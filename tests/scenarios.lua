@@ -1,0 +1,446 @@
+-- Test scenarios. Each S.<name>() raises on failure; tests/run.py runs them per class and API variant.
+-- They only use what a player (or the client) can reach: events, /codex, frames by global name,
+-- clicks, drags and hovers, so they keep working however the addon is organised inside.
+
+local S = {}
+SCENARIOS = S
+
+-- The client's talent-window toggle (the addon hooks it if it exists at login).
+function ToggleTalentFrame() if ToggleTalentFrame_Mock then ToggleTalentFrame_Mock() end end
+
+local function check(cond, msg, level)
+  if not cond then error("ASSERT: " .. msg, (level or 1) + 1) end
+end
+
+local function D() return LevelingCodexData and LevelingCodexData[MOCK.class] end
+local function win() return _G.LevelingCodexFrame end
+local function toast() return _G.LevelingCodexToast end
+local function slash(msg) SlashCmdList.LEVELINGCODEX(msg) end
+
+local function chatHas(pat)
+  for _, line in ipairs(MOCK.chat) do if line:find(pat) then return true end end
+  return false
+end
+
+local function labelOf(b)
+  return (b.label and b.label._text) or b._text
+end
+
+local function findButton(root, pred)
+  for _, b in ipairs(MOCK.buttons(root)) do
+    local l = labelOf(b)
+    if l and pred(l) then return b end
+  end
+end
+
+local function click(root, text, mouse)
+  local b = findButton(root, function(l) return l == text end)
+  check(b, "no button '" .. text .. "'", 2)
+  b:Click(mouse)
+  return b
+end
+
+local function hover(b)
+  MOCK.fire(b, "OnEnter")
+  MOCK.fire(b, "OnLeave")
+end
+
+-- the level the plan puts a point in, as the guide reads (nil before 10)
+local function planAt(level)
+  local hit
+  for _, p in ipairs(D().plan) do
+    if level >= p.from and level <= p.to then hit = p end
+  end
+  return hit
+end
+
+----------------------------------------------------------------------------
+-- Talent window mock: retail-style trait buttons nested a few frames deep.
+----------------------------------------------------------------------------
+
+local talent = {}
+S.talent = talent
+
+-- mode "name": buttons answer GetDefinitionInfo() with a spellID (C_Traits style)
+-- mode "icon": buttons only carry an icon texture
+function S.makeTalentWindow(mode, frameName)
+  if not D() then return end
+  local root = CreateFrame("Frame", frameName or "PlayerSpellsFrame", UIParent)
+  root:SetSize(800, 600)
+  root:Hide()
+  local talents = CreateFrame("Frame", nil, root)
+  local canvas = CreateFrame("Frame", nil, talents)
+  local trees = {}
+  talent.root, talent.byName, talent.mode = root, {}, mode
+  local id = 9000
+  local function addButton(tree, name, iconName)
+    if not trees[tree] then trees[tree] = CreateFrame("Frame", nil, canvas) end
+    id = id + 1
+    local b = CreateFrame("Button", nil, trees[tree])
+    b:SetSize(40, 40)
+    local spellID = id
+    MOCK.spells[spellID] = name
+    if mode == "name" then
+      b.GetDefinitionInfo = function() return { spellID = b.spellID } end
+      b.spellID = spellID
+    end
+    local tex = b:CreateTexture(nil, "ARTWORK")
+    tex:SetTexture("Interface\\Icons\\" .. iconName)
+    b.iconTex = tex
+    return b
+  end
+  -- decoys first, so a sloppy finder picks the wrong thing
+  for i = 1, 25 do addButton("Decoy", "Decoy Talent " .. i, "inv_misc_questionmark_decoy" .. i) end
+  for _, p in ipairs(D().plan) do
+    if not talent.byName[p.name] then talent.byName[p.name] = addButton(p.tree, p.name, p.icon) end
+  end
+  ToggleTalentFrame_Mock = function() if root:IsShown() then root:Hide() else root:Show() end end
+  return root
+end
+
+----------------------------------------------------------------------------
+-- Scenarios
+----------------------------------------------------------------------------
+
+-- The client's start-up order: our ADDON_LOADED, PLAYER_LOGIN, PLAYER_ENTERING_WORLD.
+function S.login()
+  MOCK.event("ADDON_LOADED", "LevelingCodex")
+  MOCK.event("VARIABLES_LOADED")
+  MOCK.event("PLAYER_LOGIN")
+  MOCK.event("PLAYER_ENTERING_WORLD", true, false)
+  MOCK.advance(1)
+  check(type(LevelingCodexDB) == "table", "LevelingCodexDB created")
+  check(type(LevelingCodexCharDB) == "table", "LevelingCodexCharDB created")
+  if D() then
+    check(chatHas("loaded the"), "login message")
+    local mini = _G.LevelingCodexMinimapButton
+    if LevelingCodexDB.noMinimap then
+      check(not (mini and mini:IsShown()), "minimap button hidden when turned off")
+    else
+      check(mini and mini:IsShown(), "minimap button shown")
+    end
+  end
+end
+
+-- Level 1 -> 60, letting each banner play out.
+function S.levelups()
+  for level = 2, 60 do
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
+    MOCK.advance(1.2)
+    if D() and not LevelingCodexDB.noToast then
+      local t = toast()
+      check(t and t:IsShown(), "banner shown at level " .. level)
+      check(t.title and t.title:GetText() == "Level " .. level, "banner title at level " .. level)
+    end
+    MOCK.advance(10)
+    if D() then check(not toast():IsShown(), "banner fades by itself at level " .. level) end
+  end
+end
+
+-- Hovering keeps the banner up; leaving lets it fade; click opens the window.
+function S.bannerMouse()
+  if not D() then return end
+  MOCK.level = 20
+  MOCK.event("PLAYER_LEVEL_UP", 20)
+  MOCK.advance(0.5)
+  local t = toast()
+  MOCK.mouseOver[t] = true
+  MOCK.advance(12)
+  check(t:IsShown(), "banner stays while hovered")
+  MOCK.mouseOver[t] = nil
+  MOCK.advance(12)
+  check(not t:IsShown(), "banner fades after mouse leaves")
+  MOCK.event("PLAYER_LEVEL_UP", 20)
+  MOCK.advance(0.5)
+  MOCK.fire(t, "OnMouseUp", "LeftButton")
+  MOCK.advance(1.5)
+  check(not t:IsShown(), "left-click dismisses the banner")
+  check(win() and win():IsShown(), "left-click on the banner opens the window")
+  win():Hide()
+end
+
+-- Banner test mode, drag, right-click close, /codex test N.
+function S.bannerTest()
+  if not D() then return end
+  slash("test")
+  MOCK.advance(0.6)
+  local t = toast()
+  check(t:IsShown(), "test banner shown")
+  MOCK.advance(20)
+  check(t:IsShown(), "test banner stays up")
+  MOCK.drag(t, 40, -25)
+  check(LevelingCodexDB.toastPos, "dragging the test banner saves its position")
+  MOCK.fire(t, "OnMouseUp", "LeftButton")
+  check(t:IsShown(), "left-click keeps the test banner")
+  MOCK.fire(t, "OnMouseUp", "RightButton")
+  MOCK.advance(1.5)
+  check(not t:IsShown(), "right-click closes the test banner")
+  for _, l in ipairs({ 1, 9, 10, 30, 59, 60 }) do
+    slash("test " .. l)
+    MOCK.advance(0.6)
+    check(t.title:GetText() == "Level " .. l, "/codex test " .. l)
+    MOCK.fire(t, "OnMouseUp", "RightButton")
+    MOCK.advance(1.5)
+  end
+end
+
+local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Settings" }
+
+local function openAt(level, tab)
+  MOCK.level = level
+  if not (win() and win():IsShown()) then slash("") end
+  check(win():IsShown(), "window opens")
+  local now = findButton(win(), function(l) return l == "You" or l:find("^Back to") end)
+  check(now, "level reset button")
+  now:Click()
+  click(win(), tab)
+end
+
+-- Browse every level 1-60 on every tab with the arrows, hovering everything.
+function S.browse()
+  if not D() then
+    slash("")
+    check(chatHas("no guide for your class"), "unsupported class message")
+    return
+  end
+  for _, tab in ipairs(TABS) do
+    openAt(1, tab)
+    for level = 1, 60 do
+      local b = MOCK.buttons(win())
+      for _, x in ipairs(b) do hover(x) end
+      if level < 60 then click(win(), ">") end
+    end
+    for _ = 1, 65 do click(win(), "<") end
+  end
+  win():Hide()
+end
+
+-- Click every button on every tab, each from a fresh state, at a few levels.
+function S.everyButton()
+  if not D() then return end
+  for _, level in ipairs({ 1, 9, 10, 30, 60 }) do
+    for _, tab in ipairs(TABS) do
+      openAt(level, tab)
+      local n = #MOCK.buttons(win())
+      for i = 1, n do
+        openAt(level, tab)
+        local list = MOCK.buttons(win())
+        local b = list[i]
+        if b then
+          hover(b)
+          b:Click("LeftButton")
+          MOCK.advance(0.3)
+        end
+      end
+      -- leave the banner closed for the next round
+      local t = toast()
+      if t and t.unlocked then openAt(level, "Settings"); click(win(), "Lock banner") end
+      if t and t:IsShown() then MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+    end
+  end
+  if win() then win():Hide() end
+  -- clicking every toggle an odd number of times leaves things off: put the defaults back
+  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap" }) do
+    if LevelingCodexDB[k] then
+      LevelingCodexDB[k] = nil
+    end
+  end
+  slash("minimap"); slash("minimap") -- re-apply the minimap setting
+end
+
+-- Settings: both themes, all pad names, banner move/lock, sizes, window position.
+function S.settings()
+  if not D() then return end
+  openAt(30, "Settings")
+  click(win(), "Codex (gold)")
+  check(LevelingCodexDB.theme == "codex", "theme saved")
+  check(win() and win():IsShown(), "window rebuilt and shown after theme switch")
+  click(win(), "This Level")
+  click(win(), "Settings")
+  click(win(), "Forever (teal)")
+  check(LevelingCodexDB.theme == "forever", "theme back to forever")
+  for _, pad in ipairs({ "PlayStation", "Switch", "Xbox" }) do click(win(), "Settings"); click(win(), pad) end
+  click(win(), "Move banner")
+  check(toast():IsShown() and toast().unlocked, "banner unlocked and shown")
+  MOCK.drag(toast(), -30, 10)
+  click(win(), "Lock banner")
+  check(not toast():IsShown(), "banner hidden after lock")
+  click(win(), "+"); click(win(), "+"); click(win(), "-")
+  MOCK.drag(win(), 10, 10)
+  click(win(), "Settings")
+  win():Hide()
+end
+
+-- Minimap: show/hide, hover, clicks and drag (round and square minimaps).
+function S.minimap()
+  if not D() then return end
+  local mini = _G.LevelingCodexMinimapButton
+  check(mini and mini:IsShown(), "minimap button exists")
+  hover(mini)
+  mini:Click("LeftButton")
+  check(win():IsShown(), "left-click opens the window")
+  mini:Click("LeftButton")
+  check(not win():IsShown(), "left-click again closes it")
+  mini:Click("RightButton")
+  check(win():IsShown(), "right-click opens settings")
+  win():Hide()
+  for _, shape in ipairs({ "ROUND", "SQUARE" }) do
+    MOCK.minimapShape = shape
+    MOCK.fire(mini, "OnDragStart", "LeftButton")
+    local cx, cy = Minimap:GetCenter()
+    MOCK.cursor = { cx, cy + 100 }
+    MOCK.advance(0.1)
+    MOCK.cursor = { cx - 100, cy }
+    MOCK.advance(0.1)
+    MOCK.fire(mini, "OnDragStop")
+    check(math.abs((LevelingCodexDB.minimapAngle or -1) - 180) < 0.01, "drag saves the angle (" .. shape .. ")")
+    local _, rel, _, x, y = mini:GetPoint(1)
+    check(rel == Minimap and x < 0 and math.abs(y) < 0.01, "button sits on the left of the minimap (" .. shape .. ")")
+  end
+  slash("minimap")
+  check(not mini:IsShown(), "/codex minimap hides it")
+  slash("minimap")
+  check(mini:IsShown(), "/codex minimap shows it")
+end
+
+-- Every slash command, including junk.
+function S.slash()
+  for _, cmd in ipairs({ "", "", "pad ps", "pad switch", "pad nope", "pad xbox", "test", "test 45", "banner", "banner",
+      "quiet", "quiet", "minimap", "minimap", "reset", "help", "MACROS", "  test  ", "zzz" }) do
+    slash(cmd)
+    MOCK.advance(0.2)
+  end
+  if win() then win():Hide() end
+  if toast() then MOCK.fire(toast(), "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+end
+
+-- Macros at every level, staying within the client's limits.
+function S.macros()
+  if not D() then slash("macros"); return end
+  for level = 1, 60 do
+    MOCK.level = level
+    slash("macros")
+  end
+  check(#MOCK.macros > 0, "macros were created")
+  -- combat: deferred until the fight ends
+  MOCK.macros = {}
+  MOCK.combat = true
+  slash("macros")
+  check(#MOCK.macros == 0, "no macros made in combat")
+  check(chatHas("in combat"), "combat message")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(#MOCK.macros > 0, "macros made when combat ends")
+  -- no free slots
+  MOCK.macros = {}
+  MOCK.charMacroSlots = 0
+  slash("macros")
+  check(chatHas("couldn't make"), "full macro slots reported")
+  MOCK.charMacroSlots = nil
+end
+
+-- Macros the addon made follow your level (auto-update), your own macros are left alone.
+function S.macroAutoUpdate()
+  if not D() then return end
+  MOCK.macros = {}
+  -- a macro of the player's own that shares no name with ours
+  MOCK.macros[1] = { name = "MyOwnMacro", icon = 1, body = "/say hi", perChar = true }
+  MOCK.level = 1
+  for level = 1, 60 do
+    MOCK.level = level
+    if level == 1 then slash("macros") end
+    MOCK.event("PLAYER_LEVEL_UP", level)
+    MOCK.advance(1.5)
+    for _, m in ipairs(D().macros) do
+      if level >= m.lo and level <= m.hi then
+        local i = GetMacroIndexByName(m.name)
+        if i > 0 and LevelingCodexCharDB.made and LevelingCodexCharDB.made[m.name] then
+          check(MOCK.macros[i].body == m.body, "macro " .. m.name .. " follows level " .. level)
+        end
+      end
+    end
+  end
+  check(MOCK.macros[1].body == "/say hi", "player's own macro untouched")
+  if toast() then MOCK.advance(12) end
+end
+
+-- Talent tracing against a mock talent window.
+local function traceCheck(level, expectTrace)
+  local hit = planAt(level)
+  local trace, hint = _G.LevelingCodexTalentTrace, _G.LevelingCodexTalentHint
+  if not hit then
+    check(not (trace and trace:IsShown()), "no trace before 10 (level " .. level .. ")")
+    return
+  end
+  check(hint and hint:IsShown(), "hint card shown at level " .. level)
+  local _, rel = hint:GetPoint(1)
+  check(rel == talent.root, "hint card sits on the talent window at level " .. level)
+  if expectTrace then
+    check(trace and trace:IsShown(), "trace shown at level " .. level)
+    local _, on = trace:GetPoint(1)
+    local want = talent.byName[hit.name]
+    if talent.mode == "icon" then
+      -- talents can share an icon: any button wearing the right icon is a correct match
+      check(on and on.iconTex and on.iconTex._tex == want.iconTex._tex, "trace on " .. hit.name .. "'s icon at level " .. level)
+    else
+      check(on == want, "trace on " .. hit.name .. " at level " .. level)
+    end
+  end
+end
+
+local function runTalentLevels(expectTrace)
+  for level = 1, 60 do
+    MOCK.level = level
+    ToggleTalentFrame()
+    MOCK.advance(0.8)
+    traceCheck(level, expectTrace)
+    ToggleTalentFrame()
+    MOCK.advance(0.8)
+    local trace, hint = _G.LevelingCodexTalentTrace, _G.LevelingCodexTalentHint
+    check(not (trace and trace:IsShown()), "trace hidden after closing (level " .. level .. ")")
+    check(not (hint and hint:IsShown()), "hint hidden after closing (level " .. level .. ")")
+  end
+end
+
+function S.talentByName()
+  if not D() then return end
+  runTalentLevels(not MOCK.minimal) -- minimal API has no way to read talent names or icons
+end
+
+function S.talentByIcon()
+  if not D() then return end
+  runTalentLevels(not MOCK.minimal)
+end
+
+-- Turning the guide off hides it.
+function S.talentGuideOff()
+  if not D() then return end
+  MOCK.level = 30
+  openAt(30, "Settings")
+  click(win(), "Trace my talent: On")
+  win():Hide()
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local trace, hint = _G.LevelingCodexTalentTrace, _G.LevelingCodexTalentHint
+  check(not (trace and trace:IsShown()) and not (hint and hint:IsShown()), "guide hidden when turned off")
+  ToggleTalentFrame()
+  openAt(30, "Settings")
+  click(win(), "Trace my talent: Off")
+  win():Hide()
+end
+
+-- The talent window is already open when we log in.
+function S.talentBeforeLogin()
+  if not (D() and talent.root) then return end
+  MOCK.level = 30
+  talent.root:Show()
+  MOCK.event("ADDON_LOADED", "Blizzard_PlayerSpells")
+end
+function S.talentBeforeLoginCheck()
+  if not D() then return end
+  MOCK.advance(1)
+  traceCheck(30, not MOCK.minimal)
+  ToggleTalentFrame()
+  MOCK.advance(0.5)
+end

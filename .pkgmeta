@@ -10,4 +10,6 @@ ignore:
   - README.md
   - CURSEFORGE_DESCRIPTION.md
   - RELEASING.md
+  - CLAUDE.md
   - media
+  - tests
