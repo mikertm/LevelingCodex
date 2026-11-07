@@ -687,6 +687,24 @@ function MOCK.setup(opts)
   end
 end
 
+-- Globals the addon is allowed to create (everything else is a leaked local).
+local ALLOWED_GLOBALS = {
+  LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
+  -- made by the test scenarios, not the addon
+  PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
+}
+function MOCK.snapshotGlobals()
+  MOCK.globals0 = {}
+  for k in pairs(_G) do MOCK.globals0[k] = true end
+end
+function MOCK.checkGlobals()
+  for k in pairs(_G) do
+    if not MOCK.globals0[k] and not ALLOWED_GLOBALS[k] and not tostring(k):find("^LevelingCodex") then
+      problem("global", "addon created global '" .. tostring(k) .. "'")
+    end
+  end
+end
+
 -- Load one addon file the way the client does: (addonName, addonTable) as varargs.
 MOCK.ns = {}
 function MOCK.loadFile(path, chunkName)

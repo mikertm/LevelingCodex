@@ -79,6 +79,7 @@ def new_state(cls, minimal, files, pre=None):
     lua.execute(b'dofile("' + lua_path(os.path.join(HERE, "scenarios.lua")).encode() + b'")')
     if pre:
         lua.execute(pre.encode())
+    lua.execute(b"MOCK.snapshotGlobals()")
     for f in files:
         err = lua.eval(b"function(p) return MOCK.try(MOCK.loadFile, p) end")(lua_path(f).encode())
         if err:
@@ -101,6 +102,7 @@ def run_sequence(name, cls, minimal, files, steps):
         err = try_(parts[0].encode(), *args)
         if err:
             failures.append("%s: %s" % (parts[0], err.decode("utf-8", "replace")))
+    lua.execute(b"MOCK.checkGlobals()")
     problems = [p.decode("utf-8", "replace") for p in lua.eval(b"MOCK.problems").values()]
     return failures, problems
 
@@ -177,6 +179,8 @@ def data_checks():
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = sys.argv[1:]
     verbose = "-v" in args
     only = args[args.index("-k") + 1] if "-k" in args else None
