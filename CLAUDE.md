@@ -57,6 +57,7 @@ All files share the addon table: `local _, ns = ...`. Cross-module calls go thro
 ## Working rules
 - Run the harness before every commit. It must pass with no Lua errors, no non-ASCII runtime text and no leaked globals.
 - When a bug is reported from the game, first add a scenario that reproduces it.
+- **In-game testing: install straight into the owner's game, never hand over a zip.** After the harness passes, run `python tools/install.py`. It copies the build into `C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\LevelingCodex` (override with an argument or `LEVELINGCODEX_ADDONS`), removes stale `.lua`/`.xml` from older builds, leaves other files alone and verifies every copy. Then tell the owner to `/reload` (restart the client if a .toc changed).
 - Keep both .toc files identical (the harness checks).
 - Small, clear commits. Add a `CHANGELOG.md` section before a release.
 - **Never push a tag** (that publishes to CurseForge) without the owner's explicit go-ahead.

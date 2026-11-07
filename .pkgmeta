@@ -13,3 +13,4 @@ ignore:
   - CLAUDE.md
   - media
   - tests
+  - tools
