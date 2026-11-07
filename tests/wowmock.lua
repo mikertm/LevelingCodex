@@ -412,6 +412,9 @@ function AnimGroup:SetScript(name, fn) self._scripts[name] = fn end
 function AnimGroup:GetScript(name) return self._scripts[name] end
 function AnimGroup:IsPlaying() return self._playing end
 function AnimGroup:Play()
+  -- seen in game: an animated texture with a gradient draws as a solid white box in Forever
+  local o = self._owner
+  if o and o._type == "Texture" and o._grad then problem("animated gradient", "a faded texture is animated (white box in Forever)") end
   self._playing, self._elapsed = true, 0
   local byOrder = {}
   for _, a in ipairs(self._anims) do

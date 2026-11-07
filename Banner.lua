@@ -196,13 +196,7 @@ local function makeToast()
     end
   end
 
-  -- a soft theme-coloured glow behind the title (no starburst: the game already did the fanfare)
-  toast.burst = toast:CreateTexture(nil, "BORDER")
-  toast.burst:SetPoint("TOPLEFT", 70, -4); toast.burst:SetPoint("TOPRIGHT", -70, -4); toast.burst:SetHeight(46)
-  ns.fade(toast.burst, "VERTICAL", C.burst[1], C.burst[2], C.burst[3], 0, 0.3)
-  toast.glow = toast.burst:CreateAnimationGroup()
-  alphaAnim(toast.glow, 0.55, 1, 1.6, 1)
-  toast.glow:SetLooping("BOUNCE")
+  -- no glow behind the title: in Forever a faded texture that's animated draws as a white box
 
   -- "LEVELING CODEX" / "New at Level 17": what you unlocked, after the game's own level-up
   toast.header = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -247,7 +241,7 @@ local function makeToast()
   toast.leave = toast:CreateAnimationGroup()
   alphaAnim(toast.leave, 1, 0, 1.0, 1)
   toast.leave:SetScript("OnFinished", function()
-    toast:Hide(); toast.glow:Stop()
+    toast:Hide()
   end)
 
   toast:SetScript("OnUpdate", function(self, elapsed)
@@ -375,7 +369,7 @@ function ns.showToast(level, force, test, waited)
   toast.leave:Stop()
   toast:SetAlpha(1)
   toast:Show()
-  toast.enter:Play(); toast.punch:Play(); toast.glow:Play()
+  toast.enter:Play(); toast.punch:Play()
   toast.holding = HOLD
 end
 
@@ -401,9 +395,8 @@ function ns.setToastUnlocked(on)
     ns.placeToast()
     toast:SetAlpha(1)
     toast:Show()
-    toast.glow:Play()
   else
-    toast:Hide(); toast.glow:Stop()
+    toast:Hide()
   end
 end
 
