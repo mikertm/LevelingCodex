@@ -91,15 +91,19 @@ local function makeRow(parent)
   local back = row:CreateTexture(nil, "BACKGROUND")
   back:SetPoint("TOPLEFT", 0, -1); back:SetPoint("BOTTOMRIGHT", 0, 1)
   ns.fadeAccent(back, "HORIZONTAL", 0.12, 0)
+  -- icon rim like the game's: thin gold outside, black edge inside
   local frameTex = row:CreateTexture(nil, "BORDER")
-  frameTex:SetSize(30, 30); frameTex:SetPoint("LEFT", 2, 0)
-  frameTex:SetColorTexture(rgba(C.iconFrame))
+  frameTex:SetSize(32, 32); frameTex:SetPoint("LEFT", 1, 0)
+  frameTex:SetColorTexture(0.72, 0.58, 0.3, 0.95)
+  local edge = row:CreateTexture(nil, "BORDER", nil, 1)
+  edge:SetSize(30, 30); edge:SetPoint("CENTER", frameTex, "CENTER")
+  edge:SetColorTexture(0, 0, 0, 1)
   row.icon = row:CreateTexture(nil, "ARTWORK")
   row.icon:SetSize(28, 28); row.icon:SetPoint("CENTER", frameTex, "CENTER")
   row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   row.label = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   row.label:SetPoint("TOPLEFT", frameTex, "TOPRIGHT", 10, 0)
-  row.label:SetTextColor(rgba(C.rowLabel))
+  row.label:SetTextColor(1, 0.82, 0)
   row.value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   row.value:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -2)
   row.value:SetWidth(330); row.value:SetJustifyH("LEFT"); row.value:SetWordWrap(false)
@@ -138,6 +142,22 @@ local function makeToast()
   local r = toast:CreateTexture(nil, "BACKGROUND")
   r:SetPoint("TOPLEFT", mid, "TOPRIGHT"); r:SetPoint("BOTTOMRIGHT", 0, 0)
   ns.fade(r, "HORIZONTAL", C.band[1], C.band[2], C.band[3], 0.7, 0)
+  -- gold lines along the top and bottom of the band, fading out at the ends (the game's level-up look)
+  for _, edge in ipairs({ "TOP", "BOTTOM" }) do
+    for side = 1, 2 do
+      local g = toast:CreateTexture(nil, "BORDER")
+      g:SetHeight(2)
+      if side == 1 then
+        g:SetPoint(edge .. "LEFT", toast, edge .. "LEFT", 20, edge == "TOP" and -34 or 0)
+        g:SetPoint(edge .. "RIGHT", toast, edge, 0, edge == "TOP" and -34 or 0)
+        ns.fade(g, "HORIZONTAL", 1, 0.82, 0.25, 0, 0.95)
+      else
+        g:SetPoint(edge .. "LEFT", toast, edge, 0, edge == "TOP" and -34 or 0)
+        g:SetPoint(edge .. "RIGHT", toast, edge .. "RIGHT", -20, edge == "TOP" and -34 or 0)
+        ns.fade(g, "HORIZONTAL", 1, 0.82, 0.25, 0.95, 0)
+      end
+    end
+  end
 
   -- golden burst behind the level number: slow spin and a gentle pulse
   toast.burst = toast:CreateTexture(nil, "BORDER")
@@ -165,7 +185,7 @@ local function makeToast()
   if toast.title:SetFont("Fonts\\MORPHEUS.TTF", 44, "OUTLINE") == false then
     toast.title:SetFontObject("GameFontNormalHuge")
   end
-  toast.title:SetTextColor(rgba(C.toastTitle))
+  toast.title:SetTextColor(1, 0.82, 0) -- Blizzard gold; the theme colour stays on the burst and glow
   toast.title:SetShadowColor(0, 0, 0, 1)
   toast.title:SetShadowOffset(2, -2)
 

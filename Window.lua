@@ -1,8 +1,11 @@
--- Window.lua: the /codex window, styled like the guide pages
--- (dark leather, gold rules, parchment cards, double borders, Morpheus headings).
+-- Window.lua: the /codex window in Blizzard frame art: the dialog border and gold title banner,
+-- a round class portrait, character-sheet tabs, red panel buttons, check boxes, and cards with
+-- the tooltip border (parchment or dark). Morpheus headings and the theme's accent colour stay.
+-- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua).
 
 local _, ns = ...
 local C, rgba, plain, padText = ns.C, ns.rgba, ns.plain, ns.padText
+local A = ns.art
 
 local FONT_HEAD = "Fonts\\MORPHEUS.TTF"
 local FONT_MONO = "Fonts\\ARIALN.TTF"
@@ -36,9 +39,12 @@ local function releaseAll()
   end
 end
 
-local function newFS() return content:CreateFontString(nil, "OVERLAY", "GameFontHighlight") end
-local function newTex() return content:CreateTexture(nil, "BACKGROUND") end
-local function newTexB() return content:CreateTexture(nil, "BORDER") end
+-- Layers inside the scroll child: Blizzard-bordered cards are frames, so text, icons and
+-- buttons live on an overlay frame above them (a parent's own regions draw under its children).
+local overlay
+local function newFS() return overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlight") end
+local function newTex() return overlay:CreateTexture(nil, "BACKGROUND") end
+local function newTexB() return overlay:CreateTexture(nil, "BORDER") end
 
 ----------------------------------------------------------------------------
 -- Drawing helpers (x, y are offsets from the content's top-left; y grows downwards)
@@ -79,10 +85,21 @@ local function rect(x, y, w, h, color, layer, sub)
   return t
 end
 
--- A card with a double gold border, like the guide's panels.
-local function box(x, y, w, h, fill, edge)
+-- Card frames with the game's tooltip border; parchment cards get the quest-log paper.
+local function newCard()
+  local f = A.frame("Frame", nil, content)
+  f.paper = f:CreateTexture(nil, "BORDER")
+  f.paper:SetPoint("TOPLEFT", 4, -4); f.paper:SetPoint("BOTTOMRIGHT", -4, 4)
+  f.shade = f:CreateTexture(nil, "BORDER", nil, 1)
+  f.shade:SetPoint("TOPLEFT", 4, -4); f.shade:SetPoint("BOTTOMRIGHT", -4, 4)
+  f.blizz = A.backdrop(f, "tooltip")
+  f.hasPaper = A.set(f.paper, "parchment", { 0, 0.586, 0, 0.655 })
+  return f
+end
+
+-- The guide's flat card (when the client has no backdrops): fill, aged shade, double border.
+local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
-  -- aged edge: parchment darkens toward the bottom, dark panels get a faint warm sheen at the top
   local shade = rect(x, y, w, h, { 1, 1, 1, 1 }, nil, 1)
   if fill == C.parch then ns.fade(shade, "VERTICAL", 0.5, 0.35, 0.15, 0.22, 0)
   else ns.fade(shade, "VERTICAL", 0.6, 0.45, 0.2, 0, 0.12) end
@@ -94,21 +111,42 @@ local function box(x, y, w, h, fill, edge)
   rect(x + 4, y + 4, 1, h - 8, e2, "border"); rect(x + w - 5, y + 4, 1, h - 8, e2, "border")
 end
 
-local function showTip(self)
-  if not self.tipTitle or not GameTooltip then return end
-  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-  GameTooltip:SetText(self.tipTitle, rgba(C.tipTitle))
-  if self.tipText and self.tipText ~= "" then GameTooltip:AddLine(self.tipText, 1, 1, 1, true) end
-  GameTooltip:Show()
+-- A card: parchment (fill == C.parch) or dark. Drawn under the overlay.
+local function box(x, y, w, h, fill, edge)
+  if w < 24 or h < 16 then return flatBox(x, y, w, h, fill, edge) end
+  local f = take("card", newCard)
+  if not f.blizz then f:Hide(); return flatBox(x, y, w, h, fill, edge) end
+  f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  f:SetSize(w, h)
+  edge = edge or C.edge
+  if fill == C.parch then
+    f:SetBackdropColor(rgba(C.parch))
+    f:SetBackdropBorderColor(0.55, 0.42, 0.24, 1)
+    f.paper:SetShown(f.hasPaper)
+    if f.hasPaper then f.paper:SetVertexColor(1, 0.97, 0.9) end
+    ns.fade(f.shade, "VERTICAL", 0.45, 0.3, 0.12, 0.2, 0)
+  else
+    f:SetBackdropColor(0, 0, 0, 0.62)
+    f:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.9)
+    f.paper:Hide()
+    ns.fade(f.shade, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.1)
+  end
 end
-local function hideTip() if GameTooltip then GameTooltip:Hide() end end
 
+local showTip, hideTip = A.showTip, A.hideTip
+
+-- Spell icons the way the game draws them: a black edge with a thin gold rim.
 local function newIcon()
-  local f = CreateFrame("Button", nil, content)
-  f.ring = f:CreateTexture(nil, "BORDER"); f.ring:SetAllPoints(); f.ring:SetColorTexture(rgba(C.edge))
+  local f = CreateFrame("Button", nil, overlay)
+  f.ring = f:CreateTexture(nil, "BORDER"); f.ring:SetPoint("TOPLEFT", -1, 1); f.ring:SetPoint("BOTTOMRIGHT", 1, -1)
+  f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
+  f.edge = f:CreateTexture(nil, "BORDER", nil, 1); f.edge:SetAllPoints(); f.edge:SetColorTexture(0, 0, 0, 1)
   f.tex = f:CreateTexture(nil, "ARTWORK")
   f.tex:SetPoint("TOPLEFT", 1, -1); f.tex:SetPoint("BOTTOMRIGHT", -1, 1)
   f.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  local hl = f:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints()
+  if A.hasFile(A.FILES.squareGlow) then hl:SetTexture(A.FILES.squareGlow); hl:SetBlendMode("ADD")
+  else hl:SetColorTexture(1, 1, 1, 0.12) end
   f:SetScript("OnEnter", showTip); f:SetScript("OnLeave", hideTip)
   return f
 end
@@ -122,44 +160,34 @@ local function icon(name, x, y, size, title, text)
   return f
 end
 
--- Gold-bordered button in the guide's style.
-local function styleButton(b)
-  b.bg = b:CreateTexture(nil, "BACKGROUND"); b.bg:SetAllPoints()
-  b.edges = {}
-  for i = 1, 4 do b.edges[i] = b:CreateTexture(nil, "BORDER") end
-  b.edges[1]:SetPoint("TOPLEFT"); b.edges[1]:SetPoint("TOPRIGHT"); b.edges[1]:SetHeight(1)
-  b.edges[2]:SetPoint("BOTTOMLEFT"); b.edges[2]:SetPoint("BOTTOMRIGHT"); b.edges[2]:SetHeight(1)
-  b.edges[3]:SetPoint("TOPLEFT"); b.edges[3]:SetPoint("BOTTOMLEFT"); b.edges[3]:SetWidth(1)
-  b.edges[4]:SetPoint("TOPRIGHT"); b.edges[4]:SetPoint("BOTTOMRIGHT"); b.edges[4]:SetWidth(1)
-  local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16)
-  b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  b.label:SetPoint("CENTER")
-  b.SetLook = function(self, on)
-    self.bg:SetColorTexture(rgba(on and C.btnOn or C.btnOff))
-    for _, e in ipairs(self.edges) do e:SetColorTexture(rgba(C.edge)) end
-    self.label:SetTextColor(rgba(on and C.btnOnInk or C.gold))
-  end
-  b:SetLook(false)
-  b:SetScript("OnEnter", showTip); b:SetScript("OnLeave", hideTip)
-  return b
-end
-
-local function newBtn() return styleButton(CreateFrame("Button", nil, content)) end
+local function newBtn() return A.button(overlay, 100, 22) end
 
 local function btn(label, x, y, w, onClick, on, tip)
   local b = take("btn", newBtn)
-  b:SetSize(w, 24)
+  b:SetSize(w, 22)
   b:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
-  b.label:SetText(label)
+  b:SetLabel(label)
   b:SetLook(on)
   b:SetScript("OnClick", onClick)
   b.tipTitle, b.tipText = tip and label or nil, tip
   return b
 end
 
+-- A check box with its label (for on/off settings).
+local function newCheck() return A.check(overlay) end
+local function check(label, x, y, on, onClick, tip)
+  local cb = take("check", newCheck)
+  cb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  cb:SetLabel(label)
+  cb:SetLook(on)
+  cb:SetScript("OnClick", onClick)
+  cb.tipTitle, cb.tipText = tip and label or nil, tip
+  return cb
+end
+
 -- An invisible clickable strip (for talent rows).
 local function newHit()
-  local f = CreateFrame("Button", nil, content)
+  local f = CreateFrame("Button", nil, overlay)
   local hl = f:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.1)
   f:SetScript("OnEnter", showTip); f:SetScript("OnLeave", hideTip)
   return f
@@ -313,7 +341,7 @@ renderers.talents = function(V)
       hb.tipTitle = "Level " .. l .. ": " .. hit.name .. " " .. rank .. "/" .. hit.max
       hb.tipText = plain(text)
       hb:SetScript("OnClick", function() viewLevel = l; activeTab = "level"; refresh() end)
-      hb:SetFrameLevel(content:GetFrameLevel() + 1)
+      hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
       y = y + 30
     end
   end
@@ -411,14 +439,18 @@ renderers.settings = function()
     y = y + 14
   end
   local function row(label, x, w, on, fn, tip) btn(label, x, y, w, function() fn(); refresh() end, on, tip) end
+  local function tick(label, on, fn, tip)
+    check(label, 0, y, on, function() fn(); refresh() end, tip)
+    y = y + 28
+  end
   local function head(str) T(str, 0, y, W, "label", C.gold); y = y + 20 end
 
   head("THEME")
   local th = db.theme or "forever"
   row("Forever (teal)", 0, 150, th == "forever", function() db.theme = "forever"; ns.rebuildForTheme() end,
-    "The WoW: Forever look: logo teal, sky blue and cream.")
+    "WoW: Forever's logo teal for the accents and highlights.")
   row("Codex (gold)", 156, 150, th == "codex", function() db.theme = "codex"; ns.rebuildForTheme() end,
-    "The guide site's look: gold, leather and parchment.")
+    "The guide site's gold for the accents and highlights.")
   y = y + 40
 
   head("CONTROLLER BUTTON NAMES")
@@ -429,54 +461,51 @@ renderers.settings = function()
   y = y + 40
 
   head("LEVEL-UP BANNER")
-  row(db.noToast and "Banner: Off" or "Banner: On", 0, 140, not db.noToast, function() db.noToast = not db.noToast end)
-  row("Test level-up", 146, 100, toast and toast.testing, function()
+  tick("Show the level-up banner", not db.noToast, function() db.noToast = not db.noToast end)
+  row("Test level-up", 0, 120, toast and toast.testing, function()
     local t = ns.getToast()
     if t and t.unlocked then ns.setToastUnlocked(false) end
     testBanner(viewLevel or UnitLevel("player"))
   end, "Plays a level-up for the level shown in the header and keeps the banner up: drag it where you want it, change its size below, right-click it to close.")
   local unlocked = toast and toast.unlocked
-  row(unlocked and "Lock banner" or "Move banner", 252, 120, unlocked, function()
+  row(unlocked and "Lock banner" or "Move banner", 126, 120, unlocked, function()
     local t = ns.getToast()
     ns.setToastUnlocked(not (t and t.unlocked))
   end, "Shows the banner so you can drag it anywhere. Press again to lock it there.")
-  row("Reset", 378, 80, false, function() db.toastPos = nil; db.toastScale = 1; ns.placeToast() end)
+  row("Reset", 252, 80, false, function() db.toastPos = nil; db.toastScale = 1; ns.placeToast() end)
   y = y + 32
-  T("Size", 0, y + 5, 60, "body", C.light)
+  T("Size", 0, y + 4, 60, "body", C.light)
   row("-", 60, 28, false, function() db.toastScale = math.max(0.5, (db.toastScale or 1) - 0.1); ns.placeToast() end)
-  T(math.floor((db.toastScale or 1) * 100 + 0.5) .. "%", 92, y + 5, 50, "body", C.gold, "CENTER")
+  T(math.floor((db.toastScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
   row("+", 146, 28, false, function() db.toastScale = math.min(2, (db.toastScale or 1) + 0.1); ns.placeToast() end)
-  y = y + 44
+  y = y + 40
 
   head("MESSAGES AND MACROS")
-  row(db.quiet and "Level-up chat: Off" or "Level-up chat: On", 0, 180, not db.quiet, function() db.quiet = not db.quiet end)
-  row(db.noAutoMacros and "Auto-update macros: Off" or "Auto-update macros: On", 186, 200, not db.noAutoMacros,
-    function() db.noAutoMacros = not db.noAutoMacros end,
+  tick("Level-up messages in chat", not db.quiet, function() db.quiet = not db.quiet end)
+  tick("Keep my Codex macros up to date", not db.noAutoMacros, function() db.noAutoMacros = not db.noAutoMacros end,
     "After a level-up, macros the Codex made switch to the right version for your new level. Your own macros are never touched.")
-  y = y + 44
+  y = y + 12
 
   head("TALENT WINDOW GUIDE")
-  row(db.noTalentGuide and "Trace my talent: Off" or "Trace my talent: On", 0, 200, not db.noTalentGuide,
-    function() db.noTalentGuide = not db.noTalentGuide end,
-    "When you open your talent window, the Codex traces the talent to take for your level and shows a card above the window.")
-  y = y + 44
+  tick("Trace my talent in the talent window", not db.noTalentGuide, function() db.noTalentGuide = not db.noTalentGuide end,
+    "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
+  y = y + 12
 
   head("MINIMAP BUTTON")
-  row(db.noMinimap and "Minimap button: Off" or "Minimap button: On", 0, 180, not db.noMinimap,
-    function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
+  tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
     "Drag the book icon around the edge of the minimap to put it where you like; it remembers the spot.")
-  row("Reset position", 186, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
-  y = y + 44
+  row("Reset position", 0, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
+  y = y + 40
 
   head("THIS WINDOW")
-  T("Size", 0, y + 5, 60, "body", C.light)
+  T("Size", 0, y + 4, 60, "body", C.light)
   row("-", 60, 28, false, function() db.windowScale = math.max(0.6, (db.windowScale or 1) - 0.1); ns.placeWindow() end)
-  T(math.floor((db.windowScale or 1) * 100 + 0.5) .. "%", 92, y + 5, 50, "body", C.gold, "CENTER")
+  T(math.floor((db.windowScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
   row("+", 146, 28, false, function() db.windowScale = math.min(1.6, (db.windowScale or 1) + 0.1); ns.placeWindow() end)
   row("Reset position", 186, 140, false, function() db.windowPos = nil; ns.placeWindow() end)
-  y = y + 44
-  T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started.", 0, y, W, "small", C.dim)
-  return y + 30
+  y = y + 40
+  T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started. /codex debug lists what the Codex can see, for bug reports.", 0, y, W, "small", C.dim)
+  return y + 40
 end
 
 ----------------------------------------------------------------------------
@@ -504,12 +533,8 @@ refresh = function()
   if viewLevel < 1 then viewLevel = 1 elseif viewLevel > 60 then viewLevel = 60 end
   levelText:SetText("Level " .. viewLevel)
   nowBtn:SetLook(viewLevel == me)
-  nowBtn.label:SetText(viewLevel == me and "You" or "Back to " .. me)
-  for _, t in ipairs(tabs) do
-    local on = t.key == activeTab
-    t.label:SetTextColor(rgba(on and C.gold or C.dim))
-    t.line:SetShown(on)
-  end
+  nowBtn:SetLabel(viewLevel == me and "You" or "Back to " .. me)
+  for _, t in ipairs(tabs) do t:SetSelected(t.key == activeTab) end
   -- remember where the tab we're leaving (or redrawing) was scrolled to
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   releaseAll()
@@ -523,7 +548,7 @@ refresh = function()
 end
 ns.refresh = refresh
 
--- Double gold border drawn on a frame, like the guide's panels.
+-- The flat Codex chrome (when the client has no dialog border): leather, glow, double border.
 local function doubleBorder(f)
   local function line(p1, p2, horiz, inset, a)
     local t = f:CreateTexture(nil, "BORDER")
@@ -537,6 +562,44 @@ local function doubleBorder(f)
     line("TOPLEFT", "TOPRIGHT", true, inset, a); line("BOTTOMLEFT", "BOTTOMRIGHT", true, inset, a)
     line("TOPLEFT", "BOTTOMLEFT", false, inset, a); line("TOPRIGHT", "BOTTOMRIGHT", false, inset, a)
   end
+end
+
+local function flatChrome(f)
+  local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))
+  local rock = f:CreateTexture(nil, "BACKGROUND", nil, -1)
+  rock:SetAllPoints()
+  if rock:SetTexture("Interface\\FrameGeneral\\UI-Background-Rock", "REPEAT", "REPEAT") ~= false then
+    if rock.SetHorizTile then rock:SetHorizTile(true); rock:SetVertTile(true) end
+    rock:SetVertexColor(rgba(C.rock))
+    bg:SetColorTexture(rgba(C.wash))
+  else
+    rock:Hide()
+  end
+  local glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+  glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(140)
+  ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.3)
+  doubleBorder(f)
+end
+
+-- The game's dialog border and background, with a faint theme-coloured glow under the header.
+local function chrome(f, glowHeight)
+  if A.backdrop(f, "dialog") then
+    local glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+    glow:SetPoint("TOPLEFT", 12, -12); glow:SetPoint("TOPRIGHT", -12, -12); glow:SetHeight(glowHeight or 110)
+    ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.22)
+    return true
+  end
+  flatChrome(f)
+  return false
+end
+
+-- A dark inset (the tooltip border) to hold scrolling content or a text box.
+local function inset(parent)
+  local f = A.frame("Frame", nil, parent)
+  if not A.backdrop(f, "tooltip", { 0, 0, 0, 0.5 }, { C.edgeSoft[1], C.edgeSoft[2], C.edgeSoft[3], 1 }) then
+    local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.35)
+  end
+  return f
 end
 
 local function closeWithEsc(name)
@@ -562,48 +625,25 @@ local function closeWithGamepad(f)
   end)
 end
 
-local function headerButton(parent, label, w)
-  local b = styleButton(CreateFrame("Button", nil, parent))
-  b:SetSize(w, 24)
-  b.label:SetText(label)
-  return b
-end
-
 local function makeFrame()
-  frame = CreateFrame("Frame", "LevelingCodexFrame", UIParent)
+  frame = A.frame("Frame", "LevelingCodexFrame", UIParent)
   frame:SetSize(640, 620)
   frame:SetFrameStrata("DIALOG")
   frame:SetMovable(true)
   frame:EnableMouse(true)
   frame:SetClampedToScreen(true)
+  if frame.SetClampRectInsets then pcall(frame.SetClampRectInsets, frame, 0, 0, 30, -34) end -- keep banner and tabs on screen
   frame:Hide()
   shownTab = nil -- a new scroll frame: keep the saved offsets, don't read the empty one
   closeWithEsc("LevelingCodexFrame") -- by name, so a rebuilt frame needs no second entry
   closeWithGamepad(frame)
 
-  -- leather background, warm glow at the top, double gold border
-  local bg = frame:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))
-  -- the game's own stone texture, tinted warm, under a dark wash: reads as worn leather
-  local rock = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
-  rock:SetAllPoints()
-  if rock:SetTexture("Interface\\FrameGeneral\\UI-Background-Rock", "REPEAT", "REPEAT") ~= false then
-    if rock.SetHorizTile then rock:SetHorizTile(true); rock:SetVertTile(true) end
-    rock:SetVertexColor(rgba(C.rock))
-    bg:SetColorTexture(rgba(C.wash))
-  else
-    rock:Hide()
-  end
-  local vignette = frame:CreateTexture(nil, "BACKGROUND", nil, 2)
-  vignette:SetPoint("BOTTOMLEFT"); vignette:SetPoint("BOTTOMRIGHT"); vignette:SetHeight(160)
-  ns.fade(vignette, "VERTICAL", 0, 0, 0, 0.45, 0)
-  local glow = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
-  glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(140)
-  ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.3)
-  doubleBorder(frame)
+  chrome(frame, 110)
+  A.header(frame, "The Leveling Codex", 360)
 
-  -- header (drag here to move)
+  -- header (drag here to move): portrait, spec, level picker
   local header = CreateFrame("Frame", nil, frame)
-  header:SetPoint("TOPLEFT", 6, -6); header:SetPoint("TOPRIGHT", -6, -6); header:SetHeight(70)
+  header:SetPoint("TOPLEFT", 12, -12); header:SetPoint("TOPRIGHT", -12, -12); header:SetHeight(84)
   header:EnableMouse(true)
   header:RegisterForDrag("LeftButton")
   header:SetScript("OnDragStart", function() frame:StartMoving() end)
@@ -613,79 +653,67 @@ local function makeFrame()
     ns.db().windowPos = { p1, p2, x, y }
   end)
 
-  local ring = header:CreateTexture(nil, "BORDER")
-  ring:SetSize(50, 50); ring:SetPoint("LEFT", 14, -2); ring:SetColorTexture(rgba(C.edge))
-  local crest = header:CreateTexture(nil, "ARTWORK")
-  crest:SetPoint("TOPLEFT", ring, "TOPLEFT", 2, -2); crest:SetPoint("BOTTOMRIGHT", ring, "BOTTOMRIGHT", -2, 2)
-  crest:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   local _, token = UnitClass("player")
-  ns.setIcon(crest, "classicon_" .. string.lower(token or "warrior"))
+  local portrait = A.portrait(header, 54, token)
+  portrait:SetPoint("TOPLEFT", 6, -12)
 
+  local spec = header:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+  spec:SetPoint("TOPLEFT", portrait, "TOPRIGHT", 10, -10)
+  spec:SetFont(FONT_HEAD, 24, "")
+  spec:SetTextColor(rgba(C.titleInk))
+  spec:SetShadowOffset(1, -1)
+  spec:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
   local kicker = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  kicker:SetPoint("TOPLEFT", ring, "TOPRIGHT", 12, -2)
+  kicker:SetPoint("TOPLEFT", spec, "BOTTOMLEFT", 1, -3)
   kicker:SetTextColor(rgba(C.goldDim))
   kicker:SetText("WOW: FOREVER  -  LEVELING 1-60")
-  local title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-  title:SetPoint("TOPLEFT", kicker, "BOTTOMLEFT", 0, -2)
-  title:SetFont(FONT_HEAD, 26, "")
-  title:SetTextColor(rgba(C.titleInk))
-  title:SetShadowOffset(1, -1)
-  title:SetText("The Leveling Codex")
-  local spec = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  spec:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -1)
-  spec:SetTextColor(rgba(C.dim))
-  spec:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
 
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", -4, -4)
+  close:SetPoint("TOPRIGHT", -6, -6)
 
-  -- level picker: view any level
-  local nextB = headerButton(header, ">", 26); nextB:SetPoint("RIGHT", -40, -6)
+  -- level picker: view any level, with the spellbook's page arrows
+  local nextB = A.arrow(header, "next"); nextB:SetPoint("TOPRIGHT", -36, -22)
   levelText = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  levelText:SetFont(FONT_HEAD, 18, "")
-  levelText:SetTextColor(rgba(C.gold))
-  levelText:SetWidth(90); levelText:SetJustifyH("CENTER")
-  levelText:SetPoint("RIGHT", nextB, "LEFT", -4, 0)
-  local prevB = headerButton(header, "<", 26); prevB:SetPoint("RIGHT", levelText, "LEFT", -4, 0)
-  nowBtn = headerButton(header, "You", 90); nowBtn:SetPoint("TOP", levelText, "BOTTOM", 0, -4)
+  levelText:SetFont(FONT_HEAD, 20, "")
+  levelText:SetTextColor(1, 0.82, 0)
+  levelText:SetShadowOffset(1, -1)
+  levelText:SetWidth(96); levelText:SetJustifyH("CENTER")
+  levelText:SetPoint("RIGHT", nextB, "LEFT", -2, 0)
+  local prevB = A.arrow(header, "prev"); prevB:SetPoint("RIGHT", levelText, "LEFT", -2, 0)
+  nowBtn = A.button(header, 96, 22); nowBtn:SetPoint("TOP", levelText, "BOTTOM", 0, -6)
+  nowBtn:SetLabel("You")
   prevB:SetScript("OnClick", function() viewLevel = math.max(1, (viewLevel or 1) - 1); refresh() end)
   nextB:SetScript("OnClick", function() viewLevel = math.min(60, (viewLevel or 1) + 1); refresh() end)
   nowBtn:SetScript("OnClick", function() viewLevel = UnitLevel("player"); refresh() end)
   prevB.tipTitle, prevB.tipText = "Previous level", "Browse the guide at any level."
   nextB.tipTitle, nextB.tipText = "Next level", "Browse the guide at any level."
 
-  local divider = frame:CreateTexture(nil, "BORDER")
-  divider:SetPoint("TOPLEFT", 16, -82); divider:SetPoint("TOPRIGHT", -16, -82); divider:SetHeight(1)
-  ns.fadeAccent(divider, "HORIZONTAL", 0.2, 0.9)
-
-  -- tabs
-  tabs = {}
-  local x = 18
-  for _, t in ipairs(TABS) do
-    local b = CreateFrame("Button", nil, frame)
-    b:SetHeight(26)
-    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    b.label:SetPoint("CENTER")
-    b.label:SetText(t[2])
-    local w = b.label:GetStringWidth() + 22
-    b:SetWidth(w)
-    b:SetPoint("TOPLEFT", x, -88)
-    b.line = b:CreateTexture(nil, "ARTWORK")
-    b.line:SetPoint("BOTTOMLEFT", 6, 0); b.line:SetPoint("BOTTOMRIGHT", -6, 0); b.line:SetHeight(2)
-    b.line:SetColorTexture(rgba(C.edge))
-    local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.08)
-    b.key = t[1]
-    b:SetScript("OnClick", function() activeTab = t[1]; refresh() end)
-    tabs[#tabs + 1] = b
-    x = x + w + 4
-  end
-
-  scroll = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", 18, -124)
-  scroll:SetPoint("BOTTOMRIGHT", -34, 16)
+  -- the page: a dark inset with the scrolling content
+  local page = inset(frame)
+  page:SetPoint("TOPLEFT", 14, -100)
+  page:SetPoint("BOTTOMRIGHT", -14, 14)
+  scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
+  scroll:SetPoint("TOPLEFT", 8, -10)
+  scroll:SetPoint("BOTTOMRIGHT", -28, 10)
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(W, 10)
   scroll:SetScrollChild(content)
+  overlay = CreateFrame("Frame", nil, content)
+  overlay:SetAllPoints(content)
+  overlay:SetFrameLevel(content:GetFrameLevel() + 5)
+
+  -- tabs hang below the window, like the character sheet's
+  tabs = {}
+  local prev
+  for i, t in ipairs(TABS) do
+    local b = A.tab(frame, t[2])
+    if i == 1 then b:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 16, 8)
+    else b:SetPoint("LEFT", prev, "RIGHT", -12, 0) end
+    b.key = t[1]
+    b:SetScript("OnClick", function() activeTab = t[1]; refresh() end)
+    tabs[#tabs + 1] = b
+    prev = b
+  end
 
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   ns.placeWindow()
@@ -699,8 +727,8 @@ end
 local copy
 
 local function makeCopy()
-  copy = CreateFrame("Frame", "LevelingCodexCopy", UIParent)
-  copy:SetSize(480, 318)
+  copy = A.frame("Frame", "LevelingCodexCopy", UIParent)
+  copy:SetSize(480, 330)
   copy:SetFrameStrata("FULLSCREEN_DIALOG")
   copy:SetMovable(true)
   copy:EnableMouse(true)
@@ -713,36 +741,28 @@ local function makeCopy()
   closeWithEsc("LevelingCodexCopy")
   closeWithGamepad(copy)
 
-  local bg = copy:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))
-  local glow = copy:CreateTexture(nil, "BACKGROUND", nil, 1)
-  glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(90)
-  ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.3)
-  doubleBorder(copy)
+  chrome(copy, 80)
+  local _, title = A.header(copy, "Copy a macro", 300)
+  copy.title = title
 
-  copy.title = copy:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  copy.title:SetPoint("TOPLEFT", 20, -18)
-  copy.title:SetFont(FONT_HEAD, 20, "")
-  copy.title:SetTextColor(rgba(C.titleInk))
-  copy.title:SetShadowOffset(1, -1)
   copy.help = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  copy.help:SetPoint("TOPLEFT", copy.title, "BOTTOMLEFT", 0, -6)
-  copy.help:SetWidth(440); copy.help:SetJustifyH("LEFT"); copy.help:SetWordWrap(true)
-  copy.help:SetTextColor(rgba(C.dim))
+  copy.help:SetPoint("TOPLEFT", 24, -34)
+  copy.help:SetWidth(432); copy.help:SetJustifyH("LEFT"); copy.help:SetWordWrap(true)
+  copy.help:SetTextColor(rgba(C.light))
   copy.help:SetText("The text is selected: press Ctrl+C (Cmd+C on a Mac). Then in Esc > Macros click New, " ..
     "choose the character tab, name it, and paste with Ctrl+V into the macro box.")
 
-  local well = copy:CreateTexture(nil, "BORDER")
-  well:SetPoint("TOPLEFT", 16, -88); well:SetPoint("BOTTOMRIGHT", -16, 52)
-  well:SetColorTexture(rgba(C.code))
+  local well = inset(copy)
+  well:SetPoint("TOPLEFT", 18, -76); well:SetPoint("BOTTOMRIGHT", -18, 50)
 
-  local eb = CreateFrame("EditBox", nil, copy)
+  local eb = CreateFrame("EditBox", nil, well)
   eb:SetMultiLine(true)
   eb:SetAutoFocus(false)
   eb:SetFontObject("GameFontHighlight")
   pcall(eb.SetFont, eb, FONT_MONO, 13, "")
   if eb.SetTextColor then eb:SetTextColor(rgba(C.codeInk)) end
-  eb:SetPoint("TOPLEFT", 24, -96)
-  eb:SetSize(432, 160)
+  eb:SetPoint("TOPLEFT", 10, -10)
+  eb:SetSize(424, 180)
   eb:SetMaxLetters(0)
   local function reselect(self) self:SetFocus(); self:HighlightText() end
   eb:SetScript("OnEscapePressed", function() copy:Hide() end)
@@ -755,25 +775,23 @@ local function makeCopy()
   copy.edit = eb
 
   copy.count = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  copy.count:SetPoint("BOTTOMLEFT", 22, 22)
+  copy.count:SetPoint("BOTTOMLEFT", 24, 24)
   copy.count:SetTextColor(rgba(C.dim))
 
   local function button(label, w, onClick)
-    local b = styleButton(CreateFrame("Button", nil, copy))
-    b:SetSize(w, 24)
-    b.label:SetText(label)
+    local b = A.button(copy, w, 22)
+    b:SetLabel(label)
     b:SetScript("OnClick", onClick)
     return b
   end
   copy.done = button("Done", 90, function() copy:Hide() end)
-  copy.done:SetPoint("BOTTOMRIGHT", -18, 16)
-  copy.done:SetLook(true)
+  copy.done:SetPoint("BOTTOMRIGHT", -20, 18)
   copy.nextB = button("Next", 70, function() ns.showMacroCopy(nil, nil, 1) end)
   copy.nextB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   copy.prevB = button("Back", 70, function() ns.showMacroCopy(nil, nil, -1) end)
   copy.prevB:SetPoint("RIGHT", copy.nextB, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
-  close:SetPoint("TOPRIGHT", -4, -4)
+  close:SetPoint("TOPRIGHT", -6, -6)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
 end
 

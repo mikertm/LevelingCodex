@@ -23,7 +23,7 @@ local function chatHas(pat)
 end
 
 local function labelOf(b)
-  return (b.label and b.label._text) or b._text
+  return b.codexLabel or (b.label and b.label._text) or b._text
 end
 
 local function findButton(root, pred)
@@ -87,6 +87,17 @@ function S.makeTalentWindow(mode, frameName)
     local tex = b:CreateTexture(nil, "ARTWORK")
     tex:SetTexture("Interface\\Icons\\" .. iconName)
     b.iconTex = tex
+    -- the trait UI's node shapes: circle, square and choice nodes, each with its own border art
+    local shapes = { "circle", "square", "choice" }
+    b.expectShape = shapes[(id % 3) + 1]
+    if mode == "name" then
+      b.StateBorder = b:CreateTexture(nil, "OVERLAY")
+      b.StateBorder:SetAllPoints()
+      b.StateBorder:SetAtlas("talents-node-" .. b.expectShape .. "-yellow")
+    else
+      b.IconMask = b:CreateTexture(nil, "ARTWORK") -- only the mask tells the shape
+      b.IconMask:SetAtlas("talents-node-" .. b.expectShape .. "-mask")
+    end
     return b
   end
   -- decoys first, so a sloppy finder picks the wrong thing
@@ -307,7 +318,7 @@ end
 -- Every slash command, including junk.
 function S.slash()
   for _, cmd in ipairs({ "", "", "pad ps", "pad switch", "pad nope", "pad xbox", "test", "test 45", "banner", "banner",
-      "quiet", "quiet", "minimap", "minimap", "reset", "help", "MACROS", "  test  ", "zzz" }) do
+      "quiet", "quiet", "minimap", "minimap", "reset", "debug", "help", "MACROS", "  test  ", "zzz" }) do
     slash(cmd)
     MOCK.advance(0.2)
   end
@@ -404,8 +415,12 @@ end
 -- Each tab keeps its own scroll position.
 function S.scrollMemory()
   if not D() then return end
-  local function scroller()
-    for _, c in ipairs(win()._children) do if c._type == "ScrollFrame" then return c end end
+  local function scroller(f)
+    for _, c in ipairs((f or win())._children) do
+      if c._type == "ScrollFrame" then return c end
+      local inner = scroller(c)
+      if inner then return inner end
+    end
   end
   openAt(30, "Talents")
   local sf = scroller()
@@ -543,7 +558,8 @@ function S.talentGuideOff()
   if not D() then return end
   MOCK.level = 30
   openAt(30, "Settings")
-  click(win(), "Trace my talent: On")
+  click(win(), "Trace my talent in the talent window")
+  check(LevelingCodexDB.noTalentGuide, "check box turns the guide off")
   win():Hide()
   ToggleTalentFrame()
   MOCK.advance(0.8)
@@ -551,7 +567,8 @@ function S.talentGuideOff()
   check(not (trace and trace:IsShown()) and not (hint and hint:IsShown()), "guide hidden when turned off")
   ToggleTalentFrame()
   openAt(30, "Settings")
-  click(win(), "Trace my talent: Off")
+  click(win(), "Trace my talent in the talent window")
+  check(not LevelingCodexDB.noTalentGuide, "check box turns the guide back on")
   win():Hide()
 end
 
@@ -702,6 +719,96 @@ function S.lateTalentUI()
   MOCK.advance(1)
   local hint = _G.LevelingCodexTalentHint
   check(not (hint and hint:IsShown()), "hint hides when the late talent UI closes")
+end
+
+-- The guide only shows while there's a point to spend, and traces the next point in the plan.
+function S.talentPoints()
+  if not D() or not talent.root then return end
+  local trace, hint
+  local function guideShown()
+    trace, hint = _G.LevelingCodexTalentTrace, _G.LevelingCodexTalentHint
+    return (trace and trace:IsShown()) or (hint and hint:IsShown())
+  end
+  MOCK.level = 30
+  MOCK.unspent = 0
+  talent.root:Show()
+  MOCK.advance(1)
+  check(not guideShown(), "nothing shown with 0 points to spend")
+  -- two points left at 30: the level-29 point comes first
+  MOCK.unspent = 2
+  MOCK.advance(0.5)
+  check(hint and hint:IsShown(), "hint shown with 2 points to spend")
+  check(hint.label:GetText():find("2 POINTS TO SPEND"), "hint says 2 points to spend")
+  if not MOCK.minimal then
+    local want = talent.byName[planAt(29).name]
+    local _, on = trace:GetPoint(1)
+    check(on == want or (talent.mode == "icon" and on.iconTex._tex == want.iconTex._tex), "traces the level-29 point first")
+  end
+  MOCK.unspent = 1
+  MOCK.advance(0.5)
+  traceCheck(30, not MOCK.minimal)
+  -- the player clicks it: no points left, the guide goes away while the window stays open
+  MOCK.unspent = 0
+  MOCK.advance(0.5)
+  check(not guideShown(), "guide hides once the point is spent")
+  check(talent.root:IsShown(), "talent window still open")
+  talent.root:Hide()
+  MOCK.unspent = nil
+  MOCK.advance(0.5)
+end
+
+-- The trace takes the talent button's shape (circle, square or choice node).
+function S.talentShape()
+  if not D() or not talent.root or MOCK.minimal then return end
+  local seen = {}
+  for level = 10, 60 do
+    MOCK.level = level
+    talent.root:Show()
+    MOCK.advance(0.6)
+    local trace = _G.LevelingCodexTalentTrace
+    local _, b = trace:GetPoint(1)
+    if b and b.expectShape then
+      check(trace.shape == b.expectShape, "trace shape " .. tostring(trace.shape) .. ", button is " .. b.expectShape .. " (level " .. level .. ")")
+      if talent.mode == "name" then
+        check(trace.copied and trace.shapeLine._atlas == b.StateBorder._atlas, "trace copies the button's border art (level " .. level .. ")")
+        local _, rel = trace.shapeLine:GetPoint(1)
+        check(rel == b.StateBorder, "outline sits on the button's border (level " .. level .. ")")
+      else
+        check(not trace.copied, "no border art to copy in icon mode")
+        check(trace.disc:IsShown() == (b.expectShape ~= "square"), "round glow for round nodes (level " .. level .. ")")
+        check(trace.edges[1]:IsShown() == (b.expectShape == "square"), "box only for square nodes (level " .. level .. ")")
+      end
+      seen[b.expectShape] = true
+    end
+    talent.root:Hide()
+    MOCK.advance(0.3)
+  end
+  check(seen.circle and seen.square, "both circle and square talents were traced")
+end
+
+-- /codex debug runs anywhere and reports the art and the talent guide.
+function S.debugReport()
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("art files:"), "debug lists the art files")
+  check(chatHas("unspent points:"), "debug shows the talent points")
+  if talent.root then
+    talent.root:Show(); MOCK.advance(0.6)
+    MOCK.chat = {}
+    slash("debug")
+    check(chatHas("talent window:"), "debug names the talent window")
+    talent.root:Hide(); MOCK.advance(0.3)
+  end
+end
+
+-- Blizzard art is used when the client has it, and its absence never breaks anything.
+function S.artUsed()
+  if not D() then return end
+  slash("")
+  local f = win()
+  local expectArt = not MOCK.minimal and not MOCK.noArt
+  check((f._backdrop ~= nil) == expectArt, "dialog border " .. (expectArt and "used" or "skipped"))
+  win():Hide()
 end
 
 -- The talent window is already open when we log in.

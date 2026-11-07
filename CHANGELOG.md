@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.10.0
+- The Codex window now uses the game's own frame art: the dialog border with the gold title banner, a round class portrait, character-sheet tabs along the bottom, red Blizzard buttons, check boxes in Settings, spellbook page arrows for browsing levels, and cards with the tooltip border.
+- The level-up banner and the talent card above the talent window got the same treatment: Blizzard gold titles, gold lines and icon rims like the game's.
+- The talent guide only appears when you have a talent point to spend, and goes away as soon as you've spent it. With several points to spend it shows the earliest one first.
+- The talent highlight now follows the talent's shape (round, square or choice) instead of always drawing a square box.
+- New `/codex debug` lists what the Codex can see (art, talent window, talent points) to paste into bug reports.
+- Theme colours (Forever teal or Codex gold) now tint the highlights and accents.
+
 ## v0.9.0
 - Fixed: the talent highlight and its card stayed on screen after closing the talent window. They now disappear the moment the window closes.
 - Fixed: levelling up in combat could create every macro for your level when the fight ended. Now only the macros the Codex made are updated.

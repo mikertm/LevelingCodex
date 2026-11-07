@@ -21,6 +21,9 @@ MOCK = {
   fileIDs = {},       -- lower(path) -> id
   nextFileID = 500000,
   missingTextures = {},
+  disabledTemplates = {},
+  atlases = {},       -- atlas names the client knows (C_Texture.GetAtlasInfo / SetAtlas)
+  unspent = nil,      -- talent points to spend; nil = one per level from 10 (the usual case)
   mouseOver = {},
   textures = 0,
 }
@@ -153,12 +156,23 @@ function Texture:SetTexture(path)
   return true
 end
 function Texture:GetTexture() return self._tex end
+function Texture:SetAtlas(name)
+  if not (MOCK.atlases[name]) then error("SetAtlas: unknown atlas " .. tostring(name), 2) end
+  self._atlas, self._tex = name, "atlas:" .. name
+  return true
+end
+function Texture:GetAtlas() return self._atlas end
+function Texture:SetTexCoord(...) self._coords = { ... } end
+function Texture:GetTexCoord()
+  local c = self._coords or { 0, 1, 0, 1 }
+  if #c == 4 then return c[1], c[3], c[1], c[4], c[2], c[3], c[2], c[4] end
+  return unpack(c)
+end
 function Texture:SetColorTexture(r, g, b, a)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetColorTexture: bad color", 2) end
   self._tex = "color"
 end
 function Texture:SetVertexColor() end
-function Texture:SetTexCoord() end
 function Texture:SetBlendMode(m) if m ~= "ADD" and m ~= "BLEND" and m ~= "ALPHAKEY" and m ~= "DISABLE" and m ~= "MOD" then error("bad blend mode", 2) end end
 function Texture:SetDrawLayer(layer, sub)
   if sub and (sub < -8 or sub > 7) then error("SetDrawLayer: sublevel out of range", 2) end
@@ -285,9 +299,15 @@ function Frame:SetPropagateGamePadInput(on) self._padPropagate = on end
 function Frame:SetResizable() end
 function Frame:SetUserPlaced() end
 function Frame:IsUserPlaced() return false end
-function Frame:SetBackdrop() end
-function Frame:SetBackdropColor() end
-function Frame:SetBackdropBorderColor() end
+-- modern clients: only frames made with BackdropTemplate have backdrops
+function Frame:SetBackdrop(b)
+  if BackdropTemplateMixin and not self._backdropTemplate then error("SetBackdrop needs BackdropTemplate", 2) end
+  if type(b) ~= "table" or type(b.edgeFile) ~= "string" then error("SetBackdrop: bad backdrop", 2) end
+  self._backdrop = b
+end
+function Frame:SetBackdropColor(r, g, b) if not self._backdrop then error("SetBackdropColor without a backdrop", 2) end end
+function Frame:SetBackdropBorderColor(r, g, b) if not self._backdrop then error("SetBackdropBorderColor without a backdrop", 2) end end
+function Frame:SetClampRectInsets() end
 function Frame:SetParent(p)
   local old = self._parent
   if old and old._children then
@@ -307,8 +327,14 @@ function Button:Enable() self._disabled = false end
 function Button:Disable() self._disabled = true end
 function Button:IsEnabled() return not self._disabled end
 function Button:SetEnabled(on) self._disabled = not on end
+function Button:LockHighlight() self._lit = true end
+function Button:UnlockHighlight() self._lit = false end
+function Button:SetChecked(on) self._checked = on and true or false end
+function Button:GetChecked() return self._checked or false end
+function Button:SetCheckedTexture() end
 function Button:Click(btn)
   if self._disabled then return end
+  if self._type == "CheckButton" then self._checked = not self._checked end
   fire(self, "PreClick", btn or "LeftButton", false)
   fire(self, "OnClick", btn or "LeftButton", false)
   fire(self, "PostClick", btn or "LeftButton", false)
@@ -425,7 +451,14 @@ function CreateFrame(kind, name, parent, template)
         f:SetScript("OnClick", function(self) self:GetParent():Hide() end)
       elseif t == "UIPanelScrollFrameTemplate" then
         f.ScrollBar = CreateFrame("Slider", name and name .. "ScrollBar" or nil, f)
-      elseif t == "InputBoxTemplate" or t == "BackdropTemplate" or t == "UIPanelButtonTemplate" then
+      elseif MOCK.disabledTemplates[t] then
+        error("CreateFrame: unknown template " .. t, 2)
+      elseif t == "BackdropTemplate" then
+        f._backdropTemplate = true
+      elseif t == "UICheckButtonTemplate" then
+        if kind ~= "CheckButton" then error("UICheckButtonTemplate needs a CheckButton", 2) end
+        f:SetSize(32, 32)
+      elseif t == "InputBoxTemplate" or t == "UIPanelButtonTemplate" then
         -- nothing extra needed
       else
         error("CreateFrame: unknown template " .. t, 2)
@@ -504,6 +537,32 @@ end
 function GetFileIDFromPath(path) return MOCK.fileID(path) end
 
 C_Spell = { GetSpellName = function(id) return MOCK.spells[id] end }
+BackdropTemplateMixin = {}
+C_Texture = { GetAtlasInfo = function(name) if MOCK.atlases[name] then return { width = 64, height = 64 } end end }
+for _, a in ipairs({ "talents-node-circle-yellow", "talents-node-square-yellow", "talents-node-choice-yellow",
+    "talents-node-circle-mask", "talents-node-square-mask", "talents-node-choice-mask" }) do
+  MOCK.atlases[a] = true
+end
+function SetPortraitToTexture(tex, path)
+  if type(path) ~= "string" and type(path) ~= "number" then error("SetPortraitToTexture: bad texture", 2) end
+  tex._tex, tex._round = path, true
+end
+function GetBuildInfo() return "1.60.1", "99999", "Nov 1 2026", 16001 end
+C_AddOns = { GetAddOnMetadata = function(addon, key) if key == "Version" then return "@project-version@" end end }
+
+-- Talent points: Forever's trait system, and the classic call.
+local function unspentNow()
+  if MOCK.unspent then return MOCK.unspent end
+  return MOCK.level >= 10 and 1 or 0
+end
+C_ClassTalents = { GetActiveConfigID = function() return 7 end }
+C_Traits = {
+  GetConfigInfo = function(id) return { ID = id, treeIDs = { 101 } } end,
+  GetTreeCurrencyInfo = function(configID, treeID, excludeStaged)
+    return { { traitCurrencyID = 55, quantity = unspentNow(), maxQuantity = 51, spent = 0 } }
+  end,
+}
+function UnitCharacterPoints(unit) return unspentNow() end
 function GetSpellInfo(id) return MOCK.spells[id] end
 
 function hooksecurefunc(a, b, c)
@@ -674,7 +733,8 @@ function MOCK.drag(f, dx, dy)
 end
 
 -- Remove the APIs a careful addon must not rely on.
-local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
+local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "C_Texture", "SetPortraitToTexture",
+  "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros" }
 
 function MOCK.setup(opts)
@@ -686,6 +746,15 @@ function MOCK.setup(opts)
     Texture.SetRotation = nil
     Frame.EnableGamePadButton = nil
     Frame.SetPropagateGamePadInput = nil
+    -- an old-style client: no Blizzard button/check templates, no backdrops at all
+    Frame.SetBackdrop = nil
+    for _, t in ipairs({ "UIPanelButtonTemplate", "UICheckButtonTemplate", "BackdropTemplate" }) do
+      MOCK.disabledTemplates[t] = true
+    end
+  end
+  if opts.noArt then
+    -- the client has the APIs but none of the Blizzard art files
+    for _, p in ipairs(opts.noArt) do MOCK.missingTextures[p:lower()] = true end
     for _, m in ipairs({ "SetSmoothing", "SetScaleFrom", "SetScaleTo" }) do Anim[m] = nil end
     AnimGroup.SetToFinalAlpha = nil
   end

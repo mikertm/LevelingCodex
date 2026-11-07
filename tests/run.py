@@ -33,10 +33,13 @@ UNSUPPORTED = "DEATHKNIGHT"
 MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLoginCheck", "levelups",
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
-        "talentPooledButtons", "talentCloseDirect", "copyMacro", "scrollMemory", "gamepadClose", "binding",
-        "noFalseLostNote"]
+        "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
+        "gamepadClose", "binding", "debugReport", "artUsed", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
-        "lateTalentUI"]
+        "talentPoints", "talentShape", "lateTalentUI"]
+# The client has every API but none of the Blizzard art files: everything falls back.
+NOART = ["makeTalentWindow:name", "login", "levelups", "browse", "everyButton", "settings", "talentByName",
+         "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
 LOST = ["lost", "login", "lostSavedVariables"]
 
@@ -95,12 +98,19 @@ def lua_path(p):
     return p.replace("\\", "/")
 
 
-def new_state(cls, minimal, files, pre=None):
+def art_files():
+    """Every Blizzard art path Art.lua uses (for the no-art run)."""
+    src = open(os.path.join(ROOT, "Art.lua"), encoding="utf-8").read()
+    block = src[src.index("A.FILES = {"):]
+    block = block[:block.index("\n}")]
+    return [p.replace("\\\\", "\\") for p in re.findall(r'"(Interface[^"]+)"', block)]
+
+
+def new_state(cls, minimal, files, pre=None, noart=False):
     lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding=None)
-    g = lua.globals()
     lua.execute(b'dofile("' + lua_path(os.path.join(HERE, "wowmock.lua")).encode() + b'")')
-    setup = lua.eval(b"function(c, m) MOCK.setup({ class = c, minimal = m }) end")
-    setup(cls.encode(), minimal)
+    setup = lua.eval(b"function(c, m, noart) MOCK.setup({ class = c, minimal = m, noArt = noart }); MOCK.noArt = noart end")
+    setup(cls.encode(), minimal, lua.table_from([p.encode() for p in art_files()]) if noart else None)
     lua.execute(b'dofile("' + lua_path(os.path.join(HERE, "scenarios.lua")).encode() + b'")')
     if pre:
         lua.execute(pre.encode())
@@ -116,7 +126,7 @@ def new_state(cls, minimal, files, pre=None):
 
 def run_sequence(name, cls, minimal, files, steps):
     pre = PERSISTED_DB if "persist" in steps else None
-    lua, err = new_state(cls, minimal, files, pre)
+    lua, err = new_state(cls, minimal, files, pre, noart=steps is NOART)
     if not err and "lost" in steps:
         lua.execute(LOST_DB.encode())
     failures = []
@@ -232,6 +242,9 @@ def main():
         for cls in CLASSES:
             if not minimal:  # needs GetMacroInfo to recognise last session's macros
                 runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST))
+        if not minimal:
+            for cls in ("WARRIOR", "PRIEST", "DRUID"):
+                runs.append(("%s/full/no-art" % cls, cls, False, NOART))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

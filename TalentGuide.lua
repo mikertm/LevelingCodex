@@ -171,7 +171,113 @@ local function discoverRoots(force)
 end
 ns.discoverTalentRoots = discoverRoots
 
--- The traced outline: a glowing border, pulsing halo and a bright spark running around it.
+-- Unspent talent points and where the number came from (nil when the client can't tell us).
+-- The trait system first (Forever's talent window), then the classic API.
+local function unspentPoints()
+  if C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits and C_Traits.GetConfigInfo
+    and C_Traits.GetTreeCurrencyInfo then
+    local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+    if ok and configID then
+      local iok, info = pcall(C_Traits.GetConfigInfo, configID)
+      if iok and type(info) == "table" and type(info.treeIDs) == "table" then
+        local total, seen, any = 0, {}, false
+        for _, treeID in ipairs(info.treeIDs) do
+          local cok, list = pcall(C_Traits.GetTreeCurrencyInfo, configID, treeID, false)
+          if cok and type(list) == "table" then
+            for i, cur in ipairs(list) do
+              local id = cur.traitCurrencyID or (treeID .. ":" .. i)
+              if not seen[id] then
+                seen[id] = true
+                total = total + (tonumber(cur.quantity) or 0)
+                any = true
+              end
+            end
+          end
+        end
+        if any then return total, "C_Traits" end
+      end
+    end
+  end
+  if UnitCharacterPoints then
+    local ok, n = pcall(UnitCharacterPoints, "player")
+    if ok and type(n) == "number" then return n, "UnitCharacterPoints" end
+  end
+  return nil, "unknown"
+end
+ns.unspentTalentPoints = unspentPoints
+
+-- The plan level of the next point to spend: with 2 points left at 30, that's level 29's.
+local function nextPlanLevel(level, unspent)
+  if not unspent then return level end
+  local earned = math.max(0, level - 9)
+  local spent = math.max(0, earned - unspent)
+  return math.max(10, math.min(level, 10 + spent))
+end
+
+-- The talent button's own border art, so the trace takes its shape (circle, square, choice).
+local BORDER_KEYS = { "StateBorder", "Border", "IconBorder", "Ring", "Frame", "BorderSheen" }
+local function shapeName(s)
+  s = lower(tostring(s or "")) or ""
+  if s:find("circle") or s:find("round") then return "circle" end
+  if s:find("choice") or s:find("octagon") then return "choice" end
+  if s:find("square") then return "square" end
+end
+
+local function regionArt(r)
+  if type(r) ~= "table" or not r.GetObjectType then return end
+  local ok, kind = pcall(r.GetObjectType, r)
+  if not ok or kind ~= "Texture" then return end
+  local atlas
+  if r.GetAtlas then
+    local aok, a = pcall(r.GetAtlas, r)
+    if aok and type(a) == "string" and a ~= "" then atlas = a end
+  end
+  local file
+  if not atlas and r.GetTexture then
+    local fok, f = pcall(r.GetTexture, r)
+    if fok and f then file = f end
+  end
+  if not (atlas or file) then return end
+  local coords
+  if file and r.GetTexCoord then
+    local cok, a, b, c, d, e, f2, g, h = pcall(r.GetTexCoord, r)
+    if cok and a then coords = { a, b, c, d, e, f2, g, h } end
+  end
+  return { region = r, atlas = atlas, file = file, coords = coords, shape = shapeName(atlas or file) }
+end
+
+local function buttonShape(b)
+  for _, k in ipairs(BORDER_KEYS) do
+    local art = regionArt(b[k])
+    if art then return art end
+  end
+  -- no border region: the icon mask still tells the shape
+  for _, k in ipairs({ "IconMask", "Mask", "CircleMask" }) do
+    local m = b[k]
+    if type(m) == "table" then
+      local name
+      if m.GetAtlas then local ok, a = pcall(m.GetAtlas, m); if ok then name = a end end
+      if not name and m.GetTexture then local ok, t = pcall(m.GetTexture, m); if ok then name = t end end
+      local s = shapeName(name) or (k == "CircleMask" and "circle")
+      if s then return { shape = s } end
+    end
+  end
+  return { shape = "square" }
+end
+
+local function copyArt(tex, art)
+  if art.atlas and tex.SetAtlas then
+    if pcall(tex.SetAtlas, tex, art.atlas, false) then return true end
+  end
+  if art.file and tex:SetTexture(art.file) ~= false then
+    if art.coords then pcall(tex.SetTexCoord, tex, unpack(art.coords)) end
+    return true
+  end
+  return false
+end
+
+-- The traced outline: the talent's own border shape in the accent colour with a pulsing glow,
+-- and two sparks running round it. Square boxes only when the button's shape can't be read.
 local function makeTrace()
   local t = CreateFrame("Frame", "LevelingCodexTalentTrace", UIParent)
   t:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -191,6 +297,17 @@ local function makeTrace()
   t.edges[2]:SetPoint("BOTTOMLEFT", -3, -3); t.edges[2]:SetPoint("BOTTOMRIGHT", 3, -3); t.edges[2]:SetHeight(2)
   t.edges[3]:SetPoint("TOPLEFT", -3, 3); t.edges[3]:SetPoint("BOTTOMLEFT", -3, -3); t.edges[3]:SetWidth(2)
   t.edges[4]:SetPoint("TOPRIGHT", 3, 3); t.edges[4]:SetPoint("BOTTOMRIGHT", 3, -3); t.edges[4]:SetWidth(2)
+  -- shape-matched outline and glow (copies of the button's border)
+  t.shapeGlow = t:CreateTexture(nil, "BACKGROUND", nil, 1)
+  t.shapeGlow:SetBlendMode("ADD")
+  t.shapeLine = t:CreateTexture(nil, "OVERLAY")
+  t.shapeLine:SetBlendMode("ADD")
+  -- round glow when only the mask says "circle"
+  t.disc = t:CreateTexture(nil, "BACKGROUND", nil, 2)
+  t.disc:SetPoint("TOPLEFT", -6, 6); t.disc:SetPoint("BOTTOMRIGHT", 6, -6)
+  t.disc.round = SetPortraitToTexture and pcall(SetPortraitToTexture, t.disc, "Interface\\Buttons\\WHITE8X8")
+  if not t.disc.round then t.disc:SetColorTexture(1, 1, 1, 1) end
+  t.disc:SetBlendMode("ADD")
   t.spark = t:CreateTexture(nil, "OVERLAY", nil, 2)
   t.spark:SetSize(14, 14)
   if t.spark:SetTexture("Interface\\Cooldown\\star4") == false then t.spark:SetColorTexture(1, 1, 1, 1) end
@@ -200,37 +317,53 @@ local function makeTrace()
   if t.spark2:SetTexture("Interface\\Cooldown\\star4") == false then t.spark2:SetColorTexture(1, 1, 1, 1) end
   t.spark2:SetBlendMode("ADD")
 
-  t.tag = CreateFrame("Frame", nil, t)
+  -- "Codex pick" tag in a tooltip-style box
+  t.tag = ns.art.frame("Frame", nil, t)
   t.tag:SetSize(10, 22)
   t.tag:SetPoint("BOTTOM", t, "TOP", 0, 8)
-  t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
-  t.tag.line = t.tag:CreateTexture(nil, "BORDER")
-  t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
-  t.tag.text = t.tag:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  t.tag.text:SetPoint("CENTER", 0, 1)
+  t.tag.blizz = ns.art.backdrop(t.tag, "tooltip")
+  if not t.tag.blizz then
+    t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
+    t.tag.line = t.tag:CreateTexture(nil, "BORDER")
+    t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
+  end
+  t.tag.text = t.tag:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  t.tag.text:SetPoint("CENTER", 0, 0)
 
   t.time = 0
   t:SetScript("OnUpdate", function(self, elapsed)
     self.time = self.time + elapsed
     local w0, h0 = self:GetWidth(), self:GetHeight()
     if not w0 or not h0 or w0 <= 0 then return end
-    local w, h = w0 + 6, h0 + 6
-    local per = 2 * (w + h)
-    local function at(d)
-      d = d % per
-      if d < w then return -3 + d, 3 end
-      d = d - w
-      if d < h then return w - 3, 3 - d end
-      d = d - h
-      if d < w then return w - 3 - d, 3 - h end
-      return -3, 3 - h + (d - w)
+    local x, y, x2, y2
+    if self.round then
+      -- sparks orbit a circle or choice node
+      local r = math.max(w0, h0) / 2 + 3
+      local a = self.time * 2 * math.pi / 1.6
+      x, y = w0 / 2 + r * math.cos(a), -h0 / 2 + r * math.sin(a)
+      x2, y2 = w0 / 2 + r * math.cos(a + math.pi), -h0 / 2 + r * math.sin(a + math.pi)
+    else
+      local w, h = w0 + 6, h0 + 6
+      local per = 2 * (w + h)
+      local function at(d)
+        d = d % per
+        if d < w then return -3 + d, 3 end
+        d = d - w
+        if d < h then return w - 3, 3 - d end
+        d = d - h
+        if d < w then return w - 3 - d, 3 - h end
+        return -3, 3 - h + (d - w)
+      end
+      x, y = at(self.time * per / 1.6)
+      x2, y2 = at(self.time * per / 1.6 + per / 2)
     end
-    local x, y = at(self.time * per / 1.6)
     self.spark:ClearAllPoints(); self.spark:SetPoint("CENTER", self, "TOPLEFT", x, y)
-    local x2, y2 = at(self.time * per / 1.6 + per / 2)
     self.spark2:ClearAllPoints(); self.spark2:SetPoint("CENTER", self, "TOPLEFT", x2, y2)
     local pulse = 0.55 + 0.45 * math.sin(self.time * 4)
     self.halo:SetAlpha(0.35 + 0.4 * pulse)
+    self.shapeGlow:SetAlpha(0.3 + 0.45 * pulse)
+    self.shapeLine:SetAlpha(0.75 + 0.25 * pulse)
+    self.disc:SetAlpha(0.12 + 0.18 * pulse)
     for _, e in ipairs(self.edges) do e:SetAlpha(0.7 + 0.3 * pulse) end
   end)
   return t
@@ -240,42 +373,91 @@ local function paintTrace(t)
   local a = C.accent
   t.halo:SetVertexColor(a[1], a[2], a[3])
   for _, e in ipairs(t.edges) do e:SetColorTexture(a[1], a[2], a[3], 1) end
+  t.shapeGlow:SetVertexColor(a[1], a[2], a[3]); t.shapeLine:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
+  t.disc:SetVertexColor(a[1], a[2], a[3])
   t.spark:SetVertexColor(C.gem[1], C.gem[2], C.gem[3]); t.spark2:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
-  t.tag.bg:SetColorTexture(rgba(C.panel)); t.tag.line:SetColorTexture(rgba(C.edge))
-  t.tag.text:SetTextColor(rgba(C.gold))
+  if t.tag.blizz then
+    t.tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
+    t.tag:SetBackdropBorderColor(rgba(C.edge))
+  else
+    t.tag.bg:SetColorTexture(rgba(C.panel)); t.tag.line:SetColorTexture(rgba(C.edge))
+  end
+  t.tag.text:SetTextColor(1, 0.82, 0)
 end
 
--- The hint card at the top of the talent window.
+-- Fit the trace to the button: copy its border when we can read it, else a box or a disc.
+local function shapeTrace(t, b)
+  local art = buttonShape(b)
+  t.shape = art.shape
+  t.round = art.shape == "circle" or art.shape == "choice"
+  local copied = false
+  if art.region then
+    copied = copyArt(t.shapeLine, art) and copyArt(t.shapeGlow, art)
+    if copied then
+      t.shapeLine:ClearAllPoints()
+      t.shapeLine:SetPoint("TOPLEFT", art.region, "TOPLEFT", -2, 2)
+      t.shapeLine:SetPoint("BOTTOMRIGHT", art.region, "BOTTOMRIGHT", 2, -2)
+      t.shapeGlow:ClearAllPoints()
+      t.shapeGlow:SetPoint("TOPLEFT", art.region, "TOPLEFT", -9, 9)
+      t.shapeGlow:SetPoint("BOTTOMRIGHT", art.region, "BOTTOMRIGHT", 9, -9)
+    end
+  end
+  t.copied = copied
+  t.shapeLine:SetShown(copied); t.shapeGlow:SetShown(copied)
+  local box = not copied and not t.round
+  for _, e in ipairs(t.edges) do e:SetShown(box) end
+  t.halo:SetShown(box)
+  t.disc:SetShown(not copied and t.round)
+end
+
+-- The hint card above the talent window, in a tooltip-style Blizzard border.
 local function makeHint()
-  local h = CreateFrame("Frame", "LevelingCodexTalentHint", UIParent)
-  h:SetSize(420, 58)
+  local A = ns.art
+  local h = A.frame("Frame", "LevelingCodexTalentHint", UIParent)
+  h:SetSize(430, 62)
   h:SetFrameStrata("FULLSCREEN_DIALOG")
   h:EnableMouse(false)
   h:Hide()
-  h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
-  h.edges = {}
-  for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
-  h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
-  h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
-  h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
-  h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
-  h.icon = h:CreateTexture(nil, "ARTWORK")
-  h.icon:SetSize(38, 38); h.icon:SetPoint("LEFT", 10, 0); h.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  h.blizz = A.backdrop(h, "tooltip")
+  if not h.blizz then
+    h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
+    h.edges = {}
+    for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
+    h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
+    h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
+    h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
+    h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
+  end
+  h.glow = h:CreateTexture(nil, "BORDER")
+  h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
+  h.ring = h:CreateTexture(nil, "ARTWORK")
+  h.ring:SetSize(42, 42); h.ring:SetPoint("LEFT", 10, 0); h.ring:SetColorTexture(0.72, 0.58, 0.3, 0.95)
+  h.edge = h:CreateTexture(nil, "ARTWORK", nil, 1)
+  h.edge:SetSize(40, 40); h.edge:SetPoint("CENTER", h.ring, "CENTER"); h.edge:SetColorTexture(0, 0, 0, 1)
+  h.icon = h:CreateTexture(nil, "ARTWORK", nil, 2)
+  h.icon:SetSize(38, 38); h.icon:SetPoint("CENTER", h.ring, "CENTER"); h.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  h.label:SetPoint("TOPLEFT", h.icon, "TOPRIGHT", 10, 0)
+  h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, 1)
   h.name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   h.name:SetPoint("TOPLEFT", h.label, "BOTTOMLEFT", 0, -2)
-  h.name:SetFont("Fonts\\MORPHEUS.TTF", 17, "")
+  h.name:SetFont("Fonts\\MORPHEUS.TTF", 18, "")
+  h.name:SetShadowOffset(1, -1)
   h.next = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   h.next:SetPoint("TOPLEFT", h.name, "BOTTOMLEFT", 0, -2)
-  h.next:SetWidth(350); h.next:SetJustifyH("LEFT"); h.next:SetWordWrap(false)
+  h.next:SetWidth(360); h.next:SetJustifyH("LEFT"); h.next:SetWordWrap(false)
   return h
 end
 
 local function paintHint(h)
-  h.bg:SetColorTexture(rgba(C.bg))
-  for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
-  h.label:SetTextColor(rgba(C.goldDim)); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
+  if h.blizz then
+    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
+    h:SetBackdropBorderColor(rgba(C.edge))
+  else
+    h.bg:SetColorTexture(rgba(C.bg))
+    for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
+  end
+  ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
+  h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
 end
 
 hideGuide = function()
@@ -285,6 +467,7 @@ hideGuide = function()
 end
 
 -- Runs every 0.25 s. Cheap once the talent is traced: one name check on the cached button.
+-- Shows only while there's a talent point to spend (when the client can tell us).
 local function talentGuideTick()
   local root = (ns.D and not ns.db().noTalentGuide) and shownTalentRoot()
   if root and isOurs(root) then guide.roots[root] = nil; root = nil end
@@ -294,20 +477,27 @@ local function talentGuideTick()
   end
   watchRoot(root)
   local level = UnitLevel("player")
-  local hit, rank = ns.talentAt(level)
+  local unspent, source = unspentPoints()
+  guide.unspent, guide.source = unspent, source
+  if unspent and unspent <= 0 then
+    if guide.open then hideGuide() end
+    return
+  end
+  local planLevel = nextPlanLevel(level, unspent)
+  local hit, rank = ns.talentAt(planLevel)
   if not hit then
     if guide.open then hideGuide() end
     return
   end
   local now = GetTime and GetTime() or 0
-  local key = hit.name .. rank
+  local key = hit.name .. rank .. ":" .. tostring(unspent)
   local fileID = iconFileID(hit.icon)
   local dirty = false
   if not guide.open or root ~= guide.root or key ~= guide.key or guide.theme ~= ns.themeVersion then
-    -- just opened, other window, new level or new theme: redraw, and look again now if needed
+    -- just opened, other window, other point or new theme: redraw, and look again now if needed
     guide.open, guide.root, guide.theme = true, root, ns.themeVersion
-    if key ~= guide.key or root ~= guide.lastRoot then guide.button = nil end
-    guide.lastRoot = root
+    if hit.name ~= guide.talent or root ~= guide.lastRoot then guide.button = nil end
+    guide.lastRoot, guide.talent = root, hit.name
     guide.key = key
     guide.nextSearch, guide.backoff = 0, 1
     dirty = true
@@ -338,10 +528,11 @@ local function talentGuideTick()
   -- hint card above the talent window
   local h = guide.hint
   ns.setIcon(h.icon, hit.icon)
-  h.label:SetText("LEVELING CODEX  -  LEVEL " .. level .. "  -  " .. string.upper(hit.tree))
+  local points = (unspent and unspent > 1) and (unspent .. " POINTS TO SPEND") or ("LEVEL " .. planLevel)
+  h.label:SetText("LEVELING CODEX  -  " .. points .. "  -  " .. string.upper(hit.tree))
   h.name:SetText(hit.name .. "  " .. rank .. "/" .. hit.max)
   local nexts = {}
-  for l = level + 1, math.min(level + 2, 60) do
+  for l = planLevel + 1, math.min(planLevel + 2, 60) do
     local h2, r2 = ns.talentAt(l)
     if h2 then nexts[#nexts + 1] = l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max end
   end
@@ -358,14 +549,36 @@ local function talentGuideTick()
     t:SetPoint("TOPLEFT", b, "TOPLEFT", 0, 0)
     t:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 0, 0)
   end) then
+    shapeTrace(t, b)
     t.tag.text:SetText("Codex pick  " .. rank .. "/" .. hit.max)
-    t.tag:SetWidth(t.tag.text:GetStringWidth() + 16)
+    t.tag:SetWidth(t.tag.text:GetStringWidth() + 18)
     t:Show()
     h.next:SetText(nextText ~= "" and nextText or "Click the traced talent.")
   else
     t:Hide()
     h.next:SetText(nextText ~= "" and nextText or ("Find it in the " .. hit.tree .. " tree."))
   end
+end
+
+-- For /codex debug: what the talent guide can see right now.
+function ns.talentDebugLines()
+  local out = {}
+  local root = shownTalentRoot()
+  local rname = root and root.GetName and select(2, pcall(root.GetName, root)) or nil
+  out[#out + 1] = "talent window: " .. (root and tostring(rname or "(unnamed)") or "not open")
+  local n, source = unspentPoints()
+  out[#out + 1] = "unspent points: " .. tostring(n) .. " (from " .. source .. ")"
+  local discovered = 0
+  for _ in pairs(guide.roots) do discovered = discovered + 1 end
+  out[#out + 1] = "discovered windows: " .. discovered .. ", hooked toggles: " .. ns.hookedToggleCount()
+  if guide.button then
+    local t = guide.trace
+    out[#out + 1] = "traced: " .. tostring(guide.talent) .. " by " .. tostring(guide.how) .. ", shape " ..
+      tostring(t and t.shape) .. (t and t.copied and " (border copied)" or " (drawn)")
+  else
+    out[#out + 1] = "traced: nothing" .. (root and " (talent not found in the window)" or "")
+  end
+  return out
 end
 
 -- Hook the usual ways of opening the talent window so new windows are found quickly.
@@ -381,6 +594,11 @@ local function hookToggles()
   end
 end
 ns.hookTalentToggles = hookToggles
+function ns.hookedToggleCount()
+  local n = 0
+  for _ in pairs(hooked) do n = n + 1 end
+  return n
+end
 
 function ns.startTalentGuide()
   hookToggles()

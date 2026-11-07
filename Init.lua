@@ -117,7 +117,35 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     db.minimapAngle = nil
     ns.updateMini()
     ns.say("banner, window and minimap button positions and sizes reset.")
+  elseif cmd == "debug" then
+    for _, line in ipairs(ns.debugLines()) do ns.say(line) end
   else
-    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex test, /codex reset")
+    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex test, /codex reset, /codex debug")
   end
+end
+
+-- /codex debug: what the Codex can see, to paste into a bug report (all ASCII).
+function ns.debugLines()
+  local out = { "debug report - include this with a screenshot:" }
+  local ok, version, build, _, toc = ns.try(GetBuildInfo)
+  out[#out + 1] = "client: " .. (ok and (tostring(version) .. " build " .. tostring(build) .. " interface " .. tostring(toc)) or "unknown")
+  local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+  local mok, v = ns.try(meta, "LevelingCodex", "Version")
+  out[#out + 1] = "codex: " .. (mok and tostring(v) or "?") .. ", guide: " .. (ns.D and (ns.D.spec .. " " .. tostring(ns.CLASS_NAME)) or "none") ..
+    ", level " .. tostring(UnitLevel("player")) .. ", settings " .. (ns.settingsLost and "did NOT load" or "ok")
+  -- every Blizzard art file the Codex uses
+  local A, have, missing = ns.art, 0, {}
+  local roles = {}
+  for role in pairs(A.FILES) do roles[#roles + 1] = role end
+  table.sort(roles)
+  for _, role in ipairs(roles) do
+    if A.hasFile(A.FILES[role]) then have = have + 1 else missing[#missing + 1] = role end
+  end
+  out[#out + 1] = "art files: " .. have .. "/" .. #roles .. " found" ..
+    (#missing > 0 and (", missing: " .. table.concat(missing, ", ")) or "")
+  local used = A.reportLines()
+  if #used > 0 then out[#out + 1] = "art used: " .. table.concat(used, "; ") end
+  for _, line in ipairs(ns.talentDebugLines()) do out[#out + 1] = line end
+  for i, line in ipairs(out) do out[i] = ns.plain(line) end
+  return out
 end
