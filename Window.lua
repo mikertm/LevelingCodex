@@ -668,8 +668,7 @@ renderers.level = function(V)
   box(0, top, W, y - top, C.parch, C.edge)
   y = y + 12
 
-  -- Next talents strip, with a test button for this level's banner
-  local stripTop = y
+  -- Next talents strip (the banner test lives in Settings)
   if V < 60 and V >= 9 then
     T("NEXT", 0, y + 8, 60, "label", C.goldDim)
     local x = 52
@@ -681,10 +680,8 @@ renderers.level = function(V)
         x = x + 196
       end
     end
+    y = y + 40
   end
-  btn("Test level-up", W - 120, stripTop + 2, 120, function() testBanner(V) end, false,
-    "See the level-up banner for level " .. V .. ". Drag it to move it; change its size in Settings; right-click to close.")
-  y = stripTop + 40
 
   -- Trainer card (dark)
   top = y
