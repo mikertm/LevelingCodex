@@ -99,7 +99,8 @@ function Region:GetHeight() return self._h end
 function Region:GetSize() return self._w, self._h end
 function Region:GetCenter() return self._cx or 500, self._cy or 500 end
 function Region:GetLeft() return 0 end
-function Region:GetTop() return 0 end
+function Region:GetTop() return self._top or 700 end
+function Region:GetBottom() return self._bottom or 100 end
 function Region:IsShown() return self._shown end
 function Region:IsVisible()
   local f = self
@@ -171,6 +172,7 @@ end
 function Texture:SetColorTexture(r, g, b, a)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetColorTexture: bad color", 2) end
   self._tex = "color"
+  self._color = { r, g, b, a or 1 }
   -- like the client: a gradient or rotation from an earlier use survives a new colour
   if self._grad then self._gradStale = true end
   if self._rot and self._rot ~= 0 then self._rotStale = true end
@@ -482,6 +484,7 @@ end
 
 UIParent = CreateFrame("Frame", "UIParent")
 UIParent:SetSize(1920, 1080)
+UIParent._top, UIParent._bottom = 1080, 0
 WorldFrame = CreateFrame("Frame", "WorldFrame")
 
 Minimap = CreateFrame("Frame", "Minimap", UIParent)
@@ -822,6 +825,7 @@ local ALLOWED_GLOBALS = {
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
+  EventToastManagerFrame = true,
 }
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}

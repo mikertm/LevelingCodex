@@ -307,15 +307,17 @@ local function buttonShape(b)
   return { shape = "square" }
 end
 
+-- Copy the border art, greyed out so the theme colour shows true: the game's node borders are
+-- green or yellow, and tinting green with teal gave a yellow-green outline instead of Forever teal.
 local function copyArt(tex, art)
-  if art.atlas and tex.SetAtlas then
-    if pcall(tex.SetAtlas, tex, art.atlas, false) then return true end
-  end
-  if art.file and tex:SetTexture(art.file) ~= false then
+  local ok = false
+  if art.atlas and tex.SetAtlas then ok = pcall(tex.SetAtlas, tex, art.atlas, false) end
+  if not ok and art.file and tex:SetTexture(art.file) ~= false then
     if art.coords then pcall(tex.SetTexCoord, tex, unpack(art.coords)) end
-    return true
+    ok = true
   end
-  return false
+  if ok and tex.SetDesaturated then tex:SetDesaturated(true) end
+  return ok
 end
 
 -- The traced outline: the talent's own border shape in the accent colour with a pulsing glow,
@@ -374,7 +376,7 @@ local function makeTrace()
   t.shapeGlow = t:CreateTexture(nil, "BACKGROUND", nil, 1)
   t.shapeGlow:SetBlendMode("ADD")
   t.shapeLine = t:CreateTexture(nil, "OVERLAY")
-  t.shapeLine:SetBlendMode("ADD")
+  t.shapeLine:SetBlendMode("BLEND") -- solid, so it covers the node's own green/yellow border
   -- round glow when only the mask says "circle"
   t.disc = t:CreateTexture(nil, "BACKGROUND", nil, 2)
   t.disc:SetPoint("TOPLEFT", -6, 6); t.disc:SetPoint("BOTTOMRIGHT", 6, -6)
@@ -455,7 +457,7 @@ local function paintTrace(t)
   else
     t.tag.bg:SetColorTexture(rgba(C.panel)); t.tag.line:SetColorTexture(rgba(C.edge))
   end
-  t.tag.text:SetTextColor(1, 0.82, 0)
+  t.tag.text:SetTextColor(rgba(C.titleInk))
 end
 
 -- Fit the trace to the button: copy its border when we can read it, else a box or a disc.
@@ -495,6 +497,7 @@ local function makeHint()
   local h = A.frame("Frame", "LevelingCodexTalentHint", UIParent)
   h:SetSize(430, 62)
   h:SetFrameStrata("FULLSCREEN_DIALOG")
+  h:SetClampedToScreen(true)
   h:EnableMouse(false)
   h:Hide()
   h.blizz = A.backdrop(h, "tooltip")
@@ -537,6 +540,32 @@ local function paintHint(h)
   end
   ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
   h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
+end
+
+-- Screen-space top/bottom of a frame (nil if the client won't say).
+local function edgeOf(f, method)
+  local ok, v = pcall(f[method], f)
+  local sok, sc = pcall(f.GetEffectiveScale, f)
+  if ok and type(v) == "number" and sok and type(sc) == "number" then return v * sc end
+end
+
+-- Above the talent window when there's room, below it when not (a window near the top of the
+-- screen pushed the card off screen), else inside its top edge.
+local function placeHint(h, root)
+  h:ClearAllPoints()
+  local top, bottom = edgeOf(root, "GetTop"), edgeOf(root, "GetBottom")
+  local screen = edgeOf(UIParent, "GetTop")
+  local need = ((h:GetHeight() or 62) + 12) * (select(2, pcall(h.GetEffectiveScale, h)) or 1)
+  local where = "above"
+  if top and screen and top + need > screen then
+    where = (bottom and bottom - need > 0) and "below" or "inside"
+  end
+  local ok
+  if where == "above" then ok = pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6)
+  elseif where == "below" then ok = pcall(h.SetPoint, h, "TOP", root, "BOTTOM", 0, -6)
+  else ok = pcall(h.SetPoint, h, "TOP", root, "TOP", 0, -44) end
+  if not ok then h:ClearAllPoints(); h:SetPoint("TOP", UIParent, "TOP", 0, -80); where = "screen" end
+  h.where = where
 end
 
 hideGuide = function()
@@ -616,8 +645,7 @@ local function talentGuideTick()
     if h2 then nexts[#nexts + 1] = l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max end
   end
   local nextText = #nexts > 0 and ("Then  " .. table.concat(nexts, "   ")) or ""
-  h:ClearAllPoints()
-  if not pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6) then h:SetPoint("TOP", UIParent, "TOP", 0, -80) end
+  placeHint(h, root)
   h:Show()
 
   -- trace the button
@@ -657,6 +685,7 @@ function ns.talentDebugLines()
   else
     out[#out + 1] = "traced: nothing" .. (root and " (talent not found in the window)" or "")
   end
+  if guide.hint and guide.hint:IsShown() then out[#out + 1] = "card: " .. tostring(guide.hint.where) .. " the talent window" end
   return out
 end
 

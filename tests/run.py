@@ -35,7 +35,7 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
         "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "traitLayoutTree", "macroMockups",
-        "tabGlow", "noFalseLostNote"]
+        "tabGlow", "keycapsLight", "bannerBuiltIn", "talentHintOnScreen", "talentTraceThemed", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
 # The client has every API but none of the Blizzard art files: everything falls back.

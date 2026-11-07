@@ -52,7 +52,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
   elseif event == "PLAYER_LEVEL_UP" then
     local level = tonumber(arg1) or UnitLevel("player")
     ns.levelUpMessage(level)
-    ns.showToast(level)
+    ns.after(0.3, function() ns.showToast(level) end) -- let the game's own display start first
     ns.after(1, function()
       if not ns.db().noAutoMacros then
         ns.setupMacros(true) -- refresh only the macros this addon made, so versions follow your level

@@ -286,15 +286,18 @@ end
 
 -- A filled circle (the game makes any texture round with SetPortraitToTexture), else a square.
 local function newDisc() return top:CreateTexture(nil, "ARTWORK") end
-local canRound = nil
+-- (SetPortraitToTexture can't round a plain white texture in Forever, so it's a round white file.)
+local round = nil
 local function disc(cx, cy, size, color, sub)
   local t = take("disc", newDisc)
   t:SetDrawLayer("ARTWORK", sub or 0)
-  if canRound == nil then
-    canRound = (SetPortraitToTexture and A.hasFile(A.FILES.white) and pcall(SetPortraitToTexture, t, A.FILES.white)) and true or false
+  if round == nil then
+    round = A.hasFile(A.FILES.circle)
+    A.report["round shapes"] = round and "ok" or "square"
   end
-  if canRound then
-    SetPortraitToTexture(t, A.FILES.white)
+  if round then
+    t:SetTexture(A.FILES.circle)
+    t:SetTexCoord(0, 1, 0, 1)
     t:SetVertexColor(color[1], color[2], color[3])
     t:SetAlpha(color[4] or 1)
   else
@@ -381,9 +384,13 @@ local function faceGlyph(cx, cy, size, letter, dim)
       bar(cx, cy + hh / 3, L, th, 0, ink)
       bar(cx - L / 4, cy - hh / 6, L, th, 60, ink)
       bar(cx + L / 4, cy - hh / 6, L, th, -60, ink)
-    else -- Circle: a ring
-      disc(cx, cy, s * 1.05, ink, 2)
-      disc(cx, cy, s * 1.05 - th * 2, { 0.07, 0.07, 0.08, 1 }, 3)
+    else -- Circle: a ring of short strokes (round textures may not exist, rotation does)
+      local R, n = s * 0.5, 12
+      local seg = 2 * R * math.sin(math.pi / n) + 1.5
+      for i = 0, n - 1 do
+        local a = (i + 0.5) * 2 * math.pi / n
+        bar(cx + R * math.cos(a), cy - R * math.sin(a), seg, th, math.deg(a) + 90, ink)
+      end
     end
     return
   end
@@ -454,7 +461,10 @@ local function keycap(text, x, y)
   fs:SetWidth(w); fs:SetJustifyH("CENTER"); fs:ClearAllPoints(); fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
   fs:SetShadowOffset(0, 0)
   plate(x, y, w, 20, { 0.84, 0.82, 0.76, 1 }, { 0.32, 0.3, 0.27, 1 })
-  rect(x + 3, y + 15, w - 6, 2, { 0.55, 0.53, 0.48, 1 }, "border", 3) -- the key's front edge
+  -- the key's face, painted directly (a tinted tooltip background comes out dark in Forever)
+  rect(x + 2, y + 2, w - 4, 16, { 0.86, 0.84, 0.78, 1 }, "border", 2)
+  rect(x + 2, y + 2, w - 4, 3, { 0.96, 0.95, 0.91, 1 }, "border", 3) -- light top edge
+  rect(x + 2, y + 15, w - 4, 3, { 0.6, 0.58, 0.53, 1 }, "border", 3)  -- the key's front edge
   return w
 end
 
@@ -523,8 +533,14 @@ local function controllerMock(list, y)
     end
     -- the two diamonds
     local cyD = py + 100
-    for side, set in ipairs({ { pos = DPAD_POS, slots = g.dir, cx = px + pw * 0.27, isDir = true },
-                              { pos = FACE_POS, slots = g.face, cx = px + pw * 0.73 } }) do
+    local sets = {}
+    if next(g.dir) then sets[#sets + 1] = { pos = DPAD_POS, slots = g.dir, isDir = true } end
+    if next(g.face) then sets[#sets + 1] = { pos = FACE_POS, slots = g.face } end
+    for k, set in ipairs(sets) do
+      -- one diamond: centred; two: d-pad on the left, face buttons on the right
+      set.cx = px + pw * (#sets == 1 and 0.5 or (k == 1 and 0.26 or 0.74))
+    end
+    for _, set in ipairs(sets) do
       for name, p in pairs(set.pos) do
         local sx, sy = set.cx + p[1] * 40, cyD + p[2] * 40
         local ms = set.slots[name]

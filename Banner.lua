@@ -34,7 +34,19 @@ end
 ----------------------------------------------------------------------------
 
 local toast
-local DEFAULT_TOAST = { "TOP", "TOP", 0, -150 } -- just below the game's own level-up text
+-- Forever shows its own level-up display near the top of the screen: start well below it.
+local DEFAULT_TOAST = { "TOP", "TOP", 0, -290 }
+-- The game's own level-up displays; while one is up, the banner waits its turn.
+local BUILT_IN = { "LevelUpDisplay", "EventToastManagerFrame", "LevelUpFrame", "BossBanner" }
+local function builtInShowing()
+  for _, n in ipairs(BUILT_IN) do
+    local f = _G[n]
+    if type(f) == "table" and f.IsVisible then
+      local ok, v = pcall(f.IsVisible, f)
+      if ok and v then return n end
+    end
+  end
+end
 local TOAST_W = 480
 local MAX_ROWS = 5
 local HOLD = 8 -- seconds on screen before it fades (paused while your mouse is over it)
@@ -294,9 +306,15 @@ local function layoutToast(rowsUsed)
 end
 
 -- force: show even when the banner is turned off. test: stays up until right-clicked.
-function ns.showToast(level, force, test)
+function ns.showToast(level, force, test, waited)
   if not ns.D then return end
   if ns.db().noToast and not force then return end
+  -- a real level-up waits (up to 8 s) for the game's own level-up display to finish
+  waited = waited or 0
+  if not test and waited < 8 and builtInShowing() then
+    ns.after(0.5, function() ns.showToast(level, force, test, waited + 0.5) end)
+    return
+  end
   if not toast then makeToast() end
   if toast.unlocked then return end
 

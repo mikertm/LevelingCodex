@@ -928,6 +928,80 @@ function S.macroMockups()
   win():Hide()
 end
 
+-- The banner never sits on top of the game's own level-up display.
+function S.bannerBuiltIn()
+  if not D() then return end
+  LevelingCodexDB.toastPos = nil
+  local builtin = _G.EventToastManagerFrame or CreateFrame("Frame", "EventToastManagerFrame", UIParent)
+  builtin:Show()
+  MOCK.level = 25
+  MOCK.event("PLAYER_LEVEL_UP", 25)
+  MOCK.advance(3)
+  check(not (toast() and toast():IsShown()), "banner waits while the game's level-up display is up")
+  builtin:Hide()
+  MOCK.advance(1)
+  check(toast():IsShown(), "banner shows once the game's display is gone")
+  local _, _, _, x, y = toast():GetPoint(1)
+  check(y == -290, "banner starts below the game's display (y " .. tostring(y) .. ")")
+  -- a game display that never goes away doesn't swallow the banner
+  MOCK.advance(12)
+  builtin:Show()
+  MOCK.event("PLAYER_LEVEL_UP", 26)
+  MOCK.advance(10)
+  check(toast():IsShown(), "banner shows after 8 s even if the game's display stays up")
+  builtin:Hide()
+  MOCK.advance(12)
+end
+
+-- Keycaps have a light face (dark legends on a dark cap were unreadable in game).
+function S.keycapsLight()
+  if not D() then return end
+  openAt(30, "This Level")
+  local light = 0
+  local function walk(f)
+    for _, r in ipairs(f._regions) do
+      local c = r._shown and r._tex == "color" and r._color
+      if c and c[1] > 0.8 and c[2] > 0.8 and c[3] > 0.7 and r._w > 18 then light = light + 1 end
+    end
+    for _, c in ipairs(f._children) do if c._shown then walk(c) end end
+  end
+  walk(win())
+  local keyed = 0
+  for _, m in ipairs(D().macros) do if 30 >= m.lo and 30 <= m.hi and m.kb ~= "" then keyed = keyed + 1 end end
+  check(light >= keyed, "a light keycap face per key (" .. light .. " for " .. keyed .. " keys)")
+  win():Hide()
+end
+
+-- The card above the talent window stays on screen: a window near the top gets it underneath.
+function S.talentHintOnScreen()
+  if not D() or not talent.root then return end
+  MOCK.level = 30
+  for _, case in ipairs({ { 600, 150, "above" }, { 1075, 200, "below" }, { 1075, 30, "inside" } }) do
+    talent.root._top, talent.root._bottom = case[1], case[2]
+    talent.root:Show()
+    MOCK.advance(0.6)
+    local hint = _G.LevelingCodexTalentHint
+    check(hint:IsShown() and hint.where == case[3], "card goes " .. case[3] .. " (got " .. tostring(hint.where) .. ")")
+    local p, rel, rp = hint:GetPoint(1)
+    check(rel == talent.root, "card still anchored to the talent window")
+    talent.root:Hide()
+    MOCK.advance(0.3)
+  end
+  talent.root._top, talent.root._bottom = nil, nil
+end
+
+-- The trace takes the theme's colour, not the node's own green or yellow.
+function S.talentTraceThemed()
+  if not D() or not talent.root or MOCK.minimal or talent.mode ~= "name" then return end
+  MOCK.level = 30
+  talent.root:Show()
+  MOCK.advance(0.6)
+  local t = _G.LevelingCodexTalentTrace
+  check(t.copied and t.shapeLine._desat and t.shapeGlow._desat, "copied border art is greyed out before the theme tint")
+  talent.root:Hide()
+  MOCK.advance(0.3)
+end
+
 -- Tabs: the hover glow never lights the selected tab.
 function S.tabGlow()
   if not D() then return end

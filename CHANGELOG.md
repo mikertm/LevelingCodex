@@ -11,6 +11,9 @@
 - The Macros tab now shows where each macro goes: your controller's button sets (R2, L2, L2 + R2...) with each macro on its button, and an action bar with each macro on its key. Controller bindings are drawn as the game's button badges and glyphs (PlayStation shapes, Xbox letters, Switch letters) and keys as keycaps, everywhere in the Codex.
 - Parchment cards in the Forever theme get the teal wash of Forever's quest log.
 - Fixed: the tab hover glow sat off the text and lit up the selected tab.
+- The talent highlight now takes the theme colour (Forever teal) instead of the node's own green, and the card above the talent window moves below it when the window is near the top of the screen.
+- The level-up banner starts lower and waits for the game's own level-up display to finish, so they no longer overlap.
+- Controller glyphs: the PlayStation circle is drawn as a real ring, keycaps have a light face, and empty halves of the controller panels are hidden.
 
 ## v0.9.0
 - Fixed: the talent highlight and its card stayed on screen after closing the talent window. They now disappear the moment the window closes.

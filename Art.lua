@@ -30,6 +30,7 @@ A.FILES = {
   slot        = "Interface\\Buttons\\UI-Quickslot2",
   white       = "Interface\\Buttons\\WHITE8X8",
   classCircles = "Interface\\TargetingFrame\\UI-Classes-Circles",
+  circle      = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", -- a white disc
   parchment   = "Interface\\QuestFrame\\QuestBG",
 }
 
