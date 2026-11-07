@@ -37,6 +37,9 @@ Every macro is built for Forever's macro rules: it never gets stuck on a spell t
 ### Made for controller players
 Forever's gamepad layout is built in: every macro says which trigger set and button it goes on. Choose **Xbox, PlayStation or Switch** button names in Settings.
 
+### Gathering tracking stays on
+WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zone or die. The Codex turns the one you had back on for you (out of combat, never over another tracking such as Track Beasts). Untick it in Settings if you'd rather do it yourself.
+
 ### Two themes
 **Forever** (teal, the default) or **Codex** (gold and parchment).
 

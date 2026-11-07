@@ -44,7 +44,11 @@ MOCK.ascii = ascii
 MOCK.knownEvents = {
   PLAYER_LOGIN = true, PLAYER_LOGOUT = true, PLAYER_ENTERING_WORLD = true, PLAYER_LEVEL_UP = true,
   PLAYER_REGEN_ENABLED = true, PLAYER_REGEN_DISABLED = true, ADDON_LOADED = true, VARIABLES_LOADED = true,
+  -- optional: the minimal client doesn't know these (MOCK.setup removes them)
+  PLAYER_ALIVE = true, PLAYER_UNGHOST = true, MINIMAP_UPDATE_TRACKING = true, LEARNED_SPELL_IN_TAB = true,
+  SPELLS_CHANGED = true,
 }
+MOCK.optionalEvents = { "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED" }
 
 ----------------------------------------------------------------------------
 -- Widgets
@@ -607,6 +611,39 @@ C_Traits.GetDefinitionInfo = function(defID)
 end
 function GetSpellInfo(id) return MOCK.spells[id] end
 
+-- Minimap tracking (C_Minimap). MOCK.tracking[i] = { name, texture, active, category, spellID }.
+-- Like Classic, only one "spell" tracking is on at a time unless MOCK.multiTrack.
+MOCK.tracking = {}
+MOCK.trackCalls = {}
+MOCK.dead = false
+C_Minimap = {
+  GetNumTrackingTypes = function() return #MOCK.tracking end,
+  GetTrackingInfo = function(i)
+    local t = MOCK.tracking[i]
+    if t then return t.name, t.texture, t.active, t.category, false, t.spellID end
+  end,
+  SetTracking = function(i, on)
+    local t = MOCK.tracking[i]
+    if not t then error("SetTracking: bad index", 2) end
+    if MOCK.combat then problem("tracking", "tracking changed in combat (" .. t.name .. ")") end
+    MOCK.trackCalls[#MOCK.trackCalls + 1] = { name = t.name, on = on and true or false }
+    if on and t.category == "spell" and not MOCK.multiTrack then
+      for _, o in ipairs(MOCK.tracking) do if o.category == "spell" then o.active = false end end
+    end
+    t.active = on and true or false
+    MOCK.event("MINIMAP_UPDATE_TRACKING")
+  end,
+}
+function UnitIsDeadOrGhost() return MOCK.dead end
+-- the vanilla calls (kept in the minimal client, which has no C_Minimap)
+function GetTrackingTexture()
+  for _, t in ipairs(MOCK.tracking) do if t.active and t.category == "spell" then return t.texture end end
+end
+function IsSpellKnown(id)
+  for _, t in ipairs(MOCK.tracking) do if t.spellID == id then return true end end
+  return false
+end
+
 function hooksecurefunc(a, b, c)
   local tbl, name, fn = _G, a, b
   if type(a) == "table" then tbl, name, fn = a, b, c end
@@ -796,13 +833,14 @@ end
 -- Remove the APIs a careful addon must not rely on.
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
-  "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros" }
+  "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
   MOCK.minimal = opts.minimal
   if opts.minimal then
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
+    for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end
     Texture.SetGradient = nil
     Texture.SetRotation = nil
     Frame.EnableGamePadButton = nil

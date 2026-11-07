@@ -258,7 +258,7 @@ function S.everyButton()
   end
   if win() then win():Hide() end
   -- clicking every toggle an odd number of times leaves things off: put the defaults back
-  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap" }) do
+  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap", "noAutoTrack" }) do
     if LevelingCodexDB[k] then
       LevelingCodexDB[k] = nil
     end
@@ -805,6 +805,199 @@ function S.talentShape()
 end
 
 -- /codex debug runs anywhere and reports the art and the talent guide.
+----------------------------------------------------------------------------
+-- Gathering tracking: Forever drops Find Herbs / Find Minerals; the Codex turns it back on.
+----------------------------------------------------------------------------
+
+local TRACK = {
+  herbs = { name = "Find Herbs", texture = 133939, category = "spell", spellID = 2383 },
+  minerals = { name = "Find Minerals", texture = 136025, category = "spell", spellID = 2580 },
+  beasts = { name = "Track Beasts", texture = 132328, category = "spell", spellID = 1494 },
+  flight = { name = "Flight Master", texture = 136456, category = "other", active = true },
+}
+
+local function trackEntry(name)
+  for i, t in ipairs(MOCK.tracking) do if t.name == name then return t, i end end
+end
+
+local function trackOn(name)
+  local t = trackEntry(name)
+  return t and t.active
+end
+
+local function gatherOn()
+  return trackOn("Find Herbs") or trackOn("Find Minerals")
+end
+
+-- what the client does at a loading screen: gathering tracking is gone
+local function dropTracking()
+  for _, t in ipairs(MOCK.tracking) do if t.category == "spell" then t.active = false end end
+end
+
+local function hasTrackingAPI() return C_Minimap ~= nil end
+
+-- Before login: which trackers the character knows ("herbs,minerals", "multi" = both can be on at once).
+function S.trackKnown(which)
+  MOCK.tracking = { { name = TRACK.flight.name, texture = TRACK.flight.texture, category = "other", active = true } }
+  for key in tostring(which or ""):gmatch("[^,]+") do
+    if key == "multi" then MOCK.multiTrack = true
+    elseif key == "herbsOn" then
+      local t = TRACK.herbs
+      MOCK.tracking[#MOCK.tracking + 1] = { name = t.name, texture = t.texture, category = t.category, spellID = t.spellID, active = true }
+    elseif TRACK[key] then
+      local t = TRACK[key]
+      MOCK.tracking[#MOCK.tracking + 1] = { name = t.name, texture = t.texture, category = t.category, spellID = t.spellID, active = false }
+    end
+  end
+end
+
+-- After login the Codex turns gathering tracking back on (once the client is ready).
+function S.trackRestored()
+  MOCK.advance(7)
+  if not hasTrackingAPI() then
+    check(#MOCK.trackCalls == 0, "no tracking calls without the API")
+    check(chatHas("is off"), "a client without the tracking API gets a reminder instead")
+    return
+  end
+  check(gatherOn(), "gathering tracking back on after login")
+  check(trackOn("Flight Master"), "town tracking left alone")
+  if MOCK.multiTrack then
+    check(trackOn("Find Herbs") and trackOn("Find Minerals"), "both trackers on when the client allows both")
+  end
+  check(chatHas("back on"), "says it turned tracking back on")
+  for _, c in ipairs(MOCK.trackCalls) do check(c.name ~= "Flight Master", "never touches town tracking") end
+end
+
+-- A loading screen drops it again: the one the player picked last comes back.
+function S.trackLoadingScreen()
+  if not hasTrackingAPI() then return end
+  local _, herbs = trackEntry("Find Herbs")
+  local _, minerals = trackEntry("Find Minerals")
+  local pick = minerals and "Find Minerals" or "Find Herbs"
+  local idx = minerals or herbs
+  if herbs and minerals then
+    -- the player switches to the other one by hand
+    pick = trackOn("Find Herbs") and "Find Minerals" or "Find Herbs"
+    idx = pick == "Find Herbs" and herbs or minerals
+  end
+  C_Minimap.SetTracking(idx, true)
+  MOCK.advance(1)
+  local chatLines
+  for _ = 1, 3 do
+    dropTracking()
+    MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+    MOCK.advance(7)
+    check(trackOn(pick), pick .. " (the player's pick) back on after a loading screen")
+    chatLines = chatLines or #MOCK.chat
+  end
+  check(#MOCK.chat == chatLines, "only says so once a session")
+end
+
+-- Dead or a ghost: wait. Alive again: back on.
+function S.trackDeath()
+  if not hasTrackingAPI() then return end
+  MOCK.dead = true
+  dropTracking()
+  MOCK.event("PLAYER_ALIVE")
+  MOCK.advance(7)
+  check(not gatherOn(), "nothing turned on while a ghost")
+  MOCK.dead = false
+  MOCK.event("PLAYER_UNGHOST")
+  MOCK.advance(7)
+  check(gatherOn(), "back on after resurrecting")
+end
+
+-- In combat: wait for the fight to end (the mock flags tracking changes in combat).
+function S.trackCombat()
+  if not hasTrackingAPI() then return end
+  dropTracking()
+  MOCK.combat = true
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.advance(7)
+  check(not gatherOn(), "waits for combat to end")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(3)
+  check(gatherOn(), "back on after combat")
+end
+
+-- Another tracking (Track Beasts) is the player's choice: leave it.
+function S.trackOtherChoice()
+  if not hasTrackingAPI() then return end
+  local _, i = trackEntry("Track Beasts")
+  if not i then
+    local t = TRACK.beasts
+    MOCK.tracking[#MOCK.tracking + 1] = { name = t.name, texture = t.texture, category = t.category, spellID = t.spellID, active = false }
+    i = #MOCK.tracking
+  end
+  dropTracking()
+  MOCK.tracking[i].active = true
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.advance(7)
+  check(trackOn("Track Beasts"), "Track Beasts left on")
+  check(not gatherOn(), "gathering not forced over another tracking")
+  MOCK.tracking[i].active = false
+end
+
+-- The setting turns it off; turning it back on restores right away.
+function S.trackSettingOff()
+  dropTracking()
+  local calls = #MOCK.trackCalls
+  if D() then
+    openAt(30, "Settings")
+    click(win(), "Keep Find Herbs / Find Minerals on")
+    win():Hide()
+  else
+    LevelingCodexDB.noAutoTrack = true
+  end
+  check(LevelingCodexDB.noAutoTrack, "check box turns tracking restore off")
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.advance(7)
+  check(#MOCK.trackCalls == calls, "no tracking calls while turned off")
+  if D() then
+    openAt(30, "Settings")
+    click(win(), "Keep Find Herbs / Find Minerals on")
+    win():Hide()
+    check(not LevelingCodexDB.noAutoTrack, "check box turns it back on")
+    MOCK.advance(1)
+    if hasTrackingAPI() then check(gatherOn(), "turning the setting on restores tracking") end
+  else
+    LevelingCodexDB.noAutoTrack = nil
+  end
+end
+
+-- Logging in with tracking that looks on: it is toggled off and on so the minimap draws it.
+function S.trackKick()
+  if not hasTrackingAPI() then return end
+  MOCK.advance(7)
+  local seenOff, seenOn
+  for _, c in ipairs(MOCK.trackCalls) do
+    if c.name == "Find Herbs" then
+      if not c.on then seenOff = true elseif seenOff then seenOn = true end
+    end
+  end
+  check(seenOff and seenOn, "tracking that looked on at login was toggled off and back on")
+  check(trackOn("Find Herbs"), "and is on")
+end
+
+-- Learning Herbalism later: Find Herbs goes on.
+function S.trackLearn()
+  if not hasTrackingAPI() then return end
+  check(not gatherOn(), "nothing to track yet")
+  local t = TRACK.herbs
+  MOCK.tracking[#MOCK.tracking + 1] = { name = t.name, texture = t.texture, category = t.category, spellID = t.spellID, active = false }
+  MOCK.event("LEARNED_SPELL_IN_TAB", t.spellID, 1)
+  MOCK.event("SPELLS_CHANGED")
+  MOCK.advance(7)
+  check(trackOn("Find Herbs"), "Find Herbs on after learning Herbalism")
+end
+
+function S.trackDebug()
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("gathering tracking:"), "debug reports gathering tracking")
+end
+
 function S.debugReport()
   MOCK.chat = {}
   slash("debug")

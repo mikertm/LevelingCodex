@@ -1122,6 +1122,13 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
+  head("GATHERING")
+  tick("Keep Find Herbs / Find Minerals on", not db.noAutoTrack, function()
+    db.noAutoTrack = not db.noAutoTrack
+    if not db.noAutoTrack then ns.restoreTracking() end
+  end, "WoW: Forever turns gathering tracking off when you log in, zone or die. The Codex turns the one you had back on (out of combat), unless you picked another tracking such as Track Beasts.")
+  y = y + 12
+
   head("MINIMAP BUTTON")
   tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
     "Drag the book icon around the edge of the minimap to put it where you like; it remembers the spot.")

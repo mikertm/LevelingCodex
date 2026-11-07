@@ -43,6 +43,12 @@ NOART = ["makeTalentWindow:name", "login", "levelups", "browse", "everyButton", 
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
 LOST = ["lost", "login", "lostSavedVariables"]
+# Gathering tracking (Find Herbs / Find Minerals) that the client drops at login and loading screens.
+TRACK = ["trackKnown:herbs,minerals", "login", "trackRestored", "trackLoadingScreen", "trackDeath", "trackCombat",
+         "trackOtherChoice", "trackSettingOff", "trackDebug"]
+TRACK_MULTI = ["trackKnown:herbs,minerals,multi", "login", "trackRestored", "trackLoadingScreen"]
+TRACK_KICK = ["trackKnown:herbsOn", "login", "trackKick", "trackLoadingScreen"]
+TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
@@ -245,6 +251,12 @@ def main():
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))
         runs.append(("MAGE/%s/persisted" % variant, "MAGE", minimal, PERSISTED))
+        for cls in ("WARRIOR", "HUNTER", UNSUPPORTED):
+            runs.append(("%s/%s/tracking" % (cls, variant), cls, minimal, TRACK))
+        if not minimal:
+            runs.append(("ROGUE/full/tracking-multi", "ROGUE", False, TRACK_MULTI))
+            runs.append(("PRIEST/full/tracking-login-on", "PRIEST", False, TRACK_KICK))
+            runs.append(("DRUID/full/tracking-learn", "DRUID", False, TRACK_LEARN))
         for cls in CLASSES:
             if not minimal:  # needs GetMacroInfo to recognise last session's macros
                 runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST))

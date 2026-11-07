@@ -17,5 +17,6 @@ Macros.lua
 Banner.lua
 Window.lua
 Minimap.lua
+Tracking.lua
 TalentGuide.lua
 Init.lua
