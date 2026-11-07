@@ -1407,7 +1407,9 @@ local function discoverRoots()
   while f and n < 20000 do
     n = n + 1
     local ok, name = pcall(f.GetName, f)
-    if ok and name and f:IsShown() and (name:find("Talent") or name:find("Trait")) and f:GetParent() == UIParent then
+    -- never our own trace/hint frames: they'd become the "talent window" and anchor to themselves
+    if ok and name and not name:find("^LevelingCodex") and f:IsShown()
+      and (name:find("Talent") or name:find("Trait")) and f:GetParent() == UIParent then
       guide.roots[f] = true
     end
     f = EnumerateFrames(f)
