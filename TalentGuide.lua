@@ -291,12 +291,43 @@ local function makeTrace()
   else
     t.halo:SetColorTexture(1, 1, 1, 0.15)
   end
+  -- the drawn outline: four sides plus four diagonal corner cuts, matching Forever's talent
+  -- nodes (squares with clipped corners). edges = sides then corners, so one loop paints all.
   t.edges = {}
-  for i = 1, 4 do t.edges[i] = t:CreateTexture(nil, "OVERLAY") end
-  t.edges[1]:SetPoint("TOPLEFT", -3, 3); t.edges[1]:SetPoint("TOPRIGHT", 3, 3); t.edges[1]:SetHeight(2)
-  t.edges[2]:SetPoint("BOTTOMLEFT", -3, -3); t.edges[2]:SetPoint("BOTTOMRIGHT", 3, -3); t.edges[2]:SetHeight(2)
-  t.edges[3]:SetPoint("TOPLEFT", -3, 3); t.edges[3]:SetPoint("BOTTOMLEFT", -3, -3); t.edges[3]:SetWidth(2)
-  t.edges[4]:SetPoint("TOPRIGHT", 3, 3); t.edges[4]:SetPoint("BOTTOMRIGHT", 3, -3); t.edges[4]:SetWidth(2)
+  for i = 1, 8 do t.edges[i] = t:CreateTexture(nil, "OVERLAY") end
+  t.corners = { t.edges[5], t.edges[6], t.edges[7], t.edges[8] }
+  t.canCut = t.edges[5].SetRotation ~= nil
+  -- c = how much of each corner is cut off, in pixels (0 = a plain box)
+  function t.layoutBox(self, c)
+    if not self.canCut then c = 0 end
+    local e, o = self.edges, 3 -- o: the outline sits 3 px outside the button
+    for _, x in ipairs(e) do x:ClearAllPoints() end
+    e[1]:SetPoint("TOPLEFT", -o + c, o); e[1]:SetPoint("TOPRIGHT", o - c, o); e[1]:SetHeight(2)
+    e[2]:SetPoint("BOTTOMLEFT", -o + c, -o); e[2]:SetPoint("BOTTOMRIGHT", o - c, -o); e[2]:SetHeight(2)
+    e[3]:SetPoint("TOPLEFT", -o, o - c); e[3]:SetPoint("BOTTOMLEFT", -o, -o + c); e[3]:SetWidth(2)
+    e[4]:SetPoint("TOPRIGHT", o, o - c); e[4]:SetPoint("BOTTOMRIGHT", o, -o + c); e[4]:SetWidth(2)
+    self.cut = c
+    if c <= 0 then
+      for _, k in ipairs(self.corners) do k:Hide() end
+      return
+    end
+    local len, half = c * 1.4142 + 1, c / 2
+    -- each cut runs between the ends of two sides; rotation is counter-clockwise
+    local spots = {
+      { "TOPLEFT", -o + half, o - half, 45 },      -- up and to the right
+      { "TOPRIGHT", o - half, o - half, -45 },     -- down and to the right
+      { "BOTTOMRIGHT", o - half, -o + half, 45 },
+      { "BOTTOMLEFT", -o + half, -o + half, -45 },
+    }
+    for i, s in ipairs(spots) do
+      local k = self.corners[i]
+      k:SetSize(len, 2)
+      k:SetPoint("CENTER", self, s[1], s[2], s[3])
+      k:SetRotation(math.rad(s[4]))
+      k:Show()
+    end
+  end
+  t:layoutBox(0)
   -- shape-matched outline and glow (copies of the button's border)
   t.shapeGlow = t:CreateTexture(nil, "BACKGROUND", nil, 1)
   t.shapeGlow:SetBlendMode("ADD")
@@ -406,6 +437,12 @@ local function shapeTrace(t, b)
   t.shapeLine:SetShown(copied); t.shapeGlow:SetShown(copied)
   local box = not copied and not t.round
   for _, e in ipairs(t.edges) do e:SetShown(box) end
+  if box then
+    -- Forever's square nodes have their corners clipped by about an eighth of their width
+    local ok, w = pcall(b.GetWidth, b)
+    w = (ok and tonumber(w)) or 40
+    t:layoutBox(math.max(3, math.min(12, math.floor(w * 0.13 + 0.5))) + 1)
+  end
   t.halo:SetShown(box)
   t.disc:SetShown(not copied and t.round)
 end

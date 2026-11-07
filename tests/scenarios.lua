@@ -779,6 +779,18 @@ function S.talentShape()
         check(not trace.copied, "no border art to copy in icon mode")
         check(trace.disc:IsShown() == (b.expectShape ~= "square"), "round glow for round nodes (level " .. level .. ")")
         check(trace.edges[1]:IsShown() == (b.expectShape == "square"), "box only for square nodes (level " .. level .. ")")
+        if b.expectShape == "square" then
+          -- Forever's square nodes have clipped corners: the outline cuts them too
+          check(trace.cut and trace.cut > 0, "square outline has clipped corners (level " .. level .. ")")
+          for i, k in ipairs(trace.corners) do
+            check(k:IsShown() and k._rot and math.abs(math.abs(math.deg(k._rot)) - 45) < 0.01,
+              "corner cut " .. i .. " drawn at 45 degrees (level " .. level .. ")")
+          end
+          local _, _, _, x = trace.edges[1]:GetPoint(1)
+          check(x == -3 + trace.cut, "top side starts after the corner cut (level " .. level .. ")")
+        else
+          for _, k in ipairs(trace.corners) do check(not k:IsShown(), "no corner cuts on round nodes") end
+        end
       end
       seen[b.expectShape] = true
     end
