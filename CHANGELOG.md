@@ -1,5 +1,17 @@
 # Leveling Codex
 
+## v0.11.0
+- Every guide checked against WoW: Forever's own game data (build 1.60.1.70862) and Blizzard's 2 Nov notes and 5-6 Nov hotfixes: talent order, the reason for every talent, trainer spells and ranks, macros and tips. 116 fixes across the nine classes:
+  - **Warrior:** new **Rend again** macro (RT+Y / 4): a cast sequence moves on even when Rend misses, so press this to put Rend back up. Panic no longer gets stuck at 26-27 before Shield Wall. Tactical Mastery keeps 25 Rage (not 10), Charge gives 9 Rage at 25 (12 from 26), Thunder Clap lasts 10-30 sec by rank.
+  - **Mage:** Get away no longer gets stuck before Blink at 20 (Frost Nova only at 10-19). Cone of Cold Rank 5 added at 58. Shatter adds 50% crit against frozen targets (not "almost every crit"); Fire Blast beats Ice Lance on targets that aren't frozen.
+  - **Paladin:** Divine Protection and Divine Shield share one 5 min cooldown (Panic tip and trainer notes); Divine Shield Rank 2 lasts 12 sec; Seal of Command's Judgement numbers at 20; Greater Blessing of Kings has no rank.
+  - **Druid:** Faerie Fire costs mana and needs caster form; Swipe hits 3 enemies; clearer Feral Swiftness, Natural Instinct, Ferocity and Rend and Tear reasons.
+  - **Hunter:** Beast Training (10) added so your pet's Growl keeps up; Aspect of the Pack, Rapid Recuperation, Trueshot Aura duration and trap placement corrected.
+  - **Priest:** Shadow Word: Death ranks added to the training reminder; Improved Mind Blast is 2/5 at 33-34; Shadow Reach and Death's backlash corrected; Fear Ward gets its own line.
+  - **Rogue:** poisons use the game's names (Instant Poison II...VI and so on); Distract, Adrenaline Rush and poison charges corrected.
+  - **Shaman:** the training reminder now includes totems, Fire Nova, Chain Lightning and heals; talent reasons give the value per point; totem durations corrected.
+  - **Warlock:** new Fight version from 40 that casts Wrack; Fel Concentration is a 70% chance (not immunity); Improved Corruption is instant from 14; Spell Lock at 36.
+
 ## v0.10.0
 - New: Find Herbs and Find Minerals stay on. WoW: Forever turns gathering tracking off when you log in, reload, zone or die; the Codex now turns the one you had back on a couple of seconds later. It waits until you're alive and out of combat, leaves another tracking you picked (like Track Beasts) alone, remembers which one you switched to last, and turns tracking on when you learn Herbalism or Mining. At login, tracking that already looks on is toggled off and on so the minimap shows it. Turn it off under Settings > Gathering.
 - `/codex debug` now reports gathering tracking.
