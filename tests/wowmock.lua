@@ -171,6 +171,9 @@ end
 function Texture:SetColorTexture(r, g, b, a)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetColorTexture: bad color", 2) end
   self._tex = "color"
+  -- like the client: a gradient or rotation from an earlier use survives a new colour
+  if self._grad then self._gradStale = true end
+  if self._rot and self._rot ~= 0 then self._rotStale = true end
 end
 function Texture:SetVertexColor() end
 function Texture:SetBlendMode(m) if m ~= "ADD" and m ~= "BLEND" and m ~= "ALPHAKEY" and m ~= "DISABLE" and m ~= "MOD" then error("bad blend mode", 2) end end
@@ -181,9 +184,10 @@ end
 function Texture:SetHorizTile() end
 function Texture:SetVertTile() end
 function Texture:SetDesaturated() end
-function Texture:SetRotation() end
+function Texture:SetRotation(r) self._rot, self._rotStale = r, false end
 function Texture:SetGradient(orient, c1, c2)
   if type(c1) ~= "table" or type(c2) ~= "table" then error("SetGradient expects colors", 2) end
+  self._grad, self._gradStale = true, false
 end
 
 -- FontString
@@ -198,10 +202,14 @@ function FontString:SetFormattedText(fmt, ...) self:SetText(string.format(fmt, .
 function FontString:GetText() return self._text end
 function FontString:SetFont(path, size, flags)
   if type(path) ~= "string" or type(size) ~= "number" then error("SetFont: bad args", 2) end
+  self._font, self._fontStale = path, false
   return true
 end
 function FontString:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
-function FontString:SetFontObject() end
+-- like the client: a font set with SetFont sticks; SetFontObject alone doesn't replace it
+function FontString:SetFontObject(o)
+  if self._font then self._fontStale = true end
+end
 function FontString:SetTextColor(r, g, b)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetTextColor: bad color", 2) end
 end
@@ -496,6 +504,12 @@ function DEFAULT_CHAT_FRAME:AddMessage(s)
   MOCK.chat[#MOCK.chat + 1] = s
 end
 
+-- font objects (GetFont gives the face, size and flags)
+for name, size in pairs({ GameFontNormal = 12, GameFontNormalSmall = 10, GameFontNormalLarge = 16, GameFontNormalHuge = 20,
+    GameFontHighlight = 12, GameFontHighlightSmall = 10, GameFontDisableSmall = 10, ChatFontNormal = 14 }) do
+  _G[name] = { GetFont = function() return "Fonts\FRIZQT__.TTF", size, "" end }
+end
+
 UISpecialFrames = {}
 SlashCmdList = {}
 tinsert = table.insert
@@ -538,6 +552,11 @@ function GetFileIDFromPath(path) return MOCK.fileID(path) end
 
 C_Spell = { GetSpellName = function(id) return MOCK.spells[id] end }
 BackdropTemplateMixin = {}
+CLASS_ICON_TCOORDS = {}
+for i, c in ipairs({ "WARRIOR", "MAGE", "ROGUE", "DRUID", "HUNTER", "SHAMAN", "PRIEST", "WARLOCK", "PALADIN" }) do
+  local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
+  CLASS_ICON_TCOORDS[c] = { col * 0.25, col * 0.25 + 0.25, row * 0.25, row * 0.25 + 0.25 }
+end
 C_Texture = { GetAtlasInfo = function(name) if MOCK.atlases[name] then return { width = 64, height = 64 } end end }
 for _, a in ipairs({ "talents-node-circle-yellow", "talents-node-square-yellow", "talents-node-choice-yellow",
     "talents-node-circle-mask", "talents-node-square-mask", "talents-node-choice-mask" }) do
@@ -711,6 +730,25 @@ function MOCK.buttons(root)
   return out
 end
 
+-- Visible regions still wearing a font, gradient or rotation from an earlier (pooled) use.
+function MOCK.staleUnder(root, where)
+  local n = 0
+  local function walk(f)
+    for _, r in ipairs(f._regions) do
+      if r._shown then
+        local why = (r._fontStale and "font") or (r._gradStale and "gradient") or (r._rotStale and "rotation")
+        if why then
+          n = n + 1
+          problem("stale " .. why, (where or "") .. ": " .. tostring(r._text or r._type))
+        end
+      end
+    end
+    for _, c in ipairs(f._children) do if c._shown then walk(c) end end
+  end
+  walk(root)
+  return n
+end
+
 -- All text currently shown under a frame, joined (for assertions).
 function MOCK.textUnder(root)
   local out = {}
@@ -733,7 +771,7 @@ function MOCK.drag(f, dx, dy)
 end
 
 -- Remove the APIs a careful addon must not rely on.
-local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "C_Texture", "SetPortraitToTexture",
+local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros" }
 

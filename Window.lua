@@ -50,13 +50,38 @@ local function newTexB() return overlay:CreateTexture(nil, "BORDER") end
 -- Drawing helpers (x, y are offsets from the content's top-left; y grows downwards)
 ----------------------------------------------------------------------------
 
+-- The face, size and flags of one of the game's font objects (so SetFont can set it exactly).
+local fontCache = {}
+local function fontOf(objName, size)
+  if not fontCache[objName] then
+    local o = _G[objName]
+    local path, sz, flags
+    if type(o) == "table" and o.GetFont then
+      local ok, p, s, f = pcall(o.GetFont, o)
+      if ok and type(p) == "string" then path, sz, flags = p, s, f end
+    end
+    fontCache[objName] = { path or "Fonts\\FRIZQT__.TTF", sz or size or 12, flags or "" }
+  end
+  local f = fontCache[objName]
+  return f[1], f[2], f[3]
+end
+
+-- Text styles. Every style sets its font explicitly: pooled font strings are reused across tabs,
+-- and a font set with SetFont sticks through SetFontObject (that's how Morpheus leaked into notes).
+local STYLES = {
+  title = { "GameFontNormalHuge", FONT_HEAD, 24 },
+  head  = { "GameFontNormalLarge", FONT_HEAD, 18 },
+  label = { "GameFontNormalSmall" },
+  small = { "GameFontHighlightSmall" },
+  mono  = { "GameFontHighlight", FONT_MONO, 13 },
+  body  = { "GameFontHighlight" },
+}
+
 local function styleFS(fs, kind)
-  if kind == "title" then fs:SetFontObject("GameFontNormalHuge"); fs:SetFont(FONT_HEAD, 24, "")
-  elseif kind == "head" then fs:SetFontObject("GameFontNormalLarge"); fs:SetFont(FONT_HEAD, 18, "")
-  elseif kind == "label" then fs:SetFontObject("GameFontNormalSmall")
-  elseif kind == "small" then fs:SetFontObject("GameFontHighlightSmall")
-  elseif kind == "mono" then fs:SetFontObject("GameFontHighlight"); fs:SetFont(FONT_MONO, 13, "")
-  else fs:SetFontObject("GameFontHighlight") end
+  local st = STYLES[kind] or STYLES.body
+  fs:SetFontObject(st[1])
+  local path, size, flags = fontOf(st[1], 12)
+  fs:SetFont(st[2] or path, st[3] or size, (st[2] and "") or flags or "")
   local sh = (kind == "head" or kind == "title" or kind == "label") and 1 or 0
   fs:SetShadowOffset(sh, -sh)
   fs:SetSpacing(kind == "mono" and 3 or 2)
@@ -76,8 +101,12 @@ local function T(str, x, y, width, kind, color, justify)
   return fs:GetStringHeight(), fs
 end
 
-local function rect(x, y, w, h, color, layer, sub)
-  local t = take(layer == "border" and "texB" or "tex", layer == "border" and newTexB or newTex)
+-- A solid rectangle. `kind` keeps textures that get a fade ("fade") or a rotation ("gem") in their
+-- own pools: the client keeps a gradient or rotation through SetColorTexture, so a plain rect must
+-- never reuse one (that's what turned macro chips into faded strips and diagonal bars).
+local function rect(x, y, w, h, color, layer, sub, kind)
+  local pool = (layer == "border" and "texB" or "tex") .. (kind or "")
+  local t = take(pool, layer == "border" and newTexB or newTex)
   if layer == "border" then t:SetDrawLayer("BORDER", sub or 0) else t:SetDrawLayer("BACKGROUND", sub or 0) end
   t:SetColorTexture(rgba(color))
   t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
@@ -100,7 +129,7 @@ end
 -- The guide's flat card (when the client has no backdrops): fill, aged shade, double border.
 local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
-  local shade = rect(x, y, w, h, { 1, 1, 1, 1 }, nil, 1)
+  local shade = rect(x, y, w, h, { 1, 1, 1, 1 }, nil, 1, "fade")
   if fill == C.parch then ns.fade(shade, "VERTICAL", 0.5, 0.35, 0.15, 0.22, 0)
   else ns.fade(shade, "VERTICAL", 0.6, 0.45, 0.2, 0, 0.12) end
   edge = edge or C.edge
@@ -203,9 +232,9 @@ end
 
 local function goldRuleAt(y)
   local half = (W - 20) / 2
-  local l = rect(0, y, half, 1, { 1, 1, 1, 1 }, "border"); ns.fadeAccent(l, "HORIZONTAL", 0, 0.8)
-  local r = rect(half + 20, y, half, 1, { 1, 1, 1, 1 }, "border"); ns.fadeAccent(r, "HORIZONTAL", 0.8, 0)
-  local g = rect(W / 2 - 4, y - 3, 7, 7, C.gem, "border")
+  local l = rect(0, y, half, 1, { 1, 1, 1, 1 }, "border", nil, "fade"); ns.fadeAccent(l, "HORIZONTAL", 0, 0.8)
+  local r = rect(half + 20, y, half, 1, { 1, 1, 1, 1 }, "border", nil, "fade"); ns.fadeAccent(r, "HORIZONTAL", 0.8, 0)
+  local g = rect(W / 2 - 4, y - 3, 7, 7, C.gem, "border", nil, "gem")
   if g.SetRotation then g:SetRotation(math.rad(45)) end
 end
 
@@ -225,18 +254,24 @@ end
 -- Tabs
 ----------------------------------------------------------------------------
 
+-- Spells in two columns. Each row is as tall as its tallest entry, so long notes that wrap
+-- push the next row (and the card's bottom edge) down instead of running over them.
 local function spellIconsGrid(t, y, x0, width, light)
   local col = (width - 8) / 2
-  local i = 0
+  local rowTop, rowH = y, 0
   for k, s in ipairs(t.spells) do
+    local i = k - 1
+    if i > 0 and i % 2 == 0 then rowTop, rowH = rowTop + rowH + 8, 0 end
     local cx = x0 + (i % 2) * col
-    local cy = y + math.floor(i / 2) * 40
-    icon(t.icons and t.icons[k], cx, cy, 32, plain(s), t.notes and plain(t.notes[k]) or nil)
-    T(plain(s), cx + 40, cy + 2, col - 48, "body", light and C.light or C.ink)
-    if t.notes and t.notes[k] ~= "" then T(plain(t.notes[k]), cx + 40, cy + 18, col - 48, "small", light and C.dim or C.inkSoft) end
-    i = i + 1
+    icon(t.icons and t.icons[k], cx, rowTop, 32, plain(s), t.notes and plain(t.notes[k]) or nil)
+    local h = T(plain(s), cx + 40, rowTop + 1, col - 48, "body", light and C.light or C.ink)
+    if t.notes and t.notes[k] and t.notes[k] ~= "" then
+      h = h + 3 + T(plain(t.notes[k]), cx + 40, rowTop + h + 4, col - 48, "small", light and C.dim or C.inkSoft)
+    end
+    rowH = math.max(rowH, 32, h + 2)
   end
-  return math.ceil(i / 2) * 40
+  if #t.spells == 0 then return 0 end
+  return rowTop + rowH - y + 4
 end
 
 local renderers = {}
@@ -275,8 +310,8 @@ renderers.level = function(V)
       local h2, r2 = ns.talentAt(l)
       if h2 then
         icon(h2.icon, x, y, 28, l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max, plain(l == h2.from and h2.why or h2.more))
-        T(l .. "  " .. h2.name .. " " .. r2 .. "/" .. h2.max, x + 34, y + 7, 140, "small", C.light)
-        x = x + 178
+        T(l .. "  " .. h2.name .. " " .. r2 .. "/" .. h2.max, x + 34, y + 8, 160, "small", C.light)
+        x = x + 196
       end
     end
   end
@@ -584,6 +619,11 @@ end
 -- The game's dialog border and background, with a faint theme-coloured glow under the header.
 local function chrome(f, glowHeight)
   if A.backdrop(f, "dialog") then
+    -- the dialog background is see-through: darken it so names and effects in the world
+    -- don't show through the text
+    local fill = f:CreateTexture(nil, "BACKGROUND", nil, 0)
+    fill:SetPoint("TOPLEFT", 11, -12); fill:SetPoint("BOTTOMRIGHT", -12, 11)
+    fill:SetColorTexture(0.035, 0.035, 0.045, 0.88)
     local glow = f:CreateTexture(nil, "BACKGROUND", nil, 1)
     glow:SetPoint("TOPLEFT", 12, -12); glow:SetPoint("TOPRIGHT", -12, -12); glow:SetHeight(glowHeight or 110)
     ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.22)

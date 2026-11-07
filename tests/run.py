@@ -225,6 +225,11 @@ def main():
     only = args[args.index("-k") + 1] if "-k" in args else None
     t0 = time.time()
     files, problems = toc_files()
+    # "Interface\Icons" in Lua source is "InterfaceIcons" at runtime: paths need doubled backslashes
+    for f in files:
+        for n, line in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
+            if re.search(r'"(Interface|Fonts)\\(?!\\)', line):
+                problems.append("%s:%d: texture/font path needs \\\\ (doubled backslash)" % (os.path.basename(f), n))
     errors, warnings = data_checks()
     failed = list(problems) + list(errors)
     for p in problems + errors:

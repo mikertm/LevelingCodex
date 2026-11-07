@@ -220,6 +220,7 @@ function S.browse()
     for level = 1, 60 do
       local b = MOCK.buttons(win())
       for _, x in ipairs(b) do hover(x) end
+      MOCK.staleUnder(win(), tab .. " at " .. level)
       if level < 60 then click(win(), ">") end
     end
     for _ = 1, 65 do click(win(), "<") end
@@ -242,6 +243,7 @@ function S.everyButton()
           hover(b)
           b:Click("LeftButton")
           MOCK.advance(0.3)
+          if win() and win():IsShown() then MOCK.staleUnder(win(), tab .. " after a click") end
         end
       end
       -- leave the banner closed for the next round

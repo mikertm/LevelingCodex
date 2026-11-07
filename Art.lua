@@ -29,7 +29,7 @@ A.FILES = {
   squareGlow  = "Interface\\Buttons\\ButtonHilight-Square",
   slot        = "Interface\\Buttons\\UI-Quickslot2",
   white       = "Interface\\Buttons\\WHITE8X8",
-  levelUp     = "Interface\\LevelUp\\LevelUpTex",
+  classCircles = "Interface\\TargetingFrame\\UI-Classes-Circles",
   parchment   = "Interface\\QuestFrame\\QuestBG",
 }
 
@@ -254,7 +254,10 @@ function A.check(parent)
 end
 
 -- A character-sheet tab hanging below a frame. SetSelected(on).
-local TAB_L, TAB_M, TAB_R = { 0, 0.15625, 0, 1 }, { 0.15625, 0.84375, 0, 1 }, { 0.84375, 1, 0, 1 }
+-- The inactive art fills its 32 px file; the active art is the top 35 of a 64 px file and sits
+-- 3 px lower, as in the game's CharacterFrameTabButtonTemplate.
+local TAB_X = { { 0, 0.15625 }, { 0.15625, 0.84375 }, { 0.84375, 1 } }
+local TAB_BOTTOM = { inactive = 1, active = 0.546875 }
 function A.tab(parent, text)
   local b = CreateFrame("Button", nil, parent)
   b:SetHeight(32)
@@ -266,23 +269,26 @@ function A.tab(parent, text)
   if art then
     note("tabs", "ok")
     b.parts = {}
-    for i, coords in ipairs({ TAB_L, TAB_M, TAB_R }) do
-      local t = b:CreateTexture(nil, "BACKGROUND")
-      t.coords = coords
-      b.parts[i] = t
-    end
-    b.parts[1]:SetPoint("TOPLEFT"); b.parts[1]:SetPoint("BOTTOMLEFT"); b.parts[1]:SetWidth(20)
-    b.parts[3]:SetPoint("TOPRIGHT"); b.parts[3]:SetPoint("BOTTOMRIGHT"); b.parts[3]:SetWidth(20)
-    b.parts[2]:SetPoint("TOPLEFT", b.parts[1], "TOPRIGHT"); b.parts[2]:SetPoint("BOTTOMRIGHT", b.parts[3], "BOTTOMLEFT")
+    for i = 1, 3 do b.parts[i] = b:CreateTexture(nil, "BACKGROUND") end
     local glow = b:CreateTexture(nil, "HIGHLIGHT")
     glow:SetPoint("TOPLEFT", 6, -6); glow:SetPoint("BOTTOMRIGHT", -6, 6)
     if A.hasFile(A.FILES.tabGlow) then glow:SetTexture(A.FILES.tabGlow); glow:SetBlendMode("ADD")
     else glow:SetColorTexture(1, 0.82, 0, 0.12) end
     b.SetSelected = function(self, on)
+      local L, M, R = self.parts[1], self.parts[2], self.parts[3]
       local file = on and A.FILES.tabActive or A.FILES.tabInactive
-      for _, t in ipairs(self.parts) do t:SetTexture(file); t:SetTexCoord(unpack(t.coords)) end
+      local bottom = on and TAB_BOTTOM.active or TAB_BOTTOM.inactive
+      for i, t in ipairs(self.parts) do
+        t:SetTexture(file)
+        t:SetTexCoord(TAB_X[i][1], TAB_X[i][2], 0, bottom)
+        t:ClearAllPoints()
+      end
+      local dy, h = on and -3 or 0, on and 35 or 32
+      L:SetSize(20, h); L:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 0, dy)
+      R:SetSize(20, h); R:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, dy)
+      M:SetPoint("TOPLEFT", L, "TOPRIGHT"); M:SetPoint("BOTTOMRIGHT", R, "BOTTOMLEFT")
       self.label:ClearAllPoints()
-      self.label:SetPoint("CENTER", 0, on and 2 or 4)
+      self.label:SetPoint("CENTER", self, "CENTER", 0, on and -3 or 2)
       if on then self.label:SetTextColor(1, 1, 1) else self.label:SetTextColor(1, 0.82, 0) end
     end
   else
@@ -317,23 +323,35 @@ local function disc(parent, layer, sub, size, r, g, b)
 end
 
 function A.portrait(parent, size, token)
+  token = string.upper(token or "WARRIOR")
   local holder = CreateFrame("Frame", nil, parent)
   holder:SetSize(size + 8, size + 8)
-  local path = "Interface\\Icons\\classicon_" .. string.lower(token or "warrior")
-  local rim, round = disc(holder, "BORDER", 0, size + 8, 0.95, 0.76, 0.26)
-  rim:SetPoint("CENTER")
-  local inner = disc(holder, "BORDER", 1, size + 2, 0.12, 0.08, 0.03)
-  inner:SetPoint("CENTER")
   local icon = holder:CreateTexture(nil, "ARTWORK")
+  holder.icon = icon
+  -- 1. the game's round class icons (with their own ring), as on the character select screen
+  local coords = type(CLASS_ICON_TCOORDS) == "table" and CLASS_ICON_TCOORDS[token]
+  if coords and A.set(icon, "classCircles", { coords[1], coords[2], coords[3], coords[4] }) then
+    icon:SetSize(size + 8, size + 8); icon:SetPoint("CENTER")
+    note("portrait", "class circle")
+    return holder
+  end
+  -- 2. the class icon made round, on a gold disc
+  local path = "Interface\\Icons\\classicon_" .. string.lower(token)
+  local rim, round = disc(holder, "BORDER", 0, size + 6, 0.95, 0.76, 0.26)
+  local inner = disc(holder, "BORDER", 1, size + 2, 0.08, 0.05, 0.02)
+  rim:SetPoint("CENTER"); inner:SetPoint("CENTER")
   icon:SetSize(size, size); icon:SetPoint("CENTER")
   if round and A.hasFile(path) and pcall(SetPortraitToTexture, icon, path) then
-    note("round portrait", "ok")
-  else
-    note("round portrait", "square")
-    ns.setIcon(icon, "classicon_" .. string.lower(token or "warrior"))
-    icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    note("portrait", "round icon")
+    return holder
   end
-  holder.icon = icon
+  -- 3. a square icon with the same thin gold rim and black edge as every other icon
+  rim:SetColorTexture(0.72, 0.58, 0.3, 0.95); rim:SetSize(size + 2, size + 2)
+  inner:SetColorTexture(0, 0, 0, 1); inner:SetSize(size, size)
+  icon:SetSize(size - 2, size - 2)
+  ns.setIcon(icon, "classicon_" .. string.lower(token))
+  icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  note("portrait", "square icon")
   return holder
 end
 
