@@ -514,15 +514,28 @@ local function controllerMock(list, y)
     end
   end
   if #order == 0 then return 0 end
-  local rank = { R = 1, L = 2, ["L+R"] = 3 }
+  -- laid out like the controller: L2 on the left, R2 on the right, then combos (L2 + R2) and
+  -- unmodified buttons centred underneath, one row each
+  local rank = { L = 1, R = 2, ["L+R"] = 3, [""] = 4 }
   table.sort(order, function(a, b) return (rank[a] or 9) < (rank[b] or 9) end)
   local P = padNames()
   local pw, ph, gap = (W - 40) / 2, 166, 8
-  local top0 = y
-  for i, key in ipairs(order) do
+  local slots, row = {}, 0
+  local sides = groups.L or groups.R
+  for _, key in ipairs(order) do
+    if key == "L" then slots[key] = { 14, 0 }
+    elseif key == "R" then slots[key] = { 14 + pw + gap, 0 }
+    else
+      row = row + 1
+      slots[key] = { math.floor((W - pw) / 2), sides and row or row - 1 }
+    end
+  end
+  local rows = (sides and 1 or 0) + row
+  for _, key in ipairs(order) do
     local g = groups[key]
-    local px = 14 + ((i - 1) % 2) * (pw + gap)
-    local py = y + math.floor((i - 1) / 2) * (ph + gap)
+    local px = slots[key][1]
+    local py = y + slots[key][2] * (ph + gap)
+    g.px = px
     -- header: "Hold [L2] + [R2]"
     local hx = px + 10
     T(#g.mods > 0 and "HOLD" or "PRESS", hx, py + 12, 60, "label", C.dim, "LEFT")
@@ -565,7 +578,7 @@ local function controllerMock(list, y)
       end
     end
   end
-  local rows = math.ceil(#order / 2)
+  ns.controllerLayout = groups -- where each button set was drawn (px), for /codex debug and tests
   return rows * ph + (rows - 1) * gap
 end
 

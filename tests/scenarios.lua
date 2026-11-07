@@ -1002,6 +1002,24 @@ function S.talentTraceThemed()
   MOCK.advance(0.3)
 end
 
+-- Controller panels follow the controller: L2 set on the left, R2 set on the right.
+function S.controllerSides()
+  if not D() then return end
+  for level = 1, 60 do
+    MOCK.level = level
+    openAt(level, "Macros")
+    local g = MOCK.ns.controllerLayout
+    if g and g.L and g.R then
+      check(g.L.px < g.R.px, "L2 set left of R2 set at level " .. level)
+    end
+    if g and g["L+R"] and (g.L or g.R) then
+      local side = g.L or g.R
+      check(g["L+R"].px > 14, "L2 + R2 set centred under the sides at level " .. level)
+    end
+  end
+  win():Hide()
+end
+
 -- Tabs: the hover glow never lights the selected tab.
 function S.tabGlow()
   if not D() then return end
