@@ -1,5 +1,15 @@
 # Leveling Codex
 
+## v0.9.0
+- Fixed: the talent highlight and its card stayed on screen after closing the talent window. They now disappear the moment the window closes.
+- Fixed: levelling up in combat could create every macro for your level when the fight ended. Now only the macros the Codex made are updated.
+- Auto-updating macros now works even when WoW: Forever doesn't load your saved settings, and the Codex tells you (once, and in Settings) when that happened.
+- The talent guide is lighter: once it has found your talent it stops searching the talent window, follows the talent if the window reuses buttons, and also finds talent windows that load later.
+- New: a Copy button on every macro, and a copy box with the macro text selected when your macro slots are full.
+- New: close the Codex with B or Back on a controller (or Esc), and bind a key or controller button to open it (Key Bindings > AddOns).
+- Each tab now remembers where you scrolled to.
+- "Updated N macros" only appears when a macro actually changed.
+
 ## v0.8.0
 - Talent window guide: the talent to take for your level is traced with a glowing outline, sparks and a "Codex pick" tag, with a card above the talent window showing it and your next two picks.
 

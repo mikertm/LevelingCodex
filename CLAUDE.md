@@ -10,7 +10,8 @@ Published on CurseForge (project ID 1789784).
 |---|---|
 | `LevelingCodex.toc`, `LevelingCodex_Camelot.toc` | Load order. **Must stay byte-identical.** Keep `## Version: @project-version@` (the packager fills it from the tag). |
 | `Data.lua` | **Generated** from the guide pages: `LevelingCodexData[CLASS_TOKEN] = { spec, guide, plan, train, br, macros }`. Small hand fixes are OK, but keep its shape and list every data change in your summary so the owner can mirror it in the guides. |
-| `Core.lua` | All addon code (to be split into modules, see below). |
+| `Theme.lua` … `Init.lua` | Addon code, one module per file, loaded in .toc order (see below). |
+| `Bindings.xml` | Key binding "Open or close the Codex" (auto-loaded by the client, not listed in the .toc). |
 | `CHANGELOG.md` | Becomes the CurseForge release notes (`.pkgmeta` `manual-changelog`). Add a section before every release. |
 | `CURSEFORGE_DESCRIPTION.md`, `README.md`, `RELEASING.md` | Docs, not packaged. |
 | `.pkgmeta`, `.github/workflows/release.yml` | BigWigsMods packager. Pushing a `v*` tag builds and uploads to CurseForge. |
@@ -24,16 +25,16 @@ Published on CurseForge (project ID 1789784).
 - `macros[]`: `{ name, title, icon, lo, hi, body, pad, kb, tips[] }`. The same `name` appears in several level-banded versions. `pad` uses Xbox names and may contain arrows (translated at runtime).
 - Guide text contains Unicode punctuation and arrows; it always goes through `plain()` / `padText()` before display.
 
-### Core.lua map (current, pre-split)
-- Theme: `THEMES` (`forever` teal = default, `codex` gold), `C` = active palette (a table mutated in place by `useTheme`, so captured references stay valid), `rgba`.
-- Text: `SWAP` + `plain()` (ASCII-only output), `PADS` + `padText()` (Xbox/PS/Switch names), `say()`.
-- Guide lookups: `talentAt`, `trainAt`, `nextTrain`, `bracketFor`, `macrosFor`, `comingMacros`.
-- Macros: `setupMacros(onlyExisting)` via `CreateMacro`/`EditMacro`; auto-update after level-up only touches macros in `LevelingCodexCharDB.made`.
-- Banner ("toast"): `makeToast`, `showToast(level, force, test)`, `unlocksAt`, `setToastUnlocked`; movable and scalable; test mode.
-- Window (`/codex`): custom-drawn frame, pooled widgets (`take`/`releaseAll`), drawing helpers (`T`, `rect`, `box`, `icon`, `btn`, `chip`), `renderers[tab]` for level/talents/trainer/macros/tips/settings, level browser, `rebuildForTheme` (rebuilds the frame on theme change).
-- Minimap button: `makeMini`, `placeMini`, `miniDrag`, `updateMini`.
-- Talent window guide: `talentGuideTick` on a 0.25 s ticker; finds the talent window (`TALENT_ROOTS` + discovered roots), then the button by name (trait APIs) or icon (`GetFileIDFromPath`), draws a trace and a hint card.
-- Events (`PLAYER_LOGIN`, `PLAYER_LEVEL_UP`, `PLAYER_REGEN_ENABLED`, `ADDON_LOADED`) and `/codex`.
+### Modules (load order)
+All files share the addon table: `local _, ns = ...`. Cross-module calls go through `ns.x()` **at call time**, so a module may call one that loads later; only values read while a file loads need load order. Never create globals (the harness fails on leaks); allowed: the SavedVariables, `LevelingCodexData`, `SLASH_LEVELINGCODEX1`, `BINDING_*`, `LevelingCodex_Toggle`, named frames `LevelingCodex*`.
+1. `Theme.lua`: `ns.THEMES` (`forever` teal = default, `codex` gold), `ns.C` = active palette (mutated in place by `ns.useTheme`, so `local C = ns.C` stays valid; `ns.themeVersion` bumps on each switch), `ns.rgba`, `ns.db()`/`ns.charDB()` (never nil), `ns.try` (pcall an API that may not exist), timers `ns.after`/`ns.every` (C_Timer or an OnUpdate fallback), `ns.plain` (ASCII-only text), `ns.PADS`/`ns.padText`, `ns.say`, `ns.setIcon`, `ns.fade`/`ns.fadeAccent`.
+2. `Guide.lua`: lookups into `ns.D` (this class's guide, set at login): `talentAt`, `trainAt`, `nextTrain`, `bracketFor`, `macrosFor`, `comingMacros`. All cope with `ns.D == nil`.
+3. `Macros.lua`: `ns.setupMacros(onlyExisting)`. A macro is "ours" if it's in `LevelingCodexCharDB.made` **or its body matches a guide version** (so auto-update survives lost SavedVariables). Combat: a manual setup is queued as "full", a level-up refresh as "refresh" (never creates macros). Failures open the copy box.
+4. `Banner.lua`: level-up chat (`ns.levelUpMessage`) and the banner (`ns.showToast(level, force, test)`, `ns.setToastUnlocked`, `ns.placeToast`, `ns.getToast`, `ns.dropToast`).
+5. `Window.lua`: the `/codex` window: pooled widgets (`take`/`releaseAll`), drawing helpers (`T`, `rect`, `box`, `icon`, `btn`, `chip`), `renderers[tab]` (level/talents/trainer/macros/tips/settings), per-tab scroll memory, `ns.rebuildForTheme`, `ns.openTab`, `ns.toggleWindow`, the copy box `ns.showMacroCopy(m, list)`, Esc/controller close.
+6. `Minimap.lua`: `ns.updateMini`.
+7. `TalentGuide.lua`: 0.25 s ticker. Finds the window (`TALENT_ROOTS`, then window-sized frames named `*Talent*`/`*Trait*` found by `discoverRoots` on toggle hooks and talent-addon loads), then the button by name (trait APIs) or icon. Once found it only re-checks the cached button (pooled buttons get reused); misses back off up to 8 s. Hides on the window's `OnHide`. Never treat `LevelingCodex*` frames as a window.
+8. `Init.lua`: events (`start()` is idempotent: PLAYER_LOGIN, retried at PLAYER_ENTERING_WORLD), lost-SavedVariables detection (`ns.settingsLost`), key binding globals, `/codex`.
 
 ## WoW: Forever client facts (design around these)
 - `## Interface: 16001`. **Lua 5.1** (WoW flavour): no `goto`, no `//`, no integer division, no `\u{}` escapes.
@@ -46,8 +47,15 @@ Published on CurseForge (project ID 1789784).
 - Missing texture paths render **green**: always use `setIcon`, or check `SetTexture`'s return value and fall back.
 - Assume any non-core API may be missing: guard with existence checks and `pcall`.
 
+## Tests
+- `python tests/run.py` (needs `pip install lupa`; ~25 s, runs in parallel). `-k WARRIOR/full` filters runs, `-v` prints all data warnings.
+- `tests/wowmock.lua` is the mocked client. Strict on purpose: unknown events, templates, scripts or methods throw; `SetPoint` refuses self/looped anchors; `CreateMacro` enforces the 255/16 limits and combat lockdown. `minimal = true` removes optional APIs (C_Timer, C_Spell, GetFileIDFromPath, EnumerateFrames, hooksecurefunc, GetMacroInfo, gradients, gamepad...).
+- `tests/scenarios.lua` only drives what a player or the client can reach (events, `/codex`, clicks, drags, named frames), so it survives refactors. Each run (class x full/minimal x main/icon/persisted/lost-savedvars) starts a fresh Lua state.
+- Also checked: both .toc files identical, `@project-version@`, Data.lua shape, talent plan covers 10-60, macro limits, and a lint for `/castsequence` steps not yet learned at the macro's first level (warnings, not failures).
+
 ## Working rules
-- Run the harness before every commit: `python tests/run.py` (needs `pip install lupa`). It must pass with no Lua errors and no non-ASCII runtime text.
+- Run the harness before every commit. It must pass with no Lua errors, no non-ASCII runtime text and no leaked globals.
+- When a bug is reported from the game, first add a scenario that reproduces it.
 - Keep both .toc files identical (the harness checks).
 - Small, clear commits. Add a `CHANGELOG.md` section before a release.
 - **Never push a tag** (that publishes to CurseForge) without the owner's explicit go-ahead.

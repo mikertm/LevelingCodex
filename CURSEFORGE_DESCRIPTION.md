@@ -68,7 +68,9 @@ Forever's gamepad layout is built in: every macro says which trigger set and but
 | `/codex minimap` | Show or hide the minimap button |
 | `/codex reset` | Reset the window, banner and minimap button positions |
 
-Left-click the minimap book to open the Codex, right-click for Settings, and drag it around the minimap edge.
+Left-click the minimap book to open the Codex, right-click for Settings, and drag it around the minimap edge. You can also bind a key or controller button to open the Codex (Key Bindings > AddOns), and close it with Esc or B.
+
+Every macro card has a **Copy** button, and if your macro slots are full the Codex opens the macro text ready to copy, so you can make it yourself.
 
 ---
 
