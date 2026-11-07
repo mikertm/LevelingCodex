@@ -6,7 +6,7 @@
 ## SavedVariables: LevelingCodexDB
 ## SavedVariablesPerCharacter: LevelingCodexCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
-## X-Curse-Project-ID: 000000
+## X-Curse-Project-ID: 1789784
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
 
 Data.lua
