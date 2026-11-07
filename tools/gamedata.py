@@ -1,0 +1,996 @@
+"""Game data for the Leveling Codex: what WoW: Forever itself says about talents and spells.
+
+    python tools/gamedata.py update             # after a game patch or hotfix: everything below in one go
+    python tools/gamedata.py fetch [--build B]  # download the client tables for the newest (or a given) Forever build
+    python tools/gamedata.py build [--build B]  # write tools/reference/forever.json from them
+    python tools/gamedata.py diff OLD.json [NEW.json]   # what changed between two references
+    python tools/gamedata.py audit [-k CLASS] [-v]       # check Data.lua against the reference
+    python tools/gamedata.py review CLASS       # the talent plan next to each talent's real tooltip
+    python tools/gamedata.py packet CLASS       # everything about one class's guide next to the game, for a manual review
+    python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
+    python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
+
+Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
+The tables are cached in tools/.cache/<build>/ (not committed). The reference built from them,
+tools/reference/forever.json, is committed: the harness checks Data.lua against it offline, and
+`git diff` on it after an update is the list of game changes the guides have to follow.
+
+What the client tables can't tell: trainer gold costs, quest-only spells, server-side tuning that
+only lives in hotfix notes. Those still come from the patch notes (see tools/UPDATING.md).
+"""
+import argparse
+import collections
+import csv
+import json
+import os
+import re
+import sys
+import urllib.request
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CACHE = os.path.join(ROOT, "tools", ".cache")
+REF = os.path.join(ROOT, "tools", "reference", "forever.json")
+API = "https://wago.tools"
+PRODUCT = "wowf"
+UA = "LevelingCodex-gamedata/1.0"
+
+TABLES = [
+    "ChrClasses", "SkillLine", "SkillRaceClassInfo", "SkillLineAbility", "SkillLineXTraitTree", "TalentTab",
+    "TraitNode", "TraitNodeEntry", "TraitDefinition", "TraitNodeXTraitNodeEntry", "TraitEdge", "TraitCond",
+    "TraitNodeGroupXTraitNode", "TraitNodeGroupXTraitCond", "TraitDefinitionEffectPoints", "Curve", "CurvePoint",
+    "SpellName", "Spell", "SpellLevels", "SpellMisc", "SpellEffect", "SpellDuration", "SpellRadius",
+    "SpellAuraOptions", "SpellCooldowns", "SpellPower", "ManifestInterfaceData", "SpellShapeshift", "SpellCategories",
+]
+
+CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
+WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
+# Abilities every character has without a trainer.
+INNATE = {"Attack", "Shoot", "Auto Shot", "Throw"}
+# SpellShapeshift masks: bit (form - 1)
+FORMS = {1: "Cat Form", 2: "Tree of Life", 3: "Travel Form", 4: "Aquatic Form", 5: "Bear Form", 8: "Dire Bear Form",
+         16: "Ghost Wolf", 17: "Battle Stance", 18: "Defensive Stance", 19: "Berserker Stance", 28: "Shadowform",
+         30: "Stealth", 31: "Moonkin Form"}
+# Talent/spell names in guide text that are just English words, not mentions.
+COMMON = {"Enrage", "Dash", "Prowl", "Growl", "Bite", "Claw", "Charge", "Shoot", "Attack", "Fade", "Stealth"}
+
+
+# ---------------------------------------------------------------------------
+# Fetching
+# ---------------------------------------------------------------------------
+
+def http_get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=180) as r:
+        return r.read()
+
+
+def latest_build():
+    builds = json.loads(http_get(API + "/api/builds"))
+    versions = [b["version"] for b in builds.get(PRODUCT, [])]
+    if not versions:
+        sys.exit("wago.tools lists no builds for product '%s'" % PRODUCT)
+    return max(versions, key=lambda v: tuple(int(x) for x in v.split(".")))
+
+
+def fetch(build, quiet=False):
+    d = os.path.join(CACHE, build)
+    os.makedirs(d, exist_ok=True)
+    for t in TABLES:
+        p = os.path.join(d, t + ".csv")
+        if os.path.exists(p) and os.path.getsize(p) > 0:
+            continue
+        if not quiet:
+            print("  fetching %s ..." % t)
+        data = http_get("%s/db2/%s/csv?build=%s" % (API, t, build))
+        if data.lstrip().startswith(b"{"):
+            sys.exit("%s: wago.tools says %s" % (t, data[:200].decode("utf-8", "replace")))
+        with open(p + ".part", "wb") as f:
+            f.write(data)
+        os.replace(p + ".part", p)
+    return d
+
+
+class Tables:
+    def __init__(self, d):
+        self.d = d
+        self._c = {}
+
+    def __getattr__(self, t):
+        if t.startswith("_"):
+            raise AttributeError(t)
+        if t not in self._c:
+            with open(os.path.join(self.d, t + ".csv"), encoding="utf-8-sig", newline="") as f:
+                self._c[t] = list(csv.DictReader(f))
+        return self._c[t]
+
+
+# ---------------------------------------------------------------------------
+# Tooltip text
+# ---------------------------------------------------------------------------
+
+def num(v):
+    v = float(v)
+    if abs(v - round(v)) < 1e-6:
+        return str(int(round(v)))
+    return ("%.2f" % v).rstrip("0").rstrip(".")
+
+
+def secs(ms):
+    s = float(ms) / 1000.0
+    if s >= 60 and abs(s / 60 - round(s / 60)) < 1e-6:
+        m = int(round(s / 60))
+        return "%d min" % m
+    return "%s sec" % num(s)
+
+
+class Spells:
+    """Spell lookups and a tooltip renderer good enough to check guide text against."""
+
+    def __init__(self, T):
+        self.name = {r["ID"]: r["Name_lang"] for r in T.SpellName}
+        self.spell = {r["ID"]: r for r in T.Spell}
+        self.misc = {}
+        for r in T.SpellMisc:
+            if r["DifficultyID"] == "0":
+                self.misc.setdefault(r["SpellID"], r)
+        self.eff = collections.defaultdict(dict)
+        for r in T.SpellEffect:
+            if r["DifficultyID"] == "0":
+                self.eff[r["SpellID"]][int(r["EffectIndex"])] = r
+        self.level = {}
+        for r in T.SpellLevels:
+            if r["DifficultyID"] == "0":
+                self.level[r["SpellID"]] = int(r["BaseLevel"]) or int(r["SpellLevel"])
+        self.duration = {r["ID"]: r for r in T.SpellDuration}
+        self.radius = {r["ID"]: r for r in T.SpellRadius}
+        self.aura = {}
+        for r in T.SpellAuraOptions:
+            if r["DifficultyID"] == "0":
+                self.aura[r["SpellID"]] = r
+        self.cooldown = {}
+        for r in T.SpellCooldowns:
+            if r["DifficultyID"] == "0":
+                self.cooldown[r["SpellID"]] = r
+        self.stances = {}
+        for r in T.SpellShapeshift:
+            m = int(r["ShapeshiftMask_0"] or 0)
+            if m:
+                self.stances[r["SpellID"]] = [FORMS.get(b + 1, "form %d" % (b + 1)) for b in range(32) if m >> b & 1]
+        self.category = {}
+        for r in T.SpellCategories:
+            if r["DifficultyID"] == "0" and r["Category"] not in ("", "0"):
+                self.category[r["SpellID"]] = r["Category"]
+        self.power = collections.defaultdict(list)
+        for r in T.SpellPower:
+            self.power[r["SpellID"]].append(r)
+        self.icons = {}
+        for r in T.ManifestInterfaceData:
+            if r["FilePath"].lower().replace("/", "\\") == "interface\\icons\\":
+                self.icons[r["ID"]] = re.sub(r"\.+blp$", "", r["FileName"], flags=re.I).lower()
+
+    def rank(self, sid):
+        m = re.match(r"Rank (\d+)", (self.spell.get(sid) or {}).get("NameSubtext_lang") or "")
+        return int(m.group(1)) if m else None
+
+    def icon(self, sid, override="0"):
+        fid = override if override not in ("", "0") else (self.misc.get(sid) or {}).get("SpellIconFileDataID", "0")
+        return self.icons.get(fid)
+
+    def value(self, sid, idx, over=None):
+        if over and idx in over:
+            return over[idx]
+        e = self.eff.get(sid, {}).get(idx)
+        return float(e["EffectBasePointsF"]) if e else 0.0
+
+    def dur_ms(self, sid):
+        di = (self.misc.get(sid) or {}).get("DurationIndex", "0")
+        d = self.duration.get(di)
+        return float(d["Duration"]) if d else 0.0
+
+    def token(self, sid, key, idx, over):
+        """One $-token. idx is 1-based as written in tooltips."""
+        i = (idx or 1) - 1
+        e = self.eff.get(sid, {}).get(i)
+        if key in "smMSw":
+            return abs(self.value(sid, i, over))
+        if key == "o":
+            per = float(e["EffectAuraPeriod"]) if e else 0
+            ticks = self.dur_ms(sid) / per if per else 1
+            return abs(self.value(sid, i, over)) * ticks
+        if key == "t":
+            return float(e["EffectAuraPeriod"]) / 1000.0 if e else 0
+        if key == "d":
+            return self.dur_ms(sid)
+        if key in "aA":
+            r = self.radius.get(e["EffectRadiusIndex_0"]) if e else None
+            return float(r["Radius"]) if r else 0
+        if key == "h":
+            a = self.aura.get(sid)
+            return float(a["ProcChance"]) if a else 0
+        if key == "n":
+            a = self.aura.get(sid)
+            return float(a["ProcCharges"]) if a else 0
+        if key == "u":
+            a = self.aura.get(sid)
+            return float(a["CumulativeAura"]) if a else 0
+        if key == "x":
+            return float(e["EffectChainTargets"]) if e else 0
+        if key == "b":
+            return float(e["EffectPointsPerResource"]) if e else 0
+        if key == "e":
+            return float(e["EffectAmplitude"]) if e else 0
+        return None
+
+    TOK = re.compile(r"\$(?:(?P<op>[/*])(?P<k>[\d.]+);)?(?P<sid>\d+)?(?P<key>[a-zA-Z])(?P<idx>\d)?")
+
+    def render(self, sid, over=None, text=None, depth=0):
+        """Tooltip of spell sid; over = {effect index: value} for talent ranks."""
+        text = text if text is not None else (self.spell.get(sid) or {}).get("Description_lang") or ""
+        if depth > 2:
+            return text
+
+        def desc(m):
+            return self.render(m.group(1), None, None, depth + 1)
+        text = re.sub(r"\$@spelldesc(\d+)", desc, text)
+        text = re.sub(r"\$@spellname(\d+)", lambda m: self.name.get(m.group(1), "?"), text)
+        text = re.sub(r"\$[lL]([^:;]*):([^;]*);", lambda m: m.group(2), text)
+        text = re.sub(r"\$[gG]([^:;]*):([^;]*);", lambda m: m.group(1), text)
+        # $?s123[yes][no] and friends: keep the first branch, mark it
+        text = re.sub(r"\$\?[^\[]*\[([^\]]*)\](?:\[([^\]]*)\])?", lambda m: m.group(1), text)
+
+        def tok(m, as_number=False):
+            s = m.group("sid") or sid
+            key, idx = m.group("key"), int(m.group("idx")) if m.group("idx") else None
+            v = self.token(s, key, idx, over if s == sid else None)
+            if v is None:
+                return m.group(0)
+            if m.group("op") == "/":
+                v = v / float(m.group("k"))
+            elif m.group("op") == "*":
+                v = v * float(m.group("k"))
+            if as_number:
+                return num(v)
+            return secs(v) if key == "d" else num(v)
+
+        def expr(m):
+            inner = self.TOK.sub(lambda x: tok(x, True), m.group(1))
+            fmt = m.group(2)
+            try:
+                v = eval(inner, {"__builtins__": {}}, {})  # digits and + - * / only after substitution
+                return ("%." + fmt[1:] + "f") % v if fmt else num(v)
+            except Exception:
+                return "{" + inner + "}"
+        text = re.sub(r"\$\{([^}]*)\}(\.\d)?", expr, text)
+        text = self.TOK.sub(tok, text)
+        text = re.sub(r"\|[cC][0-9a-fA-F]{8}|\|[rR]", "", text)
+        return re.sub(r"\s+", " ", text).strip()
+
+
+# ---------------------------------------------------------------------------
+# Reference
+# ---------------------------------------------------------------------------
+
+def clusters(xs, k):
+    """Split sorted distinct x positions into k groups at the k-1 widest gaps."""
+    xs = sorted(set(xs))
+    if len(xs) <= k:
+        return [[x] for x in xs]
+    gaps = sorted(range(1, len(xs)), key=lambda i: xs[i] - xs[i - 1], reverse=True)[:k - 1]
+    out, start = [], 0
+    for cut in sorted(gaps):
+        out.append(xs[start:cut])
+        start = cut
+    out.append(xs[start:])
+    return out
+
+
+def build_reference(build):
+    T = Tables(os.path.join(CACHE, build))
+    S = Spells(T)
+    classes = {r["ID"]: r["Filename"] for r in T.ChrClasses}
+    bit_to_class = {1 << (int(i) - 1): tok for i, tok in classes.items()}
+    skill = {r["ID"]: r for r in T.SkillLine}
+
+    # class spell lines: class (7) and class-only secondary (9: Poisons, Lockpicking) skill lines of one class
+    class_lines = collections.defaultdict(set)
+    for r in T.SkillRaceClassInfo:
+        cls = bit_to_class.get(int(r["ClassMask"]))
+        s = skill.get(r["SkillID"])
+        if cls and s and s["CategoryID"] in ("7", "9") and not s["DisplayName_lang"].startswith("Pet - "):
+            class_lines[cls].add(r["SkillID"])
+    # lines the class table misses (Forever's second Poisons line): every ability on them is for one class
+    by_line = collections.defaultdict(set)
+    for r in T.SkillLineAbility:
+        by_line[r["SkillLine"]].add(int(r["ClassMask"] or 0))
+    for line, masks in by_line.items():
+        s = skill.get(line)
+        if s and s["CategoryID"] in ("7", "9") and len(masks) == 1 and bit_to_class.get(next(iter(masks))):
+            class_lines[bit_to_class[next(iter(masks))]].add(line)
+    pet_lines = {}
+    for s in skill.values():
+        if s["CategoryID"] == "7" and s["DisplayName_lang"].startswith("Pet - "):
+            fam = s["DisplayName_lang"][6:]
+            pet_lines[s["ID"]] = ("WARLOCK" if fam in WARLOCK_PETS else "HUNTER", fam)
+
+    # trait tables
+    nodes_by_tree = collections.defaultdict(list)
+    for n in T.TraitNode:
+        nodes_by_tree[n["TraitTreeID"]].append(n)
+    entry = {r["ID"]: r for r in T.TraitNodeEntry}
+    tdef = {r["ID"]: r for r in T.TraitDefinition}
+    node_entries = collections.defaultdict(list)
+    for r in sorted(T.TraitNodeXTraitNodeEntry, key=lambda r: int(r["_Index"])):
+        node_entries[r["TraitNodeID"]].append(entry[r["TraitNodeEntryID"]])
+    node_groups = collections.defaultdict(list)
+    for r in T.TraitNodeGroupXTraitNode:
+        node_groups[r["TraitNodeID"]].append(r["TraitNodeGroupID"])
+    cond = {r["ID"]: r for r in T.TraitCond}
+    group_conds = collections.defaultdict(list)
+    for r in T.TraitNodeGroupXTraitCond:
+        group_conds[r["TraitNodeGroupID"]].append(cond[r["TraitCondID"]])
+    # TraitEdge.Type: 0 = drawn line only, 2 = sufficient for availability, 3 = required for availability
+    edges_in = collections.defaultdict(list)
+    for r in T.TraitEdge:
+        if r["Type"] != "0":
+            edges_in[r["RightTraitNodeID"]].append((r["LeftTraitNodeID"], r["Type"]))
+    curve_pts = collections.defaultdict(list)
+    for r in T.CurvePoint:
+        curve_pts[r["CurveID"]].append((float(r["Pos_0"]), float(r["Pos_1"])))
+    def_curves = collections.defaultdict(dict)
+    for r in T.TraitDefinitionEffectPoints:
+        def_curves[r["TraitDefinitionID"]][int(r["EffectIndex"])] = sorted(curve_pts[r["CurveID"]])
+
+    def curve_at(pts, x):
+        for px, py in pts:
+            if abs(px - x) < 1e-6:
+                return py
+        return pts[-1][1] if pts else 0.0
+
+    tree_of = {}
+    for r in T.SkillLineXTraitTree:
+        for cls, lines in class_lines.items():
+            if r["SkillLineID"] in lines:
+                tree_of[cls] = r["TraitTreeID"]
+
+    out = {"build": build, "product": PRODUCT, "source": API, "classes": {}}
+    for cls in CLASSES:
+        bit = [b for b, c in bit_to_class.items() if c == cls][0]
+        tabs = [t["Name_lang"] for t in sorted((t for t in T.TalentTab if int(t["ClassMask"]) == bit),
+                                               key=lambda t: int(t["OrderIndex"]))]
+        nodes = nodes_by_tree.get(tree_of.get(cls), [])
+        # The client parks talents it took out far off the canvas (x or y ten times the rest): skip those.
+        def p90(vals):
+            vals = sorted(vals)
+            return vals[int(0.9 * (len(vals) - 1))] if vals else 0
+        mx_x, mx_y = 2 * p90(int(n["PosX"]) for n in nodes), 2 * p90(int(n["PosY"]) for n in nodes)
+        hidden = sorted(S.name.get((tdef.get((node_entries.get(n["ID"]) or [{}])[0].get("TraitDefinitionID")) or {}).get("SpellID"), "?")
+                        for n in nodes if int(n["PosX"]) > mx_x or int(n["PosY"]) > mx_y)
+        nodes = [n for n in nodes if int(n["PosX"]) <= mx_x and int(n["PosY"]) <= mx_y]
+        groups = clusters([int(n["PosX"]) for n in nodes], len(tabs))
+        tab_of_x = {x: tabs[i] for i, g in enumerate(groups) for x in g}
+        talents, by_node = {}, {}
+        talent_spells = set()
+        for tab in tabs:
+            tn = [n for n in nodes if tab_of_x[int(n["PosX"])] == tab]
+            ys = sorted(set(int(n["PosY"]) for n in tn))
+            xs = sorted(set(int(n["PosX"]) for n in tn))
+            for n in tn:
+                ents = node_entries.get(n["ID"]) or []
+                if not ents:
+                    continue
+                e = ents[0]
+                d = tdef.get(e["TraitDefinitionID"]) or {}
+                sid = d.get("SpellID", "0")
+                name = d.get("OverrideName_lang") or S.name.get(sid) or "?"
+                req = 0
+                for g in node_groups.get(n["ID"], []):
+                    for c in group_conds.get(g, []):
+                        if c["CondType"] == "0" and int(c["SpentAmountRequired"] or 0) > 0:
+                            req = max(req, int(c["SpentAmountRequired"]))
+                mx = int(e["MaxRanks"])
+                curves = def_curves.get(d.get("ID"), {})
+                ranks = []
+                for r in range(1, mx + 1):
+                    over = {i: curve_at(p, r) for i, p in curves.items()}
+                    ranks.append(S.render(sid, over, d.get("OverrideDescription_lang") or None))
+                talent_spells.add(sid)
+                t = {"tab": tab, "row": ys.index(int(n["PosY"])) + 1, "col": xs.index(int(n["PosX"])) + 1,
+                     "max": mx, "req": req, "spell": int(sid), "icon": S.icon(sid, d.get("OverrideIcon", "0")),
+                     "ranks": ranks, "node": int(n["ID"])}
+                if name in talents:
+                    name = "%s (%s)" % (name, tab)
+                talents[name] = t
+                by_node[n["ID"]] = name
+        # prereq: any one of these maxed opens the talent (edge type 2); requires: all of these maxed (type 3)
+        for n in nodes:
+            if n["ID"] in by_node:
+                ins = [(by_node[x], t) for x, t in edges_in.get(n["ID"], []) if x in by_node]
+                talents[by_node[n["ID"]]]["prereq"] = sorted(x for x, t in ins if t != "3")
+                if any(t == "3" for _, t in ins):
+                    talents[by_node[n["ID"]]]["requires"] = sorted(x for x, t in ins if t == "3")
+
+        spells = collections.defaultdict(list)
+        pets = collections.defaultdict(list)
+        seen = set()
+        for r in T.SkillLineAbility:
+            sid = r["Spell"]
+            name = S.name.get(sid)
+            if not name or (r["SkillLine"], sid) in seen:
+                continue
+            # AcquireMethod 3: internal copies the player never learns (effects, rune-era leftovers)
+            if r["AcquireMethod"] == "3" and sid not in talent_spells:
+                continue
+            seen.add((r["SkillLine"], sid))
+            lvl = S.level.get(sid, 0)
+            item = {"id": int(sid), "rank": S.rank(sid), "level": lvl}
+            if r["SkillLine"] in class_lines[cls]:
+                if sid in talent_spells:
+                    item["talent"] = True
+                item["line"] = skill[r["SkillLine"]]["DisplayName_lang"]
+                cost = [p for p in S.power.get(sid, []) if p["OrderIndex"] == "0"]
+                pct = lambda pc: float(pc["PowerCostPct"] or 0)
+                if cost and (float(cost[0]["ManaCost"] or 0) or pct(cost[0])):
+                    pc = cost[0]
+                    item["cost"] = ("%s%%" % num(pct(pc))) if pct(pc) else \
+                        num(float(pc["ManaCost"]) / (10.0 if pc["PowerType"] == "1" else 1.0))
+                    item["power"] = {"0": "Mana", "1": "Rage", "3": "Energy", "2": "Focus"}.get(pc["PowerType"], pc["PowerType"])
+                cd = S.cooldown.get(sid)
+                if cd and int(cd["RecoveryTime"] or 0) + int(cd["CategoryRecoveryTime"] or 0) > 0:
+                    item["cooldown"] = secs(max(int(cd["RecoveryTime"] or 0), int(cd["CategoryRecoveryTime"] or 0)))
+                item["icon"] = S.icon(sid)
+                if sid in S.stances:
+                    item["stances"] = S.stances[sid]
+                cd = S.cooldown.get(sid)
+                if cd and int(cd["CategoryRecoveryTime"] or 0) and sid in S.category:
+                    item["cdgroup"] = int(S.category[sid])
+                item["desc"] = S.render(sid)
+                spells[name].append(item)
+            elif r["SkillLine"] in pet_lines and pet_lines[r["SkillLine"]][0] == cls:
+                item["pet"] = pet_lines[r["SkillLine"]][1]
+                item["desc"] = S.render(sid)
+                pets[name].append(item)
+        for d in (spells, pets):
+            for name in d:
+                d[name].sort(key=lambda i: (i["rank"] or 0, i["level"], i["id"]))
+        # spells that share one cooldown (same category with a category cooldown)
+        groups = collections.defaultdict(set)
+        for name, rows in spells.items():
+            for r in rows:
+                if r.get("cdgroup"):
+                    groups[r["cdgroup"]].add(name)
+        for name, rows in spells.items():
+            for r in rows:
+                g = r.pop("cdgroup", None)
+                others = sorted(groups.get(g, set()) - {name})
+                if others:
+                    r["shares_cooldown"] = others
+        out["classes"][cls] = {"tabs": tabs, "hidden": hidden, "talents": dict(sorted(talents.items())),
+                               "spells": dict(sorted(spells.items())), "pet": dict(sorted(pets.items()))}
+    return out
+
+
+def write_reference(ref, path=REF):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(ref, f, indent=1, ensure_ascii=False, sort_keys=False)
+        f.write("\n")
+
+
+def load_reference(path=REF):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# Diff between two references
+# ---------------------------------------------------------------------------
+
+def diff(old, new):
+    lines = ["Game data %s -> %s" % (old.get("build"), new.get("build"))]
+    for cls in CLASSES:
+        a, b = old["classes"].get(cls, {}), new["classes"].get(cls, {})
+        out = []
+        ta, tb = a.get("talents", {}), b.get("talents", {})
+        for n in sorted(set(ta) - set(tb)):
+            out.append("  talent removed: %s (%s row %d)" % (n, ta[n]["tab"], ta[n]["row"]))
+        for n in sorted(set(tb) - set(ta)):
+            t = tb[n]
+            out.append("  talent new: %s (%s row %d col %d, %d rank(s), needs %d points): %s"
+                       % (n, t["tab"], t["row"], t["col"], t["max"], t["req"], t["ranks"][-1] if t["ranks"] else ""))
+        for n in sorted(set(ta) & set(tb)):
+            x, y = ta[n], tb[n]
+            for k in ("tab", "row", "col", "max", "req", "prereq", "requires", "icon"):
+                if x.get(k) != y.get(k):
+                    out.append("  talent %s: %s %s -> %s" % (n, k, x.get(k), y.get(k)))
+            if x.get("ranks") != y.get("ranks"):
+                out.append("  talent %s text: %s\n      now: %s" % (n, (x["ranks"] or [""])[-1], (y["ranks"] or [""])[-1]))
+        for kind in ("spells", "pet"):
+            sa, sb = a.get(kind, {}), b.get(kind, {})
+            for n in sorted(set(sa) - set(sb)):
+                out.append("  %s removed: %s" % (kind[:-1] if kind == "spells" else "pet spell", n))
+            for n in sorted(set(sb) - set(sa)):
+                out.append("  %s new: %s (level %s)" % ("spell" if kind == "spells" else "pet spell", n,
+                                                       ", ".join(str(i["level"]) for i in sb[n])))
+            for n in sorted(set(sa) & set(sb)):
+                ra = {(i["rank"], i["id"]): i for i in sa[n]}
+                rb = {(i["rank"], i["id"]): i for i in sb[n]}
+                la = sorted((i["rank"] or 0, i["level"]) for i in sa[n])
+                lb = sorted((i["rank"] or 0, i["level"]) for i in sb[n])
+                if la != lb:
+                    out.append("  %s ranks/levels: %s -> %s" % (n, la, lb))
+                for key in set(ra) & set(rb):
+                    for k in ("cost", "cooldown", "desc", "stances", "shares_cooldown"):
+                        if ra[key].get(k) != rb[key].get(k):
+                            out.append("  %s%s %s: %s -> %s" % (n, " (Rank %s)" % key[0] if key[0] else "", k,
+                                                               ra[key].get(k), rb[key].get(k)))
+        if out:
+            lines.append(cls)
+            lines.extend(out)
+    if len(lines) == 1:
+        lines.append("no class changes")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Audit: Data.lua against the reference
+# ---------------------------------------------------------------------------
+
+def load_data(path=os.path.join(ROOT, "Data.lua")):
+    import lupa.lua51 as lupa
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    with open(path, encoding="utf-8") as f:
+        lua.execute(f.read())
+
+    def conv(t):
+        if lupa.lua_type(t) != "table":
+            return t
+        keys = list(t.keys())
+        if keys and all(isinstance(k, int) for k in keys) and sorted(keys) == list(range(1, len(keys) + 1)):
+            return [conv(t[k]) for k in sorted(keys)]
+        if not keys:
+            return []
+        return {str(k): conv(v) for k, v in t.items()}
+    return conv(lua.globals().LevelingCodexData)
+
+
+ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+RANKED = re.compile(r"^(.*?)\s*\(Rank (\d+)\)\s*$")
+
+
+def split_rank(s):
+    m = RANKED.match(s.strip())
+    return (m.group(1).strip(), int(m.group(2))) if m else (s.strip(), None)
+
+
+def first_level(rows):
+    """Lowest level among a name's spell IDs; IDs at level 0 are internal copies (unless all are)."""
+    lv = [r["level"] for r in rows if r["level"] > 0]
+    return min(lv) if lv else 1
+
+
+def is_sentence(s):
+    """Guide text in a spell list rather than a spell name (also "New level-20 spells", the race-spell slot)."""
+    return s.rstrip().endswith(".") or len(s.split()) > 5 or bool(re.match(r"New level-\d+ spells$", s.strip()))
+
+
+def macro_spells(body):
+    """(command, spell) for every spell a macro casts or shows."""
+    out = []
+    for line in body.split("\n"):
+        line = line.strip()
+        m = re.match(r"#show(?:tooltip)?\s+(.*)", line)
+        if m:
+            if m.group(1).strip():
+                out.append(("#show", m.group(1).strip()))
+            continue
+        m = re.match(r"/(cast|castsequence|use|castrandom)\s+(.*)", line)
+        if not m:
+            continue
+        cmd, rest = m.group(1), m.group(2)
+        for clause in rest.split(";"):
+            clause = re.sub(r"\[[^\]]*\]", "", clause).strip()
+            clause = re.sub(r"^reset=\S+\s*", "", clause)
+            parts = clause.split(",") if cmd in ("castsequence", "castrandom") else [clause]
+            for p in parts:
+                p = p.strip().lstrip("!").strip()
+                if p and not p.isdigit() and not re.match(r"^\d+\s+\d+$", p):
+                    out.append((cmd, p))
+    return out
+
+
+def audit(data, ref, only=None):
+    """[(class, 'error'|'warn'|'info', message)]. Errors: the game says the guide can't be done as written."""
+    res = []
+    for cls in CLASSES:
+        if only and only.upper() != cls:
+            continue
+        d, R = data.get(cls), ref["classes"].get(cls)
+        if not d or not R:
+            continue
+
+        def add(level, msg):
+            res.append((cls, level, msg))
+        talents, spells, pets = R["talents"], R["spells"], R["pet"]
+        tl = {n.lower(): n for n in talents}
+        sl = {n.lower(): n for n in spells}
+        pl = {n.lower(): n for n in pets}
+
+        # --- talent plan, point by point in level order
+        points = []
+        for p in d["plan"]:
+            for lvl in range(p["from"], p["to"] + 1):
+                points.append((lvl, p))
+        points.sort(key=lambda x: x[0])
+        in_tab, taken = collections.Counter(), collections.Counter()
+        learned = {}
+        for p in d["plan"]:
+            n = tl.get(p["name"].lower())
+            if not n:
+                add("error", "plan: talent '%s' is not in the %s tree" % (p["name"], cls))
+                continue
+            t = talents[n]
+            if p["tree"] != t["tab"]:
+                add("error", "plan: %s is in %s, not %s" % (n, t["tab"], p["tree"]))
+            if p["max"] != t["max"]:
+                add("error", "plan: %s has %d rank(s), not %d" % (n, t["max"], p["max"]))
+            if t.get("icon") and p.get("icon") and p["icon"].lower() != t["icon"]:
+                add("warn", "plan: %s icon is %s in game, guide uses %s" % (n, t["icon"], p["icon"]))
+        for lvl, p in points:
+            n = tl.get(p["name"].lower())
+            if not n:
+                continue
+            t = talents[n]
+            if in_tab[t["tab"]] < t["req"]:
+                add("error", "plan: level %d %s needs %d points in %s, only %d spent" %
+                    (lvl, n, t["req"], t["tab"], in_tab[t["tab"]]))
+            pre = t.get("prereq", [])
+            if pre and not any(taken[x] >= talents[x]["max"] for x in pre):
+                add("error", "plan: level %d %s needs %s maxed first" % (lvl, n, " or ".join(
+                    "%s %d/%d (has %d)" % (x, talents[x]["max"], talents[x]["max"], taken[x]) for x in pre)))
+            for x in t.get("requires", []):
+                if taken[x] < talents[x]["max"]:
+                    add("error", "plan: level %d %s needs %s %d/%d first (has %d)" %
+                        (lvl, n, x, talents[x]["max"], talents[x]["max"], taken[x]))
+            in_tab[t["tab"]] += 1
+            taken[n] += 1
+            learned.setdefault(n, lvl)
+        for n, k in taken.items():
+            if k > talents[n]["max"]:
+                add("error", "plan: %s gets %d points, max %d" % (n, k, talents[n]["max"]))
+
+        def spell_level(name, rank=None):
+            """Level a name is first usable at, or None if the game doesn't know it."""
+            low = name.lower()
+            if name in INNATE:
+                return 1
+            if low in tl:
+                n = tl[low]
+                return learned.get(n, 99)
+            if low in sl:
+                rows = spells[sl[low]]
+                if rank:
+                    rows = [r for r in rows if r["rank"] == rank]
+                    if not rows:
+                        return None
+                talent = any(r.get("talent") for r in spells[sl[low]])
+                lv = first_level(rows)
+                if talent and sl[low].lower() in tl:
+                    return max(lv, learned.get(tl[sl[low].lower()], 99))
+                return lv
+            if low in pl:
+                return first_level(pets[pl[low]])
+            return None
+
+        # --- trainer visits
+        mentioned = set()
+        for v in d["train"]:
+            for s in v["spells"]:
+                if is_sentence(s):
+                    for n in spells:
+                        if re.search(r"\b%s\b" % re.escape(n), s):
+                            mentioned.add(n)
+                    continue
+                name, rank = split_rank(s)
+                low = name.lower()
+                if low in sl:
+                    n = sl[low]
+                    mentioned.add(n)
+                    rows = spells[n]
+                    if rank:
+                        rr = [r for r in rows if r["rank"] == rank]
+                        roman = "%s %s" % (n, ROMAN[rank]) if rank < len(ROMAN) else None
+                        if not rr and roman in spells:
+                            add("warn", "trainer %d: the game calls %s '%s'" % (v["level"], s, roman))
+                            mentioned.add(roman)
+                            rr = spells[roman]
+                        if not rr:
+                            add("error", "trainer %d: %s has no Rank %d (ranks %s)" %
+                                (v["level"], n, rank, [r["rank"] for r in rows]))
+                            continue
+                        lv = first_level(rr)
+                    else:
+                        lv = first_level(rows)
+                    if lv > v["level"]:
+                        add("error", "trainer %d: %s%s is level %d in game" % (v["level"], s, "", lv))
+                    elif lv < v["level"] and lv > 0:
+                        add("warn", "trainer %d: %s is available from level %d" % (v["level"], s, lv))
+                elif low in tl:
+                    add("warn", "trainer %d: %s is a talent in game, not a trainer spell" % (v["level"], name))
+                elif low in pl:
+                    lv = first_level(pets[pl[low]])
+                    if lv > v["level"]:
+                        add("error", "trainer %d: pet spell %s is level %d in game" % (v["level"], name, lv))
+                elif low.endswith("s") and any(n.lower().startswith(low[:-1]) for n in spells):
+                    pass  # "Teleports", "Portals": shorthand for a family of spells
+                else:
+                    add("warn", "trainer %d: '%s' is not a %s spell in game" % (v["level"], s, cls))
+        # new abilities (rank 1 or unranked) the trainer list never mentions
+        for n, rows in spells.items():
+            real = [r for r in rows if r["level"] > 0]
+            if not real or real[0].get("talent") or real[0]["level"] > 60 or (real[0]["rank"] or 1) != 1:
+                continue
+            if n not in mentioned and n.lower() not in tl:
+                add("info", "trainer: %s (level %d) is never listed" % (n, real[0]["level"]))
+
+        # --- macros
+        for m in d["macros"]:
+            where = "macro %s (%d-%d)" % (m["name"], m["lo"], m["hi"])
+            for cmd, s in macro_spells(m["body"]):
+                name, rank = split_rank(s.replace("(Rank", " (Rank"))
+                lv = spell_level(name, rank)
+                if lv is None:
+                    if cmd == "use":
+                        add("info", "%s: uses '%s' (an item?)" % (where, s))
+                    else:
+                        add("error", "%s: '%s' is not a spell this class has" % (where, s))
+                elif lv > m["hi"]:
+                    add("error", "%s: %s is only learned at %d, after the macro's levels" % (where, name, lv))
+                elif lv > m["lo"]:
+                    if cmd == "castsequence":
+                        add("error", "%s: castsequence step %s is learned at %d: the sequence stalls at %d-%d" %
+                            (where, name, lv, m["lo"], lv - 1))
+                    else:
+                        add("info", "%s: %s is learned at %d (skipped before)" % (where, name, lv))
+
+        # --- text: "Name (NN)" level mentions and "Name N/M" ranks
+        texts = []
+        for p in d["plan"]:
+            texts += [("plan %d %s" % (p["from"], p["name"]), p.get("why") or ""), ("plan %d %s more" % (p["from"], p["name"]), p.get("more") or "")]
+        for v in d["train"]:
+            texts += [("trainer %d note" % v["level"], x) for x in v.get("notes") or []]
+        for b in d["br"]:
+            texts += [("tips %s" % b["range"], b.get("intro") or "")] + [("tips %s" % b["range"], x) for x in b["steps"]]
+        for m in d["macros"]:
+            texts += [("macro %s (%d-%d) tip" % (m["name"], m["lo"], m["hi"]), x) for x in m.get("tips") or []]
+        names = sorted(set(spells) | set(talents) | set(pets), key=len, reverse=True)
+        pat = re.compile(r"(?<![\w'])(%s) \((\d+)\)" % "|".join(re.escape(n) for n in names)) if names else None
+        rk = re.compile(r"(?<![\w'])(%s) (\d)/(\d)" % "|".join(re.escape(n) for n in talents)) if talents else None
+        for where, text in texts:
+            for mm in (pat.finditer(text) if pat else []):
+                n, at = mm.group(1), int(mm.group(2))
+                lv = spell_level(n)
+                if lv is not None and lv != at and lv != 99:
+                    add("warn", "%s: says %s (%d), game/plan has it at %d" % (where, n, at, lv))
+                elif lv == 99:
+                    add("warn", "%s: says %s (%d) but the plan never takes it" % (where, n, at))
+            for mm in (rk.finditer(text) if rk else []):
+                n, mx = mm.group(1), int(mm.group(3))
+                if talents[n]["max"] != mx:
+                    add("warn", "%s: says %s %s/%d, it has %d rank(s)" % (where, n, mm.group(2), mx, talents[n]["max"]))
+    return res
+
+
+def review(data, ref, cls):
+    d, R = data[cls], ref["classes"][cls]
+    tl = {n.lower(): n for n in R["talents"]}
+    taken = collections.Counter()
+    out = []
+    for p in sorted(d["plan"], key=lambda p: p["from"]):
+        n = tl.get(p["name"].lower())
+        a = taken[n] + 1
+        b = taken[n] + p["to"] - p["from"] + 1
+        taken[n] = b
+        out.append("L%d-%d  %s %d/%d -> %d/%d  [%s]" % (p["from"], p["to"], p["name"], a - 1, p["max"], b, p["max"], p["tree"]))
+        out.append("   why : " + (p.get("why") or ""))
+        if p.get("more"):
+            out.append("   more: " + p["more"])
+        if n:
+            t = R["talents"][n]
+            out.append("   GAME: %s row %d col %d, needs %d, prereq %s" % (t["tab"], t["row"], t["col"], t["req"],
+                       " or ".join(t.get("prereq") or []) + " and ".join(t.get("requires") or []) or "-"))
+            out.append("   r%d  : %s" % (a, t["ranks"][a - 1] if a - 1 < len(t["ranks"]) else "?"))
+            if b != a:
+                out.append("   r%d  : %s" % (b, t["ranks"][b - 1] if b - 1 < len(t["ranks"]) else "?"))
+        else:
+            out.append("   GAME: not in the tree")
+    return "\n".join(out)
+
+
+def packet(data, ref, cls):
+    """Everything about one class's guide next to what the game says: the input for a manual review."""
+    d, R = data[cls], ref["classes"][cls]
+    spells, talents, pets = R["spells"], R["talents"], R["pet"]
+    sl = {n.lower(): n for n in spells}
+    pl = {n.lower(): n for n in pets}
+
+    def about(name):
+        name, rank = split_rank(name)
+        low = name.lower()
+        if low in sl:
+            rows = spells[sl[low]]
+            if rank:
+                rows = [r for r in rows if r["rank"] == rank] or rows
+            real = [r for r in rows if r["level"] > 0] or rows
+            r = real[0] if not rank else real[-1]
+            extra = ", ".join(x for x in [("%s %s" % (r.get("cost"), r.get("power"))) if r.get("cost") else "",
+                                          ("cd " + r["cooldown"]) if r.get("cooldown") else "",
+                                          ("shares cd with " + ", ".join(r["shares_cooldown"])) if r.get("shares_cooldown") else "",
+                                          ("only in " + " / ".join(r["stances"])) if r.get("stances") else ""] if x)
+            ranks = ", ".join("%s%d" % ("r%d@" % x["rank"] if x["rank"] else "", x["level"]) for x in real)
+            return "%s [%s]%s: %s" % (sl[low], ranks, (" (" + extra + ")") if extra else "", r.get("desc", ""))
+        if low in pl:
+            r = pets[pl[low]][0]
+            return "%s [pet %s, level %d]: %s" % (pl[low], r["pet"], r["level"], r.get("desc", ""))
+        for n, t in talents.items():
+            if n.lower() == low:
+                return "%s [talent, %s row %d]: %s" % (n, t["tab"], t["row"], t["ranks"][-1])
+        return "%s: NOT FOUND in game data for %s" % (name, cls)
+
+    out = ["#### %s: %s (%s) vs WoW: Forever build %s" % (cls, d["guide"], d["spec"], ref["build"]), ""]
+    out.append("## Automatic audit (error = impossible in game, warn = likely wrong, info = worth a look)")
+    out += ["  %-5s %s" % (l, m) for c, l, m in audit(data, ref, cls)] or ["  (nothing)"]
+    out += ["", "## Talent plan vs the game's tooltips (rN = tooltip at that rank)", review(data, ref, cls)]
+    out += ["", "## The whole talent tree in game", tree(ref, cls)]
+    if R.get("hidden"):
+        out.append("(hidden in game, not takeable: %s)" % ", ".join(R["hidden"]))
+    out += ["", "## Trainer visits (guide text, then the game)"]
+    for v in d["train"]:
+        out.append("L%d" % v["level"])
+        for i, s in enumerate(v["spells"]):
+            note = (v.get("notes") or [""] * len(v["spells"]))[i] if i < len(v.get("notes") or []) else ""
+            out.append("  - %s  // note: %s" % (s, note))
+            if not is_sentence(s):
+                out.append("      GAME: " + about(s)[:400])
+    out += ["", "## Macros"]
+    for m in d["macros"]:
+        out.append("[%s] '%s' levels %d-%d  pad %s  key %s  icon %s" % (m["name"], m["title"], m["lo"], m["hi"], m["pad"], m["kb"], m["icon"]))
+        out += ["    " + l for l in m["body"].split("\n")]
+        out += ["    tip: " + t for t in m.get("tips") or []]
+        seen = set()
+        for cmd, s in macro_spells(m["body"]):
+            if s not in seen:
+                seen.add(s)
+                out.append("    GAME: " + about(s)[:400])
+    out += ["", "## Tip chapters"]
+    for b in d["br"]:
+        out.append("[%s] %s (icon %s)" % (b["range"], b["title"], b.get("icon")))
+        out.append("  intro: " + (b.get("intro") or ""))
+        out += ["  - " + s for s in b["steps"]]
+    out += ["", "## Every class spell in game (name [rank@level ...])", spell_list(ref, cls)]
+    return "\n".join(out)
+
+
+def tree(ref, cls):
+    R = ref["classes"][cls]
+    out = []
+    for tab in R["tabs"]:
+        out.append("== " + tab)
+        ts = sorted(((t["row"], t["col"], n, t) for n, t in R["talents"].items() if t["tab"] == tab))
+        for row, col, n, t in ts:
+            pre = (" <- " + " or ".join(t["prereq"])) if t.get("prereq") else ""
+            pre += (" <- needs " + " and ".join(t["requires"])) if t.get("requires") else ""
+            out.append("  r%d c%d %-32s %d rank(s), needs %2d%s :: %s" % (row, col, n, t["max"], t["req"], pre, t["ranks"][-1] if t["ranks"] else ""))
+    return "\n".join(out)
+
+
+def spell_list(ref, cls, name=None):
+    R = ref["classes"][cls]
+    out = []
+    for kind in ("spells", "pet"):
+        for n, rows in sorted(R[kind].items(), key=lambda kv: (kv[1][0]["level"], kv[0])):
+            if name and name.lower() not in n.lower():
+                continue
+            lv = ", ".join("%s%d" % ("r%d@" % r["rank"] if r["rank"] else "", r["level"]) for r in rows)
+            extra = " [talent]" if rows[0].get("talent") else (" [pet: %s]" % rows[0]["pet"] if kind == "pet" else "")
+            out.append("%-28s %s%s" % (n, lv, extra))
+            if name:
+                for r in rows:
+                    out.append("    r%s L%d id %d %s%s%s%s: %s" % (r["rank"], r["level"], r["id"],
+                               ("cost %s %s " % (r.get("cost"), r.get("power"))) if r.get("cost") else "",
+                               ("cd %s" % r.get("cooldown")) if r.get("cooldown") else "",
+                               (" shares cd with " + ", ".join(r["shares_cooldown"])) if r.get("shares_cooldown") else "",
+                               (" only in " + "/".join(r["stances"])) if r.get("stances") else "", r.get("desc", "")))
+    return "\n".join(out)
+
+
+# ---------------------------------------------------------------------------
+
+def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet"])
+    ap.add_argument("args", nargs="*")
+    ap.add_argument("--build")
+    ap.add_argument("--report", help="update: also write a markdown report (game changes + audit) to this file")
+    ap.add_argument("-k", dest="only")
+    ap.add_argument("-v", action="store_true", dest="verbose")
+    a = ap.parse_args()
+
+    if a.cmd in ("fetch", "build", "update"):
+        build = a.build or latest_build()
+        print("Forever build %s" % build)
+        fetch(build)
+        if a.cmd == "fetch":
+            return 0
+        old = load_reference() if os.path.exists(REF) else None
+        new = build_reference(build)
+        write_reference(new)
+        print("wrote %s" % os.path.relpath(REF, ROOT))
+        changes = diff(old, new) if old else "first reference, nothing to compare"
+        print(changes)
+        if a.cmd == "update":
+            res = audit(load_data(), new)
+            if a.report:
+                write_report(a.report, old, new, changes, res)
+            return report(res, a.verbose)
+        return 0
+    if a.cmd == "diff":
+        old = load_reference(a.args[0])
+        new = load_reference(a.args[1]) if len(a.args) > 1 else load_reference()
+        print(diff(old, new))
+        return 0
+    ref = load_reference()
+    if a.cmd == "audit":
+        return report(audit(load_data(), ref, a.only), a.verbose)
+    cls = (a.args[0] if a.args else a.only or "").upper()
+    if cls not in CLASSES:
+        sys.exit("name a class: " + ", ".join(CLASSES))
+    if a.cmd == "review":
+        print(review(load_data(), ref, cls))
+    elif a.cmd == "packet":
+        print(packet(load_data(), ref, cls))
+    elif a.cmd == "tree":
+        print(tree(ref, cls))
+    elif a.cmd == "spells":
+        print(spell_list(ref, cls, a.args[1] if len(a.args) > 1 else None))
+    return 0
+
+
+def write_report(path, old, new, changes, res):
+    """Markdown for a pull request: what the game changed and what in the guides now needs a look."""
+    counts = collections.Counter(l for _, l, _ in res)
+    lines = ["# WoW: Forever %s -> %s" % ((old or {}).get("build", "?"), new["build"]), "",
+             "Built by `python tools/gamedata.py update`. Follow tools/UPDATING.md: fix Data.lua (and the guide "
+             "pages) for every change below, run the harness, then merge.", "",
+             "## What the game changed", "", "```", changes[:30000], "```", "",
+             "## Guide data against the new build: %d error(s), %d warning(s)" % (counts["error"], counts["warn"]), ""]
+    for cls in CLASSES:
+        rows = [(l, m) for c, l, m in res if c == cls and l != "info"]
+        if rows:
+            lines.append("**%s**" % cls)
+            lines += ["- %s %s" % ("ERROR" if l == "error" else "warn", m) for l, m in rows]
+            lines.append("")
+    lines += ["## Also check by hand", "",
+              "- Blizzard's hotfix and development notes since the last update (server-side changes are not in the client tables).",
+              "- `python tools/gamedata.py packet CLASS` for each class above, to re-read its talent reasons and macro tips.", ""]
+    text = "\n".join(lines)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text[:60000])
+
+
+def report(res, verbose):
+    counts = collections.Counter(l for _, l, _ in res)
+    for cls in CLASSES:
+        rows = [(l, m) for c, l, m in res if c == cls and (verbose or l != "info")]
+        if rows:
+            print("\n" + cls)
+            for l, m in rows:
+                print("  %-5s %s" % (l, m))
+    print("\n%d error(s), %d warning(s), %d note(s)%s" % (counts["error"], counts["warn"], counts["info"],
+                                                       "" if verbose else " (-v shows notes)"))
+    return 1 if counts["error"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

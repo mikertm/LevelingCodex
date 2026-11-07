@@ -221,6 +221,25 @@ def data_checks():
                     elif at > m.lo:
                         warnings.append(where + ": castsequence step '%s' is only learned at %d, so the sequence stalls at levels %d-%d"
                                         % (step, at, m.lo, at - 1))
+    game_errors, game_warnings = game_checks()
+    return errors + game_errors, warnings + game_warnings
+
+
+def game_checks():
+    """Data.lua against what the game client says (tools/reference/forever.json, built by tools/gamedata.py).
+
+    Errors: the guide asks for something the game won't allow (a talent that isn't in the tree, a point
+    before its tab or prerequisite is open, a cast sequence step not learned yet, a rank that doesn't exist).
+    Warnings: probably wrong (a level or icon that differs from the game)."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if not os.path.exists(gamedata.REF):
+        return [], ["game: no tools/reference/forever.json yet (python tools/gamedata.py build)"]
+    ref = gamedata.load_reference()
+    res = gamedata.audit(gamedata.load_data(), ref)
+    tag = "game %s" % ref.get("build")
+    errors = ["%s %s: %s" % (tag, c, m) for c, lvl, m in res if lvl == "error"]
+    warnings = ["%s %s: %s" % (tag, c, m) for c, lvl, m in res if lvl == "warn"]
     return errors, warnings
 
 
