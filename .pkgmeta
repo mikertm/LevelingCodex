@@ -1,0 +1,13 @@
+package-as: LevelingCodex
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - README.md
+  - CURSEFORGE_DESCRIPTION.md
+  - RELEASING.md
+  - media

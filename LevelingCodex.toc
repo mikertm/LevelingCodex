@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: Leveling Codex
+## Notes: In-game companion for The Leveling Codex WoW: Forever guides - talent per level, trainer reminders and one-click macro setup. /codex
+## Author: The Leveling Codex
+## Version: @project-version@
+## SavedVariables: LevelingCodexDB
+## SavedVariablesPerCharacter: LevelingCodexCharDB
+## IconTexture: Interface\Icons\INV_Misc_Book_09
+## X-Curse-Project-ID: 000000
+## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
+
+Data.lua
+Core.lua
