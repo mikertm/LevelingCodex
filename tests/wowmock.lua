@@ -281,7 +281,7 @@ function Frame:SetHitRectInsets() end
 function Frame:SetID(id) self._id = id end
 function Frame:GetID() return self._id or 0 end
 function Frame:EnableGamePadButton(on) self._gamepad = on end
-function Frame:SetPropagateGamePadInput() end
+function Frame:SetPropagateGamePadInput(on) self._padPropagate = on end
 function Frame:SetResizable() end
 function Frame:SetUserPlaced() end
 function Frame:IsUserPlaced() return false end
@@ -685,6 +685,7 @@ function MOCK.setup(opts)
     Texture.SetGradient = nil
     Texture.SetRotation = nil
     Frame.EnableGamePadButton = nil
+    Frame.SetPropagateGamePadInput = nil
     for _, m in ipairs({ "SetSmoothing", "SetScaleFrom", "SetScaleTo" }) do Anim[m] = nil end
     AnimGroup.SetToFinalAlpha = nil
   end
@@ -693,6 +694,7 @@ end
 -- Globals the addon is allowed to create (everything else is a leaked local).
 local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
+  BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,

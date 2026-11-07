@@ -78,6 +78,11 @@ local function testBanner(level)
   if PlaySound then pcall(PlaySound, 888) end
 end
 
+-- Key binding (Bindings.xml): Esc > Options > Keybindings > AddOns > Leveling Codex.
+BINDING_HEADER_LEVELINGCODEX = "Leveling Codex"
+BINDING_NAME_LEVELINGCODEX_TOGGLE = "Open or close the Codex"
+function LevelingCodex_Toggle() ns.toggleWindow() end
+
 SLASH_LEVELINGCODEX1 = "/codex"
 SlashCmdList.LEVELINGCODEX = function(msg)
   msg = string.lower((tostring(msg or ""):gsub("^%s+", ""):gsub("%s+$", "")))

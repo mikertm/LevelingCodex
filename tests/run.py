@@ -33,7 +33,8 @@ UNSUPPORTED = "DEATHKNIGHT"
 MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLoginCheck", "levelups",
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "talentByName", "talentGuideOff", "talentFinderCost",
-        "talentPooledButtons", "talentCloseDirect", "noFalseLostNote"]
+        "talentPooledButtons", "talentCloseDirect", "copyMacro", "scrollMemory", "gamepadClose", "binding",
+        "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "lateTalentUI"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
@@ -80,6 +81,16 @@ def toc_files():
     return files, problems
 
 
+def binding_bodies():
+    """The Lua each key binding in Bindings.xml runs (the client loads the file by itself)."""
+    import xml.etree.ElementTree as ET
+    path = os.path.join(ROOT, "Bindings.xml")
+    if not os.path.exists(path):
+        return []
+    root = ET.parse(path).getroot()
+    return [(b.text or "").strip() for b in root.iter("Binding")]
+
+
 def lua_path(p):
     return p.replace("\\", "/")
 
@@ -93,6 +104,8 @@ def new_state(cls, minimal, files, pre=None):
     lua.execute(b'dofile("' + lua_path(os.path.join(HERE, "scenarios.lua")).encode() + b'")')
     if pre:
         lua.execute(pre.encode())
+    bodies = binding_bodies()
+    lua.execute(("BINDING_BODIES = {" + ",".join("%r" % b for b in bodies) + "}").encode())
     lua.execute(b"MOCK.snapshotGlobals()")
     for f in files:
         err = lua.eval(b"function(p) return MOCK.try(MOCK.loadFile, p) end")(lua_path(f).encode())

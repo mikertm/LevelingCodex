@@ -1,0 +1,6 @@
+<Bindings>
+  <!-- Esc > Options > Keybindings > AddOns: bind a key or controller button to open/close the Codex. -->
+  <Binding name="LEVELINGCODEX_TOGGLE" header="LEVELINGCODEX" category="ADDONS">
+    LevelingCodex_Toggle()
+  </Binding>
+</Bindings>

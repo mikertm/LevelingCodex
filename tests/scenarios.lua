@@ -337,7 +337,105 @@ function S.macros()
   MOCK.charMacroSlots = 0
   slash("macros")
   check(chatHas("couldn't make"), "full macro slots reported")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown(), "copy box offered when macros can't be made")
+  local want = {}
+  for _, m in ipairs(D().macros) do if MOCK.level >= m.lo and MOCK.level <= m.hi then want[#want + 1] = m end end
+  check(copy.edit:GetText() == want[1].body, "copy box holds the first macro that failed")
+  if #want > 1 then
+    click(copy, "Next")
+    check(copy.edit:GetText() == want[2].body, "Next shows the second failed macro")
+    click(copy, "Back")
+    check(copy.edit:GetText() == want[1].body, "Back returns to the first")
+  end
+  click(copy, "Done")
+  check(not copy:IsShown(), "Done closes the copy box")
   MOCK.charMacroSlots = nil
+end
+
+-- The Copy button on a macro card: body selected, read-only, Esc closes and frees the keyboard.
+function S.copyMacro()
+  if not D() then return end
+  openAt(30, "Macros")
+  local list = {}
+  for _, m in ipairs(D().macros) do if 30 >= m.lo and 30 <= m.hi then list[#list + 1] = m end end
+  if #list == 0 then win():Hide(); return end
+  click(win(), "Copy")
+  local copy = _G.LevelingCodexCopy
+  check(copy:IsShown(), "copy box opens")
+  local eb = copy.edit
+  check(eb:GetText() == list[1].body, "copy box shows the macro body")
+  check(eb:HasFocus() and eb._highlight, "body is selected and focused")
+  eb._text = "oops"
+  MOCK.fire(eb, "OnTextChanged", true)
+  check(eb:GetText() == list[1].body, "typing can't change the macro")
+  MOCK.fire(eb, "OnEscapePressed")
+  check(not copy:IsShown() and not eb:HasFocus(), "Esc closes it and gives the keyboard back")
+  win():Hide()
+end
+
+-- Each tab keeps its own scroll position.
+function S.scrollMemory()
+  if not D() then return end
+  local function scroller()
+    for _, c in ipairs(win()._children) do if c._type == "ScrollFrame" then return c end end
+  end
+  openAt(30, "Talents")
+  local sf = scroller()
+  sf:SetVerticalScroll(300)
+  local talents = sf:GetVerticalScroll()
+  check(talents > 0, "talents tab scrolls")
+  click(win(), "Trainer")
+  check(sf:GetVerticalScroll() == 0, "trainer tab starts at the top")
+  sf:SetVerticalScroll(120)
+  click(win(), "Talents")
+  check(sf:GetVerticalScroll() == talents, "talents tab scroll kept")
+  click(win(), "Trainer")
+  check(sf:GetVerticalScroll() == 120, "trainer tab scroll kept")
+  click(win(), ">")
+  check(sf:GetVerticalScroll() == 120, "browsing levels keeps the scroll")
+  win():Hide()
+  slash("")
+  check(sf:GetVerticalScroll() == 120, "reopening keeps the scroll")
+  win():Hide()
+end
+
+-- Controller: B or Back closes the window, other buttons pass through to the game.
+function S.gamepadClose()
+  if not D() or MOCK.minimal then return end
+  for _, name in ipairs({ "LevelingCodexFrame", "LevelingCodexCopy" }) do
+    if name == "LevelingCodexFrame" then slash("") else S.copyOpen() end
+    local f = _G[name]
+    check(f:IsShown(), name .. " open")
+    MOCK.fire(f, "OnGamePadButtonDown", "PAD1")
+    check(f:IsShown() and f._padPropagate == true, "A passes through on " .. name)
+    MOCK.combat = true
+    MOCK.fire(f, "OnGamePadButtonDown", "PAD2")
+    check(f:IsShown() and f._padPropagate == true, "in combat B is left to the game on " .. name)
+    MOCK.combat = false
+    MOCK.fire(f, "OnGamePadButtonDown", "PAD2")
+    check(not f:IsShown(), "B closes " .. name)
+    check(f._padPropagate == true, "input passes through again once closed (" .. name .. ")")
+  end
+  if win() then win():Hide() end
+end
+function S.copyOpen()
+  openAt(30, "Macros")
+  local b = findButton(win(), function(l) return l == "Copy" end)
+  if b then b:Click() else _G.LevelingCodexCopy:Show() end
+  win():Hide()
+end
+
+-- The key binding toggles the window.
+function S.binding()
+  if not D() then return end
+  for _, body in ipairs(BINDING_BODIES or {}) do
+    local f = assert(loadstring(body))
+    f()
+    check(win():IsShown(), "binding opens the window")
+    f()
+    check(not win():IsShown(), "binding closes the window")
+  end
 end
 
 -- Macros the addon made follow your level (auto-update), your own macros are left alone.

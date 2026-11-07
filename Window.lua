@@ -11,6 +11,7 @@ local W = 568 -- content width
 local frame, scroll, content, tabs, levelText, nowBtn
 local viewLevel -- the level the window is showing (defaults to yours)
 local activeTab = "level"
+local scrollPos, shownTab = {}, nil -- scroll offset per tab, and the tab currently drawn
 local refresh   -- defined below; the renderers' click handlers call it
 
 ----------------------------------------------------------------------------
@@ -351,6 +352,8 @@ renderers.macros = function(V)
     icon(m.icon, 14, y, 36, m.name, nil)
     T(m.name, 60, y, 300, "head", C.gold)
     T("Levels " .. m.lo .. "-" .. m.hi, 60, y + 22, 200, "small", C.dim)
+    btn("Copy", W - 78, y, 64, function() ns.showMacroCopy(m) end, false,
+      "Shows the macro text ready to copy, for making it yourself in Esc > Macros.")
     local cx = 300
     if m.pad ~= "" then cx = cx + chip("Controller " .. padText(m.pad), cx, y + 2, true) + 6 end
     if m.kb ~= "" then chip("Keyboard " .. plain(m.kb), 300, y + 24, false) end
@@ -507,12 +510,57 @@ refresh = function()
     t.label:SetTextColor(rgba(on and C.gold or C.dim))
     t.line:SetShown(on)
   end
+  -- remember where the tab we're leaving (or redrawing) was scrolled to
+  if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   releaseAll()
   local h = renderers[activeTab](viewLevel) or 0
   content:SetHeight(math.max(h, 10))
-  scroll:SetVerticalScroll(0)
+  shownTab = activeTab
+  if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
+  local want = scrollPos[activeTab] or 0
+  local range = scroll.GetVerticalScrollRange and scroll:GetVerticalScrollRange() or want
+  scroll:SetVerticalScroll(math.max(0, math.min(want, range or 0)))
 end
 ns.refresh = refresh
+
+-- Double gold border drawn on a frame, like the guide's panels.
+local function doubleBorder(f)
+  local function line(p1, p2, horiz, inset, a)
+    local t = f:CreateTexture(nil, "BORDER")
+    t:SetColorTexture(C.edge[1], C.edge[2], C.edge[3], a)
+    t:SetPoint(p1, inset * (p1:find("LEFT") and 1 or -1), inset * (p1:find("TOP") and -1 or 1))
+    t:SetPoint(p2, inset * (p2:find("LEFT") and 1 or -1), inset * (p2:find("TOP") and -1 or 1))
+    if horiz then t:SetHeight(1) else t:SetWidth(1) end
+  end
+  for _, inset in ipairs({ 0, 5 }) do
+    local a = inset == 0 and 1 or 0.4
+    line("TOPLEFT", "TOPRIGHT", true, inset, a); line("BOTTOMLEFT", "BOTTOMRIGHT", true, inset, a)
+    line("TOPLEFT", "BOTTOMLEFT", false, inset, a); line("TOPRIGHT", "BOTTOMRIGHT", false, inset, a)
+  end
+end
+
+local function closeWithEsc(name)
+  if type(UISpecialFrames) ~= "table" then return end
+  for _, n in ipairs(UISpecialFrames) do if n == name then return end end
+  table.insert(UISpecialFrames, name)
+end
+
+-- Controller: B (PAD2) or Back closes the frame; every other button still reaches the game.
+-- Only when the client can pass gamepad input on, so we never swallow buttons. Out of combat only.
+local function closeWithGamepad(f)
+  if not (f.EnableGamePadButton and f.SetPropagateGamePadInput and f.HasScript) then return end
+  if not pcall(f.HasScript, f, "OnGamePadButtonDown") then return end
+  if not (pcall(f.EnableGamePadButton, f, true) and pcall(f.SetPropagateGamePadInput, f, true)) then return end
+  f:SetScript("OnGamePadButtonDown", function(self, button)
+    if InCombatLockdown() then return end -- leave input alone in combat
+    local close = button == "PAD2" or button == "PADBACK"
+    pcall(self.SetPropagateGamePadInput, self, not close)
+    if close then self:Hide() end
+  end)
+  f:HookScript("OnHide", function(self)
+    if not InCombatLockdown() then pcall(self.SetPropagateGamePadInput, self, true) end
+  end)
+end
 
 local function headerButton(parent, label, w)
   local b = styleButton(CreateFrame("Button", nil, parent))
@@ -529,12 +577,9 @@ local function makeFrame()
   frame:EnableMouse(true)
   frame:SetClampedToScreen(true)
   frame:Hide()
-  -- Esc closes it (by name, so a rebuilt frame needs no second entry)
-  if type(UISpecialFrames) == "table" then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "LevelingCodexFrame" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "LevelingCodexFrame") end
-  end
+  shownTab = nil -- a new scroll frame: keep the saved offsets, don't read the empty one
+  closeWithEsc("LevelingCodexFrame") -- by name, so a rebuilt frame needs no second entry
+  closeWithGamepad(frame)
 
   -- leather background, warm glow at the top, double gold border
   local bg = frame:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))
@@ -554,18 +599,7 @@ local function makeFrame()
   local glow = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
   glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(140)
   ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.3)
-  local function line(p1, p2, horiz, inset, a)
-    local t = frame:CreateTexture(nil, "BORDER")
-    t:SetColorTexture(C.edge[1], C.edge[2], C.edge[3], a)
-    t:SetPoint(p1, inset * (p1:find("LEFT") and 1 or -1), inset * (p1:find("TOP") and -1 or 1))
-    t:SetPoint(p2, inset * (p2:find("LEFT") and 1 or -1), inset * (p2:find("TOP") and -1 or 1))
-    if horiz then t:SetHeight(1) else t:SetWidth(1) end
-  end
-  for _, inset in ipairs({ 0, 5 }) do
-    local a = inset == 0 and 1 or 0.4
-    line("TOPLEFT", "TOPRIGHT", true, inset, a); line("BOTTOMLEFT", "BOTTOMRIGHT", true, inset, a)
-    line("TOPLEFT", "BOTTOMLEFT", false, inset, a); line("TOPRIGHT", "BOTTOMRIGHT", false, inset, a)
-  end
+  doubleBorder(frame)
 
   -- header (drag here to move)
   local header = CreateFrame("Frame", nil, frame)
@@ -657,6 +691,116 @@ local function makeFrame()
   ns.placeWindow()
 end
 
+----------------------------------------------------------------------------
+-- Copy a macro: the body in a text box, already selected, for when CreateMacro fails
+-- (slots full, combat lockdown) or the player wants to make it themselves.
+----------------------------------------------------------------------------
+
+local copy
+
+local function makeCopy()
+  copy = CreateFrame("Frame", "LevelingCodexCopy", UIParent)
+  copy:SetSize(480, 318)
+  copy:SetFrameStrata("FULLSCREEN_DIALOG")
+  copy:SetMovable(true)
+  copy:EnableMouse(true)
+  copy:SetClampedToScreen(true)
+  copy:RegisterForDrag("LeftButton")
+  copy:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  copy:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+  copy:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
+  copy:Hide()
+  closeWithEsc("LevelingCodexCopy")
+  closeWithGamepad(copy)
+
+  local bg = copy:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))
+  local glow = copy:CreateTexture(nil, "BACKGROUND", nil, 1)
+  glow:SetPoint("TOPLEFT"); glow:SetPoint("TOPRIGHT"); glow:SetHeight(90)
+  ns.fade(glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.3)
+  doubleBorder(copy)
+
+  copy.title = copy:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  copy.title:SetPoint("TOPLEFT", 20, -18)
+  copy.title:SetFont(FONT_HEAD, 20, "")
+  copy.title:SetTextColor(rgba(C.titleInk))
+  copy.title:SetShadowOffset(1, -1)
+  copy.help = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  copy.help:SetPoint("TOPLEFT", copy.title, "BOTTOMLEFT", 0, -6)
+  copy.help:SetWidth(440); copy.help:SetJustifyH("LEFT"); copy.help:SetWordWrap(true)
+  copy.help:SetTextColor(rgba(C.dim))
+  copy.help:SetText("The text is selected: press Ctrl+C (Cmd+C on a Mac). Then in Esc > Macros click New, " ..
+    "choose the character tab, name it, and paste with Ctrl+V into the macro box.")
+
+  local well = copy:CreateTexture(nil, "BORDER")
+  well:SetPoint("TOPLEFT", 16, -88); well:SetPoint("BOTTOMRIGHT", -16, 52)
+  well:SetColorTexture(rgba(C.code))
+
+  local eb = CreateFrame("EditBox", nil, copy)
+  eb:SetMultiLine(true)
+  eb:SetAutoFocus(false)
+  eb:SetFontObject("GameFontHighlight")
+  pcall(eb.SetFont, eb, FONT_MONO, 13, "")
+  if eb.SetTextColor then eb:SetTextColor(rgba(C.codeInk)) end
+  eb:SetPoint("TOPLEFT", 24, -96)
+  eb:SetSize(432, 160)
+  eb:SetMaxLetters(0)
+  local function reselect(self) self:SetFocus(); self:HighlightText() end
+  eb:SetScript("OnEscapePressed", function() copy:Hide() end)
+  eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+  -- read-only: typing puts the macro back, still selected
+  eb:SetScript("OnTextChanged", function(self, userInput)
+    if userInput and copy.body and self:GetText() ~= copy.body then self:SetText(copy.body); self:HighlightText() end
+  end)
+  eb:SetScript("OnMouseUp", reselect)
+  copy.edit = eb
+
+  copy.count = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  copy.count:SetPoint("BOTTOMLEFT", 22, 22)
+  copy.count:SetTextColor(rgba(C.dim))
+
+  local function button(label, w, onClick)
+    local b = styleButton(CreateFrame("Button", nil, copy))
+    b:SetSize(w, 24)
+    b.label:SetText(label)
+    b:SetScript("OnClick", onClick)
+    return b
+  end
+  copy.done = button("Done", 90, function() copy:Hide() end)
+  copy.done:SetPoint("BOTTOMRIGHT", -18, 16)
+  copy.done:SetLook(true)
+  copy.nextB = button("Next", 70, function() ns.showMacroCopy(nil, nil, 1) end)
+  copy.nextB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
+  copy.prevB = button("Back", 70, function() ns.showMacroCopy(nil, nil, -1) end)
+  copy.prevB:SetPoint("RIGHT", copy.nextB, "LEFT", -6, 0)
+  local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
+  close:SetPoint("TOPRIGHT", -4, -4)
+  copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
+end
+
+-- Show one macro (m), optionally as part of a list (the ones that couldn't be made);
+-- step = 1 / -1 moves through that list.
+function ns.showMacroCopy(m, list, step)
+  if not copy then makeCopy() end
+  if m then
+    copy.list = list or { m }
+    copy.index = 1
+    for i, x in ipairs(copy.list) do if x == m then copy.index = i end end
+  elseif step and copy.list then
+    copy.index = (copy.index - 1 + step) % #copy.list + 1
+  end
+  local cur = copy.list and copy.list[copy.index]
+  if not cur then return end
+  local many = #copy.list > 1
+  copy.title:SetText("Copy the " .. cur.name .. " macro")
+  copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " that couldn't be made") or "")
+  copy.nextB:SetShown(many); copy.prevB:SetShown(many)
+  copy.body = cur.body
+  copy:Show()
+  copy.edit:SetText(cur.body)
+  copy.edit:SetFocus()
+  copy.edit:HighlightText()
+end
+
 function ns.toggleWindow()
   if not ns.D then
     ns.say("no guide for your class yet.")
@@ -670,6 +814,7 @@ end
 function ns.rebuildForTheme()
   ns.useTheme(ns.db().theme)
   ns.dropToast()
+  if copy then copy:Hide(); copy = nil end
   if frame then
     frame:Hide(); frame = nil
     for _, p in pairs(pools) do for i = 1, #p.list do p.list[i]:Hide() end end
