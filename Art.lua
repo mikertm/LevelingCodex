@@ -270,11 +270,15 @@ function A.tab(parent, text)
     note("tabs", "ok")
     b.parts = {}
     for i = 1, 3 do b.parts[i] = b:CreateTexture(nil, "BACKGROUND") end
+    -- hover glow: a band around the label (as in the game's tab template), never on the selected tab
     local glow = b:CreateTexture(nil, "HIGHLIGHT")
-    glow:SetPoint("TOPLEFT", 6, -6); glow:SetPoint("BOTTOMRIGHT", -6, 6)
+    glow:SetPoint("LEFT", b.label, "LEFT", -12, 0); glow:SetPoint("RIGHT", b.label, "RIGHT", 12, 0)
+    glow:SetHeight(26)
     if A.hasFile(A.FILES.tabGlow) then glow:SetTexture(A.FILES.tabGlow); glow:SetBlendMode("ADD")
     else glow:SetColorTexture(1, 0.82, 0, 0.12) end
+    b.glow = glow
     b.SetSelected = function(self, on)
+      self.glow:SetShown(not on)
       local L, M, R = self.parts[1], self.parts[2], self.parts[3]
       local file = on and A.FILES.tabActive or A.FILES.tabInactive
       local bottom = on and TAB_BOTTOM.active or TAB_BOTTOM.inactive

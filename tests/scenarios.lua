@@ -825,6 +825,122 @@ function S.artUsed()
   win():Hide()
 end
 
+-- Icon buttons under the window with a given tooltip title.
+local function iconsTitled(title)
+  local out = {}
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle == title or (b.tipTitle and b.tipTitle:find("^" .. title:gsub("%p", "%%%0") .. "  %d")) then out[#out + 1] = b end
+  end
+  return out
+end
+
+-- Talents tab: a tree node per talent, filled in to the level shown, and a click shows every point.
+function S.talentTree()
+  if not D() then return end
+  openAt(16, "Talents")
+  local seen = {}
+  for _, p in ipairs(D().plan) do
+    if not seen[p.name] then
+      seen[p.name] = true
+      local nodes = iconsTitled(p.name)
+      check(#nodes >= 1, "tree node for " .. p.name)
+      local node = nodes[1]
+      -- rank at 16
+      local r = 0
+      for _, q in ipairs(D().plan) do
+        if q.name == p.name then
+          for l = q.from, math.min(q.to, 16) do if l >= q.from then r = r + 1 end end
+        end
+      end
+      check(node.tipTitle == p.name .. "  " .. r .. "/" .. p.max, p.name .. " shows " .. r .. "/" .. p.max .. " at 16, got " .. tostring(node.tipTitle))
+      check((r == 0) == (node.tex._desat == true), p.name .. " greyed out only when no points yet")
+    end
+  end
+  -- click a future talent: its points and reasons appear
+  local future
+  for _, p in ipairs(D().plan) do if p.from > 40 then future = p; break end end
+  if future then
+    iconsTitled(future.name)[1]:Click()
+    local text = MOCK.textUnder(win())
+    check(text:find("Level " .. future.from, 1, true), "detail lists level " .. future.from .. " for " .. future.name)
+    local snippet = future.why:match("^[A-Za-z0-9 ,%.']+") or "" -- not %w: it takes UTF-8 bytes on Windows
+    if #snippet > 8 then check(text:find(snippet, 1, true), "detail shows why " .. future.name) end
+  end
+  win():Hide()
+end
+
+-- With the game's tree layout available, nodes sit where the talent window puts them.
+function S.traitLayoutTree()
+  if not D() or MOCK.minimal then return end
+  local names, id = {}, 700
+  for _, p in ipairs(D().plan) do
+    if not names[p.name] then
+      id = id + 1
+      names[p.name] = id
+      MOCK.spells[50000 + id] = p.name
+      -- reverse order: the first talent in the plan sits furthest right
+      MOCK.traitNodes[id] = { posX = 10000 - id * 100, posY = 0, spellID = 50000 + id }
+    end
+  end
+  openAt(30, "Talents")
+  local prevX = {} -- per tree: each tree is its own grid
+  for _, p in ipairs(D().plan) do
+    if names[p.name] then
+      local node = iconsTitled(p.name)[1]
+      local _, _, _, x = node:GetPoint(1)
+      if prevX[p.tree] then check(x < prevX[p.tree], p.name .. " sits left of the talent before it (game layout)") end
+      prevX[p.tree] = x
+      names[p.name] = nil
+    end
+  end
+  check(not MOCK.textUnder(win()):find("Open your talent window once", 1, true), "no layout note once the game's layout is known")
+  win():Hide()
+end
+
+-- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.
+function S.macroMockups()
+  if not D() then return end
+  for _, pad in ipairs({ "PlayStation", "Xbox", "Switch" }) do
+    openAt(30, "Settings")
+    click(win(), pad)
+    click(win(), "Macros")
+    for _, m in ipairs(D().macros) do
+      if 30 >= m.lo and 30 <= m.hi then
+        local n = #iconsTitled(m.name)
+        local want = 1 + (m.pad ~= "" and 1 or 0) + (m.kb ~= "" and 1 or 0)
+        check(n >= want, m.name .. " appears on the controller, the key bar and its card (" .. n .. "/" .. want .. ")")
+      end
+    end
+    local text = MOCK.textUnder(win())
+    check(text:find("ON YOUR CONTROLLER", 1, true) and text:find("ON YOUR KEYBOARD", 1, true), "both mock-ups drawn")
+    if pad == "PlayStation" and not MOCK.minimal then
+      -- shapes are drawn with turned strokes, not as text
+      local turned = 0
+      local function walk(f)
+        for _, r in ipairs(f._regions) do if r._shown and r._rot and r._rot ~= 0 then turned = turned + 1 end end
+        for _, c in ipairs(f._children) do if c._shown then walk(c) end end
+      end
+      walk(win())
+      check(turned > 0, "PlayStation shapes drawn")
+    end
+  end
+  openAt(30, "Settings"); click(win(), "Xbox")
+  win():Hide()
+end
+
+-- Tabs: the hover glow never lights the selected tab.
+function S.tabGlow()
+  if not D() then return end
+  openAt(20, "Tips")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.glow then
+      local selected = labelOf(b) == "Tips"
+      check(b.glow:IsShown() == not selected, "hover glow " .. (selected and "off" or "on") .. " for " .. labelOf(b))
+    end
+  end
+  win():Hide()
+end
+
 -- The talent window is already open when we log in.
 function S.talentBeforeLogin()
   if not (D() and talent.root) then return end

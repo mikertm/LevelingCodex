@@ -183,7 +183,7 @@ function Texture:SetDrawLayer(layer, sub)
 end
 function Texture:SetHorizTile() end
 function Texture:SetVertTile() end
-function Texture:SetDesaturated() end
+function Texture:SetDesaturated(on) self._desat = on and true or false end
 function Texture:SetRotation(r) self._rot, self._rotStale = r, false end
 function Texture:SetGradient(orient, c1, c2)
   if type(c1) ~= "table" or type(c2) ~= "table" then error("SetGradient expects colors", 2) end
@@ -582,6 +582,23 @@ C_Traits = {
   end,
 }
 function UnitCharacterPoints(unit) return unspentNow() end
+-- the tree's layout: MOCK.traitNodes[nodeID] = { posX, posY, spellID } (empty = no layout yet)
+MOCK.traitNodes = {}
+C_Traits.GetTreeNodes = function(treeID)
+  local ids = {}
+  for id in pairs(MOCK.traitNodes) do ids[#ids + 1] = id end
+  table.sort(ids)
+  return ids
+end
+C_Traits.GetNodeInfo = function(configID, nodeID)
+  local n = MOCK.traitNodes[nodeID]
+  if n then return { ID = nodeID, posX = n.posX, posY = n.posY, entryIDs = { nodeID } } end
+end
+C_Traits.GetEntryInfo = function(configID, entryID) return { definitionID = entryID } end
+C_Traits.GetDefinitionInfo = function(defID)
+  local n = MOCK.traitNodes[defID]
+  return n and { spellID = n.spellID } or nil
+end
 function GetSpellInfo(id) return MOCK.spells[id] end
 
 function hooksecurefunc(a, b, c)

@@ -34,12 +34,13 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
-        "gamepadClose", "binding", "debugReport", "artUsed", "noFalseLostNote"]
+        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "traitLayoutTree", "macroMockups",
+        "tabGlow", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
 # The client has every API but none of the Blizzard art files: everything falls back.
 NOART = ["makeTalentWindow:name", "login", "levelups", "browse", "everyButton", "settings", "talentByName",
-         "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed"]
+         "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
 LOST = ["lost", "login", "lostSavedVariables"]
 

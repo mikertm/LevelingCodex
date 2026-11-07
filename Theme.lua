@@ -26,6 +26,7 @@ ns.THEMES = {
     toastHeader = { 0.82, 0.93, 0.97 }, toastTitle = { 0.66, 0.9, 0.98 }, band = { 0.01, 0.06, 0.1 },
     rock = { 0.32, 0.5, 0.62 }, wash = { 0.02, 0.06, 0.1, 0.74 }, glow = { 0.2, 0.62, 0.82 },
     titleInk = { 0.66, 0.9, 0.98 }, tipTitle = { 0.45, 0.85, 0.95 },
+    parchGlow = { 0.16, 0.72, 0.88 }, -- the teal wash along the bottom of Forever's quest parchment
   },
   codex = {
     bg = { 0.085, 0.07, 0.055, 0.97 }, panel = { 0.13, 0.105, 0.08, 1 },
@@ -41,6 +42,7 @@ ns.THEMES = {
     toastHeader = { 1, 0.9, 0.6 }, toastTitle = { 1, 0.82, 0 }, band = { 0, 0, 0 },
     rock = { 0.62, 0.48, 0.34 }, wash = { 0.06, 0.045, 0.03, 0.72 }, glow = { 0.55, 0.38, 0.15 },
     titleInk = { 1, 0.86, 0.45 }, tipTitle = { 1, 0.82, 0 },
+    parchGlow = { 0.85, 0.5, 0.16 },
   },
 }
 

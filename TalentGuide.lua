@@ -206,6 +206,48 @@ local function unspentPoints()
 end
 ns.unspentTalentPoints = unspentPoints
 
+-- Where each talent sits in the game's own tree: lower(name) -> { x, y } from the trait nodes'
+-- positions, so the Codex's tree view can match the talent window. Read once, then cached.
+local layoutCache
+function ns.traitLayout()
+  if layoutCache then return layoutCache end
+  if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits and C_Traits.GetConfigInfo
+    and C_Traits.GetTreeNodes and C_Traits.GetNodeInfo and C_Traits.GetEntryInfo and C_Traits.GetDefinitionInfo) then
+    return nil
+  end
+  local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+  if not (ok and configID) then return nil end
+  local iok, info = pcall(C_Traits.GetConfigInfo, configID)
+  if not (iok and type(info) == "table" and type(info.treeIDs) == "table") then return nil end
+  local out, n = {}, 0
+  for _, treeID in ipairs(info.treeIDs) do
+    local nok, nodes = pcall(C_Traits.GetTreeNodes, treeID)
+    if nok and type(nodes) == "table" then
+      for i = 1, math.min(#nodes, 400) do
+        local gok, node = pcall(C_Traits.GetNodeInfo, configID, nodes[i])
+        if gok and type(node) == "table" and node.posX and node.posY and type(node.entryIDs) == "table" then
+          for _, entryID in ipairs(node.entryIDs) do
+            local eok, entry = pcall(C_Traits.GetEntryInfo, configID, entryID)
+            local defID = eok and type(entry) == "table" and entry.definitionID
+            if defID then
+              local dok, def = pcall(C_Traits.GetDefinitionInfo, defID)
+              if dok and type(def) == "table" then
+                local name = (def.overrideName and def.overrideName ~= "" and def.overrideName) or spellNameOf(def.spellID or def.overriddenSpellID)
+                if name then
+                  out[lower(name)] = { x = node.posX, y = node.posY }
+                  n = n + 1
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  if n > 0 then layoutCache = out end
+  return layoutCache
+end
+
 -- The plan level of the next point to spend: with 2 points left at 30, that's level 29's.
 local function nextPlanLevel(level, unspent)
   if not unspent then return level end

@@ -7,6 +7,10 @@
 - The talent highlight now follows the talent's shape (round, square or choice) instead of always drawing a square box.
 - New `/codex debug` lists what the Codex can see (art, talent window, talent points) to paste into bug reports.
 - Theme colours (Forever teal or Codex gold) now tint the highlights and accents.
+- New talent tree on the Talents tab: your build fills in up to the level you're viewing (gold when a talent is maxed, green when partly taken, grey for later points with the level they come at), the point for that level glows, and clicking a talent lists every point that goes into it and why. Once you've opened your talent window, the tree matches the game's layout.
+- The Macros tab now shows where each macro goes: your controller's button sets (R2, L2, L2 + R2...) with each macro on its button, and an action bar with each macro on its key. Controller bindings are drawn as the game's button badges and glyphs (PlayStation shapes, Xbox letters, Switch letters) and keys as keycaps, everywhere in the Codex.
+- Parchment cards in the Forever theme get the teal wash of Forever's quest log.
+- Fixed: the tab hover glow sat off the text and lit up the selected tab.
 
 ## v0.9.0
 - Fixed: the talent highlight and its card stayed on screen after closing the talent window. They now disappear the moment the window closes.

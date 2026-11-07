@@ -41,10 +41,13 @@ end
 
 -- Layers inside the scroll child: Blizzard-bordered cards are frames, so text, icons and
 -- buttons live on an overlay frame above them (a parent's own regions draw under its children).
-local overlay
+-- `top` sits above the icons, for things drawn on them (controller glyphs, rank badges, hotkeys).
+local overlay, top
 local function newFS() return overlay:CreateFontString(nil, "OVERLAY", "GameFontHighlight") end
 local function newTex() return overlay:CreateTexture(nil, "BACKGROUND") end
 local function newTexB() return overlay:CreateTexture(nil, "BORDER") end
+local function newFSTop() return top:CreateFontString(nil, "OVERLAY", "GameFontHighlight") end
+local function newTexTop() return top:CreateTexture(nil, "ARTWORK") end
 
 ----------------------------------------------------------------------------
 -- Drawing helpers (x, y are offsets from the content's top-left; y grows downwards)
@@ -90,8 +93,8 @@ local function styleFS(fs, kind)
 end
 
 -- Place text at (x, y) in content; returns its height and the font string.
-local function T(str, x, y, width, kind, color, justify)
-  local fs = take("fs", newFS)
+local function T(str, x, y, width, kind, color, justify, onTop)
+  local fs = onTop and take("fsTop", newFSTop) or take("fs", newFS)
   styleFS(fs, kind)
   fs:SetTextColor(rgba(color or C.light))
   fs:SetWidth(width)
@@ -104,10 +107,15 @@ end
 -- A solid rectangle. `kind` keeps textures that get a fade ("fade") or a rotation ("gem") in their
 -- own pools: the client keeps a gradient or rotation through SetColorTexture, so a plain rect must
 -- never reuse one (that's what turned macro chips into faded strips and diagonal bars).
-local function rect(x, y, w, h, color, layer, sub, kind)
-  local pool = (layer == "border" and "texB" or "tex") .. (kind or "")
-  local t = take(pool, layer == "border" and newTexB or newTex)
-  if layer == "border" then t:SetDrawLayer("BORDER", sub or 0) else t:SetDrawLayer("BACKGROUND", sub or 0) end
+local function rect(x, y, w, h, color, layer, sub, kind, onTop)
+  local t
+  if onTop then
+    t = take("texTop" .. (kind or ""), newTexTop)
+    t:SetDrawLayer("ARTWORK", sub or 0)
+  else
+    t = take((layer == "border" and "texB" or "tex") .. (kind or ""), layer == "border" and newTexB or newTex)
+    if layer == "border" then t:SetDrawLayer("BORDER", sub or 0) else t:SetDrawLayer("BACKGROUND", sub or 0) end
+  end
   t:SetColorTexture(rgba(color))
   t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   t:SetSize(w, h)
@@ -121,6 +129,9 @@ local function newCard()
   f.paper:SetPoint("TOPLEFT", 4, -4); f.paper:SetPoint("BOTTOMRIGHT", -4, 4)
   f.shade = f:CreateTexture(nil, "BORDER", nil, 1)
   f.shade:SetPoint("TOPLEFT", 4, -4); f.shade:SetPoint("BOTTOMRIGHT", -4, 4)
+  -- the theme's wash rising from the bottom edge (Forever: the teal of its quest parchment)
+  f.glow = f:CreateTexture(nil, "BORDER", nil, 2)
+  f.glow:SetPoint("BOTTOMLEFT", 4, 4); f.glow:SetPoint("BOTTOMRIGHT", -4, 4)
   f.blizz = A.backdrop(f, "tooltip")
   f.hasPaper = A.set(f.paper, "parchment", { 0, 0.586, 0, 0.655 })
   return f
@@ -148,18 +159,41 @@ local function box(x, y, w, h, fill, edge)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   f:SetSize(w, h)
   edge = edge or C.edge
+  f.shade:Show()
   if fill == C.parch then
     f:SetBackdropColor(rgba(C.parch))
     f:SetBackdropBorderColor(0.55, 0.42, 0.24, 1)
     f.paper:SetShown(f.hasPaper)
-    if f.hasPaper then f.paper:SetVertexColor(1, 0.97, 0.9) end
-    ns.fade(f.shade, "VERTICAL", 0.45, 0.3, 0.12, 0.2, 0)
+    if f.hasPaper then f.paper:SetVertexColor(1, 0.98, 0.93) end
+    ns.fade(f.shade, "VERTICAL", 0.45, 0.3, 0.12, 0.12, 0)
+    local g = C.parchGlow or C.accent
+    f.glow:SetHeight(math.max(12, math.min(140, (h - 8) * 0.42)))
+    ns.fade(f.glow, "VERTICAL", g[1], g[2], g[3], 0.62, 0)
+    f.glow:Show()
   else
     f:SetBackdropColor(0, 0, 0, 0.62)
     f:SetBackdropBorderColor(edge[1], edge[2], edge[3], 0.9)
     f.paper:Hide()
     ns.fade(f.shade, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.1)
+    f.glow:Hide()
   end
+end
+
+-- A small filled plate with a thin border (controller badges, keycaps, rank tags), under the overlay.
+local function plate(x, y, w, h, bg, edge)
+  local f = take("card", newCard)
+  if not f.blizz then
+    f:Hide()
+    rect(x, y, w, h, bg, "border", 1)
+    rect(x, y, w, 1, edge, "border", 2); rect(x, y + h - 1, w, 1, edge, "border", 2)
+    rect(x, y, 1, h, edge, "border", 2); rect(x + w - 1, y, 1, h, edge, "border", 2)
+    return
+  end
+  f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  f:SetSize(w, h)
+  f:SetBackdropColor(rgba(bg))
+  f:SetBackdropBorderColor(rgba(edge))
+  f.paper:Hide(); f.shade:Hide(); f.glow:Hide()
 end
 
 local showTip, hideTip = A.showTip, A.hideTip
@@ -185,6 +219,10 @@ local function icon(name, x, y, size, title, text)
   f:SetSize(size, size)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   ns.setIcon(f.tex, name)
+  f.tex:SetDesaturated(false)
+  f.tex:SetVertexColor(1, 1, 1)
+  f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
+  f:SetScript("OnClick", nil)
   f.tipTitle, f.tipText = title, text
   return f
 end
@@ -222,14 +260,6 @@ local function newHit()
   return f
 end
 
-local function chip(str, x, y, filled)
-  local _, fs = T(str, x + 8, y + 3, 400, "small", filled and C.chipInk or C.gold)
-  local w = fs:GetStringWidth() + 16
-  if filled then rect(x, y, w, 18, C.chipFill, "border")
-  else box(x, y, w, 18, { 0, 0, 0, 0 }) end
-  return w
-end
-
 local function goldRuleAt(y)
   local half = (W - 20) / 2
   local l = rect(0, y, half, 1, { 1, 1, 1, 1 }, "border", nil, "fade"); ns.fadeAccent(l, "HORIZONTAL", 0, 0.8)
@@ -248,6 +278,314 @@ end
 local function testBanner(level)
   ns.showToast(level, true, true)
   if PlaySound then pcall(PlaySound, 888) end
+end
+
+----------------------------------------------------------------------------
+-- Controller and keyboard drawing: glyphs like Forever's gamepad UI, keycaps like a keyboard
+----------------------------------------------------------------------------
+
+-- A filled circle (the game makes any texture round with SetPortraitToTexture), else a square.
+local function newDisc() return top:CreateTexture(nil, "ARTWORK") end
+local canRound = nil
+local function disc(cx, cy, size, color, sub)
+  local t = take("disc", newDisc)
+  t:SetDrawLayer("ARTWORK", sub or 0)
+  if canRound == nil then
+    canRound = (SetPortraitToTexture and A.hasFile(A.FILES.white) and pcall(SetPortraitToTexture, t, A.FILES.white)) and true or false
+  end
+  if canRound then
+    SetPortraitToTexture(t, A.FILES.white)
+    t:SetVertexColor(color[1], color[2], color[3])
+    t:SetAlpha(color[4] or 1)
+  else
+    t:SetColorTexture(rgba(color))
+    t:SetAlpha(1)
+  end
+  t:SetSize(size, size)
+  t:SetPoint("CENTER", content, "TOPLEFT", cx, -cy)
+  return t
+end
+
+-- A straight stroke centred on (cx, cy), turned `deg` degrees anticlockwise.
+local canTurn = nil
+local function bar(cx, cy, len, thick, deg, color, sub)
+  local t = take("texTopbar", newTexTop)
+  t:SetDrawLayer("ARTWORK", sub or 3)
+  t:SetColorTexture(rgba(color))
+  t:SetPoint("CENTER", content, "TOPLEFT", cx, -cy)
+  if canTurn == nil then canTurn = t.SetRotation ~= nil end
+  deg = deg or 0
+  if deg == 90 or deg == -90 then
+    t:SetSize(thick, len) -- upright strokes need no rotation
+    deg = 0
+  else
+    t:SetSize(len, thick)
+  end
+  if canTurn then t:SetRotation(math.rad(deg)) end
+  return t
+end
+
+-- Where each face button sits (by its Xbox letter) and its colour on each controller.
+local FACE_POS = { Y = { 0, -1 }, X = { -1, 0 }, B = { 1, 0 }, A = { 0, 1 } }
+local DPAD_POS = { Up = { 0, -1 }, Left = { -1, 0 }, Right = { 1, 0 }, Down = { 0, 1 } }
+local XBOX_INK = { A = { 0.45, 0.82, 0.3, 1 }, B = { 0.92, 0.32, 0.26, 1 }, X = { 0.3, 0.58, 0.98, 1 }, Y = { 1, 0.82, 0.22, 1 } }
+local PS_INK = { Cross = { 0.55, 0.72, 1, 1 }, Circle = { 1, 0.42, 0.46, 1 }, Square = { 1, 0.58, 0.86, 1 }, Triangle = { 0.38, 0.88, 0.66, 1 } }
+
+local function padKind() return ns.db().pad or "xbox" end
+local function padNames() return ns.PADS[padKind()] or ns.PADS.xbox end
+
+-- A binding's note in brackets, e.g. "1 (in Bear Form)" -> "1", "in Bear Form".
+local function splitNote(raw)
+  raw = plain(raw)
+  local note = raw:match("%((.-)%)")
+  return (raw:gsub("%s*%b()", ""):gsub("^%s+", ""):gsub("%s+$", "")), note
+end
+
+-- Split a guide binding like "RT+A" or "LT+RT+(left arrow)" into modifiers and a button.
+local function parsePad(raw)
+  local out = { mods = {} }
+  local body, note = splitNote(raw)
+  out.note = note
+  for token in (body .. "+"):gmatch("(.-)%+") do
+    local t = plain(token):gsub("^%s+", ""):gsub("%s+$", "")
+    if t == "LT" then out.mods[#out.mods + 1] = "L"
+    elseif t == "RT" then out.mods[#out.mods + 1] = "R"
+    elseif FACE_POS[t] then out.face = t
+    elseif DPAD_POS[t] then out.dir = t
+    elseif t ~= "" then out.other = (out.other and (out.other .. "+") or "") .. t end
+  end
+  return out
+end
+
+-- One face button: a dark disc with a rim, holding the letter or PlayStation shape.
+local function faceGlyph(cx, cy, size, letter, dim)
+  local a = dim and 0.4 or 1
+  disc(cx, cy, size, { 0.62, 0.55, 0.42, a }, 0)
+  disc(cx, cy, size - 3, { 0.07, 0.07, 0.08, dim and 0.7 or 1 }, 1)
+  local name = padNames()[letter]
+  local kind = padKind()
+  local th = math.max(2, math.floor(size / 9 + 0.5))
+  if kind == "ps" and canTurn ~= false and PS_INK[name] then
+    local ink = PS_INK[name]
+    ink = { ink[1], ink[2], ink[3], a }
+    local s = size * 0.5
+    if name == "Cross" then
+      bar(cx, cy, s, th, 45, ink); bar(cx, cy, s, th, -45, ink)
+    elseif name == "Square" then
+      local h = s * 0.42
+      bar(cx, cy - h, s * 0.84 + th, th, 0, ink); bar(cx, cy + h, s * 0.84 + th, th, 0, ink)
+      bar(cx - h, cy, s * 0.84, th, 90, ink); bar(cx + h, cy, s * 0.84, th, 90, ink)
+    elseif name == "Triangle" then
+      local L = s * 1.05
+      local hh = L * 0.866
+      bar(cx, cy + hh / 3, L, th, 0, ink)
+      bar(cx - L / 4, cy - hh / 6, L, th, 60, ink)
+      bar(cx + L / 4, cy - hh / 6, L, th, -60, ink)
+    else -- Circle: a ring
+      disc(cx, cy, s * 1.05, ink, 2)
+      disc(cx, cy, s * 1.05 - th * 2, { 0.07, 0.07, 0.08, 1 }, 3)
+    end
+    return
+  end
+  local ink = kind == "xbox" and XBOX_INK[letter] or { 0.95, 0.95, 0.95, 1 }
+  local _, fs = T(kind == "ps" and (name or letter):sub(1, 1) or (name or letter), cx - size / 2, cy - 7, size, "label",
+    { ink[1], ink[2], ink[3], a }, "CENTER", true)
+  return fs
+end
+
+-- A d-pad with the pressed direction lit.
+local function dpadGlyph(cx, cy, size, dir, dim)
+  local a = dim and 0.4 or 1
+  disc(cx, cy, size, { 0.62, 0.55, 0.42, a }, 0)
+  disc(cx, cy, size - 3, { 0.07, 0.07, 0.08, dim and 0.7 or 1 }, 1)
+  local arm, th = size * 0.62, size * 0.22
+  bar(cx, cy, arm, th, 0, { 0.45, 0.45, 0.47, a }, 2)
+  bar(cx, cy, arm, th, 90, { 0.45, 0.45, 0.47, a }, 2)
+  local p = DPAD_POS[dir]
+  if p then
+    local off = size * 0.19
+    bar(cx + p[1] * off, cy + p[2] * off, arm * 0.4, th, p[1] ~= 0 and 0 or 90, { C.accent[1], C.accent[2], C.accent[3], a }, 4)
+  end
+end
+
+local function glyph(cx, cy, size, b, dim)
+  if b.face then faceGlyph(cx, cy, size, b.face, dim)
+  elseif b.dir then dpadGlyph(cx, cy, size, b.dir, dim) end
+end
+
+-- A modifier badge (LT/RT, L2/R2, ZL/ZR) in the style of Forever's on-screen R1 / R2 tags.
+local function padBadge(text, x, y)
+  local _, fs = T(text, x, y + 4, 200, "label", { 1, 1, 1, 1 }, "LEFT")
+  local w = math.max(26, fs:GetStringWidth() + 14)
+  fs:SetWidth(w); fs:SetJustifyH("CENTER"); fs:ClearAllPoints(); fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
+  plate(x, y, w, 20, { 0.14, 0.12, 0.1, 0.96 }, { 0.66, 0.58, 0.44, 1 })
+  return w
+end
+
+-- A whole controller binding, e.g.  [R2] + (X)  - returns its width.
+local function padCombo(raw, x, y)
+  local b = parsePad(raw)
+  local P = padNames()
+  local cx = x
+  for i, m in ipairs(b.mods) do
+    if i > 1 then T("+", cx + 1, y + 3, 12, "label", C.dim, "LEFT"); cx = cx + 12 end
+    cx = cx + padBadge(P[m], cx, y) + 3
+  end
+  if b.face or b.dir then
+    if #b.mods > 0 then T("+", cx + 1, y + 3, 12, "label", C.dim, "LEFT"); cx = cx + 12 end
+    glyph(cx + 11, y + 10, 22, b)
+    cx = cx + 24
+  end
+  if b.other then
+    if cx > x then T("+", cx + 1, y + 3, 12, "label", C.dim, "LEFT"); cx = cx + 12 end
+    cx = cx + padBadge(b.other, cx, y) + 3
+  end
+  if b.note then
+    local _, fs = T(b.note, cx + 4, y + 4, 140, "small", C.dim, "LEFT")
+    cx = cx + 8 + fs:GetStringWidth()
+  end
+  return cx - x
+end
+
+-- A keyboard key: a light keycap with a dark legend. Combos like "Shift+2" become two caps.
+local function keycap(text, x, y)
+  local _, fs = T(text, x, y + 4, 200, "label", { 0.1, 0.09, 0.08, 1 }, "LEFT")
+  local w = math.max(24, fs:GetStringWidth() + 14)
+  fs:SetWidth(w); fs:SetJustifyH("CENTER"); fs:ClearAllPoints(); fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -(y + 4))
+  fs:SetShadowOffset(0, 0)
+  plate(x, y, w, 20, { 0.84, 0.82, 0.76, 1 }, { 0.32, 0.3, 0.27, 1 })
+  rect(x + 3, y + 15, w - 6, 2, { 0.55, 0.53, 0.48, 1 }, "border", 3) -- the key's front edge
+  return w
+end
+
+local function keyCombo(raw, x, y)
+  local cx = x
+  local parts = {}
+  local body, note = splitNote(raw)
+  for token in (body .. "+"):gmatch("(.-)%+") do
+    token = token:gsub("^%s+", ""):gsub("%s+$", "")
+    if token ~= "" then parts[#parts + 1] = token end
+  end
+  for i, k in ipairs(parts) do
+    if i > 1 then T("+", cx + 1, y + 3, 12, "label", C.dim, "LEFT"); cx = cx + 12 end
+    cx = cx + keycap(k, cx, y) + 2
+  end
+  if note then
+    local _, fs = T(note, cx + 4, y + 4, 140, "small", C.dim, "LEFT")
+    cx = cx + 8 + fs:GetStringWidth()
+  end
+  return cx - x
+end
+
+local function macroTip(m)
+  return m.tips and padText(table.concat(m.tips, "\n")) or nil
+end
+
+-- The controller mock-up: one panel per modifier set (R2, L2, L2 + R2 ...), the d-pad on the left
+-- and the face buttons on the right, with each macro's icon on the button it goes on.
+local function controllerMock(list, y)
+  local groups, order = {}, {}
+  for _, m in ipairs(list) do
+    if m.pad ~= "" then
+      local b = parsePad(m.pad)
+      if b.face or b.dir then
+        local key = table.concat(b.mods, "+")
+        if not groups[key] then
+          groups[key] = { mods = b.mods, face = {}, dir = {} }
+          order[#order + 1] = key
+        end
+        local g = groups[key]
+        local slots = b.face and g.face or g.dir
+        local at = b.face or b.dir
+        -- one button can carry several macros (a druid's cat and bear Fight, used in different forms)
+        slots[at] = slots[at] or {}
+        table.insert(slots[at], m)
+      end
+    end
+  end
+  if #order == 0 then return 0 end
+  local rank = { R = 1, L = 2, ["L+R"] = 3 }
+  table.sort(order, function(a, b) return (rank[a] or 9) < (rank[b] or 9) end)
+  local P = padNames()
+  local pw, ph, gap = (W - 40) / 2, 166, 8
+  local top0 = y
+  for i, key in ipairs(order) do
+    local g = groups[key]
+    local px = 14 + ((i - 1) % 2) * (pw + gap)
+    local py = y + math.floor((i - 1) / 2) * (ph + gap)
+    -- header: "Hold [L2] + [R2]"
+    local hx = px + 10
+    T(#g.mods > 0 and "HOLD" or "PRESS", hx, py + 12, 60, "label", C.dim, "LEFT")
+    hx = hx + 44
+    for k, mod in ipairs(g.mods) do
+      if k > 1 then T("+", hx + 1, py + 11, 12, "label", C.dim, "LEFT"); hx = hx + 12 end
+      hx = hx + padBadge(P[mod], hx, py + 8) + 3
+    end
+    -- the two diamonds
+    local cyD = py + 100
+    for side, set in ipairs({ { pos = DPAD_POS, slots = g.dir, cx = px + pw * 0.27, isDir = true },
+                              { pos = FACE_POS, slots = g.face, cx = px + pw * 0.73 } }) do
+      for name, p in pairs(set.pos) do
+        local sx, sy = set.cx + p[1] * 40, cyD + p[2] * 40
+        local ms = set.slots[name]
+        local b = set.isDir and { dir = name } or { face = name }
+        if ms and #ms > 1 then
+          -- shared button: both icons, overlapped, each with its own tooltip
+          for k = math.min(#ms, 2), 1, -1 do
+            local m = ms[k]
+            local f = icon(m.icon, sx - 17 + (k - 1) * 10, sy - 17 + (k - 1) * 10, 25, m.name, macroTip(m))
+            f:SetFrameLevel(overlay:GetFrameLevel() + 1 + (k == 1 and 1 or 0))
+          end
+          glyph(sx + 13, sy + 13, 16, b)
+        elseif ms then
+          local m = ms[1]
+          icon(m.icon, sx - 17, sy - 17, 34, m.name, macroTip(m))
+          glyph(sx + 13, sy + 13, 16, b)
+        else
+          rect(sx - 17, sy - 17, 34, 34, { 0.3, 0.27, 0.22, 0.8 }, "border", 1)
+          rect(sx - 16, sy - 16, 32, 32, { 0.03, 0.03, 0.04, 0.85 }, "border", 2)
+          glyph(sx, sy, 20, b, true)
+        end
+      end
+    end
+  end
+  local rows = math.ceil(#order / 2)
+  return rows * ph + (rows - 1) * gap
+end
+
+-- The keyboard mock-up: an action bar with each macro on its key (hotkey in the corner,
+-- like the game's own bars) and the keycap under it.
+local function keyboardMock(list, y)
+  local keys = {}
+  for _, m in ipairs(list) do
+    if m.kb ~= "" then keys[#keys + 1] = m end
+  end
+  if #keys == 0 then return 0 end
+  table.sort(keys, function(a, b)
+    local ka, kb = splitNote(a.kb), splitNote(b.kb)
+    local na, nb = tonumber(ka), tonumber(kb)
+    if na and nb then return na < nb end
+    if na or nb then return na ~= nil end
+    return ka < kb
+  end)
+  local slot, step = 40, 78
+  local perRow = math.floor((W - 28) / step)
+  local rows = math.ceil(#keys / perRow)
+  for i, m in ipairs(keys) do
+    local col, row = (i - 1) % perRow, math.floor((i - 1) / perRow)
+    local cx = 14 + col * step + step / 2
+    local sy = y + row * 84
+    -- the bar's empty slot art behind the button
+    rect(cx - slot / 2 - 3, sy - 3, slot + 6, slot + 6, { 0.22, 0.2, 0.17, 0.9 }, "border", 0)
+    icon(m.icon, cx - slot / 2, sy, slot, m.name, macroTip(m))
+    -- hotkey text as the game's bars write it: Shift+1 -> s-1
+    local hot = splitNote(m.kb):gsub("Shift%+", "s-"):gsub("Ctrl%+", "c-"):gsub("Alt%+", "a-")
+    T(hot, cx - slot / 2, sy + 2, slot - 3, "small", { 0.9, 0.9, 0.9, 1 }, "RIGHT", true)
+    -- the macro's name under its button
+    local _, fs = T(m.name, cx - step / 2, sy + slot + 8, step, "small", C.light, "CENTER")
+    fs:SetWordWrap(false)
+  end
+  return rows * 84 - 18
 end
 
 ----------------------------------------------------------------------------
@@ -346,11 +684,11 @@ renderers.level = function(V)
     "Creates or updates this character's macros for your current level.")
   y = y + 24
   for _, m in ipairs(list) do
-    icon(m.icon, 16, y, 26, m.name, m.tips and plain(table.concat(m.tips, "\n")) or nil)
-    T(m.name, 50, y + 5, 170, "body", C.light)
-    local x = 220
-    if m.pad ~= "" then x = x + chip(padText(m.pad), x, y + 4, true) + 6 end
-    if m.kb ~= "" then chip("Key " .. plain(m.kb), x, y + 4, false) end
+    icon(m.icon, 16, y, 26, m.name, macroTip(m))
+    T(m.name, 50, y + 6, 170, "body", C.light)
+    local x = 230
+    if m.pad ~= "" then x = x + padCombo(m.pad, x, y + 3) + 22 end
+    if m.kb ~= "" then keyCombo(m.kb, math.max(x, 400), y + 3) end
     y = y + 32
   end
   if #list == 0 then y = y + T("No macros yet at this level.", 16, y, W - 32, "body", C.dim) + 6 end
@@ -359,8 +697,194 @@ renderers.level = function(V)
   return y + 10
 end
 
+----------------------------------------------------------------------------
+-- Talents: the build as a tree that fills in up to the level shown, plus every point and why
+----------------------------------------------------------------------------
+
+-- The plan as talents: { name, icon, max, tree, points = { { level, rank, text } } }, by tree.
+local function talentModel()
+  local trees, byTree, byName, ranks = {}, {}, {}, {}
+  for _, p in ipairs(ns.D.plan) do
+    local t = byName[p.name]
+    if not t then
+      t = { name = p.name, icon = p.icon, max = p.max, tree = p.tree, points = {} }
+      byName[p.name] = t
+      if not byTree[p.tree] then
+        byTree[p.tree] = { name = p.tree, talents = {} }
+        trees[#trees + 1] = byTree[p.tree]
+      end
+      table.insert(byTree[p.tree].talents, t)
+    end
+    for l = p.from, p.to do
+      ranks[p.name] = (ranks[p.name] or 0) + 1
+      t.points[#t.points + 1] = { level = l, rank = ranks[p.name], text = (l == p.from or p.more == "") and p.why or p.more }
+    end
+  end
+  for _, t in pairs(byName) do table.sort(t.points, function(a, b) return a.level < b.level end) end
+  return trees, byName
+end
+
+-- Grid positions: the game's own tree layout when the trait system tells us, else tiers worked
+-- out from the plan (a talent sits in the tier its tree had 5 points per row for when it's taken).
+local function layoutTree(tree)
+  local live = ns.traitLayout and ns.traitLayout()
+  if live then
+    local xs, ys, ok = {}, {}, true
+    for _, t in ipairs(tree.talents) do
+      local p = live[string.lower(t.name)]
+      if not p then ok = false; break end
+      xs[p.x], ys[p.y] = true, true
+    end
+    if ok then
+      local function index(set)
+        local list, idx = {}, {}
+        for v in pairs(set) do list[#list + 1] = v end
+        table.sort(list)
+        for i, v in ipairs(list) do idx[v] = i - 1 end
+        return idx, #list
+      end
+      local xi, nx = index(xs)
+      local yi, ny = index(ys)
+      for _, t in ipairs(tree.talents) do
+        local p = live[string.lower(t.name)]
+        t.col, t.row = xi[p.x], yi[p.y]
+      end
+      return math.max(nx, 1), math.max(ny, 1), true
+    end
+  end
+  local order = {}
+  for _, t in ipairs(tree.talents) do order[#order + 1] = t end
+  table.sort(order, function(a, b) return a.points[1].level < b.points[1].level end)
+  local used, ncols, nrows = {}, 1, 1
+  for _, t in ipairs(order) do
+    local before = 0
+    for _, o in ipairs(tree.talents) do
+      for _, p in ipairs(o.points) do if p.level < t.points[1].level then before = before + 1 end end
+    end
+    local tier = math.min(6, math.floor(before / 5))
+    used[tier] = (used[tier] or 0) + 1
+    t.row, t.col = tier, used[tier] - 1
+    ncols = math.max(ncols, used[tier])
+    nrows = math.max(nrows, tier + 1)
+  end
+  return math.max(ncols, 4), nrows, false
+end
+
+local selectedTalent
+
+local function rankAt(t, V)
+  local r, nextP, here = 0, nil, false
+  for _, p in ipairs(t.points) do
+    if p.level <= V then
+      r = p.rank
+      if p.level == V then here = true end
+    elseif not nextP then
+      nextP = p
+    end
+  end
+  return r, nextP, here
+end
+
+-- a 2 px outline around a node
+local function outline(x, y, w, h, color)
+  rect(x, y, w, 2, color, "border", 1); rect(x, y + h - 2, w, 2, color, "border", 1)
+  rect(x, y, 2, h, color, "border", 1); rect(x + w - 2, y, 2, h, color, "border", 1)
+end
+
 renderers.talents = function(V)
-  local y = sectionTitle("Talent order", 0, "hover for why  -  click to view a level")
+  local trees, byName = talentModel()
+  local y = sectionTitle("Talent tree", 0, "your build at level " .. V .. "  -  click a talent for every point")
+  local sel = selectedTalent and byName[selectedTalent]
+  if not sel then
+    local hit = ns.talentAt(math.max(10, V))
+    sel = hit and byName[hit.name]
+  end
+  for _, tree in ipairs(trees) do
+    local ncols, nrows, live = layoutTree(tree)
+    local cellW = math.min(96, math.floor((W - 40) / ncols))
+    local cellH = 72
+    local x0 = math.floor((W - cellW * ncols) / 2)
+    local top = y
+    y = y + 12
+    local got, total = 0, 0
+    for _, t in ipairs(tree.talents) do
+      for _, p in ipairs(t.points) do
+        total = total + 1
+        if p.level <= V then got = got + 1 end
+      end
+    end
+    T(tree.name, 16, y, 300, "head", C.gold)
+    T(got .. " of " .. total .. " points by level " .. V, 16, y + 4, W - 32, "small", C.dim, "RIGHT")
+    y = y + 34
+    local gy = y
+    for _, t in ipairs(tree.talents) do
+      local nx = x0 + t.col * cellW + math.floor((cellW - 40) / 2)
+      local ny = gy + t.row * cellH
+      local r, nextP, here = rankAt(t, V)
+      if here then rect(nx - 7, ny - 7, 54, 54, { C.accent[1], C.accent[2], C.accent[3], 0.5 }, "border", 0) end
+      if t == sel then outline(nx - 4, ny - 4, 48, 48, { 1, 0.82, 0, 1 }) end
+      local f = icon(t.icon, nx, ny, 40, nil, nil)
+      local rankInk
+      if r == 0 then
+        f.tex:SetDesaturated(true); f.tex:SetVertexColor(0.65, 0.65, 0.65)
+        f.ring:SetColorTexture(0.38, 0.38, 0.38, 0.9)
+        rankInk = { 0.75, 0.75, 0.75, 1 }
+      elseif r >= t.max then
+        f.ring:SetColorTexture(1, 0.82, 0, 1); rankInk = { 1, 0.82, 0, 1 }
+      else
+        f.ring:SetColorTexture(0.3, 0.9, 0.35, 1); rankInk = { 0.4, 1, 0.45, 1 }
+      end
+      f:SetScript("OnClick", function() selectedTalent = t.name; refresh() end)
+      f.tipTitle = t.name .. "  " .. r .. "/" .. t.max
+      f.tipText = (here and ("Level " .. V .. ": your point goes here. ") or "") ..
+        (nextP and ("Next point at level " .. nextP.level .. ". ") or "All points taken. ") ..
+        plain(t.points[1].text) .. "\n\nClick for every point and why."
+      -- rank tag on the corner, like the talent window
+      rect(nx + 20, ny + 27, 24, 15, { 0, 0, 0, 0.88 }, nil, 0, nil, true)
+      T(r .. "/" .. t.max, nx + 20, ny + 28, 24, "small", rankInk, "CENTER", true)
+      if here then
+        T("NOW", nx - 10, ny + 46, 60, "label", C.gold, "CENTER")
+      elseif nextP then
+        T("Lv " .. nextP.level, nx - 10, ny + 46, 60, "small", C.dim, "CENTER")
+      end
+    end
+    y = gy + nrows * cellH + 2
+    if not live then
+      y = y + T("Open your talent window once and the Codex lays this out exactly like the game's tree.",
+        16, y, W - 32, "small", C.dim, "CENTER") + 4
+    end
+    y = y + 6
+    box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+  end
+
+  -- the selected talent: every point that goes into it, and why
+  if sel then
+    local top = y
+    y = y + 14
+    local r = rankAt(sel, V)
+    icon(sel.icon, 16, y, 40, sel.name, nil)
+    T(sel.name, 66, y, W - 90, "head", C.ink)
+    T(sel.tree .. "  -  " .. r .. "/" .. sel.max .. " at level " .. V, 66, y + 22, W - 90, "small", C.inkSoft)
+    y = y + 52
+    for _, p in ipairs(sel.points) do
+      local now, past = p.level == V, p.level < V
+      local h = T(plain(p.text), 110, y + 3, W - 130, "body", past and C.inkSoft or C.ink)
+      local rowH = math.max(20, h + 6)
+      if now then rect(10, y - 2, W - 20, rowH + 2, { C.accent[1], C.accent[2], C.accent[3], 0.22 }, nil, 4) end
+      T("Level " .. p.level, 16, y + 4, 60, "label", past and C.inkSoft or C.ink)
+      T(p.rank .. "/" .. sel.max, 76, y + 4, 30, "label", past and C.inkSoft or C.ink, "CENTER")
+      y = y + rowH + 4
+    end
+    y = y + 8
+    box(0, top, W, y - top, C.parch, C.edge)
+    y = y + 14
+  end
+
+  -- every point in order (click one to see that level)
+  T("EVERY POINT, IN ORDER", 0, y, W, "label", C.gold)
+  T("click a level to open it", 0, y, W - 6, "small", C.dim, "RIGHT")
+  y = y + 20
   local me = UnitLevel("player")
   for l = 10, 60 do
     local hit, rank, text = ns.talentAt(l)
@@ -403,28 +927,71 @@ renderers.trainer = function(V)
   return y
 end
 
+----------------------------------------------------------------------------
+-- Macros: where each one goes on your controller and keyboard, then each macro in full
+----------------------------------------------------------------------------
+
+local PAD_NAMES = { xbox = "Xbox", ps = "PlayStation", switch = "Switch" }
+
 renderers.macros = function(V)
-  local y = sectionTitle("Macros for level " .. V, 0, "hover the icon for how it works")
-  y = y + T("Press Set up macros to create them all at once (they go in the character tab of Esc > Macros), then drag each onto the button or key shown.", 0, y, W - 160, "small", C.dim)
-  btn("Set up macros", W - 140, y - 30, 140, function() ns.setupMacros(false) end, true,
+  local list = ns.macrosFor(V)
+  local y = sectionTitle("Macros for level " .. V, 0, "hover a button for how it works")
+  local h = T("Set up macros makes them all at once (character tab of Esc > Macros). Then put each on the button or key shown below.",
+    0, y, W - 170, "small", C.dim)
+  btn("Set up macros", W - 150, y - 2, 150, function() ns.setupMacros(false) end, true,
     "Creates or updates this character's macros for your current level (" .. UnitLevel("player") .. ").")
-  y = y + 10
-  for _, m in ipairs(ns.macrosFor(V)) do
+  y = y + math.max(h, 24) + 12
+  if #list == 0 then
+    y = y + T("No macros yet at this level.", 0, y, W, "body", C.dim) + 10
+  else
+    -- controller
     local top = y
     y = y + 12
-    icon(m.icon, 14, y, 36, m.name, nil)
+    T("ON YOUR CONTROLLER", 16, y, 300, "label", C.gold)
+    T((PAD_NAMES[padKind()] or "Xbox") .. " buttons  -  change in Settings", 16, y, W - 32, "small", C.dim, "RIGHT")
+    y = y + 22
+    local ch = controllerMock(list, y)
+    if ch == 0 then y = y + T("None of these macros has a controller button.", 16, y, W - 32, "small", C.dim) + 4 end
+    y = y + ch + 12
+    box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+    -- keyboard
+    top = y
+    y = y + 12
+    T("ON YOUR KEYBOARD", 16, y, 300, "label", C.gold)
+    T("action bar keys", 16, y, W - 32, "small", C.dim, "RIGHT")
+    y = y + 26
+    local kh = keyboardMock(list, y)
+    if kh == 0 then y = y + T("None of these macros has a key.", 16, y, W - 32, "small", C.dim) + 4 end
+    y = y + kh + 14
+    box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 14
+  end
+  -- each macro in full
+  for _, m in ipairs(list) do
+    local top = y
+    y = y + 12
+    icon(m.icon, 14, y, 36, m.name, macroTip(m))
     T(m.name, 60, y, 300, "head", C.gold)
     T("Levels " .. m.lo .. "-" .. m.hi, 60, y + 22, 200, "small", C.dim)
-    btn("Copy", W - 78, y, 64, function() ns.showMacroCopy(m) end, false,
+    btn("Copy", W - 78, y + 6, 64, function() ns.showMacroCopy(m) end, false,
       "Shows the macro text ready to copy, for making it yourself in Esc > Macros.")
-    local cx = 300
-    if m.pad ~= "" then cx = cx + chip("Controller " .. padText(m.pad), cx, y + 2, true) + 6 end
-    if m.kb ~= "" then chip("Keyboard " .. plain(m.kb), 300, y + 24, false) end
     y = y + 46
+    local bx = 14
+    if m.pad ~= "" then
+      T("CONTROLLER", bx, y + 5, 90, "label", C.dim)
+      bx = bx + 84
+      bx = bx + padCombo(m.pad, bx, y) + 24
+    end
+    if m.kb ~= "" then
+      T("KEY", bx, y + 5, 40, "label", C.dim)
+      keyCombo(m.kb, bx + 32, y)
+    end
+    if m.pad ~= "" or m.kb ~= "" then y = y + 30 end
     local codeTop = y
-    local h = T(m.body, 22, y + 8, W - 44, "mono", C.codeInk)
-    rect(14, codeTop, W - 28, h + 16, C.code, nil, 3)
-    y = y + h + 24
+    local ch = T(m.body, 22, y + 8, W - 44, "mono", C.codeInk)
+    rect(14, codeTop, W - 28, ch + 16, C.code, nil, 3)
+    y = y + ch + 24
     for _, line in ipairs(m.tips or {}) do
       y = y + T("-  " .. padText(line), 22, y, W - 44, "small", C.light) + 4
     end
@@ -741,6 +1308,9 @@ local function makeFrame()
   overlay = CreateFrame("Frame", nil, content)
   overlay:SetAllPoints(content)
   overlay:SetFrameLevel(content:GetFrameLevel() + 5)
+  top = CreateFrame("Frame", nil, content)
+  top:SetAllPoints(content)
+  top:SetFrameLevel(content:GetFrameLevel() + 20) -- above the icons (overlay + 1)
 
   -- tabs hang below the window, like the character sheet's
   tabs = {}
