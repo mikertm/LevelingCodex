@@ -12,7 +12,7 @@
 - Parchment cards in the Forever theme get the teal wash of Forever's quest log.
 - Fixed: the tab hover glow sat off the text and lit up the selected tab.
 - The talent highlight now takes the theme colour (Forever teal) instead of the node's own green, and the card above the talent window moves below it when the window is near the top of the screen.
-- The level-up banner starts lower and waits for the game's own level-up display to finish, so they no longer overlap.
+- The level-up banner is now an unlocks card ("New at Level 17": your talent point, trainer spells, macros, new chapter) that appears after the game's own level-up display instead of repeating "You have reached Level 17". It finds the game's display and waits for it, or waits about 4 seconds, and starts lower on screen.
 - Controller glyphs: the PlayStation circle is drawn as a real ring, keycaps have a light face, and empty halves of the controller panels are hidden.
 
 ## v0.9.0

@@ -1,5 +1,5 @@
--- Banner.lua: level-up chat messages and the level-up banner ("toast") at the top of the screen,
--- which fades in and out like the classic one. Movable, scalable, with a test mode.
+-- Banner.lua: level-up chat messages and the unlocks banner ("toast"): after the game's own
+-- level-up display, it lists what you unlocked. Movable, scalable, with a test mode.
 
 local _, ns = ...
 local C, rgba, plain = ns.C, ns.rgba, ns.plain
@@ -45,6 +45,31 @@ local function builtInShowing()
       local ok, v = pcall(f.IsVisible, f)
       if ok and v then return n end
     end
+  end
+end
+
+-- Forever's own level-up display has an unconfirmed name: look once for a visible frame named
+-- like one ("...LevelUp...", "EventToast...") and remember it for next time.
+local FALLBACK_WAIT = 3.7 -- no display found: about how long the game's one stays up
+local function discoverBuiltIn()
+  if not EnumerateFrames then return end
+  local f, n = EnumerateFrames(), 0
+  while f and n < 20000 do
+    n = n + 1
+    local ok, name = pcall(f.GetName, f)
+    if ok and type(name) == "string" and not name:find("^LevelingCodex") then
+      local low = name:lower()
+      if low:find("levelup") or low:find("eventtoast") then
+        local vok, vis = pcall(f.IsVisible, f)
+        if vok and vis then
+          table.insert(BUILT_IN, 1, name)
+          ns.builtInLevelUp = name
+          return name
+        end
+      end
+    end
+    local nok, nextF = pcall(EnumerateFrames, f)
+    f = nok and nextF or nil
   end
 end
 local TOAST_W = 480
@@ -171,35 +196,28 @@ local function makeToast()
     end
   end
 
-  -- golden burst behind the level number: slow spin and a gentle pulse
+  -- a soft theme-coloured glow behind the title (no starburst: the game already did the fanfare)
   toast.burst = toast:CreateTexture(nil, "BORDER")
-  toast.burst:SetSize(300, 300)
-  toast.burst:SetPoint("CENTER", toast, "TOP", 0, -58)
-  local ok = toast.burst:SetTexture("Interface\\Cooldown\\star4")
-  if ok == false then toast.burst:SetColorTexture(C.burst[1], C.burst[2], C.burst[3], 0.15) end
-  toast.burst:SetBlendMode("ADD")
-  toast.burst:SetVertexColor(rgba(C.burst))
-  toast.spin = toast.burst:CreateAnimationGroup()
-  local spin = toast.spin:CreateAnimation("Rotation")
-  spin:SetDegrees(-360); spin:SetDuration(24)
-  toast.spin:SetLooping("REPEAT")
+  toast.burst:SetPoint("TOPLEFT", 70, -4); toast.burst:SetPoint("TOPRIGHT", -70, -4); toast.burst:SetHeight(46)
+  ns.fade(toast.burst, "VERTICAL", C.burst[1], C.burst[2], C.burst[3], 0, 0.3)
   toast.glow = toast.burst:CreateAnimationGroup()
-  alphaAnim(toast.glow, 0.35, 0.8, 1.6, 1)
+  alphaAnim(toast.glow, 0.55, 1, 1.6, 1)
   toast.glow:SetLooping("BOUNCE")
 
-  toast.header = toast:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  -- "LEVELING CODEX" / "New at Level 17": what you unlocked, after the game's own level-up
+  toast.header = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   toast.header:SetPoint("TOP", 0, -8)
-  toast.header:SetTextColor(rgba(C.toastHeader))
-  toast.header:SetText("You have reached")
+  toast.header:SetTextColor(rgba(C.goldDim))
+  toast.header:SetText("LEVELING CODEX")
 
-  toast.title = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-  toast.title:SetPoint("TOP", toast.header, "BOTTOM", 0, -2)
-  if toast.title:SetFont("Fonts\\MORPHEUS.TTF", 44, "OUTLINE") == false then
-    toast.title:SetFontObject("GameFontNormalHuge")
+  toast.title = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+  toast.title:SetPoint("TOP", toast.header, "BOTTOM", 0, -3)
+  if toast.title:SetFont("Fonts\\MORPHEUS.TTF", 26, "OUTLINE") == false then
+    toast.title:SetFontObject("GameFontNormalLarge")
   end
-  toast.title:SetTextColor(1, 0.82, 0) -- Blizzard gold; the theme colour stays on the burst and glow
+  toast.title:SetTextColor(1, 0.82, 0)
   toast.title:SetShadowColor(0, 0, 0, 1)
-  toast.title:SetShadowOffset(2, -2)
+  toast.title:SetShadowOffset(1, -1)
 
   toast.rule = goldRule(toast, 360)
   toast.rule:SetPoint("TOP", toast.title, "BOTTOM", 0, -4)
@@ -222,16 +240,14 @@ local function makeToast()
   toast.enter = toast:CreateAnimationGroup()
   alphaAnim(toast.enter, 0, 1, 0.3, 1)
   toast.punch = toast.title:CreateAnimationGroup()
-  scaleAnim(toast.punch, 2.2, 1, 0.4, 1)
-  alphaAnim(toast.punch, 0, 1, 0.25, 1)
-  toast.burstIn = toast.burst:CreateAnimationGroup()
-  scaleAnim(toast.burstIn, 0.2, 1, 0.6, 1)
+  scaleAnim(toast.punch, 1.12, 1, 0.3, 1)
+  alphaAnim(toast.punch, 0, 1, 0.3, 1)
 
   -- exit
   toast.leave = toast:CreateAnimationGroup()
   alphaAnim(toast.leave, 1, 0, 1.0, 1)
   toast.leave:SetScript("OnFinished", function()
-    toast:Hide(); toast.spin:Stop(); toast.glow:Stop()
+    toast:Hide(); toast.glow:Stop()
   end)
 
   toast:SetScript("OnUpdate", function(self, elapsed)
@@ -300,7 +316,7 @@ local function unlocksAt(level)
 end
 
 local function layoutToast(rowsUsed)
-  toast:SetHeight(118 + rowsUsed * 38 + 26)
+  toast:SetHeight(94 + rowsUsed * 38 + 26)
   toast.hint:ClearAllPoints()
   toast.hint:SetPoint("BOTTOM", 0, 8)
 end
@@ -309,11 +325,22 @@ end
 function ns.showToast(level, force, test, waited)
   if not ns.D then return end
   if ns.db().noToast and not force then return end
-  -- a real level-up waits (up to 8 s) for the game's own level-up display to finish
-  waited = waited or 0
-  if not test and waited < 8 and builtInShowing() then
-    ns.after(0.5, function() ns.showToast(level, force, test, waited + 0.5) end)
-    return
+  -- a real level-up comes after the game's own level-up display: wait (up to 8 s) while it's up,
+  -- or, when we can't see one, about as long as it usually lasts
+  if not test then
+    if waited == nil then
+      local shown = builtInShowing() or discoverBuiltIn()
+      if shown then ns.builtInLevelUp = shown end
+      if not shown then
+        ns.after(FALLBACK_WAIT, function() ns.showToast(level, force, test, "done") end)
+        return
+      end
+      waited = 0
+    end
+    if waited ~= "done" and waited < 8 and builtInShowing() then
+      ns.after(0.5, function() ns.showToast(level, force, test, waited + 0.5) end)
+      return
+    end
   end
   if not toast then makeToast() end
   if toast.unlocked then return end
@@ -335,7 +362,7 @@ function ns.showToast(level, force, test, waited)
       row:Hide()
     end
   end
-  toast.title:SetText("Level " .. level)
+  toast.title:SetText("New at Level " .. level)
   toast.sub:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
   toast.testing = test or nil
   toast.hint:SetText(test and "TEST LEVEL-UP  -  drag to move  -  change its size in Settings  -  right-click to close"
@@ -348,8 +375,7 @@ function ns.showToast(level, force, test, waited)
   toast.leave:Stop()
   toast:SetAlpha(1)
   toast:Show()
-  toast.enter:Play(); toast.punch:Play(); toast.burstIn:Play()
-  toast.spin:Play(); toast.glow:Play()
+  toast.enter:Play(); toast.punch:Play(); toast.glow:Play()
   toast.holding = HOLD
 end
 
@@ -359,7 +385,7 @@ function ns.setToastUnlocked(on)
   toast.unlocked = on
   toast.leave:Stop()
   if on then
-    toast.title:SetText("Level " .. UnitLevel("player"))
+    toast.title:SetText("New at Level " .. UnitLevel("player"))
     toast.sub:SetText("Drag me where you want me, then click Lock banner in the Codex settings")
     for i, row in ipairs(toast.rows) do
       row.anim:Stop()
@@ -375,9 +401,9 @@ function ns.setToastUnlocked(on)
     ns.placeToast()
     toast:SetAlpha(1)
     toast:Show()
-    toast.spin:Play(); toast.glow:Play()
+    toast.glow:Play()
   else
-    toast:Hide(); toast.spin:Stop(); toast.glow:Stop()
+    toast:Hide(); toast.glow:Stop()
   end
 end
 

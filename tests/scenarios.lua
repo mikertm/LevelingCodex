@@ -140,9 +140,13 @@ function S.levelups()
     MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
     MOCK.advance(1.2)
     if D() and not LevelingCodexDB.noToast then
+      check(not (toast() and toast():IsShown()), "banner waits for the game's own level-up display (level " .. level .. ")")
+    end
+    MOCK.advance(3.3)
+    if D() and not LevelingCodexDB.noToast then
       local t = toast()
       check(t and t:IsShown(), "banner shown at level " .. level)
-      check(t.title and t.title:GetText() == "Level " .. level, "banner title at level " .. level)
+      check(t.title and t.title:GetText() == "New at Level " .. level, "banner title at level " .. level)
     end
     MOCK.advance(10)
     if D() then check(not toast():IsShown(), "banner fades by itself at level " .. level) end
@@ -154,7 +158,7 @@ function S.bannerMouse()
   if not D() then return end
   MOCK.level = 20
   MOCK.event("PLAYER_LEVEL_UP", 20)
-  MOCK.advance(0.5)
+  MOCK.advance(4.5)
   local t = toast()
   MOCK.mouseOver[t] = true
   MOCK.advance(12)
@@ -163,7 +167,7 @@ function S.bannerMouse()
   MOCK.advance(12)
   check(not t:IsShown(), "banner fades after mouse leaves")
   MOCK.event("PLAYER_LEVEL_UP", 20)
-  MOCK.advance(0.5)
+  MOCK.advance(4.5)
   MOCK.fire(t, "OnMouseUp", "LeftButton")
   MOCK.advance(1.5)
   check(not t:IsShown(), "left-click dismisses the banner")
@@ -190,7 +194,7 @@ function S.bannerTest()
   for _, l in ipairs({ 1, 9, 10, 30, 59, 60 }) do
     slash("test " .. l)
     MOCK.advance(0.6)
-    check(t.title:GetText() == "Level " .. l, "/codex test " .. l)
+    check(t.title:GetText() == "New at Level " .. l, "/codex test " .. l)
     MOCK.fire(t, "OnMouseUp", "RightButton")
     MOCK.advance(1.5)
   end
@@ -950,6 +954,22 @@ function S.bannerBuiltIn()
   MOCK.advance(10)
   check(toast():IsShown(), "banner shows after 8 s even if the game's display stays up")
   builtin:Hide()
+  MOCK.advance(12)
+end
+
+-- A level-up display under a name we don't know is found and waited for, then remembered.
+function S.bannerFindsDisplay()
+  if not D() or MOCK.minimal then return end
+  local f = _G.ForeverLevelUpBanner or CreateFrame("Frame", "ForeverLevelUpBanner", UIParent)
+  f:Show()
+  MOCK.level = 33
+  MOCK.event("PLAYER_LEVEL_UP", 33)
+  MOCK.advance(5)
+  check(not toast():IsShown(), "banner waits for the game's display it found")
+  check(MOCK.ns.builtInLevelUp == "ForeverLevelUpBanner", "remembers the game's display (" .. tostring(MOCK.ns.builtInLevelUp) .. ")")
+  f:Hide()
+  MOCK.advance(1)
+  check(toast():IsShown() and toast().title:GetText() == "New at Level 33", "unlocks shown right after it")
   MOCK.advance(12)
 end
 

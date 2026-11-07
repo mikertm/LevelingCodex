@@ -825,7 +825,7 @@ local ALLOWED_GLOBALS = {
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
-  EventToastManagerFrame = true,
+  EventToastManagerFrame = true, ForeverLevelUpBanner = true,
 }
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}

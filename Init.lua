@@ -146,6 +146,7 @@ function ns.debugLines()
   local used = A.reportLines()
   if #used > 0 then out[#out + 1] = "art used: " .. table.concat(used, "; ") end
   for _, line in ipairs(ns.talentDebugLines()) do out[#out + 1] = line end
+  out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet")
   for i, line in ipairs(out) do out[i] = ns.plain(line) end
   return out
 end
