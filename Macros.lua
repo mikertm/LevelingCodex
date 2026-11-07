@@ -56,7 +56,8 @@ function ns.countOurMacros()
 end
 
 -- onlyExisting = true: the after-level-up refresh, which only touches macros the Codex made.
--- Returns made, updated, failed (list of names).
+-- A macro of the player's own with a guide macro's name is never overwritten: it is kept and
+-- the Codex version is offered in the copy box. Returns made, updated, failed, kept.
 function ns.setupMacros(onlyExisting)
   if not ns.D then return end
   if InCombatLockdown() then
@@ -71,11 +72,14 @@ function ns.setupMacros(onlyExisting)
   if not LevelingCodexCharDB then LevelingCodexCharDB = {} end
   LevelingCodexCharDB.made = LevelingCodexCharDB.made or {}
   local level = UnitLevel("player")
-  local made, updated, same, failed = 0, 0, 0, {}
+  local made, updated, same, failed, kept = 0, 0, 0, {}, {}
   for _, m in ipairs(ns.macrosFor(level)) do
     local index = macroIndex(m.name)
     if index and index > 0 then
-      if not onlyExisting or isOurs(index, m.name) then
+      if not isOurs(index, m.name) then
+        -- the player's own macro under the same name: never overwrite it
+        if not onlyExisting then kept[#kept + 1] = m end
+      else
         local current = macroBody(index)
         if current and trim(current) == trim(m.body) then
           LevelingCodexCharDB.made[m.name] = true -- already right: nothing to do
@@ -107,13 +111,23 @@ function ns.setupMacros(onlyExisting)
   ns.say(ns.GREEN .. made .. " created|r, " .. updated .. " updated" ..
     (same > 0 and (", " .. same .. " already up to date") or "") .. " for level " .. level ..
     ". Open " .. ns.WHITE .. "Esc > Macros|r (character tab) and drag them onto your bars - /codex shows where.")
-  if #failed > 0 then
-    local names = {}
-    for i, m in ipairs(failed) do names[i] = m.name end
-    ns.say("couldn't make: " .. table.concat(names, ", ") .. ". Your character macro slots may be full.")
-    if ns.showMacroCopy then ns.showMacroCopy(failed[1], failed) end
+  local function names(list)
+    local out = {}
+    for i, m in ipairs(list) do out[i] = m.name end
+    return table.concat(out, ", ")
   end
-  return made, updated, failed
+  if #kept > 0 then
+    ns.say("kept your own macro(s) with the same name: " .. names(kept) .. ". The Codex version is in the copy box - rename yours to use both.")
+  end
+  if #failed > 0 then
+    ns.say("couldn't make: " .. names(failed) .. ". Your character macro slots may be full.")
+  end
+  -- everything the player has to make by hand, in one copy box
+  local manual = {}
+  for _, m in ipairs(failed) do manual[#manual + 1] = m end
+  for _, m in ipairs(kept) do manual[#manual + 1] = m end
+  if #manual > 0 and ns.showMacroCopy then ns.showMacroCopy(manual[1], manual) end
+  return made, updated, failed, kept
 end
 
 -- PLAYER_REGEN_ENABLED: finish a setup that was asked for during combat.

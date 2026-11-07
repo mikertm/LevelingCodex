@@ -353,6 +353,33 @@ function S.macros()
   MOCK.charMacroSlots = nil
 end
 
+-- The player already has their own macro under one of the guide's names: Set up macros keeps
+-- it, says so, and offers the Codex version in the copy box.
+function S.ownMacroSameName()
+  if not D() then return end
+  MOCK.level = 30
+  local list = {}
+  for _, m in ipairs(D().macros) do if 30 >= m.lo and 30 <= m.hi then list[#list + 1] = m end end
+  if #list == 0 then return end
+  local name = list[1].name
+  MOCK.macros = { { name = name, icon = 1, body = "/say this one is mine", perChar = true } }
+  if LevelingCodexCharDB then LevelingCodexCharDB.made = nil end
+  MOCK.chat = {}
+  slash("macros")
+  check(MOCK.macros[1].body == "/say this one is mine", "player's own " .. name .. " macro kept")
+  check(chatHas("kept your own"), "chat says the player's macro was kept")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown() and copy.edit:GetText() == list[1].body, "copy box offers the Codex version of " .. name)
+  copy:Hide()
+  -- and the level-up refresh leaves it alone too
+  MOCK.level = 31
+  MOCK.event("PLAYER_LEVEL_UP", 31)
+  MOCK.advance(1.5)
+  check(MOCK.macros[1].body == "/say this one is mine", "level-up leaves the player's macro alone")
+  MOCK.advance(12)
+  MOCK.macros = {}
+end
+
 -- The Copy button on a macro card: body selected, read-only, Esc closes and frees the keyboard.
 function S.copyMacro()
   if not D() then return end

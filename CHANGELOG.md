@@ -3,6 +3,7 @@
 ## v0.9.0
 - Fixed: the talent highlight and its card stayed on screen after closing the talent window. They now disappear the moment the window closes.
 - Fixed: levelling up in combat could create every macro for your level when the fight ended. Now only the macros the Codex made are updated.
+- Set up macros no longer overwrites a macro of your own that has the same name (for example your own "Fight"): it keeps yours, tells you, and shows the Codex version in the copy box.
 - Auto-updating macros now works even when WoW: Forever doesn't load your saved settings, and the Codex tells you (once, and in Settings) when that happened.
 - The talent guide is lighter: once it has found your talent it stops searching the talent window, follows the talent if the window reuses buttons, and also finds talent windows that load later.
 - New: a Copy button on every macro, and a copy box with the macro text selected when your macro slots are full.

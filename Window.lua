@@ -792,7 +792,7 @@ function ns.showMacroCopy(m, list, step)
   if not cur then return end
   local many = #copy.list > 1
   copy.title:SetText("Copy the " .. cur.name .. " macro")
-  copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " that couldn't be made") or "")
+  copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
   copy.body = cur.body
   copy:Show()
