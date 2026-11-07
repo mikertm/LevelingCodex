@@ -936,7 +936,15 @@ end
 function S.bannerBuiltIn()
   if not D() then return end
   LevelingCodexDB.toastPos = nil
+  if MOCK.ns.builtInSpotY == nil then
+    -- game display never seen: the usual level-up spot near the top
+    MOCK.ns.showToast(25, true, true)
+    local _, _, _, _, dy = toast():GetPoint(1)
+    check(dy == -190, "banner defaults to the game's usual level-up spot (y " .. tostring(dy) .. ")")
+    toast():Hide()
+  end
   local builtin = _G.EventToastManagerFrame or CreateFrame("Frame", "EventToastManagerFrame", UIParent)
+  builtin._top = 1080 - 180 -- the game's display: its top 180 below the top of the screen
   builtin:Show()
   MOCK.level = 25
   MOCK.event("PLAYER_LEVEL_UP", 25)
@@ -946,7 +954,20 @@ function S.bannerBuiltIn()
   MOCK.advance(1)
   check(toast():IsShown(), "banner shows once the game's display is gone")
   local _, _, _, x, y = toast():GetPoint(1)
-  check(y == -290, "banner starts below the game's display (y " .. tostring(y) .. ")")
+  check(y == -180, "banner takes the game's display's spot (y " .. tostring(y) .. ")")
+  -- a bigger banner still starts at that spot (offsets are in its scaled units)
+  LevelingCodexDB.toastScale = 1.5
+  MOCK.ns.placeToast()
+  _, _, _, x, y = toast():GetPoint(1)
+  check(y == -120, "scaled banner starts at the same spot (y " .. tostring(y) .. ")")
+  LevelingCodexDB.toastScale = 1
+  -- where you dragged it wins
+  LevelingCodexDB.toastPos = { "TOP", "TOP", 40, -400 }
+  MOCK.ns.placeToast()
+  _, _, _, x, y = toast():GetPoint(1)
+  check(x == 40 and y == -400, "a banner you moved stays where you put it")
+  LevelingCodexDB.toastPos = nil
+  MOCK.ns.placeToast()
   -- a game display that never goes away doesn't swallow the banner
   MOCK.advance(12)
   builtin:Show()

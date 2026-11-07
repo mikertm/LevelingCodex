@@ -34,8 +34,9 @@ end
 ----------------------------------------------------------------------------
 
 local toast
--- Forever shows its own level-up display near the top of the screen: start well below it.
-local DEFAULT_TOAST = { "TOP", "TOP", 0, -290 }
+-- The card shows after the game's own level-up display is gone, so it takes that display's spot:
+-- where we saw it (ns.builtInSpotY), else where the game usually draws it.
+local DEFAULT_TOAST = { "TOP", "TOP", 0, -190 }
 -- The game's own level-up displays; while one is up, the banner waits its turn.
 local BUILT_IN = { "LevelUpDisplay", "EventToastManagerFrame", "LevelUpFrame", "BossBanner" }
 local function builtInShowing()
@@ -72,6 +73,21 @@ local function discoverBuiltIn()
     f = nok and nextF or nil
   end
 end
+-- Remember how far below the top of the screen the game's display sits (in UIParent units).
+local function scaleOf(f)
+  local ok, s = pcall(f.GetEffectiveScale, f)
+  return (ok and type(s) == "number" and s > 0) and s or 1
+end
+local function noteBuiltInSpot(name)
+  local f = name and _G[name]
+  if type(f) ~= "table" or not f.GetTop or not UIParent.GetTop then return end
+  local ok, top = pcall(f.GetTop, f)
+  local uok, uiTop = pcall(UIParent.GetTop, UIParent)
+  if not (ok and uok and type(top) == "number" and type(uiTop) == "number") then return end
+  local us = scaleOf(UIParent)
+  local y = (top * scaleOf(f) - uiTop * us) / us
+  if y <= -20 and y >= -600 then ns.builtInSpotY = math.floor(y + 0.5) end -- ignore odd sizes
+end
 local TOAST_W = 480
 local MAX_ROWS = 5
 local HOLD = 8 -- seconds on screen before it fades (paused while your mouse is over it)
@@ -81,8 +97,13 @@ function ns.getToast() return toast end
 function ns.placeToast()
   if not toast then return end
   local db = ns.db()
-  local p = db.toastPos or DEFAULT_TOAST
-  toast:SetScale(db.toastScale or 1)
+  local scale = db.toastScale or 1
+  local p = db.toastPos
+  if not p and ns.builtInSpotY then
+    p = { "TOP", "TOP", 0, ns.builtInSpotY / scale } -- offsets are in the card's own (scaled) units
+  end
+  p = p or DEFAULT_TOAST
+  toast:SetScale(scale)
   toast:ClearAllPoints()
   toast:SetPoint(p[1], UIParent, p[2], p[3], p[4])
 end
@@ -324,7 +345,7 @@ function ns.showToast(level, force, test, waited)
   if not test then
     if waited == nil then
       local shown = builtInShowing() or discoverBuiltIn()
-      if shown then ns.builtInLevelUp = shown end
+      if shown then ns.builtInLevelUp = shown; noteBuiltInSpot(shown) end
       if not shown then
         ns.after(FALLBACK_WAIT, function() ns.showToast(level, force, test, "done") end)
         return
