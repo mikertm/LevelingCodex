@@ -270,7 +270,10 @@ function Frame:StartMoving()
   self._moving = true
 end
 function Frame:StopMovingOrSizing() self._moving = false end
-function Frame:GetChildren() return unpack(self._children) end
+function Frame:GetChildren()
+  MOCK.walked = (MOCK.walked or 0) + 1 -- lets tests measure how much the talent finder walks
+  return unpack(self._children)
+end
 function Frame:GetNumChildren() return #self._children end
 function Frame:GetRegions() return unpack(self._regions) end
 function Frame:IsMouseOver() return MOCK.mouseOver[self] and true or false end
@@ -671,7 +674,7 @@ function MOCK.drag(f, dx, dy)
 end
 
 -- Remove the APIs a careful addon must not rely on.
-local OPTIONAL = { "C_Spell", "GetSpellInfo", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
+local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros" }
 
 function MOCK.setup(opts)
@@ -692,6 +695,7 @@ local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
+  ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
 }
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}

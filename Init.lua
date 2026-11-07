@@ -7,38 +7,66 @@
 
 local _, ns = ...
 
+-- Were the saved variables there when the client loaded us? (Forever may not load them.)
+local hadDB, hadCharDB
+
+local function noteSavedState()
+  if hadDB == nil then hadDB = LevelingCodexDB ~= nil end
+  if hadCharDB == nil then hadCharDB = LevelingCodexCharDB ~= nil end
+end
+
+-- Runs once, at PLAYER_LOGIN (or PLAYER_ENTERING_WORLD if the class wasn't known yet).
+local function start()
+  if ns.started then return end
+  noteSavedState()
+  LevelingCodexDB = LevelingCodexDB or {}
+  LevelingCodexCharDB = LevelingCodexCharDB or {}
+  LevelingCodexDB.v = 1 -- so a table that comes back next session is told apart from a lost one
+  ns.useTheme(LevelingCodexDB.theme)
+  local localized, token = UnitClass("player")
+  if not token then return end -- try again at PLAYER_ENTERING_WORLD
+  ns.started = true
+  ns.CLASS_NAME = localized
+  ns.D = LevelingCodexData and LevelingCodexData[token]
+  if not ns.D then return end
+  ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the book on your minimap.")
+  -- Macros from an earlier session but no saved settings: they didn't load (a known Forever issue).
+  if (not hadDB or not hadCharDB) and ns.countOurMacros() > 0 then
+    ns.settingsLost = true
+    ns.say("your settings from last time didn't load (a known WoW: Forever issue), so the defaults are in use. Your macros still update.")
+  end
+  ns.updateMini()
+  ns.startTalentGuide()
+end
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_LOGIN")
 events:RegisterEvent("PLAYER_LEVEL_UP")
-events:RegisterEvent("PLAYER_REGEN_ENABLED")
-pcall(events.RegisterEvent, events, "ADDON_LOADED")
+-- anything beyond the core events is pcall'd: an unknown event throws and would abort this file
+for _, ev in ipairs({ "PLAYER_REGEN_ENABLED", "ADDON_LOADED", "PLAYER_ENTERING_WORLD" }) do
+  pcall(events.RegisterEvent, events, ev)
+end
 events:SetScript("OnEvent", function(_, event, arg1)
-  if event == "PLAYER_LOGIN" then
-    LevelingCodexDB = LevelingCodexDB or {}
-    LevelingCodexCharDB = LevelingCodexCharDB or {}
-    ns.useTheme(LevelingCodexDB.theme)
-    local localized, token = UnitClass("player")
-    ns.CLASS_NAME = localized
-    ns.D = LevelingCodexData and LevelingCodexData[token]
-    if ns.D then
-      ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the book on your minimap.")
-      ns.updateMini()
-      ns.startTalentGuide()
-    end
+  if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+    start()
   elseif event == "PLAYER_LEVEL_UP" then
     local level = tonumber(arg1) or UnitLevel("player")
     ns.levelUpMessage(level)
     ns.showToast(level)
-    C_Timer.After(1, function()
-      if not LevelingCodexDB.noAutoMacros then
+    ns.after(1, function()
+      if not ns.db().noAutoMacros then
         ns.setupMacros(true) -- refresh only the macros this addon made, so versions follow your level
       end
       ns.refresh()
     end)
   elseif event == "ADDON_LOADED" then
     local n = tostring(arg1 or "")
-    if n:find("Talent") or n:find("PlayerSpells") or n:find("Trait") or n:find("Legacy") then
-      if C_Timer then C_Timer.After(0.5, ns.discoverTalentRoots) end
+    if n == "LevelingCodex" then
+      noteSavedState()
+    elseif n:find("Talent") or n:find("PlayerSpells") or n:find("Trait") or n:find("Legacy") then
+      -- the talent UI loads on demand: its toggle functions may only exist now
+      ns.hookTalentToggles()
+      ns.after(0.5, function() ns.discoverTalentRoots(true) end)
     end
   elseif event == "PLAYER_REGEN_ENABLED" then
     ns.flushPendingMacros()
@@ -52,8 +80,9 @@ end
 
 SLASH_LEVELINGCODEX1 = "/codex"
 SlashCmdList.LEVELINGCODEX = function(msg)
-  msg = strlower(strtrim(msg or ""))
+  msg = string.lower((tostring(msg or ""):gsub("^%s+", ""):gsub("%s+$", "")))
   local cmd, rest = msg:match("^(%S*)%s*(.-)$")
+  if not LevelingCodexDB then LevelingCodexDB = {} end
   local db = LevelingCodexDB
   if cmd == "" then
     ns.toggleWindow()

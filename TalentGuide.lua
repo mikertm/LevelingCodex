@@ -10,7 +10,7 @@ local _, ns = ...
 local C, rgba = ns.C, ns.rgba
 
 local TALENT_ROOTS = { "PlayerSpellsFrame", "ClassTalentFrame", "PlayerTalentFrame", "TalentFrame", "LegacySystemFrame" }
-local guide = { roots = {} }
+local guide = { roots = {}, watched = {} }
 
 local function lower(s) return s and string.lower(s) or nil end
 
@@ -44,61 +44,129 @@ local function iconFileID(name)
   if ok and id and id ~= 0 then return id end
 end
 
+local function shown(f)
+  if not f or not f.IsShown then return false end
+  local ok, s = pcall(f.IsShown, f)
+  return ok and s
+end
+
+-- Does this frame carry the icon (a texture region showing fileID)?
+local function hasIcon(f, fileID)
+  if not fileID or not f.GetRegions then return false end
+  local ok, regions = pcall(function() return { f:GetRegions() } end)
+  if not ok then return false end
+  for _, r in ipairs(regions) do
+    if r.GetObjectType and r.GetTexture then
+      local tok, kind = pcall(r.GetObjectType, r)
+      if tok and kind == "Texture" then
+        local gok, tex = pcall(r.GetTexture, r)
+        if gok and tex == fileID then return true end
+      end
+    end
+  end
+  return false
+end
+
+local WALK_BUDGET = 4000 -- frames per search, so a huge tree can't stall a frame
+
 -- Walk a frame tree looking for the talent: by name first, then by its icon.
+-- Returns the button and how it matched ("name" or "icon").
 local function findTalentButton(root, name, fileID)
   local want = lower(name)
   local byIcon
+  local budget = WALK_BUDGET
   local function walk(f, depth)
-    if depth > 12 or not f.IsShown or not f:IsShown() then return end
+    if depth > 12 or budget <= 0 or not shown(f) then return end
     local ok, kids = pcall(function() return { f:GetChildren() } end)
     if not ok then return end
     for _, k in ipairs(kids) do
-      if k.IsShown and k:IsShown() then
+      budget = budget - 1
+      if budget <= 0 then return end
+      if shown(k) then
         local n = buttonTalentName(k)
         if n and lower(n) == want then return k end
-        if fileID and not byIcon and k.GetRegions then
-          local rok, regions = pcall(function() return { k:GetRegions() } end)
-          if rok then
-            for _, r in ipairs(regions) do
-              if r.GetObjectType and r:GetObjectType() == "Texture" and r.GetTexture then
-                local tok, tex = pcall(r.GetTexture, r)
-                if tok and (tex == fileID) then byIcon = k end
-              end
-            end
-          end
-        end
+        if not byIcon and hasIcon(k, fileID) then byIcon = k end
         local found = walk(k, depth + 1)
         if found then return found end
       end
     end
   end
-  return walk(root, 0) or byIcon
+  local b = walk(root, 0)
+  if b then return b, "name" end
+  if byIcon then return byIcon, "icon" end
+end
+
+-- Shown and every parent shown too (IsShown alone stays true inside a closed window).
+local function visible(f)
+  if not f then return false end
+  if f.IsVisible then
+    local ok, v = pcall(f.IsVisible, f)
+    if ok then return v end
+  end
+  return shown(f)
+end
+
+-- Is the button we traced still showing that talent? (talent buttons are pooled and reused)
+local function stillMatches(b, how, name, fileID)
+  if not visible(b) then return false end
+  if how == "icon" then return hasIcon(b, fileID) end
+  local n = buttonTalentName(b)
+  return n ~= nil and lower(n) == lower(name)
+end
+
+-- Our own frames must never be taken for the talent window.
+local function isOurs(f)
+  if f == guide.trace or f == guide.hint then return true end
+  local ok, name = pcall(f.GetName, f)
+  return ok and type(name) == "string" and name:find("^LevelingCodex") ~= nil
 end
 
 local function shownTalentRoot()
   for _, n in ipairs(TALENT_ROOTS) do
     local f = _G[n]
-    if f and f.IsShown and f:IsShown() then return f end
+    if type(f) == "table" and shown(f) then return f end
   end
   for f in pairs(guide.roots) do
-    if f:IsShown() then return f end
+    if shown(f) then return f end
   end
 end
 
--- Find extra talent windows by name (done rarely: on addon load and when a toggle is hooked).
-local function discoverRoots()
+-- Hide the trace and hint right away when the talent window closes (the ticker is a fallback).
+local hideGuide
+local function watchRoot(f)
+  if guide.watched[f] or not f.HookScript then return end
+  guide.watched[f] = true
+  pcall(f.HookScript, f, "OnHide", function() if hideGuide then hideGuide() end end)
+end
+
+-- Find extra talent windows by name. Walks every frame, so it only runs when a talent
+-- toggle fires (at most once a second) or a talent addon loads (force), and only while
+-- no known talent window is shown.
+local lastDiscover = -100
+local function discoverRoots(force)
   if not EnumerateFrames then return end
+  if shownTalentRoot() then return end
+  local now = GetTime and GetTime() or 0
+  if not force then
+    if now - lastDiscover < 1 then return end
+    lastDiscover = now
+  end
   local f = EnumerateFrames()
   local n = 0
   while f and n < 20000 do
     n = n + 1
     local ok, name = pcall(f.GetName, f)
-    -- never our own trace/hint frames: they'd become the "talent window" and anchor to themselves
-    if ok and name and not name:find("^LevelingCodex") and f:IsShown()
-      and (name:find("Talent") or name:find("Trait")) and f:GetParent() == UIParent then
-      guide.roots[f] = true
+    if ok and type(name) == "string" and (name:find("Talent") or name:find("Trait")) and not isOurs(f)
+      and shown(f) and f.GetParent and f:GetParent() == UIParent then
+      -- a window, not a small always-on helper frame
+      local wok, w, h = pcall(function() return f:GetWidth(), f:GetHeight() end)
+      if wok and (w or 0) >= 200 and (h or 0) >= 150 then
+        guide.roots[f] = true
+        watchRoot(f)
+      end
     end
-    f = EnumerateFrames(f)
+    local nok, nextF = pcall(EnumerateFrames, f)
+    f = nok and nextF or nil
   end
 end
 ns.discoverTalentRoots = discoverRoots
@@ -210,21 +278,59 @@ local function paintHint(h)
   h.label:SetTextColor(rgba(C.goldDim)); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
 end
 
+hideGuide = function()
+  if guide.trace then guide.trace:Hide() end
+  if guide.hint then guide.hint:Hide() end
+  guide.open = false
+end
+
+-- Runs every 0.25 s. Cheap once the talent is traced: one name check on the cached button.
 local function talentGuideTick()
   local root = (ns.D and not ns.db().noTalentGuide) and shownTalentRoot()
+  if root and isOurs(root) then guide.roots[root] = nil; root = nil end
   if not root then
-    if guide.trace then guide.trace:Hide() end
-    if guide.hint then guide.hint:Hide() end
-    guide.button = nil
+    if guide.open then hideGuide() end
     return
   end
+  watchRoot(root)
   local level = UnitLevel("player")
   local hit, rank = ns.talentAt(level)
   if not hit then
-    if guide.trace then guide.trace:Hide() end
-    if guide.hint then guide.hint:Hide() end
+    if guide.open then hideGuide() end
     return
   end
+  local now = GetTime and GetTime() or 0
+  local key = hit.name .. rank
+  local fileID = iconFileID(hit.icon)
+  local dirty = false
+  if not guide.open or root ~= guide.root or key ~= guide.key or guide.theme ~= ns.themeVersion then
+    -- just opened, other window, new level or new theme: redraw, and look again now if needed
+    guide.open, guide.root, guide.theme = true, root, ns.themeVersion
+    if key ~= guide.key or root ~= guide.lastRoot then guide.button = nil end
+    guide.lastRoot = root
+    guide.key = key
+    guide.nextSearch, guide.backoff = 0, 1
+    dirty = true
+  end
+  if guide.button and not stillMatches(guide.button, guide.how, hit.name, fileID) then
+    guide.button = nil
+    guide.nextSearch, guide.backoff = 0, 1
+    dirty = true
+  end
+  if not guide.button and now >= (guide.nextSearch or 0) then
+    local b, how = findTalentButton(root, hit.name, fileID)
+    if b then
+      guide.button, guide.how = b, how
+      dirty = true
+    else
+      -- not in view (other tab, still loading): back off 1, 2, 4, 8 s
+      guide.nextSearch = now + guide.backoff
+      guide.backoff = math.min((guide.backoff or 1) * 2, 8)
+      if guide.traced then dirty = true end
+    end
+  end
+  if not dirty then return end
+
   guide.trace = guide.trace or makeTrace()
   guide.hint = guide.hint or makeHint()
   paintTrace(guide.trace); paintHint(guide.hint)
@@ -239,40 +345,51 @@ local function talentGuideTick()
     local h2, r2 = ns.talentAt(l)
     if h2 then nexts[#nexts + 1] = l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max end
   end
-  h.next:SetText(#nexts > 0 and ("Then  " .. table.concat(nexts, "   ")) or "")
-  h:ClearAllPoints(); h:SetPoint("BOTTOM", root, "TOP", 0, 6)
+  local nextText = #nexts > 0 and ("Then  " .. table.concat(nexts, "   ")) or ""
+  h:ClearAllPoints()
+  if not pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6) then h:SetPoint("TOP", UIParent, "TOP", 0, -80) end
   h:Show()
 
   -- trace the button
-  local b = guide.button
-  local now = GetTime and GetTime() or 0
-  if not (b and b:IsShown() and guide.buttonFor == hit.name .. rank) and now >= (guide.nextSearch or 0) then
-    b = findTalentButton(root, hit.name, iconFileID(hit.icon))
-    guide.button, guide.buttonFor = b, hit.name .. rank
-    guide.nextSearch = b and 0 or now + 1 -- not found yet: look again in a second
-  end
-  local t = guide.trace
-  if b then
+  local b, t = guide.button, guide.trace
+  guide.traced = b ~= nil
+  if b and pcall(function()
     t:ClearAllPoints()
     t:SetPoint("TOPLEFT", b, "TOPLEFT", 0, 0)
     t:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", 0, 0)
+  end) then
     t.tag.text:SetText("Codex pick  " .. rank .. "/" .. hit.max)
     t.tag:SetWidth(t.tag.text:GetStringWidth() + 16)
     t:Show()
-    h.next:SetText((h.next:GetText() or "") ~= "" and h.next:GetText() or "Click the traced talent.")
+    h.next:SetText(nextText ~= "" and nextText or "Click the traced talent.")
   else
     t:Hide()
-    if (h.next:GetText() or "") == "" then h.next:SetText("Find it in the " .. hit.tree .. " tree.") end
+    h.next:SetText(nextText ~= "" and nextText or ("Find it in the " .. hit.tree .. " tree."))
   end
 end
 
-function ns.startTalentGuide()
-  if guide.ticker or not C_Timer or not C_Timer.NewTicker then return end
-  guide.ticker = C_Timer.NewTicker(0.25, talentGuideTick)
-  -- hook the usual ways of opening the talent window so new windows are found quickly
-  for _, fn in ipairs({ "ToggleTalentFrame", "ToggleLegacySystemUI", "TalentFrame_LoadUI", "PlayerSpellsFrame_Toggle" }) do
-    if type(_G[fn]) == "function" and hooksecurefunc then
-      pcall(hooksecurefunc, fn, function() C_Timer.After(0.1, discoverRoots) end)
+-- Hook the usual ways of opening the talent window so new windows are found quickly.
+-- Called at login and again whenever a talent addon loads (its toggle may not exist before).
+local hooked = {}
+local function hookToggles()
+  if not hooksecurefunc then return end
+  for _, fn in ipairs({ "ToggleTalentFrame", "ToggleLegacySystemUI", "TalentFrame_LoadUI", "PlayerSpellsFrame_Toggle",
+      "TogglePlayerSpellsFrame", "ToggleClassTalentFrame" }) do
+    if not hooked[fn] and type(_G[fn]) == "function" then
+      if pcall(hooksecurefunc, fn, function() ns.after(0.1, discoverRoots) end) then hooked[fn] = true end
     end
   end
+end
+ns.hookTalentToggles = hookToggles
+
+function ns.startTalentGuide()
+  hookToggles()
+  if guide.ticker then return end
+  guide.ticker = ns.every(0.25, function()
+    local ok, err = pcall(talentGuideTick)
+    if not ok and not guide.errored then
+      guide.errored = true -- report once, keep ticking
+      ns.say("talent guide error: " .. ns.plain(err))
+    end
+  end)
 end

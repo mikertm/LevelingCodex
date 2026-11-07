@@ -94,13 +94,13 @@ local function box(x, y, w, h, fill, edge)
 end
 
 local function showTip(self)
-  if not self.tipTitle then return end
+  if not self.tipTitle or not GameTooltip then return end
   GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
   GameTooltip:SetText(self.tipTitle, rgba(C.tipTitle))
   if self.tipText and self.tipText ~= "" then GameTooltip:AddLine(self.tipText, 1, 1, 1, true) end
   GameTooltip:Show()
 end
-local function hideTip() GameTooltip:Hide() end
+local function hideTip() if GameTooltip then GameTooltip:Hide() end end
 
 local function newIcon()
   local f = CreateFrame("Button", nil, content)
@@ -399,6 +399,14 @@ renderers.settings = function()
   local db = LevelingCodexDB
   local toast = ns.getToast()
   local y = sectionTitle("Settings", 0)
+  if ns.settingsLost then
+    local top = y
+    y = y + 10
+    y = y + T("Your settings from last time didn't load. WoW: Forever doesn't always load addon settings yet, so the defaults are in use. Set them again here if you like; the Codex works the same either way, and your macros still update.",
+      14, y, W - 28, "small", C.ink) + 10
+    box(0, top, W, y - top, C.parch, C.edge)
+    y = y + 14
+  end
   local function row(label, x, w, on, fn, tip) btn(label, x, y, w, function() fn(); refresh() end, on, tip) end
   local function head(str) T(str, 0, y, W, "label", C.gold); y = y + 20 end
 
@@ -522,9 +530,11 @@ local function makeFrame()
   frame:SetClampedToScreen(true)
   frame:Hide()
   -- Esc closes it (by name, so a rebuilt frame needs no second entry)
-  local listed = false
-  for _, n in ipairs(UISpecialFrames) do if n == "LevelingCodexFrame" then listed = true end end
-  if not listed then tinsert(UISpecialFrames, "LevelingCodexFrame") end
+  if type(UISpecialFrames) == "table" then
+    local listed = false
+    for _, n in ipairs(UISpecialFrames) do if n == "LevelingCodexFrame" then listed = true end end
+    if not listed then table.insert(UISpecialFrames, "LevelingCodexFrame") end
+  end
 
   -- leather background, warm glow at the top, double gold border
   local bg = frame:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(rgba(C.bg))

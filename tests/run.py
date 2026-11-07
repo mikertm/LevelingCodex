@@ -32,14 +32,28 @@ UNSUPPORTED = "DEATHKNIGHT"
 # Scenario sequences. Each runs in a fresh Lua state.
 MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLoginCheck", "levelups",
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "slash", "macros",
-        "macroAutoUpdate", "talentByName", "talentGuideOff"]
-ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon"]
+        "macroAutoUpdate", "combatLevelUp", "talentByName", "talentGuideOff", "talentFinderCost",
+        "talentPooledButtons", "talentCloseDirect", "noFalseLostNote"]
+ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
+        "lateTalentUI"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
+LOST = ["lost", "login", "lostSavedVariables"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
   windowPos = { "CENTER", "CENTER", 50, 0 }, windowScale = 0.9, minimapAngle = 45, quiet = true, noAutoMacros = true }
 LevelingCodexCharDB = { made = { Fight = true } }
+"""
+
+# Saved variables didn't load, but last session's macros (made at level 25) are still there.
+LOST_DB = """
+MOCK.level = 25
+MOCK.macros[1] = { name = "MyOwn", icon = 1, body = "/say mine", perChar = true }
+for _, m in ipairs(LevelingCodexData[MOCK.class].macros) do
+  if 25 >= m.lo and 25 <= m.hi then
+    MOCK.macros[#MOCK.macros + 1] = { name = m.name, icon = 134400, body = m.body, perChar = true }
+  end
+end
 """
 
 
@@ -90,12 +104,14 @@ def new_state(cls, minimal, files, pre=None):
 def run_sequence(name, cls, minimal, files, steps):
     pre = PERSISTED_DB if "persist" in steps else None
     lua, err = new_state(cls, minimal, files, pre)
+    if not err and "lost" in steps:
+        lua.execute(LOST_DB.encode())
     failures = []
     if err:
         return [err], []
     try_ = lua.eval(b"function(name, ...) return MOCK.try(SCENARIOS[name], ...) end")
     for step in steps:
-        if step == "persist":
+        if step in ("persist", "lost"):
             continue
         parts = step.split(":")
         args = [p.encode() for p in parts[1:]]
@@ -200,6 +216,9 @@ def main():
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))
         runs.append(("MAGE/%s/persisted" % variant, "MAGE", minimal, PERSISTED))
+        for cls in CLASSES:
+            if not minimal:  # needs GetMacroInfo to recognise last session's macros
+                runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

@@ -430,6 +430,155 @@ function S.talentGuideOff()
   win():Hide()
 end
 
+-- Levelling up in combat (the killing blow) must not create macros nobody asked for.
+function S.combatLevelUp()
+  if not D() then return end
+  MOCK.macros = {}
+  MOCK.level = 20
+  MOCK.combat = true
+  MOCK.event("PLAYER_LEVEL_UP", 20)
+  MOCK.advance(1.5)
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.5)
+  check(#MOCK.macros == 0, "combat level-up created " .. #MOCK.macros .. " macro(s) nobody asked for")
+  -- but macros the Codex made are still brought up to date after the fight
+  MOCK.level = 9
+  slash("macros")
+  local before = #MOCK.macros
+  check(before > 0, "macros made at 9")
+  MOCK.level = 10
+  MOCK.combat = true
+  MOCK.event("PLAYER_LEVEL_UP", 10)
+  MOCK.advance(1.5)
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.5)
+  check(#MOCK.macros == before, "no new macros after combat")
+  for _, m in ipairs(D().macros) do
+    if 10 >= m.lo and 10 <= m.hi then
+      local i = GetMacroIndexByName(m.name)
+      if i > 0 then check(MOCK.macros[i].body == m.body, m.name .. " updated after combat") end
+    end
+  end
+  MOCK.advance(12)
+end
+
+-- SavedVariables didn't load: macros made last session must still follow your level,
+-- and the player is told their settings didn't persist.
+function S.lostSavedVariables()
+  if not D() then return end
+  -- this run started with no saved variables but with last session's macros (see run.py)
+  local found
+  for _, line in ipairs(MOCK.chat) do if line:find("didn't load") then found = true end end
+  check(found, "chat note that settings didn't persist")
+  openAt(MOCK.level, "Settings")
+  check(MOCK.textUnder(win()):find("didn't load"), "settings tab shows the note")
+  win():Hide()
+  for level = MOCK.level + 1, 60 do
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level)
+    MOCK.advance(1.5)
+    for _, m in ipairs(D().macros) do
+      if level >= m.lo and level <= m.hi then
+        local i = GetMacroIndexByName(m.name)
+        if i > 0 then check(MOCK.macros[i].body == m.body, m.name .. " follows level " .. level .. " without saved variables") end
+      end
+    end
+    MOCK.advance(10)
+  end
+  check(MOCK.macros[1].body == "/say mine", "player's own macro untouched")
+end
+
+-- A clean install must not claim settings were lost.
+function S.noFalseLostNote()
+  for _, line in ipairs(MOCK.chat) do check(not line:find("didn't load"), "no lost-settings note on a fresh install") end
+end
+
+-- Once the talent is traced, the finder stops walking the window.
+function S.talentFinderCost()
+  if not D() or MOCK.minimal then return end
+  MOCK.level = 30
+  ToggleTalentFrame()
+  MOCK.advance(1)
+  traceCheck(30, true)
+  local walked = MOCK.walked
+  MOCK.advance(20)
+  check(MOCK.walked - walked < 5, "finder kept walking the tree (" .. (MOCK.walked - walked) .. " walks in 20s)")
+  -- talent not in the window (other tab): searches back off instead of walking every second
+  local hit = planAt(30)
+  local b = talent.byName[hit.name]
+  b:Hide()
+  walked = MOCK.walked
+  MOCK.advance(30)
+  local perSearch = 40 -- frames in the mock window
+  local searches = (MOCK.walked - walked) / perSearch
+  check(searches <= 10, "finder searched " .. searches .. " times in 30s while the talent was missing")
+  b:Show()
+  MOCK.advance(10)
+  traceCheck(30, true)
+  ToggleTalentFrame()
+  MOCK.advance(0.5)
+end
+
+-- Reported in game: the trace stayed up after closing the talent window. Close it every way
+-- (Esc/close button hide it directly, not through the toggle) and check nothing is left.
+function S.talentCloseDirect()
+  if not D() or MOCK.minimal then return end
+  for _, level in ipairs({ 10, 16, 30, 60 }) do
+    MOCK.level = level
+    talent.root:Show()
+    MOCK.advance(0.6)
+    traceCheck(level, true)
+    talent.root:Hide() -- no toggle, no time passing
+    local trace, hint = _G.LevelingCodexTalentTrace, _G.LevelingCodexTalentHint
+    check(not trace:IsShown() and not hint:IsShown(), "guide hidden the moment the window closes (level " .. level .. ")")
+    MOCK.advance(5)
+    check(not trace:IsShown() and not hint:IsShown(), "guide stays hidden after closing (level " .. level .. ")")
+  end
+end
+
+-- Talent buttons are pooled: when the traced button is reused for another talent, the trace follows.
+function S.talentPooledButtons()
+  if not D() or MOCK.minimal or talent.mode ~= "name" then return end
+  MOCK.level = 30
+  ToggleTalentFrame()
+  MOCK.advance(1)
+  traceCheck(30, true)
+  local hit = planAt(30)
+  local a = talent.byName[hit.name]
+  -- swap the spells of the traced button and a decoy
+  local decoy = MOCK.buttons(talent.root)[1]
+  a.spellID, decoy.spellID = decoy.spellID, a.spellID
+  talent.byName[hit.name] = decoy
+  MOCK.advance(1)
+  traceCheck(30, true)
+  a.spellID, decoy.spellID = decoy.spellID, a.spellID
+  talent.byName[hit.name] = a
+  MOCK.advance(1)
+  traceCheck(30, true)
+  ToggleTalentFrame()
+  MOCK.advance(0.5)
+end
+
+-- A talent UI that loads on demand after login, under a name we don't know, opened by its own
+-- toggle function: the guide still finds it.
+function S.lateTalentUI()
+  if not D() or MOCK.minimal then return end
+  local root = S.makeTalentWindow("name", "ForeverTalentsUI")
+  function PlayerSpellsFrame_Toggle() if root:IsShown() then root:Hide() else root:Show() end end
+  MOCK.event("ADDON_LOADED", "Blizzard_PlayerSpells")
+  MOCK.advance(1)
+  MOCK.level = 30
+  PlayerSpellsFrame_Toggle()
+  MOCK.advance(1)
+  traceCheck(30, true)
+  PlayerSpellsFrame_Toggle()
+  MOCK.advance(1)
+  local hint = _G.LevelingCodexTalentHint
+  check(not (hint and hint:IsShown()), "hint hides when the late talent UI closes")
+end
+
 -- The talent window is already open when we log in.
 function S.talentBeforeLogin()
   if not (D() and talent.root) then return end

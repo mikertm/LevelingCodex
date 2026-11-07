@@ -48,16 +48,63 @@ ns.THEMES = {
 local C = {}
 ns.C = C
 
+ns.themeVersion = 0 -- bumped on every switch, so long-lived frames know to repaint
 function ns.useTheme(name)
   local t = ns.THEMES[name] or ns.THEMES.forever
   for k, v in pairs(t) do C[k] = v end
+  ns.themeVersion = ns.themeVersion + 1
 end
 ns.useTheme("forever")
 
 function ns.rgba(t) return t[1], t[2], t[3], t[4] or 1 end
 
 -- The saved settings, or an empty table before they exist (never nil).
+-- SavedVariables may not load in Forever, so nothing may depend on what's in here.
 function ns.db() return LevelingCodexDB or {} end
+function ns.charDB() return LevelingCodexCharDB or {} end
+
+-- Call an API that might not exist in Forever. Returns ok, results...
+function ns.try(fn, ...)
+  if type(fn) ~= "function" then return false end
+  return pcall(fn, ...)
+end
+
+-- Timers: C_Timer when the client has it, else a small OnUpdate scheduler.
+local jobs, clock
+local function schedule(sec, fn, every)
+  local job = { at = (GetTime and GetTime() or 0) + sec, fn = fn, every = every }
+  if not clock then
+    clock = CreateFrame("Frame")
+    clock:SetScript("OnUpdate", function()
+      local now = GetTime and GetTime() or 0
+      local due = {}
+      for i = #jobs, 1, -1 do
+        local j = jobs[i]
+        if j.cancelled then table.remove(jobs, i)
+        elseif now >= j.at then
+          due[#due + 1] = j
+          if j.every then j.at = now + j.every else table.remove(jobs, i) end
+        end
+      end
+      for _, j in ipairs(due) do j.fn() end
+    end)
+    jobs = {}
+  end
+  jobs[#jobs + 1] = job
+  return job
+end
+
+function ns.after(sec, fn)
+  if C_Timer and C_Timer.After then C_Timer.After(sec, fn) else schedule(sec, fn) end
+end
+
+-- Repeating timer; returns a handle with :Cancel().
+function ns.every(sec, fn)
+  if C_Timer and C_Timer.NewTicker then return C_Timer.NewTicker(sec, fn) end
+  local job = schedule(sec, fn, sec)
+  job.Cancel = function(self) self.cancelled = true end
+  return job
+end
 
 -- Text -----------------------------------------------------------------------
 
@@ -93,7 +140,9 @@ function ns.padText(s)
 end
 
 function ns.say(msg)
-  DEFAULT_CHAT_FRAME:AddMessage(ns.GOLD .. "Leveling Codex:|r " .. msg)
+  local line = ns.GOLD .. "Leveling Codex:|r " .. msg
+  if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then DEFAULT_CHAT_FRAME:AddMessage(line)
+  elseif print then print(line) end
 end
 
 -- Drawing helpers that work across client versions -----------------------------
