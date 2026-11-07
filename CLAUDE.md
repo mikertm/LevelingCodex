@@ -16,6 +16,10 @@ Published on CurseForge (project ID 1789784).
 | `CURSEFORGE_DESCRIPTION.md`, `README.md`, `RELEASING.md` | Docs, not packaged. |
 | `.pkgmeta`, `.github/workflows/release.yml` | BigWigsMods packager. Pushing a `v*` tag builds and uploads to CurseForge. |
 | `tests/` | Headless test harness (Python + lupa, Lua 5.1). Not packaged. |
+| `tools/gamedata.py` | What the game itself says. Downloads the Forever client's tables from wago.tools (product `wowf`, cached in `tools/.cache/`), builds `tools/reference/forever.json` (talent trees with tab/row/col/max/points needed/prereqs/tooltip per rank; class and pet spells with rank/level/cost/cooldown/tooltip), diffs two references, audits `Data.lua` against it. `packet CLASS` prints a class's whole guide next to the game data for review. |
+| `tools/reference/forever.json` | The committed game reference. The harness checks `Data.lua` against it offline; its git diff after an update is the list of game changes. |
+| `tools/UPDATING.md`, `.github/workflows/gamedata.yml` | The update routine after a patch/hotfix, and a daily workflow that opens a PR when a new Forever build appears. |
+| `tools/audits/` | One file per audit: every Data.lua change with its reason and before/after, for mirroring into the guide pages. |
 
 ### Data.lua shape
 - `spec` (e.g. "Protection"), `guide` (short guide name).
@@ -54,10 +58,12 @@ All files share the addon table: `local _, ns = ...`. Cross-module calls go thro
 - `tests/wowmock.lua` is the mocked client. Strict on purpose: unknown events, templates, scripts or methods throw; `SetPoint` refuses self/looped anchors; `CreateMacro` enforces the 255/16 limits and combat lockdown. `minimal = true` removes optional APIs (C_Timer, C_Spell, GetFileIDFromPath, EnumerateFrames, hooksecurefunc, GetMacroInfo, gradients, gamepad...).
 - `tests/scenarios.lua` only drives what a player or the client can reach (events, `/codex`, clicks, drags, named frames), so it survives refactors. Each run (class x full/minimal x main/icon/persisted/lost-savedvars) starts a fresh Lua state.
 - Also checked: both .toc files identical, `@project-version@`, Data.lua shape, talent plan covers 10-60, macro limits, and a lint for `/castsequence` steps not yet learned at the macro's first level (warnings, not failures).
+- **Game checks** (`game_checks()`, via `tools/gamedata.py audit` and the committed `tools/reference/forever.json`): fail on a talent that isn't in the class tree, a wrong tab or rank count, a point spent before its row is open or its prerequisite is maxed, a trainer rank that doesn't exist or isn't trainable yet, a macro spell the class doesn't have or a `/castsequence` step learned after the macro's first level. Warn on levels in guide text like "Swipe (16)" that differ from the game, icons that differ, spells listed earlier than the game teaches them.
 
 ## Working rules
 - Run the harness before every commit. It must pass with no Lua errors, no non-ASCII runtime text and no leaked globals.
 - When a bug is reported from the game, first add a scenario that reproduces it.
+- **Guide facts come from the game, not memory.** Before changing a talent reason, macro or trainer line, check it with `python tools/gamedata.py spells|tree|review|packet CLASS`. After a Forever patch or hotfix (or a Game data PR), follow `tools/UPDATING.md`.
 - **In-game testing: install straight into the owner's game, never hand over a zip.** After the harness passes, run `python tools/install.py`. It copies the build into `C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\LevelingCodex` (override with an argument or `LEVELINGCODEX_ADDONS`), removes stale `.lua`/`.xml` from older builds, leaves other files alone and verifies every copy. Then tell the owner to `/reload` (restart the client if a .toc changed).
 - Keep both .toc files identical (the harness checks).
 - Small, clear commits. Add a `CHANGELOG.md` section before a release.
