@@ -131,7 +131,8 @@ per craft when not 1: none in Mining or Blacksmithing, so the craft counts hold)
 - **Derotain's skill requirement**: the quests need level 50; whether they still need 265 Blacksmithing
   (Classic) is unconfirmed. If he won't give the belt quest at 240, the alternatives cover 240-300.
 - **No trainer-only route past 260**: every trainer recipe above 240 goes grey by 260, so 260-300 needs
-  plans (Derotain's quests or the vendor plans). The route chose the quests.
+  plans (Derotain's quests or the vendor plans). The owner chose to keep the quests (7 Nov); the
+  vendor plans (Ebon Shiv, then Bold Dirk) stay as the 245-272 alternative.
 - **Imperial Plate Gauntlets** (new in Forever, plan at 255, 24 Thorium Bar + 1 Star Ruby): no known
   source yet, and not one of Derotain's quests.
 - **Molten Foundry blueprint**: no known source yet.
