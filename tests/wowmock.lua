@@ -718,6 +718,16 @@ function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
 
+-- Forever's addon compartment (the addons button under the clock): RegisterAddon({ text, icon,
+-- func(data, menuInputData), funcOnEnter(button), funcOnLeave(button) }).
+AddonCompartmentFrame = CreateFrame("Frame", "AddonCompartmentFrame", UIParent)
+AddonCompartmentFrame.registeredAddons = {}
+function AddonCompartmentFrame:RegisterAddon(data)
+  if type(data) ~= "table" or type(data.text) ~= "string" then error("RegisterAddon: needs a table with text", 2) end
+  ascii(data.text, "AddonCompartmentFrame:RegisterAddon")
+  table.insert(self.registeredAddons, data)
+end
+
 function hooksecurefunc(a, b, c)
   local tbl, name, fn = _G, a, b
   if type(a) == "table" then tbl, name, fn = a, b, c end
@@ -910,7 +920,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
-  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell" }
+  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

@@ -29,7 +29,7 @@ local function start()
   ns.CLASS_NAME = localized
   ns.D = LevelingCodexData and LevelingCodexData[token]
   if not ns.D then return end
-  ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the book on your minimap.")
+  ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the Level 60 badge on your minimap.")
   -- Macros from an earlier session but no saved settings: they didn't load (a known Forever issue).
   if (not hadDB or not hadCharDB) and ns.countOurMacros() > 0 then
     ns.settingsLost = true

@@ -1135,7 +1135,7 @@ renderers.settings = function()
 
   head("MINIMAP BUTTON")
   tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
-    "Drag the book icon around the edge of the minimap to put it where you like; it remembers the spot.")
+    "Drag the Level 60 badge around the edge of the minimap to put it where you like; it remembers the spot. The Codex is also in the addons button under the clock.")
   row("Reset position", 0, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
   y = y + 40
 

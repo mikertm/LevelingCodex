@@ -31,7 +31,7 @@ UNSUPPORTED = "DEATHKNIGHT"
 
 # Scenario sequences. Each runs in a fresh Lua state.
 MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLoginCheck", "levelups",
-        "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "slash", "macros",
+        "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "compartment", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
         "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "traitLayoutTree", "macroMockups",

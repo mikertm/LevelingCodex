@@ -294,6 +294,12 @@ function S.minimap()
   if not D() then return end
   local mini = _G.LevelingCodexMinimapButton
   check(mini and mini:IsShown(), "minimap button exists")
+  check((mini.icon._path or ""):lower():find("achievement_level_60"), "the Level 60 badge, not the common book")
+  if LevelingCodexDB.minimapAngle == nil then
+    -- right side, about 10 degrees up: clear of Forever's own buttons and the lower-left spot most addons use
+    local _, rel, _, x, y = mini:GetPoint(1)
+    check(rel == Minimap and x > 0 and y > 0 and y < x * 0.3, "default spot on the right (" .. tostring(x) .. ", " .. tostring(y) .. ")")
+  end
   hover(mini)
   mini:Click("LeftButton")
   check(win():IsShown(), "left-click opens the window")
@@ -319,6 +325,32 @@ function S.minimap()
   check(not mini:IsShown(), "/codex minimap hides it")
   slash("minimap")
   check(mini:IsShown(), "/codex minimap shows it")
+end
+
+-- Forever's addon compartment (the addons button under the clock) lists the Codex.
+function S.compartment()
+  if not D() or not AddonCompartmentFrame then return end
+  local found = {}
+  for _, a in ipairs(AddonCompartmentFrame.registeredAddons) do
+    if a.text == "The Leveling Codex" then found[#found + 1] = a end
+  end
+  check(#found == 1, "the Codex is in the addon compartment once (" .. #found .. ")")
+  local entry = found[1]
+  if not entry then return end
+  check(type(entry.icon) == "string" and entry.icon:lower():find("achievement_level_60"), "with the Level 60 badge")
+  entry.func(entry, { buttonName = "LeftButton" })
+  check(win() and win():IsShown(), "click opens the Codex")
+  entry.func(entry, { buttonName = "LeftButton" })
+  check(not win():IsShown(), "click again closes it")
+  entry.func(entry, { buttonName = "RightButton" })
+  check(win():IsShown() and MOCK.textUnder(win()):find("Minimap button"), "right-click opens Settings")
+  win():Hide()
+  local owner = CreateFrame("Button", nil, UIParent)
+  entry.funcOnEnter(owner)
+  local lines = table.concat(GameTooltip._lines or {}, " / ")
+  check(GameTooltip:IsOwned(owner) and lines:find("The Leveling Codex") and lines:find("Left%-click"), "hover shows the tooltip")
+  check(not lines:find("Drag"), "no minimap drag hint in the compartment")
+  entry.funcOnLeave(owner)
 end
 
 -- Every slash command, including junk.

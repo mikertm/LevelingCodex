@@ -10,6 +10,7 @@
 - When your skill is ready for the next tier before your level is (Journeyman needs level 10, Expert 20, Artisan 35), the level-up banner and chat tell you to train it at the level that opens it.
 - Settings > Professions turns the crafting window guide and the skill-up cards on or off.
 - Fixed: **Show it** did nothing in Forever's crafting window. It now scrolls the list to the recipe and selects it.
+- New look for the minimap button: the Level 60 badge instead of the brown book many addons use, and it now starts on the right side of the minimap instead of the lower left, where most addon buttons pile up (drag it anywhere as before). The Codex is also listed in the addons button under the clock.
 - Fixed: the card beside the crafting and talent windows covered the controller hints the game shows under a window near the top of the screen. It now goes below them.
 - The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit a Blacksmithing and a Mining trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.
 
