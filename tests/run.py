@@ -585,6 +585,9 @@ def main():
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
         runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
+        runs.append(("WARRIOR/%s/prof-reader-open" % variant, "WARRIOR", minimal, ["login", "profReaderRecoversAfterOpen"]))
+        runs.append(("WARRIOR/%s/prof-reader-closed-weapons" % variant, "WARRIOR", minimal,
+                     ["skills:MI;30;75:skilllines", "login", "profOpenHeadingWithClosedWeapons"]))
         runs.append(("WARRIOR/%s/prof-herbalism" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismTab"]))
         runs.append(("WARRIOR/%s/prof-herbalism-cards" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismCards"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
@@ -606,6 +609,9 @@ def main():
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))
             runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
             runs.append(("WARRIOR/full/craft-scrollbox", "WARRIOR", False, CRAFT_SCROLLBOX))
+            for mode in ("classic", "retail"):
+                runs.append(("WARRIOR/full/craft-herbalism-" + mode, "WARRIOR", False,
+                             ["makeCraftWindow:" + mode, "login", "craftHerbalism"]))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

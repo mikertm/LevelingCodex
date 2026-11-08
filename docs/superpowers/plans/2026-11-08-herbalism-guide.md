@@ -103,7 +103,7 @@
 
 ### Task 4 — Review, verify and install
 
-- [ ] **Review the branch as a whole.** Compare `main...HEAD` against the approved spec and this plan. Send that diff and the Review Focus list to a fresh reviewer. Use Opus if available. If the native review tool offers only GPT models, use GPT-6 Astra and record the substitution in the ledger.
+- [ ] **Review the branch as a whole.** Compare `main...HEAD` against the approved spec and this plan. Send the diff and Review Focus list to a fresh Sol reviewer for a read-only review.
 - [ ] **Do one fix pass.** For each confirmed defect, add a scenario or data check that fails first, apply the smallest fix and verify it passes. Run the full harness before committing fixes.
 - [ ] **Verify the final build.** Run `git diff main...HEAD --check`, `python tools/gamedata.py audit -k HERBALISM -v` and `python tests/run.py`. Confirm the TOCs still match each other, contain the version token, and have the same load order as the base. Record the branch head and test results.
 - [ ] **Install for live testing.** Run `python tools/install.py` from the worktree. Capture the installed version and require `all copies verified`. Tell the owner to `/reload`.

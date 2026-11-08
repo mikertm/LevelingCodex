@@ -76,7 +76,7 @@ end
 local function keyFor(name)
   for _, key in ipairs(ns.PROF_ORDER) do
     local P = ns.P and ns.P[key]
-    if P and (P.name == name or (key == "MINING" and name == "Smelting")) then return key end
+    if P and not P.herbs and (P.name == name or (key == "MINING" and name == "Smelting")) then return key end
   end
 end
 

@@ -9,6 +9,7 @@ local C, plain = ns.C, ns.plain
 local shown        -- profession key on screen (nil = pick one you have)
 local pending      -- restore this selection if a temporary read failure clears
 local picked = {}  -- key -> { index = step clicked in the route, at = your skill then }
+local displayed = {}  -- last rendered reading can differ from the skill-up watcher's
 
 local function choose(key)
   shown, pending = key, nil
@@ -21,7 +22,14 @@ function ns.profTabSkillsChanged(snapshot)
       picked[key] = nil
     end
   end
-  ns.refreshProfessionTab()
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local before, after = displayed[key] or {}, snapshot[key] or {}
+    if before.rank ~= after.rank or before.cap ~= after.cap or before.hidden ~= after.hidden
+      or before.unavailable ~= after.unavailable then
+      ns.refreshProfessionTab(snapshot)
+      return
+    end
+  end
 end
 
 function ns.profTabShow(key)
@@ -82,14 +90,15 @@ local function smeltLine(P, step, skill)
   return "Smelt for points: " .. table.concat(parts, ", ") .. "."
 end
 
-local function renderer()
+local function renderer(_, snapshot)
   local ui = ns.ui
   local W, T, box, icon, btn, rect, hit = ui.W, ui.T, ui.box, ui.icon, ui.btn, ui.rect, ui.hit
   local y = ui.sectionTitle("Professions", 0, "Leveling guides for WoW: Forever")
   local names = profNames()
   if names == "" then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
-  local snapshot = ns.profSkillSnapshot()
+  snapshot = snapshot or ns.profSkillSnapshot()
+  displayed = snapshot
   local learned, hidden, unavailable = {}, false, false
   for _, key in ipairs(ns.PROF_ORDER) do
     local reading = snapshot[key]

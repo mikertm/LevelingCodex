@@ -1759,6 +1759,35 @@ function S.profReaderRecovery()
   end
 end
 
+function S.profReaderRecoversAfterOpen()
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.advance(1.2)
+  local profs, count = GetProfessions, GetNumSkillLines
+  if profs then GetProfessions = function() error("profession list is loading") end end
+  GetNumSkillLines = function() error("Skills tab is loading") end
+  openAt(30, "Professions")
+  check(not profButton("Mining") and profText():find("skills are unavailable", 1, true), "unavailable read while opening")
+  GetProfessions, GetNumSkillLines = profs, count
+  MOCK.event("SKILL_LINES_CHANGED")
+  MOCK.advance(1.2)
+  check(profButton("Mining") and profText():find("Mining 30 / 75"), "a healthy read refreshes the view opened during failure")
+end
+
+function S.profOpenHeadingWithClosedWeapons()
+  local count, line = GetNumSkillLines, GetSkillLineInfo
+  GetNumSkillLines = function() return count() + 1 end
+  GetSkillLineInfo = function(i)
+    if i > count() then return "Weapon Skills", true, false end
+    return line(i)
+  end
+  openAt(30, "Professions")
+  check(profButton("Mining"), "Mining confirmed with the Professions heading open")
+  MOCK.removeSkill("Mining")
+  MOCK.advance(1.2)
+  check(not profButton("Mining") and profText():find("No supported professions learned", 1, true),
+    "an unrelated closed heading cannot hide an unlearned profession")
+end
+
 -- Without GetProfessions the classic skill list hides lines under a closed heading: the guide
 -- keeps the skill it saw last, and the card still comes when the heading opens again.
 function S.profCollapsed()
@@ -2443,6 +2472,19 @@ function S.craftTrace()
   check(rel == TradeSkillSkill4, "trace on the Rough Bronze Leggings row (its text has a colour code and a count)")
   closeCraft()
   check(not tr:IsShown() and not h:IsShown(), "trace and card hide with the window")
+end
+
+function S.craftHerbalism()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown() and trace and trace:IsShown(), "crafting guide before switching professions")
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Herbalism", 20, 75
+  MOCK.trade.recipes = { { "Incense Candle", "optimal", 2 } }
+  MOCK.trade.layout()
+  MOCK.event("TRADE_SKILL_UPDATE")
+  MOCK.advance(0.6)
+  check(not hint:IsShown() and not trace:IsShown(), "Herbalism camp recipes do not show a crafting guide")
+  closeCraft()
 end
 
 function S.craftNotLearned()

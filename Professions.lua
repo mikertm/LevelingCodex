@@ -107,20 +107,27 @@ local function readSkillLines(skills)
   local ok, count = pcall(GetNumSkillLines)
   count = ok and tonumber(count)
   if not count then return false end
-  local complete, hidden = true, false
+  local complete, professionHeading = true, false
+  local professionHidden, otherHidden = false, false
   for i = 1, count do
     local read, name, header, expanded, rank, _, _, cap = pcall(GetSkillLineInfo, i)
     rank, cap = tonumber(rank), tonumber(cap)
     if not (read and name) then
       complete = false
     elseif header then
-      if not expanded then hidden = true end
+      if name == "Professions" or name == PROFESSIONS then
+        professionHeading = true
+        if not expanded then professionHidden = true end
+      elseif not expanded then
+        otherHidden = true
+      end
     elseif not rank then
       complete = false
     elseif rank > 0 and not skills[name] then
       skills[name] = { rank = rank, cap = cap and cap > 0 and cap or nil }
     end
   end
+  local hidden = professionHidden or (not professionHeading and otherHidden)
   return complete and not hidden, hidden
 end
 
@@ -390,13 +397,9 @@ end
 -- Compare every guided profession with the last reading; show a card when something changed.
 local function checkSkills()
   local snapshot = ns.profSkillSnapshot()
-  local changed = false
   for _, key in ipairs(ns.PROF_ORDER) do
-    local current, before = snapshot[key] or {}, last[key] or {}
-    local new, cap, old = current.rank, current.cap, before.rank
-    if new ~= old or cap ~= before.cap or current.hidden ~= before.hidden or current.unavailable ~= before.unavailable then
-      changed = true
-    end
+    local current, before = snapshot[key], last[key]
+    local new, cap, old = current and current.rank, current and current.cap, before and before.rank
     if new and old and new > old then
       local P = ns.P[key]
       local rows = ns.profCardRows(key, old, new, cap, UnitLevel("player"))
@@ -412,7 +415,7 @@ local function checkSkills()
     end
   end
   last = snapshot
-  if changed and ns.profTabSkillsChanged then ns.profTabSkillsChanged(snapshot) end
+  if ns.profTabSkillsChanged then ns.profTabSkillsChanged(snapshot) end
 end
 
 -- The skill a trainer really asks for each route recipe, where it differs from the guide's

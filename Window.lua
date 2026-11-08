@@ -1197,7 +1197,7 @@ function ns.placeWindow()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
 
-refresh = function()
+refresh = function(professionSnapshot)
   if not (frame and frame:IsShown() and ns.D) then return end
   local me = UnitLevel("player")
   viewLevel = viewLevel or me
@@ -1209,7 +1209,7 @@ refresh = function()
   -- remember where the tab we're leaving (or redrawing) was scrolled to
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   releaseAll()
-  local h = renderers[activeTab](viewLevel) or 0
+  local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
   shownTab = activeTab
   if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
@@ -1234,8 +1234,8 @@ refresh = function()
 end
 ns.refresh = refresh
 
-function ns.refreshProfessionTab()
-  if frame and frame:IsShown() and activeTab == "professions" then refresh() end
+function ns.refreshProfessionTab(snapshot)
+  if frame and frame:IsShown() and activeTab == "professions" then refresh(snapshot) end
 end
 
 -- LB/RB on a controller: the next or previous tab, wrapping around.
