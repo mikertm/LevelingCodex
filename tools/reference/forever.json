@@ -77918,6 +77918,496 @@
      439134
     ]
    }
+  },
+  "Herbalism": {
+   "skillLine": 182,
+   "recipes": {
+    "Greenhouse": {
+     "spell": 1262980,
+     "yellow": 140,
+     "green": 142,
+     "grey": 145,
+     "mats": [
+      [
+       "Simple Wood",
+       2
+      ],
+      [
+       "Arthas' Tears",
+       1
+      ],
+      [
+       "Purple Lotus",
+       1
+      ]
+     ],
+     "makes": [
+      "Greenhouse",
+      1
+     ],
+     "icon": "inv_misc_herb_08",
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Greenhouse",
+      "skill": 140
+     }
+    },
+    "Herb Gathering": {
+     "spell": 1235236,
+     "yellow": 1,
+     "green": 1,
+     "grey": 1,
+     "mats": [],
+     "makes": null,
+     "icon": "trade_engineering",
+     "category": "",
+     "auto": true
+    },
+    "Incense Candle": {
+     "spell": 1229705,
+     "yellow": 20,
+     "green": 22,
+     "grey": 25,
+     "mats": [
+      [
+       "Peacebloom",
+       1
+      ],
+      [
+       "Silverleaf",
+       1
+      ]
+     ],
+     "makes": [
+      "Incense Candle",
+      1
+     ],
+     "icon": "inv_misc_candle_02",
+     "category": "Camping"
+    },
+    "Seed Hybridizer": {
+     "spell": 1263070,
+     "yellow": 300,
+     "green": 300,
+     "grey": 300,
+     "mats": [
+      [
+       "Mountain Silversage",
+       4
+      ],
+      [
+       "Crystal Vial",
+       1
+      ],
+      [
+       "Runecloth",
+       2
+      ]
+     ],
+     "makes": [
+      "Seed Hybridizer",
+      1
+     ],
+     "icon": "inv_farm_herbseed",
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Seed Hybridizer",
+      "skill": 300
+     }
+    }
+   },
+   "items": {
+    "Arthas' Tears": "inv_misc_herb_13",
+    "Crystal Vial": "inv_potion_86",
+    "Greenhouse": "inv_misc_herb_08",
+    "Incense Candle": "inv_misc_candle_02",
+    "Mountain Silversage": "inv_misc_herb_mountainsilversage",
+    "Peacebloom": "inv_misc_flower_02",
+    "Purple Lotus": "inv_misc_herb_17",
+    "Runecloth": "inv_fabric_purplefire_01",
+    "Seed Hybridizer": "inv_farm_herbseed",
+    "Silverleaf": "inv_misc_herb_10",
+    "Simple Wood": "inv_tradeskillitem_01"
+   },
+   "clashes": {},
+   "gathering": {
+    "icon": "trade_herbalism",
+    "items": {
+     "765": {
+      "name": "Silverleaf",
+      "icon": "inv_misc_herb_10"
+     },
+     "785": {
+      "name": "Mageroyal",
+      "icon": "inv_jewelry_talisman_03"
+     },
+     "2447": {
+      "name": "Peacebloom",
+      "icon": "inv_misc_flower_02"
+     },
+     "2449": {
+      "name": "Earthroot",
+      "icon": "inv_misc_herb_07"
+     },
+     "2450": {
+      "name": "Briarthorn",
+      "icon": "inv_misc_root_01"
+     },
+     "2453": {
+      "name": "Bruiseweed",
+      "icon": "inv_misc_herb_01"
+     },
+     "3355": {
+      "name": "Wild Steelbloom",
+      "icon": "inv_misc_flower_01"
+     },
+     "3356": {
+      "name": "Kingsblood",
+      "icon": "inv_misc_herb_03"
+     },
+     "3357": {
+      "name": "Liferoot",
+      "icon": "inv_misc_root_02"
+     },
+     "3358": {
+      "name": "Khadgar's Whisker",
+      "icon": "inv_misc_herb_08"
+     },
+     "3369": {
+      "name": "Grave Moss",
+      "icon": "inv_misc_dust_02"
+     },
+     "3818": {
+      "name": "Fadeleaf",
+      "icon": "inv_misc_herb_12"
+     },
+     "3819": {
+      "name": "Wintersbite",
+      "icon": "inv_misc_flower_03"
+     },
+     "3820": {
+      "name": "Stranglekelp",
+      "icon": "inv_misc_herb_11"
+     },
+     "3821": {
+      "name": "Goldthorn",
+      "icon": "inv_misc_herb_15"
+     },
+     "4625": {
+      "name": "Firebloom",
+      "icon": "inv_misc_herb_19"
+     },
+     "8831": {
+      "name": "Purple Lotus",
+      "icon": "inv_misc_herb_17"
+     },
+     "8836": {
+      "name": "Arthas' Tears",
+      "icon": "inv_misc_herb_13"
+     },
+     "8838": {
+      "name": "Sungrass",
+      "icon": "inv_misc_herb_18"
+     },
+     "8839": {
+      "name": "Blindweed",
+      "icon": "inv_misc_herb_14"
+     },
+     "8845": {
+      "name": "Ghost Mushroom",
+      "icon": "inv_mushroom_08"
+     },
+     "8846": {
+      "name": "Gromsblood",
+      "icon": "inv_misc_herb_16"
+     },
+     "13463": {
+      "name": "Dreamfoil",
+      "icon": "inv_misc_herb_dreamfoil"
+     },
+     "13464": {
+      "name": "Golden Sansam",
+      "icon": "inv_misc_herb_sansamroot"
+     },
+     "13465": {
+      "name": "Mountain Silversage",
+      "icon": "inv_misc_herb_mountainsilversage"
+     },
+     "13466": {
+      "name": "Plaguebloom",
+      "icon": "inv_misc_herb_plaguebloom"
+     },
+     "13467": {
+      "name": "Icecap",
+      "icon": "inv_misc_herb_icecap"
+     },
+     "13468": {
+      "name": "Black Lotus",
+      "icon": "inv_misc_herb_blacklotus"
+     }
+    },
+    "lockSkills": {
+     "8": [
+      25
+     ],
+     "9": [
+      50
+     ],
+     "10": [
+      75
+     ],
+     "11": [
+      100
+     ],
+     "26": [
+      125
+     ],
+     "27": [
+      150
+     ],
+     "29": [
+      1
+     ],
+     "30": [
+      15
+     ],
+     "31": [
+      70
+     ],
+     "32": [
+      115
+     ],
+     "33": [
+      120
+     ],
+     "34": [
+      130
+     ],
+     "35": [
+      140
+     ],
+     "45": [
+      125
+     ],
+     "47": [
+      160
+     ],
+     "48": [
+      215
+     ],
+     "49": [
+      185
+     ],
+     "50": [
+      205
+     ],
+     "51": [
+      195
+     ],
+     "259": [
+      0
+     ],
+     "439": [
+      210
+     ],
+     "440": [
+      220
+     ],
+     "441": [
+      230
+     ],
+     "442": [
+      235
+     ],
+     "443": [
+      245
+     ],
+     "444": [
+      250
+     ],
+     "519": [
+      85
+     ],
+     "521": [
+      170
+     ],
+     "1119": [
+      260
+     ],
+     "1120": [
+      270
+     ],
+     "1121": [
+      280
+     ],
+     "1122": [
+      285
+     ],
+     "1123": [
+      290
+     ],
+     "1124": [
+      300
+     ]
+    },
+    "areas": [
+     "***On Map Dungeon***",
+     "Ahn'Qiraj",
+     "Alcaz Prison",
+     "Alterac Mountains",
+     "Alterac Valley",
+     "Arathi Basin",
+     "Arathi Highlands",
+     "Ashenvale",
+     "Azshara",
+     "Azshara Crater",
+     "Badlands",
+     "Battle for Gilneas",
+     "Blackfathom Deeps",
+     "Blackmaw Hold",
+     "Blackrock Depths",
+     "Blackrock Mountain",
+     "Blackrock Spire",
+     "Blackwing Lair",
+     "Blasted Lands",
+     "Burning Steppes",
+     "Caverns of Time",
+     "Champions' Hall",
+     "City",
+     "City of Dalaran",
+     "Crafting",
+     "DELETE ME",
+     "Darkshore",
+     "Darkspear Islands",
+     "Darnassus",
+     "Darrowmere Lake UNUSED",
+     "Deadwind Pass",
+     "Deeprun Tram",
+     "Demon Fall Canyon",
+     "Designer Island",
+     "Desolace",
+     "Dire Maul",
+     "Dun Algaz",
+     "Dun Morogh",
+     "Durotar",
+     "Duskwood",
+     "Dustwallow Marsh",
+     "Eastern Plaguelands",
+     "Elsewhen",
+     "Elwynn Forest",
+     "Elwynn Forest (Blue Whelpling Inn Prototype)",
+     "Emerald Forest",
+     "Excavation Site - Bael Modan",
+     "Excavation Site: Wetlands",
+     "Felwood",
+     "Feralas",
+     "GM Island",
+     "Gates of Ahn'Qiraj",
+     "Gillijim's Isle",
+     "Gilneas",
+     "Gnomeregan",
+     "Half-Pint Tavern",
+     "Hall of Legends",
+     "Hillsbrad Foothills",
+     "Hyjal Crater",
+     "Ironforge",
+     "Island of Doctor Lapidis",
+     "Karazhan Crypts",
+     "Krol'dok Stronghold",
+     "Kul Tiras",
+     "Loch Modan",
+     "Lordamere Lake",
+     "Manor Mistmantle",
+     "Maraudon",
+     "Molten Core",
+     "Moonglade",
+     "Mount Hyjal",
+     "Mulgore",
+     "Naxxramas",
+     "Nine",
+     "Old Hillsbrad Foothills",
+     "Onyxia's Lair",
+     "Orgrimmar",
+     "Outland",
+     "Programmer Isle",
+     "Ragefire Chasm",
+     "Razorfen Downs",
+     "Razorfen Kraul",
+     "Redridge Mountains",
+     "Riverglades",
+     "Ruins of Ahn'Qiraj",
+     "Ruins of Gilneas",
+     "Ruins of Lordaeron",
+     "Scarlet Enclave",
+     "Scarlet Monastery",
+     "Scholomance",
+     "Searing Gorge",
+     "Shadow Hold",
+     "Shadowfang Keep",
+     "Shark-Infested Waters",
+     "Shen'dralas",
+     "Silithus",
+     "Silverpine Forest",
+     "South Seas UNUSED",
+     "Southfury River",
+     "Starfall Village",
+     "Stonetalon Mountains",
+     "Storm Cliffs",
+     "Stormr's Test Map",
+     "Stormwind City",
+     "Stranglethorn Vale",
+     "Stratholme",
+     "Sunken Temple",
+     "Swamp of Sorrows",
+     "Tanaris",
+     "Teldrassil",
+     "Temple of Ahn'Qiraj",
+     "Test Dungeon",
+     "Thandol Span",
+     "The Barrens",
+     "The Black Morass",
+     "The Burning of Andorhal",
+     "The Crystal Vale",
+     "The Deadmines",
+     "The Drowned City",
+     "The Forbidding Sea",
+     "The Great Sea",
+     "The Hall of Thanes",
+     "The Hinterlands",
+     "The Scarab Dais",
+     "The Shaper's Terrace",
+     "The Stockade",
+     "The Tainted Scar",
+     "The Temple of Atal'Hakkar",
+     "The Veiled Sea",
+     "The Verdant Fields",
+     "Thoradin's Wall",
+     "Thousand Needles",
+     "Thunder Bluff",
+     "Tirisfal Glades",
+     "Tyler's Test Map (Desolace)",
+     "UNUSED Stonewrought Pass",
+     "UNUSED Stratholme",
+     "UNUSEDAlcaz Island",
+     "UNUSEDShadowfang Keep 003",
+     "Uldaman",
+     "Un'Goro Crater",
+     "Undercity",
+     "Unused",
+     "Unused Ironcladcove",
+     "Unused The Deadmines 002",
+     "Wailing Caverns",
+     "Warsong Gulch",
+     "Western Plaguelands",
+     "Westfall",
+     "Wetlands",
+     "Whelgar's Excavation Site",
+     "Winterspring",
+     "Zephras Isle",
+     "Zul'Farrak",
+     "Zul'Gurub"
+    ]
+   }
   }
  },
  "rods": {
