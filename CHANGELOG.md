@@ -1,7 +1,7 @@
 # Leveling Codex
 
 ## v0.12.0
-- New: **profession guides for Mining and Blacksmithing, 1-300**, built for WoW: Forever. Forever reworked Blacksmithing (about 200 new plans, and many recipes turn yellow and grey 25 points earlier than in Classic), so the route uses Forever's own recipe colours and reagents, checked against the game files.
+- New: **profession guides for Mining, Blacksmithing and Tailoring, 1-300**, built for WoW: Forever. Forever reworked Blacksmithing (about 200 new plans, and many recipes turn yellow and grey 25 points earlier than in Classic), so the route uses Forever's own recipe colours and reagents, checked against the game files.
   - **Blacksmithing**: the cheapest trainer route: stones, Copper Chain Belt, Runed Copper Belt, Rough Bronze Leggings, Heavy Grinding Stones (kept for Golden Scale Bracers), Iron Buckle, Bronze Warhammer, Green Iron Bracers, Golden Scale Bracers, the Heavy Mithril pieces and Dense Sharpening Stones, then the Imperial Plate plans from Derotain Mudsipper's quests in Tanaris from 240. Every step has an alternative.
   - **Mining**: what to mine and where for your faction (Zephras Isle for Skyborne), and what to smelt for points. Smelting only gives points up to 185 (Smelt Gold).
   - **Tailoring**: the cheapest trainer route to 225 (bolts, Linen Belt, Woolen Cape, Double-stitched Woolen Shoulders, Azure Silk Hood, Earthen Vest, Crimson Silk Vest, the Black Mageweave pieces, Runecloth Belt), then Forever's vendor patterns: Runecloth Gloves (Qia, Winterspring), Runecloth Cuffs (Pexmit, Mount Hyjal) and Venomspew Gloves and Cord (Mishta, Silithus). Forever's trainers stop at 225, and only Timothy Worthington (Theramore) and Daryl Stack (Tarren Mill) teach Artisan.
