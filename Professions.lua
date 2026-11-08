@@ -82,18 +82,31 @@ function ns.craftsLeft(step, fromSkill)
   return math.ceil(n - 1e-9)
 end
 
--- Every material from this skill to 300: { { item, count }, ... }, most first.
+-- Every material from this skill to 300: { { item, count }, ... }, most first. Things the route
+-- makes itself (Heavy Grinding Stones) only count where it doesn't make enough, and a step's
+-- extra (the Thorium Bars a quest takes for its plan) counts until that step starts.
 function ns.profShopping(key, skill)
   local P = ns.P and ns.P[key]
   local list = {}
   if not P then return list end
-  local byItem = {}
+  local byItem, made = {}, {}
+  local function add(item, n)
+    if n <= 0 then return end
+    if not byItem[item] then byItem[item] = { item, 0 }; list[#list + 1] = byItem[item] end
+    byItem[item][2] = byItem[item][2] + n
+  end
   for _, s in ipairs(P.steps) do
     if s.to > (skill or 0) and s.mats then
       local n = ns.craftsLeft(s, skill) or 0
       for _, m in ipairs(s.mats) do
-        if not byItem[m[1]] then byItem[m[1]] = { m[1], 0 }; list[#list + 1] = byItem[m[1]] end
-        byItem[m[1]][2] = byItem[m[1]][2] + n * m[2]
+        local need = n * m[2]
+        local own = math.min(made[m[1]] or 0, need)
+        made[m[1]] = (made[m[1]] or 0) - own
+        add(m[1], need - own)
+      end
+      if s.makes then made[s.makes[1]] = (made[s.makes[1]] or 0) + n * s.makes[2] end
+      if (skill or 0) < s.from then
+        for _, m in ipairs(s.extra or {}) do add(m[1], m[2]) end
       end
     end
   end

@@ -71,12 +71,12 @@ your real skill. Materials are for the whole step.
 |---|---|---|---|---|---|
 | 1-25 | Rough Sharpening Stone | 1 (known) | 26 | 26 Rough Stone | Rough Weightstone |
 | 25-65 | Rough Grinding Stone | 25 | 48 | 96 Rough Stone | |
-| 65-75 | Copper Chain Belt | 35 | 11 | 66 Copper Bar | Runed Copper Gauntlets |
+| 65-80 | Copper Chain Belt | 35 | 17 | 102 Copper Bar | Runed Copper Gauntlets |
 | *50* | *Train Journeyman* | | | | |
-| 75-85 | Runed Copper Belt | 75 | 10 | 100 Copper Bar | Silver Skeleton Key |
-| 85-100 | Rough Bronze Leggings | 80 | 15 | 90 Bronze Bar | Runed Copper Belt (190 Copper Bar) |
+| 80-95 | Runed Copper Belt | 80 | 17 | 170 Copper Bar | Rough Bronze Leggings, if taught already |
+| 95-100 | Rough Bronze Leggings | 95 | 5 | 30 Bronze Bar | Runed Copper Belt |
 | 100-112 | Heavy Grinding Stone | 100 | 16 | 48 Heavy Stone (keep the stones: Golden Scale Bracers) | |
-| 112-125 | Rough Bronze Leggings | 80 | 14 | 84 Bronze Bar | Patterned Bronze Bracers |
+| 112-125 | Rough Bronze Leggings | 95 | 14 | 84 Bronze Bar | Patterned Bronze Bracers |
 | *125* | *Train Expert* | | | | |
 | 125-130 | Iron Buckle | 125 | 12 | 12 Iron Bar | |
 | 130-140 | Bronze Warhammer | 125 | 10 | 80 Bronze Bar, 10 Strong Flux, 10 Medium Leather | |
@@ -92,7 +92,10 @@ your real skill. Materials are for the whole step.
 | 272-290 | Imperial Plate Boots (quest plan) | 270 | 18 | 612 Thorium Bar, 18 Star Ruby, 18 Aquamarine | |
 | 290-300 | Imperial Plate Leggings (quest plan) | 280 | 10 | 440 Thorium Bar, 20 Star Ruby | Imperial Plate Chest |
 
-Every step was checked against the colours: no recipe turns grey before its step ends. The 245-300
+Every step was checked against the colours: no recipe turns grey before its step ends. (Changed after
+review: the client's `SkillLineAbility.MinSkillLineRank` says Runed Copper Belt is learned at 80 and
+Rough Bronze Leggings at 95, against 75 and 80 on guide sites, so 65-100 is laid out to work with
+either; the reference keeps that field as `min` and the audit warns when a step's `learn` is lower.) The 245-300
 steps are expensive in Thorium (about 1,740 bars plus 140 for the quests); that is the cost of the
 Artisan tier in Forever without dungeon-drop plans. Specializations (Armorsmith or Weaponsmith, from
 200 and level 40) get a note at 200; they don't change the route.

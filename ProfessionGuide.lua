@@ -80,7 +80,9 @@ end
 local KIND = { optimal = "orange", medium = "yellow", easy = "green", trivial = "grey" }
 local RELATIVE = { [0] = "orange", [1] = "yellow", [2] = "green", [3] = "grey" }
 
--- A recipe you know: { index or id, color, available }, or nil.
+-- A recipe in the window's list: { index or id, color, available }, or nil. The classic list only
+-- holds what the window shows (a search, a filter or a closed heading hide recipes), and some
+-- clients keep the classic calls as empty stubs: then C_TradeSkillUI gets asked too.
 local function findRecipe(name)
   if GetNumTradeSkills and GetTradeSkillInfo then
     local ok, count = pcall(GetNumTradeSkills)
@@ -88,7 +90,6 @@ local function findRecipe(name)
       local iok, n, kind, avail = pcall(GetTradeSkillInfo, i)
       if iok and n == name and kind ~= "header" then return { index = i, color = KIND[kind], available = tonumber(avail) } end
     end
-    return nil
   end
   if C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs and C_TradeSkillUI.GetRecipeInfo then
     local ok, ids = pcall(C_TradeSkillUI.GetAllRecipeIDs)
@@ -116,9 +117,12 @@ local function rowText(f)
   end
 end
 
--- The shown row whose text is the recipe (a button, or the frame holding a matching font string).
+-- The shown row whose text is the recipe. A button with that text wins; else a row-high frame
+-- holding a matching font string (never the details pane, which shows the selected recipe's
+-- name too).
 local function findRow(root, name)
   local budget = 3000
+  local holder
   local function walk(f, depth)
     if depth > 10 or budget <= 0 then return end
     local ok, kids = pcall(function() return { f:GetChildren() } end)
@@ -128,39 +132,60 @@ local function findRow(root, name)
       if budget <= 0 then return end
       if visible(k) then
         if rowText(k) == name then return k end
-        local rok, regions = pcall(function() return { k:GetRegions() } end)
-        for _, r in ipairs(rok and regions or {}) do
-          local tok, kind = pcall(r.GetObjectType, r)
-          if tok and kind == "FontString" and visible(r) and rowText(r) == name then return k end
+        if not holder then
+          local hok, h = pcall(k.GetHeight, k)
+          if hok and type(h) == "number" and h > 0 and h <= 40 then
+            local rok, regions = pcall(function() return { k:GetRegions() } end)
+            for _, r in ipairs(rok and regions or {}) do
+              local tok, kind = pcall(r.GetObjectType, r)
+              if tok and kind == "FontString" and visible(r) and rowText(r) == name then holder = k end
+            end
+          end
         end
         local found = walk(k, depth + 1)
         if found then return found end
       end
     end
   end
-  return walk(root, 0)
+  return walk(root, 0) or holder
 end
 
 local function stillRow(row, name) return visible(row) and rowText(row) == name end
 
--- What to make in this window at this skill: a crafting step, or for Mining the first smelt of
--- the step you know that still gives points.
+-- The chance a craft or smelt gives a point at this skill (the game's rule).
+local function chanceAt(r, skill)
+  if skill < r.yellow then return 1 end
+  if skill >= r.grey then return 0 end
+  return (r.grey - skill) / (r.grey - r.yellow)
+end
+
+-- What to make in this window at this skill: the crafting step, or for Mining the step's smelt
+-- you can know that has the best chance (one in the window first). A smelt is counted only while
+-- it's orange (sure points, to yellow); after that the card gives its chance instead.
 local function pickFor(key, skill)
   local P = ns.P[key]
   local step = ns.profStep(key, skill)
   if not step then return nil end
   if step.name then return step end
+  local best, bestScore, later
   for _, sname in ipairs(step.smelt or {}) do
     for _, s in ipairs(P.smelt or {}) do
-      if s.name == sname and skill < s.grey then
-        -- while it's orange, count the sure points (to yellow); after that, to grey
-        local stop = (skill < s.yellow) and s.yellow or s.grey
-        return { name = s.name, icon = s.icon, yellow = s.yellow, grey = s.grey, learn = s.learn, mats = s.mats,
-                 from = step.from, to = math.min(step.to, stop), smeltOf = step }
+      if s.name == sname then
+        if s.learn > skill then
+          later = later or s
+        elseif skill < s.grey then
+          local score = chanceAt(s, skill) + (findRecipe(s.name) and 10 or 0)
+          if not best or score > bestScore then best, bestScore = s, score end
+        end
       end
     end
   end
-  return { none = true, step = step }
+  if not best then return { none = true, step = step, later = later } end
+  local s = best
+  local orange = skill < s.yellow
+  return { name = s.name, spell = s.spell, icon = s.icon, yellow = s.yellow, grey = s.grey, learn = s.learn, mats = s.mats,
+           from = step.from, to = math.min(step.to, orange and s.yellow or s.grey), smeltOf = step,
+           chanceOnly = not orange, chance = chanceAt(s, skill) }
 end
 
 ----------------------------------------------------------------------------
@@ -194,7 +219,7 @@ end
 local function makeHint()
   local A = ns.art
   local h = A.frame("Frame", "LevelingCodexCraftHint", UIParent)
-  h:SetSize(440, 90)
+  h:SetSize(440, 104)
   h:SetFrameStrata("FULLSCREEN_DIALOG")
   h:SetClampedToScreen(true)
   h:Hide()
@@ -264,7 +289,7 @@ local function placeHint(h, root)
   h:ClearAllPoints()
   local top, bottom = edgeOf(root, "GetTop"), edgeOf(root, "GetBottom")
   local screen = edgeOf(UIParent, "GetTop")
-  local need = ((h:GetHeight() or 90) + 12) * (select(2, pcall(h.GetEffectiveScale, h)) or 1)
+  local need = ((h:GetHeight() or 104) + 12) * (select(2, pcall(h.GetEffectiveScale, h)) or 1)
   local where = "above"
   if top and screen and top + need > screen then
     where = (bottom and bottom - need > 0) and "below" or "inside"
@@ -287,6 +312,14 @@ local function selectRecipe(found)
   if found.index and SelectTradeSkill then
     pcall(SelectTradeSkill, found.index)
     if TradeSkillFrame_SetSelection then pcall(TradeSkillFrame_SetSelection, found.index) end
+    -- the classic list doesn't scroll to a selection: put the recipe near the top of the list
+    local list = _G.TradeSkillListScrollFrame
+    if list and FauxScrollFrame_SetOffset then
+      local offset = math.max(0, found.index - 2)
+      pcall(FauxScrollFrame_SetOffset, list, offset)
+      local bar = _G.TradeSkillListScrollFrameScrollBar
+      if bar and bar.SetValue then pcall(bar.SetValue, bar, offset * (tonumber(_G.TRADE_SKILL_HEIGHT) or 16)) end
+    end
     if TradeSkillFrame_Update then pcall(TradeSkillFrame_Update) end
   elseif found.id and C_TradeSkillUI then
     local fn = C_TradeSkillUI.OpenRecipe or C_TradeSkillUI.SetSelectedRecipe
@@ -302,9 +335,16 @@ end
 -- Every 0.25 s while a crafting window is open.
 local function tick()
   local root, rootName = craftWindow()
+  if not root and guide.lookUntil and (GetTime and GetTime() or 0) < guide.lookUntil
+      and (GetTime and GetTime() or 0) >= (guide.nextLook or 0) then
+    -- the event can come before the window is on screen, and its name may be one we don't know
+    discoverRoots()
+    guide.lookEvery = math.min((guide.lookEvery or 0.5) * 2, 4)
+    guide.nextLook = (GetTime and GetTime() or 0) + guide.lookEvery
+    root, rootName = craftWindow()
+  end
   if not root or ns.db().noCraftGuide then
     if guide.open then hideGuide() end
-    if not root then guide.active = guide.polling end
     return
   end
   local pname, skill, cap = openProfession()
@@ -331,20 +371,33 @@ local function tick()
   if not pick or pick.none then
     ns.setIcon(h.icon, P.icon)
     h.name:SetText(pick and plain(pick.step.title) or "Route done")
-    h.line:SetText(pick and "Smelting gives no points here: mine instead." or ("You've reached " .. skill .. "."))
+    h.line:SetText(pick and ("Smelting gives no points at " .. skill .. ": mine instead." ..
+      (pick.later and ("  " .. pick.later.name .. " gives points from " .. pick.later.learn .. ".") or ""))
+      or ("You've reached " .. skill .. "."))
     h.status:SetText(pick and plain(pick.step.note or "") or "")
     t:Hide(); guide.how = "none"
   else
     ns.setIcon(h.icon, pick.icon)
     h.name:SetText(pick.name)
     local found = findRecipe(pick.name)
-    local n = ns.craftsLeft(pick, skill)
+    local n = (not pick.chanceOnly) and ns.craftsLeft(pick, skill)
     local line = n and ("About " .. n .. " more to " .. pick.to) or ""
+    if pick.chanceOnly then
+      line = "About a " .. math.floor(pick.chance * 100 + 0.5) .. "% chance of a point per smelt now"
+    end
     if found and found.available then line = line .. "  -  you have materials for " .. found.available end
     h.line:SetText(line)
     if not found then
-      h.status:SetText("Not learned yet: learn it at a " .. P.name .. " trainer (" .. (pick.learn or "?") .. ").")
-      t:Hide(); guide.row, guide.how = nil, "not learned"
+      local known = pick.spell and IsPlayerSpell and select(2, pcall(IsPlayerSpell, pick.spell)) == true
+      if known then
+        h.status:SetText("You know it, but it's not in the list: clear the search or filter, or open its heading.")
+        guide.how = "filtered"
+      else
+        h.status:SetText("Not learned yet (or hidden by a filter): learn it at a " .. P.name .. " trainer (" ..
+          (pick.learn or "?") .. ")." .. ((pick.alt and pick.alt ~= "") and ("  Instead: " .. plain(pick.alt)) or ""))
+        guide.how = "not learned"
+      end
+      t:Hide(); guide.row = nil
     elseif found.color == "grey" then
       local nxt = ns.profNext(key, skill)
       h.status:SetText("Grey now: " .. (nxt and ("next is " .. (nxt.name or nxt.title) .. ".") or "the route is done."))
@@ -393,9 +446,14 @@ function ns.startCraftGuide()
     if pcall(events.RegisterEvent, events, ev) then any = true end
   end
   events:SetScript("OnEvent", function(_, event)
+    local now = GetTime and GetTime() or 0
     if event == "TRADE_SKILL_SHOW" then
       guide.active = true
-      if not craftWindow() then discoverRoots() end
+      guide.lookUntil, guide.nextLook, guide.lookEvery = now + 10, now, 0.5
+    elseif event == "TRADE_SKILL_CLOSE" then
+      guide.active, guide.lookUntil = guide.polling, nil
+      hideGuide()
+      return
     end
     if guide.active then pcall(tick) end
   end)

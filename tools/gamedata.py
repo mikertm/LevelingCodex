@@ -522,6 +522,10 @@ def build_professions(T, S):
                    "makes": [item_name.get(made[0], "item %s" % made[0]), made[1]] if made else None,
                    "icon": (item_icon.get(made[0]) if made else None) or S.icon(sid),
                    "category": cats.get(r["TradeSkillCategoryID"], "")}
+            # the client sets a learn level on a few recipes; not always the trainer's (Heavy
+            # Sharpening Stone says 125 but goes grey at 115), so it's a warning, not a fact
+            if int(r["MinSkillLineRank"] or 0) > 1:
+                rec["min"] = int(r["MinSkillLineRank"])
             if made:
                 items[rec["makes"][0]] = item_icon.get(made[0])
             for p in sorted(plans.get(sid, []), key=int):
@@ -706,8 +710,13 @@ def audit_professions(profdata, ref):
                     (where, name, r["yellow"], r["grey"], x.get("yellow"), x.get("grey")))
             if _mats(x.get("mats")) != r["mats"]:
                 add("error", "%s: %s takes %s in game, data says %s" % (where, name, r["mats"], _mats(x.get("mats"))))
+            if isinstance(x.get("makes"), list) and [x["makes"][0], int(x["makes"][1])] != r.get("makes"):
+                add("error", "%s: %s makes %s in game, data says %s" % (where, name, r.get("makes"), x["makes"]))
             if x.get("icon") and r.get("icon") and x["icon"].lower() != r["icon"]:
                 add("warn", "%s: %s icon is %s in game, data uses %s" % (where, name, r["icon"], x["icon"]))
+            if r.get("min") and x.get("learn") and x["learn"] < r["min"]:
+                add("warn", "%s: %s: the client says it's learned at %d, data says %d (check at a trainer, /codex debug)" %
+                    (where, name, r["min"], x["learn"]))
             return r
 
         steps = P.get("steps") or []

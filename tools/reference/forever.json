@@ -40285,7 +40285,8 @@
       1
      ],
      "icon": "inv_axe_17",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "min": 85
     },
     "Bronze Battle Axe": {
      "spell": 9987,
@@ -40389,7 +40390,8 @@
       1
      ],
      "icon": "inv_mace_08",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "min": 75
     },
     "Bronze Shortsword": {
      "spell": 2742,
@@ -40415,7 +40417,8 @@
       1
      ],
      "icon": "inv_sword_04",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "min": 95
     },
     "Bronze Warhammer": {
      "spell": 9985,
@@ -40795,7 +40798,8 @@
       1
      ],
      "icon": "inv_stone_sharpeningstone_02",
-     "category": "Weapon Stones"
+     "category": "Weapon Stones",
+     "min": 75
     },
     "Coarse Weightstone": {
      "spell": 3116,
@@ -40945,7 +40949,8 @@
       1
      ],
      "icon": "inv_pants_03",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "min": 40
     },
     "Copper Chain Vest": {
      "spell": 3321,
@@ -41101,7 +41106,8 @@
       1
      ],
      "icon": "inv_sword_26",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "min": 40
     },
     "Corruption": {
      "spell": 16985,
@@ -44717,7 +44723,8 @@
       1
      ],
      "icon": "inv_stone_sharpeningstone_03",
-     "category": "Weapon Stones"
+     "category": "Weapon Stones",
+     "min": 125
     },
     "Heavy Thorium Gauntlets": {
      "spell": 1306538,
@@ -47799,7 +47806,8 @@
       1
      ],
      "icon": "inv_bracer_07",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "min": 120
     },
     "Pauldrons of Glory": {
      "spell": 1292987,
@@ -48891,7 +48899,8 @@
       1
      ],
      "icon": "inv_chest_chain_08",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "min": 105
     },
     "Rough Bronze Leggings": {
      "spell": 2668,
@@ -48909,7 +48918,8 @@
       1
      ],
      "icon": "inv_pants_03",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "min": 95
     },
     "Rough Bronze Shoulders": {
      "spell": 3328,
@@ -49073,7 +49083,8 @@
       1
      ],
      "icon": "inv_belt_03",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "min": 80
     },
     "Runed Copper Bracers": {
      "spell": 2664,
@@ -49121,7 +49132,8 @@
       1
      ],
      "icon": "inv_chest_plate03",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "min": 90
     },
     "Runed Copper Gauntlets": {
      "spell": 3323,
@@ -50231,7 +50243,8 @@
       1
      ],
      "icon": "inv_chest_plate15",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "min": 135
     },
     "Shoulderplates of Dread": {
      "spell": 446179,

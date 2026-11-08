@@ -204,7 +204,8 @@ local function renderer()
     local n = s.name and ns.craftsLeft(s, s.from)
     if n then T("~" .. n, 0, y + 5, W - 10, "small", C.dim, "RIGHT") end
     hit(0, y, W, 22, s.from .. "-" .. s.to .. ": " .. (s.name or s.title), plain(s.note), function()
-      picked[key] = { index = i, at = skill }
+      -- your own step takes you back to "do this now"
+      picked[key] = (not mine) and { index = i, at = skill } or nil
       ui.refresh()
     end)
     y = y + 24

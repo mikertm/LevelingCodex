@@ -692,8 +692,7 @@ function SelectTradeSkill(i)
   local t = MOCK.trade
   if not t then return end
   if type(i) ~= "number" then error("SelectTradeSkill: bad index", 2) end
-  t.selected = i
-  t.offset = math.max(0, i - 4) -- the game scrolls the list to the selection
+  t.selected = i -- like the classic client: selects (and fills the details), doesn't scroll the list
   if t.layout then t.layout() end
 end
 function GetTradeSkillSelectionIndex() return MOCK.trade and MOCK.trade.selected or 0 end
@@ -709,6 +708,9 @@ function GetTrainerServiceSkillReq(i)
   local t = MOCK.trainer[i]
   if t then return t[2], t[3], true end
 end
+
+MOCK.knownSpells = {}
+function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
@@ -906,7 +908,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
-  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq" }
+  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -940,7 +942,8 @@ local ALLOWED_GLOBALS = {
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
   EventToastManagerFrame = true, ForeverLevelUpBanner = true,
-  TradeSkillFrame = true, C_TradeSkillUI = true,
+  TradeSkillFrame = true, C_TradeSkillUI = true, TradeSkillListScrollFrame = true, FauxScrollFrame_SetOffset = true,
+  TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 function MOCK.snapshotGlobals()

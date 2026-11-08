@@ -1286,7 +1286,7 @@ end
 -- Professions (ProfessionData.lua): skills, the Professions tab, skill-up cards, the crafting window
 ----------------------------------------------------------------------------
 
--- skills:BS;87;150,MI;140;225:professions[:Horde[:Skyborne]]  (the step parser splits on ":")
+-- skills:BS;97;150,MI;140;225:professions[:Horde[:Skyborne]]  (the step parser splits on ":")
 -- api "skilllines": the client only has the classic skill list (no GetProfessions).
 function S.skills(list, api, faction, race)
   MOCK.skillAPI = api or "professions"
@@ -1304,7 +1304,7 @@ function S.profDebug()
   if not D() then return end
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("profession: Blacksmithing 87/150, step 85%-100 Rough Bronze Leggings, about 13 more"), "BS step in debug")
+  check(chatHas("profession: Blacksmithing 97/150, step 95%-100 Rough Bronze Leggings, about 3 more"), "BS step in debug")
   check(chatHas("profession: Mining 140/225, step 125%-175"), "Mining step in debug")
   local via = (GetProfessions and "professions") or "skill lines"
   check(chatHas("profession skills read from: " .. via), "skills read from " .. via)
@@ -1319,18 +1319,28 @@ end
 
 local function profText() return MOCK.textUnder(win()) end
 
--- The Professions tab at Blacksmithing 87/150 and Mining 140/225 (set by the skills step).
+-- The Professions tab at Blacksmithing 97/150 and Mining 140/225 (set by the skills step).
 function S.profTab()
   if not D() then return end
   openAt(30, "Professions")
   click(win(), "Blacksmithing")
   local t = profText()
-  check(t:find("Blacksmithing 87 / 150"), "skill header")
-  check(t:find("Rough Bronze Leggings") and t:find("about 13 more to 100"), "now card")
-  check(t:find("Learn at 80"), "learn level")
+  check(t:find("Blacksmithing 97 / 150"), "skill header")
+  check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
+  check(t:find("Learn at 95"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
+  check(t:find("1882 Thorium Bar"), "shopping list counts the 140 Thorium Bars the Imperial Plate quests take")
+  check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
+  end
+  check(profText():find("STEP 100%-112") and profText():find("make 24 more"), "clicked step shows; the note says how many more stones")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^95%-100") then b:Click(); break end
+  end
+  check(profText():find("DO THIS NOW") and profText():find("about 3 more to 100"), "clicking your own step goes back to it")
   check(t:find("THE WHOLE ROUTE"), "route list")
-  check(t:find("TRAIN EXPERT") == nil, "Expert not due at 87")
+  check(t:find("TRAIN EXPERT") == nil, "Expert not due at 97")
   click(win(), "Mining")
   t = profText()
   check(t:find("Mining 140 / 225") and t:find("Iron Deposit") and t:find("Arathi Highlands"), "mining header, vein, zones")
@@ -1383,16 +1393,16 @@ end
 function S.profSkillUps()
   if not D() then return end
   local function dismiss(t) MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
-  MOCK.setSkill("Blacksmithing", 84, 150)       -- first reading this session: no card
+  MOCK.setSkill("Blacksmithing", 94, 150)       -- first reading this session: no card
   MOCK.advance(1.2)
   check(not (toast() and toast():IsShown()), "no card for the first reading")
-  MOCK.setSkill("Blacksmithing", 85, 150)       -- step boundary at 85
+  MOCK.setSkill("Blacksmithing", 95, 150)       -- step boundary at 95
   MOCK.advance(1.2)
   local t = toast()
-  check(t and t:IsShown() and t.title:GetText() == "Blacksmithing 85", "card at a new step")
+  check(t and t:IsShown() and t.title:GetText() == "Blacksmithing 95", "card at a new step")
   check(MOCK.textUnder(t):find("Rough Bronze Leggings"), "card names the next recipe")
   dismiss(t)
-  MOCK.setSkill("Blacksmithing", 86, 150)       -- an ordinary point
+  MOCK.setSkill("Blacksmithing", 96, 150)       -- an ordinary point
   MOCK.advance(1.2)
   check(not t:IsShown(), "no card for an ordinary point")
   MOCK.setSkill("Blacksmithing", 112, 150)      -- jumps over 100 and 112: one card, both steps
@@ -1432,7 +1442,10 @@ local RELATIVE = { optimal = 0, medium = 1, easy = 2, trivial = 3 }
 
 function S.makeCraftWindow(style)
   local f = CreateFrame("Frame", "TradeSkillFrame", UIParent); f:SetSize(384, 512); f:Hide()
-  MOCK.trade = { line = "Blacksmithing", rank = 87, max = 150, style = style or "classic", offset = 0, selected = 0, rows = {},
+  -- the selected recipe's details pane: its name in big letters, like the game's
+  local details = CreateFrame("Frame", nil, f); details:SetSize(300, 180)
+  local dname = details:CreateFontString(nil, "OVERLAY"); dname:SetText("Rough Bronze Leggings")
+  MOCK.trade = { line = "Blacksmithing", rank = 97, max = 150, style = style or "classic", offset = 0, selected = 0, rows = {},
     recipes = { { "Rough Sharpening Stone", "trivial", 5 }, { "Copper Chain Belt", "trivial", 3 }, { "Runed Copper Belt", "easy", 1 },
                 { "Rough Bronze Leggings", "optimal", 4 } } }
   for i = 1, 8 do
@@ -1451,8 +1464,20 @@ function S.makeCraftWindow(style)
     end
   end
   MOCK.trade.layout()
+  -- the classic list scrolls through FauxScrollFrame_SetOffset + TradeSkillFrame_Update
+  TradeSkillListScrollFrame = CreateFrame("ScrollFrame", "TradeSkillListScrollFrame", f)
+  TRADE_SKILLS_DISPLAYED = 8
+  FauxScrollFrame_SetOffset = function(frame, offset) if frame == TradeSkillListScrollFrame then MOCK.trade.offset = offset end end
+  TradeSkillFrame_Update = function() MOCK.trade.layout() end
   if style == "retail" then
     GetTradeSkillLine, GetNumTradeSkills, GetTradeSkillInfo, SelectTradeSkill = nil, nil, nil, nil
+    S.retailAPI()
+  end
+  return f
+end
+
+-- Retail's C_TradeSkillUI over MOCK.trade.
+function S.retailAPI()
     C_TradeSkillUI = {
       GetBaseProfessionInfo = function()
         return { professionName = MOCK.trade.line, skillLevel = MOCK.trade.rank, maxSkillLevel = MOCK.trade.max }
@@ -1473,8 +1498,6 @@ function S.makeCraftWindow(style)
         MOCK.trade.layout()
       end,
     }
-  end
-  return f
 end
 
 local function openCraft() TradeSkillFrame:Show(); MOCK.event("TRADE_SKILL_SHOW"); MOCK.advance(0.6) end
@@ -1483,12 +1506,12 @@ local function craftReady() return D() and not MOCK.minimal and _G.TradeSkillFra
 
 function S.craftTrace()
   if not craftReady() then return end
-  MOCK.setSkill("Blacksmithing", 87, 150)
+  MOCK.setSkill("Blacksmithing", 97, 150)
   openCraft()
   local tr, h = _G.LevelingCodexCraftTrace, _G.LevelingCodexCraftHint
   check(h and h:IsShown(), "card beside the crafting window")
   local text = MOCK.textUnder(h)
-  check(text:find("Rough Bronze Leggings") and text:find("About 13 more to 100") and text:find("materials for 4"), "card text")
+  check(text:find("Rough Bronze Leggings") and text:find("About 3 more to 100") and text:find("materials for 4"), "card text")
   check(text:find("orange"), "live colour on the card")
   check(tr and tr:IsShown(), "row traced")
   local _, rel = tr:GetPoint(1)
@@ -1564,13 +1587,82 @@ end
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.
 function S.trainerReqs()
   if not D() or MOCK.minimal then return end
-  MOCK.trainer = { { "Rough Bronze Leggings", "Blacksmithing", 95 }, { "Runed Copper Belt", "Blacksmithing", 75 },
+  MOCK.trainer = { { "Rough Bronze Leggings", "Blacksmithing", 80 }, { "Runed Copper Belt", "Blacksmithing", 80 },
                    { "Copper Bracers", "Blacksmithing", 1 }, { "Smelt Silver", "Mining", 70 } }
   MOCK.event("TRAINER_SHOW")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("trainer: Rough Bronze Leggings needs 95 %(guide says 80%)"), "difference reported")
+  check(chatHas("trainer: Rough Bronze Leggings needs 80 %(guide says 95%)"), "difference reported")
   check(chatHas("trainer: Smelt Silver needs 70 %(guide says 75%)"), "smelt difference reported")
   check(not chatHas("Runed Copper Belt needs"), "matching values not reported")
   check(not chatHas("Copper Bracers"), "recipes off the route not reported")
+end
+
+-- The game sends TRADE_SKILL_SHOW before its window is on screen: the card still comes.
+function S.craftEventFirst()
+  if not craftReady() then return end
+  closeCraft()
+  check(not (LevelingCodexCraftHint and LevelingCodexCraftHint:IsShown()), "starts with the window closed")
+  MOCK.event("TRADE_SKILL_SHOW")
+  MOCK.advance(0.4)
+  TradeSkillFrame:Show()
+  MOCK.advance(0.6)
+  check(LevelingCodexCraftHint and LevelingCodexCraftHint:IsShown(), "card when the window shows after the event")
+  closeCraft()
+end
+
+-- A recipe you know but the window's filter or a closed heading hides; one you don't know shows its alternative.
+function S.craftFiltered()
+  if not craftReady() then return end
+  table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
+  MOCK.knownSpells[2668] = true
+  openCraft()
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("not in the list: clear the search"), "known but filtered")
+  closeCraft()
+  MOCK.knownSpells[2668] = nil
+  openCraft()
+  local text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Not learned yet") and text:find("Instead: Runed Copper Belt"), "not learned shows the alternative")
+  closeCraft()
+  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
+  MOCK.trade.layout()
+end
+
+-- Classic calls that exist but return nothing (compatibility stubs): C_TradeSkillUI is read instead.
+function S.craftClassicStubs()
+  if not craftReady() then return end
+  local count = GetNumTradeSkills
+  S.retailAPI()
+  GetNumTradeSkills = function() return 0 end
+  openCraft()
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("materials for 4"), "recipe read through C_TradeSkillUI")
+  closeCraft()
+  GetNumTradeSkills = count
+  C_TradeSkillUI = nil
+end
+
+-- Smelting at 66 (Bronze beats green Tin), 100 (Silver is yellow: a chance, not a count) and 145 (nothing gives points).
+function S.craftSmeltingCases()
+  if not craftReady() then return end
+  local saved = { MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset }
+  local function at(rank, recipes)
+    MOCK.setSkill("Mining", rank, 225)
+    MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.offset = "Mining", rank, 225, 0
+    MOCK.trade.recipes = recipes
+    MOCK.trade.layout()
+    openCraft()
+    local text = MOCK.textUnder(LevelingCodexCraftHint)
+    closeCraft()
+    return text
+  end
+  local t = at(66, { { "Smelt Copper", "trivial", 9 }, { "Smelt Tin", "easy", 2 }, { "Smelt Bronze", "medium", 1 } })
+  check(t:find("Smelt Bronze") and not t:find("Smelt Tin"), "66: Smelt Bronze, the better chance")
+  t = at(100, { { "Smelt Copper", "trivial", 9 }, { "Smelt Tin", "trivial", 2 }, { "Smelt Bronze", "easy", 1 },
+                { "Smelt Silver", "medium", 3 } })
+  check(t:find("Smelt Silver") and t:find("chance of a point") and not t:find("About %d+ more"), "100: a chance, not a count")
+  t = at(145, { { "Smelt Copper", "trivial", 9 }, { "Smelt Bronze", "trivial", 1 }, { "Smelt Silver", "trivial", 3 },
+                { "Smelt Iron", "trivial", 5 } })
+  check(t:find("no points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
+  MOCK.trade.layout()
 end
