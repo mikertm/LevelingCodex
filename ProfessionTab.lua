@@ -1,6 +1,6 @@
 -- ProfessionTab.lua: the Professions tab of the /codex window. What to do at your skill (the
 -- recipe, how many more, materials against your bags, where to learn it), training when it's
--- due, the whole route, and a shopping list to 300. Mining shows the veins for your faction,
+-- due, the whole route, and a shopping list to 300. Gathering guides show nodes for your faction,
 -- Tailoring the cloth (mob levels and zones), and its shopping list counts bolts as their cloth.
 
 local _, ns = ...
@@ -221,22 +221,22 @@ local function renderer()
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
     if step.alt and step.alt ~= "" then y = y + T("Instead: " .. plain(step.alt), 16, y, W - 32, "small", C.inkSoft) + 6 end
     y = y + 8
-  else -- Mining
+  else -- Gathering
     T(browsing and ("STEP " .. step.from .. "-" .. step.to) or "DO THIS NOW", 16, y, 300, "label", C.inkSoft)
     T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
     y = y + 18
     y = y + T(plain(step.title), 16, y, W - 32, "head", C.ink) + 8
-    for _, name in ipairs(step.veins or {}) do
-      local v = ns.veinNamed(name)
-      if v then
-        icon(v.icon, 16, y, 30, v.name, v.ore)
-        local col = ns.veinColor(v, skill or 0)
-        T(v.name .. "  " .. v.skill .. "  " .. col, 54, y + 1, W - 70, "body", C.ink)
-        local h = T("Where: " .. table.concat(ns.profZones(v), ", "), 54, y + 17, W - 70, "small", C.inkSoft)
+    for _, name in ipairs(step.herbs or step.veins or {}) do
+      local node = ns.profNode(key, name)
+      if node then
+        icon(node.icon, 16, y, 30, node.name, node.ore)
+        local col = ns.profNodeColor(node, skill)
+        T(node.name .. "  " .. node.skill .. "  " .. col, 54, y + 1, W - 70, "body", C.ink)
+        local h = T("Where: " .. table.concat(ns.profZones(node), ", "), 54, y + 17, W - 70, "small", C.inkSoft)
         y = y + math.max(36, 21 + h)
       end
     end
-    y = y + T(smeltLine(P, step, skill), 16, y, W - 32, "small", C.inkSoft) + 6
+    if P.smelt then y = y + T(smeltLine(P, step, skill), 16, y, W - 32, "small", C.inkSoft) + 6 end
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
     y = y + 8
   end

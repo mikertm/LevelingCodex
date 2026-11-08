@@ -64,6 +64,7 @@ TAILOR_ONLY = ["skills:TA;20;75:professions", "login", "tailorOnly"]
 TAILOR_LINES = ["skills:TA;150;225:skilllines", "login", "tailorDebug"]
 TAILOR_CLOSED = ["skills:TA;150;225:skilllines", "skillsClosed", "login", "tailorClosed"]
 PROF_BANNER = ["login", "bannerOpensTarget"]
+HERBALISM = ["skills:HE;1;75:professions:Alliance:Human", "login"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
        "padBackupCombat", "padCopyBox", "padForeverCombat", "padTalents", "padForeverFocus", "padForeverActive",
@@ -584,6 +585,8 @@ def main():
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
         runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
+        runs.append(("WARRIOR/%s/prof-herbalism" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismTab"]))
+        runs.append(("WARRIOR/%s/prof-herbalism-cards" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismCards"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))

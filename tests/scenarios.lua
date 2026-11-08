@@ -1685,10 +1685,11 @@ function S.profNone()
   check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
   check(chatHas("profession: Tailoring not learned"), "Tailoring not learned in debug")
   check(chatHas("profession: Enchanting not learned"), "Enchanting not learned in debug")
+  check(chatHas("profession: Herbalism not learned"), "Herbalism not learned in debug")
   openAt(9, "Professions")
   local content = profText()
   check(content:find("No supported professions learned", 1, true), "empty profession switch")
-  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting" }) do
+  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism" }) do
     check(content:find(name, 1, true) and not profButton(name), "only text for supported " .. name)
   end
   win():Hide()
@@ -1901,8 +1902,8 @@ function S.profSkillUps()
   MOCK.advance(1.2)
   check(t:IsShown() and MOCK.textUnder(t):find("Tin Vein"), "new vein card")
   dismiss(t)
-  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
-  MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Cooking", 1, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Cooking", 50, 75); MOCK.advance(1.2)
   check(not t:IsShown(), "no card for a profession the guide doesn't cover")
   LevelingCodexDB.noProfCards = true
   MOCK.setSkill("Blacksmithing", 140, 150); MOCK.advance(1.2)
@@ -1965,6 +1966,71 @@ function S.profRemovedBanner(shortcut)
   if shortcut == "click" then MOCK.fire(t, "OnMouseUp", "LeftButton") else slash("") end
   check(win() and win():IsShown() and profText():find("Mining 30 / 75"), "stale shortcut selects a learned guide")
   check(not profButton("Blacksmithing"), "stale shortcut cannot expose unlearned guide")
+end
+
+function S.herbalismTab()
+  openAt(1, "Professions")
+  local text = profText()
+  check(profButton("Herbalism") and not (profButton("Blacksmithing") or profButton("Mining") or
+    profButton("Tailoring") or profButton("Enchanting")), "only learned Herbalism button")
+  check(text:find("Herbalism 1 / 75") and text:find("Peacebloom  1  orange") and
+    text:find("Silverleaf  1  orange") and text:find("Earthroot  15  red"), "starter herbs and first unlock")
+  check(text:find("Elwynn Forest") and not text:find("Durotar"), "Alliance starter zones")
+  MOCK.faction, MOCK.race = "Horde", "Orc"
+  click(win(), "Herbalism")
+  check(profText():find("Durotar") and not profText():find("Elwynn Forest"), "Horde starter zones")
+  MOCK.race = "Skyborne"
+  click(win(), "Herbalism")
+  check(profText():find("Zephras Isle"), "Skyborne starter zone")
+  check(text:find("THE WHOLE ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
+  check(text:find("20  Incense Candle") and text:find("140  Greenhouse") and
+    text:find("300  Seed Hybridizer"), "camp unlocks")
+  check(not text:find("Smelt") and not text:find("SHOPPING LIST"), "gathering route has no crafting advice")
+  MOCK.setSkill("Herbalism", 25, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  yellow"), "Peacebloom turns yellow at 25")
+  MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  green") and profText():find("TRAIN JOURNEYMAN"), "green and training at 50")
+  MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
+  click(win(), "Settings")
+  local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
+  check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
+end
+
+function S.herbalismCards()
+  MOCK.level = 1
+  local function set(rank, cap)
+    MOCK.setSkill("Herbalism", rank, cap)
+    MOCK.advance(1.2)
+    return toast()
+  end
+  local function dismiss()
+    local t = toast()
+    if t and t:IsShown() then MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+  end
+  set(14, 75)
+  local t = set(15, 75)
+  check(t and t:IsShown() and t.title:GetText() == "Herbalism 15" and
+    MOCK.textUnder(t):find("NEW HERB") and MOCK.textUnder(t):find("Earthroot %(15%)"), "Earthroot unlock card")
+  MOCK.fire(t, "OnMouseUp", "LeftButton")
+  check(win() and win():IsShown() and profText():find("Herbalism 15 / 75"), "herb card opens its guide")
+  win():Hide()
+  set(119, 150); dismiss()
+  t = set(120, 150)
+  check(t:IsShown() and MOCK.textUnder(t):find("Grave Moss %(120%)"), "off-route herb unlock")
+  dismiss()
+  t = set(125, 150)
+  check(t:IsShown() and MOCK.textUnder(t):find("TRAIN EXPERT"), "Expert training at 125")
+  dismiss()
+  check(not set(126, 150):IsShown(), "ordinary point does not show a card")
+  set(269, 300); dismiss()
+  t = set(270, 300)
+  local content = MOCK.textUnder(t)
+  check(t:IsShown() and content:find("NEW STEP") and content:find("Dreamfoil %(270%)"), "late route handoff and herb unlock")
+  dismiss()
+  set(299, 300); dismiss()
+  t = set(300, 300)
+  check(t:IsShown() and MOCK.textUnder(t):find("Black Lotus %(300%)"), "Black Lotus unlock at 300")
 end
 
 ----------------------------------------------------------------------------

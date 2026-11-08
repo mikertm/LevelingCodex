@@ -6,7 +6,7 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM" }
 
 -- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
 function ns.profPart(key, item)
@@ -282,19 +282,21 @@ function ns.profTierDue(key, skill, cap, level)
   if skill >= trained.cap then return "cap", nextTier end
 end
 
--- Each vein's colour at a skill: red (can't mine yet), orange, yellow, green or grey.
-function ns.veinColor(vein, skill)
+-- Herbs specify their own cutoffs. Veins use the standard mining intervals.
+function ns.profNodeColor(node, skill)
   skill = skill or 0
-  if skill < vein.skill then return "red" end
-  if skill < vein.skill + 25 then return "orange" end
-  if skill < vein.skill + 50 then return "yellow" end
-  if skill < vein.skill + 100 then return "green" end
+  if skill < node.skill then return "red" end
+  if skill < (node.yellow or node.skill + 25) then return "orange" end
+  if skill < (node.green or node.skill + 50) then return "yellow" end
+  if skill < (node.grey or node.skill + 100) then return "green" end
   return "grey"
 end
 
-function ns.veinNamed(name)
-  local M = ns.P and ns.P.MINING
-  for _, v in ipairs(M and M.veins or {}) do if v.name == name then return v end end
+function ns.profNode(key, name)
+  local P = ns.P and ns.P[key]
+  for _, node in ipairs(P and (P.herbs or P.veins) or {}) do
+    if node.name == name then return node end
+  end
 end
 
 function ns.profFaction()
@@ -303,7 +305,7 @@ function ns.profFaction()
   if ok and (f == "Alliance" or f == "Horde") then return f end
 end
 
--- Zones for a vein: both factions' (All), else your faction's (both when unknown), plus the
+-- Zones for a gathering node: both factions' (All), else your faction's (both when unknown), plus the
 -- Skyborne starting isle for Skyborne characters.
 function ns.profZones(vein)
   local out, seen = {}, {}
@@ -329,7 +331,7 @@ end
 local last = {}
 
 -- What a skill-up from old to new brings, as card rows { icon, label, text }: the step you're now
--- in (and any you jumped over), training that just opened, a cap you just hit, new veins.
+-- in (and any you jumped over), training that just opened, a cap you just hit, new nodes.
 function ns.profCardRows(key, old, new, cap, level)
   local rows = {}
   local P = ns.P and ns.P[key]
@@ -342,8 +344,9 @@ function ns.profCardRows(key, old, new, cap, level)
         rows[#rows + 1] = { s.icon, now and "NEW STEP" or "STEP PASSED",
           s.name .. (now and n and ("  -  about " .. n .. " to " .. s.to) or ("  (" .. s.from .. "-" .. s.to .. ")")) }
       else
-        local v = s.veins and ns.veinNamed(s.veins[1])
-        rows[#rows + 1] = { v and v.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
+        local names = s.herbs or s.veins
+        local node = names and ns.profNode(key, names[1])
+        rows[#rows + 1] = { node and node.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
       end
     end
   end
@@ -355,9 +358,10 @@ function ns.profCardRows(key, old, new, cap, level)
   if nextTier and trained.cap > old and trained.cap <= new then
     rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }
   end
-  for _, v in ipairs(P.veins or {}) do
-    if v.skill > old and v.skill <= new then
-      rows[#rows + 1] = { v.icon, "NEW VEIN", v.name .. " (" .. v.skill .. ")" }
+  local unlock = P.herbs and "NEW HERB" or "NEW VEIN"
+  for _, node in ipairs(P.herbs or P.veins or {}) do
+    if node.skill > old and node.skill <= new then
+      rows[#rows + 1] = { node.icon, unlock, node.name .. " (" .. node.skill .. ")" }
     end
   end
   return rows
