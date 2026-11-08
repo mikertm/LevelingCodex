@@ -9,6 +9,7 @@
 - New: a **skill-up card** in the level-up banner's look when your Mining or Blacksmithing reaches a new step, can train the next tier, hits its cap, or can mine a new vein. Ordinary points stay quiet.
 - When your skill is ready for the next tier before your level is (Journeyman needs level 10, Expert 20, Artisan 35), the level-up banner and chat tell you to train it at the level that opens it.
 - Settings > Professions turns the crafting window guide and the skill-up cards on or off.
+- Fixed: the card beside the crafting and talent windows covered the controller hints the game shows under a window near the top of the screen. It now goes below them.
 - The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit a Blacksmithing and a Mining trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.
 
 ## v0.11.0

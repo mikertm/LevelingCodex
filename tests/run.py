@@ -57,7 +57,7 @@ PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
-         "craftScrolled", "craftRowBackoff", "craftOnHide", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
+         "craftScrolled", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
 CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled"]
 
 PERSISTED_DB = """

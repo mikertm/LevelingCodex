@@ -173,3 +173,111 @@ end
 function ns.fadeAccent(tex, orient, a1, a2)
   ns.fade(tex, orient, C.accent[1], C.accent[2], C.accent[3], a1, a2)
 end
+
+-- Cards beside a game window (talent, crafting) ---------------------------------
+
+-- Screen-space edges of a frame (nil where the client won't say).
+local function screenEdges(f)
+  local function get(m)
+    if not f[m] then return nil end
+    local ok, v = pcall(f[m], f)
+    return (ok and type(v) == "number") and v or nil
+  end
+  local sc = get("GetEffectiveScale") or 1
+  local t, b, l, r = get("GetTop"), get("GetBottom"), get("GetLeft"), get("GetRight")
+  return t and t * sc, b and b * sc, l and l * sc, r and r * sc
+end
+
+local function shownFrame(f)
+  if not f.IsVisible then return false end
+  local ok, v = pcall(f.IsVisible, f)
+  return ok and v
+end
+
+-- Ours: a LevelingCodex* frame or anything inside one.
+local function oursOrInside(f)
+  for _ = 1, 8 do
+    if not f then return false end
+    local ok, n = pcall(f.GetName, f)
+    if ok and type(n) == "string" and n:find("^LevelingCodex") then return true end
+    local pok, p = pcall(f.GetParent, f)
+    f = pok and p or nil
+  end
+  return false
+end
+
+-- How far bars hanging off the window's top and bottom edges reach past it (Forever puts its
+-- controller hints right under the crafting window). Walks every frame, so it runs when the
+-- window opens and again 1 and 3 s later (bars can come a moment after the window).
+local function scanEdges(root, state)
+  state.edgeUp, state.edgeDown = 0, 0
+  local top, bottom, left, right = screenEdges(root)
+  if not (top and bottom and EnumerateFrames) then return end
+  local bars = {}
+  local ok, f = pcall(EnumerateFrames)
+  local budget = 8000
+  while ok and f and budget > 0 do
+    budget = budget - 1
+    if f ~= root and shownFrame(f) then
+      local t, b, l, r = screenEdges(f)
+      -- bar-sized and near the window's top or bottom edge (two bars deep at most)
+      if t and b and t > b and t - b < 200 and (t <= bottom + 212 or b >= top - 212) then
+        bars[#bars + 1] = { t, b, l, r, f }
+      end
+    end
+    ok, f = pcall(EnumerateFrames, f)
+  end
+  local up, down = top, bottom
+  for _ = 1, 2 do -- twice: a bar under a bar
+    for _, x in ipairs(bars) do
+      local t, b, l, r = x[1], x[2], x[3], x[4]
+      if not (l and r and left and right) or (r > left + 20 and l < right - 20) then
+        local below = t <= down + 12 and t >= down - 40 and b < down
+        local above = b >= up - 12 and b <= up + 40 and t > up
+        if (below or above) and not oursOrInside(x[5]) then
+          if below then down = b end
+          if above then up = t end
+        end
+      end
+    end
+  end
+  state.edgeUp, state.edgeDown = up - top, bottom - down
+end
+
+local RESCAN = { 1, 2 } -- seconds to the next look after each scan
+
+-- True when the next look for bars around the window is due (callers that only redraw on change
+-- call ns.placeByWindow again then).
+function ns.windowEdgesDue(state)
+  return state.edgeRoot ~= nil and (GetTime and GetTime() or 0) >= (state.edgeNext or 0)
+end
+
+-- Put card h above the window when there's room, else below it, else inside its top edge,
+-- clear of any bar hanging off the window. state: the caller's table for this window (set
+-- state.edgeRoot = nil when the window closes, so the next open looks again).
+function ns.placeByWindow(h, root, state)
+  local now = GetTime and GetTime() or 0
+  if state.edgeRoot ~= root then state.edgeRoot, state.edgeScans, state.edgeNext = root, 0, 0 end
+  if now >= (state.edgeNext or 0) then
+    pcall(scanEdges, root, state)
+    state.edgeScans = (state.edgeScans or 0) + 1
+    state.edgeNext = RESCAN[state.edgeScans] and now + RESCAN[state.edgeScans] or math.huge
+  end
+  h:ClearAllPoints()
+  local top, bottom = screenEdges(root)
+  local screen = screenEdges(UIParent)
+  local hs = select(2, pcall(h.GetEffectiveScale, h))
+  hs = type(hs) == "number" and hs > 0 and hs or 1
+  local up, down = state.edgeUp or 0, state.edgeDown or 0
+  local need = ((h:GetHeight() or 100) + 12) * hs
+  local where = "above"
+  if top and screen and top + up + need > screen then
+    where = (bottom and bottom - down - need > 0) and "below" or "inside"
+  end
+  local ok
+  if where == "above" then ok = pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6 + up / hs)
+  elseif where == "below" then ok = pcall(h.SetPoint, h, "TOP", root, "BOTTOM", 0, -6 - down / hs)
+  else ok = pcall(h.SetPoint, h, "TOP", root, "TOP", 0, -44) end
+  if not ok then h:ClearAllPoints(); h:SetPoint("TOP", UIParent, "TOP", 0, -80); where = "screen" end
+  h.where = where
+end

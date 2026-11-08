@@ -542,36 +542,11 @@ local function paintHint(h)
   h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
 end
 
--- Screen-space top/bottom of a frame (nil if the client won't say).
-local function edgeOf(f, method)
-  local ok, v = pcall(f[method], f)
-  local sok, sc = pcall(f.GetEffectiveScale, f)
-  if ok and type(v) == "number" and sok and type(sc) == "number" then return v * sc end
-end
-
--- Above the talent window when there's room, below it when not (a window near the top of the
--- screen pushed the card off screen), else inside its top edge.
-local function placeHint(h, root)
-  h:ClearAllPoints()
-  local top, bottom = edgeOf(root, "GetTop"), edgeOf(root, "GetBottom")
-  local screen = edgeOf(UIParent, "GetTop")
-  local need = ((h:GetHeight() or 62) + 12) * (select(2, pcall(h.GetEffectiveScale, h)) or 1)
-  local where = "above"
-  if top and screen and top + need > screen then
-    where = (bottom and bottom - need > 0) and "below" or "inside"
-  end
-  local ok
-  if where == "above" then ok = pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6)
-  elseif where == "below" then ok = pcall(h.SetPoint, h, "TOP", root, "BOTTOM", 0, -6)
-  else ok = pcall(h.SetPoint, h, "TOP", root, "TOP", 0, -44) end
-  if not ok then h:ClearAllPoints(); h:SetPoint("TOP", UIParent, "TOP", 0, -80); where = "screen" end
-  h.where = where
-end
-
 hideGuide = function()
   if guide.trace then guide.trace:Hide() end
   if guide.hint then guide.hint:Hide() end
   guide.open = false
+  guide.edgeRoot = nil -- look for bars around the window again on the next open
 end
 
 -- Runs every 0.25 s. Cheap once the talent is traced: one name check on the cached button.
@@ -627,7 +602,11 @@ local function talentGuideTick()
       if guide.traced then dirty = true end
     end
   end
-  if not dirty then return end
+  if not dirty then
+    -- a bar may hang off the window a moment after it opens: place the card again when due
+    if guide.hint and guide.hint:IsShown() and ns.windowEdgesDue(guide) then ns.placeByWindow(guide.hint, root, guide) end
+    return
+  end
 
   guide.trace = guide.trace or makeTrace()
   guide.hint = guide.hint or makeHint()
@@ -645,7 +624,7 @@ local function talentGuideTick()
     if h2 then nexts[#nexts + 1] = l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max end
   end
   local nextText = #nexts > 0 and ("Then  " .. table.concat(nexts, "   ")) or ""
-  placeHint(h, root)
+  ns.placeByWindow(h, root, guide)
   h:Show()
 
   -- trace the button

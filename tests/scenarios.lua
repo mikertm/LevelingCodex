@@ -1221,6 +1221,21 @@ function S.talentHintOnScreen()
     talent.root:Hide()
     MOCK.advance(0.3)
   end
+  -- a bar hanging under the window (Forever's controller hints): the card goes below the bar
+  if EnumerateFrames then
+    local bar = CreateFrame("Frame", nil, UIParent); bar:SetSize(600, 62)
+    bar._top, bar._bottom = 202, 140
+    talent.root._top, talent.root._bottom = 1075, 200
+    talent.root:Show()
+    MOCK.advance(0.6)
+    local hint = _G.LevelingCodexTalentHint
+    local _, rel, _, _, y = hint:GetPoint(1)
+    check(hint.where == "below" and rel == talent.root and y and y <= -66,
+      "talent card below the bar (" .. tostring(hint.where) .. ", offset " .. tostring(y) .. ")")
+    talent.root:Hide()
+    bar:Hide()
+    MOCK.advance(0.3)
+  end
   talent.root._top, talent.root._bottom = nil, nil
 end
 
@@ -1727,6 +1742,24 @@ function S.craftRowBackoff()
   for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
   MOCK.trade.offset = 0
   MOCK.trade.layout()
+end
+
+-- Reported in game: with the crafting window near the top of the screen the card went below it,
+-- over the controller hint bar the game hangs under the window. Bars touching the window's edge
+-- count as part of the window.
+function S.craftHintClearsBar()
+  if not craftReady() or not EnumerateFrames then return end
+  TradeSkillFrame._top, TradeSkillFrame._bottom = 1075, 560
+  local bar = CreateFrame("Frame", nil, UIParent); bar:SetSize(600, 62)
+  bar._top, bar._bottom = 562, 500
+  openCraft()
+  local h = LevelingCodexCraftHint
+  local _, rel, _, _, y = h:GetPoint(1)
+  check(h.where == "below" and rel == TradeSkillFrame and y and y <= -66,
+    "card below the bar under the window (" .. tostring(h.where) .. ", offset " .. tostring(y) .. ")")
+  closeCraft()
+  bar:Hide()
+  TradeSkillFrame._top, TradeSkillFrame._bottom = nil, nil
 end
 
 -- The crafting window closed by its own close button (no event yet): the guide goes at once.

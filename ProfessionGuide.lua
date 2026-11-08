@@ -278,35 +278,12 @@ local function paint()
   guide.theme = ns.themeVersion
 end
 
-local function edgeOf(f, method)
-  local ok, v = pcall(f[method], f)
-  local sok, sc = pcall(f.GetEffectiveScale, f)
-  if ok and type(v) == "number" and sok and type(sc) == "number" then return v * sc end
-end
-
--- Above the crafting window when there's room, else below it, else inside its top edge.
-local function placeHint(h, root)
-  h:ClearAllPoints()
-  local top, bottom = edgeOf(root, "GetTop"), edgeOf(root, "GetBottom")
-  local screen = edgeOf(UIParent, "GetTop")
-  local need = ((h:GetHeight() or 104) + 12) * (select(2, pcall(h.GetEffectiveScale, h)) or 1)
-  local where = "above"
-  if top and screen and top + need > screen then
-    where = (bottom and bottom - need > 0) and "below" or "inside"
-  end
-  local ok
-  if where == "above" then ok = pcall(h.SetPoint, h, "BOTTOM", root, "TOP", 0, 6)
-  elseif where == "below" then ok = pcall(h.SetPoint, h, "TOP", root, "BOTTOM", 0, -6)
-  else ok = pcall(h.SetPoint, h, "TOP", root, "TOP", 0, -44) end
-  if not ok then h:ClearAllPoints(); h:SetPoint("TOP", UIParent, "TOP", 0, -80); where = "screen" end
-  h.where = where
-end
-
 local function hideGuide()
   if guide.trace then guide.trace:Hide() end
   if guide.hint then guide.hint:Hide() end
   guide.open, guide.row, guide.pick, guide.how = false, nil, nil, nil
   guide.nextRow, guide.rowEvery = 0, nil
+  guide.edgeRoot = nil -- look for bars around the window again on the next open
 end
 
 -- Hide the outline and card as soon as the crafting window closes (the ticker is a fallback).
@@ -444,7 +421,7 @@ local function tick()
     end
   end
   guide.pick = pick and pick.name
-  placeHint(h, root)
+  ns.placeByWindow(h, root, guide)
   h:Show()
 end
 
