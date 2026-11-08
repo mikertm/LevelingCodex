@@ -272,7 +272,7 @@ local function checkSkills()
         ns.showCard(P.name .. " " .. new, tier and (tier.name .. " " .. P.name) or P.name, rows, function()
           if ns.profTabShow then ns.profTabShow(key) end
           ns.openTab("professions")
-        end)
+        end, { tab = "professions", key = key })
         if not db.quiet then ns.say(P.name .. " " .. new .. ": " .. ns.plain(rows[1][3])) end
       end
     end

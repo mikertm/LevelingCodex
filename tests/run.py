@@ -55,6 +55,7 @@ PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "p
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
 PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
+PROF_BANNER = ["login", "bannerOpensTarget"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
        "padBackupCombat", "padCopyBox"]
@@ -457,6 +458,7 @@ def main():
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
         for cls in ("WARRIOR", "MAGE"):
             runs.append(("%s/%s/pad" % (cls, variant), cls, minimal, PAD))
+        runs.append(("WARRIOR/%s/banner-target" % variant, "WARRIOR", minimal, PROF_BANNER))
         runs.append(("WARRIOR/%s/craft" % variant, "WARRIOR", minimal, CRAFT))
         if not minimal:
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))

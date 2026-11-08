@@ -11,6 +11,7 @@
 - Settings > Professions turns the crafting window guide and the skill-up cards on or off.
 - Fixed: **Show it** did nothing in Forever's crafting window. It now scrolls the list to the recipe and selects it.
 - Controller support: the Codex window works with Forever's controller navigation (D-pad, A, B, LB/RB to switch tabs, right stick to scroll), with its own navigation as a backup (Settings > Controller). On the controller the crafting card selects the guide's recipe as the crafting window opens, so there's nothing to press.
+- Opening the Codex within a minute of a level-up banner or a skill-up card opens what it was about (that level, or the Professions tab on that profession).
 - New look for the minimap button: the Level 60 badge instead of the brown book many addons use, and it now starts on the right side of the minimap instead of the lower left, where most addon buttons pile up (drag it anywhere as before). The Codex is also listed in the addons button under the clock.
 - Fixed: the card beside the crafting and talent windows covered the controller hints the game shows under a window near the top of the screen. It now goes below them.
 - The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit a Blacksmithing and a Mining trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.

@@ -1746,6 +1746,25 @@ function S.profLevelTier()
   MOCK.advance(10)
 end
 
+-- Opening the Codex within a minute of a banner opens what it was about.
+function S.bannerOpensTarget()
+  if not D() then return end
+  openAt(30, "Settings"); win():Hide()          -- last tab: Settings
+  MOCK.setSkill("Blacksmithing", 94, 150); MOCK.advance(1.2)
+  MOCK.setSkill("Blacksmithing", 95, 150); MOCK.advance(1.2)   -- skill-up card
+  slash("")
+  check(MOCK.textUnder(win()):find("Blacksmithing 95 / 150"), "opens on the profession the card was about")
+  win():Hide()
+  slash("")
+  check(MOCK.textUnder(win()):find("Blacksmithing 95 / 150"), "used once: reopening keeps the tab you were on")
+  click(win(), "Settings"); win():Hide()
+  MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
+  MOCK.advance(61)
+  slash("")
+  check(MOCK.textUnder(win()):find("Minimap button"), "after a minute it opens as usual")
+  win():Hide()
+end
+
 ----------------------------------------------------------------------------
 -- Crafting window mock: TradeSkillFrame with 8 visible rows TradeSkillSkill1..8 showing the
 -- recipes from `offset`. Row text carries a count and orange ones a colour code, like the game.

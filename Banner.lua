@@ -369,14 +369,17 @@ function ns.showToast(level, force, test, waited)
   present("New at Level " .. level, ns.D.spec .. " " .. ns.CLASS_NAME, unlocksAt(level), test, nil,
     test and "TEST LEVEL-UP  -  drag to move  -  change its size in Settings  -  right-click to close"
     or "Click for the full guide  -  right-click to dismiss")
+  if not test then ns.lastBanner = { tab = "level", level = level, at = GetTime() } end
 end
 
 -- Any other card in the banner's look, shown right away (profession skill-ups): rows of
--- { icon, label, text }; left-click runs onClick (default: open the Codex).
-function ns.showCard(title, sub, rows, onClick)
+-- { icon, label, text }; left-click runs onClick (default: open the Codex). target { tab, key }: what
+-- opening the Codex within a minute opens (ns.lastBanner, read by ns.toggleWindow).
+function ns.showCard(title, sub, rows, onClick, target)
   if not toast then makeToast() end
   if toast.unlocked or toast.testing then return end
   present(title, sub, rows, false, onClick, "Click for the guide  -  right-click to dismiss")
+  if target then ns.lastBanner = { tab = target.tab, key = target.key, at = GetTime() } end
 end
 
 present = function(title, sub, rows, test, onClick, hint)

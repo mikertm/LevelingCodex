@@ -1535,7 +1535,16 @@ function ns.toggleWindow()
     return
   end
   if not frame then makeFrame() end
-  if frame:IsShown() then frame:Hide() else frame:Show() end
+  if frame:IsShown() then frame:Hide(); return end
+  -- opened within a minute of a banner: open what it was about (once)
+  local b = ns.lastBanner
+  ns.lastBanner = nil
+  if b and GetTime() - b.at <= 60 and renderers[b.tab] then
+    activeTab = b.tab
+    if b.level then viewLevel = b.level end
+    if b.key and ns.profTabShow then ns.profTabShow(b.key) end
+  end
+  frame:Show()
 end
 
 -- Theme change: rebuild the window (and drop the banner) in the new colours.
@@ -1554,6 +1563,7 @@ end
 
 function ns.openTab(tab)
   if not ns.D then return end
+  ns.lastBanner = nil -- a banner click (or any direct opening) has used it
   if not frame then makeFrame() end
   activeTab = tab
   if frame:IsShown() then refresh() else frame:Show() end
