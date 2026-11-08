@@ -9,6 +9,7 @@
     python tools/gamedata.py packet CLASS       # everything about one class's guide next to the game, for a manual review
     python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
     python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
+    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining recipes: colours, reagents, icon, plan
 
 Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
 The tables are cached in tools/.cache/<build>/ (not committed). The reference built from them,
@@ -40,9 +41,14 @@ TABLES = [
     "TraitNodeGroupXTraitNode", "TraitNodeGroupXTraitCond", "TraitDefinitionEffectPoints", "Curve", "CurvePoint",
     "SpellName", "Spell", "SpellLevels", "SpellMisc", "SpellEffect", "SpellDuration", "SpellRadius",
     "SpellAuraOptions", "SpellCooldowns", "SpellPower", "ManifestInterfaceData", "SpellShapeshift", "SpellCategories",
+    # professions: reagents, items, the plans that teach recipes, recipe categories
+    "SpellReagents", "ItemSparse", "Item", "ItemEffect", "ItemXItemEffect", "TradeSkillCategory",
 ]
 
-CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
+# Professions with a guide (ProfessionData.lua): name -> skill line.
+PROFESSIONS = {"Blacksmithing": 164, "Mining": 186}
+
+CLASSES =["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
 WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
 # Abilities every character has without a trainer.
 INNATE = {"Attack", "Shoot", "Auto Shot", "Throw"}
@@ -466,6 +472,63 @@ def build_reference(build):
                     r["shares_cooldown"] = others
         out["classes"][cls] = {"tabs": tabs, "hidden": hidden, "talents": dict(sorted(talents.items())),
                                "spells": dict(sorted(spells.items())), "pet": dict(sorted(pets.items()))}
+    out["professions"] = build_professions(T, S)
+    return out
+
+
+def build_professions(T, S):
+    """Every recipe of each guided profession: colours, reagents, what it makes, its icon and plan.
+
+    SkillLineAbility: TrivialSkillLineRankLow = turns yellow, TrivialSkillLineRankHigh = turns grey
+    (green starts halfway). The skill a trainer teaches a recipe at is server-side, not in here."""
+    item_name = {r["ID"]: r["Display_lang"] for r in T.ItemSparse}
+    plan_skill = {r["ID"]: int(r["RequiredSkillRank"] or 0) for r in T.ItemSparse}
+    item_icon = {r["ID"]: S.icons.get(r["IconFileDataID"]) for r in T.Item}
+    reag = {r["SpellID"]: r for r in T.SpellReagents}
+    cats = {r["ID"]: r["Name_lang"] for r in T.TradeSkillCategory}
+    makes, learns = {}, collections.defaultdict(list)
+    for sid, effs in S.eff.items():
+        for e in effs.values():
+            if e["Effect"] == "24" and sid not in makes:
+                makes[sid] = (e["EffectItemType"], int(round(float(e["EffectBasePointsF"] or 1))) or 1)
+            elif e["Effect"] == "36":
+                learns[sid].append(e["EffectTriggerSpell"])
+    effect = {r["ID"]: r["SpellID"] for r in T.ItemEffect}
+    plans = collections.defaultdict(list)  # recipe spell -> plan items
+    for r in T.ItemXItemEffect:
+        for taught in learns.get(effect.get(r["ItemEffectID"]), []):
+            plans[taught].append(r["ItemID"])
+    out = {}
+    for prof, line in PROFESSIONS.items():
+        rows = sorted((r for r in T.SkillLineAbility if r["SkillLine"] == str(line)
+                       and int(r["TrivialSkillLineRankHigh"] or 0) > 0), key=lambda r: int(r["Spell"]))
+        recipes, items = {}, {}
+        for r in rows:
+            sid = r["Spell"]
+            name = S.name.get(sid)
+            if not name or name in recipes:
+                continue  # a name clash keeps the lowest spell ID
+            y, g = int(r["TrivialSkillLineRankLow"] or 0), int(r["TrivialSkillLineRankHigh"])
+            mats = []
+            rg = reag.get(sid)
+            for k in range(8):
+                if rg and rg["Reagent_%d" % k] not in ("", "0"):
+                    it = rg["Reagent_%d" % k]
+                    mats.append([item_name.get(it, "item %s" % it), int(rg["ReagentCount_%d" % k])])
+                    items[mats[-1][0]] = item_icon.get(it)
+            made = makes.get(sid)
+            rec = {"spell": int(sid), "yellow": y, "green": (y + g) // 2, "grey": g, "mats": mats,
+                   "makes": [item_name.get(made[0], "item %s" % made[0]), made[1]] if made else None,
+                   "icon": (item_icon.get(made[0]) if made else None) or S.icon(sid),
+                   "category": cats.get(r["TradeSkillCategoryID"], "")}
+            if made:
+                items[rec["makes"][0]] = item_icon.get(made[0])
+            for p in sorted(plans.get(sid, []), key=int):
+                if p in item_name:
+                    rec["plan"] = {"item": item_name[p], "skill": plan_skill.get(p, 0)}
+                    break
+            recipes[name] = rec
+        out[prof] = {"skillLine": line, "recipes": dict(sorted(recipes.items())), "items": dict(sorted(items.items()))}
     return out
 
 
@@ -528,7 +591,41 @@ def diff(old, new):
             lines.extend(out)
     if len(lines) == 1:
         lines.append("no class changes")
+    for prof in PROFESSIONS:
+        a = ((old.get("professions") or {}).get(prof) or {}).get("recipes", {})
+        b = ((new.get("professions") or {}).get(prof) or {}).get("recipes", {})
+        out = []
+        if not a and b:
+            out.append("  first profession data: %d recipes" % len(b))
+        else:
+            for n in sorted(set(a) - set(b)):
+                out.append("  recipe removed: %s" % n)
+            for n in sorted(set(b) - set(a)):
+                out.append("  recipe new: %s (yellow %d, grey %d)" % (n, b[n]["yellow"], b[n]["grey"]))
+            for n in sorted(set(a) & set(b)):
+                for k in ("yellow", "grey", "mats", "makes"):
+                    if a[n].get(k) != b[n].get(k):
+                        out.append("  recipe %s %s: %s -> %s" % (n, k, a[n].get(k), b[n].get(k)))
+        if out:
+            lines.append(prof.upper())
+            lines.extend(out)
     return "\n".join(lines)
+
+
+def recipe_list(ref, prof, name=None):
+    """One line per recipe of a profession, by the skill it turns yellow at."""
+    P = (ref.get("professions") or {}).get(prof)
+    if not P:
+        return "no profession '%s' in the reference (have: %s)" % (prof, ", ".join(ref.get("professions") or {}))
+    out = []
+    for n, r in sorted(P["recipes"].items(), key=lambda kv: (kv[1]["yellow"], kv[1]["grey"], kv[0])):
+        if name and name.lower() not in n.lower():
+            continue
+        mats = ", ".join("%d %s" % (c, it) for it, c in r["mats"])
+        plan = (" plan: %s (%d)" % (r["plan"]["item"], r["plan"]["skill"])) if r.get("plan") else ""
+        out.append("y%-3d g%-3d gr%-3d %-34s [%s]  spell %d  icon %s%s" % (r["yellow"], r["green"], r["grey"], n, mats,
+                   r["spell"], r.get("icon"), plan))
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -909,7 +1006,7 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet"])
+    ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet", "recipes"])
     ap.add_argument("args", nargs="*")
     ap.add_argument("--build")
     ap.add_argument("--report", help="update: also write a markdown report (game changes + audit) to this file")
@@ -943,6 +1040,13 @@ def main():
     ref = load_reference()
     if a.cmd == "audit":
         return report(audit(load_data(), ref, a.only), a.verbose)
+    if a.cmd == "recipes":
+        names = {p.lower(): p for p in PROFESSIONS}
+        prof = names.get((a.args[0] if a.args else "").lower())
+        if not prof:
+            sys.exit("name a profession: " + ", ".join(PROFESSIONS))
+        print(recipe_list(ref, prof, a.args[1] if len(a.args) > 1 else None))
+        return 0
     cls = (a.args[0] if a.args else a.only or "").upper()
     if cls not in CLASSES:
         sys.exit("name a class: " + ", ".join(CLASSES))

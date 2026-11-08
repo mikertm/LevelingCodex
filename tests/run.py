@@ -240,6 +240,16 @@ def game_checks():
     tag = "game %s" % ref.get("build")
     errors = ["%s %s: %s" % (tag, c, m) for c, lvl, m in res if lvl == "error"]
     warnings = ["%s %s: %s" % (tag, c, m) for c, lvl, m in res if lvl == "warn"]
+    # the profession part of the reference: a few recipes whose colours and reagents are known
+    profs = ref.get("professions") or {}
+    want = [("Blacksmithing", "Rough Sharpening Stone", 15, 55, [["Rough Stone", 1]]),
+            ("Blacksmithing", "Runed Copper Belt", 85, 125, [["Copper Bar", 10]]),
+            ("Mining", "Smelt Gold", 170, 185, [["Gold Ore", 1]]),
+            ("Mining", "Smelt Bronze", 65, 115, [["Copper Bar", 1], ["Tin Bar", 1]])]
+    for prof, name, y, g, mats in want:
+        r = (profs.get(prof) or {}).get("recipes", {}).get(name)
+        if not r or (r["yellow"], r["grey"], r["mats"]) != (y, g, mats):
+            errors.append("%s reference: %s %s should be yellow %d grey %d %s, is %s" % (tag, prof, name, y, g, mats, r))
     return errors, warnings
 
 
