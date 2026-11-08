@@ -284,6 +284,7 @@ local function hideGuide()
   guide.open, guide.row, guide.pick, guide.how = false, nil, nil, nil
   guide.nextRow, guide.rowEvery = 0, nil
   guide.edgeRoot = nil -- look for bars around the window again on the next open
+  guide.autoDone = nil
 end
 
 -- Hide the outline and card as soon as the crafting window closes (the ticker is a fallback).
@@ -528,6 +529,12 @@ local function tick()
         guide.row = findRow(root, pick.name)
         guide.rowEvery = (not guide.row) and math.min((guide.rowEvery or 0.25) * 2, 2) or nil
         guide.nextRow = now + (guide.rowEvery or 0)
+      end
+      -- on the controller, Show it runs by itself once per opening (nothing to reach); after that
+      -- the list is the player's to scroll
+      if not guide.autoDone then
+        guide.autoDone = true
+        if not guide.row and ns.gamepad and ns.gamepad.inUse() then selectRecipe(found, pick, root) end
       end
       local row = guide.row
       if row and pcall(function()

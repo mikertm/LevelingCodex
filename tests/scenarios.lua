@@ -2063,6 +2063,33 @@ function S.craftHintClearsBar()
   TradeSkillFrame._top, TradeSkillFrame._bottom = nil, nil
 end
 
+-- On the controller the recipe is selected and scrolled into view once per opening.
+function S.craftPadAutoSelect()
+  if not craftReady() or not GamepadMode then return end
+  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  MOCK.trade.offset, MOCK.trade.selected = 0, 0
+  MOCK.trade.layout()
+  MOCK.gamepad = true
+  openCraft()
+  check(MOCK.trade.selected > 0 and LevelingCodexCraftTrace:IsShown(), "selected and outlined on opening")
+  MOCK.trade.offset = 0; MOCK.trade.layout()   -- the player scrolls away
+  MOCK.advance(3)
+  check(not LevelingCodexCraftTrace:IsShown() and MOCK.trade.offset == 0, "not pulled back after scrolling away")
+  closeCraft()
+  MOCK.trade.selected = 0
+  openCraft()
+  check(MOCK.trade.selected > 0, "again on the next opening")
+  closeCraft()
+  MOCK.gamepad = nil
+  MOCK.trade.offset, MOCK.trade.selected = 0, 0
+  MOCK.trade.layout()
+  openCraft()
+  check(MOCK.trade.selected == 0, "mouse: nothing automatic")
+  closeCraft()
+  for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
+  MOCK.trade.layout()
+end
+
 -- The crafting window closed by its own close button (no event yet): the guide goes at once.
 function S.craftOnHide()
   if not craftReady() then return end
