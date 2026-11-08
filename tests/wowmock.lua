@@ -46,9 +46,12 @@ MOCK.knownEvents = {
   PLAYER_REGEN_ENABLED = true, PLAYER_REGEN_DISABLED = true, ADDON_LOADED = true, VARIABLES_LOADED = true,
   -- optional: the minimal client doesn't know these (MOCK.setup removes them)
   PLAYER_ALIVE = true, PLAYER_UNGHOST = true, MINIMAP_UPDATE_TRACKING = true, LEARNED_SPELL_IN_TAB = true,
-  SPELLS_CHANGED = true,
+  SPELLS_CHANGED = true, SKILL_LINES_CHANGED = true, CHAT_MSG_SKILL = true, TRADE_SKILL_SHOW = true,
+  TRADE_SKILL_UPDATE = true, TRADE_SKILL_CLOSE = true, TRAINER_SHOW = true, TRAINER_CLOSED = true,
 }
-MOCK.optionalEvents = { "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED" }
+MOCK.optionalEvents = { "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED",
+  "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
+  "TRAINER_CLOSED" }
 
 ----------------------------------------------------------------------------
 -- Widgets
@@ -644,6 +647,39 @@ function IsSpellKnown(id)
   return false
 end
 
+-- Professions. MOCK.skills[i] = { name, rank, max }. Retail-style GetProfessions/GetProfessionInfo
+-- (gone in the minimal client) and the classic skill list (always there, with a header row).
+MOCK.skills = {}
+MOCK.bags = {}       -- item name -> count (GetItemCount)
+MOCK.faction, MOCK.race = nil, nil
+local SECONDARY = { Cooking = true, Fishing = true, ["First Aid"] = true }
+function MOCK.setSkill(name, rank, max)
+  local s
+  for _, x in ipairs(MOCK.skills) do if x.name == name then s = x end end
+  if not s then s = { name = name }; MOCK.skills[#MOCK.skills + 1] = s end
+  s.rank, s.max = rank, max
+  MOCK.event("SKILL_LINES_CHANGED")
+  MOCK.event("CHAT_MSG_SKILL", "Your skill in " .. name .. " has increased to " .. rank .. ".")
+end
+function GetProfessions()
+  local primary = {}
+  for i, s in ipairs(MOCK.skills) do if not SECONDARY[s.name] then primary[#primary + 1] = i end end
+  return primary[1], primary[2], nil, nil, nil
+end
+function GetProfessionInfo(i)
+  local s = MOCK.skills[i]
+  if s then return s.name, 136241, s.rank, s.max, 0, 0, 0, 0 end
+end
+function GetNumSkillLines() return #MOCK.skills + 1 end
+function GetSkillLineInfo(i)
+  if i == 1 then return "Professions", true, true, 0, 0, 0, 0 end
+  local s = MOCK.skills[i - 1]
+  if s then return s.name, false, false, s.rank, 0, 0, s.max, true end
+end
+function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
+function UnitRace() local r = MOCK.race or "Human"; return r, r end
+function GetItemCount(name) return MOCK.bags[name] or 0 end
+
 function hooksecurefunc(a, b, c)
   local tbl, name, fn = _G, a, b
   if type(a) == "table" then tbl, name, fn = a, b, c end
@@ -833,7 +869,8 @@ end
 -- Remove the APIs a careful addon must not rely on.
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
-  "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost" }
+  "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
+  "GetProfessions", "GetProfessionInfo", "GetItemCount" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

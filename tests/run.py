@@ -49,6 +49,10 @@ TRACK = ["trackKnown:herbs,minerals", "login", "trackRestored", "trackLoadingScr
 TRACK_MULTI = ["trackKnown:herbs,minerals,multi", "login", "trackRestored", "trackLoadingScreen"]
 TRACK_KICK = ["trackKnown:herbsOn", "login", "trackKick", "trackLoadingScreen"]
 TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
+# Professions: skills read through GetProfessions or only the classic skill list, or none at all.
+PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug"]
+PROF_LINES = ["skills:BS;87;150,MI;140;225:skilllines", "login", "profDebug"]
+PROF_NONE = ["login", "profNone"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
@@ -361,6 +365,9 @@ def main():
         if not minimal:
             for cls in ("WARRIOR", "PRIEST", "DRUID"):
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
+        runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
+        runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
+        runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

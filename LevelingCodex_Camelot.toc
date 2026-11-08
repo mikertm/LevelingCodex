@@ -14,6 +14,7 @@ ProfessionData.lua
 Theme.lua
 Art.lua
 Guide.lua
+Professions.lua
 Macros.lua
 Banner.lua
 Window.lua

@@ -37,6 +37,7 @@ local function start()
   end
   ns.updateMini()
   ns.startTalentGuide()
+  ns.startProfessions()
 end
 
 local events = CreateFrame("Frame")
@@ -147,6 +148,7 @@ function ns.debugLines()
   if #used > 0 then out[#out + 1] = "art used: " .. table.concat(used, "; ") end
   for _, line in ipairs(ns.talentDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trackingDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet") ..
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..
     ", banner: " .. (ns.db().toastPos and "moved by you" or (ns.builtInSpotY and "in its spot" or "default spot"))

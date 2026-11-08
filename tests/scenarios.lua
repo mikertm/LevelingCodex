@@ -1281,3 +1281,38 @@ function S.talentBeforeLoginCheck()
   ToggleTalentFrame()
   MOCK.advance(0.5)
 end
+
+----------------------------------------------------------------------------
+-- Professions (ProfessionData.lua): skills, the Professions tab, skill-up cards, the crafting window
+----------------------------------------------------------------------------
+
+-- skills:BS;87;150,MI;140;225:professions[:Horde[:Skyborne]]  (the step parser splits on ":")
+-- api "skilllines": the client only has the classic skill list (no GetProfessions).
+function S.skills(list, api, faction, race)
+  MOCK.skillAPI = api or "professions"
+  if MOCK.skillAPI ~= "professions" then GetProfessions, GetProfessionInfo = nil, nil end
+  MOCK.faction, MOCK.race = faction, race
+  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism" }
+  for part in (list or ""):gmatch("[^,]+") do
+    local k, r, m = part:match("(%a+);(%d+);(%d+)")
+    MOCK.setSkill(names[k], tonumber(r), tonumber(m))
+  end
+end
+
+-- /codex debug reports each profession's skill and step.
+function S.profDebug()
+  if not D() then return end
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Blacksmithing 87/150, step 85%-100 Rough Bronze Leggings, about 13 more"), "BS step in debug")
+  check(chatHas("profession: Mining 140/225, step 125%-175"), "Mining step in debug")
+  local via = (GetProfessions and "professions") or "skill lines"
+  check(chatHas("profession skills read from: " .. via), "skills read from " .. via)
+end
+
+function S.profNone()
+  if not D() then return end
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
+end
