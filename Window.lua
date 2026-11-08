@@ -1234,6 +1234,10 @@ refresh = function()
 end
 ns.refresh = refresh
 
+function ns.refreshProfessionTab()
+  if frame and frame:IsShown() and activeTab == "professions" then refresh() end
+end
+
 -- LB/RB on a controller: the next or previous tab, wrapping around.
 local function cycleTab(delta)
   local i = 1

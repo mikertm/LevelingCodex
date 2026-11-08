@@ -663,6 +663,15 @@ function MOCK.setSkill(name, rank, max)
   MOCK.event("SKILL_LINES_CHANGED")
   MOCK.event("CHAT_MSG_SKILL", "Your skill in " .. name .. " has increased to " .. rank .. ".")
 end
+function MOCK.removeSkill(name)
+  for i, skill in ipairs(MOCK.skills) do
+    if skill.name == name then
+      table.remove(MOCK.skills, i)
+      MOCK.event("SKILL_LINES_CHANGED")
+      return
+    end
+  end
+end
 function GetProfessions()
   local primary = {}
   for i, s in ipairs(MOCK.skills) do if not SECONDARY[s.name] then primary[#primary + 1] = i end end

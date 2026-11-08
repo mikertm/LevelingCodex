@@ -53,7 +53,7 @@ TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 PROF = ["skills:BS;97;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme", "trainerReqs"]
 PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "profCollapsed"]
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
-PROF_NONE = ["login", "profNone", "tailorNone"]
+PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier", "tailorSkillUps", "enchantSkillUps"]
 # Enchanting: rods, Motes as Strange Dust, the disenchanting section and the bag scan.
 ENCHANT = ["skills:EN;150;225:professions", "login", "enchantDebug", "enchantTab", "enchantTabCases", "enchantBags"]
@@ -520,6 +520,8 @@ def main():
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
+        runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
+        runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))
@@ -531,6 +533,9 @@ def main():
         for cls in ("WARRIOR", "MAGE"):
             runs.append(("%s/%s/pad" % (cls, variant), cls, minimal, PAD))
         runs.append(("WARRIOR/%s/banner-target" % variant, "WARRIOR", minimal, PROF_BANNER))
+        for shortcut in ("slash", "click"):
+            runs.append(("WARRIOR/%s/banner-target-%s" % (variant, shortcut), "WARRIOR", minimal,
+                         ["login", "profRemovedBanner:" + shortcut]))
         runs.append(("WARRIOR/%s/craft" % variant, "WARRIOR", minimal, CRAFT))
         if not minimal:
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))

@@ -7,20 +7,25 @@ local _, ns = ...
 local C, plain = ns.C, ns.plain
 
 local shown        -- profession key on screen (nil = pick one you have)
+local pending      -- restore this selection if a temporary read failure clears
 local picked = {}  -- key -> { index = step clicked in the route, at = your skill then }
 
+local function choose(key)
+  shown, pending = key, nil
+end
 
--- The profession to show: the one picked, else the first you have, else Blacksmithing.
-local function current()
-  if shown and ns.P and ns.P[shown] then return shown end
-  for _, key in ipairs(ns.PROF_ORDER) do
-    if ns.profSkill(key) then return key end
+function ns.profTabSkillsChanged(snapshot)
+  for key, preview in pairs(picked) do
+    local reading = snapshot[key]
+    if reading and not (reading.hidden or reading.unavailable) and reading.rank ~= preview.at then
+      picked[key] = nil
+    end
   end
-  return ns.PROF_ORDER[1]
+  ns.refreshProfessionTab()
 end
 
 function ns.profTabShow(key)
-  if ns.P and ns.P[key] then shown = key end
+  if ns.profSkill(key) then choose(key) end
 end
 
 local function recipeColor(step, skill)
@@ -55,6 +60,7 @@ end
 local function viewStep(key, P, skill)
   local p = picked[key]
   if p and p.at == skill and P.steps[p.index] then return P.steps[p.index], p.index, true end
+  picked[key] = nil
   local s, i = ns.profStep(key, skill or 1)
   return s, i, false
 end
@@ -79,49 +85,65 @@ end
 local function renderer()
   local ui = ns.ui
   local W, T, box, icon, btn, rect, hit = ui.W, ui.T, ui.box, ui.icon, ui.btn, ui.rect, ui.hit
-  local key = current()
-  local P = ns.P and ns.P[key]
-  local y = ui.sectionTitle("Professions", 0, profNames() .. " 1-300 for WoW: Forever")
-  if not P then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
+  local y = ui.sectionTitle("Professions", 0, "Leveling guides for WoW: Forever")
+  local names = profNames()
+  if names == "" then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
-  -- switch
-  local x, n = 0, 0
-  for _, k in ipairs(ns.PROF_ORDER) do if ns.P[k] then n = n + 1 end end
-  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / math.max(n, 1)))  -- every button inside the content width
-  for _, k in ipairs(ns.PROF_ORDER) do
-    local Q = ns.P[k]
-    if Q then
-      btn(Q.name, x, y, bw, function() shown = k; ui.refresh() end, k == key, "Show the " .. Q.name .. " guide.")
-      x = x + bw + 6
+  local snapshot = ns.profSkillSnapshot()
+  local learned, hidden, unavailable = {}, false, false
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local reading = snapshot[key]
+    if reading then
+      if reading.rank then learned[#learned + 1] = key end
+      hidden = hidden or reading.hidden
+      unavailable = unavailable or reading.unavailable
     end
+  end
+
+  if pending then
+    local reading = snapshot[pending]
+    if reading and reading.rank then choose(pending)
+    elseif not (reading and (reading.hidden or reading.unavailable)) then pending = nil end
+  end
+  local selected = shown and snapshot[shown]
+  if not (selected and selected.rank) then
+    if not pending and selected and (selected.hidden or selected.unavailable) then pending = shown end
+    shown = learned[1]
+  end
+
+  if hidden then
+    y = y + T("Open the character window's Skills tab and expand Professions to show your learned guides.",
+      0, y, W, "body", C.dim) + 10
+  end
+  if unavailable then y = y + T("Profession skills are unavailable right now.", 0, y, W, "body", C.dim) + 10 end
+  if not shown then
+    if not (hidden or unavailable) then y = y + T("No supported professions learned.", 0, y, W, "body", C.dim) + 10 end
+    return y + T("Supported guides: " .. names .. ".", 0, y, W, "small", C.dim) + 10
+  end
+
+  local key = shown
+  local P = ns.P[key]
+  local x, n = 0, #learned
+  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / n))
+  for _, k in ipairs(learned) do
+    local name = ns.P[k].name
+    btn(name, x, y, bw, function() choose(k); ui.refresh() end, k == key, "Show the " .. name .. " guide.")
+    x = x + bw + 6
   end
   y = y + 34
 
-  local skill, cap, hidden = ns.profSkill(key)
+  local reading = snapshot[key]
+  local skill, cap = reading.rank, reading.cap
   local level = UnitLevel("player") or 1
 
   -- header card: your skill
   local top = y
   y = y + 14
   icon(P.icon, 16, y, 40, P.name, nil)
-  if skill then
-    T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
-    local tier = ns.profTier(key, skill, cap)
-    T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
-    y = y + 50
-  elseif hidden then
-    T(P.name .. ": skill not seen", 66, y + 2, W - 90, "head", C.ink)
-    y = y + 28
-    y = y + T("A heading in your skill list is closed, so the game doesn't list your skill. Open it in the " ..
-      "character window's Skills tab and this updates.", 66, y, W - 90, "small", C.inkSoft) + 10
-    y = math.max(y, top + 64)
-  else
-    T(P.name .. ": not learned", 66, y + 2, W - 90, "head", C.ink)
-    y = y + 28
-    y = y + T("Learn " .. P.name .. " from any " .. P.name .. " trainer (no level needed). The route below starts at 1.",
-      66, y, W - 90, "small", C.inkSoft) + 10
-    y = math.max(y, top + 64)
-  end
+  T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
+  local tier = ns.profTier(key, skill, cap)
+  T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
+  y = y + 50
   box(0, top, W, y - top, C.parch, C.edge)
   y = y + 12
 
