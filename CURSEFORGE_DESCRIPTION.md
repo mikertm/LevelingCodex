@@ -43,7 +43,7 @@ The whole Codex window works on the controller with Forever's own navigation: **
 ### Profession guides: Mining, Blacksmithing and Tailoring 1-300
 Built for WoW: Forever's reworked Blacksmithing and Tailoring, from the game's own recipe colours and reagents.
 - **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction.
-- **Crafting window guide**: open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make (in Tailoring the bolts first when you only have the cloth), with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
+- **Crafting window guide**: open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make (in Tailoring the bolts first when you only have the cloth), with a card showing how many more and how many you have materials for. It never touches the window itself: scroll the list as usual (mouse or controller) and the recipe is outlined when it comes into view.
 - **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein. Open the Codex within a minute of it and it opens on that profession.
 - Turn the crafting window guide or the skill-up cards off under Settings > Professions.
 
