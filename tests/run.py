@@ -53,6 +53,7 @@ TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme"]
 PROF_LINES = ["skills:BS;87;150,MI;140;225:skilllines", "login", "profDebug"]
 PROF_NONE = ["login", "profNone"]
+PROF_UPS = ["login", "profSkillUps"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
@@ -368,6 +369,8 @@ def main():
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
+        for cls in ("WARRIOR", "HUNTER"):
+            runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

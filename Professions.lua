@@ -184,10 +184,78 @@ end
 
 -- Skills seen this session (nothing is saved): the skill-up card compares against these.
 local last = {}
-ns.profLast = last
 
+-- What a skill-up from old to new brings, as card rows { icon, label, text }: the step you're now
+-- in (and any you jumped over), training that just opened, a cap you just hit, new veins.
+function ns.profCardRows(key, old, new, cap, level)
+  local rows = {}
+  local P = ns.P and ns.P[key]
+  if not (P and old and new and new > old) then return rows end
+  for _, s in ipairs(P.steps) do
+    if s.from > old and s.from <= new then
+      local now = new < s.to
+      if s.name then
+        local n = ns.craftsLeft(s, new)
+        rows[#rows + 1] = { s.icon, now and "NEW STEP" or "STEP PASSED",
+          s.name .. (now and n and ("  -  about " .. n .. " to " .. s.to) or ("  (" .. s.from .. "-" .. s.to .. ")")) }
+      else
+        local v = s.veins and ns.veinNamed(s.veins[1])
+        rows[#rows + 1] = { v and v.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
+      end
+    end
+  end
+  local trained, i = ns.profTier(key, new, cap)
+  local nextTier = trained and P.tiers[i + 1]
+  if nextTier and nextTier.skill > old and nextTier.skill <= new and (level or 1) >= nextTier.level then
+    rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name), ns.plain(nextTier.where) }
+  end
+  if nextTier and trained.cap > old and trained.cap <= new then
+    rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }
+  end
+  for _, v in ipairs(P.veins or {}) do
+    if v.skill > old and v.skill <= new then
+      rows[#rows + 1] = { v.icon, "NEW VEIN", v.name .. " (" .. v.skill .. ")" }
+    end
+  end
+  return rows
+end
+
+-- Compare every guided profession with the last reading; show a card when something changed.
+local function checkSkills()
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local P = ns.P and ns.P[key]
+    local new, cap = ns.profSkill(key)
+    local old = last[key]
+    last[key] = new
+    if P and new and old and new > old then
+      local rows = ns.profCardRows(key, old, new, cap, UnitLevel("player"))
+      local db = ns.db()
+      if #rows > 0 and not db.noProfCards then
+        ns.showCard(P.name .. " " .. new, "Profession guide", rows, function()
+          if ns.profTabShow then ns.profTabShow(key) end
+          ns.openTab("professions")
+        end)
+        if not db.quiet then ns.say(P.name .. " " .. new .. ": " .. ns.plain(rows[1][3])) end
+      end
+    end
+  end
+end
+
+local events
 function ns.startProfessions()
   for _, key in ipairs(ns.PROF_ORDER) do last[key] = ns.profSkill(key) end
+  if events then return end
+  events = CreateFrame("Frame")
+  local any = false
+  for _, ev in ipairs({ "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_UPDATE" }) do
+    if pcall(events.RegisterEvent, events, ev) then any = true end
+  end
+  events:SetScript("OnEvent", function()
+    local ok, err = pcall(checkSkills)
+    if not ok and not events.errored then events.errored = true; ns.say("profession guide error: " .. ns.plain(err)) end
+  end)
+  -- no skill events in this client: look once a second instead
+  if not any then ns.every(1, function() pcall(checkSkills) end) end
 end
 
 -- For /codex debug.

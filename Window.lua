@@ -1119,6 +1119,11 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
+  head("PROFESSIONS")
+  tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
+    "A card like the level-up one when your Mining or Blacksmithing reaches a new step of the guide, can train the next tier, or can mine a new vein.")
+  y = y + 12
+
   head("GATHERING")
   tick("Keep Find Herbs / Find Minerals on", not db.noAutoTrack, function()
     db.noAutoTrack = not db.noAutoTrack

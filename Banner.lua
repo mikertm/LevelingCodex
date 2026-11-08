@@ -287,7 +287,7 @@ local function makeToast()
       return
     end
     self.holding = nil; self.leave:Play()
-    if mouseButton ~= "RightButton" then ns.toggleWindow() end
+    if mouseButton ~= "RightButton" then (self.onClick or ns.toggleWindow)() end
   end)
   ns.placeToast()
 end
@@ -330,6 +330,8 @@ local function unlocksAt(level)
   return rows
 end
 
+local present -- fills and shows the banner (defined below showToast)
+
 local function layoutToast(rowsUsed)
   toast:SetHeight(94 + rowsUsed * 38 + 26)
   toast.hint:ClearAllPoints()
@@ -359,8 +361,20 @@ function ns.showToast(level, force, test, waited)
   end
   if not toast then makeToast() end
   if toast.unlocked then return end
+  present("New at Level " .. level, ns.D.spec .. " " .. ns.CLASS_NAME, unlocksAt(level), test, nil,
+    test and "TEST LEVEL-UP  -  drag to move  -  change its size in Settings  -  right-click to close"
+    or "Click for the full guide  -  right-click to dismiss")
+end
 
-  local rows = unlocksAt(level)
+-- Any other card in the banner's look, shown right away (profession skill-ups): rows of
+-- { icon, label, text }; left-click runs onClick (default: open the Codex).
+function ns.showCard(title, sub, rows, onClick)
+  if not toast then makeToast() end
+  if toast.unlocked or toast.testing then return end
+  present(title, sub, rows, false, onClick, "Click for the guide  -  right-click to dismiss")
+end
+
+present = function(title, sub, rows, test, onClick, hint)
   local n = math.min(#rows, MAX_ROWS)
   for i, row in ipairs(toast.rows) do
     local u = rows[i]
@@ -377,11 +391,11 @@ function ns.showToast(level, force, test, waited)
       row:Hide()
     end
   end
-  toast.title:SetText("New at Level " .. level)
-  toast.sub:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
+  toast.title:SetText(title)
+  toast.sub:SetText(sub)
   toast.testing = test or nil
-  toast.hint:SetText(test and "TEST LEVEL-UP  -  drag to move  -  change its size in Settings  -  right-click to close"
-    or "Click for the full guide  -  right-click to dismiss")
+  toast.onClick = onClick
+  toast.hint:SetText(hint)
   toast.hint:SetTextColor(rgba(test and C.gold or C.dim))
   toast.hint:Show()
   layoutToast(n)

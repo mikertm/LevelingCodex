@@ -258,7 +258,7 @@ function S.everyButton()
   end
   if win() then win():Hide() end
   -- clicking every toggle an odd number of times leaves things off: put the defaults back
-  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap", "noAutoTrack" }) do
+  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap", "noAutoTrack", "noProfCards", "noCraftGuide" }) do
     if LevelingCodexDB[k] then
       LevelingCodexDB[k] = nil
     end
@@ -1376,4 +1376,48 @@ function S.profTabAfterTheme()
   check(profText():find("Blacksmithing") or profText():find("Mining"), "Professions tab survives a theme rebuild")
   click(win(), "Settings"); click(win(), "Forever (teal)")
   win():Hide()
+end
+
+-- Skill-up cards: only when a step starts, a tier is due or a vein opens; one card for a jump.
+-- (1.2 s waits: the minimal client has no skill events, so its cards come from a 1 s poll.)
+function S.profSkillUps()
+  if not D() then return end
+  local function dismiss(t) MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+  MOCK.setSkill("Blacksmithing", 84, 150)       -- first reading this session: no card
+  MOCK.advance(1.2)
+  check(not (toast() and toast():IsShown()), "no card for the first reading")
+  MOCK.setSkill("Blacksmithing", 85, 150)       -- step boundary at 85
+  MOCK.advance(1.2)
+  local t = toast()
+  check(t and t:IsShown() and t.title:GetText() == "Blacksmithing 85", "card at a new step")
+  check(MOCK.textUnder(t):find("Rough Bronze Leggings"), "card names the next recipe")
+  dismiss(t)
+  MOCK.setSkill("Blacksmithing", 86, 150)       -- an ordinary point
+  MOCK.advance(1.2)
+  check(not t:IsShown(), "no card for an ordinary point")
+  MOCK.setSkill("Blacksmithing", 112, 150)      -- jumps over 100 and 112: one card, both steps
+  MOCK.advance(1.2)
+  local text = MOCK.textUnder(t)
+  check(t:IsShown() and text:find("Heavy Grinding Stone") and text:find("Rough Bronze Leggings"), "one card for two boundaries")
+  dismiss(t)
+  MOCK.level = 30
+  MOCK.setSkill("Blacksmithing", 125, 150)      -- Expert can be trained now
+  MOCK.advance(1.2)
+  check(t:IsShown() and MOCK.textUnder(t):find("TRAIN EXPERT"), "Expert card at 125")
+  MOCK.fire(t, "OnMouseUp", "LeftButton"); MOCK.advance(1.5)
+  check(win() and win():IsShown() and MOCK.textUnder(win()):find("Blacksmithing 125"), "click opens the Professions tab")
+  win():Hide()
+  MOCK.setSkill("Mining", 64, 75)               -- first Mining reading
+  MOCK.advance(1.2)
+  MOCK.setSkill("Mining", 65, 75)
+  MOCK.advance(1.2)
+  check(t:IsShown() and MOCK.textUnder(t):find("Tin Vein"), "new vein card")
+  dismiss(t)
+  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
+  check(not t:IsShown(), "no card for a profession the guide doesn't cover")
+  LevelingCodexDB.noProfCards = true
+  MOCK.setSkill("Blacksmithing", 140, 150); MOCK.advance(1.2)
+  check(not t:IsShown(), "cards off in Settings")
+  LevelingCodexDB.noProfCards = nil
 end
