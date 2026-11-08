@@ -2341,6 +2341,59 @@ function S.craftHintClearsBar()
   TradeSkillFrame._top, TradeSkillFrame._bottom = nil, nil
 end
 
+-- Tailoring at 150 (Earthen Vest takes 3 Bolts of Silk Cloth): with only the cloth, the bolt is
+-- outlined first; with bolts, the step's recipe again.
+local function tailorWindow(fillers)
+  local saved = { MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected }
+  MOCK.setSkill("Tailoring", 150, 225)
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.offset, MOCK.trade.selected = "Tailoring", 150, 225, 0, 0
+  MOCK.trade.recipes = { { "Bolt of Silk Cloth", "trivial", 11 }, { "Crimson Silk Vest", "optimal", 0 }, { "Earthen Vest", "medium", 0 } }
+  for i = 1, fillers or 0 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  MOCK.bags = { ["Silk Cloth"] = 46 }
+  MOCK.trade.layout()
+  return function()
+    MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected = unpack(saved)
+    MOCK.bags = {}
+    MOCK.trade.layout()
+  end
+end
+
+function S.craftTailoring()
+  if not craftReady() then return end
+  local restore = tailorWindow()
+  openCraft()
+  local text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Make Bolts of Silk Cloth first: your 46 Silk Cloth make 11.", 1, true), "bolts first with only the cloth")
+  local _, rel = LevelingCodexCraftTrace:GetPoint(1)
+  check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the bolt row is outlined (grey, but still the one to make)")
+  MOCK.bags["Bolt of Silk Cloth"] = 11; MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  _, rel = LevelingCodexCraftTrace:GetPoint(1)
+  check(text:find("Earthen Vest") and not text:find("first"), "with bolts: the step's recipe")
+  check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill3, "Earthen Vest outlined")
+  MOCK.bags = {}; MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Earthen Vest") and not text:find("first"), "no bolts, no cloth: the step's recipe")
+  MOCK.bags = { ["Silk Cloth"] = 46 }
+  table.remove(MOCK.trade.recipes, 1); MOCK.trade.layout(); MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Earthen Vest") and not text:find("first"), "bolt recipe not in the list: the step's recipe")
+  closeCraft()
+  restore()
+end
+
+-- On the controller the bolt is selected by itself on opening.
+function S.craftTailoringPad()
+  if not craftReady() or not GamepadMode then return end
+  local restore = tailorWindow(10)
+  MOCK.gamepad = true
+  openCraft()
+  check(MOCK.trade.selected == 11, "the bolt (index 11) selected on opening (" .. tostring(MOCK.trade.selected) .. ")")
+  closeCraft()
+  MOCK.gamepad = nil
+  restore()
+end
+
 -- On the controller the recipe is selected and scrolled into view once per opening.
 function S.craftPadAutoSelect()
   if not craftReady() or not GamepadMode then return end

@@ -1,4 +1,4 @@
--- ProfessionGuide.lua: in the crafting window (Blacksmithing, Smelting), outlines the recipe the
+-- ProfessionGuide.lua: in the crafting window (Blacksmithing, Smelting, Tailoring), outlines the recipe the
 -- guide says to make now and shows a card beside the window: how many more, how many you have
 -- materials for, the recipe's live colour, or where to learn it / what's next when it's grey.
 --
@@ -159,14 +159,35 @@ local function chanceAt(r, skill)
   return (r.grey - skill) / (r.grey - r.yellow)
 end
 
--- What to make in this window at this skill: the crafting step, or for Mining the step's smelt
+-- Bolts first: the step needs a part (a bolt) you have too few of for one craft, you have the cloth
+-- for one, and the part's recipe is in the window. Bags as they are here: a bolt counts as a bolt.
+local function partFirst(key, step)
+  if not GetItemCount then return nil end
+  local function count(item)
+    local ok, n = pcall(GetItemCount, item)
+    return (ok and tonumber(n)) or 0
+  end
+  for _, m in ipairs(step.mats or {}) do
+    local part = ns.profPart(key, m[1])
+    local src = part and part.mats and part.mats[1]
+    if src and count(m[1]) < m[2] and count(src[1]) >= src[2] and findRecipe(part.name) then
+      local have = count(src[1])
+      return { name = part.name, spell = part.spell, icon = part.icon, yellow = part.yellow, grey = part.grey,
+               learn = part.learn, mats = part.mats, from = step.from, to = step.to, partOf = step,
+               plural = part.plural or part.name, cloth = src[1], have = have, canMake = math.floor(have / src[2]) }
+    end
+  end
+end
+
+-- What to make in this window at this skill: the crafting step (its bolts first when you only have
+-- the cloth), or for Mining the step's smelt
 -- you can know that has the best chance (one in the window first). A smelt is counted only while
 -- it's orange (sure points, to yellow); after that the card gives its chance instead.
 local function pickFor(key, skill)
   local P = ns.P[key]
   local step = ns.profStep(key, skill)
   if not step then return nil end
-  if step.name then return step end
+  if step.name then return partFirst(key, step) or step end
   local best, bestScore, later
   for _, sname in ipairs(step.smelt or {}) do
     for _, s in ipairs(P.smelt or {}) do
@@ -503,7 +524,11 @@ local function tick()
     if pick.chanceOnly then
       line = "About a " .. math.floor(pick.chance * 100 + 0.5) .. "% chance of a point per smelt now"
     end
-    if found and found.available then line = line .. "  -  you have materials for " .. found.available end
+    if pick.partOf then
+      line = "Make " .. pick.plural .. " first: your " .. pick.have .. " " .. pick.cloth .. " make " .. pick.canMake .. "."
+    elseif found and found.available then
+      line = line .. "  -  you have materials for " .. found.available
+    end
     h.line:SetText(line)
     if not found then
       local known = pick.spell and IsPlayerSpell and select(2, pcall(IsPlayerSpell, pick.spell)) == true
@@ -516,7 +541,7 @@ local function tick()
         guide.how = "not learned"
       end
       t:Hide(); guide.row = nil
-    elseif found.color == "grey" then
+    elseif found.color == "grey" and not pick.partOf then  -- a bolt is worth making even when grey
       local nxt = ns.profNext(key, skill)
       h.status:SetText("Grey now: " .. (nxt and ("next is " .. (nxt.name or nxt.title) .. ".") or "the route is done."))
       t:Hide(); guide.row, guide.how = nil, "grey"
@@ -543,11 +568,11 @@ local function tick()
         t:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 3, -3)
       end) then
         t:Show()
-        h.status:SetText((found.color or "?") .. " now. Make it here: the outlined recipe.")
+        h.status:SetText((pick.partOf and "" or ((found.color or "?") .. " now. ")) .. "Make it here: the outlined recipe.")
         guide.how = "row"
       else
         t:Hide()
-        h.status:SetText((found.color or "?") .. " now. It's in the list: scroll to it, or press Show it.")
+        h.status:SetText((pick.partOf and "" or ((found.color or "?") .. " now. ")) .. "It's in the list: scroll to it, or press Show it.")
         guide.how = "not shown"
         h.show:SetScript("OnClick", function() selectRecipe(found, pick, root) end)
         h.show:Show()

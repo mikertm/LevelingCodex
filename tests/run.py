@@ -67,8 +67,8 @@ PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "pad
        "padStickKeepsFocus"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
-         "craftScrolled", "craftPadAutoSelect", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
-CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled"]
+         "craftScrolled", "craftPadAutoSelect", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "craftTailoring", "craftTailoringPad", "debugReport"]
+CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled", "craftTailoring"]
 # Forever's own crafting window: a ScrollBox list (anonymous pooled rows, no FauxScrollFrame).
 CRAFT_SCROLLBOX = ["makeCraftWindow:scrollbox", "login", "craftShowItScrollBox"]
 

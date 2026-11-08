@@ -40,7 +40,7 @@ Forever's gamepad layout is built in: every macro says which trigger set and but
 ### Profession guides: Mining, Blacksmithing and Tailoring 1-300
 Built for WoW: Forever's reworked Blacksmithing and Tailoring, from the game's own recipe colours and reagents.
 - **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction.
-- **Crafting window guide**: open Blacksmithing or Smelting and the Codex outlines the recipe to make, with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
+- **Crafting window guide**: open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make (in Tailoring the bolts first when you only have the cloth), with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
 - **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein.
 
 ### Gathering tracking stays on
