@@ -1123,7 +1123,7 @@ renderers.settings = function()
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
     "When you open Blacksmithing, Smelting or Tailoring, the Codex outlines the recipe to make for your skill and shows a card with how many more and your materials.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "A card like the level-up one when your Mining or Blacksmithing reaches a new step of the guide, can train the next tier, or can mine a new vein.")
+    "A card like the level-up one when your Mining, Blacksmithing or Tailoring reaches a new step of the guide, can train the next tier, or can mine a new vein.")
   y = y + 12
 
   head("GATHERING")

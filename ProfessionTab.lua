@@ -174,7 +174,7 @@ local function renderer()
       local part = ns.profPart(key, m[1])
       local src = part and part.mats and part.mats[1]
       if src then
-        local h = ns.profHave(key, src[1])
+        local h = have(src[1])  -- the cloth itself: bolts you hold can't make more bolts
         y = y + T("make them from " .. src[1] .. " (" .. src[2] .. " each)" ..
           (h and (": your " .. h .. " make " .. math.floor(h / src[2])) or ""), 40, y, W - 56, "small", C.inkSoft) + 2
       end
@@ -250,6 +250,7 @@ local function renderer()
     T(skill and ("from " .. skill) or "from 1", 16, y, W - 32, "small", C.dim, "RIGHT")
     y = y + 20
     local col = (W - 32) / 2
+    local rowH = 0  -- the taller text of the pair: a long cloth row wraps
     for i, m in ipairs(list) do
       local cx = 16 + ((i - 1) % 2) * col
       local text = m[2] .. " " .. m[1]
@@ -258,8 +259,8 @@ local function renderer()
         local what = m.via.part:find("^Bolt") and "bolts" or "parts"
         text = text .. " (for " .. m.via.n .. " " .. what .. (h and (", you have " .. h) or "") .. ")"
       end
-      T(text, cx, y, col - 8, "body", C.light)
-      if i % 2 == 0 or i == #list then y = y + 18 end
+      rowH = math.max(rowH, (T(text, cx, y, col - 8, "body", C.light)))
+      if i % 2 == 0 or i == #list then y = y + math.max(18, rowH + 4); rowH = 0 end
     end
     y = y + T("About, from the recipe colours: yellow and green crafts sometimes give no point.", 16, y + 4, W - 32,
       "small", C.dim) + 14

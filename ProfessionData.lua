@@ -214,7 +214,7 @@ LevelingCodexProfessions = {
     tiers = {
       { name = "Apprentice", cap = 75, skill = 1, level = 1, where = "Any Tailoring trainer" },
       { name = "Journeyman", cap = 150, skill = 50, level = 10, short = "An Expert, Master or Artisan Tailor (not Journeyman ones)",
-        where = "An Expert, Master or Artisan Tailor, Lawrence Schneider (Stormwind) or the Zephras Isle tailors: Sellandus (Stormwind), Jormund Stonebrow (Ironforge), Me'lynn (Darnassus), Magar (Orgrimmar), Tepa (Thunder Bluff), Rhiannon Davis (Undercity), Mahani (The Barrens) or Grarnik Goodstitch (Booty Bay)" },
+        where = "An Expert, Master or Artisan Tailor (Sellandus (Stormwind), Jormund Stonebrow (Ironforge), Me'lynn (Darnassus), Magar (Orgrimmar), Tepa (Thunder Bluff), Rhiannon Davis (Undercity), Mahani (The Barrens), Grarnik Goodstitch (Booty Bay)), Lawrence Schneider (Stormwind), or Taleen Shimmerthread or Othesia Evengale (Zephras Isle); not the other Journeyman Tailors" },
       { name = "Expert", cap = 225, skill = 125, level = 20, short = "Georgio Bolero (Stormwind) or Josef Gregorian (Undercity)",
         where = "Alliance: Georgio Bolero or Lawrence Schneider (Stormwind), Charles Worth (Alterac Mountains), Timothy Worthington (Theramore). Horde: Josef Gregorian (Undercity), Daryl Stack (Tarren Mill, Hillsbrad Foothills)" },
       { name = "Artisan", cap = 300, skill = 200, level = 35, short = "Timothy Worthington (Theramore) or Daryl Stack (Tarren Mill)",

@@ -160,13 +160,15 @@ local function chanceAt(r, skill)
 end
 
 -- Bolts first: the step needs a part (a bolt) you have too few of for one craft, you have the cloth
--- for one, and the part's recipe is in the window. Bags as they are here: a bolt counts as a bolt.
+-- for one, and both the part's recipe and the step's are in the window (a step recipe you haven't
+-- learned yet gets the usual "not learned" card first). Bags as they are here: a bolt counts as a bolt.
 local function partFirst(key, step)
   if not GetItemCount then return nil end
   local function count(item)
     local ok, n = pcall(GetItemCount, item)
     return (ok and tonumber(n)) or 0
   end
+  if not findRecipe(step.name) then return nil end
   for _, m in ipairs(step.mats or {}) do
     local part = ns.profPart(key, m[1])
     local src = part and part.mats and part.mats[1]

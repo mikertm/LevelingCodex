@@ -8,7 +8,7 @@
   - Tailoring's shopping list is in raw cloth (bolts you hold count), and a **cloth** section shows the mob levels and zones for each cloth for your faction, with the cloth your step needs first.
 - New **Professions** tab: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when Journeyman (50), Expert (125) or Artisan (200) is due, the whole route (click a step), and a shopping list to 300.
 - New: **crafting window guide**. Open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make for your skill, with a card showing how many more, how many you have materials for and its colour. Not learned yet: where to learn it. Gone grey: what's next. **Show it** selects a recipe scrolled out of view. In Tailoring, when the step needs bolts and you only have the cloth, it outlines the bolt recipe first and says how many your cloth makes.
-- New: a **skill-up card** in the level-up banner's look when your Mining or Blacksmithing reaches a new step, can train the next tier, hits its cap, or can mine a new vein. Ordinary points stay quiet.
+- New: a **skill-up card** in the level-up banner's look when your Mining, Blacksmithing or Tailoring reaches a new step, can train the next tier, hits its cap, or can mine a new vein. Ordinary points stay quiet.
 - When your skill is ready for the next tier before your level is (Journeyman needs level 10, Expert 20, Artisan 35), the level-up banner and chat tell you to train it at the level that opens it.
 - Settings > Professions turns the crafting window guide and the skill-up cards on or off.
 - Fixed: **Show it** did nothing in Forever's crafting window. It now scrolls the list to the recipe and selects it.
@@ -16,7 +16,7 @@
 - Opening the Codex within a minute of a level-up banner or a skill-up card opens what it was about (that level, or the Professions tab on that profession).
 - New look for the minimap button: the Level 60 badge instead of the brown book many addons use, and it now starts on the right side of the minimap instead of the lower left, where most addon buttons pile up (drag it anywhere as before). The Codex is also listed in the addons button under the clock.
 - Fixed: the card beside the crafting and talent windows covered the controller hints the game shows under a window near the top of the screen. It now goes below them.
-- The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit a Blacksmithing and a Mining trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.
+- The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit your Blacksmithing, Mining or Tailoring trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.
 
 ## v0.11.0
 - Every guide checked against WoW: Forever's own game data (build 1.60.1.70862) and Blizzard's 2 Nov notes and 5-6 Nov hotfixes: talent order, the reason for every talent, trainer spells and ranks, macros and tips. 116 fixes across the nine classes:

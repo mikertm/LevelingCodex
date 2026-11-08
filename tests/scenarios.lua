@@ -1913,6 +1913,27 @@ end
 
 local function tailoring() click(win(), "Tailoring"); return profText() end
 
+-- Two shopping-list texts in the same column whose lines overlap (a row that wraps into the next).
+local function shoppingOverlap()
+  local top, bottom = textY(win(), "^SHOPPING LIST TO 300$"), textY(win(), "^CLOTH$")
+  local items = {}
+  local function walk(f)
+    for _, r in ipairs(f._regions) do
+      if r._shown and r._text and r._points[1] and top and bottom then
+        local y = -r._points[1][5]
+        if y > top and y < bottom then items[#items + 1] = { x = r._points[1][4], y = y, h = r:GetStringHeight(), t = r._text } end
+      end
+    end
+    for _, c in ipairs(f._children) do if c._shown then walk(c) end end
+  end
+  walk(win())
+  for i, a in ipairs(items) do
+    for j, b in ipairs(items) do
+      if i < j and a.x == b.x and a.y < b.y + b.h and b.y < a.y + a.h then return a.t .. " | " .. b.t end
+    end
+  end
+end
+
 function S.tailorTab()
   if not D() then return end
   openAt(30, "Professions")
@@ -1934,6 +1955,13 @@ function S.tailorTab()
     MOCK.bags["Bolt of Mageweave"] = 10
     check(tailoring():find("Mageweave Cloth %(for %d+ bolts, you have 70%)"), "have: held bolts count as 5 cloth each")
     MOCK.bags["Mageweave Cloth"], MOCK.bags["Bolt of Mageweave"] = nil, nil
+    local over = shoppingOverlap()
+    check(not over, "shopping rows don't overlap: " .. tostring(over))
+    MOCK.bags["Bolt of Silk Cloth"] = 12
+    local held = tailoring()
+    check(held:find("make them from Silk Cloth %(4 each%): your 0 make 0") and not held:find("your 48"),
+      "step card: held bolts aren't cloth that makes more bolts")
+    MOCK.bags["Bolt of Silk Cloth"] = nil
   else
     check(not t:find("you have"), "no bag counts without GetItemCount")
   end
@@ -1943,6 +1971,9 @@ function S.tailorTab()
   openAt(30, "Professions")
   check(profText():find("Tailoring 150 / 225"), "the picked profession stays after reopening")
   MOCK.staleUnder(win(), "Professions")
+  click(win(), "Settings")
+  local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
+  check(cards and cards.tipText and cards.tipText:find("Tailoring"), "Settings: skill-up cards name Tailoring")
   win():Hide()
 end
 
@@ -1967,6 +1998,10 @@ function S.tailorTabCases()
   local _, after = shop:match("(%d+) Runecloth %(for (%d+) bolts")
   check(before and after == before, "held bolts don't change the need")
   MOCK.bags["Bolt of Runecloth"] = nil
+  MOCK.setSkill("Tailoring", 50, 75)
+  t = tailoring()
+  check(t:find("TRAIN JOURNEYMAN") and t:find("Taleen Shimmerthread") and not t:find("Zephras Isle tailors: Sellandus"),
+    "Journeyman card names the Zephras Isle trainers")
   MOCK.setSkill("Tailoring", 260, 300)
   t = tailoring()
   check(t:find("Runecloth Cuffs") and t:find("Pexmit"), "step at 260: Runecloth Cuffs from Pexmit")
@@ -2375,6 +2410,11 @@ function S.craftTailoring()
   text = MOCK.textUnder(LevelingCodexCraftHint)
   check(text:find("Earthen Vest") and not text:find("first"), "no bolts, no cloth: the step's recipe")
   MOCK.bags = { ["Silk Cloth"] = 46 }
+  local vest = table.remove(MOCK.trade.recipes, 3); MOCK.trade.layout(); MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Earthen Vest") and text:find("Not learned yet") and not text:find("first"),
+    "the step's recipe not learned: say so, not bolts first")
+  table.insert(MOCK.trade.recipes, vest)
   table.remove(MOCK.trade.recipes, 1); MOCK.trade.layout(); MOCK.advance(1)
   text = MOCK.textUnder(LevelingCodexCraftHint)
   check(text:find("Earthen Vest") and not text:find("first"), "bolt recipe not in the list: the step's recipe")
