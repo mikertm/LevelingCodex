@@ -22,4 +22,5 @@ ProfessionTab.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua
+ProfessionGuide.lua
 Init.lua

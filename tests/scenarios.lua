@@ -1421,3 +1421,142 @@ function S.profSkillUps()
   check(not t:IsShown(), "cards off in Settings")
   LevelingCodexDB.noProfCards = nil
 end
+
+----------------------------------------------------------------------------
+-- Crafting window mock: TradeSkillFrame with 8 visible rows TradeSkillSkill1..8 showing the
+-- recipes from `offset`. Row text carries a count and orange ones a colour code, like the game.
+-- style "retail": no classic calls, only C_TradeSkillUI.
+----------------------------------------------------------------------------
+
+local RELATIVE = { optimal = 0, medium = 1, easy = 2, trivial = 3 }
+
+function S.makeCraftWindow(style)
+  local f = CreateFrame("Frame", "TradeSkillFrame", UIParent); f:SetSize(384, 512); f:Hide()
+  MOCK.trade = { line = "Blacksmithing", rank = 87, max = 150, style = style or "classic", offset = 0, selected = 0, rows = {},
+    recipes = { { "Rough Sharpening Stone", "trivial", 5 }, { "Copper Chain Belt", "trivial", 3 }, { "Runed Copper Belt", "easy", 1 },
+                { "Rough Bronze Leggings", "optimal", 4 } } }
+  for i = 1, 8 do
+    local b = CreateFrame("Button", "TradeSkillSkill" .. i, f); b:SetSize(300, 16)
+    MOCK.trade.rows[i] = b
+  end
+  MOCK.trade.layout = function()
+    for i, b in ipairs(MOCK.trade.rows) do
+      local r = MOCK.trade.recipes[i + MOCK.trade.offset]
+      if r then
+        local name = r[2] == "optimal" and ("|cffff8040" .. r[1] .. "|r") or r[1]
+        b:SetText("  " .. name .. (r[3] > 0 and (" [" .. r[3] .. "]") or "")); b:Show()
+      else
+        b:Hide()
+      end
+    end
+  end
+  MOCK.trade.layout()
+  if style == "retail" then
+    GetTradeSkillLine, GetNumTradeSkills, GetTradeSkillInfo, SelectTradeSkill = nil, nil, nil, nil
+    C_TradeSkillUI = {
+      GetBaseProfessionInfo = function()
+        return { professionName = MOCK.trade.line, skillLevel = MOCK.trade.rank, maxSkillLevel = MOCK.trade.max }
+      end,
+      GetAllRecipeIDs = function()
+        local ids = {}
+        for i = 1, #MOCK.trade.recipes do ids[i] = 1000 + i end
+        return ids
+      end,
+      GetRecipeInfo = function(id)
+        local r = MOCK.trade.recipes[id - 1000]
+        if r then return { name = r[1], learned = true, numAvailable = r[3], relativeDifficulty = RELATIVE[r[2]] } end
+      end,
+      OpenRecipe = function(id)
+        local i = id - 1000
+        MOCK.trade.selected = i
+        MOCK.trade.offset = math.max(0, i - 4)
+        MOCK.trade.layout()
+      end,
+    }
+  end
+  return f
+end
+
+local function openCraft() TradeSkillFrame:Show(); MOCK.event("TRADE_SKILL_SHOW"); MOCK.advance(0.6) end
+local function closeCraft() TradeSkillFrame:Hide(); MOCK.event("TRADE_SKILL_CLOSE"); MOCK.advance(0.6) end
+local function craftReady() return D() and not MOCK.minimal and _G.TradeSkillFrame end
+
+function S.craftTrace()
+  if not craftReady() then return end
+  MOCK.setSkill("Blacksmithing", 87, 150)
+  openCraft()
+  local tr, h = _G.LevelingCodexCraftTrace, _G.LevelingCodexCraftHint
+  check(h and h:IsShown(), "card beside the crafting window")
+  local text = MOCK.textUnder(h)
+  check(text:find("Rough Bronze Leggings") and text:find("About 13 more to 100") and text:find("materials for 4"), "card text")
+  check(text:find("orange"), "live colour on the card")
+  check(tr and tr:IsShown(), "row traced")
+  local _, rel = tr:GetPoint(1)
+  check(rel == TradeSkillSkill4, "trace on the Rough Bronze Leggings row (its text has a colour code and a count)")
+  closeCraft()
+  check(not tr:IsShown() and not h:IsShown(), "trace and card hide with the window")
+end
+
+function S.craftNotLearned()
+  if not craftReady() then return end
+  table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
+  openCraft()
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Not learned yet"), "not learned")
+  check(not LevelingCodexCraftTrace:IsShown(), "nothing to trace")
+  closeCraft()
+  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
+  MOCK.trade.layout()
+end
+
+function S.craftGrey()
+  if not craftReady() then return end
+  MOCK.trade.recipes[4][2] = "trivial"; MOCK.trade.layout()
+  openCraft()
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Grey now: next is Heavy Grinding Stone"), "grey: move on")
+  closeCraft()
+  MOCK.trade.recipes[4][2] = "optimal"; MOCK.trade.layout()
+end
+
+function S.craftScrolled()
+  if not craftReady() then return end
+  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  MOCK.trade.offset = 0
+  MOCK.trade.layout()
+  openCraft()
+  local h = LevelingCodexCraftHint
+  check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen")
+  click(h, "Show it")
+  check(MOCK.trade.selected == 14, "Show it selects the recipe")
+  MOCK.advance(0.6)
+  check(LevelingCodexCraftTrace:IsShown(), "traced after Show it")
+  closeCraft()
+end
+
+-- The crafting guide turned off in Settings: nothing over the crafting window.
+function S.craftGuideOff()
+  if not craftReady() then return end
+  LevelingCodexDB.noCraftGuide = true
+  openCraft()
+  check(not (LevelingCodexCraftHint and LevelingCodexCraftHint:IsShown()), "no card when turned off")
+  closeCraft()
+  LevelingCodexDB.noCraftGuide = nil
+end
+
+-- The Mining (smelting) window at 80: Smelt Silver is the one that still gives points.
+function S.craftSmelting()
+  if not craftReady() then return end
+  MOCK.setSkill("Mining", 80, 150)
+  local saved = { MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset }
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.offset = "Mining", 80, 150, 0
+  MOCK.trade.recipes = { { "Smelt Copper", "trivial", 9 }, { "Smelt Tin", "trivial", 2 }, { "Smelt Silver", "optimal", 3 },
+                         { "Smelt Bronze", "medium", 1 } }
+  MOCK.trade.layout()
+  openCraft()
+  local text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("MINING 80") and text:find("Smelt Silver") and text:find("About 20 more to 100"), "smelting card")
+  local _, rel = LevelingCodexCraftTrace:GetPoint(1)
+  check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill3, "Smelt Silver row traced")
+  closeCraft()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
+  MOCK.trade.layout()
+end

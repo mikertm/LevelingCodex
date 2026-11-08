@@ -54,6 +54,9 @@ PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug", "profTa
 PROF_LINES = ["skills:BS;87;150,MI;140;225:skilllines", "login", "profDebug"]
 PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps"]
+# The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
+CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftNotLearned", "craftGrey", "craftScrolled", "craftGuideOff", "craftSmelting", "debugReport"]
+CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
@@ -371,6 +374,10 @@ def main():
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         for cls in ("WARRIOR", "HUNTER"):
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
+        runs.append(("WARRIOR/%s/craft" % variant, "WARRIOR", minimal, CRAFT))
+        if not minimal:
+            runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))
+            runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

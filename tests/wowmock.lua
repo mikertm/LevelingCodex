@@ -676,6 +676,28 @@ function GetSkillLineInfo(i)
   local s = MOCK.skills[i - 1]
   if s then return s.name, false, false, s.rank, 0, 0, s.max, true end
 end
+-- The crafting window's data (classic calls). MOCK.trade is set up by the scenario that builds
+-- the window: { line, rank, max, recipes = { { name, type, numAvailable } }, selected, layout }.
+function GetTradeSkillLine()
+  local t = MOCK.trade
+  if t then return t.line, t.rank, t.max end
+  return "UNKNOWN", 0, 0
+end
+function GetNumTradeSkills() return MOCK.trade and #MOCK.trade.recipes or 0 end
+function GetTradeSkillInfo(i)
+  local r = MOCK.trade and MOCK.trade.recipes[i]
+  if r then return r[1], r[2], r[3], false end
+end
+function SelectTradeSkill(i)
+  local t = MOCK.trade
+  if not t then return end
+  if type(i) ~= "number" then error("SelectTradeSkill: bad index", 2) end
+  t.selected = i
+  t.offset = math.max(0, i - 4) -- the game scrolls the list to the selection
+  if t.layout then t.layout() end
+end
+function GetTradeSkillSelectionIndex() return MOCK.trade and MOCK.trade.selected or 0 end
+
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
@@ -870,7 +892,8 @@ end
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
-  "GetProfessions", "GetProfessionInfo", "GetItemCount" }
+  "GetProfessions", "GetProfessionInfo", "GetItemCount",
+  "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -904,7 +927,9 @@ local ALLOWED_GLOBALS = {
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
   EventToastManagerFrame = true, ForeverLevelUpBanner = true,
+  TradeSkillFrame = true, C_TradeSkillUI = true,
 }
+for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}
   for k in pairs(_G) do MOCK.globals0[k] = true end
