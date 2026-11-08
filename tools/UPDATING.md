@@ -51,6 +51,13 @@ test harness checks `Data.lua` against it without going online.
 
    Smaller tools: `tree CLASS`, `review CLASS`, `spells CLASS "Name"`, `audit -k CLASS -v`.
 
+   **Professions** (`ProfessionData.lua`): the diff lists recipes added or removed and changed
+   colours or reagents under BLACKSMITHING / MINING. Run `python tools/gamedata.py profs` for the
+   route next to the game and `recipes PROFESSION "Name"` for one recipe; copy changed `yellow`,
+   `grey`, `mats` and `icon` into the step, and if a recipe now goes grey before its step ends, move
+   the step's range or pick another recipe (keep 1-300 without gaps). Learn levels aren't in the
+   client: the owner's `/codex debug` after visiting a trainer lists any that differ.
+
 4. **Test.** `python tests/run.py` must pass: it fails on anything the game won't allow
    (a talent not in the tree, a point before its row opens, a cast sequence step not learned yet,
    a rank that doesn't exist) and lists likely mistakes as warnings.

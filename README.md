@@ -2,7 +2,7 @@
 
 # Leveling Codex
 
-In-game companion for **The Leveling Codex** WoW: Forever leveling guides: the talent to take each level (traced in your talent window), trainer reminders, one-click smart macros and a level-up fanfare. Open it with `/codex` or the minimap book.
+In-game companion for **The Leveling Codex** WoW: Forever leveling guides: the talent to take each level (traced in your talent window), trainer reminders, one-click smart macros, a level-up fanfare, and Mining and Blacksmithing 1-300 guides with a crafting window trace. Open it with `/codex` or the minimap book.
 
 See [CURSEFORGE_DESCRIPTION.md](CURSEFORGE_DESCRIPTION.md) for the full feature list and [RELEASING.md](RELEASING.md) for how releases are published.
 
