@@ -241,6 +241,44 @@ local function checkSkills()
   end
 end
 
+-- The skill a trainer really asks for each route recipe, where it differs from the guide's
+-- learn level (that's server-side, so the guide's values come from guide sites).
+local trainerSeen, trainerDiff = false, {}
+
+local function guideLearn(skillName, recipe)
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local P = ns.P and ns.P[key]
+    if P and P.name == skillName then
+      for _, s in ipairs(P.steps) do if s.name == recipe then return s.learn end end
+      for _, s in ipairs(P.smelt or {}) do if s.name == recipe then return s.learn end end
+    end
+  end
+end
+
+local function readTrainer()
+  if not (GetNumTrainerServices and GetTrainerServiceInfo and GetTrainerServiceSkillReq) then return end
+  trainerSeen = true
+  local ok, count = pcall(GetNumTrainerServices)
+  for i = 1, (ok and tonumber(count)) or 0 do
+    local iok, name = pcall(GetTrainerServiceInfo, i)
+    local rok, skillName, skillLevel = pcall(GetTrainerServiceSkillReq, i)
+    local learn = iok and rok and guideLearn(skillName, name)
+    if learn then
+      skillLevel = tonumber(skillLevel)
+      trainerDiff[name] = (skillLevel and skillLevel ~= learn) and { name, skillLevel, learn } or nil
+    end
+  end
+end
+
+function ns.trainerDebugLines()
+  if not trainerSeen then return { "trainer: not visited this session" } end
+  local out = {}
+  for _, d in pairs(trainerDiff) do out[#out + 1] = "trainer: " .. d[1] .. " needs " .. d[2] .. " (guide says " .. d[3] .. ")" end
+  table.sort(out)
+  if #out == 0 then out[1] = "trainer: no differences from the guide seen" end
+  return out
+end
+
 local events
 function ns.startProfessions()
   for _, key in ipairs(ns.PROF_ORDER) do last[key] = ns.profSkill(key) end
@@ -250,8 +288,9 @@ function ns.startProfessions()
   for _, ev in ipairs({ "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_UPDATE" }) do
     if pcall(events.RegisterEvent, events, ev) then any = true end
   end
-  events:SetScript("OnEvent", function()
-    local ok, err = pcall(checkSkills)
+  pcall(events.RegisterEvent, events, "TRAINER_SHOW")
+  events:SetScript("OnEvent", function(_, event)
+    local ok, err = pcall(event == "TRAINER_SHOW" and readTrainer or checkSkills)
     if not ok and not events.errored then events.errored = true; ns.say("profession guide error: " .. ns.plain(err)) end
   end)
   -- no skill events in this client: look once a second instead

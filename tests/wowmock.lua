@@ -698,6 +698,18 @@ function SelectTradeSkill(i)
 end
 function GetTradeSkillSelectionIndex() return MOCK.trade and MOCK.trade.selected or 0 end
 
+-- A trainer window: MOCK.trainer[i] = { name, skillName, skillLevel }.
+MOCK.trainer = {}
+function GetNumTrainerServices() return #MOCK.trainer end
+function GetTrainerServiceInfo(i)
+  local t = MOCK.trainer[i]
+  if t then return t[1], "", "available" end
+end
+function GetTrainerServiceSkillReq(i)
+  local t = MOCK.trainer[i]
+  if t then return t[2], t[3], true end
+end
+
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
@@ -893,7 +905,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount",
-  "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex" }
+  "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
+  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

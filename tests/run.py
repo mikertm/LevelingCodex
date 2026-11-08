@@ -50,7 +50,7 @@ TRACK_MULTI = ["trackKnown:herbs,minerals,multi", "login", "trackRestored", "tra
 TRACK_KICK = ["trackKnown:herbsOn", "login", "trackKick", "trackLoadingScreen"]
 TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 # Professions: skills read through GetProfessions or only the classic skill list, or none at all.
-PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme"]
+PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme", "trainerReqs"]
 PROF_LINES = ["skills:BS;87;150,MI;140;225:skilllines", "login", "profDebug"]
 PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps"]

@@ -1560,3 +1560,17 @@ function S.craftSmelting()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
 end
+
+-- A trainer's real skill requirements that differ from the guide show in /codex debug.
+function S.trainerReqs()
+  if not D() or MOCK.minimal then return end
+  MOCK.trainer = { { "Rough Bronze Leggings", "Blacksmithing", 95 }, { "Runed Copper Belt", "Blacksmithing", 75 },
+                   { "Copper Bracers", "Blacksmithing", 1 }, { "Smelt Silver", "Mining", 70 } }
+  MOCK.event("TRAINER_SHOW")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("trainer: Rough Bronze Leggings needs 95 %(guide says 80%)"), "difference reported")
+  check(chatHas("trainer: Smelt Silver needs 70 %(guide says 75%)"), "smelt difference reported")
+  check(not chatHas("Runed Copper Belt needs"), "matching values not reported")
+  check(not chatHas("Copper Bracers"), "recipes off the route not reported")
+end
