@@ -243,7 +243,7 @@ def data_checks():
     return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
 
 
-PROF_KEYS = ("BLACKSMITHING", "MINING")
+PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING")
 
 
 def prof_shape_checks():
@@ -308,6 +308,25 @@ def prof_shape_checks():
             for f in ("name", "skill", "ore", "icon", "zones"):
                 if not v.get(f):
                     errors.append("professions %s vein %s: missing %s" % (key, v.get("name"), f))
+        # parts: items the profession makes for its own recipes (Tailoring's bolts)
+        for p in P.get("parts") or []:
+            for f in ("name", "plural", "spell", "icon", "yellow", "grey", "mats", "makes", "learn", "source"):
+                if p.get(f) in (None, ""):
+                    errors.append("professions %s part %s: missing %s" % (key, p.get("name"), f))
+        cloth = P.get("cloth") or []
+        for c in cloth:
+            for f in ("name", "icon", "levels", "zones"):
+                if not c.get(f):
+                    errors.append("professions %s cloth %s: missing %s" % (key, c.get("name"), f))
+            for side, zones in (c.get("zones") or {}).items():
+                if not isinstance(zones, list) or not all(isinstance(z, str) for z in zones):
+                    errors.append("professions %s cloth %s: zones %s must be a list of names" % (key, c.get("name"), side))
+        if cloth:
+            names = {c.get("name") for c in cloth}
+            for p in P.get("parts") or []:
+                first = (p.get("mats") or [[None]])[0][0]
+                if first not in names:
+                    errors.append("professions %s: part %s: %s is not in the cloth list" % (key, p.get("name"), first))
     return errors, warnings
 
 
@@ -331,7 +350,9 @@ def game_checks():
     want = [("Blacksmithing", "Rough Sharpening Stone", 15, 55, [["Rough Stone", 1]]),
             ("Blacksmithing", "Runed Copper Belt", 85, 125, [["Copper Bar", 10]]),
             ("Mining", "Smelt Gold", 170, 185, [["Gold Ore", 1]]),
-            ("Mining", "Smelt Bronze", 65, 115, [["Copper Bar", 1], ["Tin Bar", 1]])]
+            ("Mining", "Smelt Bronze", 65, 115, [["Copper Bar", 1], ["Tin Bar", 1]]),
+            ("Tailoring", "Bolt of Silk Cloth", 110, 120, [["Silk Cloth", 4]]),
+            ("Tailoring", "Runecloth Belt", 225, 255, [["Bolt of Runecloth", 3], ["Rune Thread", 1]])]
     for prof, name, y, g, mats in want:
         r = (profs.get(prof) or {}).get("recipes", {}).get(name)
         if not r or (r["yellow"], r["grey"], r["mats"]) != (y, g, mats):
@@ -340,6 +361,9 @@ def game_checks():
     bs = (profs.get("Blacksmithing") or {}).get("recipes", {})
     if (bs.get("Rough Bronze Leggings") or {}).get("min") != 95 or "min" in (bs.get("Rough Sharpening Stone") or {"min": 0}):
         errors.append("%s reference: Rough Bronze Leggings should carry the client's min 95, Rough Sharpening Stone none" % tag)
+    # learned with the profession (SkillLineAbility.AcquireMethod 1)
+    if not ((profs.get("Tailoring") or {}).get("recipes", {}).get("Linen Bag") or {}).get("auto"):
+        errors.append("%s reference: Tailoring's Linen Bag should be learned with the profession (auto)" % tag)
     profdata = gamedata.load_profdata()
     if profdata:
         for p, lvl, m in gamedata.audit_professions(profdata, ref):

@@ -9,7 +9,7 @@
     python tools/gamedata.py packet CLASS       # everything about one class's guide next to the game, for a manual review
     python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
     python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
-    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining recipes: colours, reagents, icon, plan
+    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining / Tailoring recipes: colours, reagents, icon, plan
     python tools/gamedata.py profs [PROFESSION]   # ProfessionData.lua audited, each route step next to the game
 
 Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
@@ -47,7 +47,7 @@ TABLES = [
 ]
 
 # Professions with a guide (ProfessionData.lua): name -> skill line.
-PROFESSIONS = {"Blacksmithing": 164, "Mining": 186}
+PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197}
 
 CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
 WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
@@ -764,8 +764,17 @@ def audit_professions(profdata, ref):
                 add("error", "tier %s needs %d but %s stops at %d" % (n["name"], n["skill"], t["name"], t["cap"]))
         if tiers and steps and tiers[-1]["cap"] < steps[-1]["to"]:
             add("error", "the last tier stops at %d, the route goes to %d" % (tiers[-1]["cap"], steps[-1]["to"]))
+        # items this profession makes: a step may only use one that parts or an earlier step's makes provides
+        own = {r["makes"][0] for r in recipes.values() if r.get("makes")}
+        provided = {(p.get("makes") or [p.get("name")])[0] for p in P.get("parts") or []}
         for s in steps:
             where = "step %d-%d" % (s["from"], s["to"])
+            for m in s.get("mats") or []:
+                item = _mats([m])[0][0]
+                if item in own and item not in provided:
+                    add("error", "%s: %s is made by a %s recipe: add it to parts or a step's makes" % (where, item, P["name"]))
+            if isinstance(s.get("makes"), list):
+                provided.add(s["makes"][0])
             if s.get("name"):  # a crafting step
                 r = check_recipe(where, s, s["name"])
                 if not r:
@@ -780,6 +789,13 @@ def audit_professions(profdata, ref):
                     add("warn", "%s: %s is learned at %d, after the step starts" % (where, s["name"], s["learn"]))
         for sm in P.get("smelt") or []:
             check_recipe("smelt", sm, sm["name"])
+        for p in P.get("parts") or []:
+            check_recipe("part", p, p["name"])
+        for c in P.get("cloth") or []:
+            if c.get("name") not in items:
+                add("error", "cloth %s: no %s recipe uses it" % (c.get("name"), P["name"]))
+            elif c.get("icon") and items[c["name"]] and c["icon"].lower() != items[c["name"]]:
+                add("warn", "cloth %s: icon is %s in game, data uses %s" % (c["name"], items[c["name"]], c["icon"]))
         for v in P.get("veins") or []:
             want = items.get(v.get("ore"))
             if want and v.get("icon") and v["icon"].lower() != want:
