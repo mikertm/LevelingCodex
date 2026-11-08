@@ -221,8 +221,73 @@ def data_checks():
                     elif at > m.lo:
                         warnings.append(where + ": castsequence step '%s' is only learned at %d, so the sequence stalls at levels %d-%d"
                                         % (step, at, m.lo, at - 1))
+    prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
-    return errors + game_errors, warnings + game_warnings
+    return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
+
+
+PROF_KEYS = ("BLACKSMITHING", "MINING")
+
+
+def prof_shape_checks():
+    """ProfessionData.lua: the fields the addon reads, ASCII text, Mining steps naming real veins and smelts."""
+    errors, warnings = [], []
+    path = os.path.join(ROOT, "ProfessionData.lua")
+    if not os.path.exists(path):
+        return ["professions: ProfessionData.lua missing"], warnings
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    data = gamedata.load_profdata(path)
+    if not isinstance(data, dict):
+        return ["professions: ProfessionData.lua sets no LevelingCodexProfessions"], warnings
+
+    def strings(x, where):
+        if isinstance(x, str):
+            if any(ord(c) > 127 for c in x):
+                errors.append("professions %s: non-ASCII text: %s" % (where, x[:60]))
+        elif isinstance(x, dict):
+            for k, v in x.items():
+                strings(v, where)
+        elif isinstance(x, list):
+            for v in x:
+                strings(v, where)
+    for key in PROF_KEYS:
+        P = data.get(key)
+        if not isinstance(P, dict):
+            errors.append("professions: no %s" % key)
+            continue
+        strings(P, key)
+        for f in ("name", "skillLine", "icon", "tiers", "steps"):
+            if not P.get(f):
+                errors.append("professions %s: missing %s" % (key, f))
+        for t in P.get("tiers") or []:
+            for f in ("name", "cap", "skill", "level", "where"):
+                if t.get(f) in (None, ""):
+                    errors.append("professions %s: tier %s missing %s" % (key, t.get("name"), f))
+        veins = {v.get("name") for v in P.get("veins") or []}
+        smelts = {s.get("name") for s in P.get("smelt") or []}
+        for s in P.get("steps") or []:
+            where = "professions %s step %s-%s" % (key, s.get("from"), s.get("to"))
+            if not isinstance(s.get("from"), int) or not isinstance(s.get("to"), int) or s["from"] >= s["to"]:
+                errors.append(where + ": needs from < to")
+            if key == "MINING":
+                if not s.get("title"):
+                    errors.append(where + ": missing title")
+                for v in s.get("veins") or []:
+                    if v not in veins:
+                        errors.append(where + ": vein '%s' is not in the veins list" % v)
+                for v in s.get("smelt") or []:
+                    if v not in smelts:
+                        errors.append(where + ": smelt '%s' is not in the smelt list" % v)
+            else:
+                for f in ("name", "spell", "icon", "yellow", "grey", "mats", "learn", "source"):
+                    if s.get(f) in (None, ""):
+                        errors.append(where + ": missing %s" % f)
+        for v in P.get("veins") or []:
+            for f in ("name", "skill", "ore", "icon", "zones"):
+                if not v.get(f):
+                    errors.append("professions %s vein %s: missing %s" % (key, v.get("name"), f))
+    return errors, warnings
 
 
 def game_checks():
@@ -250,6 +315,10 @@ def game_checks():
         r = (profs.get(prof) or {}).get("recipes", {}).get(name)
         if not r or (r["yellow"], r["grey"], r["mats"]) != (y, g, mats):
             errors.append("%s reference: %s %s should be yellow %d grey %d %s, is %s" % (tag, prof, name, y, g, mats, r))
+    profdata = gamedata.load_profdata()
+    if profdata:
+        for p, lvl, m in gamedata.audit_professions(profdata, ref):
+            (errors if lvl == "error" else warnings).append("%s %s: %s" % (tag, p, m))
     return errors, warnings
 
 

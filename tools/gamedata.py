@@ -10,6 +10,7 @@
     python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
     python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
     python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining recipes: colours, reagents, icon, plan
+    python tools/gamedata.py profs [PROFESSION]   # ProfessionData.lua audited, each route step next to the game
 
 Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
 The tables are cached in tools/.cache/<build>/ (not committed). The reference built from them,
@@ -632,7 +633,8 @@ def recipe_list(ref, prof, name=None):
 # Audit: Data.lua against the reference
 # ---------------------------------------------------------------------------
 
-def load_data(path=os.path.join(ROOT, "Data.lua")):
+def load_lua_global(path, name):
+    """Run a data file and return one of its globals as Python lists and dicts (None if unset)."""
     import lupa.lua51 as lupa
     lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
     with open(path, encoding="utf-8") as f:
@@ -647,7 +649,103 @@ def load_data(path=os.path.join(ROOT, "Data.lua")):
         if not keys:
             return []
         return {str(k): conv(v) for k, v in t.items()}
-    return conv(lua.globals().LevelingCodexData)
+    return conv(lua.globals()[name])
+
+
+def load_data(path=os.path.join(ROOT, "Data.lua")):
+    return load_lua_global(path, "LevelingCodexData")
+
+
+PROFDATA = os.path.join(ROOT, "ProfessionData.lua")
+
+
+def load_profdata(path=PROFDATA):
+    """ProfessionData.lua's LevelingCodexProfessions, or None when the file isn't there."""
+    if not os.path.exists(path):
+        return None
+    return load_lua_global(path, "LevelingCodexProfessions")
+
+
+def expected_crafts(a, b, yellow, grey):
+    """Expected crafts from skill a to b: one per point below yellow, then (grey - s) / (grey - yellow).
+    None when the recipe is grey before b (it can't get you there)."""
+    total = 0.0
+    for s in range(a, b):
+        if s >= grey:
+            return None
+        total += 1.0 if s < yellow else (grey - yellow) / float(grey - s)
+    return total
+
+
+def _mats(m):
+    return [[x[0], int(x[1])] for x in (m or [])]
+
+
+def audit_professions(profdata, ref):
+    """[(PROFESSION, 'error'|'warn', message)]: ProfessionData.lua against the game reference."""
+    res = []
+    refp = ref.get("professions") or {}
+    for key, P in sorted((profdata or {}).items()):
+        def add(level, msg):
+            res.append((key, level, msg))
+        R = refp.get(P.get("name"))
+        if not R:
+            add("error", "no profession '%s' in the game reference" % P.get("name"))
+            continue
+        recipes, items = R["recipes"], R["items"]
+
+        def check_recipe(where, x, name):
+            r = recipes.get(name)
+            if not r:
+                add("error", "%s: '%s' is not a %s recipe in game" % (where, name, P["name"]))
+                return None
+            if x.get("spell") != r["spell"]:
+                add("error", "%s: %s is spell %s in game, data says %s" % (where, name, r["spell"], x.get("spell")))
+            if (x.get("yellow"), x.get("grey")) != (r["yellow"], r["grey"]):
+                add("error", "%s: %s is yellow %d / grey %d in game, data says %s / %s" %
+                    (where, name, r["yellow"], r["grey"], x.get("yellow"), x.get("grey")))
+            if _mats(x.get("mats")) != r["mats"]:
+                add("error", "%s: %s takes %s in game, data says %s" % (where, name, r["mats"], _mats(x.get("mats"))))
+            if x.get("icon") and r.get("icon") and x["icon"].lower() != r["icon"]:
+                add("warn", "%s: %s icon is %s in game, data uses %s" % (where, name, r["icon"], x["icon"]))
+            return r
+
+        steps = P.get("steps") or []
+        if not steps or steps[0]["from"] != 1 or steps[-1]["to"] != 300:
+            add("error", "steps must run from 1 to 300 (have %s-%s)" %
+                (steps[0]["from"] if steps else "?", steps[-1]["to"] if steps else "?"))
+        for a, b in zip(steps, steps[1:]):
+            if a["to"] != b["from"]:
+                add("error", "steps %d-%d and %d-%d leave a gap or overlap" % (a["from"], a["to"], b["from"], b["to"]))
+        tiers = P.get("tiers") or []
+        for t, n in zip(tiers, tiers[1:]):
+            if n["skill"] > t["cap"]:
+                add("error", "tier %s needs %d but %s stops at %d" % (n["name"], n["skill"], t["name"], t["cap"]))
+        if tiers and steps and tiers[-1]["cap"] < steps[-1]["to"]:
+            add("error", "the last tier stops at %d, the route goes to %d" % (tiers[-1]["cap"], steps[-1]["to"]))
+        for s in steps:
+            where = "step %d-%d" % (s["from"], s["to"])
+            if s.get("name"):  # a crafting step
+                r = check_recipe(where, s, s["name"])
+                if not r:
+                    continue
+                if expected_crafts(s["from"], s["to"], r["yellow"], r["grey"]) is None:
+                    add("error", "%s: %s turns grey at %d, before the step ends" % (where, s["name"], r["grey"]))
+                else:
+                    green = sum(1 for k in range(s["from"], s["to"]) if k >= r["green"])
+                    if green * 2 > s["to"] - s["from"]:
+                        add("warn", "%s: %s is green for %d of its %d points" % (where, s["name"], green, s["to"] - s["from"]))
+                if s.get("learn") and s["learn"] > s["from"]:
+                    add("warn", "%s: %s is learned at %d, after the step starts" % (where, s["name"], s["learn"]))
+        for sm in P.get("smelt") or []:
+            check_recipe("smelt", sm, sm["name"])
+        for v in P.get("veins") or []:
+            want = items.get(v.get("ore"))
+            if want and v.get("icon") and v["icon"].lower() != want:
+                add("warn", "vein %s: %s icon is %s in game, data uses %s" % (v["name"], v["ore"], want, v["icon"]))
+            elif v.get("ore") and v["ore"] not in items:
+                add("warn", "vein %s: no recipe uses '%s'" % (v["name"], v["ore"]))
+    return res
 
 
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
@@ -1006,7 +1104,7 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet", "recipes"])
+    ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet", "recipes", "profs"])
     ap.add_argument("args", nargs="*")
     ap.add_argument("--build")
     ap.add_argument("--report", help="update: also write a markdown report (game changes + audit) to this file")
@@ -1040,6 +1138,22 @@ def main():
     ref = load_reference()
     if a.cmd == "audit":
         return report(audit(load_data(), ref, a.only), a.verbose)
+    if a.cmd == "profs":
+        data = load_profdata() or {}
+        want = (a.args[0] if a.args else "").upper()
+        res = audit_professions(data, ref)
+        for key, P in sorted(data.items()):
+            if want and key != want:
+                continue
+            print("#### %s vs WoW: Forever build %s" % (P["name"], ref["build"]))
+            print("\n".join("  %-5s %s" % (l, m) for k, l, m in res if k == key) or "  (audit: nothing)")
+            for s in P.get("steps") or []:
+                label = s.get("name") or s.get("title")
+                print("%3d-%3d  %s  (learn %s)" % (s["from"], s["to"], label, s.get("learn", "-")))
+                if s.get("name"):
+                    print("         GAME: " + (recipe_list(ref, P["name"], s["name"]).splitlines() or ["not found"])[0])
+            print()
+        return 1 if any(l == "error" for _, l, _ in res) else 0
     if a.cmd == "recipes":
         names = {p.lower(): p for p in PROFESSIONS}
         prof = names.get((a.args[0] if a.args else "").lower())
