@@ -763,6 +763,14 @@ function SmartNavigation:GetCurrentButton()
   end
   return first(panel)
 end
+-- How far the first scroll frame inside f is scrolled.
+function MOCK.scrollOf(f)
+  for _, k in ipairs(f._children or {}) do
+    if k._type == "ScrollFrame" then return k._scroll or 0 end
+    local v = MOCK.scrollOf(k)
+    if v then return v end
+  end
+end
 function SmartNavigation_MarkFrameIgnored(f) f._padIgnored = true end
 function SmartNavigation_ClearIgnoreStatus(f) f._padIgnored = nil end
 

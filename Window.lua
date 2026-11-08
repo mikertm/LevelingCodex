@@ -1136,6 +1136,13 @@ renderers.settings = function()
   end, "WoW: Forever turns gathering tracking off when you log in, zone or die. The Codex turns the one you had back on (out of combat), unless you picked another tracking such as Track Beasts.")
   y = y + 12
 
+  head("CONTROLLER")
+  tick("Use Forever's controller navigation", db.padNative ~= false, function()
+    db.padNative = (db.padNative == false) and nil or false
+    ns.gamepad.repick()
+  end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
+  y = y + 12
+
   head("MINIMAP BUTTON")
   tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
     "Drag the Level 60 badge around the edge of the minimap to put it where you like; it remembers the spot. The Codex is also in the addons button under the clock.")
@@ -1240,10 +1247,10 @@ local function listFocusables()
   end
   local chrome = frame.padChrome or {}
   for _, c in ipairs({ { chrome.prev, W * 0.6 }, { chrome.now, W * 0.75 }, { chrome.next, W * 0.9 }, { chrome.close, W + 20 } }) do
-    if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40 } end
+    if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40, fixed = true } end
   end
   local h = content:GetHeight() or 0
-  for i, t in ipairs(tabs) do out[#out + 1] = { frame = t, x = i * W / #tabs, y = h + 40 } end
+  for i, t in ipairs(tabs) do out[#out + 1] = { frame = t, x = i * W / #tabs, y = h + 40, fixed = true } end
   return out
 end
 
@@ -1484,7 +1491,18 @@ local function makeCopy()
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
-  ns.gamepad.attach(copy, { popup = true })
+  -- the controller: the text first, then the box's buttons along one row
+  ns.gamepad.attach(copy, { popup = true, focusables = function()
+    local out = { { frame = copy.edit, x = 0, y = 0, fixed = true } }
+    local i = 0
+    for _, k in ipairs({ copy:GetChildren() }) do
+      if k:IsShown() and k:GetObjectType() == "Button" then
+        i = i + 1
+        out[#out + 1] = { frame = k, x = 100 * i, y = 0, fixed = true }
+      end
+    end
+    return out
+  end })
 end
 
 -- Show one macro (m), optionally as part of a list (the ones that couldn't be made);

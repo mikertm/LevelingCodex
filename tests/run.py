@@ -56,7 +56,8 @@ PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login"
 PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
 # The controller: Forever's navigation, the Codex's own as a backup.
-PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp"]
+PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
+       "padBackupCombat", "padCopyBox"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]

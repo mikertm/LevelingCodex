@@ -258,7 +258,7 @@ function S.everyButton()
   end
   if win() then win():Hide() end
   -- clicking every toggle an odd number of times leaves things off: put the defaults back
-  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap", "noAutoTrack", "noProfCards", "noCraftGuide" }) do
+  for _, k in ipairs({ "noToast", "quiet", "noAutoMacros", "noTalentGuide", "noMinimap", "noAutoTrack", "noProfCards", "noCraftGuide", "padNative" }) do
     if LevelingCodexDB[k] then
       LevelingCodexDB[k] = nil
     end
@@ -427,6 +427,109 @@ function S.padPickUp()
   check(shown, "joins Forever's navigation without reopening")
   win():Hide()
   MOCK.gamepadUI = nil
+end
+
+local function focusLabel()
+  local t = LevelingCodexPadFocus and LevelingCodexPadFocus.target
+  return t and (t.label and t.label:GetText() or t.tipTitle or (t.GetText and t:GetText())) or ""
+end
+
+local function reachSkillUpTick()
+  for _ = 1, 80 do
+    if focusLabel():find("Profession skill%-up cards") then return true end
+    pad(win(), "PADDDOWN")
+  end
+end
+
+-- Backup when Forever refuses: the D-pad, A, scrolling, B.
+function S.padBackup()
+  if not D() or not GamepadMode then return end
+  for _, how in ipairs({ "error", "no focus", "setting", "no manager" }) do
+    MOCK.gamepadUI = true
+    local saved = GamepadMode
+    if how == "error" then MOCK.padRefuse = true end
+    if how == "no focus" then MOCK.padNoFocus = true end
+    if how == "setting" then LevelingCodexDB.padNative = false end
+    if how == "no manager" then GamepadMode = nil; MOCK.gamepad = true end
+    openAt(30, "Settings")
+    MOCK.advance(0.6)
+    check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(), "highlight shown (" .. how .. ")")
+    check(reachSkillUpTick(), "D-pad reaches the skill-up tick (" .. how .. ")")
+    check(GameTooltip:IsOwned(LevelingCodexPadFocus.target), "focusing shows its tooltip")
+    check(win()._padPropagate == false, "the D-pad is the Codex's in this mode")
+    pad(win(), "PAD1")
+    check(LevelingCodexDB.noProfCards == true, "A ticks it (" .. how .. ")")
+    pad(win(), "PAD1")
+    check(not LevelingCodexDB.noProfCards, "A unticks it")
+    MOCK.chat = {}; slash("debug")
+    check(chatHas("controller: Codex navigation %("), "debug says why (" .. how .. ")")
+    pad(win(), "PAD2")
+    check(not win():IsShown() and not LevelingCodexPadFocus:IsShown(), "B closes, highlight goes")
+    MOCK.padRefuse, MOCK.padNoFocus, LevelingCodexDB.padNative, MOCK.gamepad = nil, nil, nil, nil
+    GamepadMode = saved
+    MOCK.gamepadUI = nil
+  end
+end
+
+-- Moving past the bottom scrolls; the right stick scrolls.
+function S.padBackupScroll()
+  if not D() or not GamepadMode then return end
+  LevelingCodexDB.padNative = false; MOCK.gamepadUI = true
+  openAt(30, "Settings")
+  for _ = 1, 80 do -- down past the first screen (the content shows about 480 px)
+    local t = LevelingCodexPadFocus.target
+    if t.padY and t.padY > 600 then break end
+    pad(win(), "PADDDOWN")
+  end
+  check((LevelingCodexPadFocus.target.padY or 0) > 600, "the D-pad reaches the lower part of Settings")
+  check(LevelingCodexPadFocus.target:IsShown(), "focused piece visible")
+  check(MOCK.scrollOf(win()) > 0, "scrolled to bring a lower piece into view")
+  local before = MOCK.scrollOf(win())
+  MOCK.fire(win(), "OnGamePadStick", "Right", 0, 1)
+  MOCK.advance(0.5)
+  check(MOCK.scrollOf(win()) < before, "right stick up scrolls up")
+  MOCK.fire(win(), "OnGamePadStick", "Right", 0, 0)
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+end
+
+-- (Review 3) combat starts while the window is open in Codex mode: a D-pad press must not leave
+-- the window swallowing the controller, and after combat the highlight is back where it was.
+function S.padBackupCombat()
+  if not D() or not GamepadMode then return end
+  LevelingCodexDB.padNative = false; MOCK.gamepadUI = true
+  openAt(30, "Settings")
+  pad(win(), "PADDDOWN")
+  local t = LevelingCodexPadFocus.target
+  check(win()._padPropagate == false, "the D-pad is the Codex's before combat")
+  MOCK.event("PLAYER_REGEN_DISABLED"); MOCK.combat = true
+  pad(win(), "PADDDOWN")
+  check(win()._padPropagate == true and not LevelingCodexPadFocus:IsShown(), "in combat the controller goes to the game")
+  MOCK.combat = false; MOCK.event("PLAYER_REGEN_ENABLED"); MOCK.advance(0.1)
+  check(LevelingCodexPadFocus:IsShown() and LevelingCodexPadFocus.target == t, "after combat the highlight is back where it was")
+  pad(win(), "PADDDOWN")
+  check(LevelingCodexPadFocus.target ~= t, "and the D-pad moves it again")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+end
+
+-- The copy box: a popup for Forever, the backup otherwise.
+function S.padCopyBox()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  S.copyOpen()
+  local copy = _G.LevelingCodexCopy
+  local shown = false
+  for _, f in ipairs(nav().shown) do if f == copy then shown = copy._padPopup == true end end
+  check(shown, "copy box joins as a popup")
+  pad(copy, "PAD2"); check(not copy:IsShown(), "B closes the copy box")
+  LevelingCodexDB.padNative = false
+  S.copyOpen()
+  check(LevelingCodexPadFocus:IsShown() and LevelingCodexPadFocus.target == copy.edit, "backup focuses the text first")
+  pad(copy, "PADDRIGHT")
+  check(LevelingCodexPadFocus.target ~= copy.edit, "D-pad moves to the box's buttons")
+  pad(copy, "PAD2")
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
 end
 
 -- Forever's addon compartment (the addons button under the clock) lists the Codex.
