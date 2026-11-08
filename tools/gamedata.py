@@ -9,7 +9,7 @@
     python tools/gamedata.py packet CLASS       # everything about one class's guide next to the game, for a manual review
     python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
     python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
-    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining / Tailoring recipes: colours, reagents, icon, plan
+    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining / Tailoring / Enchanting recipes: colours, reagents, icon, plan, tool
     python tools/gamedata.py profs [PROFESSION]   # ProfessionData.lua audited, each route step next to the game
 
 Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
@@ -44,10 +44,12 @@ TABLES = [
     "SpellAuraOptions", "SpellCooldowns", "SpellPower", "ManifestInterfaceData", "SpellShapeshift", "SpellCategories",
     # professions: reagents, items, the plans that teach recipes, recipe categories
     "SpellReagents", "ItemSparse", "Item", "ItemEffect", "ItemXItemEffect", "TradeSkillCategory",
+    # Enchanting: the tool (rod) a recipe needs, rod categories and masks, disenchanting level bands
+    "SpellTotems", "TotemCategory", "ItemDisenchantLoot",
 ]
 
 # Professions with a guide (ProfessionData.lua): name -> skill line.
-PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197}
+PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333}
 
 CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
 WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
@@ -474,7 +476,19 @@ def build_reference(build):
         out["classes"][cls] = {"tabs": tabs, "hidden": hidden, "talents": dict(sorted(talents.items())),
                                "spells": dict(sorted(spells.items())), "pet": dict(sorted(pets.items()))}
     out["professions"] = build_professions(T, S)
+    out["rods"] = build_rods(T)
     return out
+
+
+def build_rods(T):
+    """The Enchanting rods: TotemCategory rows of type 3, with the mask that says which lower rods a rod
+    also counts as (a rod's mask holds the lower rods' bits) and the item of that category."""
+    item_of = {r["TotemCategoryID"]: int(r["ID"]) for r in T.ItemSparse if r.get("TotemCategoryID") not in (None, "", "0")}
+    rods = {}
+    for r in T.TotemCategory:
+        if r["TotemCategoryType"] == "3":
+            rods[r["Name_lang"]] = {"category": int(r["ID"]), "mask": int(r["TotemCategoryMask"]), "item": item_of.get(r["ID"])}
+    return dict(sorted(rods.items(), key=lambda kv: kv[1]["category"]))
 
 
 def build_professions(T, S):
@@ -487,6 +501,9 @@ def build_professions(T, S):
     item_icon = {r["ID"]: S.icons.get(r["IconFileDataID"]) for r in T.Item}
     reag = {r["SpellID"]: r for r in T.SpellReagents}
     cats = {r["ID"]: r["Name_lang"] for r in T.TradeSkillCategory}
+    totem_name = {r["ID"]: r["Name_lang"] for r in T.TotemCategory}
+    tools = {r["SpellID"]: totem_name.get(r["RequiredTotemCategoryID_0"]) for r in T.SpellTotems
+             if r.get("RequiredTotemCategoryID_0") not in (None, "", "0")}
     makes, learns = {}, collections.defaultdict(list)
     for sid, effs in S.eff.items():
         for e in effs.values():
@@ -535,6 +552,8 @@ def build_professions(T, S):
             # Sharpening Stone says 125 but goes grey at 115), so it's a warning, not a fact
             if int(r["MinSkillLineRank"] or 0) > 1:
                 rec["min"] = int(r["MinSkillLineRank"])
+            if tools.get(sid):
+                rec["tool"] = tools[sid]  # e.g. Runed Silver Rod (or a better rod, see "rods")
             if r.get("AcquireMethod") == "1":
                 rec["auto"] = True  # learned with the profession
             if int(r.get("NumSkillUps") or 0) != 1:
@@ -777,6 +796,8 @@ def audit_professions(profdata, ref):
                 provided.add(s["makes"][0])
             if s.get("name"):  # a crafting step
                 r = check_recipe(where, s, s["name"])
+                if r and P.get("rods") and r.get("tool") != s.get("rod"):  # professions with rods: each step names its own
+                    add("error", "%s: %s needs %s in game, data says %s" % (where, s["name"], r.get("tool"), s.get("rod")))
                 if not r:
                     continue
                 if expected_crafts(s["from"], s["to"], r["yellow"], r["grey"]) is None:
@@ -791,6 +812,19 @@ def audit_professions(profdata, ref):
             check_recipe("smelt", sm, sm["name"])
         for p in P.get("parts") or []:
             check_recipe("part", p, p["name"])
+        rods = ref.get("rods") or {}
+        for rod in P.get("rods") or []:
+            check_recipe("rod", rod, rod["name"])
+            want = rods.get(rod["name"])
+            if not want:
+                add("error", "rod %s: not a rod in game" % rod["name"])
+            elif (rod.get("category"), rod.get("mask")) != (want["category"], want["mask"]):
+                add("error", "rod %s: category %s mask %s in game, data says %s / %s" %
+                    (rod["name"], want["category"], want["mask"], rod.get("category"), rod.get("mask")))
+        for b in ((P.get("disenchant") or {}).get("bands") or []):
+            for f in ("dust", "essence", "shard"):
+                if b.get(f) and b[f] not in items:
+                    add("error", "disenchant: %s is not an %s material" % (b[f], P["name"]))
         for c in P.get("cloth") or []:
             if c.get("name") not in items:
                 add("error", "cloth %s: no %s recipe uses it" % (c.get("name"), P["name"]))

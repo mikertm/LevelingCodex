@@ -248,7 +248,7 @@ def data_checks():
     return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
 
 
-PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING")
+PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING")
 
 
 def prof_shape_checks():
@@ -318,6 +318,28 @@ def prof_shape_checks():
             for f in ("name", "plural", "spell", "icon", "yellow", "grey", "mats", "makes", "learn", "source"):
                 if p.get(f) in (None, ""):
                     errors.append("professions %s part %s: missing %s" % (key, p.get("name"), f))
+        # rods (Enchanting): the tool each step needs
+        rods = {r.get("name") for r in P.get("rods") or []}
+        for r in P.get("rods") or []:
+            for f in ("name", "category", "mask", "spell", "icon", "yellow", "grey", "mats", "learn", "source"):
+                if r.get(f) in (None, ""):
+                    errors.append("professions %s rod %s: missing %s" % (key, r.get("name"), f))
+        for s in P.get("steps") or []:
+            if s.get("rod") and s["rod"] not in rods:
+                errors.append("professions %s step %s-%s: rod %s is not in the rods list" % (key, s.get("from"), s.get("to"), s["rod"]))
+        bands = (P.get("disenchant") or {}).get("bands") or []
+        if P.get("disenchant"):
+            at = 1
+            for b in bands:
+                if b.get("from") != at or not isinstance(b.get("to"), int) or b["to"] < b["from"]:
+                    errors.append("professions %s: disenchant bands must run 1-60 without gaps (at %s)" % (key, b.get("from")))
+                    break
+                for f in ("dust", "essence"):
+                    if not b.get(f):
+                        errors.append("professions %s: disenchant band %s-%s missing %s" % (key, b.get("from"), b.get("to"), f))
+                at = b["to"] + 1
+            if at != 61:
+                errors.append("professions %s: disenchant bands must run 1-60 without gaps (end %s)" % (key, at - 1))
         cloth = P.get("cloth") or []
         for c in cloth:
             for f in ("name", "icon", "levels", "zones"):
@@ -357,7 +379,9 @@ def game_checks():
             ("Mining", "Smelt Gold", 170, 185, [["Gold Ore", 1]]),
             ("Mining", "Smelt Bronze", 65, 115, [["Copper Bar", 1], ["Tin Bar", 1]]),
             ("Tailoring", "Bolt of Silk Cloth", 110, 120, [["Silk Cloth", 4]]),
-            ("Tailoring", "Runecloth Belt", 225, 255, [["Bolt of Runecloth", 3], ["Rune Thread", 1]])]
+            ("Tailoring", "Runecloth Belt", 225, 255, [["Bolt of Runecloth", 3], ["Rune Thread", 1]]),
+            ("Enchanting", "Dust to Motes", 10, 15, [["Strange Dust", 1]]),
+            ("Enchanting", "Enchant Shield - Greater Stamina", 285, 325, [["Dream Dust", 6]])]
     for prof, name, y, g, mats in want:
         r = (profs.get(prof) or {}).get("recipes", {}).get(name)
         if not r or (r["yellow"], r["grey"], r["mats"]) != (y, g, mats):
@@ -369,6 +393,12 @@ def game_checks():
     # learned with the profession (SkillLineAbility.AcquireMethod 1)
     if not ((profs.get("Tailoring") or {}).get("recipes", {}).get("Linen Bag") or {}).get("auto"):
         errors.append("%s reference: Tailoring's Linen Bag should be learned with the profession (auto)" % tag)
+    # rods: a better rod counts for the lower ones (mask); Superior Defense needs only the Truesilver rod
+    tsr = (ref.get("rods") or {}).get("Runed Truesilver Rod") or {}
+    sd = ((profs.get("Enchanting") or {}).get("recipes", {}).get("Enchant Cloak - Superior Defense") or {})
+    if (tsr.get("category"), tsr.get("mask")) != (376, 15) or sd.get("tool") != "Runed Truesilver Rod":
+        errors.append("%s reference: Runed Truesilver Rod should be category 376 mask 15 and Superior Defense need it (%s, %s)" %
+                      (tag, tsr, sd.get("tool")))
     profdata = gamedata.load_profdata()
     if profdata:
         for p, lvl, m in gamedata.audit_professions(profdata, ref):
