@@ -294,7 +294,136 @@ local function watchRoot(f)
   pcall(f.HookScript, f, "OnHide", function() if guide.open then hideGuide() end end)
 end
 
-local function selectRecipe(found)
+-- The scroll controls inside the crafting window: ScrollBoxes that can scroll to an element
+-- ("data"), anything with a scroll percentage (ScrollBoxes and their bars, "box"), sliders and
+-- scroll frames. Forever's own crafting window is a ScrollBox, not the classic FauxScrollFrame.
+local function scrollersIn(root)
+  local out, budget = {}, 3000
+  local function walk(f, depth)
+    if depth > 8 or budget <= 0 then return end
+    local ok, kids = pcall(function() return { f:GetChildren() } end)
+    if not ok then return end
+    for _, k in ipairs(kids) do
+      budget = budget - 1
+      if budget <= 0 then return end
+      if visible(k) and not isOurs(k) then
+        local kind
+        if type(k.ScrollToElementDataByPredicate) == "function" then kind = "data"
+        elseif type(k.SetScrollPercentage) == "function" and type(k.GetScrollPercentage) == "function" then kind = "box"
+        else
+          local tok, t = pcall(k.GetObjectType, k)
+          if tok and t == "Slider" then kind = "slider" elseif tok and t == "ScrollFrame" then kind = "frame" end
+        end
+        if kind then out[#out + 1] = { f = k, kind = kind } end
+        walk(k, depth + 1)
+      end
+    end
+  end
+  walk(root, 0)
+  return out
+end
+
+-- A scroller's position, 0 (top) to 1 (bottom); nil when it can't scroll.
+local function scrollPos(s)
+  local f = s.f
+  if s.kind == "data" or s.kind == "box" then
+    if type(f.GetScrollPercentage) ~= "function" then return nil end
+    local ok, p = pcall(f.GetScrollPercentage, f)
+    return ok and tonumber(p) or nil
+  elseif s.kind == "slider" then
+    local ok, lo, hi = pcall(f.GetMinMaxValues, f)
+    local vok, v = pcall(f.GetValue, f)
+    if ok and vok and type(lo) == "number" and type(hi) == "number" and hi > lo and type(v) == "number" then
+      return (v - lo) / (hi - lo)
+    end
+  else
+    local ok, r = pcall(f.GetVerticalScrollRange, f)
+    local vok, v = pcall(f.GetVerticalScroll, f)
+    if ok and vok and type(r) == "number" and r > 0 and type(v) == "number" then return v / r end
+  end
+end
+
+local function setScrollPos(s, p)
+  local f = s.f
+  if s.kind == "data" or s.kind == "box" then
+    return type(f.SetScrollPercentage) == "function" and pcall(f.SetScrollPercentage, f, p)
+  elseif s.kind == "slider" then
+    local ok, lo, hi = pcall(f.GetMinMaxValues, f)
+    return ok and type(lo) == "number" and type(hi) == "number" and hi > lo and pcall(f.SetValue, f, lo + (hi - lo) * p)
+  else
+    local ok, r = pcall(f.GetVerticalScrollRange, f)
+    return ok and type(r) == "number" and r > 0 and pcall(f.SetVerticalScroll, f, r * p)
+  end
+end
+
+-- Is this ScrollBox element the recipe? Element data is unconfirmed in Forever: try the usual fields.
+local function elementMatches(e, found, name, spell)
+  local d = e
+  if type(e) == "table" and type(e.GetData) == "function" then
+    local ok, x = pcall(e.GetData, e)
+    if ok then d = x end
+  end
+  if type(d) ~= "table" then return false end
+  local info = type(d.recipeInfo) == "table" and d.recipeInfo or nil
+  if found.index and (d.index == found.index or d.skillIndex == found.index or d.tradeSkillIndex == found.index) then return true end
+  if found.id and (d.recipeID == found.id or (info and info.recipeID == found.id)) then return true end
+  if spell and (d.spellID == spell or d.recipeSpellID == spell or (info and info.spellID == spell)) then return true end
+  if info and info.name == name then return true end
+  for _, v in pairs(d) do if v == name then return true end end
+  return false
+end
+
+-- Scroll the window's list until the recipe's row is on screen. Returns the row (or nil) and
+-- what it did, for /codex debug.
+local function scrollToRow(root, found, name, spell)
+  local scrollers = scrollersIn(root)
+  for _, s in ipairs(scrollers) do
+    if s.kind == "data" then
+      local match = function(e)
+        local ok, m = pcall(elementMatches, e, found, name, spell)
+        return ok and m
+      end
+      local sbc = _G.ScrollBoxConstants
+      if pcall(s.f.ScrollToElementDataByPredicate, s.f, match, sbc and sbc.AlignCenter, true) then
+        local row = findRow(root, name)
+        if row then return row, "scrolled by element data" end
+      end
+    end
+  end
+  -- else try positions, starting where the recipe sits in the list and working outwards
+  local count = 0
+  if GetNumTradeSkills then
+    local ok, n = pcall(GetNumTradeSkills)
+    count = ok and tonumber(n) or 0
+  end
+  local guess = (found.index and count > 1) and (found.index - 1) / (count - 1) or 0.5
+  local probes, movable = 0, 0
+  for _, s in ipairs(scrollers) do
+    local was = scrollPos(s)
+    if was then
+      movable = movable + 1
+      for k = 0, 34 do
+        for _, sign in ipairs(k == 0 and { 1 } or { 1, -1 }) do
+          local p = guess + sign * k * 0.03
+          if p >= 0 and p <= 1 then
+            probes = probes + 1
+            if setScrollPos(s, p) then
+              local row = findRow(root, name)
+              if row then return row, "scrolled the list to " .. math.floor(p * 100 + 0.5) .. "% (" .. s.kind .. ")" end
+            end
+          end
+        end
+      end
+      setScrollPos(s, was) -- not here: put it back
+    end
+  end
+  if #scrollers == 0 then return nil, "no scroller found" end
+  return nil, "row not found after " .. probes .. " probes in " .. movable .. " of " .. #scrollers .. " scrollers"
+end
+
+-- Show it: select the recipe, bring its row into view and click it, as the player would.
+local function selectRecipe(found, pick, root)
+  local how
   if found.index and SelectTradeSkill then
     pcall(SelectTradeSkill, found.index)
     if TradeSkillFrame_SetSelection then pcall(TradeSkillFrame_SetSelection, found.index) end
@@ -305,17 +434,18 @@ local function selectRecipe(found)
       pcall(FauxScrollFrame_SetOffset, list, offset)
       local bar = _G.TradeSkillListScrollFrameScrollBar
       if bar and bar.SetValue then pcall(bar.SetValue, bar, offset * (tonumber(_G.TRADE_SKILL_HEIGHT) or 16)) end
+      how = "scrolled the classic list"
     end
     if TradeSkillFrame_Update then pcall(TradeSkillFrame_Update) end
   elseif found.id and C_TradeSkillUI then
     local fn = C_TradeSkillUI.OpenRecipe or C_TradeSkillUI.SetSelectedRecipe
-    if fn then pcall(fn, found.id) end
+    if fn then pcall(fn, found.id); how = "opened the recipe" end
   end
-  guide.row, guide.nextRow, guide.rowEvery = nil, 0, nil -- look for the row again on the next tick
-end
-
-local function canSelect(found)
-  return (found.index and SelectTradeSkill) or (found.id and C_TradeSkillUI and (C_TradeSkillUI.OpenRecipe or C_TradeSkillUI.SetSelectedRecipe))
+  local row = findRow(root, pick.name)
+  if not row then row, how = scrollToRow(root, found, pick.name, pick.spell) end
+  if row and type(row.Click) == "function" then pcall(row.Click, row) end
+  guide.showResult = how or "selected"
+  guide.row, guide.nextRow, guide.rowEvery = row, 0, nil -- trace it on the next tick
 end
 
 -- Every 0.25 s while a crafting window is open.
@@ -410,13 +540,10 @@ local function tick()
         guide.how = "row"
       else
         t:Hide()
-        h.status:SetText((found.color or "?") .. " now. It's in the list: scroll to it" ..
-          (canSelect(found) and ", or press Show it." or "."))
+        h.status:SetText((found.color or "?") .. " now. It's in the list: scroll to it, or press Show it.")
         guide.how = "not shown"
-        if canSelect(found) then
-          h.show:SetScript("OnClick", function() selectRecipe(found) end)
-          h.show:Show()
-        end
+        h.show:SetScript("OnClick", function() selectRecipe(found, pick, root) end)
+        h.show:Show()
       end
     end
   end
@@ -429,6 +556,7 @@ function ns.craftDebugLines()
   local root, name = craftWindow()
   local out = { "crafting window: " .. (root and tostring(name) or "not open") }
   if guide.open then out[#out + 1] = "crafting pick: " .. tostring(guide.pick or "-") .. " by " .. tostring(guide.how) end
+  if guide.showResult then out[#out + 1] = "crafting show it: " .. guide.showResult end
   return out
 end
 

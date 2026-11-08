@@ -1525,8 +1525,11 @@ function S.makeCraftWindow(style)
   MOCK.trade = { line = "Blacksmithing", rank = 97, max = 150, style = style or "classic", offset = 0, selected = 0, rows = {},
     recipes = { { "Rough Sharpening Stone", "trivial", 5 }, { "Copper Chain Belt", "trivial", 3 }, { "Runed Copper Belt", "easy", 1 },
                 { "Rough Bronze Leggings", "optimal", 4 } } }
+  -- style "scrollbox": Forever's own window, a modern ScrollBox of anonymous pooled rows
+  local box = style == "scrollbox" and CreateFrame("Frame", nil, f) or nil
+  if box then box:SetSize(300, 140) end
   for i = 1, 8 do
-    local b = CreateFrame("Button", "TradeSkillSkill" .. i, f); b:SetSize(300, 16)
+    local b = CreateFrame("Button", (not box) and ("TradeSkillSkill" .. i) or nil, box or f); b:SetSize(300, 16)
     MOCK.trade.rows[i] = b
   end
   MOCK.trade.layout = function()
@@ -1541,6 +1544,31 @@ function S.makeCraftWindow(style)
     end
   end
   MOCK.trade.layout()
+  if box then
+    -- scrolls by percentage; ScrollToElementDataByPredicate is added by the scenario that wants it
+    -- (elements are tree nodes whose GetData() holds the recipe's name)
+    local function maxOffset() return math.max(0, #MOCK.trade.recipes - 8) end
+    box.SetScrollPercentage = function(_, p)
+      MOCK.trade.offset = math.floor(math.max(0, math.min(1, p)) * maxOffset() + 0.5)
+      MOCK.trade.layout()
+    end
+    box.GetScrollPercentage = function()
+      local m = maxOffset()
+      return m > 0 and MOCK.trade.offset / m or 0
+    end
+    MOCK.trade.box = box
+    MOCK.trade.scrollToPredicate = function(_, pred)
+      for i, r in ipairs(MOCK.trade.recipes) do
+        local node = { GetData = function() return { name = r[1], kind = r[2] } end }
+        if pred(node) then
+          MOCK.trade.offset = math.max(0, math.min(i - 4, maxOffset()))
+          MOCK.trade.layout()
+          return node
+        end
+      end
+    end
+    return f
+  end
   -- the classic list scrolls through FauxScrollFrame_SetOffset + TradeSkillFrame_Update
   TradeSkillListScrollFrame = CreateFrame("ScrollFrame", "TradeSkillListScrollFrame", f)
   TRADE_SKILLS_DISPLAYED = 8
@@ -1630,6 +1658,42 @@ function S.craftScrolled()
   MOCK.advance(0.6)
   check(LevelingCodexCraftTrace:IsShown(), "traced after Show it")
   closeCraft()
+end
+
+-- Reported in game: Show it did nothing. Forever's own crafting window lists recipes in a
+-- ScrollBox, not the classic FauxScrollFrame. Show it scrolls the box: by its element data when
+-- it can, else by trying scroll positions. Then the row is outlined.
+function S.craftShowItScrollBox()
+  if not craftReady() or not MOCK.trade.box then return end
+  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  local box = MOCK.trade.box
+  -- by element data; by scroll position (the first guess is right); by scroll position when the
+  -- guess is wrong (the list's count says 100, so it has to step through)
+  for _, case in ipairs({ { "data", "scrolled by element data" }, { "guess", "scrolled the list to 100%%" },
+                          { "sweep", "scrolled the list to" } }) do
+    local how = case[1]
+    box.ScrollToElementDataByPredicate = how == "data" and MOCK.trade.scrollToPredicate or nil
+    MOCK.trade.offset, MOCK.trade.selected = 0, 0
+    MOCK.trade.layout()
+    openCraft()
+    local h = LevelingCodexCraftHint
+    check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen (" .. how .. ")")
+    local count = GetNumTradeSkills
+    if how == "sweep" then GetNumTradeSkills = function() return 100 end end
+    click(h, "Show it")
+    GetNumTradeSkills = count
+    MOCK.advance(0.6)
+    check(LevelingCodexCraftTrace:IsShown(), "Show it scrolls the list (" .. how .. ")")
+    check(MOCK.trade.selected == 14, "Show it selects the recipe (" .. how .. ")")
+    MOCK.chat = {}
+    slash("debug")
+    check(chatHas("crafting show it: " .. case[2]), "debug says how Show it scrolled (" .. how .. ")")
+    closeCraft()
+  end
+  box.ScrollToElementDataByPredicate = nil
+  for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
+  MOCK.trade.offset = 0
+  MOCK.trade.layout()
 end
 
 -- The crafting guide turned off in Settings: nothing over the crafting window.

@@ -59,6 +59,8 @@ PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
 CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled"]
+# Forever's own crafting window: a ScrollBox list (anonymous pooled rows, no FauxScrollFrame).
+CRAFT_SCROLLBOX = ["makeCraftWindow:scrollbox", "login", "craftShowItScrollBox"]
 
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
@@ -454,6 +456,7 @@ def main():
         if not minimal:
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))
             runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
+            runs.append(("WARRIOR/full/craft-scrollbox", "WARRIOR", False, CRAFT_SCROLLBOX))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]
