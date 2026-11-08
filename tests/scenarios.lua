@@ -2317,46 +2317,61 @@ function S.craftScrolled()
   openCraft()
   local h = LevelingCodexCraftHint
   check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen")
-  click(h, "Show it")
-  check(MOCK.trade.selected == 14, "Show it selects the recipe")
-  MOCK.advance(0.6)
-  check(LevelingCodexCraftTrace:IsShown(), "traced after Show it")
+  check(MOCK.textUnder(h):find("It's in the list: scroll to it.", 1, true), "the card says to scroll to it")
+  MOCK.trade.offset = 11; MOCK.trade.layout() -- the player scrolls to it
+  MOCK.advance(2.3)
+  check(LevelingCodexCraftTrace:IsShown(), "traced once the player scrolls to it")
+  check(MOCK.trade.selected == 0, "nothing selected for the player")
   closeCraft()
-end
-
--- Reported in game: Show it did nothing. Forever's own crafting window lists recipes in a
--- ScrollBox, not the classic FauxScrollFrame. Show it scrolls the box: by its element data when
--- it can, else by trying scroll positions. Then the row is outlined.
-function S.craftShowItScrollBox()
-  if not craftReady() or not MOCK.trade.box then return end
-  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
-  local box = MOCK.trade.box
-  -- by element data; by scroll position (the first guess is right); by scroll position when the
-  -- guess is wrong (the list's count says 100, so it has to step through)
-  for _, case in ipairs({ { "data", "scrolled by element data" }, { "guess", "scrolled the list to 100%%" },
-                          { "sweep", "scrolled the list to" } }) do
-    local how = case[1]
-    box.ScrollToElementDataByPredicate = how == "data" and MOCK.trade.scrollToPredicate or nil
-    MOCK.trade.offset, MOCK.trade.selected = 0, 0
-    MOCK.trade.layout()
-    openCraft()
-    local h = LevelingCodexCraftHint
-    check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen (" .. how .. ")")
-    local count = GetNumTradeSkills
-    if how == "sweep" then GetNumTradeSkills = function() return 100 end end
-    click(h, "Show it")
-    GetNumTradeSkills = count
-    MOCK.advance(0.6)
-    check(LevelingCodexCraftTrace:IsShown(), "Show it scrolls the list (" .. how .. ")")
-    check(MOCK.trade.selected == 14, "Show it selects the recipe (" .. how .. ")")
-    MOCK.chat = {}
-    slash("debug")
-    check(chatHas("crafting show it: " .. case[2]), "debug says how Show it scrolled (" .. how .. ")")
-    closeCraft()
-  end
-  box.ScrollToElementDataByPredicate = nil
   for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
   MOCK.trade.offset = 0
+  MOCK.trade.layout()
+end
+
+-- Reported in game: on the controller the crafting list wouldn't scroll once the card came up, then
+-- the game crashed. The guide selected the recipe, scrolled the list and clicked its row by itself
+-- (and offered Show it to do the same). The crafting window is the player's: the guide only reads
+-- it and outlines the row when it's in view.
+function S.craftHandsOff()
+  if not craftReady() then return end
+  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  local touched, restore = {}, {}
+  local function spy(t, k, label)
+    local f = t and t[k]
+    if type(f) ~= "function" then return end
+    t[k] = function(...) touched[#touched + 1] = label; return f(...) end
+    restore[#restore + 1] = function() t[k] = f end
+  end
+  local box = MOCK.trade.box
+  if box then box.ScrollToElementDataByPredicate = MOCK.trade.scrollToPredicate end
+  spy(_G, "SelectTradeSkill", "SelectTradeSkill")
+  spy(_G, "FauxScrollFrame_SetOffset", "FauxScrollFrame_SetOffset")
+  spy(_G, "TradeSkillFrame_Update", "TradeSkillFrame_Update")
+  spy(C_TradeSkillUI, "OpenRecipe", "C_TradeSkillUI.OpenRecipe")
+  spy(box, "SetScrollPercentage", "SetScrollPercentage")
+  spy(box, "ScrollToElementDataByPredicate", "ScrollToElementDataByPredicate")
+  for i, b in ipairs(MOCK.trade.rows) do spy(b, "Click", "row " .. i .. " Click") end
+  for _, pad in ipairs({ true, false }) do
+    local who = pad and "controller" or "mouse"
+    MOCK.gamepad, MOCK.gamepadUI = pad or nil, pad or nil
+    MOCK.trade.offset, MOCK.trade.selected = 0, 0
+    MOCK.trade.layout()
+    for k in pairs(touched) do touched[k] = nil end
+    openCraft()
+    MOCK.advance(3)
+    check(#touched == 0, who .. ": the guide never drives the crafting window (" .. table.concat(touched, ", ") .. ")")
+    check(MOCK.trade.offset == 0 and MOCK.trade.selected == 0, who .. ": the list stays where the player left it")
+    local h = LevelingCodexCraftHint
+    local text = h and h:IsShown() and MOCK.textUnder(h) or ""
+    check(text:find("It's in the list: scroll to it.", 1, true), who .. ": the card says to scroll to it")
+    check(not text:find("Show it"), who .. ": no Show it button")
+    closeCraft()
+  end
+  MOCK.gamepad, MOCK.gamepadUI = nil, nil
+  for _, undo in ipairs(restore) do undo() end
+  if box then box.ScrollToElementDataByPredicate = nil end
+  for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
+  MOCK.trade.offset, MOCK.trade.selected = 0, 0
   MOCK.trade.layout()
 end
 
@@ -2536,18 +2551,6 @@ function S.craftTailoring()
   restore()
 end
 
--- On the controller the bolt is selected by itself on opening.
-function S.craftTailoringPad()
-  if not craftReady() or not GamepadMode then return end
-  local restore = tailorWindow(10)
-  MOCK.gamepad = true
-  openCraft()
-  check(MOCK.trade.selected == 11, "the bolt (index 11) selected on opening (" .. tostring(MOCK.trade.selected) .. ")")
-  closeCraft()
-  MOCK.gamepad = nil
-  restore()
-end
-
 -- Enchanting: a missing rod is outlined first (a better rod counts, a grey rod is still needed), then
 -- Dust to Motes when you have the dust but no Motes.
 local function enchantWindow(skill, max, recipes, bags)
@@ -2589,33 +2592,6 @@ function S.craftEnchanting()
   closeCraft()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected = unpack(saved)
   MOCK.bags = {}
-  MOCK.trade.layout()
-end
-
--- On the controller the recipe is selected and scrolled into view once per opening.
-function S.craftPadAutoSelect()
-  if not craftReady() or not GamepadMode then return end
-  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
-  MOCK.trade.offset, MOCK.trade.selected = 0, 0
-  MOCK.trade.layout()
-  MOCK.gamepad = true
-  openCraft()
-  check(MOCK.trade.selected > 0 and LevelingCodexCraftTrace:IsShown(), "selected and outlined on opening")
-  MOCK.trade.offset = 0; MOCK.trade.layout()   -- the player scrolls away
-  MOCK.advance(3)
-  check(not LevelingCodexCraftTrace:IsShown() and MOCK.trade.offset == 0, "not pulled back after scrolling away")
-  closeCraft()
-  MOCK.trade.selected = 0
-  openCraft()
-  check(MOCK.trade.selected > 0, "again on the next opening")
-  closeCraft()
-  MOCK.gamepad = nil
-  MOCK.trade.offset, MOCK.trade.selected = 0, 0
-  MOCK.trade.layout()
-  openCraft()
-  check(MOCK.trade.selected == 0, "mouse: nothing automatic")
-  closeCraft()
-  for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
   MOCK.trade.layout()
 end
 

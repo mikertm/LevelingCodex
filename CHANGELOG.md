@@ -1,5 +1,9 @@
 # Leveling Codex
 
+## Unreleased
+- Fixed: on the controller, the crafting window's recipe list could stop scrolling. When the window opened with the guide's recipe scrolled out of view, the Codex selected that recipe, scrolled the list and clicked its row by itself, and that took the list away from the controller. The crafting guide now only outlines the recipe and shows its card: it never selects, scrolls or clicks anything in the crafting window.
+- Removed: the **Show it** button on the crafting card (it did the same thing). When the recipe is out of view, the card says to scroll to it, and the outline appears as soon as it's on screen.
+
 ## v0.12.0
 - New: **profession guides for Mining, Blacksmithing, Tailoring and Enchanting, 1-300**, built for WoW: Forever. Forever reworked Blacksmithing (about 200 new plans, and many recipes turn yellow and grey 25 points earlier than in Classic), so the route uses Forever's own recipe colours and reagents, checked against the game files.
   - **Blacksmithing**: the cheapest trainer route: stones, Copper Chain Belt, Runed Copper Belt, Rough Bronze Leggings, Heavy Grinding Stones (kept for Golden Scale Bracers), Iron Buckle, Bronze Warhammer, Green Iron Bracers, Golden Scale Bracers, the Heavy Mithril pieces and Dense Sharpening Stones, then the Imperial Plate plans from Derotain Mudsipper's quests in Tanaris from 240. Every step has an alternative.
