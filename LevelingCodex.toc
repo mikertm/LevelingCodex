@@ -19,6 +19,7 @@ Macros.lua
 Banner.lua
 Window.lua
 ProfessionTab.lua
+Gamepad.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua

@@ -224,6 +224,7 @@ local function icon(name, x, y, size, title, text)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
   f.tipTitle, f.tipText = title, text
+  f.padSkip = true -- a tooltip only: the controller focus skips it
   return f
 end
 
@@ -237,6 +238,7 @@ local function btn(label, x, y, w, onClick, on, tip)
   b:SetLook(on)
   b:SetScript("OnClick", onClick)
   b.tipTitle, b.tipText = tip and label or nil, tip
+  b.padSkip, b.padX, b.padY = nil, x + w / 2, y + 11
   return b
 end
 
@@ -249,6 +251,7 @@ local function check(label, x, y, on, onClick, tip)
   cb:SetLook(on)
   cb:SetScript("OnClick", onClick)
   cb.tipTitle, cb.tipText = tip and label or nil, tip
+  cb.padSkip, cb.padX, cb.padY = nil, x + 12, y + 12
   return cb
 end
 
@@ -1174,6 +1177,8 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick)
   hb.tipTitle, hb.tipText = tipTitle, tipText
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
+  hb.padSkip = (onClick == nil) or nil -- tooltip-only strips stay out of the controller focus
+  hb.padX, hb.padY = x + w / 2, y + h / 2
   return hb
 end
 
@@ -1209,8 +1214,38 @@ refresh = function()
   local want = scrollPos[activeTab] or 0
   local range = scroll.GetVerticalScrollRange and scroll:GetVerticalScrollRange() or want
   scroll:SetVerticalScroll(math.max(0, math.min(want, range or 0)))
+  if ns.gamepad then ns.gamepad.refresh(frame) end
 end
 ns.refresh = refresh
+
+-- LB/RB on a controller: the next or previous tab, wrapping around.
+local function cycleTab(delta)
+  local i = 1
+  for k, t in ipairs(TABS) do if t[1] == activeTab then i = k end end
+  i = (i - 1 + delta) % #TABS + 1
+  activeTab = TABS[i][1]
+  refresh()
+end
+
+-- What the controller can focus, at logical positions (content coordinates, y down): the content's
+-- buttons, ticks and clickable strips, the header above it and the tabs below it.
+local function listFocusables()
+  local out = {}
+  for _, kind in ipairs({ "btn", "check", "hit" }) do
+    local p = pools[kind]
+    for i = 1, p and p.used or 0 do
+      local w = p.list[i]
+      if w:IsShown() and not w.padSkip then out[#out + 1] = { frame = w, x = w.padX or 0, y = w.padY or 0 } end
+    end
+  end
+  local chrome = frame.padChrome or {}
+  for _, c in ipairs({ { chrome.prev, W * 0.6 }, { chrome.now, W * 0.75 }, { chrome.next, W * 0.9 }, { chrome.close, W + 20 } }) do
+    if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40 } end
+  end
+  local h = content:GetHeight() or 0
+  for i, t in ipairs(tabs) do out[#out + 1] = { frame = t, x = i * W / #tabs, y = h + 40 } end
+  return out
+end
 
 -- The flat Codex chrome (when the client has no dialog border): leather, glow, double border.
 local function doubleBorder(f)
@@ -1277,23 +1312,6 @@ local function closeWithEsc(name)
   table.insert(UISpecialFrames, name)
 end
 
--- Controller: B (PAD2) or Back closes the frame; every other button still reaches the game.
--- Only when the client can pass gamepad input on, so we never swallow buttons. Out of combat only.
-local function closeWithGamepad(f)
-  if not (f.EnableGamePadButton and f.SetPropagateGamePadInput and f.HasScript) then return end
-  if not pcall(f.HasScript, f, "OnGamePadButtonDown") then return end
-  if not (pcall(f.EnableGamePadButton, f, true) and pcall(f.SetPropagateGamePadInput, f, true)) then return end
-  f:SetScript("OnGamePadButtonDown", function(self, button)
-    if InCombatLockdown() then return end -- leave input alone in combat
-    local close = button == "PAD2" or button == "PADBACK"
-    pcall(self.SetPropagateGamePadInput, self, not close)
-    if close then self:Hide() end
-  end)
-  f:HookScript("OnHide", function(self)
-    if not InCombatLockdown() then pcall(self.SetPropagateGamePadInput, self, true) end
-  end)
-end
-
 local function makeFrame()
   frame = A.frame("Frame", "LevelingCodexFrame", UIParent)
   frame:SetSize(640, 620)
@@ -1305,7 +1323,6 @@ local function makeFrame()
   frame:Hide()
   shownTab = nil -- a new scroll frame: keep the saved offsets, don't read the empty one
   closeWithEsc("LevelingCodexFrame") -- by name, so a rebuilt frame needs no second entry
-  closeWithGamepad(frame)
 
   chrome(frame, 110)
   A.header(frame, "The Leveling Codex", 360)
@@ -1356,6 +1373,7 @@ local function makeFrame()
   nowBtn:SetScript("OnClick", function() viewLevel = UnitLevel("player"); refresh() end)
   prevB.tipTitle, prevB.tipText = "Previous level", "Browse the guide at any level."
   nextB.tipTitle, nextB.tipText = "Next level", "Browse the guide at any level."
+  frame.padChrome = { prev = prevB, now = nowBtn, next = nextB, close = close }
 
   -- the page: a dark inset with the scrolling content
   local page = inset(frame)
@@ -1388,6 +1406,8 @@ local function makeFrame()
   end
 
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
+  -- after OnShow is set: the controller (Gamepad.lua) hooks it
+  ns.gamepad.attach(frame, { main = true, scroll = scroll, focusables = listFocusables, onTab = cycleTab })
   ns.placeWindow()
 end
 
@@ -1411,7 +1431,6 @@ local function makeCopy()
   copy:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
   copy:Hide()
   closeWithEsc("LevelingCodexCopy")
-  closeWithGamepad(copy)
 
   chrome(copy, 80)
   local _, title = A.header(copy, "Copy a macro", 300)
@@ -1465,6 +1484,7 @@ local function makeCopy()
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
+  ns.gamepad.attach(copy, { popup = true })
 end
 
 -- Show one macro (m), optionally as part of a list (the ones that couldn't be made);
@@ -1506,7 +1526,7 @@ function ns.rebuildForTheme()
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
-    frame:Hide(); frame = nil
+    frame:Hide(); frame = nil -- hiding first hands it back to Forever's controller navigation
     for _, p in pairs(pools) do for i = 1, #p.list do p.list[i]:Hide() end end
     pools = {}
     makeFrame()

@@ -48,8 +48,9 @@ MOCK.knownEvents = {
   PLAYER_ALIVE = true, PLAYER_UNGHOST = true, MINIMAP_UPDATE_TRACKING = true, LEARNED_SPELL_IN_TAB = true,
   SPELLS_CHANGED = true, SKILL_LINES_CHANGED = true, CHAT_MSG_SKILL = true, TRADE_SKILL_SHOW = true,
   TRADE_SKILL_UPDATE = true, TRADE_SKILL_CLOSE = true, TRAINER_SHOW = true, TRAINER_CLOSED = true,
+  GAME_PAD_ACTIVE_CHANGED = true,
 }
-MOCK.optionalEvents = { "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED",
+MOCK.optionalEvents = { "GAME_PAD_ACTIVE_CHANGED", "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED",
   "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
   "TRAINER_CLOSED" }
 
@@ -258,7 +259,7 @@ end
 local SCRIPTS = {
   OnShow = 1, OnHide = 1, OnUpdate = 1, OnEvent = 1, OnEnter = 1, OnLeave = 1, OnClick = 1, OnMouseUp = 1,
   OnMouseDown = 1, OnDragStart = 1, OnDragStop = 1, OnMouseWheel = 1, OnKeyDown = 1, OnKeyUp = 1,
-  OnGamePadButtonDown = 1, OnGamePadButtonUp = 1, OnEscapePressed = 1, OnEnterPressed = 1, OnTextChanged = 1,
+  OnGamePadButtonDown = 1, OnGamePadButtonUp = 1, OnGamePadStick = 1, OnEscapePressed = 1, OnEnterPressed = 1, OnTextChanged = 1,
   OnEditFocusGained = 1, OnEditFocusLost = 1, OnVerticalScroll = 1, OnScrollRangeChanged = 1, OnSizeChanged = 1,
   OnValueChanged = 1, OnLoad = 1, PreClick = 1, PostClick = 1, OnDoubleClick = 1, OnChar = 1,
 }
@@ -313,6 +314,7 @@ function Frame:SetID(id) self._id = id end
 function Frame:GetID() return self._id or 0 end
 function Frame:EnableGamePadButton(on) self._gamepad = on end
 function Frame:SetPropagateGamePadInput(on) self._padPropagate = on end
+function Frame:EnableGamePadStick(on) self._padStick = on end
 function Frame:SetResizable() end
 function Frame:SetUserPlaced() end
 function Frame:IsUserPlaced() return false end
@@ -718,6 +720,52 @@ function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
 
+-- Forever's controller UI (Blizzard_GamepadSharedUtility / Blizzard_GamepadSmartNavigation):
+-- MOCK.gamepadUI = its controller UI is on, MOCK.gamepad = the controller is in use,
+-- MOCK.padRefuse = FrameShown errors, MOCK.padNoFocus = the focus never lands on a frame.
+MOCK.padHidden, MOCK.padRefreshed = {}, {}
+InputUtil = { IsGamepadUIEnabled = function() return MOCK.gamepadUI == true end }
+function IsUsingGamepad() return MOCK.gamepad == true end
+GamepadMode = { FrameControlsManager = { shown = {} } }
+function GamepadMode.FrameControlsManager:FrameShown(f, popup)
+  if MOCK.combat then problem("gamepad", "FrameShown in combat") end
+  if MOCK.padRefuse then error("refused", 2) end
+  if not InputUtil.IsGamepadUIEnabled() then return false end
+  for _, x in ipairs(self.shown) do if x == f then return false end end
+  table.insert(self.shown, f)
+  f._padPopup = popup
+  return true
+end
+function GamepadMode.FrameControlsManager:FrameHidden(f)
+  if MOCK.combat then problem("gamepad", "FrameHidden in combat") end
+  for i = #self.shown, 1, -1 do if self.shown[i] == f then table.remove(self.shown, i) end end
+  MOCK.padHidden[f] = true
+end
+SmartNavigation = CreateFrame("Frame", "SmartNavigation", UIParent)
+SmartNavigation:Hide()
+function SmartNavigation:RefreshButtonGroups(p)
+  if MOCK.combat then problem("gamepad", "RefreshButtonGroups in combat") end
+  table.insert(MOCK.padRefreshed, p)
+end
+function SmartNavigation:SetScrollFrameForFrame(p, s) p._padScroll = s end
+function SmartNavigation:GetCurrentButton()
+  local shown = GamepadMode and GamepadMode.FrameControlsManager.shown or {}
+  local panel = shown[#shown]
+  if MOCK.padNoFocus or not panel then return nil end
+  local function first(f)
+    for _, k in ipairs(f._children or {}) do
+      if k:IsShown() then
+        if k._type == "Button" or k._type == "CheckButton" then return k end
+        local found = first(k)
+        if found then return found end
+      end
+    end
+  end
+  return first(panel)
+end
+function SmartNavigation_MarkFrameIgnored(f) f._padIgnored = true end
+function SmartNavigation_ClearIgnoreStatus(f) f._padIgnored = nil end
+
 -- Forever's addon compartment (the addons button under the clock): RegisterAddon({ text, icon,
 -- func(data, menuInputData), funcOnEnter(button), funcOnLeave(button) }).
 AddonCompartmentFrame = CreateFrame("Frame", "AddonCompartmentFrame", UIParent)
@@ -920,7 +968,9 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
-  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame" }
+  "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
+  "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",
+  "SmartNavigation_ClearIgnoreStatus" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -932,6 +982,7 @@ function MOCK.setup(opts)
     Texture.SetRotation = nil
     Frame.EnableGamePadButton = nil
     Frame.SetPropagateGamePadInput = nil
+    Frame.EnableGamePadStick = nil
     -- an old-style client: no Blizzard button/check templates, no backdrops at all
     Frame.SetBackdrop = nil
     for _, t in ipairs({ "UIPanelButtonTemplate", "UICheckButtonTemplate", "BackdropTemplate" }) do

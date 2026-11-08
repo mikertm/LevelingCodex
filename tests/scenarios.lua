@@ -327,6 +327,108 @@ function S.minimap()
   check(mini:IsShown(), "/codex minimap shows it")
 end
 
+----------------------------------------------------------------------------
+-- Controller (Gamepad.lua): Forever's navigation, the Codex's own as a backup
+----------------------------------------------------------------------------
+
+local function pad(f, b) MOCK.fire(f, "OnGamePadButtonDown", b) end
+local function nav() return GamepadMode.FrameControlsManager end
+
+-- Forever's controller UI on: the window joins its navigation.
+function S.padForever()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "Settings")
+  local shown = false
+  for _, f in ipairs(nav().shown) do if f == win() then shown = true end end
+  check(shown, "window handed to Forever's window manager")
+  check(win()._padScroll ~= nil, "scroll area registered")
+  -- tooltip-only icons ignored, clickable pieces not
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() and b.padSkip then check(b._padIgnored, "tooltip-only piece ignored") end
+    if b:IsShown() and not b.padSkip then check(not b._padIgnored, "clickable piece not ignored: " .. tostring(b.tipTitle)) end
+  end
+  local n = #MOCK.padRefreshed
+  click(win(), "Professions")
+  check(#MOCK.padRefreshed > n, "buttons re-read after a redraw")
+  -- (Review 4) after switching tabs the marks follow each strip's click
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() then check((b._padIgnored == true) == (b.padSkip == true), "mark follows the strip after a tab switch") end
+  end
+  MOCK.chat = {}; slash("debug")
+  check(chatHas("controller: Forever navigation"), "debug line")
+  win():Hide()
+  check(MOCK.padHidden[win()], "closing hands it back (Review 2: Hide/Esc path)")
+  check(win()._padPropagate ~= false, "input passes through once closed")
+  MOCK.gamepadUI = nil
+end
+
+-- (Review 1) a theme switch rebuilds the window: the old one is handed back, the new one joins.
+function S.padThemeRebuild()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "Settings")
+  local old = win()
+  click(win(), "Codex (gold)")
+  check(MOCK.padHidden[old], "old frame handed back")
+  local shown = false
+  for _, f in ipairs(nav().shown) do if f == win() then shown = true end end
+  check(shown and win() ~= old, "the rebuilt window is handed over")
+  click(win(), "Forever (teal)")
+  win():Hide()
+  MOCK.gamepadUI = nil
+end
+
+-- LB/RB switch tabs (both modes), keeping B-to-close.
+function S.padTabs()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "This Level")
+  pad(win(), "PADRSHOULDER")
+  check(MOCK.textUnder(win()):find("Talent tree") and win()._padPropagate == false, "RB: next tab (Talents), button kept")
+  pad(win(), "PADLSHOULDER"); pad(win(), "PADLSHOULDER")
+  check(MOCK.textUnder(win()):find("Minimap button"), "LB twice from Talents wraps to Settings")
+  pad(win(), "PAD1")
+  check(win()._padPropagate == true, "A is Forever's in Forever mode")
+  pad(win(), "PAD2")
+  check(not win():IsShown(), "B closes")
+  MOCK.gamepadUI = nil
+end
+
+-- Opened in combat: Forever's functions wait until combat ends (the mock flags any call in combat).
+function S.padCombatOpen()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  MOCK.combat = true
+  openAt(30, "Settings")
+  local shown = false
+  for _, f in ipairs(nav().shown) do if f == win() then shown = true end end
+  check(not shown, "not handed over in combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.6)
+  for _, f in ipairs(nav().shown) do if f == win() then shown = true end end
+  check(shown, "handed over once combat ends")
+  win():Hide()
+  MOCK.gamepadUI = nil
+end
+
+-- (Review 5) picking up the controller while the window is open.
+function S.padPickUp()
+  if not D() or not GamepadMode then return end
+  openAt(30, "Settings")
+  MOCK.chat = {}; slash("debug")
+  check(chatHas("controller: not in use"), "no controller: not in use")
+  MOCK.gamepadUI = true
+  MOCK.event("GAME_PAD_ACTIVE_CHANGED", true)
+  MOCK.advance(0.6)
+  local shown = false
+  for _, f in ipairs(nav().shown) do if f == win() then shown = true end end
+  check(shown, "joins Forever's navigation without reopening")
+  win():Hide()
+  MOCK.gamepadUI = nil
+end
+
 -- Forever's addon compartment (the addons button under the clock) lists the Codex.
 function S.compartment()
   if not D() or not AddonCompartmentFrame then return end

@@ -55,6 +55,8 @@ PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "p
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
 PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
+# The controller: Forever's navigation, the Codex's own as a backup.
+PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
@@ -452,6 +454,8 @@ def main():
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         for cls in ("WARRIOR", "HUNTER"):
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
+        for cls in ("WARRIOR", "MAGE"):
+            runs.append(("%s/%s/pad" % (cls, variant), cls, minimal, PAD))
         runs.append(("WARRIOR/%s/craft" % variant, "WARRIOR", minimal, CRAFT))
         if not minimal:
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))

@@ -156,5 +156,6 @@ function ns.debugLines()
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..
     ", banner: " .. (ns.db().toastPos and "moved by you" or (ns.builtInSpotY and "in its spot" or "default spot"))
   for i, line in ipairs(out) do out[i] = ns.plain(line) end
+  for _, line in ipairs(ns.gamepad and ns.gamepad.debugLines() or {}) do out[#out + 1] = line end
   return out
 end
