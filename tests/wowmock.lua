@@ -734,8 +734,16 @@ function GamepadMode.FrameControlsManager:FrameShown(f, popup)
   for _, x in ipairs(self.shown) do if x == f then return false end end
   table.insert(self.shown, f)
   f._padPopup = popup
+  -- were the tooltip-only pieces already out of the focus when the window joined?
+  local marked = true
+  for _, b in ipairs(MOCK.buttons(f)) do
+    if b:IsShown() and b.padSkip and not b._padIgnored then marked = false end
+  end
+  MOCK.padMarksAtJoin = marked
+  SmartNavigation:SelectTopLeftButton()
   return true
 end
+function GamepadMode.FrameControlsManager:GetActiveFrame() return self.shown[#self.shown] end
 function GamepadMode.FrameControlsManager:FrameHidden(f)
   if MOCK.combat then problem("gamepad", "FrameHidden in combat") end
   for i = #self.shown, 1, -1 do if self.shown[i] == f then table.remove(self.shown, i) end end
@@ -748,20 +756,25 @@ function SmartNavigation:RefreshButtonGroups(p)
   table.insert(MOCK.padRefreshed, p)
 end
 function SmartNavigation:SetScrollFrameForFrame(p, s) p._padScroll = s end
-function SmartNavigation:GetCurrentButton()
+-- The focused piece: picked when a window joins, or by SelectTopLeftButton (the first shown,
+-- not ignored Button of the active window); a redraw can leave it on a hidden or reused widget.
+function SmartNavigation:SelectTopLeftButton()
   local shown = GamepadMode and GamepadMode.FrameControlsManager.shown or {}
   local panel = shown[#shown]
-  if MOCK.padNoFocus or not panel then return nil end
   local function first(f)
     for _, k in ipairs(f._children or {}) do
-      if k:IsShown() then
+      if k:IsShown() and not k._padIgnored then
         if k._type == "Button" or k._type == "CheckButton" then return k end
         local found = first(k)
         if found then return found end
       end
     end
   end
-  return first(panel)
+  self._current = panel and first(panel) or nil
+end
+function SmartNavigation:GetCurrentButton()
+  if MOCK.padNoFocus then return nil end
+  return self._current
 end
 -- How far the first scroll frame inside f is scrolled.
 function MOCK.scrollOf(f)

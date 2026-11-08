@@ -58,7 +58,8 @@ PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
 PROF_BANNER = ["login", "bannerOpensTarget"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
-       "padBackupCombat", "padCopyBox"]
+       "padBackupCombat", "padCopyBox", "padForeverCombat", "padTalents", "padForeverFocus", "padForeverActive",
+       "padStickKeepsFocus"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftPadAutoSelect", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]

@@ -532,6 +532,119 @@ function S.padCopyBox()
   LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
 end
 
+-- Review fixes 1-2: combat starting releases the controller (also after LB/RB in Forever mode)
+-- and hands the window back to Forever, so closing it in combat leaves no ghost window behind.
+function S.padForeverCombat()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  MOCK.padHidden = {}
+  openAt(30, "This Level")
+  pad(win(), "PADRSHOULDER")
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  check(win()._padPropagate == true, "combat starting releases the controller after RB")
+  check(MOCK.padHidden[win()], "and hands the window back to Forever before combat")
+  MOCK.combat = true
+  win():Hide()                                   -- closed with Esc in combat
+  MOCK.combat = false; MOCK.event("PLAYER_REGEN_ENABLED"); MOCK.advance(0.6)
+  local ghost = false
+  for _, f in ipairs(nav().shown) do if f == win() then ghost = true end end
+  check(not ghost, "no ghost window left with Forever")
+  slash(""); MOCK.advance(0.6)
+  MOCK.chat = {}; slash("debug")
+  check(chatHas("controller: Forever navigation"), "the next opening joins Forever again")
+  -- combat that starts without its event reaching us: the hand-back waits for combat to end
+  MOCK.padHidden = {}
+  MOCK.combat = true
+  win():Hide()
+  check(not MOCK.padHidden[win()], "nothing called in combat")
+  MOCK.combat = false; MOCK.event("PLAYER_REGEN_ENABLED"); MOCK.advance(0.1)
+  check(MOCK.padHidden[win()], "handed back once combat ends")
+  MOCK.gamepadUI = nil
+end
+
+-- Review fix 3: the Talents tab's tree nodes and every-point rows are reachable.
+function S.padTalents()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "Talents")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() and b:GetScript("OnClick") then
+      check(not b._padIgnored, "Forever: clickable piece not ignored: " .. tostring(b.tipTitle))
+    end
+  end
+  win():Hide()
+  LevelingCodexDB.padNative = false
+  openAt(30, "Talents")
+  local node, row
+  for _ = 1, 120 do
+    local t = LevelingCodexPadFocus.target
+    local title = t and t.tipTitle or ""
+    if title:find("^Level %d+:") then row = t; break end
+    if title:find("%d/%d") and t:GetScript("OnClick") then node = t end
+    pad(win(), "PADDDOWN")
+  end
+  check(node, "the D-pad reaches a talent tree node")
+  check(row, "the D-pad reaches the every-point rows")
+  local level = row and tonumber(row.tipTitle:match("^Level (%d+)"))
+  pad(win(), "PAD1")
+  check(level and MOCK.textUnder(win()):find("Level " .. level) and not MOCK.textUnder(win()):find("Talent tree"),
+    "A on a row opens that level")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+end
+
+-- Review fix 4: tooltip-only pieces are out of Forever's focus before the window joins, and a
+-- redraw that hides the focused piece puts the focus back on the window.
+function S.padForeverFocus()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "This Level"); win():Hide()          -- This Level has tooltip-only icons
+  for _, b in ipairs(MOCK.buttons(win())) do b._padIgnored = nil end -- fresh widgets
+  slash(""); MOCK.advance(0.1)
+  check(MOCK.padMarksAtJoin == true, "marks in place when the window joins")
+  click(win(), "Settings")
+  local tick
+  for _, b in ipairs(MOCK.buttons(win())) do if b:IsShown() and b._type == "CheckButton" then tick = b end end
+  SmartNavigation._current = tick                -- Forever's focus on a Settings tick
+  pad(win(), "PADRSHOULDER")                     -- Settings -> This Level: the tick is gone
+  local cur = SmartNavigation:GetCurrentButton()
+  check(cur and cur:IsShown() and not cur._padIgnored, "focus back on a shown, clickable piece")
+  win():Hide()
+  MOCK.gamepadUI = nil
+end
+
+-- Review fix 9: LB/RB belong to the window Forever's focus is in.
+function S.padForeverActive()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  openAt(30, "This Level")
+  local other = CreateFrame("Frame", nil, UIParent)
+  table.insert(nav().shown, other)               -- the player moved the focus to another window (LT/RT)
+  pad(win(), "PADRSHOULDER")
+  check(win()._padPropagate == true and not MOCK.textUnder(win()):find("Talent tree"), "LB/RB left to the focused window")
+  table.remove(nav().shown)
+  pad(win(), "PADRSHOULDER")
+  check(MOCK.textUnder(win()):find("Talent tree"), "back on the Codex, RB switches its tab")
+  win():Hide()
+  MOCK.gamepadUI = nil
+end
+
+-- Review fix 7: after the right stick scrolls, the highlight sits on a piece in view.
+function S.padStickKeepsFocus()
+  if not D() or not GamepadMode then return end
+  LevelingCodexDB.padNative = false; MOCK.gamepadUI = true
+  openAt(30, "Settings")
+  MOCK.fire(win(), "OnGamePadStick", "Right", 0, -1)
+  MOCK.advance(1.5)
+  MOCK.fire(win(), "OnGamePadStick", "Right", 0, 0)
+  local off = MOCK.scrollOf(win())
+  check(off > 0, "the stick scrolled down")
+  local _, _, _, _, ty = LevelingCodexPadFocus.target:GetPoint(1)
+  check(ty and -ty >= off - 30 and -ty <= off + 480, "the highlight is on a piece in view (" .. tostring(ty) .. ", " .. off .. ")")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+end
+
 -- Forever's addon compartment (the addons button under the clock) lists the Codex.
 function S.compartment()
   if not D() or not AddonCompartmentFrame then return end

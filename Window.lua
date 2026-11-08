@@ -224,7 +224,6 @@ local function icon(name, x, y, size, title, text)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
   f.tipTitle, f.tipText = title, text
-  f.padSkip = true -- a tooltip only: the controller focus skips it
   return f
 end
 
@@ -238,7 +237,6 @@ local function btn(label, x, y, w, onClick, on, tip)
   b:SetLook(on)
   b:SetScript("OnClick", onClick)
   b.tipTitle, b.tipText = tip and label or nil, tip
-  b.padSkip, b.padX, b.padY = nil, x + w / 2, y + 11
   return b
 end
 
@@ -251,7 +249,6 @@ local function check(label, x, y, on, onClick, tip)
   cb:SetLook(on)
   cb:SetScript("OnClick", onClick)
   cb.tipTitle, cb.tipText = tip and label or nil, tip
-  cb.padSkip, cb.padX, cb.padY = nil, x + 12, y + 12
   return cb
 end
 
@@ -1184,8 +1181,6 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick)
   hb.tipTitle, hb.tipText = tipTitle, tipText
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
-  hb.padSkip = (onClick == nil) or nil -- tooltip-only strips stay out of the controller focus
-  hb.padX, hb.padY = x + w / 2, y + h / 2
   return hb
 end
 
@@ -1221,6 +1216,20 @@ refresh = function()
   local want = scrollPos[activeTab] or 0
   local range = scroll.GetVerticalScrollRange and scroll:GetVerticalScrollRange() or want
   scroll:SetVerticalScroll(math.max(0, math.min(want, range or 0)))
+  -- the controller's tags, from what each widget is now (pooled widgets change role between tabs,
+  -- and some get their click after the helper drew them): padSkip = nothing to press, padX/padY =
+  -- its centre in content coordinates
+  for _, kind in ipairs({ "icon", "btn", "check", "hit" }) do
+    local p = pools[kind]
+    for i = 1, p and p.used or 0 do
+      local w = p.list[i]
+      w.padSkip = (w:GetScript("OnClick") == nil) or nil
+      local _, rel, _, x, y = w:GetPoint(1)
+      if rel == content and x and y then
+        w.padX, w.padY = x + (w:GetWidth() or 0) / 2, -y + (w:GetHeight() or 0) / 2
+      end
+    end
+  end
   if ns.gamepad then ns.gamepad.refresh(frame) end
 end
 ns.refresh = refresh
@@ -1238,7 +1247,7 @@ end
 -- buttons, ticks and clickable strips, the header above it and the tabs below it.
 local function listFocusables()
   local out = {}
-  for _, kind in ipairs({ "btn", "check", "hit" }) do
+  for _, kind in ipairs({ "icon", "btn", "check", "hit" }) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]

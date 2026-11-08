@@ -211,6 +211,26 @@ local function press(f, st)
   elseif type(piece.SetFocus) == "function" then pcall(piece.SetFocus, piece) end
 end
 
+-- After the content scrolled under it, keep the highlight on a piece in view (the nearest one), so
+-- A never presses something you can't see.
+local function keepInView(st)
+  local cur, sc = st.focus, st.opts.scroll
+  if not (cur and sc) or cur.fixed then return end
+  local okOff, off = pcall(sc.GetVerticalScroll, sc)
+  off = okOff and tonumber(off) or 0
+  local okH, visible = pcall(sc.GetHeight, sc)
+  visible = (okH and tonumber(visible) and visible > 0) and visible or 480
+  if cur.y >= off and cur.y <= off + visible then return end
+  local best, bestD
+  for _, it in ipairs(list(st)) do
+    if not it.fixed and it.y >= off and it.y <= off + visible then
+      local d = math.abs(it.y - cur.y)
+      if not best or d < bestD then best, bestD = it, d end
+    end
+  end
+  if best then focusOn(st, best) end
+end
+
 -- The right stick scrolls while it's tilted.
 local driver = CreateFrame("Frame")
 local function stickUpdate(_, elapsed)
@@ -223,6 +243,7 @@ local function stickUpdate(_, elapsed)
       local okR, range = pcall(sc.GetVerticalScrollRange, sc)
       off, range = (ok and tonumber(off)) or 0, (okR and tonumber(range)) or 0
       pcall(sc.SetVerticalScroll, sc, math.max(0, math.min(off - st.stickY * STICK_SPEED * elapsed, range)))
+      keepInView(st)
     end
   end
   if not any then driver:SetScript("OnUpdate", nil) end
@@ -261,12 +282,33 @@ end
 local function leave(f, st)
   if st.mode == "forever" then
     local m = manager()
-    if m and type(m.FrameHidden) == "function" and not inCombat() then pcall(m.FrameHidden, m, f) end
+    if inCombat() then
+      st.pendingHidden = true -- handed back when combat ends, so Forever keeps no ghost window
+    elseif m and type(m.FrameHidden) == "function" then
+      pcall(m.FrameHidden, m, f)
+    end
   elseif st.mode == "codex" then
     leaveCodex(f, st)
   end
   if st.mode then st.last, st.lastWhy = st.mode, st.why end
   st.mode, st.why = nil, nil
+end
+
+-- Tooltip-only pieces stay out of Forever's focus.
+local function markPieces(f)
+  local mark, clear = SmartNavigation_MarkFrameIgnored, SmartNavigation_ClearIgnoreStatus
+  for _, p in ipairs(pieces(f)) do
+    local fn = p.padSkip and mark or clear
+    if type(fn) == "function" then pcall(fn, p) end
+  end
+end
+
+-- Is this frame the window Forever's focus is in (true when the client can't say)?
+local function isActive(f)
+  local m = manager()
+  if not (m and type(m.GetActiveFrame) == "function") then return true end
+  local ok, active = pcall(m.GetActiveFrame, m)
+  return not ok or active == nil or active == f
 end
 
 -- Re-read the frame's pieces after it redrew.
@@ -279,14 +321,15 @@ function G.refresh(f)
     return
   end
   if st.mode ~= "forever" then return end
-  -- tooltip-only pieces stay out of Forever's focus
-  local mark, clear = SmartNavigation_MarkFrameIgnored, SmartNavigation_ClearIgnoreStatus
-  for _, p in ipairs(pieces(f)) do
-    local fn = p.padSkip and mark or clear
-    if type(fn) == "function" then pcall(fn, p) end
-  end
+  markPieces(f)
   local nav = navigation()
-  if nav and type(nav.RefreshButtonGroups) == "function" then pcall(nav.RefreshButtonGroups, nav, f) end
+  if not nav then return end
+  if type(nav.RefreshButtonGroups) == "function" then pcall(nav.RefreshButtonGroups, nav, f) end
+  -- a redraw can hide or reuse the focused piece: put the focus back on the window
+  if isActive(f) and type(nav.GetCurrentButton) == "function" and type(nav.SelectTopLeftButton) == "function" then
+    local ok, cur = pcall(nav.GetCurrentButton, nav)
+    if not (ok and cur and shown(cur) and inside(cur, f) and not cur.padSkip) then pcall(nav.SelectTopLeftButton, nav) end
+  end
 end
 
 -- Half a second after joining: no focus inside the frame means Forever didn't take it.
@@ -317,6 +360,7 @@ local function pick(f)
   local m = manager()
   if not m then return enterCodex(f, st, "no Forever navigation") end
   if ns.db().padNative == false then return enterCodex(f, st, "turned off in Settings") end
+  markPieces(f) -- before joining, so Forever's first focus isn't a tooltip-only piece
   local ok, res = pcall(m.FrameShown, m, f, st.opts.popup and true or false)
   if not ok or res == false then return enterCodex(f, st, "Forever refused the window") end
   st.mode, st.why = "forever", nil
@@ -345,6 +389,8 @@ local function onButton(self, button)
   local codex = st and st.mode == "codex"
   local close = button == "PAD2" or button == "PADBACK"
   local tab = st and st.mode and st.opts.onTab and (button == "PADLSHOULDER" or button == "PADRSHOULDER")
+  -- in Forever's navigation LB/RB belong to the window its focus is in (the spellbook pages with them)
+  if tab and st.mode == "forever" and not isActive(self) then tab = false end
   local dir = codex and DIRS[button]
   local isPress = codex and button == "PAD1"
   pcall(self.SetPropagateGamePadInput, self, not (close or tab or dir or isPress))
@@ -396,8 +442,9 @@ function G.debugLines()
   return { line }
 end
 
--- The controller picked up or put down; combat starting (the Codex's own navigation lets go of the
--- controller first, remembering where its highlight was) and ending (set up any shown frame again).
+-- The controller picked up or put down; combat starting (just before lockdown: let go of the
+-- controller, hand the frame back to Forever, remember the highlight) and ending (finish a hand-back
+-- that combat held up, set up any shown frame again).
 local events = CreateFrame("Frame")
 for _, ev in ipairs({ "GAME_PAD_ACTIVE_CHANGED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
   pcall(events.RegisterEvent, events, ev)
@@ -405,13 +452,19 @@ end
 events:SetScript("OnEvent", function(_, event)
   for f, st in pairs(states) do
     if event == "PLAYER_REGEN_DISABLED" then
-      if st.mode == "codex" then
-        st.keep = st.focus and { x = st.focus.x, y = st.focus.y }
+      propagate(f, true)
+      if st.mode then
+        if st.mode == "codex" then st.keep = st.focus and { x = st.focus.x, y = st.focus.y } end
         leave(f, st)
-        st.waiting = true
+        st.waiting = shown(f) or nil
       end
-    elseif event == "GAME_PAD_ACTIVE_CHANGED" or st.waiting then
-      pick(f)
+    else
+      if event == "PLAYER_REGEN_ENABLED" and st.pendingHidden and not inCombat() then
+        st.pendingHidden = nil
+        local m = manager()
+        if m and type(m.FrameHidden) == "function" then pcall(m.FrameHidden, m, f) end
+      end
+      if event == "GAME_PAD_ACTIVE_CHANGED" or st.waiting then pick(f) end
     end
   end
 end)
