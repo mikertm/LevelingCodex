@@ -1140,6 +1140,15 @@ renderers.settings = function()
   end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
   y = y + 12
 
+  head("QUEST GUIDE")
+  tick("Show dungeon steps", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end)
+  tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+  tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
+  tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end)
+  tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
+    "Only outside combat and when there are no selectable rewards.")
+  y = y + 12
+
   head("MINIMAP BUTTON")
   tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
     "Drag the Level 60 badge around the edge of the minimap to put it where you like; it remembers the spot. The Codex is also in the addons button under the clock.")
@@ -1233,6 +1242,9 @@ refresh = function()
   if ns.gamepad then ns.gamepad.refresh(frame) end
 end
 ns.refresh = refresh
+function ns.refreshQuestTab()
+  if frame and frame:IsShown() and activeTab == "quests" then refresh() end
+end
 
 -- LB/RB on a controller: the next or previous tab, wrapping around.
 local function cycleTab(delta)
@@ -1456,8 +1468,8 @@ local function makeCopy()
   copy.help:SetPoint("TOPLEFT", 24, -34)
   copy.help:SetWidth(432); copy.help:SetJustifyH("LEFT"); copy.help:SetWordWrap(true)
   copy.help:SetTextColor(rgba(C.light))
-  copy.help:SetText("The text is selected: press Ctrl+C (Cmd+C on a Mac). Then in Esc > Macros click New, " ..
-    "choose the character tab, name it, and paste with Ctrl+V into the macro box.")
+  copy.macroHelp = "The text is selected: press Ctrl+C (Cmd+C on a Mac). Then in Esc > Macros click New, " ..
+    "choose the character tab, name it, and paste with Ctrl+V into the macro box."
 
   local well = inset(copy)
   well:SetPoint("TOPLEFT", 18, -76); well:SetPoint("BOTTOMRIGHT", -18, 50)
@@ -1528,7 +1540,8 @@ function ns.showMacroCopy(m, list, step)
   local cur = copy.list and copy.list[copy.index]
   if not cur then return end
   local many = #copy.list > 1
-  copy.title:SetText("Copy the " .. cur.name .. " macro")
+  copy.title:SetText(cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro"))
+  copy.help:SetText(cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp)
   copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
   copy.body = cur.body
@@ -1559,6 +1572,7 @@ end
 -- Theme change: rebuild the window (and drop the banner) in the new colours.
 function ns.rebuildForTheme()
   ns.useTheme(ns.db().theme)
+  ns.questRefresh()
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then

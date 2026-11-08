@@ -46,6 +46,9 @@ TABLES = [
     "SpellReagents", "ItemSparse", "Item", "ItemEffect", "ItemXItemEffect", "TradeSkillCategory",
     # Enchanting: the tool (rod) a recipe needs, rod categories and masks, disenchanting level bands
     "SpellTotems", "TotemCategory", "ItemDisenchantLoot",
+    # Quest IDs, navigation and the small subset of quests with client POIs.
+    "QuestV2", "UiMap", "UiMapAssignment", "TaxiNodes", "QuestLine", "QuestLineXQuest",
+    "QuestPOIBlob", "QuestPOIPoint",
 ]
 
 # Professions with a guide (ProfessionData.lua): name -> skill line.
@@ -477,7 +480,51 @@ def build_reference(build):
                                "spells": dict(sorted(spells.items())), "pet": dict(sorted(pets.items()))}
     out["professions"] = build_professions(T, S)
     out["rods"] = build_rods(T)
+    out["quests"] = build_quests(T)
     return out
+
+
+def build_quests(tables):
+    maps = {int(row["ID"]): {"name": row["Name_lang"]} for row in tables.UiMap}
+    extents = {}
+    for row in tables.UiMapAssignment:
+        map_id = int(row["UiMapID"])
+        if map_id not in maps or int(row["OrderIndex"]) != 0:
+            continue
+        if [float(row[key]) for key in ("UiMin_0", "UiMin_1", "UiMax_0", "UiMax_1")] != [0, 0, 1, 1]:
+            continue
+        south, east, north, west = (float(row[f"Region_{i}"]) for i in (0, 1, 3, 4))
+        if north > south and west > east:
+            maps[map_id].update(width=round(west - east, 3), height=round(north - south, 3))
+            extents[map_id] = (int(row["MapID"]), south, east, north, west)
+
+    lines = {int(row["ID"]): {"name": row["Name_lang"], "ids": []} for row in tables.QuestLine}
+    for row in sorted(tables.QuestLineXQuest, key=lambda row: int(row["OrderIndex"])):
+        line = lines.get(int(row["QuestLineID"]))
+        if line is not None:
+            line["ids"].append(int(row["QuestID"]))
+
+    points = collections.defaultdict(list)
+    for row in tables.QuestPOIPoint:
+        points[row["QuestPOIBlobID"]].append((float(row["X"]), float(row["Y"])))
+    pois = collections.defaultdict(list)
+    for row in tables.QuestPOIBlob:
+        map_id = int(row["UiMapID"])
+        if map_id not in extents:
+            continue
+        world, south, east, north, west = extents[map_id]
+        if world != int(row["MapID"]):
+            continue
+        xy = [[round(100 * (west - y) / (west - east), 2),
+               round(100 * (north - x) / (north - south), 2)] for x, y in points[row["ID"]]]
+        pois[int(row["QuestID"])].append({"map": map_id, "objective": int(row["ObjectiveIndex"]), "points": xy})
+    return {
+        "ids": sorted(int(row["ID"]) for row in tables.QuestV2),
+        "maps": maps,
+        "flights": sorted({row["Name_lang"] for row in tables.TaxiNodes if row["Name_lang"]}),
+        "lines": lines,
+        "pois": dict(pois),
+    }
 
 
 def build_rods(T):
@@ -848,7 +895,17 @@ def full_audit(ref, only=None):
     res = audit(load_data(), ref, only) if not only or only in CLASSES else []
     if not only or only not in CLASSES:
         res += [r for r in audit_professions(load_profdata() or {}, ref) if not only or r[0] == only]
+    if not only or only == "QUESTS":
+        res += audit_quests(ref)
     return res
+
+
+def audit_quests(ref):
+    from questroute import ROUTE, audit
+
+    if not ROUTE.exists():
+        return []
+    return audit(load_lua_global(ROUTE, "LevelingCodexQuests"), ref)
 
 
 def groups(res):

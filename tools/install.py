@@ -43,7 +43,7 @@ def source(f, ver):
 
 def payload():
     toc = open(os.path.join(ROOT, "LevelingCodex.toc"), encoding="utf-8").read().splitlines()
-    files = ["LevelingCodex.toc", "LevelingCodex_Camelot.toc", "Bindings.xml"]
+    files = ["LevelingCodex.toc", "LevelingCodex_Camelot.toc", "Bindings.xml", "media/quest-arrow.tga"]
     files += [l.strip() for l in toc if l.strip() and not l.startswith("#")]
     return files
 
@@ -57,6 +57,7 @@ def main():
     files = payload()
     ver = version()
     for f in files:
+        os.makedirs(os.path.dirname(os.path.join(dest, f)), exist_ok=True)
         if f in TOCS:
             with open(os.path.join(dest, f), "wb") as fh:
                 fh.write(source(f, ver))

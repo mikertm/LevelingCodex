@@ -28,6 +28,7 @@ local function start()
   ns.started = true
   ns.CLASS_NAME = localized
   ns.D = LevelingCodexData and LevelingCodexData[token]
+  ns.startQuestGuide()
   if not ns.D then return end
   ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the Level 60 badge on your minimap.")
   -- Macros from an earlier session but no saved settings: they didn't load (a known Forever issue).
@@ -111,6 +112,10 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     db.noMinimap = not db.noMinimap
     ns.updateMini()
     ns.say("minimap button " .. (db.noMinimap and "hidden." or "shown."))
+  elseif cmd == "quests" then
+    ns.openTab("quests")
+  elseif cmd == "record" then
+    ns.questRecord(rest)
   elseif cmd == "reset" then
     db.toastPos, db.toastScale = nil, 1
     db.windowPos, db.windowScale = nil, 1
@@ -152,6 +157,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet") ..
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..
     ", banner: " .. (ns.db().toastPos and "moved by you" or (ns.builtInSpotY and "in its spot" or "default spot"))

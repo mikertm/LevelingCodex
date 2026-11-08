@@ -410,6 +410,8 @@ def game_checks():
         for p, lvl, m in gamedata.audit_professions(profdata, ref):
             (errors if lvl == "error" else warnings).append("%s %s: %s" % (tag, p, m))
     errors += tool_checks(gamedata, ref, profdata, tag)
+    for area, lvl, message in gamedata.audit_quests(ref):
+        (errors if lvl == "error" else warnings).append("%s %s: %s" % (tag, area, message))
     return errors, warnings
 
 
@@ -498,6 +500,10 @@ def main():
     runs = []
     for minimal in (False, True):
         variant = "minimal" if minimal else "full"
+        runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
+        if not minimal:
+            for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questRecorder", "questController"):
+                runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
         for cls in CLASSES + [UNSUPPORTED]:
             runs.append(("%s/%s/main" % (cls, variant), cls, minimal, MAIN))
         for cls in CLASSES:

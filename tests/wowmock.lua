@@ -53,6 +53,33 @@ MOCK.knownEvents = {
 MOCK.optionalEvents = { "GAME_PAD_ACTIVE_CHANGED", "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED",
   "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
   "TRAINER_CLOSED" }
+for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
+  "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND" }) do
+  MOCK.knownEvents[event] = true
+  table.insert(MOCK.optionalEvents, event)
+end
+
+MOCK.questLog, MOCK.questDone = {}, {}
+MOCK.questMap, MOCK.questX, MOCK.questY, MOCK.facing = 1429, 48, 43, 0
+C_QuestLog = {
+  GetNumQuestLogEntries = function() return #MOCK.questLog end,
+  GetInfo = function(i) return MOCK.questLog[i] end,
+  GetQuestObjectives = function(id)
+    for _, q in ipairs(MOCK.questLog) do if q.questID == id then return q.objectives end end
+  end,
+  IsQuestFlaggedCompleted = function(id) return MOCK.questDone[id] or false end,
+}
+C_Map = {
+  GetBestMapForUnit = function() return MOCK.questMap end,
+  GetPlayerMapPosition = function()
+    return { GetXY = function() return MOCK.questX / 100, MOCK.questY / 100 end }
+  end,
+}
+function GetPlayerFacing() return MOCK.facing end
+function GetQuestID() return MOCK.interactionQuest end
+function GetNumQuestChoices() return MOCK.questChoices or 0 end
+function AcceptQuest() MOCK.questAccepted = MOCK.interactionQuest end
+function GetQuestReward() MOCK.questRewarded = MOCK.interactionQuest end
 
 ----------------------------------------------------------------------------
 -- Widgets
@@ -1018,6 +1045,7 @@ function MOCK.setup(opts)
   MOCK.class = opts.class
   MOCK.minimal = opts.minimal
   if opts.minimal then
+    C_QuestLog, C_Map, GetPlayerFacing, GetQuestID, GetNumQuestChoices, AcceptQuest, GetQuestReward = nil, nil, nil, nil, nil, nil, nil
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
     for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end
     Texture.SetGradient = nil
@@ -1043,12 +1071,15 @@ end
 local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
   BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true,
+  LevelingCodexQuests = true, LevelingCodexQuestViewer = true, LevelingCodexQuestArrow = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,
   ForeverTalentsUI = true, PlayerSpellsFrame_Toggle = true,
   EventToastManagerFrame = true, ForeverLevelUpBanner = true,
   TradeSkillFrame = true, C_TradeSkillUI = true, TradeSkillListScrollFrame = true, FauxScrollFrame_SetOffset = true,
   TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
+  GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
+  GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 function MOCK.snapshotGlobals()

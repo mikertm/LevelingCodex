@@ -11,7 +11,8 @@ ignore:
   - CURSEFORGE_DESCRIPTION.md
   - RELEASING.md
   - CLAUDE.md
-  - media
+  - media/logo.png
+  - AGENTS.md
   - tests
   - tools
   - docs

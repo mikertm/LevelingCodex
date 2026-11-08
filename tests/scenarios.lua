@@ -45,6 +45,136 @@ local function hover(b)
   MOCK.fire(b, "OnLeave")
 end
 
+local function questViewer()
+  local frame = _G.LevelingCodexQuestViewer
+  check(frame and frame:IsShown(), "quest viewer shown")
+  return frame
+end
+
+local function questText(root, value)
+  for _, child in ipairs({ root:GetRegions() }) do
+    if child._text and child._text:find(value, 1, true) then return true end
+  end
+  for _, child in ipairs({ root:GetChildren() }) do
+    if child:IsShown() and questText(child, value) then return true end
+  end
+  return false
+end
+
+function S.questStart()
+  local frame = questViewer()
+  check(questText(frame, "A Threat Within"), "fresh Human route starts at A Threat Within")
+  click(frame, "Next")
+  check(questText(frame, "Accept - Nibbled-On Book"), "skipping the first quest skips its dependent steps")
+  click(frame, "Back")
+  check(questText(frame, "A Threat Within"), "back returns to initial step")
+  click(frame, "Quests")
+  check(questText(win(), "Unverified"), "quest tab shows section verification")
+end
+
+function S.questProgress()
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", numFulfilled = 4 } } } }
+  S.login()
+  check(questText(questViewer(), "Kobold Vermin 4/10"), "login resumes the active objective")
+  check(LevelingCodexQuestArrow and LevelingCodexQuestArrow:IsShown(), "same-map arrow shown")
+  MOCK.facing = nil
+  MOCK.advance(0.5)
+  check(questText(LevelingCodexQuestArrow, " yd"), "compass fallback when facing is absent")
+  MOCK.questDone[7], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 7)
+  check(not questText(questViewer(), "Kobold Vermin 4/10"), "turn-in clears completed objective")
+end
+
+function S.questClassic()
+  C_QuestLog.GetInfo = function() return nil end
+  C_QuestLog.GetQuestObjectives = function() return nil end
+  C_QuestLog.IsQuestFlaggedCompleted = function() return nil end
+  GetNumQuestLogEntries = function() return 1 end
+  GetQuestLogTitle = function() return "Kobold Camp Cleanup", 2, nil, false, false, false, nil, 7 end
+  GetNumQuestLeaderBoards = function() return 1 end
+  GetQuestLogLeaderBoard = function() return "Kobold Vermin 3/10", "monster", false end
+  IsQuestFlaggedCompleted = function(id) return id == 783 or id == 5261 or id == 33 end
+  S.login()
+  check(questText(questViewer(), "Kobold Vermin 3/10"), "classic fallback resumes objective")
+end
+
+function S.questPastRoute()
+  MOCK.level = 25
+  S.login()
+  slash("quests")
+  check(questText(win(), "No route covers level 25"), "level 25 is beyond milestone coverage")
+  click(win(), "Elwynn Forest")
+  check(questText(questViewer(), "Elwynn Forest"), "can jump to the nearest available section")
+end
+
+function S.questNavigation()
+  MOCK.level, MOCK.questX, MOCK.questY = 6, 43.77, 65.8
+  for _, id in ipairs({ 2158, 96627, 95998, 96626, 54, 91772 }) do
+    MOCK.questDone[id] = true
+  end
+  for _, id in ipairs({ 91775, 62, 60, 47 }) do
+    MOCK.questLog[#MOCK.questLog + 1] = { questID = id }
+  end
+  S.login()
+  local frame = questViewer()
+  click(frame, "Next") -- hearth binding
+  click(frame, "Next") -- training
+  check(questText(frame, "Follow the road south"), "arrives at the first Elwynn travel step")
+  MOCK.questX, MOCK.questY = 35.8, 80.3
+  MOCK.advance(0.5)
+  check(not questText(frame, "Follow the road south"), "travel completes within range")
+  check(questText(frame, "Accept - Lost Necklace"), "arrival advances to the farm quest")
+end
+
+function S.questRecorder()
+  S.login()
+  MOCK.interactionQuest = 783
+  MOCK.event("QUEST_DETAIL")
+  check(not LevelingCodexDB.rec, "recording is off by default")
+  slash("record")
+  LevelingCodexDB.questAutoAccept = true
+  MOCK.combat = true
+  MOCK.event("QUEST_DETAIL")
+  check(not MOCK.questAccepted, "no automatic acceptance in combat")
+  MOCK.combat = false
+  MOCK.event("QUEST_DETAIL")
+  check(MOCK.questAccepted == 783, "accepts the active guide quest out of combat")
+  local objective = { text = "Speak to McBride 0/1", numFulfilled = 0, numRequired = 1 }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within", objectives = { objective } } }
+  MOCK.event("QUEST_ACCEPTED", 783)
+  objective.text, objective.numFulfilled, objective.finished = "Speak to McBride 1/1", 1, true
+  MOCK.event("QUEST_LOG_UPDATE")
+  local records = LevelingCodexDB.rec
+  check(records[#records].type == "complete" and records[#records].count == 1 and records[#records].map == 1429,
+    "objective gain records the count and map")
+  LevelingCodexDB.questAutoTurnin = true
+  MOCK.questChoices = 1
+  MOCK.event("QUEST_COMPLETE")
+  check(not MOCK.questRewarded, "never picks a reward")
+  MOCK.questChoices = 0
+  MOCK.event("QUEST_COMPLETE")
+  check(MOCK.questRewarded == 783, "turns in the active quest without reward choices")
+  MOCK.event("QUEST_TURNED_IN", 783)
+  check(LevelingCodexDB.rec and #LevelingCodexDB.rec >= 3, "quest events recorded")
+  slash("record")
+  local count = #LevelingCodexDB.rec
+  MOCK.event("QUEST_DETAIL")
+  check(#LevelingCodexDB.rec == count, "toggling recording off stops new observations")
+end
+
+function S.questController()
+  MOCK.gamepad, MOCK.gamepadUI = true, true
+  S.login()
+  local frame = questViewer()
+  check(GamepadMode.FrameControlsManager:GetActiveFrame() ~= frame, "background viewer leaves world controls alone")
+  slash("quests")
+  click(win(), "Show step window")
+  check(GamepadMode.FrameControlsManager:GetActiveFrame() == win(), "main window keeps controller focus")
+  win():Hide()
+  check(GamepadMode.FrameControlsManager:GetActiveFrame() == frame, "viewer joins Forever controller navigation")
+end
+
 -- the level the plan puts a point in, as the guide reads (nil before 10)
 local function planAt(level)
   local hit
@@ -200,7 +330,7 @@ function S.bannerTest()
   end
 end
 
-local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Settings" }
+local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Settings" }
 
 local function openAt(level, tab)
   MOCK.level = level

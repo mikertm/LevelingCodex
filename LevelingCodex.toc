@@ -11,9 +11,11 @@
 
 Data.lua
 ProfessionData.lua
+QuestData.lua
 Theme.lua
 Art.lua
 Guide.lua
+Quests.lua
 Professions.lua
 Disenchant.lua
 Macros.lua
@@ -21,6 +23,8 @@ Banner.lua
 Window.lua
 ProfessionTab.lua
 Gamepad.lua
+QuestGuide.lua
+QuestTab.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua
