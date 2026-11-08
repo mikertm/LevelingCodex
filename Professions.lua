@@ -6,7 +6,7 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM" }
 
 -- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
 function ns.profPart(key, item)
@@ -83,49 +83,85 @@ local function skillSource()
   return "nothing"
 end
 
-local function readSkill(name)
-  if GetProfessions and GetProfessionInfo then
-    local got = { pcall(GetProfessions) }
-    if got[1] then
-      for k = 2, 6 do
-        local i = got[k]
-        if i then
-          local ok, n, _, rank, max = pcall(GetProfessionInfo, i)
-          if ok and n == name and tonumber(rank) then return tonumber(rank), tonumber(max) end
-        end
+local function readProfessions(skills)
+  if not (GetProfessions and GetProfessionInfo) then return false end
+  local slots = { pcall(GetProfessions) }
+  if not slots[1] then return false end
+  local complete = true
+  for i = 2, 6 do
+    if slots[i] then
+      local ok, name, _, rank, cap = pcall(GetProfessionInfo, slots[i])
+      rank, cap = tonumber(rank), tonumber(cap)
+      if ok and name and rank then
+        if rank > 0 then skills[name] = { rank = rank, cap = cap and cap > 0 and cap or nil } end
+      else
+        complete = false
       end
     end
   end
-  if GetNumSkillLines and GetSkillLineInfo then
-    local ok, count = pcall(GetNumSkillLines)
-    local hidden = false
-    for i = 1, (ok and tonumber(count)) or 0 do
-      local ok2, n, isHeader, isExpanded, rank, _, _, max = pcall(GetSkillLineInfo, i)
-      if ok2 and n == name and not isHeader and tonumber(rank) then return tonumber(rank), tonumber(max) end
-      if ok2 and isHeader and not isExpanded then hidden = true end
-    end
-    -- a closed heading hides the lines under it: the skill may be there
-    return nil, nil, hidden
-  end
+  return complete
 end
 
--- The last skill read this session, for while a closed heading hides it.
+local function readSkillLines(skills)
+  if not (GetNumSkillLines and GetSkillLineInfo) then return false end
+  local ok, count = pcall(GetNumSkillLines)
+  count = ok and tonumber(count)
+  if not count then return false end
+  local complete, professionHeading = true, false
+  local professionHidden, otherHidden = false, false
+  for i = 1, count do
+    local read, name, header, expanded, rank, _, _, cap = pcall(GetSkillLineInfo, i)
+    rank, cap = tonumber(rank), tonumber(cap)
+    if not (read and name) then
+      complete = false
+    elseif header then
+      if name == "Professions" or name == PROFESSIONS then
+        professionHeading = true
+        if not expanded then professionHidden = true end
+      elseif not expanded then
+        otherHidden = true
+      end
+    elseif not rank then
+      complete = false
+    elseif rank > 0 and not skills[name] then
+      skills[name] = { rank = rank, cap = cap and cap > 0 and cap or nil }
+    end
+  end
+  local hidden = professionHidden or (not professionHeading and otherHidden)
+  return complete and not hidden, hidden
+end
+
+-- Last confirmed skills for when the classic Skills list hides them.
 local seen = {}
 
--- Your skill and its cap (nil when you don't have the profession or the client won't say).
--- A third value, true, means the skill list has a closed heading and nothing was seen before.
-function ns.profSkill(key)
-  local P = ns.P and ns.P[key]
-  if not P then return end
-  local rank, max, hidden = readSkill(P.name)
-  if rank and rank > 0 then
-    seen[key] = { rank, (max and max > 0) and max or nil }
-  elseif hidden then
-    if not seen[key] then return nil, nil, true end
-  else
-    seen[key] = nil
+function ns.profSkillSnapshot()
+  local skills, snapshot = {}, {}
+  local retailComplete = readProfessions(skills)
+  local classicComplete, hidden = readSkillLines(skills)
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local P = ns.P and ns.P[key]
+    if P then
+      local reading = skills[P.name]
+      if reading then
+        seen[key] = reading
+      elseif retailComplete or classicComplete then
+        seen[key] = nil
+        reading = {}
+      elseif hidden then
+        reading = seen[key] or { hidden = true }
+      else
+        reading = { unavailable = true }
+      end
+      snapshot[key] = reading
+    end
   end
-  if seen[key] then return seen[key][1], seen[key][2] end
+  return snapshot
+end
+
+-- Rank and cap, or the reason a rank could not be read.
+function ns.profSkill(key)
+  local reading = ns.profSkillSnapshot()[key]
+  if reading then return reading.rank, reading.cap, reading.hidden, reading.unavailable end
 end
 
 -- The step for a skill (nil before 1 and at 300 or above), and its index.
@@ -253,19 +289,21 @@ function ns.profTierDue(key, skill, cap, level)
   if skill >= trained.cap then return "cap", nextTier end
 end
 
--- Each vein's colour at a skill: red (can't mine yet), orange, yellow, green or grey.
-function ns.veinColor(vein, skill)
+-- Herbs specify their own cutoffs. Veins use the standard mining intervals.
+function ns.profNodeColor(node, skill)
   skill = skill or 0
-  if skill < vein.skill then return "red" end
-  if skill < vein.skill + 25 then return "orange" end
-  if skill < vein.skill + 50 then return "yellow" end
-  if skill < vein.skill + 100 then return "green" end
+  if skill < node.skill then return "red" end
+  if skill < (node.yellow or node.skill + 25) then return "orange" end
+  if skill < (node.green or node.skill + 50) then return "yellow" end
+  if skill < (node.grey or node.skill + 100) then return "green" end
   return "grey"
 end
 
-function ns.veinNamed(name)
-  local M = ns.P and ns.P.MINING
-  for _, v in ipairs(M and M.veins or {}) do if v.name == name then return v end end
+function ns.profNode(key, name)
+  local P = ns.P and ns.P[key]
+  for _, node in ipairs(P and (P.herbs or P.veins) or {}) do
+    if node.name == name then return node end
+  end
 end
 
 function ns.profFaction()
@@ -274,7 +312,7 @@ function ns.profFaction()
   if ok and (f == "Alliance" or f == "Horde") then return f end
 end
 
--- Zones for a vein: both factions' (All), else your faction's (both when unknown), plus the
+-- Zones for a gathering node: both factions' (All), else your faction's (both when unknown), plus the
 -- Skyborne starting isle for Skyborne characters.
 function ns.profZones(vein)
   local out, seen = {}, {}
@@ -300,7 +338,7 @@ end
 local last = {}
 
 -- What a skill-up from old to new brings, as card rows { icon, label, text }: the step you're now
--- in (and any you jumped over), training that just opened, a cap you just hit, new veins.
+-- in (and any you jumped over), training that just opened, a cap you just hit, new nodes.
 function ns.profCardRows(key, old, new, cap, level)
   local rows = {}
   local P = ns.P and ns.P[key]
@@ -313,8 +351,9 @@ function ns.profCardRows(key, old, new, cap, level)
         rows[#rows + 1] = { s.icon, now and "NEW STEP" or "STEP PASSED",
           s.name .. (now and n and ("  -  about " .. n .. " to " .. s.to) or ("  (" .. s.from .. "-" .. s.to .. ")")) }
       else
-        local v = s.veins and ns.veinNamed(s.veins[1])
-        rows[#rows + 1] = { v and v.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
+        local names = s.herbs or s.veins
+        local node = names and ns.profNode(key, names[1])
+        rows[#rows + 1] = { node and node.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
       end
     end
   end
@@ -326,9 +365,10 @@ function ns.profCardRows(key, old, new, cap, level)
   if nextTier and trained.cap > old and trained.cap <= new then
     rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }
   end
-  for _, v in ipairs(P.veins or {}) do
-    if v.skill > old and v.skill <= new then
-      rows[#rows + 1] = { v.icon, "NEW VEIN", v.name .. " (" .. v.skill .. ")" }
+  local unlock = P.herbs and "NEW HERB" or "NEW VEIN"
+  for _, node in ipairs(P.herbs or P.veins or {}) do
+    if node.skill > old and node.skill <= new then
+      rows[#rows + 1] = { node.icon, unlock, node.name .. " (" .. node.skill .. ")" }
     end
   end
   return rows
@@ -339,13 +379,16 @@ end
 function ns.profLevelRows(level)
   local rows = {}
   if ns.db().noProfCards then return rows end
+  local snapshot = ns.profSkillSnapshot()
   for _, key in ipairs(ns.PROF_ORDER) do
-    local P = ns.P and ns.P[key]
-    local skill, cap = ns.profSkill(key)
-    local due, nextTier = ns.profTierDue(key, skill, cap, level)
-    if P and due == "train" and nextTier.level == level then
-      rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.short or nextTier.where),
-        P.name, nextTier }
+    local reading = snapshot[key]
+    if reading then
+      local due, nextTier = ns.profTierDue(key, reading.rank, reading.cap, level)
+      if due == "train" and nextTier.level == level then
+        local P = ns.P[key]
+        rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.short or nextTier.where),
+          P.name, nextTier }
+      end
     end
   end
   return rows
@@ -353,12 +396,12 @@ end
 
 -- Compare every guided profession with the last reading; show a card when something changed.
 local function checkSkills()
+  local snapshot = ns.profSkillSnapshot()
   for _, key in ipairs(ns.PROF_ORDER) do
-    local P = ns.P and ns.P[key]
-    local new, cap = ns.profSkill(key)
-    local old = last[key]
-    last[key] = new
-    if P and new and old and new > old then
+    local current, before = snapshot[key], last[key]
+    local new, cap, old = current and current.rank, current and current.cap, before and before.rank
+    if new and old and new > old then
+      local P = ns.P[key]
       local rows = ns.profCardRows(key, old, new, cap, UnitLevel("player"))
       local db = ns.db()
       if #rows > 0 and not db.noProfCards then
@@ -371,6 +414,8 @@ local function checkSkills()
       end
     end
   end
+  last = snapshot
+  if ns.profTabSkillsChanged then ns.profTabSkillsChanged(snapshot) end
 end
 
 -- The skill a trainer really asks for each route recipe, where it differs from the guide's
@@ -413,13 +458,15 @@ end
 
 local events
 function ns.startProfessions()
-  for _, key in ipairs(ns.PROF_ORDER) do last[key] = ns.profSkill(key) end
+  last = ns.profSkillSnapshot()
   if events then return end
   events = CreateFrame("Frame")
   local any = false
   for _, ev in ipairs({ "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_UPDATE" }) do
     if pcall(events.RegisterEvent, events, ev) then any = true end
   end
+  pcall(events.RegisterEvent, events, "LEARNED_SPELL_IN_TAB")
+  pcall(events.RegisterEvent, events, "SPELLS_CHANGED")
   pcall(events.RegisterEvent, events, "TRAINER_SHOW")
   events:SetScript("OnEvent", function(_, event)
     local ok, err = pcall(event == "TRAINER_SHOW" and readTrainer or checkSkills)
@@ -432,12 +479,17 @@ end
 -- For /codex debug.
 function ns.profDebugLines()
   local out = {}
+  local snapshot = ns.profSkillSnapshot()
   for _, key in ipairs(ns.PROF_ORDER) do
     local P = ns.P and ns.P[key]
     if P then
-      local skill, cap, hidden = ns.profSkill(key)
+      local reading = snapshot[key]
+      local skill, cap = reading.rank, reading.cap
       if not skill then
-        out[#out + 1] = "profession: " .. P.name .. (hidden and " not seen: a heading in the skill list is closed" or " not learned")
+        local status = "not learned"
+        if reading.hidden then status = "not seen: a heading in the skill list is closed" end
+        if reading.unavailable then status = "skill data unavailable" end
+        out[#out + 1] = "profession: " .. P.name .. " " .. status
       else
         local s = ns.profStep(key, skill)
         local line = "profession: " .. P.name .. " " .. skill .. "/" .. (cap or "?")

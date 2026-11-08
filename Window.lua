@@ -1123,7 +1123,7 @@ renderers.settings = function()
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
     "When you open Blacksmithing, Smelting, Tailoring or Enchanting, the Codex outlines the recipe to make for your skill and shows a card with how many more and your materials.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "A card like the level-up one when your Mining, Blacksmithing, Tailoring or Enchanting reaches a new step of the guide, can train the next tier, or can mine a new vein.")
+    "A card like the level-up one when Mining, Blacksmithing, Tailoring, Enchanting or Herbalism reaches a new step, can train the next tier, or unlocks a new vein or herb.")
   y = y + 12
 
   head("GATHERING")
@@ -1206,7 +1206,7 @@ function ns.placeWindow()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
 
-refresh = function()
+refresh = function(professionSnapshot)
   if not (frame and frame:IsShown() and ns.D) then return end
   local me = UnitLevel("player")
   viewLevel = viewLevel or me
@@ -1218,7 +1218,7 @@ refresh = function()
   -- remember where the tab we're leaving (or redrawing) was scrolled to
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   releaseAll()
-  local h = renderers[activeTab](viewLevel) or 0
+  local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
   shownTab = activeTab
   if scroll.UpdateScrollChildRect then scroll:UpdateScrollChildRect() end
@@ -1244,6 +1244,10 @@ end
 ns.refresh = refresh
 function ns.refreshQuestTab()
   if frame and frame:IsShown() and activeTab == "quests" then refresh() end
+end
+
+function ns.refreshProfessionTab(snapshot)
+  if frame and frame:IsShown() and activeTab == "professions" then refresh(snapshot) end
 end
 
 -- LB/RB on a controller: the next or previous tab, wrapping around.

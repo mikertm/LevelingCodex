@@ -9,7 +9,7 @@
     python tools/gamedata.py packet CLASS       # everything about one class's guide next to the game, for a manual review
     python tools/gamedata.py tree CLASS         # the class's talent tree as the game lays it out
     python tools/gamedata.py spells CLASS [NAME]   # class spells with rank and level
-    python tools/gamedata.py recipes PROFESSION [NAME]   # Blacksmithing / Mining / Tailoring / Enchanting recipes: colours, reagents, icon, plan, tool
+    python tools/gamedata.py recipes PROFESSION [NAME]   # guided profession recipes: colours, reagents, icon, plan, tool
     python tools/gamedata.py profs [PROFESSION]   # ProfessionData.lua audited, each route step next to the game
 
 Source: wago.tools serves every table of every client build as CSV. Forever is the product "wowf".
@@ -49,10 +49,19 @@ TABLES = [
     # Quest IDs, navigation and the small subset of quests with client POIs.
     "QuestV2", "UiMap", "UiMapAssignment", "TaxiNodes", "QuestLine", "QuestLineXQuest",
     "QuestPOIBlob", "QuestPOIPoint",
+    "Lock", "AreaTable",
 ]
 
 # Professions with a guide (ProfessionData.lua): name -> skill line.
-PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333}
+PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333, "Herbalism": 182}
+
+# Standard herb item IDs from the Forever node catalog. Lock rows supply the
+# possible minimum skills; the client does not link these named nodes to locks.
+HERBALISM_ITEMS = {
+    "2447", "765", "2449", "785", "2450", "3820", "2453", "3355", "3369", "3356", "3357", "3818", "3821",
+    "3358", "3819", "4625", "8831", "8836", "8838", "8839", "8845", "8846", "13464", "13463", "13465",
+    "13466", "13467", "13468",
+}
 
 CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
 WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
@@ -479,6 +488,7 @@ def build_reference(build):
         out["classes"][cls] = {"tabs": tabs, "hidden": hidden, "talents": dict(sorted(talents.items())),
                                "spells": dict(sorted(spells.items())), "pet": dict(sorted(pets.items()))}
     out["professions"] = build_professions(T, S)
+    out["professions"]["Herbalism"]["gathering"] = build_herbalism(T, S, skill["182"])
     out["rods"] = build_rods(T)
     out["quests"] = build_quests(T)
     return out
@@ -536,6 +546,21 @@ def build_rods(T):
         if r["TotemCategoryType"] == "3":
             rods[r["Name_lang"]] = {"category": int(r["ID"]), "mask": int(r["TotemCategoryMask"]), "item": item_of.get(r["ID"])}
     return dict(sorted(rods.items(), key=lambda kv: kv[1]["category"]))
+
+
+def build_herbalism(T, S, skill_line):
+    icons = {r["ID"]: S.icons.get(r["IconFileDataID"]) for r in T.Item if r["ID"] in HERBALISM_ITEMS}
+    items = {r["ID"]: {"name": r["Display_lang"], "icon": icons.get(r["ID"])}
+             for r in T.ItemSparse if r["ID"] in HERBALISM_ITEMS}
+    locks = {}
+    for row in T.Lock:
+        skills = {int(row[f"Skill_{i}"]) for i in range(8)
+                  if row[f"Type_{i}"] == "2" and row[f"_Index_{i}"] == "2"}
+        if skills:
+            locks[row["ID"]] = sorted(skills)
+    areas = sorted({r["AreaName_lang"] for r in T.AreaTable if r["ParentAreaID"] == "0" and r["AreaName_lang"]})
+    return {"icon": S.icons.get(skill_line["SpellIconFileID"]), "items": dict(sorted(items.items(), key=lambda p: int(p[0]))),
+            "lockSkills": dict(sorted(locks.items(), key=lambda p: int(p[0]))), "areas": areas}
 
 
 def build_professions(T, S):
@@ -677,8 +702,9 @@ def diff(old, new):
     if len(lines) == 1:
         lines.append("no class changes")
     for prof in PROFESSIONS:
-        a = ((old.get("professions") or {}).get(prof) or {}).get("recipes", {})
-        b = ((new.get("professions") or {}).get(prof) or {}).get("recipes", {})
+        prev = (old.get("professions") or {}).get(prof) or {}
+        curr = (new.get("professions") or {}).get(prof) or {}
+        a, b = prev.get("recipes", {}), curr.get("recipes", {})
         out = []
         if not a and b:
             out.append("  first profession data: %d recipes" % len(b))
@@ -691,10 +717,31 @@ def diff(old, new):
                 for k in ("yellow", "grey", "mats", "makes"):
                     if a[n].get(k) != b[n].get(k):
                         out.append("  recipe %s %s: %s -> %s" % (n, k, a[n].get(k), b[n].get(k)))
+        if prof == "Herbalism":
+            out.extend(diff_herbalism(prev.get("gathering"), curr.get("gathering")))
         if out:
             lines.append(prof.upper())
             lines.extend(out)
     return "\n".join(lines)
+
+
+def diff_herbalism(old, new):
+    if not old:
+        return ["  first Herbalism gathering data"] if new else []
+    if not new:
+        return ["  Herbalism gathering data removed"]
+    out = []
+    if old["icon"] != new["icon"]:
+        out.append(f"  Herbalism icon: {old['icon']} -> {new['icon']}")
+    for key, label in (("items", "herb item"), ("lockSkills", "herbalism lock")):
+        before, after = old[key], new[key]
+        for record in sorted(before.keys() | after.keys(), key=int):
+            if before.get(record) != after.get(record):
+                out.append(f"  {label} {record}: {before.get(record)} -> {after.get(record)}")
+    before, after = set(old["areas"]), set(new["areas"])
+    out.extend("  area added: " + name for name in sorted(after - before))
+    out.extend("  area removed: " + name for name in sorted(before - after))
+    return out
 
 
 def recipe_list(ref, prof, name=None):
@@ -765,6 +812,55 @@ def _mats(m):
     return [[x[0], int(x[1])] for x in (m or [])]
 
 
+def audit_herbalism(guide, reference, add):
+    gathering = reference.get("gathering")
+    if not gathering:
+        add("error", "missing Herbalism gathering evidence in the reference")
+        return
+    if guide.get("skillLine") != reference["skillLine"] or guide.get("icon") != gathering["icon"]:
+        add("error", "Herbalism skill line or icon differs from the client")
+    lock_skills = {skill for skills in gathering["lockSkills"].values() for skill in skills}
+    areas = set(gathering["areas"])
+    herbs = {}
+    for herb in guide.get("herbs") or []:
+        name = herb["name"]
+        item = gathering["items"].get(str(herb.get("item"))) or {}
+        if item.get("name") != name:
+            add("error", f"{name} item {herb.get('item')} does not match the client")
+        if not item.get("icon") or item["icon"] != herb.get("icon"):
+            add("error", f"{name} icon does not match the client")
+        if herb.get("skill") not in lock_skills:
+            add("error", f"{name} skill {herb.get('skill')} has no client herbalism lock")
+        cuts = tuple(herb.get(k) for k in ("skill", "yellow", "green", "grey"))
+        if not (all(isinstance(n, int) for n in cuts) and cuts[0] <= cuts[1] <= cuts[2] < cuts[3]):
+            add("error", f"{name} has invalid difficulty thresholds: {cuts}")
+            continue
+        herbs[name] = herb
+        for zones in herb["zones"].values():
+            for zone in zones:
+                if zone not in areas:
+                    add("error", f"{name}: {zone} is absent from the client's top-level areas")
+
+    for step in guide.get("steps") or []:
+        nodes = [herbs[name] for name in step.get("herbs", []) if name in herbs]
+        for faction in ("Alliance", "Horde"):
+            available = [h for h in nodes if h["zones"].get("All") or h["zones"].get(faction)]
+            for skill in range(step["from"], step["to"]):
+                if not any(h["skill"] <= skill < h["grey"] for h in available):
+                    add("error", f"step {step['from']}-{step['to']}: no usable herb at skill {skill} for {faction}")
+                    break
+
+    for camp in guide.get("camp") or []:
+        name = camp["name"]
+        recipe = reference["recipes"].get(name)
+        if not recipe or camp.get("spell") != recipe["spell"]:
+            add("error", f"{name}: camp recipe spell does not match the client")
+            continue
+        plan = recipe.get("plan")
+        if plan and camp.get("skill") != plan["skill"]:
+            add("error", f"{name}: {plan['item']} needs {plan['skill']}, guide says {camp.get('skill')}")
+
+
 def audit_professions(profdata, ref):
     """[(PROFESSION, 'error'|'warn', message)]: ProfessionData.lua against the game reference."""
     res = []
@@ -777,6 +873,8 @@ def audit_professions(profdata, ref):
             add("error", "no profession '%s' in the game reference" % P.get("name"))
             continue
         recipes, items = R["recipes"], R["items"]
+        if key == "HERBALISM":
+            audit_herbalism(P, R, add)
 
         def check_recipe(where, x, name):
             r = recipes.get(name)

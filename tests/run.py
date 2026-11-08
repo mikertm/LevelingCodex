@@ -53,7 +53,7 @@ TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 PROF = ["skills:BS;97;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme", "trainerReqs"]
 PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "profCollapsed"]
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
-PROF_NONE = ["login", "profNone", "tailorNone"]
+PROF_NONE = ["login", "profNone"]
 PROF_UPS = ["login", "profSkillUps", "profLevelTier", "tailorSkillUps", "enchantSkillUps"]
 # Enchanting: rods, Motes as Strange Dust, the disenchanting section and the bag scan.
 ENCHANT = ["skills:EN;150;225:professions", "login", "enchantDebug", "enchantTab", "enchantTabCases", "enchantBags"]
@@ -64,6 +64,7 @@ TAILOR_ONLY = ["skills:TA;20;75:professions", "login", "tailorOnly"]
 TAILOR_LINES = ["skills:TA;150;225:skilllines", "login", "tailorDebug"]
 TAILOR_CLOSED = ["skills:TA;150;225:skilllines", "skillsClosed", "login", "tailorClosed"]
 PROF_BANNER = ["login", "bannerOpensTarget"]
+HERBALISM = ["skills:HE;1;75:professions:Alliance:Human", "login"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
        "padBackupCombat", "padCopyBox", "padForeverCombat", "padTalents", "padForeverFocus", "padForeverActive",
@@ -251,7 +252,7 @@ def data_checks():
     return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
 
 
-PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING")
+PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM")
 
 
 def prof_shape_checks():
@@ -294,6 +295,20 @@ def prof_shape_checks():
                 errors.append("professions %s: tier %s: banner text over 60 characters, add a short `short`" %
                               (key, t.get("name")))
         veins = {v.get("name") for v in P.get("veins") or []}
+        herbs = P.get("herbs") or []
+        herb_names = {h.get("name") for h in herbs}
+        if key == "HERBALISM":
+            if len(herbs) != 28 or len(herb_names) != 28:
+                errors.append("professions HERBALISM: expected 28 distinct standard herbs")
+            if [(t.get("skill"), t.get("cap"), t.get("level")) for t in P.get("tiers") or []] != [
+                (1, 75, 1), (50, 150, 1), (125, 225, 1), (200, 300, 1)
+            ]:
+                errors.append("professions HERBALISM: incorrect training tiers")
+            if {c.get("name") for c in P.get("camp") or []} != {"Incense Candle", "Greenhouse", "Seed Hybridizer"}:
+                errors.append("professions HERBALISM: missing camp objects")
+            for h in herbs:
+                if not all(h.get(f) for f in ("name", "item", "icon", "skill", "yellow", "green", "grey", "zones")):
+                    errors.append("professions HERBALISM: incomplete herb %s" % h.get("name"))
         smelts = {s.get("name") for s in P.get("smelt") or []}
         for s in P.get("steps") or []:
             where = "professions %s step %s-%s" % (key, s.get("from"), s.get("to"))
@@ -308,6 +323,9 @@ def prof_shape_checks():
                 for v in s.get("smelt") or []:
                     if v not in smelts:
                         errors.append(where + ": smelt '%s' is not in the smelt list" % v)
+            elif key == "HERBALISM":
+                if not s.get("title") or not s.get("herbs") or any(h not in herb_names for h in s["herbs"]):
+                    errors.append(where + ": requires a title and known herbs")
             else:
                 for f in ("name", "spell", "icon", "yellow", "grey", "mats", "learn", "source"):
                     if s.get(f) in (None, ""):
@@ -387,7 +405,10 @@ def game_checks():
             ("Tailoring", "Bolt of Silk Cloth", 110, 120, [["Silk Cloth", 4]]),
             ("Tailoring", "Runecloth Belt", 225, 255, [["Bolt of Runecloth", 3], ["Rune Thread", 1]]),
             ("Enchanting", "Dust to Motes", 10, 15, [["Strange Dust", 1]]),
-            ("Enchanting", "Enchant Shield - Greater Stamina", 285, 325, [["Dream Dust", 6]])]
+            ("Enchanting", "Enchant Shield - Greater Stamina", 285, 325, [["Dream Dust", 6]]),
+            ("Herbalism", "Incense Candle", 20, 25, [["Peacebloom", 1], ["Silverleaf", 1]]),
+            ("Herbalism", "Greenhouse", 140, 145, [["Simple Wood", 2], ["Arthas' Tears", 1], ["Purple Lotus", 1]]),
+            ("Herbalism", "Seed Hybridizer", 300, 300, [["Mountain Silversage", 4], ["Crystal Vial", 1], ["Runecloth", 2]])]
     for prof, name, y, g, mats in want:
         r = (profs.get(prof) or {}).get("recipes", {}).get(name)
         if not r or (r["yellow"], r["grey"], r["mats"]) != (y, g, mats):
@@ -406,6 +427,17 @@ def game_checks():
         errors.append("%s reference: Runed Truesilver Rod should be category 376 mask 15 and Superior Defense need it (%s, %s)" %
                       (tag, tsr, sd.get("tool")))
     profdata = gamedata.load_profdata()
+    herbs = profs.get("Herbalism") or {}
+    gathering = herbs.get("gathering") or {}
+    if (herbs.get("skillLine") != 182 or gathering.get("icon") != "trade_herbalism"
+            or gathering.get("items", {}).get("2447", {}).get("name") != "Peacebloom"
+            or gathering.get("lockSkills", {}).get("29") != [1]
+            or gathering.get("lockSkills", {}).get("1124") != [300]
+            or not {"Zephras Isle", "Riverglades"} <= set(gathering.get("areas", []))):
+        errors.append("%s reference: missing or incorrect Herbalism client evidence" % tag)
+    for name, spell in (("Incense Candle", 1229705), ("Greenhouse", 1262980), ("Seed Hybridizer", 1263070)):
+        if herbs.get("recipes", {}).get(name, {}).get("spell") != spell:
+            errors.append("%s reference: %s should be spell %d" % (tag, name, spell))
     if profdata:
         for p, lvl, m in gamedata.audit_professions(profdata, ref):
             (errors if lvl == "error" else warnings).append("%s %s: %s" % (tag, p, m))
@@ -476,6 +508,37 @@ def tool_checks(gamedata, ref, profdata, tag):
         if not any(lvl == "warn" and "Rough Bronze Leggings" in m and "999999" in m
                    for _, lvl, m in gamedata.audit_professions(profdata, fake)):
             errors.append("%s tools: a step naming a recipe the game has twice isn't flagged" % tag)
+    if profdata and profdata.get("HERBALISM") and ref.get("professions", {}).get("Herbalism", {}).get("gathering"):
+        errors.extend(herbalism_tool_checks(gamedata, ref, profdata["HERBALISM"], tag))
+    return errors
+
+
+def herbalism_tool_checks(gamedata, ref, guide, tag):
+    import copy
+    errors = []
+    fake = copy.deepcopy(ref)
+    herbalism = fake["professions"]["Herbalism"]
+    gathering = herbalism["gathering"]
+    gathering["items"]["2447"] = {"name": "Wrong name", "icon": "wrong_icon"}
+    gathering["lockSkills"]["29"] = [2]
+    gathering["areas"].remove("Zephras Isle")
+    del herbalism["recipes"]["Incense Candle"]
+    herbalism["recipes"]["Greenhouse"]["plan"]["skill"] = 141
+    messages = [msg for _, level, msg in gamedata.audit_professions({"HERBALISM": guide}, fake) if level == "error"]
+    for needle in ("Peacebloom item", "Peacebloom icon", "Peacebloom skill", "Zephras Isle", "Incense Candle", "Greenhouse"):
+        if not any(needle in msg for msg in messages):
+            errors.append("%s Herbalism audit missed %s" % (tag, needle))
+    changes = gamedata.diff(ref, fake)
+    if not all(text in changes for text in ("HERBALISM", "herb item 2447", "herbalism lock 29", "Zephras Isle")):
+        errors.append("%s Herbalism diff misses changed gathering evidence" % tag)
+    del herbalism["gathering"]
+    if "first Herbalism gathering data" not in gamedata.diff(fake, ref):
+        errors.append("%s Herbalism diff misses initial gathering evidence" % tag)
+    broken = copy.deepcopy(guide)
+    broken["steps"][0]["herbs"] = ["Earthroot"]
+    if not any(level == "error" and "no usable herb at skill 1" in msg
+               for _, level, msg in gamedata.audit_professions({"HERBALISM": broken}, ref)):
+        errors.append("%s Herbalism audit misses a gap within a gathering step" % tag)
     return errors
 
 
@@ -527,6 +590,13 @@ def main():
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
+        runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
+        runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
+        runs.append(("WARRIOR/%s/prof-reader-open" % variant, "WARRIOR", minimal, ["login", "profReaderRecoversAfterOpen"]))
+        runs.append(("WARRIOR/%s/prof-reader-closed-weapons" % variant, "WARRIOR", minimal,
+                     ["skills:MI;30;75:skilllines", "login", "profOpenHeadingWithClosedWeapons"]))
+        runs.append(("WARRIOR/%s/prof-herbalism" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismTab"]))
+        runs.append(("WARRIOR/%s/prof-herbalism-cards" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismCards"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))
@@ -538,11 +608,17 @@ def main():
         for cls in ("WARRIOR", "MAGE"):
             runs.append(("%s/%s/pad" % (cls, variant), cls, minimal, PAD))
         runs.append(("WARRIOR/%s/banner-target" % variant, "WARRIOR", minimal, PROF_BANNER))
+        for shortcut in ("slash", "click"):
+            runs.append(("WARRIOR/%s/banner-target-%s" % (variant, shortcut), "WARRIOR", minimal,
+                         ["login", "profRemovedBanner:" + shortcut]))
         runs.append(("WARRIOR/%s/craft" % variant, "WARRIOR", minimal, CRAFT))
         if not minimal:
             runs.append(("PRIEST/full/craft", "PRIEST", False, CRAFT))
             runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
             runs.append(("WARRIOR/full/craft-scrollbox", "WARRIOR", False, CRAFT_SCROLLBOX))
+            for mode in ("classic", "retail"):
+                runs.append(("WARRIOR/full/craft-herbalism-" + mode, "WARRIOR", False,
+                             ["makeCraftWindow:" + mode, "login", "craftHerbalism"]))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

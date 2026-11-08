@@ -1,26 +1,39 @@
 -- ProfessionTab.lua: the Professions tab of the /codex window. What to do at your skill (the
 -- recipe, how many more, materials against your bags, where to learn it), training when it's
--- due, the whole route, and a shopping list to 300. Mining shows the veins for your faction,
+-- due, the whole route, and a shopping list to 300. Gathering guides show nodes for your faction,
 -- Tailoring the cloth (mob levels and zones), and its shopping list counts bolts as their cloth.
 
 local _, ns = ...
 local C, plain = ns.C, ns.plain
 
 local shown        -- profession key on screen (nil = pick one you have)
+local pending      -- restore this selection if a temporary read failure clears
 local picked = {}  -- key -> { index = step clicked in the route, at = your skill then }
+local displayed = {}  -- last rendered reading can differ from the skill-up watcher's
 
+local function choose(key)
+  shown, pending = key, nil
+end
 
--- The profession to show: the one picked, else the first you have, else Blacksmithing.
-local function current()
-  if shown and ns.P and ns.P[shown] then return shown end
-  for _, key in ipairs(ns.PROF_ORDER) do
-    if ns.profSkill(key) then return key end
+function ns.profTabSkillsChanged(snapshot)
+  for key, preview in pairs(picked) do
+    local reading = snapshot[key]
+    if reading and not (reading.hidden or reading.unavailable) and reading.rank ~= preview.at then
+      picked[key] = nil
+    end
   end
-  return ns.PROF_ORDER[1]
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local before, after = displayed[key] or {}, snapshot[key] or {}
+    if before.rank ~= after.rank or before.cap ~= after.cap or before.hidden ~= after.hidden
+      or before.unavailable ~= after.unavailable then
+      ns.refreshProfessionTab(snapshot)
+      return
+    end
+  end
 end
 
 function ns.profTabShow(key)
-  if ns.P and ns.P[key] then shown = key end
+  if ns.profSkill(key) then choose(key) end
 end
 
 local function recipeColor(step, skill)
@@ -55,6 +68,7 @@ end
 local function viewStep(key, P, skill)
   local p = picked[key]
   if p and p.at == skill and P.steps[p.index] then return P.steps[p.index], p.index, true end
+  picked[key] = nil
   local s, i = ns.profStep(key, skill or 1)
   return s, i, false
 end
@@ -76,52 +90,69 @@ local function smeltLine(P, step, skill)
   return "Smelt for points: " .. table.concat(parts, ", ") .. "."
 end
 
-local function renderer()
+local function renderer(_, snapshot)
   local ui = ns.ui
   local W, T, box, icon, btn, rect, hit = ui.W, ui.T, ui.box, ui.icon, ui.btn, ui.rect, ui.hit
-  local key = current()
-  local P = ns.P and ns.P[key]
-  local y = ui.sectionTitle("Professions", 0, profNames() .. " 1-300 for WoW: Forever")
-  if not P then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
+  local y = ui.sectionTitle("Professions", 0, "Leveling guides for WoW: Forever")
+  local names = profNames()
+  if names == "" then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
-  -- switch
-  local x, n = 0, 0
-  for _, k in ipairs(ns.PROF_ORDER) do if ns.P[k] then n = n + 1 end end
-  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / math.max(n, 1)))  -- every button inside the content width
-  for _, k in ipairs(ns.PROF_ORDER) do
-    local Q = ns.P[k]
-    if Q then
-      btn(Q.name, x, y, bw, function() shown = k; ui.refresh() end, k == key, "Show the " .. Q.name .. " guide.")
-      x = x + bw + 6
+  snapshot = snapshot or ns.profSkillSnapshot()
+  displayed = snapshot
+  local learned, hidden, unavailable = {}, false, false
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local reading = snapshot[key]
+    if reading then
+      if reading.rank then learned[#learned + 1] = key end
+      hidden = hidden or reading.hidden
+      unavailable = unavailable or reading.unavailable
     end
+  end
+
+  if pending then
+    local reading = snapshot[pending]
+    if reading and reading.rank then choose(pending)
+    elseif not (reading and (reading.hidden or reading.unavailable)) then pending = nil end
+  end
+  local selected = shown and snapshot[shown]
+  if not (selected and selected.rank) then
+    if not pending and selected and (selected.hidden or selected.unavailable) then pending = shown end
+    shown = learned[1]
+  end
+
+  if hidden then
+    y = y + T("Open the character window's Skills tab and expand Professions to show your learned guides.",
+      0, y, W, "body", C.dim) + 10
+  end
+  if unavailable then y = y + T("Profession skills are unavailable right now.", 0, y, W, "body", C.dim) + 10 end
+  if not shown then
+    if not (hidden or unavailable) then y = y + T("No supported professions learned.", 0, y, W, "body", C.dim) + 10 end
+    return y + T("Supported guides: " .. names .. ".", 0, y, W, "small", C.dim) + 10
+  end
+
+  local key = shown
+  local P = ns.P[key]
+  local x, n = 0, #learned
+  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / n))
+  for _, k in ipairs(learned) do
+    local name = ns.P[k].name
+    btn(name, x, y, bw, function() choose(k); ui.refresh() end, k == key, "Show the " .. name .. " guide.")
+    x = x + bw + 6
   end
   y = y + 34
 
-  local skill, cap, hidden = ns.profSkill(key)
+  local reading = snapshot[key]
+  local skill, cap = reading.rank, reading.cap
   local level = UnitLevel("player") or 1
 
   -- header card: your skill
   local top = y
   y = y + 14
   icon(P.icon, 16, y, 40, P.name, nil)
-  if skill then
-    T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
-    local tier = ns.profTier(key, skill, cap)
-    T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
-    y = y + 50
-  elseif hidden then
-    T(P.name .. ": skill not seen", 66, y + 2, W - 90, "head", C.ink)
-    y = y + 28
-    y = y + T("A heading in your skill list is closed, so the game doesn't list your skill. Open it in the " ..
-      "character window's Skills tab and this updates.", 66, y, W - 90, "small", C.inkSoft) + 10
-    y = math.max(y, top + 64)
-  else
-    T(P.name .. ": not learned", 66, y + 2, W - 90, "head", C.ink)
-    y = y + 28
-    y = y + T("Learn " .. P.name .. " from any " .. P.name .. " trainer (no level needed). The route below starts at 1.",
-      66, y, W - 90, "small", C.inkSoft) + 10
-    y = math.max(y, top + 64)
-  end
+  T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
+  local tier = ns.profTier(key, skill, cap)
+  T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
+  y = y + 50
   box(0, top, W, y - top, C.parch, C.edge)
   y = y + 12
 
@@ -199,22 +230,22 @@ local function renderer()
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
     if step.alt and step.alt ~= "" then y = y + T("Instead: " .. plain(step.alt), 16, y, W - 32, "small", C.inkSoft) + 6 end
     y = y + 8
-  else -- Mining
+  else -- Gathering
     T(browsing and ("STEP " .. step.from .. "-" .. step.to) or "DO THIS NOW", 16, y, 300, "label", C.inkSoft)
     T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
     y = y + 18
     y = y + T(plain(step.title), 16, y, W - 32, "head", C.ink) + 8
-    for _, name in ipairs(step.veins or {}) do
-      local v = ns.veinNamed(name)
-      if v then
-        icon(v.icon, 16, y, 30, v.name, v.ore)
-        local col = ns.veinColor(v, skill or 0)
-        T(v.name .. "  " .. v.skill .. "  " .. col, 54, y + 1, W - 70, "body", C.ink)
-        local h = T("Where: " .. table.concat(ns.profZones(v), ", "), 54, y + 17, W - 70, "small", C.inkSoft)
+    for _, name in ipairs(step.herbs or step.veins or {}) do
+      local node = ns.profNode(key, name)
+      if node then
+        icon(node.icon, 16, y, 30, node.name, node.ore)
+        local col = ns.profNodeColor(node, skill)
+        T(node.name .. "  " .. node.skill .. "  " .. col, 54, y + 1, W - 70, "body", C.ink)
+        local h = T("Where: " .. table.concat(ns.profZones(node), ", "), 54, y + 17, W - 70, "small", C.inkSoft)
         y = y + math.max(36, 21 + h)
       end
     end
-    y = y + T(smeltLine(P, step, skill), 16, y, W - 32, "small", C.inkSoft) + 6
+    if P.smelt then y = y + T(smeltLine(P, step, skill), 16, y, W - 32, "small", C.inkSoft) + 6 end
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
     y = y + 8
   end

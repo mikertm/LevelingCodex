@@ -1853,6 +1853,9 @@ function S.profDebug()
   check(chatHas("profession skills read from: " .. via), "skills read from " .. via)
 end
 
+local function profText() return MOCK.textUnder(win()) end
+local function profButton(name) return findButton(win(), function(label) return label == name end) end
+
 function S.profNone()
   if not D() then return end
   MOCK.chat = {}
@@ -1860,9 +1863,108 @@ function S.profNone()
   check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
   check(chatHas("profession: Tailoring not learned"), "Tailoring not learned in debug")
   check(chatHas("profession: Enchanting not learned"), "Enchanting not learned in debug")
+  check(chatHas("profession: Herbalism not learned"), "Herbalism not learned in debug")
+  openAt(9, "Professions")
+  local content = profText()
+  check(content:find("No supported professions learned", 1, true), "empty profession switch")
+  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism" }) do
+    check(content:find(name, 1, true) and not profButton(name), "only text for supported " .. name)
+  end
+  win():Hide()
+  MOCK.level = 10
+  MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
+  MOCK.advance(4.5)
+  local t = toast()
+  check(t and t:IsShown() and not MOCK.textUnder(t):find("TRAIN JOURNEYMAN"), "no level-up row for unlearned professions")
 end
 
-local function profText() return MOCK.textUnder(win()) end
+function S.profLearnedSwitch()
+  LevelingCodexDB.noProfCards = true
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.advance(1.2)
+  openAt(30, "Professions")
+  check(profButton("Mining") and not profButton("Blacksmithing"), "one learned guide button")
+  MOCK.setSkill("Blacksmithing", 97, 150)
+  MOCK.advance(1.2)
+  check(profButton("Blacksmithing") and profText():find("Mining 30 / 75"), "new button without switching away from Mining")
+  MOCK.removeSkill("Mining")
+  MOCK.advance(1.2)
+  check(not profButton("Mining") and profText():find("Blacksmithing 97 / 150"), "select learned fallback after unlearning")
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.advance(1.2)
+  check(profButton("Mining") and profText():find("Blacksmithing 97 / 150"), "relearning doesn't override the current guide")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
+  end
+  check(profText():find("STEP 100%-112"), "clicked route preview")
+  MOCK.setSkill("Blacksmithing", 98, 150)
+  MOCK.advance(1.2)
+  MOCK.setSkill("Blacksmithing", 97, 150)
+  MOCK.advance(1.2)
+  check(profText():find("DO THIS NOW") and not profText():find("STEP 100%-112"), "rank change clears the preview permanently")
+  MOCK.removeSkill("Mining")
+  MOCK.removeSkill("Blacksmithing")
+  MOCK.advance(1.2)
+  check(profText():find("No supported professions learned", 1, true), "switch updates to empty while open")
+end
+
+function S.profReaderRecovery()
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.setSkill("Blacksmithing", 97, 150)
+  openAt(30, "Professions")
+  click(win(), "Mining")
+  local profs, line = GetProfessions, GetSkillLineInfo
+  if profs then GetProfessions = function() error("profession list is loading") end end
+  GetSkillLineInfo = function(i)
+    if i == 2 then error("Mining row is loading") end
+    return line(i)
+  end
+  MOCK.event("SKILL_LINES_CHANGED")
+  MOCK.advance(1.2)
+  check(not profButton("Mining") and profText():find("skills are unavailable", 1, true), "partial read reports unavailable")
+  check(profText():find("Blacksmithing 97 / 150"), "readable skill stays visible")
+  GetProfessions, GetSkillLineInfo = profs, line
+  MOCK.event("SKILL_LINES_CHANGED")
+  MOCK.advance(1.2)
+  check(profText():find("Mining 30 / 75"), "selection returns after the reader recovers")
+  if profs then
+    GetProfessions = function() return nil, 2 end
+    MOCK.skillsCollapsed = true
+    MOCK.event("SKILL_LINES_CHANGED")
+    check(not profButton("Mining") and profText():find("Blacksmithing 97 / 150"), "complete read with a hole proves absence")
+    check(not profText():find("expand Professions", 1, true), "complete read wins over closed fallback")
+    GetProfessions, MOCK.skillsCollapsed = profs, false
+  end
+end
+
+function S.profReaderRecoversAfterOpen()
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.advance(1.2)
+  local profs, count = GetProfessions, GetNumSkillLines
+  if profs then GetProfessions = function() error("profession list is loading") end end
+  GetNumSkillLines = function() error("Skills tab is loading") end
+  openAt(30, "Professions")
+  check(not profButton("Mining") and profText():find("skills are unavailable", 1, true), "unavailable read while opening")
+  GetProfessions, GetNumSkillLines = profs, count
+  MOCK.event("SKILL_LINES_CHANGED")
+  MOCK.advance(1.2)
+  check(profButton("Mining") and profText():find("Mining 30 / 75"), "a healthy read refreshes the view opened during failure")
+end
+
+function S.profOpenHeadingWithClosedWeapons()
+  local count, line = GetNumSkillLines, GetSkillLineInfo
+  GetNumSkillLines = function() return count() + 1 end
+  GetSkillLineInfo = function(i)
+    if i > count() then return "Weapon Skills", true, false end
+    return line(i)
+  end
+  openAt(30, "Professions")
+  check(profButton("Mining"), "Mining confirmed with the Professions heading open")
+  MOCK.removeSkill("Mining")
+  MOCK.advance(1.2)
+  check(not profButton("Mining") and profText():find("No supported professions learned", 1, true),
+    "an unrelated closed heading cannot hide an unlearned profession")
+end
 
 -- Without GetProfessions the classic skill list hides lines under a closed heading: the guide
 -- keeps the skill it saw last, and the card still comes when the heading opens again.
@@ -1872,6 +1974,7 @@ function S.profCollapsed()
   MOCK.event("SKILL_LINES_CHANGED"); MOCK.advance(1.2)
   openAt(30, "Professions"); click(win(), "Blacksmithing")
   check(profText():find("Blacksmithing 97 / 150"), "closed heading: still the skill seen before")
+  check(not profButton("Tailoring"), "closed heading does not add unconfirmed guides")
   win():Hide()
   MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2) -- a skill-up the list doesn't show
   MOCK.skillsCollapsed = false
@@ -1884,17 +1987,14 @@ end
 function S.skillsClosed() MOCK.skillsCollapsed = true end
 function S.profCollapsedCold()
   if not D() then return end
-  openAt(30, "Professions"); click(win(), "Blacksmithing")
-  check(profText():find("skill not seen") and profText():find("heading in your skill list is closed")
-    and not profText():find("not learned"), "tab: heading closed")
-  win():Hide()
+  openAt(30, "Professions")
+  check(profText():find("expand Professions", 1, true) and not profButton("Blacksmithing"), "tab: heading closed")
   MOCK.chat = {}
   slash("debug")
   check(chatHas("profession: Blacksmithing not seen"), "debug: not seen")
   MOCK.skillsCollapsed = false
   MOCK.event("SKILL_LINES_CHANGED"); MOCK.advance(1.2)
-  openAt(30, "Professions"); click(win(), "Blacksmithing")
-  check(profText():find("Blacksmithing 97 / 150"), "heading opened: skill read")
+  check(profButton("Blacksmithing") and profText():find("Blacksmithing 97 / 150"), "heading opened: skill read")
   win():Hide()
 end
 
@@ -1940,10 +2040,12 @@ function S.profTabCases()
   MOCK.setSkill("Blacksmithing", 300, 300)
   click(win(), "Blacksmithing")
   check(profText():find("ROUTE DONE"), "route done at 300")
-  MOCK.skills = {}
-  click(win(), "Blacksmithing")
-  check(profText():find("Blacksmithing: not learned"), "not learned")
+  MOCK.removeSkill("Blacksmithing")
+  MOCK.removeSkill("Mining")
+  MOCK.advance(1.2)
+  check(profText():find("No supported professions learned", 1, true), "unlearned skills removed")
   MOCK.setSkill("Mining", 30, 75)
+  MOCK.advance(1.2)
   MOCK.faction, MOCK.race = "Alliance", "Human"
   click(win(), "Mining")
   check(profText():find("Elwynn Forest") and not profText():find("Durotar"), "Alliance copper zones only")
@@ -2007,8 +2109,8 @@ function S.profSkillUps()
   MOCK.advance(1.2)
   check(t:IsShown() and MOCK.textUnder(t):find("Tin Vein"), "new vein card")
   dismiss(t)
-  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
-  MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Cooking", 1, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Cooking", 50, 75); MOCK.advance(1.2)
   check(not t:IsShown(), "no card for a profession the guide doesn't cover")
   LevelingCodexDB.noProfCards = true
   MOCK.setSkill("Blacksmithing", 140, 150); MOCK.advance(1.2)
@@ -2056,6 +2158,86 @@ function S.bannerOpensTarget()
   slash("")
   check(MOCK.textUnder(win()):find("Minimap button"), "after a minute it opens as usual")
   win():Hide()
+end
+
+function S.profRemovedBanner(shortcut)
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.setSkill("Blacksmithing", 94, 150)
+  MOCK.advance(1.2)
+  MOCK.setSkill("Blacksmithing", 95, 150)
+  MOCK.advance(1.2)
+  local t = toast()
+  check(t and t:IsShown(), "profession card before unlearning")
+  MOCK.removeSkill("Blacksmithing")
+  MOCK.advance(1.2)
+  if shortcut == "click" then MOCK.fire(t, "OnMouseUp", "LeftButton") else slash("") end
+  check(win() and win():IsShown() and profText():find("Mining 30 / 75"), "stale shortcut selects a learned guide")
+  check(not profButton("Blacksmithing"), "stale shortcut cannot expose unlearned guide")
+end
+
+function S.herbalismTab()
+  openAt(1, "Professions")
+  local text = profText()
+  check(profButton("Herbalism") and not (profButton("Blacksmithing") or profButton("Mining") or
+    profButton("Tailoring") or profButton("Enchanting")), "only learned Herbalism button")
+  check(text:find("Herbalism 1 / 75") and text:find("Peacebloom  1  orange") and
+    text:find("Silverleaf  1  orange") and text:find("Earthroot  15  red"), "starter herbs and first unlock")
+  check(text:find("Elwynn Forest") and not text:find("Durotar"), "Alliance starter zones")
+  MOCK.faction, MOCK.race = "Horde", "Orc"
+  click(win(), "Herbalism")
+  check(profText():find("Durotar") and not profText():find("Elwynn Forest"), "Horde starter zones")
+  MOCK.race = "Skyborne"
+  click(win(), "Herbalism")
+  check(profText():find("Zephras Isle"), "Skyborne starter zone")
+  check(text:find("THE WHOLE ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
+  check(text:find("20  Incense Candle") and text:find("140  Greenhouse") and
+    text:find("300  Seed Hybridizer"), "camp unlocks")
+  check(not text:find("Smelt") and not text:find("SHOPPING LIST"), "gathering route has no crafting advice")
+  MOCK.setSkill("Herbalism", 25, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  yellow"), "Peacebloom turns yellow at 25")
+  MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  green") and profText():find("TRAIN JOURNEYMAN"), "green and training at 50")
+  MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
+  click(win(), "Settings")
+  local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
+  check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
+end
+
+function S.herbalismCards()
+  MOCK.level = 1
+  local function set(rank, cap)
+    MOCK.setSkill("Herbalism", rank, cap)
+    MOCK.advance(1.2)
+    return toast()
+  end
+  local function dismiss()
+    local t = toast()
+    if t and t:IsShown() then MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+  end
+  set(14, 75)
+  local t = set(15, 75)
+  check(t and t:IsShown() and t.title:GetText() == "Herbalism 15" and
+    MOCK.textUnder(t):find("NEW HERB") and MOCK.textUnder(t):find("Earthroot %(15%)"), "Earthroot unlock card")
+  MOCK.fire(t, "OnMouseUp", "LeftButton")
+  check(win() and win():IsShown() and profText():find("Herbalism 15 / 75"), "herb card opens its guide")
+  win():Hide()
+  set(119, 150); dismiss()
+  t = set(120, 150)
+  check(t:IsShown() and MOCK.textUnder(t):find("Grave Moss %(120%)"), "off-route herb unlock")
+  dismiss()
+  t = set(125, 150)
+  check(t:IsShown() and MOCK.textUnder(t):find("TRAIN EXPERT"), "Expert training at 125")
+  dismiss()
+  check(not set(126, 150):IsShown(), "ordinary point does not show a card")
+  set(269, 300); dismiss()
+  t = set(270, 300)
+  local content = MOCK.textUnder(t)
+  check(t:IsShown() and content:find("NEW STEP") and content:find("Dreamfoil %(270%)"), "late route handoff and herb unlock")
+  dismiss()
+  set(299, 300); dismiss()
+  t = set(300, 300)
+  check(t:IsShown() and MOCK.textUnder(t):find("Black Lotus %(300%)"), "Black Lotus unlock at 300")
 end
 
 ----------------------------------------------------------------------------
@@ -2144,8 +2326,7 @@ function S.tailorTab()
   else
     check(not t:find("you have"), "no bag counts without GetItemCount")
   end
-  local function has(l) return findButton(win(), function(x) return x == l end) end
-  check(has("Blacksmithing") and has("Mining") and has("Tailoring"), "three profession buttons")
+  check(profButton("Tailoring") and not (profButton("Blacksmithing") or profButton("Mining")), "only learned Tailoring button")
   win():Hide()
   openAt(30, "Professions")
   check(profText():find("Tailoring 150 / 225"), "the picked profession stays after reopening")
@@ -2199,15 +2380,6 @@ function S.tailorOnly()
   local t = profText()
   check(t:find("Tailoring 20 / 75") and t:find("Bolt of Linen Cloth"), "opens on Tailoring without a click")
   check(t:find("Linen Cloth  %-  you need this now"), "Linen Cloth first for the bolt step")
-  win():Hide()
-end
-
-function S.tailorNone()
-  if not D() then return end
-  openAt(30, "Professions")
-  local t = tailoring()
-  check(t:find("Tailoring: not learned"), "not learned")
-  check(t:find("Linen Cloth  %-  you need this now"), "cloth for the first step")
   win():Hide()
 end
 
@@ -2271,13 +2443,10 @@ function S.enchantTab()
   check(marked and first and marked < first, "the Soul Dust band first and marked")
   check(t:find("3 Lesser make 1 Greater"), "essence line")
   if not C_Container then check(not t:find("IN YOUR BAGS"), "no bag list without the bag API") end
-  local function has(l) return findButton(win(), function(x) return x == l end) end
-  check(has("Blacksmithing") and has("Mining") and has("Tailoring") and has("Enchanting"), "four profession buttons")
-  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting" }) do
-    local b = has(name)
-    local _, _, _, x = b:GetPoint(1)
-    check(x and x + b:GetWidth() <= 568, name .. " button inside the 568 content width (" .. tostring(x) .. " + " .. tostring(b:GetWidth()) .. ")")
-  end
+  local b = profButton("Enchanting")
+  check(b and not (profButton("Blacksmithing") or profButton("Mining") or profButton("Tailoring")), "only learned Enchanting button")
+  local _, _, _, x = b:GetPoint(1)
+  check(x and x + b:GetWidth() <= 568, "Enchanting button fits the content width")
   MOCK.staleUnder(win(), "Professions")
   win():Hide()
 end
@@ -2481,6 +2650,19 @@ function S.craftTrace()
   check(rel == TradeSkillSkill4, "trace on the Rough Bronze Leggings row (its text has a colour code and a count)")
   closeCraft()
   check(not tr:IsShown() and not h:IsShown(), "trace and card hide with the window")
+end
+
+function S.craftHerbalism()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown() and trace and trace:IsShown(), "crafting guide before switching professions")
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Herbalism", 20, 75
+  MOCK.trade.recipes = { { "Incense Candle", "optimal", 2 } }
+  MOCK.trade.layout()
+  MOCK.event("TRADE_SKILL_UPDATE")
+  MOCK.advance(0.6)
+  check(not hint:IsShown() and not trace:IsShown(), "Herbalism camp recipes do not show a crafting guide")
+  closeCraft()
 end
 
 function S.craftNotLearned()
