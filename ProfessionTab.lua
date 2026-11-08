@@ -1,6 +1,7 @@
 -- ProfessionTab.lua: the Professions tab of the /codex window. What to do at your skill (the
 -- recipe, how many more, materials against your bags, where to learn it), training when it's
--- due, the whole route, and a shopping list to 300. Mining shows the veins for your faction.
+-- due, the whole route, and a shopping list to 300. Mining shows the veins for your faction,
+-- Tailoring the cloth (mob levels and zones), and its shopping list counts bolts as their cloth.
 
 local _, ns = ...
 local C, plain = ns.C, ns.plain
@@ -40,6 +41,16 @@ local function have(item)
   return ok and tonumber(n) or nil
 end
 
+-- "Blacksmithing, Mining and Tailoring": the guided professions' names.
+local function profNames()
+  local names = {}
+  for _, k in ipairs(ns.PROF_ORDER) do
+    if ns.P and ns.P[k] then names[#names + 1] = ns.P[k].name end
+  end
+  if #names <= 1 then return names[1] or "" end
+  return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
+end
+
 -- Which step the Now card shows: one you clicked (until your skill changes), else yours.
 local function viewStep(key, P, skill)
   local p = picked[key]
@@ -70,7 +81,7 @@ local function renderer()
   local W, T, box, icon, btn, rect, hit = ui.W, ui.T, ui.box, ui.icon, ui.btn, ui.rect, ui.hit
   local key = current()
   local P = ns.P and ns.P[key]
-  local y = ui.sectionTitle("Professions", 0, "Mining and Blacksmithing 1-300 for WoW: Forever")
+  local y = ui.sectionTitle("Professions", 0, profNames() .. " 1-300 for WoW: Forever")
   if not P then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
   -- switch
@@ -160,6 +171,13 @@ local function renderer()
     for _, m in ipairs(step.mats or {}) do
       local got = have(m[1])
       y = y + T((n * m[2]) .. " " .. m[1] .. (got and (" (you have " .. got .. ")") or ""), 28, y, W - 44, "body", C.ink) + 2
+      local part = ns.profPart(key, m[1])
+      local src = part and part.mats and part.mats[1]
+      if src then
+        local h = ns.profHave(key, src[1])
+        y = y + T("make them from " .. src[1] .. " (" .. src[2] .. " each)" ..
+          (h and (": your " .. h .. " make " .. math.floor(h / src[2])) or ""), 40, y, W - 56, "small", C.inkSoft) + 2
+      end
     end
     y = y + 6
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
@@ -234,11 +252,38 @@ local function renderer()
     local col = (W - 32) / 2
     for i, m in ipairs(list) do
       local cx = 16 + ((i - 1) % 2) * col
-      T(m[2] .. " " .. m[1], cx, y, col - 8, "body", C.light)
+      local text = m[2] .. " " .. m[1]
+      if m.via then
+        local h = ns.profHave(key, m[1])
+        local what = m.via.part:find("^Bolt") and "bolts" or "parts"
+        text = text .. " (for " .. m.via.n .. " " .. what .. (h and (", you have " .. h) or "") .. ")"
+      end
+      T(text, cx, y, col - 8, "body", C.light)
       if i % 2 == 0 or i == #list then y = y + 18 end
     end
     y = y + T("About, from the recipe colours: yellow and green crafts sometimes give no point.", 16, y + 4, W - 32,
       "small", C.dim) + 14
+    box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+  end
+  if P.cloth then
+    top = y
+    y = y + 12
+    T("CLOTH", 16, y, W - 32, "label", C.gold)
+    y = y + 20
+    local need = ns.profClothFor(key, (ns.profStep(key, skill or 1)))  -- your step's, not a browsed one
+    local rows = {}
+    for _, c in ipairs(P.cloth) do if c.name == need then rows[#rows + 1] = c end end
+    for _, c in ipairs(P.cloth) do if c.name ~= need then rows[#rows + 1] = c end end
+    for _, c in ipairs(rows) do
+      icon(c.icon, 16, y, 30, c.name, "Humanoids level " .. c.levels)
+      T(c.name .. (c.name == need and "  -  you need this now" or ""), 54, y + 1, W - 70, "body",
+        c.name == need and C.gold or C.light)
+      local h = T("Humanoids level " .. c.levels .. ". Where: " .. table.concat(ns.profZones(c), ", "), 54, y + 17, W - 70, "small", C.dim)
+      y = y + math.max(36, 21 + h)
+    end
+    y = y + T("Thread, dyes and Bleach: Tailoring and trade supply vendors (most trainers have one nearby).", 16, y + 2,
+      W - 32, "small", C.dim) + 12
     box(0, top, W, y - top, C.panel, C.edge)
     y = y + 12
   end

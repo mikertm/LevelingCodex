@@ -53,8 +53,13 @@ TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 PROF = ["skills:BS;97;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme", "trainerReqs"]
 PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "profCollapsed"]
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
-PROF_NONE = ["login", "profNone"]
-PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
+PROF_NONE = ["login", "profNone", "tailorNone"]
+PROF_UPS = ["login", "profSkillUps", "profLevelTier", "tailorSkillUps"]
+# Tailoring: the shopping list in cloth, the cloth section, the classic skill list.
+TAILOR = ["skills:TA;150;225:professions", "login", "tailorDebug", "tailorTab", "tailorTabCases"]
+TAILOR_ONLY = ["skills:TA;20;75:professions", "login", "tailorOnly"]
+TAILOR_LINES = ["skills:TA;150;225:skilllines", "login", "tailorDebug"]
+TAILOR_CLOSED = ["skills:TA;150;225:skilllines", "skillsClosed", "login", "tailorClosed"]
 PROF_BANNER = ["login", "bannerOpensTarget"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
@@ -479,6 +484,10 @@ def main():
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
+        runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
+        runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
+        runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))
+        runs.append(("PALADIN/%s/tailor-closed-heading" % variant, "PALADIN", minimal, TAILOR_CLOSED))
         for cls in ("WARRIOR", "HUNTER"):
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
         for cls in ("WARRIOR", "MAGE"):

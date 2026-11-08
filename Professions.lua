@@ -6,7 +6,48 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING" }
+
+-- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
+function ns.profPart(key, item)
+  local P = ns.P and ns.P[key]
+  for _, p in ipairs((P and P.parts) or {}) do
+    if p.makes and p.makes[1] == item then return p end
+  end
+end
+
+local function bagCount(item)
+  if not GetItemCount then return nil end
+  local ok, n = pcall(GetItemCount, item)
+  return ok and tonumber(n) or nil
+end
+
+-- How much of item you hold, counting the parts made from it (a held Bolt of Mageweave counts as
+-- 5 Mageweave Cloth). nil when the client can't count items.
+function ns.profHave(key, item)
+  local n = bagCount(item)
+  if not n then return nil end
+  local P = ns.P and ns.P[key]
+  for _, p in ipairs((P and P.parts) or {}) do
+    for _, m in ipairs(p.mats or {}) do
+      if m[1] == item then n = n + (bagCount(p.makes[1]) or 0) * m[2] / (p.makes[2] or 1) end
+    end
+  end
+  return math.floor(n)
+end
+
+-- The cloth a step uses: one named in its materials, else the first material of the first part it uses.
+function ns.profClothFor(key, step)
+  local P = ns.P and ns.P[key]
+  if not (P and P.cloth and step) then return nil end
+  local names = {}
+  for _, c in ipairs(P.cloth) do names[c.name] = true end
+  for _, m in ipairs(step.mats or {}) do if names[m[1]] then return m[1] end end
+  for _, m in ipairs(step.mats or {}) do
+    local part = ns.profPart(key, m[1])
+    if part and part.mats and part.mats[1] then return part.mats[1][1] end
+  end
+end
 
 -- Where skills come from: retail's GetProfessions, else the classic skill list.
 local function skillSource()
@@ -99,12 +140,14 @@ end
 
 -- Every material from this skill to 300: { { item, count }, ... }, most first. Things the route
 -- makes itself (Heavy Grinding Stones) only count where it doesn't make enough, and a step's
--- extra (the Thorium Bars a quest takes for its plan) counts until that step starts.
+-- extra (the Thorium Bars a quest takes for its plan) counts until that step starts. Parts never
+-- show: what's still needed is counted as their materials, and those rows carry
+-- via = { part = name, n = parts still to make (the parts' own steps included) }.
 function ns.profShopping(key, skill)
   local P = ns.P and ns.P[key]
   local list = {}
   if not P then return list end
-  local byItem, made = {}, {}
+  local byItem, made, partMade = {}, {}, {}
   local function add(item, n)
     if n <= 0 then return end
     if not byItem[item] then byItem[item] = { item, 0 }; list[#list + 1] = byItem[item] end
@@ -119,9 +162,26 @@ function ns.profShopping(key, skill)
         made[m[1]] = (made[m[1]] or 0) - own
         add(m[1], need - own)
       end
-      if s.makes then made[s.makes[1]] = (made[s.makes[1]] or 0) + n * s.makes[2] end
+      if s.makes then
+        made[s.makes[1]] = (made[s.makes[1]] or 0) + n * s.makes[2]
+        partMade[s.makes[1]] = (partMade[s.makes[1]] or 0) + n * s.makes[2]
+      end
       if (skill or 0) < s.from then
         for _, m in ipairs(s.extra or {}) do add(m[1], m[2]) end
+      end
+    end
+  end
+  for _, p in ipairs(P.parts or {}) do
+    local item = p.makes and p.makes[1]
+    local row = item and byItem[item]
+    local left = row and math.max(row[2], 0) or 0
+    if row then row[2] = 0 end
+    local crafts = math.ceil(left / ((p.makes and p.makes[2]) or 1))
+    for _, m in ipairs(p.mats or {}) do add(m[1], crafts * m[2]) end
+    local total = left + (partMade[item] or 0)
+    if total > 0 then
+      for _, m in ipairs(p.mats or {}) do
+        if byItem[m[1]] then byItem[m[1]].via = { part = p.name, n = total } end
       end
     end
   end

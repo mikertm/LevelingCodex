@@ -1657,7 +1657,7 @@ function S.skills(list, api, faction, race)
   MOCK.skillAPI = api or "professions"
   if MOCK.skillAPI ~= "professions" then GetProfessions, GetProfessionInfo = nil, nil end
   MOCK.faction, MOCK.race = faction, race
-  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism" }
+  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring" }
   for part in (list or ""):gmatch("[^,]+") do
     local k, r, m = part:match("(%a+);(%d+);(%d+)")
     MOCK.setSkill(names[k], tonumber(r), tonumber(m))
@@ -1680,6 +1680,7 @@ function S.profNone()
   MOCK.chat = {}
   slash("debug")
   check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
+  check(chatHas("profession: Tailoring not learned"), "Tailoring not learned in debug")
 end
 
 local function profText() return MOCK.textUnder(win()) end
@@ -1885,6 +1886,151 @@ end
 ----------------------------------------------------------------------------
 
 local RELATIVE = { optimal = 0, medium = 1, easy = 2, trivial = 3 }
+
+-- Tailoring: the shopping list in raw cloth (bolts become their cloth), the cloth section.
+
+-- How far down the window (draw y) the first shown text matching pat sits; the text dump follows
+-- the widget pools, not the screen, so order on screen is read from the anchors.
+local function textY(root, pat)
+  local found
+  local function walk(f)
+    for _, r in ipairs(f._regions) do
+      if not found and r._shown and r._text and r._text:find(pat) and r._points[1] then found = -r._points[1][5] end
+    end
+    for _, c in ipairs(f._children) do if c._shown and not found then walk(c) end end
+  end
+  walk(root)
+  return found
+end
+
+-- The shopping list's text only (between its title and the cloth section).
+local function shoppingText()
+  local t = profText()
+  local a = t:find("SHOPPING LIST TO 300", 1, true)
+  local b = t:find("\nCLOTH\n", a or 1, true)
+  return a and t:sub(a, b or #t) or ""
+end
+
+local function tailoring() click(win(), "Tailoring"); return profText() end
+
+function S.tailorTab()
+  if not D() then return end
+  openAt(30, "Professions")
+  local t = tailoring()
+  check(t:find("Tailoring 150 / 225"), "Tailoring header")
+  check(t:find("Earthen Vest"), "step at 150: Earthen Vest")
+  check(t:find("SHOPPING LIST TO 300") and t:find("\nCLOTH\n"), "shopping list and cloth section")
+  local shop = shoppingText()
+  check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
+  local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
+  check(cloth and tonumber(cloth) == 5 * tonumber(bolts), "Runecloth row: 5 per bolt (" .. tostring(cloth) .. ", " .. tostring(bolts) .. ")")
+  check(t:find("make them from Silk Cloth %(4 each%)"), "step card: bolts are made from Silk Cloth")
+  local now, linen = textY(win(), "^Silk Cloth  %-  you need this now"), textY(win(), "^Linen Cloth$")
+  check(now and linen and now < linen, "this step's cloth (Silk) first, marked")
+  check(t:find("Humanoids level 27%-39"), "silk mob levels")
+  if GetItemCount then
+    MOCK.bags["Mageweave Cloth"] = 20
+    check(tailoring():find("Mageweave Cloth %(for %d+ bolts, you have 20%)"), "have: cloth in bags")
+    MOCK.bags["Bolt of Mageweave"] = 10
+    check(tailoring():find("Mageweave Cloth %(for %d+ bolts, you have 70%)"), "have: held bolts count as 5 cloth each")
+    MOCK.bags["Mageweave Cloth"], MOCK.bags["Bolt of Mageweave"] = nil, nil
+  else
+    check(not t:find("you have"), "no bag counts without GetItemCount")
+  end
+  local function has(l) return findButton(win(), function(x) return x == l end) end
+  check(has("Blacksmithing") and has("Mining") and has("Tailoring"), "three profession buttons")
+  win():Hide()
+  openAt(30, "Professions")
+  check(profText():find("Tailoring 150 / 225"), "the picked profession stays after reopening")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- Faction zones, more bolts than needed, the end of the route.
+function S.tailorTabCases()
+  if not D() then return end
+  openAt(30, "Professions")
+  local t = tailoring()
+  check(t:find("Westfall") and not t:find("Durotar"), "Alliance cloth zones")
+  MOCK.faction = "Horde"
+  t = tailoring()
+  check(t:find("Durotar") and not t:find("Westfall"), "Horde cloth zones")
+  MOCK.race = "Skyborne"
+  t = tailoring()
+  check(t:find("Durotar") and not t:find("Zephras Isle"), "Skyborne: their faction's zones")
+  MOCK.faction, MOCK.race = nil, nil
+  local _, before = shoppingText():match("(%d+) Runecloth %(for (%d+) bolts")
+  MOCK.bags["Bolt of Runecloth"] = 999
+  tailoring()
+  local shop = shoppingText()
+  check(not shop:find("%-%d"), "no negative counts with 999 bolts held")
+  local _, after = shop:match("(%d+) Runecloth %(for (%d+) bolts")
+  check(before and after == before, "held bolts don't change the need")
+  MOCK.bags["Bolt of Runecloth"] = nil
+  MOCK.setSkill("Tailoring", 260, 300)
+  t = tailoring()
+  check(t:find("Runecloth Cuffs") and t:find("Pexmit"), "step at 260: Runecloth Cuffs from Pexmit")
+  check(t:find("Runecloth  %-  you need this now"), "Runecloth marked at 260")
+  MOCK.setSkill("Tailoring", 300, 300)
+  t = tailoring()
+  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  MOCK.setSkill("Tailoring", 150, 225)
+  win():Hide()
+end
+
+-- Only Tailoring learned: the tab opens on it.
+function S.tailorOnly()
+  if not D() then return end
+  openAt(30, "Professions")
+  local t = profText()
+  check(t:find("Tailoring 20 / 75") and t:find("Bolt of Linen Cloth"), "opens on Tailoring without a click")
+  check(t:find("Linen Cloth  %-  you need this now"), "Linen Cloth first for the bolt step")
+  win():Hide()
+end
+
+function S.tailorNone()
+  if not D() then return end
+  openAt(30, "Professions")
+  local t = tailoring()
+  check(t:find("Tailoring: not learned"), "not learned")
+  check(t:find("Linen Cloth  %-  you need this now"), "cloth for the first step")
+  win():Hide()
+end
+
+function S.tailorSkillUps()
+  if not D() then return end
+  MOCK.advance(10)
+  MOCK.setSkill("Tailoring", 159, 225); MOCK.advance(1.2)
+  MOCK.setSkill("Tailoring", 160, 225); MOCK.advance(1.2)
+  local t = toast()
+  check(t and t:IsShown() and t.title:GetText() == "Tailoring 160", "Tailoring card at a new step")
+  check(t and MOCK.textUnder(t):find("Crimson Silk Vest"), "card names Crimson Silk Vest")
+  MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(10)
+  MOCK.level = 9
+  MOCK.setSkill("Tailoring", 60, 75); MOCK.advance(1.2)
+  MOCK.advance(10)
+  MOCK.level = 10
+  MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
+  MOCK.advance(4.5)
+  t = toast()
+  local text = t and t:IsShown() and MOCK.textUnder(t) or ""
+  check(text:find("TRAIN JOURNEYMAN TAILORING") and text:find("An Expert, Master or Artisan Tailor"), "level-up banner: train Journeyman Tailoring")
+  MOCK.advance(10)
+end
+
+function S.tailorDebug()
+  if not D() then return end
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Tailoring 150/225, step 147%-160 Earthen Vest"), "Tailoring step in debug")
+end
+
+function S.tailorClosed()
+  if not D() then return end
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Tailoring not seen"), "Tailoring not seen under a closed heading")
+end
 
 function S.makeCraftWindow(style)
   local f = CreateFrame("Frame", "TradeSkillFrame", UIParent); f:SetSize(384, 512); f:Hide()

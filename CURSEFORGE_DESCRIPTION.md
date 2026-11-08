@@ -37,9 +37,9 @@ Every macro is built for Forever's macro rules: it never gets stuck on a spell t
 ### Made for controller players
 Forever's gamepad layout is built in: every macro says which trigger set and button it goes on, drawn as the game's button glyphs. Choose **Xbox, PlayStation or Switch** buttons in Settings. Bind a key or controller button to open the Codex (Key Bindings > AddOns), and close it with B, Back or Esc.
 
-### Profession guides: Mining and Blacksmithing 1-300
-Built for WoW: Forever's reworked Blacksmithing, from the game's own recipe colours and reagents.
-- **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points.
+### Profession guides: Mining, Blacksmithing and Tailoring 1-300
+Built for WoW: Forever's reworked Blacksmithing and Tailoring, from the game's own recipe colours and reagents.
+- **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction.
 - **Crafting window guide**: open Blacksmithing or Smelting and the Codex outlines the recipe to make, with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
 - **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein.
 
