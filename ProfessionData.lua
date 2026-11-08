@@ -457,7 +457,7 @@ LevelingCodexProfessions = {
     },
     -- Mote of Magic: Dust to Motes turns 1 Strange Dust into 3; the shopping list counts Motes as Strange Dust
     parts = {
-      { name = "Dust to Motes", plural = "Motes of Magic", unit = "motes", spell = 1245320, icon = "inv_elemental_mote_mana",
+      { name = "Dust to Motes", plural = "Motes of Magic", unit = "motes", rod = "Runed Copper Rod", spell = 1245320, icon = "inv_elemental_mote_mana",
         yellow = 10, grey = 15, mats = { { "Strange Dust", 1 } },
         makes = { "Mote of Magic", 3 }, learn = 1, source = "Known when you learn Enchanting" },
     },
@@ -475,6 +475,10 @@ LevelingCodexProfessions = {
       { name = "Runed Truesilver Rod", category = 376, mask = 15, spell = 13702, icon = "inv_staff_11",
         yellow = 220, grey = 260, mats = { { "Truesilver Rod", 1 }, { "Black Pearl", 1 }, { "Greater Mystic Essence", 1 }, { "Vision Dust", 1 } },
         learn = 200, source = "Enchanting trainer" },
+      -- not on the route, but a player who has one doesn't need the lower rods
+      { name = "Runed Arcanite Rod", category = 377, mask = 31, spell = 20051, icon = "inv_wand_09",
+        yellow = 310, grey = 350, mats = { { "Arcanite Rod", 1 }, { "Golden Pearl", 1 }, { "Illusion Dust", 10 }, { "Greater Eternal Essence", 4 }, { "Small Brilliant Shard", 4 }, { "Large Brilliant Shard", 2 } },
+        learn = 290, source = "Formula: Runed Arcanite Rod, sold by Lorelae Wintersong (Moonglade)" },
     },
     -- disenchanting by required level (wow-professions' Forever table; the bands match the client's, 5 levels apart)
     disenchant = {

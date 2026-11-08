@@ -811,7 +811,9 @@ def audit_professions(profdata, ref):
         for sm in P.get("smelt") or []:
             check_recipe("smelt", sm, sm["name"])
         for p in P.get("parts") or []:
-            check_recipe("part", p, p["name"])
+            r = check_recipe("part", p, p["name"])
+            if r and P.get("rods") and r.get("tool") != p.get("rod"):
+                add("error", "part %s needs %s in game, data says %s" % (p["name"], r.get("tool"), p.get("rod")))
         rods = ref.get("rods") or {}
         for rod in P.get("rods") or []:
             check_recipe("rod", rod, rod["name"])

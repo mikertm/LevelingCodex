@@ -327,6 +327,9 @@ def prof_shape_checks():
             for f in ("name", "category", "mask", "spell", "icon", "yellow", "grey", "mats", "learn", "source"):
                 if r.get(f) in (None, ""):
                     errors.append("professions %s rod %s: missing %s" % (key, r.get("name"), f))
+        for p in P.get("parts") or []:
+            if p.get("rod") and p["rod"] not in rods:
+                errors.append("professions %s part %s: rod %s is not in the rods list" % (key, p.get("name"), p["rod"]))
         for s in P.get("steps") or []:
             if s.get("rod") and s["rod"] not in rods:
                 errors.append("professions %s step %s-%s: rod %s is not in the rods list" % (key, s.get("from"), s.get("to"), s["rod"]))

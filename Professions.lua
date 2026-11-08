@@ -175,6 +175,11 @@ function ns.profShopping(key, skill)
   local list = {}
   if not P then return list end
   local byItem, made, partMade = {}, {}, {}
+  -- a part that needs a rod can't be made for the step that makes that rod: keep it as a row to buy
+  local rodPart, keep = {}, {}
+  for _, p in ipairs(P.parts or {}) do
+    if p.rod and p.makes then rodPart[p.rod] = p.makes[1] end
+  end
   local function add(item, n)
     if n <= 0 then return end
     if not byItem[item] then byItem[item] = { item, 0 }; list[#list + 1] = byItem[item] end
@@ -187,6 +192,7 @@ function ns.profShopping(key, skill)
         local need = n * m[2]
         local own = math.min(made[m[1]] or 0, need)
         made[m[1]] = (made[m[1]] or 0) - own
+        if rodPart[s.name] == m[1] then keep[m[1]] = (keep[m[1]] or 0) + need - own end
         add(m[1], need - own)
       end
       if s.makes then
@@ -201,7 +207,7 @@ function ns.profShopping(key, skill)
   for _, p in ipairs(P.parts or {}) do
     local item = p.makes and p.makes[1]
     local row = item and byItem[item]
-    local left = row and math.max(row[2], 0) or 0
+    local left = row and math.max(row[2] - (keep[item] or 0), 0) or 0
     if row then row[2] = 0 end
     local crafts = math.ceil(left / ((p.makes and p.makes[2]) or 1))
     for _, m in ipairs(p.mats or {}) do add(m[1], crafts * m[2]) end
@@ -212,6 +218,7 @@ function ns.profShopping(key, skill)
       end
     end
   end
+  for item, n in pairs(keep) do add(item, n) end
   for i = #list, 1, -1 do if list[i][2] <= 0 then table.remove(list, i) end end
   table.sort(list, function(a, b)
     if a[2] ~= b[2] then return a[2] > b[2] end

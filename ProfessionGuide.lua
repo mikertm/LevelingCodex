@@ -175,7 +175,8 @@ local function partFirst(key, step)
   for _, m in ipairs(step.mats or {}) do
     local part = ns.profPart(key, m[1])
     local src = part and part.mats and part.mats[1]
-    if src and count(m[1]) < m[2] and count(src[1]) >= src[2] and findRecipe(part.name) then
+    if src and count(m[1]) < m[2] and count(src[1]) >= src[2] and ns.profHasRod(key, ns.profRod(key, part)) ~= false
+        and findRecipe(part.name) then
       local have = count(src[1])
       return { name = part.name, spell = part.spell, icon = part.icon, yellow = part.yellow, grey = part.grey,
                learn = part.learn, mats = part.mats, from = step.from, to = step.to, partOf = step,

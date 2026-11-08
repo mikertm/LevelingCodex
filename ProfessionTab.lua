@@ -85,12 +85,14 @@ local function renderer()
   if not P then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
   -- switch
-  local x = 0
+  local x, n = 0, 0
+  for _, k in ipairs(ns.PROF_ORDER) do if ns.P[k] then n = n + 1 end end
+  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / math.max(n, 1)))  -- every button inside the content width
   for _, k in ipairs(ns.PROF_ORDER) do
     local Q = ns.P[k]
     if Q then
-      btn(Q.name, x, y, 140, function() shown = k; ui.refresh() end, k == key, "Show the " .. Q.name .. " guide.")
-      x = x + 146
+      btn(Q.name, x, y, bw, function() shown = k; ui.refresh() end, k == key, "Show the " .. Q.name .. " guide.")
+      x = x + bw + 6
     end
   end
   y = y + 34
@@ -186,10 +188,11 @@ local function renderer()
       y = y + T((n * m[2]) .. " " .. m[1] .. (got and (" (you have " .. got .. ")") or ""), 28, y, W - 44, "body", C.ink) + 2
       local part = ns.profPart(key, m[1])
       local src = part and part.mats and part.mats[1]
-      if src then
+      if src and ns.profHasRod(key, ns.profRod(key, part)) ~= false then  -- a part that needs a rod you lack can't be made
         local h = have(src[1])  -- the cloth itself: bolts you hold can't make more bolts
-        y = y + T("make them from " .. src[1] .. " (" .. src[2] .. " each)" ..
-          (h and (": your " .. h .. " make " .. math.floor(h / src[2])) or ""), 40, y, W - 56, "small", C.inkSoft) + 2
+        local per = (part.makes and part.makes[2]) or 1
+        y = y + T("make them from " .. src[1] .. " (" .. src[2] .. (per > 1 and (" makes " .. per) or " each") .. ")" ..
+          (h and (": your " .. h .. " make " .. math.floor(h / src[2]) * per) or ""), 40, y, W - 56, "small", C.inkSoft) + 2
       end
     end
     y = y + 6

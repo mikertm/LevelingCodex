@@ -2095,6 +2095,11 @@ function S.enchantTab()
   if not C_Container then check(not t:find("IN YOUR BAGS"), "no bag list without the bag API") end
   local function has(l) return findButton(win(), function(x) return x == l end) end
   check(has("Blacksmithing") and has("Mining") and has("Tailoring") and has("Enchanting"), "four profession buttons")
+  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting" }) do
+    local b = has(name)
+    local _, _, _, x = b:GetPoint(1)
+    check(x and x + b:GetWidth() <= 568, name .. " button inside the 568 content width (" .. tostring(x) .. " + " .. tostring(b:GetWidth()) .. ")")
+  end
   MOCK.staleUnder(win(), "Professions")
   win():Hide()
 end
@@ -2111,7 +2116,18 @@ function S.enchantTabCases()
   MOCK.setSkill("Enchanting", 1, 75)
   local t = enchanting()
   check(t:find("Runed Copper Rod") and t:find("Dust to Motes"), "skill 1: the rod, then Dust to Motes")
-  check(shoppingText():find("Strange Dust %(for %d+ motes") and not shoppingText():find("%d+ Mote of Magic"), "Motes counted as Strange Dust")
+  check(shoppingText():find("Strange Dust %(for %d+ motes"), "Motes counted as Strange Dust")
+  check(shoppingText():find("\n1 Mote of Magic"), "the rod's first Mote stays on the list: it must be bought")
+  if GetItemCount then
+    check(not t:find("make them from Strange Dust"), "skill 1, no rod: no 'make them from' (Dust to Motes needs the rod)")
+    MOCK.setSkill("Enchanting", 12, 75)
+    MOCK.bags = { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 4 }
+    check(enchanting():find("make them from Strange Dust %(1 makes 3%): your 4 make 12"), "Motes: 1 dust makes 3")
+    MOCK.bags = { ["Runed Arcanite Rod"] = 1 }
+    MOCK.setSkill("Enchanting", 265, 300)
+    check(enchanting():find("Rod: Runed Truesilver Rod %(you have it%)"), "an Arcanite rod counts for the Truesilver one")
+    MOCK.bags = {}
+  end
   check(t:find("Level 1%-10: Strange Dust[^\n]*you need this now"), "the Strange Dust band marked at 1")
   MOCK.setSkill("Enchanting", 265, 300)
   t = enchanting()
@@ -2585,6 +2601,9 @@ function S.craftEnchanting()
   text = MOCK.textUnder(LevelingCodexCraftHint)
   check(text:find("Make your Runed Truesilver Rod first") and not text:find("Grey now"), "a grey rod still needed")
   check(LevelingCodexCraftTrace:IsShown(), "the grey rod is outlined")
+  enchantWindow(1, 75, { { "Runed Copper Rod", "optimal", 0 }, { "Dust to Motes", "optimal", 5 } }, { ["Strange Dust"] = 5 })
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Runed Copper Rod") and not text:find("Make Motes of Magic first"), "skill 1: the rod, not Motes (Dust to Motes needs the rod)")
   enchantWindow(12, 75, { { "Dust to Motes", "trivial", 5 }, { "Enchant Bracer - Inferior Stamina", "optimal", 0 } },
     { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 5 })
   text = MOCK.textUnder(LevelingCodexCraftHint)
