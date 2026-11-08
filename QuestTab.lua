@@ -2,7 +2,7 @@ local _, ns = ...
 local Q, U, C = ns.quests, ns.ui, ns.C
 
 local function render()
-  local rows, sections, missed, level, selected = Q.rows()
+  local rows, sections, missed, level, selected, ready = Q.rows()
   local current = Q.current()
   local y = U.sectionTitle("Quest Guide", 0)
   if #sections == 0 then
@@ -14,6 +14,12 @@ local function render()
   end
   U.btn("Show step window", 0, y, 160, ns.showQuestViewer)
   U.btn("Copy recorder log", 170, y, 160, function() ns.questRecord("copy") end)
+  if selected then
+    U.btn("Resume active quest", 340, y, 172, function()
+      if Q.resumeActive() then ns.showQuestViewer()
+      else ns.say("no active quest to resume in this section.") end
+    end, false, "Use your quest log to catch up in this section. Keep prerequisites and list earlier pickups below.")
+  end
   y = y + 38
   y = y + U.T("Controller: select Show step window, then close this tab to focus the guide.",
     0, y, U.W, "small", C.dim) + 8
@@ -26,24 +32,27 @@ local function render()
       180, y + 4, U.W - 180, "small", C.dim)
     y = y + 28
   end
-  if #missed > 0 then
+  local function questList(heading, list, tip)
+    if #list == 0 then return end
     y = y + 10
-    y = U.sectionTitle("Missed quests", y)
-    for _, row in ipairs(missed) do
+    y = U.sectionTitle(heading, y)
+    for _, row in ipairs(list) do
       U.btn(row.step.name, 0, y, 240, function()
         Q.jump(selected, row)
         ns.showQuestViewer()
-      end, false, "Review this earlier pickup in the step window.")
+      end, false, tip)
       U.T(row.section.title, 252, y + 3, U.W - 252, "small", C.dim)
       y = y + 27
     end
   end
+  questList("Ready to turn in", ready, "Show the turn-in in the step window.")
+  questList("Missed quests", missed, "Review this earlier pickup in the step window.")
   for _, section in ipairs(sections) do
     y = U.sectionTitle(section.title, y + 12)
     for _, row in ipairs(rows) do
       if row.section == section and row.state ~= "filtered" then
-        local mark = row == current and "NOW" or
-          (row.state == "pending" and "Next" or row.state == "done" and "Done" or "Skipped")
+        local mark = row == current and "NOW" or (row.state == "pending" and "Next" or
+          row.state == "done" and "Done" or row.state == "deferred" and "Earlier" or "Skipped")
         local color = row == current and C.gold or row.state == "pending" and C.ink or C.dim
         local text = Q.label(row.step) .. (row.step.forever and "  [Forever]" or "")
         U.T(mark, 0, y + 4, 58, "small", color)

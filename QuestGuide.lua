@@ -307,7 +307,7 @@ local function handle(event, a, b)
   local old = id and Q.log(id)
   Q.update(event, id, event == "PLAYER_LEVEL_UP" and id or nil)
   local nodes = event == "TAXIMAP_OPENED" and taxiSnapshot()
-  if nodes then Q.acknowledge("getfp", function(step) return nodes[step.flight] == "CURRENT" end) end
+  if nodes then Q.learnFlights(nodes) end
   if event == "HEARTHSTONE_BOUND" or event == "PLAYER_BIND_CHANGED" then
     Q.acknowledge("sethearth", function(step)
       local _, distance = Q.vector(step, Q.position())

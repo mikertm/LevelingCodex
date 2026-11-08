@@ -132,7 +132,8 @@ def audit(data, ref, cap=20):
         def matches(value, token):
             return value is None or (token in value if isinstance(value, list) else token == value)
 
-        races = set(route["starts"])
+        # Check shared sections on a character who has no published racial start.
+        races = {""} | set(route["starts"])
         classes = {None}
         for _, step, _ in rows:
             for key, values in (("race", races), ("class", classes)):

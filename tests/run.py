@@ -502,7 +502,8 @@ def main():
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
         if not minimal:
-            for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questRecorder", "questController"):
+            for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questRecorder",
+                             "questController", "questSkyborne", "questWestfall", "questCatchup"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
         for cls in CLASSES + [UNSUPPORTED]:
             runs.append(("%s/%s/main" % (cls, variant), cls, minimal, MAIN))

@@ -127,6 +127,54 @@ function S.questNavigation()
   check(questText(frame, "Accept - Lost Necklace"), "arrival advances to the farm quest")
 end
 
+function S.questSkyborne()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 19, 1433
+  MOCK.questLog = { { questID = 14 } } -- an older Westfall quest is still in the log
+  S.login()
+  check(questText(questViewer(), "Lakeshire"), "level 19 Skyborne starts in Lakeshire with an older Westfall quest")
+  slash("quests")
+  check(not findButton(win(), function(l) return l == "Northshire Valley" end), "Human start stays race filtered")
+  check(findButton(win(), function(l) return l == "Westfall" end), "the shared Westfall section remains available")
+end
+
+function S.questWestfall()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 13, 1436
+  S.login()
+  check(questText(questViewer(), "Westfall"), "Skyborne can enter the shared Westfall route")
+  slash("quests")
+  check(questText(win(), "The Defias Brotherhood"), "solo Defias lead-in is visible with dungeons off")
+  check(not questText(win(), "Dungeon - The Deadmines"), "dungeon run is hidden by default")
+  click(win(), "Settings")
+  click(win(), "Show dungeon steps")
+  click(win(), "Quests")
+  check(questText(win(), "Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
+end
+
+function S.questCatchup()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 19, 1433
+  for _, id in ipairs({ 244, 129, 130, 120 }) do MOCK.questDone[id] = true end
+  MOCK.questLog = {
+    { questID = 246, objectives = { { text = "Redridge Mongrels 4/10" } } },
+    { questID = 3741, isComplete = true },
+    { questID = 125 },
+  }
+  S.login()
+  slash("quests")
+  check(questText(win(), "Ready to turn in"), "ready quests have their own list")
+  click(win(), "Resume active quest")
+  check(questText(questViewer(), "Accept - The Price of Shoes"), "catch-up retains a prerequisite for later quests")
+  MOCK.questDone[118] = true
+  MOCK.event("QUEST_TURNED_IN", 118)
+  check(questText(questViewer(), "Redridge Mongrels 4/10"), "resume opens an active objective")
+  check(questText(win(), "Missed quests"), "earlier pickups remain available for review")
+  check(next(LevelingCodexCharDB.questSkips) == nil, "catch-up leaves manual skips alone")
+  click(win(), "Hilary's Necklace")
+  check(questText(questViewer(), "Turn in - Hilary's Necklace"), "ready quest opens its turn-in")
+  MOCK.questDone[3741] = true
+  MOCK.event("QUEST_TURNED_IN", 3741)
+  check(questText(questViewer(), "Redridge Mongrels 4/10"), "turn-in review returns to the resumed quest")
+end
+
 function S.questRecorder()
   S.login()
   MOCK.interactionQuest = 783

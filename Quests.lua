@@ -13,11 +13,12 @@ function Q.plain(value)
   return (ns.plain(value):gsub("[\128-\255]", ""))
 end
 local log, turnedIn, liveDone, removed = {}, {}, {}, {}
+local knownFlights = {}
 local visited, selected, review = {}, nil, nil
 local history = {}
 local route, race, class
-local sections, steps, missed = {}, {}, {}
-local index, level
+local sections, steps, missed, ready = {}, {}, {}, {}
+local index, level, resumeAt
 local RADIUS = 35
 
 function Q.position()
@@ -136,20 +137,21 @@ end
 
 local function chooseSection()
   if selected then return end
+  local map = Q.position()
+  local active = {}
+  for _, row in ipairs(steps) do
+    if row.step.quest and log[row.step.quest] then active[row.section] = true end
+  end
+  local best
   for _, section in ipairs(sections) do
     if level >= section.levels[1] and level <= section.levels[2] then
-      selected = section
-      break
+      local score = (section.zone == map and 2 or 0) + (active[section] and 1 or 0)
+      if not best or score > best then
+        selected, best = section, score
+      end
     end
   end
-  if not selected then return end
-  for _, row in ipairs(steps) do
-    if row.step.quest and log[row.step.quest] and level <= row.section.levels[2] + 2 then
-      selected = row.section
-      return
-    end
-  end
-  if level == 1 and route.starts[race] then
+  if selected and level == 1 and route.starts[race] then
     for _, section in ipairs(sections) do
       if section.id == route.starts[race] then selected = section; return end
     end
@@ -188,7 +190,8 @@ local function state(row, skips, skippedQuests, later, map, x, y)
   if skips[row.key] then return "skipped" end
   if visited[row.key] then return "done" end
   if s.type == "grind" and s.level and level >= s.level then return "done" end
-  if s.type == "goto" then
+  if s.type == "getfp" and knownFlights[s.flight] then return "done" end
+  if s.type == "goto" or s.type == "fly" then
     local _, dist = Q.vector(s, map, x, y)
     if dist and dist <= RADIUS then
       visited[row.key] = true
@@ -197,6 +200,28 @@ local function state(row, skips, skippedQuests, later, map, x, y)
     if later then return "done" end
   end
   return "pending"
+end
+
+-- Keep earlier pickups only if a remaining quest needs them. Reverse route
+-- order visits a quest before its prerequisites and follows whole chains.
+local function catchup(skips)
+  local needed, deferred = {}, {}
+  if not resumeAt then return needed, deferred end
+  for i = #steps, 1, -1 do
+    local row = steps[i]
+    local step = row.step
+    if step.type == "accept" and not gameDone(step) then
+      if (i >= resumeAt or needed[step.quest]) and not skips[row.key]
+          and (not step.optional or ns.db().questDungeons) then
+        for _, id in ipairs(step.chain or {}) do
+          if not turnedIn[id] then needed[id] = true end
+        end
+      elseif i < resumeAt and not needed[step.quest] then
+        deferred[step.quest] = true
+      end
+    end
+  end
+  return needed, deferred
 end
 
 local function calculate()
@@ -208,19 +233,28 @@ local function calculate()
     if not row.step.optional and gameDone(row.step) then laterSeen[row.section] = true end
   end
   local skips, skippedQuests, reached, seen = skipTable(), {}, false, {}
-  index, missed = nil, {}
+  local needed, deferred = catchup(skips)
+  local fromSection = resumeAt and steps[resumeAt].section or selected
+  local grey = try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
+  index, missed, ready = nil, {}, {}
   for i, row in ipairs(steps) do
-    if row.section == selected then reached = true end
+    if row.section == fromSection then reached = true end
     row.state = state(row, skips, skippedQuests, later[i], map, x, y)
     local s = row.step
+    local entry = s.quest and log[s.quest]
     if s.quest and row.state == "skipped" then skippedQuests[s.quest] = true end
-    if reached and not index and row.state == "pending" then index = i end
-    if selected and not reached and s.type == "accept" and not turnedIn[s.quest]
-        and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1) then
-      local grey = try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
-      if not s.level or s.level > level - grey then
-        missed[#missed + 1], seen[s.quest] = row, true
-      end
+    if row.state == "pending" and resumeAt and (deferred[s.quest] or
+        (i < resumeAt and not needed[s.quest] and not (reached and entry))) then
+      row.state = "deferred"
+    end
+    if not index and (reached or needed[s.quest]) and row.state == "pending" then index = i end
+    if s.type == "turnin" and entry and entry.ready and not turnedIn[s.quest] and row.state ~= "filtered" then
+      ready[#ready + 1] = row
+    end
+    if fromSection and (not reached or row.state == "deferred") and s.type == "accept" and not turnedIn[s.quest]
+        and not entry and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1)
+        and (not s.level or s.level > level - grey) then
+      missed[#missed + 1], seen[s.quest] = row, true
     end
   end
   if index then selected = steps[index].section end
@@ -236,6 +270,7 @@ function Q.update(event, id, newLevel)
   readCompleted()
   chooseSection()
   calculate()
+  if event == "QUEST_TURNED_IN" and review and steps[review].step.quest == id then review = nil end
 end
 
 function Q.current()
@@ -243,7 +278,7 @@ function Q.current()
   return i and steps[i], i
 end
 
-function Q.rows() return steps, sections, missed, level or UnitLevel("player"), selected end
+function Q.rows() return steps, sections, missed, level or UnitLevel("player"), selected, ready end
 function Q.log(id) return log[id] end
 function Q.logEntries() return log end
 function Q.arrived() return RADIUS end
@@ -282,6 +317,7 @@ function Q.next()
   elseif row.step.quest or row.step.type == "dungeon" then
     skipTable()[row.key] = true
   else
+    if row.step.type == "getfp" then knownFlights[row.step.flight] = true end
     visited[row.key] = true
   end
   calculate()
@@ -299,6 +335,7 @@ function Q.back()
   end
   local row = steps[i]
   if row then
+    if row.step.type == "getfp" then knownFlights[row.step.flight] = nil end
     skipTable()[row.key], visited[row.key] = nil, nil
     selected, review = row.section, i
     calculate()
@@ -307,12 +344,25 @@ function Q.back()
 end
 
 function Q.jump(section, row)
-  selected, review = section, nil
-  history = {}
-  calculate()
   if row then
     for i, candidate in ipairs(steps) do
-      if candidate == row then review = i ~= index and i or nil; break end
+      if candidate == row then review = i ~= index and i or nil; return end
+    end
+  else
+    selected, review, resumeAt, history = section, nil, nil, {}
+    calculate()
+  end
+end
+
+function Q.resumeActive()
+  for i, row in ipairs(steps) do
+    local s = row.step
+    local entry = s.quest and log[s.quest]
+    if row.section == selected and entry and row.state == "pending"
+        and (s.type == "complete" or (s.type == "turnin" and entry.ready)) then
+      resumeAt, review, history = i, nil, {}
+      calculate()
+      return true
     end
   end
 end
@@ -330,9 +380,16 @@ function Q.acknowledge(kind, matchesStep)
   end
 end
 
+function Q.learnFlights(nodes)
+  for name, state in pairs(nodes) do
+    if state == "CURRENT" or state == "REACHABLE" then knownFlights[name] = true end
+  end
+  calculate()
+end
+
 function Q.checkArrival()
   local row = not review and index and steps[index]
-  if row and row.step.type == "goto" then
+  if row and (row.step.type == "goto" or row.step.type == "fly") then
     local _, dist = Q.vector(row.step, Q.position())
     if dist and dist <= RADIUS then
       calculate()
