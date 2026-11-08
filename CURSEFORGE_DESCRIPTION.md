@@ -1,6 +1,6 @@
 # Leveling Codex
 
-**Your leveling guide, inside the game.** Open your talents and the Codex traces the one to take. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard.
+**Your leveling guide, inside the game.** Open your talents and the Codex traces the one to take. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard. Open your crafting window and it outlines the recipe to make for Mining, Blacksmithing or Tailoring, 1-300.
 
 Built from **The Leveling Codex** guides — one researched leveling spec per class, checked against the WoW: Forever client and hotfixes.
 
@@ -18,15 +18,16 @@ After the game's own level-up display, a **"New at Level 26"** card takes its pl
 - New or updated macros
 - New guide chapter
 
-Hover to keep it up, click it for the full guide, right-click to dismiss. Move it, resize it or turn it off in Settings, and use **Test level-up** there to try it any time.
+Hover to keep it up, click it for the full guide, right-click to dismiss. Open the Codex within a minute of the card and it opens on that level. Move it, resize it or turn it off in Settings, and use **Test level-up** there to try it any time.
 
 ### The Codex window
-Type **/codex** or click the book on your minimap. Browse any level from 1 to 60 with the page arrows. The window uses the game's own frame art: gold title banner, your class portrait and character-sheet tabs.
+Type **/codex**, click the **Level 60 badge** on your minimap, or pick the Codex in the addons button under the clock. Browse any level from 1 to 60 with the page arrows. The window uses the game's own frame art: gold title banner, your class portrait and character-sheet tabs.
 - **This Level** — your talent with the reason for it, the next picks, what to train, and your macros with the exact controller button and keyboard key for each.
 - **Talents** — a talent tree with your build filled in up to the level you're viewing (gold when maxed, green when partly taken, later points marked with their level). Click a talent for every point that goes into it and why. Once you've opened your talent window, the tree matches the game's layout. Below it, every point from 10 to 60 in order.
 - **Trainer** — every trainer visit, with icons and notes.
 - **Macros** — every macro for your level with its code and how it works, plus your controller's button sets (R2, L2, L2 + R2...) and an action bar showing where each one goes.
 - **Tips** — the play-style chapter for your level range.
+- **Professions** — your Mining, Blacksmithing or Tailoring guide (see below).
 - **Settings** — everything below, no slash commands needed.
 
 ### One-click smart macros
@@ -35,13 +36,16 @@ Type **/codex** or click the book on your minimap. Browse any level from 1 to 60
 Every macro is built for Forever's macro rules: it never gets stuck on a spell that's on cooldown, and cast sequences are versioned by level. Every macro card has a **Copy** button, and if your macro slots are full the Codex opens the macro text ready to copy.
 
 ### Made for controller players
-Forever's gamepad layout is built in: every macro says which trigger set and button it goes on, drawn as the game's button glyphs. Choose **Xbox, PlayStation or Switch** buttons in Settings. Bind a key or controller button to open the Codex (Key Bindings > AddOns), and close it with B, Back or Esc.
+Forever's gamepad layout is built in: every macro says which trigger set and button it goes on, drawn as the game's button glyphs. Choose **Xbox, PlayStation or Switch** buttons in Settings.
+
+The whole Codex window works on the controller with Forever's own navigation: **D-pad** to move, **A** to press, **B**, Back or Esc to close, **LB/RB** to switch tabs and the **right stick** to scroll. If Forever's navigation misbehaves, Settings > Controller switches to the Codex's own highlight. On the controller the crafting card selects the guide's recipe as the crafting window opens, so there's nothing to press. Bind a key or controller button to open the Codex (Key Bindings > AddOns).
 
 ### Profession guides: Mining, Blacksmithing and Tailoring 1-300
 Built for WoW: Forever's reworked Blacksmithing and Tailoring, from the game's own recipe colours and reagents.
 - **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction.
 - **Crafting window guide**: open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make (in Tailoring the bolts first when you only have the cloth), with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
-- **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein.
+- **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein. Open the Codex within a minute of it and it opens on that profession.
+- Turn the crafting window guide or the skill-up cards off under Settings > Professions.
 
 ### Gathering tracking stays on
 WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zone or die. The Codex turns the one you had back on for you (out of combat, never over another tracking such as Track Beasts), and turns it on when you learn Herbalism or Mining. Untick it in Settings if you'd rather do it yourself.
@@ -78,7 +82,7 @@ WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zon
 | `/codex reset` | Reset the window, banner and minimap button positions |
 | `/codex debug` | List what the Codex can see, to paste into a bug report (also: trainer requirements that differ from the profession guide) |
 
-Left-click the minimap book to open the Codex, right-click for Settings, and drag it around the minimap edge.
+Left-click the minimap badge to open the Codex, right-click for Settings, and drag it around the minimap edge.
 
 ---
 
