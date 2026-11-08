@@ -2548,6 +2548,50 @@ function S.craftTailoringPad()
   restore()
 end
 
+-- Enchanting: a missing rod is outlined first (a better rod counts, a grey rod is still needed), then
+-- Dust to Motes when you have the dust but no Motes.
+local function enchantWindow(skill, max, recipes, bags)
+  MOCK.setSkill("Enchanting", skill, max)
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.offset, MOCK.trade.selected = "Enchanting", skill, max, 0, 0
+  MOCK.trade.recipes = recipes
+  MOCK.bags = bags
+  MOCK.trade.layout()
+  MOCK.advance(1)
+end
+
+function S.craftEnchanting()
+  if not craftReady() then return end
+  local saved = { MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected }
+  enchantWindow(150, 225, { { "Runed Silver Rod", "easy", 0 }, { "Enchant Bracer - Lesser Stamina", "optimal", 0 },
+    { "Dust to Motes", "trivial", 3 } }, {})
+  openCraft()
+  local text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Make your Runed Silver Rod first: every enchant from here needs it.", 1, true), "rod first")
+  local _, rel = LevelingCodexCraftTrace:GetPoint(1)
+  check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the rod row is outlined")
+  MOCK.bags["Runed Truesilver Rod"] = 1; MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  _, rel = LevelingCodexCraftTrace:GetPoint(1)
+  check(text:find("Enchant Bracer %- Lesser Stamina") and not text:find("first"), "a better rod counts: the step's recipe")
+  check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill2, "the bracer row is outlined")
+  MOCK.bags = {}
+  table.remove(MOCK.trade.recipes, 2); MOCK.trade.layout(); MOCK.advance(1)
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Not learned yet") and not text:find("first"), "the step's recipe missing: not learned, not the rod")
+  enchantWindow(270, 300, { { "Runed Truesilver Rod", "trivial", 0 }, { "Enchant Shield - Greater Stamina", "optimal", 0 } }, {})
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Make your Runed Truesilver Rod first") and not text:find("Grey now"), "a grey rod still needed")
+  check(LevelingCodexCraftTrace:IsShown(), "the grey rod is outlined")
+  enchantWindow(12, 75, { { "Dust to Motes", "trivial", 5 }, { "Enchant Bracer - Inferior Stamina", "optimal", 0 } },
+    { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 5 })
+  text = MOCK.textUnder(LevelingCodexCraftHint)
+  check(text:find("Make Motes of Magic first: your 5 Strange Dust make 15.", 1, true), "Motes first: 3 per dust")
+  closeCraft()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected = unpack(saved)
+  MOCK.bags = {}
+  MOCK.trade.layout()
+end
+
 -- On the controller the recipe is selected and scrolled into view once per opening.
 function S.craftPadAutoSelect()
   if not craftReady() or not GamepadMode then return end
