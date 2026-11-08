@@ -306,6 +306,15 @@ local function hideGuide()
   if guide.trace then guide.trace:Hide() end
   if guide.hint then guide.hint:Hide() end
   guide.open, guide.row, guide.pick, guide.how = false, nil, nil, nil
+  guide.nextRow, guide.rowEvery = 0, nil
+end
+
+-- Hide the outline and card as soon as the crafting window closes (the ticker is a fallback).
+local function watchRoot(f)
+  guide.watched = guide.watched or {}
+  if guide.watched[f] or not f.HookScript then return end
+  guide.watched[f] = true
+  pcall(f.HookScript, f, "OnHide", function() if guide.open then hideGuide() end end)
 end
 
 local function selectRecipe(found)
@@ -325,7 +334,7 @@ local function selectRecipe(found)
     local fn = C_TradeSkillUI.OpenRecipe or C_TradeSkillUI.SetSelectedRecipe
     if fn then pcall(fn, found.id) end
   end
-  guide.row = nil -- look for the row again on the next tick
+  guide.row, guide.nextRow, guide.rowEvery = nil, 0, nil -- look for the row again on the next tick
 end
 
 local function canSelect(found)
@@ -347,6 +356,7 @@ local function tick()
     if guide.open then hideGuide() end
     return
   end
+  watchRoot(root)
   local pname, skill, cap = openProfession()
   local key = pname and keyFor(pname)
   if not key then
@@ -404,7 +414,14 @@ local function tick()
       t:Hide(); guide.row, guide.how = nil, "grey"
     else
       if guide.row and not stillRow(guide.row, pick.name) then guide.row = nil end
-      guide.row = guide.row or findRow(root, pick.name)
+      if guide.rowFor ~= pick.name then guide.rowFor, guide.nextRow, guide.rowEvery = pick.name, 0, nil end
+      local now = GetTime and GetTime() or 0
+      if not guide.row and now >= (guide.nextRow or 0) then
+        -- the search walks the whole window: while the row is out of view, look every 0.5, 1, then 2 s
+        guide.row = findRow(root, pick.name)
+        guide.rowEvery = (not guide.row) and math.min((guide.rowEvery or 0.25) * 2, 2) or nil
+        guide.nextRow = now + (guide.rowEvery or 0)
+      end
       local row = guide.row
       if row and pcall(function()
         t:ClearAllPoints()

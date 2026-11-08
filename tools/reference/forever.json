@@ -53018,6 +53018,88 @@
     "item 273949": null,
     "item 273950": null,
     "item 273951": null
+   },
+   "clashes": {
+    "Black Grasp of the Destroyer": [
+     27589,
+     1214257
+    ],
+    "Golden Scale Boots": [
+     3515,
+     439122
+    ],
+    "Golden Scale Coif": [
+     3503,
+     439126
+    ],
+    "Golden Scale Cuirass": [
+     3511,
+     439124
+    ],
+    "Golden Scale Gauntlets": [
+     11643,
+     439120
+    ],
+    "Golden Scale Leggings": [
+     3507,
+     439132
+    ],
+    "Golden Scale Shoulders": [
+     3505,
+     439130
+    ],
+    "Heavy Obsidian Belt": [
+     27585,
+     1213746
+    ],
+    "Icebane Bracers": [
+     28244,
+     1223791
+    ],
+    "Icebane Breastplate": [
+     28242,
+     1223787
+    ],
+    "Icebane Gauntlets": [
+     28243,
+     1223789
+    ],
+    "Ironvine Belt": [
+     28463,
+     1213709
+    ],
+    "Ironvine Breastplate": [
+     28461,
+     1213715
+    ],
+    "Ironvine Gloves": [
+     28462,
+     1213711
+    ],
+    "Jagged Obsidian Shield": [
+     27586,
+     1214270
+    ],
+    "Light Obsidian Belt": [
+     27588,
+     1213748
+    ],
+    "Moonsteel Broadsword": [
+     3496,
+     439128
+    ],
+    "Obsidian Mail Tunic": [
+     27590,
+     1214274
+    ],
+    "Sulfuron Hammer": [
+     21161,
+     460460
+    ],
+    "Thick Obsidian Breastplate": [
+     27587,
+     1215507
+    ]
    }
   },
   "Mining": {
@@ -53446,6 +53528,14 @@
     "Truesilver Bar": "inv_ingot_08",
     "Truesilver Ore": "inv_ore_truesilver_01",
     "item 234003": "inv_ingot_titansteel_dark"
+   },
+   "clashes": {
+    "Mining": [
+     2577,
+     2578,
+     2579,
+     1235230
+    ]
    }
   }
  }

@@ -670,9 +670,11 @@ function GetProfessionInfo(i)
   local s = MOCK.skills[i]
   if s then return s.name, 136241, s.rank, s.max, 0, 0, 0, 0 end
 end
-function GetNumSkillLines() return #MOCK.skills + 1 end
+-- MOCK.skillsCollapsed: the player closed the heading, so the list hides the lines under it.
+function GetNumSkillLines() return MOCK.skillsCollapsed and 1 or #MOCK.skills + 1 end
 function GetSkillLineInfo(i)
-  if i == 1 then return "Professions", true, true, 0, 0, 0, 0 end
+  if i == 1 then return "Professions", true, not MOCK.skillsCollapsed, 0, 0, 0, 0 end
+  if MOCK.skillsCollapsed then return end
   local s = MOCK.skills[i - 1]
   if s then return s.name, false, false, s.rank, 0, 0, s.max, true end
 end

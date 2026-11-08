@@ -84,7 +84,7 @@ local function renderer()
   end
   y = y + 34
 
-  local skill, cap = ns.profSkill(key)
+  local skill, cap, hidden = ns.profSkill(key)
   local level = UnitLevel("player") or 1
 
   -- header card: your skill
@@ -96,6 +96,12 @@ local function renderer()
     local tier = ns.profTier(key, skill, cap)
     T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
     y = y + 50
+  elseif hidden then
+    T(P.name .. ": skill not seen", 66, y + 2, W - 90, "head", C.ink)
+    y = y + 28
+    y = y + T("A heading in your skill list is closed, so the game doesn't list your skill. Open it in the " ..
+      "character window's Skills tab and this updates.", 66, y, W - 90, "small", C.inkSoft) + 10
+    y = math.max(y, top + 64)
   else
     T(P.name .. ": not learned", 66, y + 2, W - 90, "head", C.ink)
     y = y + 28

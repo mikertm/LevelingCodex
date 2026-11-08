@@ -27,6 +27,9 @@ function ns.levelUpMessage(level)
   end
   local b = ns.bracketFor(level)
   if b and b.level == level then ns.say("new chapter: " .. WHITE .. plain(b.title) .. "|r. Type /codex for the tips.") end
+  for _, r in ipairs(ns.profLevelRows and ns.profLevelRows(level) or {}) do
+    ns.say(r[4] .. ": train " .. WHITE .. r[5].name .. "|r now (" .. r[3] .. ").")
+  end
 end
 
 ----------------------------------------------------------------------------
@@ -312,6 +315,8 @@ local function unlocksAt(level)
     for i, s in ipairs(t.spells) do spells[i] = plain(s) end
     rows[#rows + 1] = { t.icons and t.icons[1], "NEW AT YOUR TRAINER", shorten(spells, 3) }
   end
+  -- profession training this level opens, next to the class trainer (the banner holds 5 rows)
+  for _, r in ipairs(ns.profLevelRows and ns.profLevelRows(level) or {}) do rows[#rows + 1] = r end
   for _, m in ipairs(ns.D.macros) do
     if m.lo == level then
       local older = false

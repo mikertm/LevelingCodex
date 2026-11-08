@@ -1319,6 +1319,40 @@ end
 
 local function profText() return MOCK.textUnder(win()) end
 
+-- Without GetProfessions the classic skill list hides lines under a closed heading: the guide
+-- keeps the skill it saw last, and the card still comes when the heading opens again.
+function S.profCollapsed()
+  if not D() then return end
+  MOCK.skillsCollapsed = true
+  MOCK.event("SKILL_LINES_CHANGED"); MOCK.advance(1.2)
+  openAt(30, "Professions"); click(win(), "Blacksmithing")
+  check(profText():find("Blacksmithing 97 / 150"), "closed heading: still the skill seen before")
+  win():Hide()
+  MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2) -- a skill-up the list doesn't show
+  MOCK.skillsCollapsed = false
+  MOCK.event("SKILL_LINES_CHANGED"); MOCK.advance(1.2)
+  local t = toast()
+  check(t and t:IsShown() and t.title:GetText() == "Blacksmithing 100", "card when the heading opens again")
+end
+
+-- A closed heading from the start (nothing seen yet this session): say so, not "not learned".
+function S.skillsClosed() MOCK.skillsCollapsed = true end
+function S.profCollapsedCold()
+  if not D() then return end
+  openAt(30, "Professions"); click(win(), "Blacksmithing")
+  check(profText():find("skill not seen") and profText():find("heading in your skill list is closed")
+    and not profText():find("not learned"), "tab: heading closed")
+  win():Hide()
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Blacksmithing not seen"), "debug: not seen")
+  MOCK.skillsCollapsed = false
+  MOCK.event("SKILL_LINES_CHANGED"); MOCK.advance(1.2)
+  openAt(30, "Professions"); click(win(), "Blacksmithing")
+  check(profText():find("Blacksmithing 97 / 150"), "heading opened: skill read")
+  win():Hide()
+end
+
 -- The Professions tab at Blacksmithing 97/150 and Mining 140/225 (set by the skills step).
 function S.profTab()
   if not D() then return end
@@ -1400,6 +1434,7 @@ function S.profSkillUps()
   MOCK.advance(1.2)
   local t = toast()
   check(t and t:IsShown() and t.title:GetText() == "Blacksmithing 95", "card at a new step")
+  check(t.sub:GetText() == "Journeyman Blacksmithing", "card subtitle: your tier (" .. tostring(t.sub:GetText()) .. ")")
   check(MOCK.textUnder(t):find("Rough Bronze Leggings"), "card names the next recipe")
   dismiss(t)
   MOCK.setSkill("Blacksmithing", 96, 150)       -- an ordinary point
@@ -1430,6 +1465,29 @@ function S.profSkillUps()
   MOCK.setSkill("Blacksmithing", 140, 150); MOCK.advance(1.2)
   check(not t:IsShown(), "cards off in Settings")
   LevelingCodexDB.noProfCards = nil
+end
+
+-- Skill 65 reached at level 9 (Journeyman needs level 10): the level-up to 10 brings the
+-- training row, once. Runs after profSkillUps (Mining 65/75).
+function S.profLevelTier()
+  if not D() then return end
+  local function levelUp(level)
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
+    MOCK.advance(4.5)
+    local t = toast()
+    return t and t:IsShown() and MOCK.textUnder(t) or ""
+  end
+  MOCK.level = 9
+  MOCK.setSkill("Mining", 65, 75); MOCK.advance(1.2)
+  MOCK.chat = {}
+  local text = levelUp(10)
+  check(text:find("TRAIN JOURNEYMAN MINING"), "level-up banner: train Journeyman Mining")
+  check(chatHas("Mining: train .-Journeyman"), "level-up chat: train Journeyman")
+  check(not text:find("BLACKSMITHING"), "no row for Blacksmithing (Expert needs level 20)")
+  MOCK.advance(10)
+  check(not levelUp(11):find("TRAIN JOURNEYMAN"), "only at the level that unlocks it")
+  MOCK.advance(10)
 end
 
 ----------------------------------------------------------------------------
@@ -1639,6 +1697,42 @@ function S.craftClassicStubs()
   closeCraft()
   GetNumTradeSkills = count
   C_TradeSkillUI = nil
+end
+
+-- The recipe is in the list but scrolled out of view: the row search slows down (it walks the
+-- whole window), yet a row scrolled into view is outlined within about 2 s.
+function S.craftRowBackoff()
+  if not craftReady() then return end
+  for i = 1, 10 do table.insert(MOCK.trade.recipes, 1, { "Filler " .. i, "trivial", 0 }) end
+  MOCK.trade.offset = 0
+  MOCK.trade.layout()
+  local searches, walk = 0, TradeSkillFrame.GetChildren
+  TradeSkillFrame.GetChildren = function(self) searches = searches + 1; return walk(self) end
+  openCraft()
+  searches = 0
+  MOCK.advance(20)
+  check(searches <= 14, "row searched " .. searches .. " times in 20 s while scrolled out of view")
+  check(not LevelingCodexCraftTrace:IsShown(), "no outline while out of view")
+  local at
+  for i, r in ipairs(MOCK.trade.recipes) do if r[1] == "Rough Bronze Leggings" then at = i end end
+  MOCK.trade.offset = at - 3; MOCK.trade.layout() -- the player scrolls to it
+  MOCK.advance(2.3)
+  check(LevelingCodexCraftTrace:IsShown(), "outlined within about 2 s of scrolling into view")
+  TradeSkillFrame.GetChildren = nil
+  closeCraft()
+  for _ = 1, 10 do table.remove(MOCK.trade.recipes, 1) end
+  MOCK.trade.offset = 0
+  MOCK.trade.layout()
+end
+
+-- The crafting window closed by its own close button (no event yet): the guide goes at once.
+function S.craftOnHide()
+  if not craftReady() then return end
+  openCraft()
+  check(LevelingCodexCraftHint:IsShown(), "card up")
+  TradeSkillFrame:Hide()
+  check(not LevelingCodexCraftHint:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card and outline hide with the window")
+  MOCK.event("TRADE_SKILL_CLOSE"); MOCK.advance(0.6)
 end
 
 -- Smelting at 66 (Bronze beats green Tin), 100 (Silver is yellow: a chance, not a count) and 145 (nothing gives points).

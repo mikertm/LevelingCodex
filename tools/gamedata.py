@@ -49,7 +49,7 @@ TABLES = [
 # Professions with a guide (ProfessionData.lua): name -> skill line.
 PROFESSIONS = {"Blacksmithing": 164, "Mining": 186}
 
-CLASSES =["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
+CLASSES = ["DRUID", "HUNTER", "MAGE", "PALADIN", "PRIEST", "ROGUE", "SHAMAN", "WARLOCK", "WARRIOR"]
 WARLOCK_PETS = {"Imp", "Voidwalker", "Succubus", "Felhunter", "Infernal", "Doomguard", "Felguard"}
 # Abilities every character has without a trainer.
 INNATE = {"Attack", "Shoot", "Auto Shot", "Throw"}
@@ -503,12 +503,14 @@ def build_professions(T, S):
     for prof, line in PROFESSIONS.items():
         rows = sorted((r for r in T.SkillLineAbility if r["SkillLine"] == str(line)
                        and int(r["TrivialSkillLineRankHigh"] or 0) > 0), key=lambda r: int(r["Spell"]))
-        recipes, items = {}, {}
+        recipes, items, spells = {}, {}, collections.defaultdict(list)
         for r in rows:
             sid = r["Spell"]
             name = S.name.get(sid)
+            if name and int(sid) not in spells[name]:
+                spells[name].append(int(sid))
             if not name or name in recipes:
-                continue  # a name clash keeps the lowest spell ID
+                continue  # a name clash keeps the lowest spell ID (all of them are in "clashes")
             y, g = int(r["TrivialSkillLineRankLow"] or 0), int(r["TrivialSkillLineRankHigh"])
             mats = []
             rg = reag.get(sid)
@@ -533,7 +535,8 @@ def build_professions(T, S):
                     rec["plan"] = {"item": item_name[p], "skill": plan_skill.get(p, 0)}
                     break
             recipes[name] = rec
-        out[prof] = {"skillLine": line, "recipes": dict(sorted(recipes.items())), "items": dict(sorted(items.items()))}
+        out[prof] = {"skillLine": line, "recipes": dict(sorted(recipes.items())), "items": dict(sorted(items.items())),
+                     "clashes": {n: ids for n, ids in sorted(spells.items()) if len(ids) > 1}}
     return out
 
 
@@ -714,6 +717,10 @@ def audit_professions(profdata, ref):
                 add("error", "%s: %s makes %s in game, data says %s" % (where, name, r.get("makes"), x["makes"]))
             if x.get("icon") and r.get("icon") and x["icon"].lower() != r["icon"]:
                 add("warn", "%s: %s icon is %s in game, data uses %s" % (where, name, r["icon"], x["icon"]))
+            clash = (R.get("clashes") or {}).get(name)
+            if clash:
+                add("warn", "%s: the game has %d recipes named %s (spells %s): the reference keeps the lowest, "
+                    "check it's the one trainers teach" % (where, len(clash), name, ", ".join(str(c) for c in clash)))
             if r.get("min") and x.get("learn") and x["learn"] < r["min"]:
                 add("warn", "%s: %s: the client says it's learned at %d, data says %d (check at a trainer, /codex debug)" %
                     (where, name, r["min"], x["learn"]))
@@ -755,6 +762,21 @@ def audit_professions(profdata, ref):
             elif v.get("ore") and v["ore"] not in items:
                 add("warn", "vein %s: no recipe uses '%s'" % (v["name"], v["ore"]))
     return res
+
+
+def full_audit(ref, only=None):
+    """What `update` and `audit` report: Data.lua against the game, and ProfessionData.lua unless
+    -k names a class (-k BLACKSMITHING shows one profession)."""
+    only = (only or "").upper() or None
+    res = audit(load_data(), ref, only) if not only or only in CLASSES else []
+    if not only or only not in CLASSES:
+        res += [r for r in audit_professions(load_profdata() or {}, ref) if not only or r[0] == only]
+    return res
+
+
+def groups(res):
+    """The classes, then any profession, in the order reports list them."""
+    return CLASSES + sorted({c for c, _, _ in res if c not in CLASSES})
 
 
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
@@ -1134,7 +1156,7 @@ def main():
         changes = diff(old, new) if old else "first reference, nothing to compare"
         print(changes)
         if a.cmd == "update":
-            res = audit(load_data(), new)
+            res = full_audit(new)
             if a.report:
                 write_report(a.report, old, new, changes, res)
             return report(res, a.verbose)
@@ -1146,7 +1168,7 @@ def main():
         return 0
     ref = load_reference()
     if a.cmd == "audit":
-        return report(audit(load_data(), ref, a.only), a.verbose)
+        return report(full_audit(ref, a.only), a.verbose)
     if a.cmd == "profs":
         data = load_profdata() or {}
         want = (a.args[0] if a.args else "").upper()
@@ -1192,7 +1214,7 @@ def write_report(path, old, new, changes, res):
              "pages) for every change below, run the harness, then merge.", "",
              "## What the game changed", "", "```", changes[:30000], "```", "",
              "## Guide data against the new build: %d error(s), %d warning(s)" % (counts["error"], counts["warn"]), ""]
-    for cls in CLASSES:
+    for cls in groups(res):
         rows = [(l, m) for c, l, m in res if c == cls and l != "info"]
         if rows:
             lines.append("**%s**" % cls)
@@ -1200,7 +1222,8 @@ def write_report(path, old, new, changes, res):
             lines.append("")
     lines += ["## Also check by hand", "",
               "- Blizzard's hotfix and development notes since the last update (server-side changes are not in the client tables).",
-              "- `python tools/gamedata.py packet CLASS` for each class above, to re-read its talent reasons and macro tips.", ""]
+              "- `python tools/gamedata.py packet CLASS` for each class above, to re-read its talent reasons and macro tips.",
+              "- `python tools/gamedata.py profs` for a profession above, to re-read its route next to the game.", ""]
     text = "\n".join(lines)
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text[:60000])
@@ -1208,7 +1231,7 @@ def write_report(path, old, new, changes, res):
 
 def report(res, verbose):
     counts = collections.Counter(l for _, l, _ in res)
-    for cls in CLASSES:
+    for cls in groups(res):
         rows = [(l, m) for c, l, m in res if c == cls and (verbose or l != "info")]
         if rows:
             print("\n" + cls)

@@ -51,12 +51,13 @@ TRACK_KICK = ["trackKnown:herbsOn", "login", "trackKick", "trackLoadingScreen"]
 TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 # Professions: skills read through GetProfessions or only the classic skill list, or none at all.
 PROF = ["skills:BS;97;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme", "trainerReqs"]
-PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug"]
+PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "profCollapsed"]
+PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
 PROF_NONE = ["login", "profNone"]
-PROF_UPS = ["login", "profSkillUps"]
+PROF_UPS = ["login", "profSkillUps", "profLevelTier"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
-         "craftScrolled", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
+         "craftScrolled", "craftRowBackoff", "craftOnHide", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "debugReport"]
 CRAFT_RETAIL = ["makeCraftWindow:retail", "login", "craftTrace", "craftScrolled"]
 
 PERSISTED_DB = """
@@ -332,7 +333,42 @@ def game_checks():
     if profdata:
         for p, lvl, m in gamedata.audit_professions(profdata, ref):
             (errors if lvl == "error" else warnings).append("%s %s: %s" % (tag, p, m))
+    errors += tool_checks(gamedata, ref, profdata, tag)
     return errors, warnings
+
+
+def tool_checks(gamedata, ref, profdata, tag):
+    """tools/gamedata.py itself: what `update` and the daily pull request report cover."""
+    import copy
+    import tempfile
+    errors = []
+    # `update` and `audit` run the profession audit too, and the report lists its rows
+    full = getattr(gamedata, "full_audit", None)
+    res = full(ref) if full else []
+    if not any(c in PROF_KEYS for c, _, _ in res):
+        errors.append("%s tools: update/audit leave out the profession audit" % tag)
+    fd, path = tempfile.mkstemp(suffix=".md")
+    os.close(fd)
+    try:
+        gamedata.write_report(path, ref, ref, "nothing", [("BLACKSMITHING", "warn", "a profession row")])
+        text = open(path, encoding="utf-8").read()
+    finally:
+        os.remove(path)
+    if "BLACKSMITHING" not in text or "a profession row" not in text:
+        errors.append("%s tools: the daily report leaves out the profession audit" % tag)
+    # recipe names the game gives to more than one spell are kept, and a step naming one is flagged
+    bs = (ref.get("professions") or {}).get("Blacksmithing") or {}
+    coif = (bs.get("clashes") or {}).get("Golden Scale Coif") or []
+    if 3503 not in coif or len(coif) < 2:
+        errors.append("%s reference: Blacksmithing clashes should list Golden Scale Coif's spells (3503 and more), have %s" %
+                      (tag, coif))
+    if profdata:
+        fake = copy.deepcopy(ref)
+        fake["professions"]["Blacksmithing"]["clashes"] = {"Rough Bronze Leggings": [2668, 999999]}
+        if not any(lvl == "warn" and "Rough Bronze Leggings" in m and "999999" in m
+                   for _, lvl, m in gamedata.audit_professions(profdata, fake)):
+            errors.append("%s tools: a step naming a recipe the game has twice isn't flagged" % tag)
+    return errors
 
 
 def main():
@@ -376,6 +412,7 @@ def main():
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
+        runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         for cls in ("WARRIOR", "HUNTER"):
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))

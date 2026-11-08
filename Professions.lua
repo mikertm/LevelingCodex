@@ -30,19 +30,34 @@ local function readSkill(name)
   end
   if GetNumSkillLines and GetSkillLineInfo then
     local ok, count = pcall(GetNumSkillLines)
+    local hidden = false
     for i = 1, (ok and tonumber(count)) or 0 do
-      local ok2, n, isHeader, _, rank, _, _, max = pcall(GetSkillLineInfo, i)
+      local ok2, n, isHeader, isExpanded, rank, _, _, max = pcall(GetSkillLineInfo, i)
       if ok2 and n == name and not isHeader and tonumber(rank) then return tonumber(rank), tonumber(max) end
+      if ok2 and isHeader and not isExpanded then hidden = true end
     end
+    -- a closed heading hides the lines under it: the skill may be there
+    return nil, nil, hidden
   end
 end
 
+-- The last skill read this session, for while a closed heading hides it.
+local seen = {}
+
 -- Your skill and its cap (nil when you don't have the profession or the client won't say).
+-- A third value, true, means the skill list has a closed heading and nothing was seen before.
 function ns.profSkill(key)
   local P = ns.P and ns.P[key]
   if not P then return end
-  local rank, max = readSkill(P.name)
-  if rank and rank > 0 then return rank, (max and max > 0) and max or nil end
+  local rank, max, hidden = readSkill(P.name)
+  if rank and rank > 0 then
+    seen[key] = { rank, (max and max > 0) and max or nil }
+  elseif hidden then
+    if not seen[key] then return nil, nil, true end
+  else
+    seen[key] = nil
+  end
+  if seen[key] then return seen[key][1], seen[key][2] end
 end
 
 -- The step for a skill (nil before 1 and at 300 or above), and its index.
@@ -154,14 +169,6 @@ function ns.veinColor(vein, skill)
   return "grey"
 end
 
-function ns.veinsFor(skill)
-  local list = {}
-  local M = ns.P and ns.P.MINING
-  if not M then return list end
-  for _, v in ipairs(M.veins) do list[#list + 1] = { vein = v, color = ns.veinColor(v, skill) } end
-  return list
-end
-
 function ns.veinNamed(name)
   local M = ns.P and ns.P.MINING
   for _, v in ipairs(M and M.veins or {}) do if v.name == name then return v end end
@@ -233,6 +240,22 @@ function ns.profCardRows(key, old, new, cap, level)
   return rows
 end
 
+-- Training this level-up opens: your skill was already there, the level was the wait. Rows for
+-- the level-up banner, { icon, label, text, profession name, tier }.
+function ns.profLevelRows(level)
+  local rows = {}
+  if ns.db().noProfCards then return rows end
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local P = ns.P and ns.P[key]
+    local skill, cap = ns.profSkill(key)
+    local due, nextTier = ns.profTierDue(key, skill, cap, level)
+    if P and due == "train" and nextTier.level == level then
+      rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.where), P.name, nextTier }
+    end
+  end
+  return rows
+end
+
 -- Compare every guided profession with the last reading; show a card when something changed.
 local function checkSkills()
   for _, key in ipairs(ns.PROF_ORDER) do
@@ -244,7 +267,8 @@ local function checkSkills()
       local rows = ns.profCardRows(key, old, new, cap, UnitLevel("player"))
       local db = ns.db()
       if #rows > 0 and not db.noProfCards then
-        ns.showCard(P.name .. " " .. new, "Profession guide", rows, function()
+        local tier = ns.profTier(key, new, cap)
+        ns.showCard(P.name .. " " .. new, tier and (tier.name .. " " .. P.name) or P.name, rows, function()
           if ns.profTabShow then ns.profTabShow(key) end
           ns.openTab("professions")
         end)
@@ -316,9 +340,9 @@ function ns.profDebugLines()
   for _, key in ipairs(ns.PROF_ORDER) do
     local P = ns.P and ns.P[key]
     if P then
-      local skill, cap = ns.profSkill(key)
+      local skill, cap, hidden = ns.profSkill(key)
       if not skill then
-        out[#out + 1] = "profession: " .. P.name .. " not learned"
+        out[#out + 1] = "profession: " .. P.name .. (hidden and " not seen: a heading in the skill list is closed" or " not learned")
       else
         local s = ns.profStep(key, skill)
         local line = "profession: " .. P.name .. " " .. skill .. "/" .. (cap or "?")

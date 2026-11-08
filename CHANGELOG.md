@@ -7,6 +7,7 @@
 - New **Professions** tab: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when Journeyman (50), Expert (125) or Artisan (200) is due, the whole route (click a step), and a shopping list to 300.
 - New: **crafting window guide**. Open Blacksmithing or Smelting and the Codex outlines the recipe to make for your skill, with a card showing how many more, how many you have materials for and its colour. Not learned yet: where to learn it. Gone grey: what's next. **Show it** selects a recipe scrolled out of view.
 - New: a **skill-up card** in the level-up banner's look when your Mining or Blacksmithing reaches a new step, can train the next tier, hits its cap, or can mine a new vein. Ordinary points stay quiet.
+- When your skill is ready for the next tier before your level is (Journeyman needs level 10, Expert 20, Artisan 35), the level-up banner and chat tell you to train it at the level that opens it.
 - Settings > Professions turns the crafting window guide and the skill-up cards on or off.
 - The skill a trainer teaches each recipe at isn't in the game files, and the Forever guides disagree on it. Visit a Blacksmithing and a Mining trainer, then `/codex debug`: it lists any recipe whose trainer requirement differs from the guide.
 
