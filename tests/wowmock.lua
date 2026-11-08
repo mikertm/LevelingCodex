@@ -720,6 +720,27 @@ function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
 
+-- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), class
+-- = "Armor"|"Weapon"|"Trade Goods", loaded (false = GetItemInfo not cached yet) } } in bag 0.
+MOCK.bagItems = {}
+local function bagLink(i) return "|cff1eff00|Hitem:" .. (90000 + i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
+C_Container = {
+  GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or 0 end,
+  GetContainerItemInfo = function(bag, slot)
+    if bag == 0 and MOCK.bagItems[slot] then return { itemID = 90000 + slot, hyperlink = bagLink(slot), stackCount = 1 } end
+  end,
+}
+function GetItemInfo(link)
+  local name = type(link) == "string" and link:match("%[(.-)%]")
+  for _, it in ipairs(MOCK.bagItems) do
+    if it.name == name then
+      if it.loaded == false then return nil end
+      local classID = ({ Armor = 4, Weapon = 2 })[it.class] or 7
+      return it.name, link, it.quality, it.level + 5, it.level, it.class, "", 1, "", 134400, 1, classID
+    end
+  end
+end
+
 -- Forever's controller UI (Blizzard_GamepadSharedUtility / Blizzard_GamepadSmartNavigation):
 -- MOCK.gamepadUI = its controller UI is on, MOCK.gamepad = the controller is in use,
 -- MOCK.padRefuse = FrameShown errors, MOCK.padNoFocus = the focus never lands on a frame.
@@ -987,7 +1008,7 @@ end
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
-  "GetProfessions", "GetProfessionInfo", "GetItemCount",
+  "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
   "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",

@@ -168,6 +168,19 @@ local function renderer()
     y = y + math.max(50, h + 22)
     y = y + T(colorsLine(step), 16, y, W - 32, "small", C.inkSoft) + 6
     y = y + T("Learn at " .. step.learn .. "  -  " .. plain(step.source), 16, y, W - 32, "small", C.inkSoft) + 8
+    local rod = ns.profRod(key, step)
+    if rod then
+      local got = ns.profHasRod(key, rod)
+      local line = "Rod: " .. rod.name
+      if got == true then
+        line = line .. " (you have it)"
+      elseif got == false then
+        local m = {}
+        for _, x in ipairs(rod.mats or {}) do m[#m + 1] = x[2] .. " " .. x[1] end
+        line = line .. " - you need it: " .. table.concat(m, ", ") .. " (learn at " .. rod.learn .. ")"
+      end
+      y = y + T(line, 16, y, W - 32, "small", got == false and C.gold or C.inkSoft) + 8
+    end
     for _, m in ipairs(step.mats or {}) do
       local got = have(m[1])
       y = y + T((n * m[2]) .. " " .. m[1] .. (got and (" (you have " .. got .. ")") or ""), 28, y, W - 44, "body", C.ink) + 2
@@ -256,7 +269,8 @@ local function renderer()
       local text = m[2] .. " " .. m[1]
       if m.via then
         local h = ns.profHave(key, m[1])
-        local what = m.via.part:find("^Bolt") and "bolts" or "parts"
+        local part = ns.profPart(key, m.via.made or "") or {}
+        local what = part.unit or (m.via.part:find("^Bolt") and "bolts") or "parts"
         text = text .. " (for " .. m.via.n .. " " .. what .. (h and (", you have " .. h) or "") .. ")"
       end
       rowH = math.max(rowH, (T(text, cx, y, col - 8, "body", C.light)))
@@ -285,6 +299,48 @@ local function renderer()
     end
     y = y + T("Thread, dyes and Bleach: Tailoring and trade supply vendors (most trainers have one nearby).", 16, y + 2,
       W - 32, "small", C.dim) + 12
+    box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+  end
+  if P.disenchant then
+    top = y
+    y = y + 12
+    T("DISENCHANTING", 16, y, W - 32, "label", C.gold)
+    y = y + 20
+    y = y + T(plain(P.disenchant.note or ""), 16, y, W - 32, "small", C.inkSoft) + 6
+    local need = ns.deNeeded(key, (ns.profStep(key, skill or 1)))
+    local function wanted(b) return need[b.dust] or need[b.essence] or (b.shard and need[b.shard]) end
+    local rows = {}
+    for _, b in ipairs(P.disenchant.bands or {}) do if wanted(b) then rows[#rows + 1] = b end end
+    for _, b in ipairs(P.disenchant.bands or {}) do if not wanted(b) then rows[#rows + 1] = b end end
+    for _, b in ipairs(rows) do
+      local w = wanted(b)
+      y = y + T("Level " .. b.from .. "-" .. b.to .. ": " .. b.dust .. ", " .. b.essence .. (b.shard and (", " .. b.shard) or "") ..
+        (w and "  -  you need this now" or ""), 16, y, W - 32, "small", w and C.gold or C.light) + 3
+    end
+    y = y + T("3 Lesser make 1 Greater, and back: right-click the essence.", 16, y + 3, W - 32, "small", C.dim) + 10
+    local items = ns.deBagItems(key)
+    if items then
+      T("IN YOUR BAGS", 16, y, W - 32, "label", C.goldDim)
+      y = y + 18
+      if #items == 0 then
+        y = y + T("No green or blue weapons or armour in your bags.", 16, y, W - 32, "small", C.dim) + 4
+      else
+        local function gives(it) for _, g in ipairs(it.gives) do if need[g] then return true end end end
+        table.sort(items, function(a, b)
+          local ga, gb = gives(a) and 1 or 0, gives(b) and 1 or 0
+          if ga ~= gb then return ga > gb end
+          if a.level ~= b.level then return a.level < b.level end
+          return a.name < b.name
+        end)
+        for i = 1, math.min(8, #items) do
+          local it = items[i]
+          y = y + T(it.name .. " (level " .. it.level .. "): " .. table.concat(it.gives, " or "), 16, y, W - 32, "small",
+            gives(it) and C.gold or C.light) + 3
+        end
+      end
+    end
+    y = y + 8
     box(0, top, W, y - top, C.panel, C.edge)
     y = y + 12
   end

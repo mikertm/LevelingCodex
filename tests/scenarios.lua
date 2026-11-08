@@ -1657,7 +1657,7 @@ function S.skills(list, api, faction, race)
   MOCK.skillAPI = api or "professions"
   if MOCK.skillAPI ~= "professions" then GetProfessions, GetProfessionInfo = nil, nil end
   MOCK.faction, MOCK.race = faction, race
-  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring" }
+  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring", EN = "Enchanting" }
   for part in (list or ""):gmatch("[^,]+") do
     local k, r, m = part:match("(%a+);(%d+);(%d+)")
     MOCK.setSkill(names[k], tonumber(r), tonumber(m))
@@ -1681,6 +1681,7 @@ function S.profNone()
   slash("debug")
   check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
   check(chatHas("profession: Tailoring not learned"), "Tailoring not learned in debug")
+  check(chatHas("profession: Enchanting not learned"), "Enchanting not learned in debug")
 end
 
 local function profText() return MOCK.textUnder(win()) end
@@ -2065,6 +2066,119 @@ function S.tailorClosed()
   MOCK.chat = {}
   slash("debug")
   check(chatHas("profession: Tailoring not seen"), "Tailoring not seen under a closed heading")
+end
+
+-- Enchanting: rods per step, Motes counted as Strange Dust, the disenchanting section and your bags.
+local function enchanting() click(win(), "Enchanting"); return profText() end
+
+function S.enchantTab()
+  if not D() then return end
+  openAt(30, "Professions")
+  local t = enchanting()
+  check(t:find("Enchanting 150 / 225"), "Enchanting header")
+  check(t:find("Enchant Bracer %- Lesser Stamina") and t:find("about 5 more to 155"), "step at 150")
+  check(t:find("Enchant your own bracers"), "what to enchant")
+  check(t:find("\nDISENCHANTING\n"), "disenchanting section")
+  if GetItemCount then
+    check(t:find("Rod: Runed Silver Rod %- you need it"), "rod line: you need it")
+    MOCK.bags["Runed Silver Rod"] = 1
+    check(enchanting():find("Rod: Runed Silver Rod %(you have it%)"), "rod line: you have it")
+    MOCK.bags["Runed Silver Rod"] = nil
+    t = enchanting()
+  else
+    check(t:find("Rod: Runed Silver Rod") and not t:find("you need it"), "rod line without bag counts")
+  end
+  check(not shoppingText():find("%d+ Mote of Magic"), "no Mote rows in the shopping list")
+  local marked, first = textY(win(), "^Level 26%-30: Soul Dust.*you need this now"), textY(win(), "^Level 1%-10:")
+  check(marked and first and marked < first, "the Soul Dust band first and marked")
+  check(t:find("3 Lesser make 1 Greater"), "essence line")
+  if not C_Container then check(not t:find("IN YOUR BAGS"), "no bag list without the bag API") end
+  local function has(l) return findButton(win(), function(x) return x == l end) end
+  check(has("Blacksmithing") and has("Mining") and has("Tailoring") and has("Enchanting"), "four profession buttons")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- A better rod, the start and the end of the route.
+function S.enchantTabCases()
+  if not D() then return end
+  openAt(30, "Professions")
+  if GetItemCount then
+    MOCK.bags = { ["Runed Truesilver Rod"] = 1 }
+    check(enchanting():find("Rod: Runed Silver Rod %(you have it%)"), "a better rod counts")
+    MOCK.bags = {}
+  end
+  MOCK.setSkill("Enchanting", 1, 75)
+  local t = enchanting()
+  check(t:find("Runed Copper Rod") and t:find("Dust to Motes"), "skill 1: the rod, then Dust to Motes")
+  check(shoppingText():find("Strange Dust %(for %d+ motes") and not shoppingText():find("%d+ Mote of Magic"), "Motes counted as Strange Dust")
+  check(t:find("Level 1%-10: Strange Dust[^\n]*you need this now"), "the Strange Dust band marked at 1")
+  MOCK.setSkill("Enchanting", 265, 300)
+  t = enchanting()
+  check(t:find("Enchant Shield %- Greater Stamina") and t:find("Mythrin'dir") and t:find("any shield"), "skill 265: shield, formula vendor")
+  MOCK.setSkill("Enchanting", 300, 300)
+  t = enchanting()
+  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  MOCK.setSkill("Enchanting", 150, 225)
+  win():Hide()
+end
+
+function S.enchantBags()
+  if not D() or not C_Container then return end
+  MOCK.bagItems = {
+    { name = "Ironforge Boots", quality = 2, level = 22, class = "Armor" },
+    { name = "Rusty Sword", quality = 2, level = 8, class = "Weapon" },
+    { name = "Blue Cloak", quality = 3, level = 33, class = "Armor" },
+    { name = "Linen Shirt", quality = 1, level = 5, class = "Armor" },
+    { name = "Copper Ore", quality = 1, level = 1, class = "Trade Goods" },
+    { name = "Unseen Gloves", quality = 2, level = 30, class = "Armor", loaded = false },
+  }
+  openAt(30, "Professions")
+  local t = enchanting()
+  check(t:find("IN YOUR BAGS"), "bag list")
+  check(t:find("Ironforge Boots %(level 22%): Soul Dust or Greater Astral Essence"), "green armour: dust then essence")
+  check(t:find("Rusty Sword %(level 8%): Lesser Magic Essence or Strange Dust"), "green weapon: essence then dust")
+  check(t:find("Blue Cloak %(level 33%): Large Glowing Shard"), "blue: the shard")
+  check(not t:find("Linen Shirt") and not t:find("Copper Ore") and not t:find("Unseen Gloves"), "white, non-gear and unloaded items left out")
+  local boots, sword = textY(win(), "^Ironforge Boots"), textY(win(), "^Rusty Sword")
+  check(boots and sword and boots < sword, "the Soul Dust item first at 150")
+  MOCK.bagItems = {}
+  for i = 1, 12 do MOCK.bagItems[i] = { name = "Green Thing " .. i, quality = 2, level = 10 + i, class = "Armor" } end
+  t = enchanting()
+  local rows = 0
+  for _ in t:gmatch("Green Thing %d+ %(level") do rows = rows + 1 end
+  check(rows == 8, "at most 8 bag rows (" .. rows .. ")")
+  MOCK.bagItems = {}
+  check(enchanting():find("No green or blue weapons or armour in your bags"), "empty bags")
+  win():Hide()
+end
+
+function S.enchantSkillUps()
+  if not D() then return end
+  MOCK.advance(10)
+  MOCK.setSkill("Enchanting", 159, 225); MOCK.advance(1.2)
+  MOCK.setSkill("Enchanting", 160, 225); MOCK.advance(1.2)
+  local t = toast()
+  check(t and t:IsShown() and t.title:GetText() == "Enchanting 160", "Enchanting card at a new step")
+  check(t and MOCK.textUnder(t):find("Enchant Boots %- Lesser Agility"), "card names Boots - Lesser Agility")
+  MOCK.fire(t, "OnMouseUp", "RightButton"); MOCK.advance(10)
+  MOCK.level = 9
+  MOCK.setSkill("Enchanting", 60, 75); MOCK.advance(1.2)
+  MOCK.advance(10)
+  MOCK.level = 10
+  MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
+  MOCK.advance(4.5)
+  t = toast()
+  local text = t and t:IsShown() and MOCK.textUnder(t) or ""
+  check(text:find("TRAIN JOURNEYMAN ENCHANTING") and text:find("An Expert, Master or Artisan Enchanter"), "level-up banner: train Journeyman Enchanting")
+  MOCK.advance(10)
+end
+
+function S.enchantDebug()
+  if not D() then return end
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession: Enchanting 150/225, step 135%-155 Enchant Bracer %- Lesser Stamina"), "Enchanting step in debug")
 end
 
 function S.makeCraftWindow(style)

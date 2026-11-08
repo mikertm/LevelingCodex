@@ -1,6 +1,6 @@
 # Leveling Codex
 
-**Your leveling guide, inside the game.** Open your talents and the Codex traces the one to take. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard. Open your crafting window and it outlines the recipe to make for Mining, Blacksmithing or Tailoring, 1-300.
+**Your leveling guide, inside the game.** Open your talents and the Codex traces the one to take. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard. Open your crafting window and it outlines the recipe to make for Mining, Blacksmithing, Tailoring or Enchanting, 1-300.
 
 Built from **The Leveling Codex** guides — one researched leveling spec per class, checked against the WoW: Forever client and hotfixes.
 
@@ -27,7 +27,7 @@ Type **/codex**, click the **Level 60 badge** on your minimap, or pick the Codex
 - **Trainer** — every trainer visit, with icons and notes.
 - **Macros** — every macro for your level with its code and how it works, plus your controller's button sets (R2, L2, L2 + R2...) and an action bar showing where each one goes.
 - **Tips** — the play-style chapter for your level range.
-- **Professions** — your Mining, Blacksmithing or Tailoring guide (see below).
+- **Professions** — your Mining, Blacksmithing, Tailoring or Enchanting guide (see below).
 - **Settings** — everything below, no slash commands needed.
 
 ### One-click smart macros
@@ -40,9 +40,9 @@ Forever's gamepad layout is built in: every macro says which trigger set and but
 
 The whole Codex window works on the controller with Forever's own navigation: **D-pad** to move, **A** to press, **B**, Back or Esc to close, **LB/RB** to switch tabs and the **right stick** to scroll. If Forever's navigation misbehaves, Settings > Controller switches to the Codex's own highlight. On the controller the crafting card selects the guide's recipe as the crafting window opens, so there's nothing to press. Bind a key or controller button to open the Codex (Key Bindings > AddOns).
 
-### Profession guides: Mining, Blacksmithing and Tailoring 1-300
-Built for WoW: Forever's reworked Blacksmithing and Tailoring, from the game's own recipe colours and reagents.
-- **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction.
+### Profession guides: Mining, Blacksmithing, Tailoring and Enchanting 1-300
+Built for WoW: Forever's reworked Blacksmithing, Tailoring and Enchanting, from the game's own recipe colours and reagents.
+- **Professions tab**: your skill, the recipe to make now with how many more and the materials against your bags, where to learn it, the trainer to visit when the next tier is due, the whole route and a shopping list to 300. Mining shows what to mine where for your faction and what to smelt for points. Tailoring counts the shopping list in raw cloth and shows which mobs and zones drop each cloth for your faction. Enchanting says which rod each step needs and what each green or blue item in your bags would disenchant into.
 - **Crafting window guide**: open Blacksmithing, Smelting or Tailoring and the Codex outlines the recipe to make (in Tailoring the bolts first when you only have the cloth), with a card showing how many more and how many you have materials for. **Show it** finds a recipe that's scrolled out of view.
 - **Skill-up card** when you reach a new step, can train Journeyman, Expert or Artisan, or can mine a new vein. Open the Codex within a minute of it and it opens on that profession.
 - Turn the crafting window guide or the skill-up cards off under Settings > Professions.

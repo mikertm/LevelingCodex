@@ -54,7 +54,10 @@ PROF = ["skills:BS;97;150,MI;140;225:professions", "login", "profDebug", "profTa
 PROF_LINES = ["skills:BS;97;150,MI;140;225:skilllines", "login", "profDebug", "profCollapsed"]
 PROF_CLOSED = ["skills:BS;97;150,MI;140;225:skilllines", "skillsClosed", "login", "profCollapsedCold"]
 PROF_NONE = ["login", "profNone", "tailorNone"]
-PROF_UPS = ["login", "profSkillUps", "profLevelTier", "tailorSkillUps"]
+PROF_UPS = ["login", "profSkillUps", "profLevelTier", "tailorSkillUps", "enchantSkillUps"]
+# Enchanting: rods, Motes as Strange Dust, the disenchanting section and the bag scan.
+ENCHANT = ["skills:EN;150;225:professions", "login", "enchantDebug", "enchantTab", "enchantTabCases", "enchantBags"]
+ENCHANT_LINES = ["skills:EN;150;225:skilllines", "login", "enchantDebug"]
 # Tailoring: the shopping list in cloth, the cloth section, the classic skill list.
 TAILOR = ["skills:TA;150;225:professions", "login", "tailorDebug", "tailorTab", "tailorTabCases"]
 TAILOR_ONLY = ["skills:TA;20;75:professions", "login", "tailorOnly"]
@@ -518,6 +521,8 @@ def main():
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))
         runs.append(("PALADIN/%s/tailor-closed-heading" % variant, "PALADIN", minimal, TAILOR_CLOSED))
+        runs.append(("WARRIOR/%s/enchant" % variant, "WARRIOR", minimal, ENCHANT))
+        runs.append(("PRIEST/%s/enchant-skilllines" % variant, "PRIEST", minimal, ENCHANT_LINES))
         for cls in ("WARRIOR", "HUNTER"):
             runs.append(("%s/%s/prof-skillups" % (cls, variant), cls, minimal, PROF_UPS))
         for cls in ("WARRIOR", "MAGE"):

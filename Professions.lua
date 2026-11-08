@@ -6,7 +6,7 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING" }
 
 -- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
 function ns.profPart(key, item)
@@ -34,6 +34,33 @@ function ns.profHave(key, item)
     end
   end
   return math.floor(n)
+end
+
+-- Rods (Enchanting): the rod a step needs, or nil.
+function ns.profRod(key, step)
+  local P = ns.P and ns.P[key]
+  if not (P and P.rods and step and step.rod) then return nil end
+  for _, r in ipairs(P.rods) do if r.name == step.rod then return r end end
+end
+
+-- Every bit of need set in have (masks without the bit library: a better rod's mask holds the lower ones').
+local function hasBits(have, need)
+  local p = 1
+  while p <= need do
+    if math.floor(need / p) % 2 == 1 and math.floor(have / p) % 2 ~= 1 then return false end
+    p = p * 2
+  end
+  return true
+end
+
+-- That rod, or a better one, in your bags; nil when the client can't count items.
+function ns.profHasRod(key, rod)
+  local P = ns.P and ns.P[key]
+  if not (P and P.rods and rod) or not bagCount(rod.name) then return nil end
+  for _, r in ipairs(P.rods) do
+    if (bagCount(r.name) or 0) > 0 and hasBits(r.mask or 0, rod.mask or 0) then return true end
+  end
+  return false
 end
 
 -- The cloth a step uses: one named in its materials, else the first material of the first part it uses.
@@ -181,7 +208,7 @@ function ns.profShopping(key, skill)
     local total = left + (partMade[item] or 0)
     if total > 0 then
       for _, m in ipairs(p.mats or {}) do
-        if byItem[m[1]] then byItem[m[1]].via = { part = p.name, n = total } end
+        if byItem[m[1]] then byItem[m[1]].via = { part = p.name, made = item, n = total } end
       end
     end
   end

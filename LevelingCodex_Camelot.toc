@@ -15,6 +15,7 @@ Theme.lua
 Art.lua
 Guide.lua
 Professions.lua
+Disenchant.lua
 Macros.lua
 Banner.lua
 Window.lua
