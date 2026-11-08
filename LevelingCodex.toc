@@ -18,6 +18,7 @@ Professions.lua
 Macros.lua
 Banner.lua
 Window.lua
+ProfessionTab.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua

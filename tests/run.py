@@ -39,7 +39,7 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
 # The client has every API but none of the Blizzard art files: everything falls back.
-NOART = ["makeTalentWindow:name", "login", "levelups", "browse", "everyButton", "settings", "talentByName",
+NOART = ["skills:BS;87;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
 LOST = ["lost", "login", "lostSavedVariables"]
@@ -50,7 +50,7 @@ TRACK_MULTI = ["trackKnown:herbs,minerals,multi", "login", "trackRestored", "tra
 TRACK_KICK = ["trackKnown:herbsOn", "login", "trackKick", "trackLoadingScreen"]
 TRACK_LEARN = ["trackKnown", "login", "trackLearn"]
 # Professions: skills read through GetProfessions or only the classic skill list, or none at all.
-PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug"]
+PROF = ["skills:BS;87;150,MI;140;225:professions", "login", "profDebug", "profTab", "profTabCases", "profTabAfterTheme"]
 PROF_LINES = ["skills:BS;87;150,MI;140;225:skilllines", "login", "profDebug"]
 PROF_NONE = ["login", "profNone"]
 

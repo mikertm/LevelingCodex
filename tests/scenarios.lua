@@ -200,7 +200,7 @@ function S.bannerTest()
   end
 end
 
-local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Settings" }
+local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Settings" }
 
 local function openAt(level, tab)
   MOCK.level = level
@@ -1315,4 +1315,65 @@ function S.profNone()
   MOCK.chat = {}
   slash("debug")
   check(chatHas("profession: Blacksmithing not learned") and chatHas("profession: Mining not learned"), "no professions")
+end
+
+local function profText() return MOCK.textUnder(win()) end
+
+-- The Professions tab at Blacksmithing 87/150 and Mining 140/225 (set by the skills step).
+function S.profTab()
+  if not D() then return end
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  local t = profText()
+  check(t:find("Blacksmithing 87 / 150"), "skill header")
+  check(t:find("Rough Bronze Leggings") and t:find("about 13 more to 100"), "now card")
+  check(t:find("Learn at 80"), "learn level")
+  check(t:find("SHOPPING LIST TO 300"), "shopping list")
+  check(t:find("THE WHOLE ROUTE"), "route list")
+  check(t:find("TRAIN EXPERT") == nil, "Expert not due at 87")
+  click(win(), "Mining")
+  t = profText()
+  check(t:find("Mining 140 / 225") and t:find("Iron Deposit") and t:find("Arathi Highlands"), "mining header, vein, zones")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- Tier card, route done, not learned, faction and Skyborne zones.
+function S.profTabCases()
+  if not D() then return end
+  MOCK.setSkill("Blacksmithing", 150, 150)
+  openAt(30, "Professions"); click(win(), "Blacksmithing")
+  check(profText():find("TRAIN EXPERT") and profText():find("Bengus Deepforge"), "Expert due at 150, level 30")
+  MOCK.level = 15
+  click(win(), "Blacksmithing")
+  check(profText():find("AT YOUR CAP"), "stuck at the cap at level 15")
+  MOCK.level = 30
+  MOCK.setSkill("Blacksmithing", 300, 300)
+  click(win(), "Blacksmithing")
+  check(profText():find("ROUTE DONE"), "route done at 300")
+  MOCK.skills = {}
+  click(win(), "Blacksmithing")
+  check(profText():find("Blacksmithing: not learned"), "not learned")
+  MOCK.setSkill("Mining", 30, 75)
+  MOCK.faction, MOCK.race = "Alliance", "Human"
+  click(win(), "Mining")
+  check(profText():find("Elwynn Forest") and not profText():find("Durotar"), "Alliance copper zones only")
+  MOCK.faction, MOCK.race = "Horde", "Orc"
+  click(win(), "Mining")
+  check(profText():find("Durotar") and not profText():find("Elwynn Forest"), "Horde copper zones only")
+  MOCK.race = "Skyborne"
+  click(win(), "Mining")
+  check(profText():find("Zephras Isle"), "Skyborne starting isle for Copper")
+  MOCK.faction, MOCK.race = nil, nil
+  win():Hide()
+end
+
+-- A theme switch rebuilds the window: the Professions tab is still there.
+function S.profTabAfterTheme()
+  if not D() then return end
+  openAt(30, "Settings"); click(win(), "Codex (gold)")
+  click(win(), "Professions")
+  check(profText():find("Blacksmithing") or profText():find("Mining"), "Professions tab survives a theme rebuild")
+  click(win(), "Settings"); click(win(), "Forever (teal)")
+  win():Hide()
 end

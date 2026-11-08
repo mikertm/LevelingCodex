@@ -1152,6 +1152,28 @@ local TABS = {
   { "macros", "Macros" }, { "tips", "Tips" }, { "settings", "Settings" },
 }
 
+-- Another file adds its own tab (before Settings): renderer(viewLevel) draws with ns.ui and
+-- returns the content height. TABS outlives the frame, so a theme rebuild keeps the tab.
+function ns.addTab(key, label, renderer)
+  renderers[key] = renderer
+  for _, t in ipairs(TABS) do if t[1] == key then return end end
+  table.insert(TABS, #TABS, { key, label })
+end
+
+-- An invisible row button with a tooltip (route rows and the like).
+local function hit(x, y, w, h, tipTitle, tipText, onClick)
+  local hb = take("hit", newHit)
+  hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
+  hb.tipTitle, hb.tipText = tipTitle, tipText
+  hb:SetScript("OnClick", onClick)
+  hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
+  return hb
+end
+
+-- The drawing helpers for tabs that live in other files.
+ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+  sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end }
+
 function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
