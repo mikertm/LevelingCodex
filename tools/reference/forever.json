@@ -38669,7 +38669,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Acolyte's Boots",
+      "skill": 85
+     }
     },
     "Acolyte's Chain Belt": {
      "spell": 1252265,
@@ -38699,7 +38703,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Acolyte's Chain Belt",
+      "skill": 45
+     }
     },
     "Acolyte's Chain Helm": {
      "spell": 1252250,
@@ -38725,7 +38733,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Acolyte's Chain Helm",
+      "skill": 125
+     }
     },
     "Acolyte's Chain Leggings": {
      "spell": 1252245,
@@ -38751,7 +38763,11 @@
       1
      ],
      "icon": "inv_pants_mail_17",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Acolyte's Chain Leggings",
+      "skill": 95
+     }
     },
     "Acolyte's Chain Shirt": {
      "spell": 1252240,
@@ -38777,7 +38793,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Acolyte's Chain Shirt",
+      "skill": 80
+     }
     },
     "Acolyte's Gloves": {
      "spell": 1252260,
@@ -38807,7 +38827,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Acolyte's Gloves",
+      "skill": 80
+     }
     },
     "Acolyte's Silvered Chain Helm": {
      "spell": 1252280,
@@ -38841,7 +38865,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Acolyte's Silvered Chain Helm",
+      "skill": 95
+     }
     },
     "Acolyte's Silvered Chain Leggings": {
      "spell": 1252275,
@@ -38875,7 +38903,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Acolyte's Silvered Chain Leggings",
+      "skill": 125
+     }
     },
     "Acolyte's Silvered Chain Shirt": {
      "spell": 1252270,
@@ -38909,7 +38941,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Acolyte's Silvered Chain Shirt",
+      "skill": 110
+     }
     },
     "Annihilator": {
      "spell": 16991,
@@ -38947,7 +38983,11 @@
       1
      ],
      "icon": "inv_axe_12",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Annihilator",
+      "skill": 300
+     }
     },
     "Anvil": {
      "spell": 1263041,
@@ -38973,7 +39013,11 @@
       1
      ],
      "icon": "inv_blacksmith_anvil",
-     "category": "Camping"
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Anvil",
+      "skill": 140
+     }
     },
     "Arcanite Blacksmith Hammer": {
      "spell": 1317964,
@@ -38999,7 +39043,11 @@
       1
      ],
      "icon": "inv_hammer_20",
-     "category": "Thrown"
+     "category": "Thrown",
+     "plan": {
+      "item": "Plans: Arcanite Blacksmith Hammer",
+      "skill": 270
+     }
     },
     "Arcanite Champion": {
      "spell": 16990,
@@ -39037,7 +39085,11 @@
       1
      ],
      "icon": "inv_sword_39",
-     "category": "Two-Handed Swords"
+     "category": "Two-Handed Swords",
+     "plan": {
+      "item": "Plans: Arcanite Champion",
+      "skill": 300
+     }
     },
     "Arcanite Reaper": {
      "spell": 16994,
@@ -39063,7 +39115,11 @@
       1
      ],
      "icon": "inv_axe_09",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Arcanite Reaper",
+      "skill": 300
+     }
     },
     "Arcanite Rod": {
      "spell": 20201,
@@ -39133,7 +39189,11 @@
       1
      ],
      "icon": "inv_pants_plate_15",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Azerothium Legplates",
+      "skill": 300
+     }
     },
     "Azure Skyforged Chain": {
      "spell": 1301448,
@@ -39151,7 +39211,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Azure Skyforged Chain",
+      "skill": 50
+     }
     },
     "Azure Skyforged Chainmail": {
      "spell": 1301445,
@@ -39173,7 +39237,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Azure Skyforged Chainmail",
+      "skill": 60
+     }
     },
     "Azure Skyforged Gauntlets": {
      "spell": 1301447,
@@ -39191,7 +39259,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Azure Skyforged Gauntlets",
+      "skill": 55
+     }
     },
     "Azure Skyforged Greaves": {
      "spell": 1301450,
@@ -39209,7 +39281,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Azure Skyforged Greaves",
+      "skill": 55
+     }
     },
     "Azure Skyforged Helm": {
      "spell": 1301534,
@@ -39235,7 +39311,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Azure Skyforged Helm",
+      "skill": 175
+     }
     },
     "Azure Skyforged Legguards": {
      "spell": 1301449,
@@ -39257,7 +39337,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Azure Skyforged Legguards",
+      "skill": 60
+     }
     },
     "Azure Skyforged Pauldrons": {
      "spell": 1301535,
@@ -39283,7 +39367,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Azure Skyforged Pauldrons",
+      "skill": 175
+     }
     },
     "Azure Skyforged Wristguards": {
      "spell": 1301446,
@@ -39301,7 +39389,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "plan": {
+      "item": "Plans: Azure Skyforged Wristguards",
+      "skill": 50
+     }
     },
     "Bagh Nakh": {
      "spell": 1252367,
@@ -39335,7 +39427,11 @@
       1
      ],
      "icon": "inv_misc_monsterclaw_03",
-     "category": "Fist Weapons"
+     "category": "Fist Weapons",
+     "plan": {
+      "item": "Plans: Bagh Nakh",
+      "skill": 300
+     }
     },
     "Baleful Pauldrons": {
      "spell": 446191,
@@ -39387,7 +39483,11 @@
       1
      ],
      "icon": "inv_boots_plate_01",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Barbaric Iron Boots",
+      "skill": 155
+     }
     },
     "Barbaric Iron Breastplate": {
      "spell": 9813,
@@ -39409,7 +39509,11 @@
       1
      ],
      "icon": "inv_chest_chain_14",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Barbaric Iron Breastplate",
+      "skill": 135
+     }
     },
     "Barbaric Iron Gloves": {
      "spell": 9820,
@@ -39435,7 +39539,11 @@
       1
      ],
      "icon": "inv_gauntlets_31",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Barbaric Iron Gloves",
+      "skill": 160
+     }
     },
     "Barbaric Iron Helm": {
      "spell": 9814,
@@ -39461,7 +39569,11 @@
       1
      ],
      "icon": "inv_helmet_25",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Barbaric Iron Helm",
+      "skill": 150
+     }
     },
     "Barbaric Iron Shoulders": {
      "spell": 9811,
@@ -39491,7 +39603,11 @@
       1
      ],
      "icon": "inv_shoulder_23",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Barbaric Iron Shoulders",
+      "skill": 135
+     }
     },
     "Big Black Mace": {
      "spell": 10001,
@@ -39593,7 +39709,11 @@
       1
      ],
      "icon": "inv_weapon_shortblade_12",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Black Amnesty",
+      "skill": 300
+     }
     },
     "Black Grasp of the Destroyer": {
      "spell": 27589,
@@ -39623,7 +39743,11 @@
       1
      ],
      "icon": "inv_gauntlets_31",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Black Grasp of the Destroyer",
+      "skill": 300
+     }
     },
     "Blackfathom Sharpening Stone": {
      "spell": 430397,
@@ -39675,7 +39799,11 @@
       1
      ],
      "icon": "inv_spear_08",
-     "category": "Polearms"
+     "category": "Polearms",
+     "plan": {
+      "item": "Plans: Blackfury",
+      "skill": 300
+     }
     },
     "Blackguard": {
      "spell": 23652,
@@ -39709,7 +39837,11 @@
       1
      ],
      "icon": "inv_sword_39",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Blackguard",
+      "skill": 300
+     }
     },
     "Blazing Rapier": {
      "spell": 16978,
@@ -39743,7 +39875,11 @@
       1
      ],
      "icon": "inv_sword_30",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Blazing Rapier",
+      "skill": 255
+     }
     },
     "Bleakwood Hew": {
      "spell": 16965,
@@ -39811,7 +39947,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Blessed Plate Belt",
+      "skill": 270
+     }
     },
     "Blessed Plate Boots": {
      "spell": 1252336,
@@ -39837,7 +39977,11 @@
       1
      ],
      "icon": "inv_boots_plate_03",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Blessed Plate Boots",
+      "skill": 240
+     }
     },
     "Blessed Plate Bracers": {
      "spell": 1252339,
@@ -39859,7 +40003,11 @@
       1
      ],
      "icon": "inv_bracer_19",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Blessed Plate Bracers",
+      "skill": 255
+     }
     },
     "Blessed Plate Chest": {
      "spell": 1252343,
@@ -39881,7 +40029,11 @@
       1
      ],
      "icon": "inv_chest_plate03",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Blessed Plate Chest",
+      "skill": 280
+     }
     },
     "Blessed Plate Gauntlet": {
      "spell": 1252337,
@@ -39903,7 +40055,11 @@
       1
      ],
      "icon": "inv_gauntlets_29",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Blessed Plate Gauntlet",
+      "skill": 245
+     }
     },
     "Blessed Plate Helm": {
      "spell": 1252342,
@@ -39925,7 +40081,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Blessed Plate Helm",
+      "skill": 275
+     }
     },
     "Blessed Plate Leggings": {
      "spell": 1252340,
@@ -39947,7 +40107,11 @@
       1
      ],
      "icon": "inv_pants_plate_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Blessed Plate Leggings",
+      "skill": 270
+     }
     },
     "Blessed Plate Pauldrons": {
      "spell": 1252335,
@@ -39973,7 +40137,11 @@
       1
      ],
      "icon": "inv_shoulder_10",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Blessed Plate Pauldrons",
+      "skill": 240
+     }
     },
     "Blight": {
      "spell": 10011,
@@ -40071,7 +40239,11 @@
       1
      ],
      "icon": "inv_chest_chain_14",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Bloodsoul Breastplate",
+      "skill": 300
+     }
     },
     "Bloodsoul Gauntlets": {
      "spell": 24138,
@@ -40101,7 +40273,11 @@
       1
      ],
      "icon": "inv_gauntlets_31",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Bloodsoul Gauntlets",
+      "skill": 300
+     }
     },
     "Bloodsoul Shoulders": {
      "spell": 24137,
@@ -40131,7 +40307,11 @@
       1
      ],
      "icon": "inv_shoulder_15",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Bloodsoul Shoulders",
+      "skill": 300
+     }
     },
     "Blue Glittering Axe": {
      "spell": 9995,
@@ -40161,7 +40341,11 @@
       1
      ],
      "icon": "inv_axe_03",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Blue Glittering Axe",
+      "skill": 195
+     }
     },
     "Bold Dirk": {
      "spell": 1252365,
@@ -40191,7 +40375,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Bold Dirk",
+      "skill": 270
+     }
     },
     "Brass Knuckles": {
      "spell": 1252351,
@@ -40225,7 +40413,11 @@
       1
      ],
      "icon": "inv_gauntlets_04",
-     "category": "Fist Weapons"
+     "category": "Fist Weapons",
+     "plan": {
+      "item": "Plans: Brass Knuckles",
+      "skill": 80
+     }
     },
     "Breastplate of Salvation": {
      "spell": 1252350,
@@ -40259,7 +40451,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Breastplate of Salvation",
+      "skill": 300
+     }
     },
     "Bronze Axe": {
      "spell": 2741,
@@ -40338,7 +40534,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Polearms"
+     "category": "Polearms",
+     "plan": {
+      "item": "Plans: Bronze Dory",
+      "skill": 95
+     }
     },
     "Bronze Greatsword": {
      "spell": 9986,
@@ -40474,7 +40674,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Champion's Legplates",
+      "skill": 300
+     }
     },
     "Charged Mithril Battleaxe": {
      "spell": 1252361,
@@ -40504,7 +40708,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Charged Mithril Battleaxe",
+      "skill": 215
+     }
     },
     "Cloudy Skyforged Chain": {
      "spell": 1301424,
@@ -40522,7 +40730,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Chain",
+      "skill": 50
+     }
     },
     "Cloudy Skyforged Chainmail": {
      "spell": 1301421,
@@ -40544,7 +40756,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Chainmail",
+      "skill": 60
+     }
     },
     "Cloudy Skyforged Gauntlets": {
      "spell": 1301423,
@@ -40562,7 +40778,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Gauntlets",
+      "skill": 55
+     }
     },
     "Cloudy Skyforged Greaves": {
      "spell": 1301426,
@@ -40580,7 +40800,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Greaves",
+      "skill": 55
+     }
     },
     "Cloudy Skyforged Helm": {
      "spell": 1301526,
@@ -40606,7 +40830,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Helm",
+      "skill": 175
+     }
     },
     "Cloudy Skyforged Legguards": {
      "spell": 1301425,
@@ -40628,7 +40856,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Legguards",
+      "skill": 60
+     }
     },
     "Cloudy Skyforged Pauldrons": {
      "spell": 1301527,
@@ -40654,7 +40886,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Pauldrons",
+      "skill": 175
+     }
     },
     "Cloudy Skyforged Wristguards": {
      "spell": 1301422,
@@ -40672,7 +40908,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "plan": {
+      "item": "Plans: Cloudy Skyforged Wristguards",
+      "skill": 50
+     }
     },
     "Clutchlord's Grips": {
      "spell": 1297141,
@@ -40702,7 +40942,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Clutchlord's Grips",
+      "skill": 285
+     }
     },
     "Clutchlord's Stompers": {
      "spell": 1297143,
@@ -40732,7 +40976,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Clutchlord's Stompers",
+      "skill": 295
+     }
     },
     "Clutchlord's Support": {
      "spell": 1297142,
@@ -40762,7 +41010,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Clutchlord's Support",
+      "skill": 290
+     }
     },
     "Coarse Grinding Stone": {
      "spell": 3326,
@@ -40895,7 +41147,8 @@
       1
      ],
      "icon": "inv_bracer_03",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "auto": true
     },
     "Copper Chain Belt": {
      "spell": 2661,
@@ -40976,7 +41229,11 @@
       1
      ],
      "icon": "inv_chest_chain",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Copper Chain Vest",
+      "skill": 30
+     }
     },
     "Copper Claymore": {
      "spell": 9983,
@@ -41080,7 +41337,8 @@
       1
      ],
      "icon": "inv_misc_flute_01",
-     "category": "Inert Enchanting Rods"
+     "category": "Inert Enchanting Rods",
+     "auto": true
     },
     "Copper Shortsword": {
      "spell": 2739,
@@ -41149,7 +41407,11 @@
       1
      ],
      "icon": "inv_sword_07",
-     "category": "Two-Handed Swords"
+     "category": "Two-Handed Swords",
+     "plan": {
+      "item": "Plans: Corruption",
+      "skill": 265
+     }
     },
     "Cracked Blacksmith Hammer": {
      "spell": 1317962,
@@ -41175,7 +41437,11 @@
       1
      ],
      "icon": "inv_hammer_20",
-     "category": "Thrown"
+     "category": "Thrown",
+     "plan": {
+      "item": "Plans: Cracked Blacksmith Hammer",
+      "skill": 110
+     }
     },
     "Crusader's Boots": {
      "spell": 1252256,
@@ -41205,7 +41471,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Crusader's Boots",
+      "skill": 85
+     }
     },
     "Crusader's Chain Belt": {
      "spell": 1252266,
@@ -41235,7 +41505,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Crusader's Chain Belt",
+      "skill": 45
+     }
     },
     "Crusader's Chain Helm": {
      "spell": 1252251,
@@ -41261,7 +41535,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Crusader's Chain Helm",
+      "skill": 125
+     }
     },
     "Crusader's Chain Leggings": {
      "spell": 1252246,
@@ -41287,7 +41565,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Crusader's Chain Leggings",
+      "skill": 95
+     }
     },
     "Crusader's Chain Shirt": {
      "spell": 1252241,
@@ -41313,7 +41595,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Crusader's Chain Shirt",
+      "skill": 80
+     }
     },
     "Crusader's Gloves": {
      "spell": 1252261,
@@ -41343,7 +41629,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Crusader's Gloves",
+      "skill": 80
+     }
     },
     "Crusader's Silvered Chain Helm": {
      "spell": 1252281,
@@ -41377,7 +41667,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Crusader's Silvered Chain Helm",
+      "skill": 95
+     }
     },
     "Crusader's Silvered Chain Leggings": {
      "spell": 1252276,
@@ -41411,7 +41705,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Crusader's Silvered Chain Leggings",
+      "skill": 125
+     }
     },
     "Crusader's Silvered Chain Shirt": {
      "spell": 1252271,
@@ -41445,7 +41743,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Crusader's Silvered Chain Shirt",
+      "skill": 110
+     }
     },
     "Dark Iron Boots": {
      "spell": 24399,
@@ -41475,7 +41777,11 @@
       1
      ],
      "icon": "inv_boots_chain_08",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Dark Iron Boots",
+      "skill": 300
+     }
     },
     "Dark Iron Bracers": {
      "spell": 20874,
@@ -41501,7 +41807,11 @@
       1
      ],
      "icon": "inv_bracer_07",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Dark Iron Bracers",
+      "skill": 270
+     }
     },
     "Dark Iron Destroyer": {
      "spell": 20897,
@@ -41531,7 +41841,11 @@
       1
      ],
      "icon": "inv_axe_12",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Dark Iron Destroyer",
+      "skill": 300
+     }
     },
     "Dark Iron Gauntlets": {
      "spell": 23637,
@@ -41565,7 +41879,11 @@
       1
      ],
      "icon": "inv_gauntlets_22",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Dark Iron Gauntlets",
+      "skill": 300
+     }
     },
     "Dark Iron Helm": {
      "spell": 23636,
@@ -41591,7 +41909,11 @@
       1
      ],
      "icon": "inv_helmet_22",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Dark Iron Helm",
+      "skill": 300
+     }
     },
     "Dark Iron Leggings": {
      "spell": 20876,
@@ -41617,7 +41939,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Dark Iron Leggings",
+      "skill": 300
+     }
     },
     "Dark Iron Mail": {
      "spell": 15293,
@@ -41639,7 +41965,11 @@
       1
      ],
      "icon": "inv_chest_chain_16",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Dark Iron Mail",
+      "skill": 245
+     }
     },
     "Dark Iron Plate": {
      "spell": 15296,
@@ -41661,7 +41991,11 @@
       1
      ],
      "icon": "inv_chest_plate08",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Dark Iron Plate",
+      "skill": 260
+     }
     },
     "Dark Iron Pulverizer": {
      "spell": 15292,
@@ -41683,7 +42017,11 @@
       1
      ],
      "icon": "inv_hammer_09",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Dark Iron Pulverizer",
+      "skill": 240
+     }
     },
     "Dark Iron Reaver": {
      "spell": 20890,
@@ -41713,7 +42051,11 @@
       1
      ],
      "icon": "inv_sword_48",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Dark Iron Reaver",
+      "skill": 300
+     }
     },
     "Dark Iron Shoulders": {
      "spell": 15295,
@@ -41735,7 +42077,11 @@
       1
      ],
      "icon": "inv_shoulder_09",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Dark Iron Shoulders",
+      "skill": 255
+     }
     },
     "Dark Iron Sunderer": {
      "spell": 15294,
@@ -41757,7 +42103,11 @@
       1
      ],
      "icon": "inv_weapon_halberd_02",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Dark Iron Sunderer",
+      "skill": 250
+     }
     },
     "Darkrune Breastplate": {
      "spell": 24914,
@@ -41783,7 +42133,11 @@
       1
      ],
      "icon": "inv_chest_plate06",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Darkrune Breastplate",
+      "skill": 300
+     }
     },
     "Darkrune Gauntlets": {
      "spell": 24912,
@@ -41813,7 +42167,11 @@
       1
      ],
      "icon": "inv_gauntlets_27",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Darkrune Gauntlets",
+      "skill": 300
+     }
     },
     "Darkrune Helm": {
      "spell": 24913,
@@ -41843,7 +42201,11 @@
       1
      ],
      "icon": "inv_helmet_10",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Darkrune Helm",
+      "skill": 300
+     }
     },
     "Darksoul Breastplate": {
      "spell": 24139,
@@ -41869,7 +42231,11 @@
       1
      ],
      "icon": "inv_chest_plate08",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Darksoul Breastplate",
+      "skill": 300
+     }
     },
     "Darksoul Leggings": {
      "spell": 24140,
@@ -41895,7 +42261,11 @@
       1
      ],
      "icon": "inv_pants_plate_21",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Darksoul Leggings",
+      "skill": 300
+     }
     },
     "Darksoul Shoulders": {
      "spell": 24141,
@@ -41921,7 +42291,11 @@
       1
      ],
      "icon": "inv_shoulder_01",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Darksoul Shoulders",
+      "skill": 300
+     }
     },
     "Darkspear": {
      "spell": 16987,
@@ -41993,7 +42367,11 @@
       1
      ],
      "icon": "inv_axe_05",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Dawn's Edge",
+      "skill": 250
+     }
     },
     "Dawnbringer Shoulders": {
      "spell": 16660,
@@ -42023,7 +42401,11 @@
       1
      ],
      "icon": "inv_shoulder_20",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Dawnbringer Shoulders",
+      "skill": 265
+     }
     },
     "Dazzling Mithril Rapier": {
      "spell": 10005,
@@ -42061,7 +42443,11 @@
       1
      ],
      "icon": "inv_sword_30",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Dazzling Mithril Rapier",
+      "skill": 215
+     }
     },
     "Deadly Bronze Poniard": {
      "spell": 3295,
@@ -42099,7 +42485,11 @@
       1
      ],
      "icon": "inv_weapon_shortblade_05",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Deadly Bronze Poniard",
+      "skill": 100
+     }
     },
     "Deadly Heartseeker": {
      "spell": 461716,
@@ -42171,7 +42561,11 @@
       1
      ],
      "icon": "inv_chest_plate06",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Demon Forged Breastplate",
+      "skill": 260
+     }
     },
     "Dense Grinding Stone": {
      "spell": 16639,
@@ -42251,7 +42645,11 @@
       1
      ],
      "icon": "inv_boots_plate_02",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Depleted Thorium Sabatons",
+      "skill": 300
+     }
     },
     "Desecration": {
      "spell": 461714,
@@ -42361,7 +42759,11 @@
       1
      ],
      "icon": "inv_hammer_19",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Ebon Hand",
+      "skill": 300
+     }
     },
     "Ebon Shiv": {
      "spell": 10013,
@@ -42395,7 +42797,11 @@
       1
      ],
      "icon": "inv_weapon_shortblade_14",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Ebon Shiv",
+      "skill": 230
+     }
     },
     "Edge of Winter": {
      "spell": 21913,
@@ -42429,7 +42835,11 @@
       1
      ],
      "icon": "inv_axe_06",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Edge of Winter",
+      "skill": 165
+     }
     },
     "Elemental Sharpening Stone": {
      "spell": 22757,
@@ -42451,7 +42861,11 @@
       1
      ],
      "icon": "inv_stone_02",
-     "category": "Weapon Stones"
+     "category": "Weapon Stones",
+     "plan": {
+      "item": "Plans: Elemental Sharpening Stone",
+      "skill": 300
+     }
     },
     "Enchanted Battlehammer": {
      "spell": 16973,
@@ -42485,7 +42899,11 @@
       1
      ],
      "icon": "inv_hammer_05",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Enchanted Battlehammer",
+      "skill": 255
+     }
     },
     "Enchanted Thorium Breastplate": {
      "spell": 16745,
@@ -42523,7 +42941,11 @@
       1
      ],
      "icon": "inv_chest_plate10",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Enchanted Thorium Breastplate",
+      "skill": 300
+     }
     },
     "Enchanted Thorium Helm": {
      "spell": 16742,
@@ -42557,7 +42979,11 @@
       1
      ],
      "icon": "inv_helmet_02",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Enchanted Thorium Helm",
+      "skill": 300
+     }
     },
     "Enchanted Thorium Leggings": {
      "spell": 16744,
@@ -42591,7 +43017,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Enchanted Thorium Leggings",
+      "skill": 300
+     }
     },
     "Enriched Thorium Breastplate": {
      "spell": 1252344,
@@ -42625,7 +43055,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Enriched Thorium Breastplate",
+      "skill": 300
+     }
     },
     "Enriched Thorium Helm": {
      "spell": 1252346,
@@ -42655,7 +43089,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Enriched Thorium Helm",
+      "skill": 300
+     }
     },
     "Enriched Thorium Leggings": {
      "spell": 1252345,
@@ -42685,7 +43123,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Enriched Thorium Leggings",
+      "skill": 300
+     }
     },
     "Evergreen Shield": {
      "spell": 1306536,
@@ -42711,7 +43153,11 @@
       1
      ],
      "icon": "inv_shield_1h_raidhyjalc60_d_01",
-     "category": "Shields"
+     "category": "Shields",
+     "plan": {
+      "item": "Plans: Evergreen Shield",
+      "skill": 300
+     }
     },
     "Fearmonger's Shoulderguards": {
      "spell": 446188,
@@ -42759,7 +43205,11 @@
       1
      ],
      "icon": "inv_belt_13",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Fiery Chain Girdle",
+      "skill": 270
+     }
     },
     "Fiery Chain Shoulders": {
      "spell": 20873,
@@ -42785,7 +43235,11 @@
       1
      ],
      "icon": "inv_shoulder_23",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Fiery Chain Shoulders",
+      "skill": 300
+     }
     },
     "Fiery Plate Gauntlets": {
      "spell": 16655,
@@ -42815,7 +43269,11 @@
       1
      ],
      "icon": "inv_gauntlets_03",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Fiery Plate Gauntlets",
+      "skill": 265
+     }
     },
     "Fiery Plate Gauntlets of the Hidden Technique": {
      "spell": 461651,
@@ -42845,7 +43303,11 @@
       1
      ],
      "icon": "inv_gauntlets_03",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Fiery Plate Gauntlets of the Hidden Technique",
+      "skill": 290
+     }
     },
     "Finely-Enchanted Battlehammer": {
      "spell": 461733,
@@ -42879,7 +43341,11 @@
       1
      ],
      "icon": "inv_hammer_05",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Finely-Enchanted Battlehammer",
+      "skill": 280
+     }
     },
     "Forest Defender's Axe": {
      "spell": 1306534,
@@ -42905,7 +43371,11 @@
       1
      ],
      "icon": "inv_axe_2h_raidhyjalc60_d_01",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Forest Defender's Axe",
+      "skill": 300
+     }
     },
     "Frost Tiger Blade": {
      "spell": 3497,
@@ -42943,7 +43413,11 @@
       1
      ],
      "icon": "inv_sword_05",
-     "category": "Two-Handed Swords"
+     "category": "Two-Handed Swords",
+     "plan": {
+      "item": "Plans: Frost Tiger Blade",
+      "skill": 175
+     }
     },
     "Frostguard": {
      "spell": 16992,
@@ -42981,7 +43455,11 @@
       1
      ],
      "icon": "inv_sword_11",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Frostguard",
+      "skill": 300
+     }
     },
     "Gauntlets of Glory": {
      "spell": 1292982,
@@ -43011,7 +43489,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Gauntlets of Glory",
+      "skill": 300
+     }
     },
     "Gemmed Copper Boots": {
      "spell": 1252229,
@@ -43041,7 +43523,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Gemmed Copper Boots",
+      "skill": 35
+     }
     },
     "Gemmed Copper Gauntlets": {
      "spell": 3325,
@@ -43067,7 +43553,11 @@
       1
      ],
      "icon": "inv_gauntlets_05",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Gemmed Copper Gauntlets",
+      "skill": 35
+     }
     },
     "Girdle of the Dawn": {
      "spell": 23632,
@@ -43093,7 +43583,11 @@
       1
      ],
      "icon": "inv_belt_11",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Girdle of the Dawn",
+      "skill": 265
+     }
     },
     "Glinting Steel Dagger": {
      "spell": 15972,
@@ -43153,7 +43647,11 @@
       1
      ],
      "icon": "inv_gauntlets_29",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Gloves of the Dawn",
+      "skill": 300
+     }
     },
     "Glowing Copper Boots": {
      "spell": 1252231,
@@ -43179,7 +43677,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Glowing Copper Boots",
+      "skill": 35
+     }
     },
     "Golden Iron Destroyer": {
      "spell": 3495,
@@ -43217,7 +43719,11 @@
       1
      ],
      "icon": "inv_hammer_04",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Golden Iron Destroyer",
+      "skill": 145
+     }
     },
     "Golden Rod": {
      "spell": 14379,
@@ -43269,7 +43775,11 @@
       1
      ],
      "icon": "inv_boots_01",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Golden Scale Boots",
+      "skill": 175
+     }
     },
     "Golden Scale Bracers": {
      "spell": 7223,
@@ -43317,7 +43827,11 @@
       1
      ],
      "icon": "inv_helmet_36",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Golden Scale Coif",
+      "skill": 165
+     }
     },
     "Golden Scale Cuirass": {
      "spell": 3511,
@@ -43347,7 +43861,11 @@
       1
      ],
      "icon": "inv_chest_chain_06",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Golden Scale Cuirass",
+      "skill": 170
+     }
     },
     "Golden Scale Gauntlets": {
      "spell": 11643,
@@ -43377,7 +43895,11 @@
       1
      ],
      "icon": "inv_gauntlets_29",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Golden Scale Gauntlets",
+      "skill": 180
+     }
     },
     "Golden Scale Leggings": {
      "spell": 3507,
@@ -43403,7 +43925,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Golden Scale Leggings",
+      "skill": 145
+     }
     },
     "Golden Scale Shoulders": {
      "spell": 3505,
@@ -43429,7 +43955,11 @@
       1
      ],
      "icon": "inv_shoulder_09",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Golden Scale Shoulders",
+      "skill": 150
+     }
     },
     "Golden Skeleton Key": {
      "spell": 19667,
@@ -43481,7 +44011,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Goregasher Grips",
+      "skill": 285
+     }
     },
     "Goregasher Stompers": {
      "spell": 1297140,
@@ -43511,7 +44045,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Goregasher Stompers",
+      "skill": 295
+     }
     },
     "Goregasher Support": {
      "spell": 1297139,
@@ -43541,7 +44079,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Goregasher Support",
+      "skill": 290
+     }
     },
     "Greaves of Glory": {
      "spell": 1292984,
@@ -43571,7 +44113,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Greaves of Glory",
+      "skill": 300
+     }
     },
     "Green Iron Boots": {
      "spell": 3334,
@@ -43601,7 +44147,11 @@
       1
      ],
      "icon": "inv_boots_01",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Green Iron Boots",
+      "skill": 120
+     }
     },
     "Green Iron Bracers": {
      "spell": 3501,
@@ -43653,7 +44203,11 @@
       1
      ],
      "icon": "inv_gauntlets_05",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Green Iron Gauntlets",
+      "skill": 125
+     }
     },
     "Green Iron Hauberk": {
      "spell": 3508,
@@ -43765,7 +44319,11 @@
       1
      ],
      "icon": "inv_shoulder_09",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Green Iron Shoulders",
+      "skill": 135
+     }
     },
     "Greenhammer": {
      "spell": 1306535,
@@ -43791,7 +44349,11 @@
       1
      ],
      "icon": "inv_mace_1h_raidhyjalc60_d_01",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Greenhammer",
+      "skill": 300
+     }
     },
     "Guard's Boots": {
      "spell": 1252253,
@@ -43821,7 +44383,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Guard's Boots",
+      "skill": 85
+     }
     },
     "Guard's Chain Belt": {
      "spell": 1252263,
@@ -43851,7 +44417,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Guard's Chain Belt",
+      "skill": 45
+     }
     },
     "Guard's Chain Helm": {
      "spell": 1252248,
@@ -43877,7 +44447,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Guard's Chain Helm",
+      "skill": 125
+     }
     },
     "Guard's Chain Leggings": {
      "spell": 1252243,
@@ -43903,7 +44477,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Guard's Chain Leggings",
+      "skill": 95
+     }
     },
     "Guard's Chain Shirt": {
      "spell": 1252238,
@@ -43929,7 +44507,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Guard's Chain Shirt",
+      "skill": 80
+     }
     },
     "Guard's Gloves": {
      "spell": 1252258,
@@ -43959,7 +44541,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Guard's Gloves",
+      "skill": 80
+     }
     },
     "Guard's Silvered Chain Helm": {
      "spell": 1252278,
@@ -43993,7 +44579,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Guard's Silvered Chain Helm",
+      "skill": 95
+     }
     },
     "Guard's Silvered Chain Leggings": {
      "spell": 1252273,
@@ -44027,7 +44617,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Guard's Silvered Chain Leggings",
+      "skill": 125
+     }
     },
     "Guard's Silvered Chain Shirt": {
      "spell": 1252268,
@@ -44061,7 +44655,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Guard's Silvered Chain Shirt",
+      "skill": 110
+     }
     },
     "Hammer of the Titans": {
      "spell": 16988,
@@ -44095,7 +44693,11 @@
       1
      ],
      "icon": "inv_hammer_09",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Hammer of the Titans",
+      "skill": 300
+     }
     },
     "Handguards of Glory": {
      "spell": 1292986,
@@ -44125,7 +44727,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Handguards of Glory",
+      "skill": 300
+     }
     },
     "Hard Gold Boots": {
      "spell": 1252283,
@@ -44155,7 +44761,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Hard Gold Boots",
+      "skill": 150
+     }
     },
     "Hard Gold Bracers": {
      "spell": 1252284,
@@ -44181,7 +44791,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "plan": {
+      "item": "Plans: Hard Gold Bracers",
+      "skill": 160
+     }
     },
     "Hard Gold Coif": {
      "spell": 1252286,
@@ -44207,7 +44821,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Hard Gold Coif",
+      "skill": 170
+     }
     },
     "Hard Gold Cuirass": {
      "spell": 1252282,
@@ -44233,7 +44851,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Hard Gold Cuirass",
+      "skill": 145
+     }
     },
     "Hard Gold Gauntlet": {
      "spell": 1252287,
@@ -44259,7 +44881,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Hard Gold Gauntlet",
+      "skill": 175
+     }
     },
     "Hard Gold Leggings": {
      "spell": 1252285,
@@ -44285,7 +44911,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Hard Gold Leggings",
+      "skill": 165
+     }
     },
     "Hard Gold Pauldrons": {
      "spell": 1252288,
@@ -44311,7 +44941,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Hard Gold Pauldrons",
+      "skill": 175
+     }
     },
     "Hardened Frostguard": {
      "spell": 461730,
@@ -44333,7 +44967,11 @@
       1
      ],
      "icon": "inv_sword_11",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Hardened Frostguard",
+      "skill": 300
+     }
     },
     "Hardened Iron Shortsword": {
      "spell": 3492,
@@ -44367,7 +45005,11 @@
       1
      ],
      "icon": "inv_sword_20",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Hardened Iron Shortsword",
+      "skill": 135
+     }
     },
     "Heartseeker": {
      "spell": 16995,
@@ -44409,7 +45051,11 @@
       1
      ],
      "icon": "inv_sword_17",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Heartseeker",
+      "skill": 300
+     }
     },
     "Heavy Bronze Mace": {
      "spell": 3296,
@@ -44635,7 +45281,11 @@
       1
      ],
      "icon": "inv_helmet_10",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Heavy Mithril Helm",
+      "skill": 220
+     }
     },
     "Heavy Mithril Pants": {
      "spell": 9933,
@@ -44657,7 +45307,11 @@
       1
      ],
      "icon": "inv_pants_03",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Heavy Mithril Pants",
+      "skill": 185
+     }
     },
     "Heavy Mithril Shoulder": {
      "spell": 9926,
@@ -44750,7 +45404,11 @@
       1
      ],
      "icon": "inv_gauntlets_28",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Heavy Thorium Gauntlets",
+      "skill": 300
+     }
     },
     "Heavy Weightstone": {
      "spell": 3117,
@@ -44794,7 +45452,11 @@
       1
      ],
      "icon": "inv_weapon_halberd_11",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Huge Thorium Battleaxe",
+      "skill": 255
+     }
     },
     "Icebane Bracers": {
      "spell": 28244,
@@ -44824,7 +45486,11 @@
       1
      ],
      "icon": "inv_bracer_07",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Icebane Bracers",
+      "skill": 300
+     }
     },
     "Icebane Breastplate": {
      "spell": 28242,
@@ -44854,7 +45520,11 @@
       1
      ],
      "icon": "inv_chest_chain_11",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Icebane Breastplate",
+      "skill": 300
+     }
     },
     "Icebane Gauntlets": {
      "spell": 28243,
@@ -44884,7 +45554,11 @@
       1
      ],
      "icon": "inv_gauntlets_28",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Icebane Gauntlets",
+      "skill": 300
+     }
     },
     "Imperial Plate Belt": {
      "spell": 16647,
@@ -44910,7 +45584,11 @@
       1
      ],
      "icon": "inv_belt_01",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Imperial Plate Belt",
+      "skill": 240
+     }
     },
     "Imperial Plate Boots": {
      "spell": 16657,
@@ -44936,7 +45614,11 @@
       1
      ],
      "icon": "inv_boots_plate_01",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Imperial Plate Boots",
+      "skill": 270
+     }
     },
     "Imperial Plate Bracers": {
      "spell": 16649,
@@ -44958,7 +45640,11 @@
       1
      ],
      "icon": "inv_bracer_19",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Imperial Plate Bracers",
+      "skill": 245
+     }
     },
     "Imperial Plate Chest": {
      "spell": 16663,
@@ -44980,7 +45666,11 @@
       1
      ],
      "icon": "inv_chest_plate10",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Imperial Plate Chest",
+      "skill": 275
+     }
     },
     "Imperial Plate Gauntlets": {
      "spell": 1252338,
@@ -45002,7 +45692,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Imperial Plate Gauntlets",
+      "skill": 255
+     }
     },
     "Imperial Plate Helm": {
      "spell": 16658,
@@ -45024,7 +45718,11 @@
       1
      ],
      "icon": "inv_helmet_22",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Imperial Plate Helm",
+      "skill": 270
+     }
     },
     "Imperial Plate Leggings": {
      "spell": 16730,
@@ -45046,7 +45744,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Imperial Plate Leggings",
+      "skill": 280
+     }
     },
     "Imperial Plate Shoulders": {
      "spell": 16646,
@@ -45072,7 +45774,11 @@
       1
      ],
      "icon": "inv_shoulder_02",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Imperial Plate Shoulders",
+      "skill": 240
+     }
     },
     "Inlaid Mithril Cylinder": {
      "spell": 11454,
@@ -45098,7 +45804,11 @@
       1
      ],
      "icon": "inv_musket_01",
-     "category": "Reagents"
+     "category": "Reagents",
+     "plan": {
+      "item": "Plans: Inlaid Mithril Cylinder",
+      "skill": 200
+     }
     },
     "Inlaid Thorium Hammer": {
      "spell": 16967,
@@ -45162,7 +45872,11 @@
       1
      ],
      "icon": "inv_chest_chain_07",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Invincible Mail",
+      "skill": 300
+     }
     },
     "Iridescent Hammer": {
      "spell": 6518,
@@ -45196,7 +45910,11 @@
       1
      ],
      "icon": "inv_hammer_05",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Iridescent Hammer",
+      "skill": 115
+     }
     },
     "Iron Buckle": {
      "spell": 8768,
@@ -45240,7 +45958,11 @@
       1
      ],
      "icon": "inv_misc_orb_01",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Iron Counterweight",
+      "skill": 140
+     }
     },
     "Iron Fists": {
      "spell": 1252353,
@@ -45274,7 +45996,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Fist Weapons"
+     "category": "Fist Weapons",
+     "plan": {
+      "item": "Plans: Iron Fists",
+      "skill": 130
+     }
     },
     "Iron Morningstar": {
      "spell": 1252355,
@@ -45308,7 +46034,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Iron Morningstar",
+      "skill": 165
+     }
     },
     "Iron Shield Spike": {
      "spell": 7221,
@@ -45330,7 +46060,11 @@
       1
      ],
      "icon": "inv_misc_armorkit_01",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Iron Shield Spike",
+      "skill": 125
+     }
     },
     "Ironforge Breastplate": {
      "spell": 8367,
@@ -45356,7 +46090,11 @@
       1
      ],
      "icon": "inv_chest_plate05",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Ironforge Breastplate",
+      "skill": 100
+     }
     },
     "Ironforge Chain": {
      "spell": 8366,
@@ -45512,7 +46250,11 @@
       1
      ],
      "icon": "inv_sword_07",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Ironwood Blade",
+      "skill": 300
+     }
     },
     "Jade Serpentblade": {
      "spell": 3493,
@@ -45546,7 +46288,11 @@
       1
      ],
      "icon": "inv_sword_36",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Jade Serpentblade",
+      "skill": 150
+     }
     },
     "Jagged Obsidian Shield": {
      "spell": 27586,
@@ -45576,7 +46322,11 @@
       1
      ],
      "icon": "inv_shield_22",
-     "category": "Shields"
+     "category": "Shields",
+     "plan": {
+      "item": "Plans: Jagged Obsidian Shield",
+      "skill": 300
+     }
     },
     "Justicar's Belt": {
      "spell": 1252309,
@@ -45602,7 +46352,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Justicar's Belt",
+      "skill": 150
+     }
     },
     "Justicar's Boots": {
      "spell": 1252299,
@@ -45628,7 +46382,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Justicar's Boots",
+      "skill": 200
+     }
     },
     "Justicar's Gauntlet": {
      "spell": 1252319,
@@ -45662,7 +46420,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Justicar's Gauntlet",
+      "skill": 175
+     }
     },
     "Justicar's Gloves": {
      "spell": 1252304,
@@ -45688,7 +46450,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Justicar's Gloves",
+      "skill": 250
+     }
     },
     "Justicar's Pauldrons": {
      "spell": 1252329,
@@ -45726,7 +46492,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Justicar's Pauldrons",
+      "skill": 210
+     }
     },
     "Justicar's Sabatons": {
      "spell": 1252314,
@@ -45764,7 +46534,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Justicar's Sabatons",
+      "skill": 240
+     }
     },
     "Justicar's Waistguard": {
      "spell": 1252324,
@@ -45798,7 +46572,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Justicar's Waistguard",
+      "skill": 250
+     }
     },
     "Justicar's Wristguards": {
      "spell": 1252334,
@@ -45836,7 +46614,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Justicar's Wristguards",
+      "skill": 225
+     }
     },
     "Justice Epaulets": {
      "spell": 1292951,
@@ -45866,7 +46648,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Justice Epaulets",
+      "skill": 300
+     }
     },
     "Justice Gauntlets": {
      "spell": 1292946,
@@ -45896,7 +46682,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Justice Gauntlets",
+      "skill": 300
+     }
     },
     "Justice Gloves": {
      "spell": 1292950,
@@ -45926,7 +46716,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Justice Gloves",
+      "skill": 300
+     }
     },
     "Justice Greaves": {
      "spell": 1292948,
@@ -45956,7 +46750,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Justice Greaves",
+      "skill": 300
+     }
     },
     "Justice Handguards": {
      "spell": 1292954,
@@ -45986,7 +46784,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Justice Handguards",
+      "skill": 300
+     }
     },
     "Justice Leggings": {
      "spell": 1292945,
@@ -46016,7 +46818,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Justice Leggings",
+      "skill": 300
+     }
     },
     "Justice Legguards": {
      "spell": 1292953,
@@ -46046,7 +46852,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Justice Legguards",
+      "skill": 300
+     }
     },
     "Justice Legplates": {
      "spell": 1292949,
@@ -46076,7 +46886,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Justice Legplates",
+      "skill": 300
+     }
     },
     "Justice Pauldrons": {
      "spell": 1292955,
@@ -46106,7 +46920,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Justice Pauldrons",
+      "skill": 300
+     }
     },
     "Justice Sabatons": {
      "spell": 1292956,
@@ -46136,7 +46954,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Justice Sabatons",
+      "skill": 300
+     }
     },
     "Justice Spaulders": {
      "spell": 1292947,
@@ -46166,7 +46988,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Justice Spaulders",
+      "skill": 300
+     }
     },
     "Justice Treads": {
      "spell": 1292952,
@@ -46196,7 +47022,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Justice Treads",
+      "skill": 300
+     }
     },
     "Legguards of Glory": {
      "spell": 1292985,
@@ -46226,7 +47056,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Legguards of Glory",
+      "skill": 300
+     }
     },
     "Legionite Glaive": {
      "spell": 1252368,
@@ -46260,7 +47094,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Polearms"
+     "category": "Polearms",
+     "plan": {
+      "item": "Plans: Legionite Glaive",
+      "skill": 300
+     }
     },
     "Legplates of Glory": {
      "spell": 1292981,
@@ -46290,7 +47128,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Legplates of Glory",
+      "skill": 300
+     }
     },
     "Light Obsidian Belt": {
      "spell": 27588,
@@ -46346,7 +47188,11 @@
       1
      ],
      "icon": "inv_helmet_36",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Lionheart Helm",
+      "skill": 300
+     }
     },
     "Low-Background Truesilver Plates": {
      "spell": 435910,
@@ -46368,7 +47214,11 @@
       1
      ],
      "icon": "inv_gizmo_mithrilcasing_02",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Low-Background Truesilver Plates",
+      "skill": 200
+     }
     },
     "Mantle of the Second War": {
      "spell": 427061,
@@ -46402,7 +47252,11 @@
       1
      ],
      "icon": "inv_shoulder_28",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Mantle of the Second War",
+      "skill": 150
+     }
     },
     "Martyr's Legplates": {
      "spell": 1252349,
@@ -46432,7 +47286,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Martyr's Legplates",
+      "skill": 300
+     }
     },
     "Massive Iron Axe": {
      "spell": 3498,
@@ -46466,7 +47324,11 @@
       1
      ],
      "icon": "inv_throwingaxe_05",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Massive Iron Axe",
+      "skill": 160
+     }
     },
     "Master Forge": {
      "spell": 1263073,
@@ -46492,7 +47354,11 @@
       1
      ],
      "icon": "inv_mace_1h_blacksmithing_b_01_black",
-     "category": "Camping"
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Master Forge",
+      "skill": 300
+     }
     },
     "Masterwork Stormhammer": {
      "spell": 16993,
@@ -46526,7 +47392,11 @@
       1
      ],
      "icon": "inv_hammer_04",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Masterwork Stormhammer",
+      "skill": 300
+     }
     },
     "Mighty Iron Hammer": {
      "spell": 3297,
@@ -46564,7 +47434,11 @@
       1
      ],
      "icon": "inv_hammer_04",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Mighty Iron Hammer",
+      "skill": 120
+     }
     },
     "Mithril Blacksmith Hammer": {
      "spell": 1317963,
@@ -46590,7 +47464,11 @@
       1
      ],
      "icon": "inv_hammer_20",
-     "category": "Thrown"
+     "category": "Thrown",
+     "plan": {
+      "item": "Plans: Mithril Blacksmith Hammer",
+      "skill": 195
+     }
     },
     "Mithril Claws": {
      "spell": 1252358,
@@ -46620,7 +47498,11 @@
       1
      ],
      "icon": "inv_misc_monsterclaw_02",
-     "category": "Fist Weapons"
+     "category": "Fist Weapons",
+     "plan": {
+      "item": "Plans: Mithril Claws",
+      "skill": 195
+     }
     },
     "Mithril Claymore": {
      "spell": 1252359,
@@ -46650,7 +47532,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Two-Handed Swords"
+     "category": "Two-Handed Swords",
+     "plan": {
+      "item": "Plans: Mithril Claymore",
+      "skill": 195
+     }
     },
     "Mithril Coif": {
      "spell": 9961,
@@ -46694,7 +47580,11 @@
       1
      ],
      "icon": "inv_bracer_07",
-     "category": "Mail Bracers"
+     "category": "Mail Bracers",
+     "plan": {
+      "item": "Plans: Mithril Plate Bracers",
+      "skill": 190
+     }
     },
     "Mithril Plate Gloves": {
      "spell": 9942,
@@ -46764,7 +47654,11 @@
       1
      ],
      "icon": "inv_shoulder_12",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Mithril Plate Shoulders",
+      "skill": 210
+     }
     },
     "Mithril Shield Spike": {
      "spell": 9939,
@@ -46790,7 +47684,11 @@
       1
      ],
      "icon": "inv_misc_armorkit_02",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Mithril Shield Spike",
+      "skill": 190
+     }
     },
     "Mithril Shortsword": {
      "spell": 1252356,
@@ -46824,7 +47722,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Mithril Shortsword",
+      "skill": 180
+     }
     },
     "Mithril Spurs": {
      "spell": 9964,
@@ -46846,7 +47748,11 @@
       1
      ],
      "icon": "ability_rogue_sprint",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Mithril Spurs",
+      "skill": 210
+     }
     },
     "Mithril Stiletto": {
      "spell": 1252360,
@@ -46876,7 +47782,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Mithril Stiletto",
+      "skill": 210
+     }
     },
     "Mithril Warhammer": {
      "spell": 1252357,
@@ -46906,7 +47816,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Mithril Warhammer",
+      "skill": 190
+     }
     },
     "Moonsteel Broadsword": {
      "spell": 3496,
@@ -46940,7 +47854,11 @@
       1
      ],
      "icon": "inv_sword_25",
-     "category": "Two-Handed Swords"
+     "category": "Two-Handed Swords",
+     "plan": {
+      "item": "Plans: Moonsteel Broadsword",
+      "skill": 155
+     }
     },
     "Nightfall": {
      "spell": 23653,
@@ -46974,7 +47892,11 @@
       1
      ],
      "icon": "inv_axe_12",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Nightfall",
+      "skill": 300
+     }
     },
     "Obsidian Champion": {
      "spell": 1213498,
@@ -47178,7 +48100,11 @@
       1
      ],
      "icon": "inv_chest_chain_17",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Obsidian Mail Tunic",
+      "skill": 300
+     }
     },
     "Obsidian Reaver": {
      "spell": 1213492,
@@ -47318,7 +48244,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Officer's Belt",
+      "skill": 150
+     }
     },
     "Officer's Boots": {
      "spell": 1252295,
@@ -47344,7 +48274,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Officer's Boots",
+      "skill": 200
+     }
     },
     "Officer's Gauntlet": {
      "spell": 1252315,
@@ -47378,7 +48312,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Officer's Gauntlet",
+      "skill": 175
+     }
     },
     "Officer's Gloves": {
      "spell": 1252300,
@@ -47404,7 +48342,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Officer's Gloves",
+      "skill": 250
+     }
     },
     "Officer's Pauldrons": {
      "spell": 1252325,
@@ -47442,7 +48384,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Officer's Pauldrons",
+      "skill": 210
+     }
     },
     "Officer's Sabatons": {
      "spell": 1252310,
@@ -47480,7 +48426,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Officer's Sabatons",
+      "skill": 240
+     }
     },
     "Officer's Waistguard": {
      "spell": 1252320,
@@ -47514,7 +48464,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Officer's Waistguard",
+      "skill": 250
+     }
     },
     "Officer's Wristguards": {
      "spell": 1252330,
@@ -47552,7 +48506,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Officer's Wristguard",
+      "skill": 225
+     }
     },
     "Orcish War Leggings": {
      "spell": 9957,
@@ -47668,7 +48626,11 @@
       1
      ],
      "icon": "inv_gauntlets_31",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Ornate Mithril Gloves",
+      "skill": 195
+     }
     },
     "Ornate Mithril Helm": {
      "spell": 9980,
@@ -47728,7 +48690,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Ornate Mithril Pants",
+      "skill": 195
+     }
     },
     "Ornate Mithril Shoulders": {
      "spell": 9952,
@@ -47754,7 +48720,11 @@
       1
      ],
      "icon": "inv_shoulder_09",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Ornate Mithril Shoulders",
+      "skill": 200
+     }
     },
     "Ornate Thorium Handaxe": {
      "spell": 16969,
@@ -47784,7 +48754,11 @@
       1
      ],
      "icon": "inv_axe_12",
-     "category": "One-Handed Axes"
+     "category": "One-Handed Axes",
+     "plan": {
+      "item": "Plans: Ornate Thorium Handaxe",
+      "skill": 250
+     }
     },
     "Patterned Bronze Bracers": {
      "spell": 2672,
@@ -47837,7 +48811,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Pauldrons of Glory",
+      "skill": 300
+     }
     },
     "Pearl-handled Dagger": {
      "spell": 6517,
@@ -47905,7 +48883,11 @@
       1
      ],
      "icon": "inv_hammer_08",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Persuader",
+      "skill": 300
+     }
     },
     "Phantom Blade": {
      "spell": 10007,
@@ -47977,7 +48959,11 @@
       1
      ],
      "icon": "inv_boots_01",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Polished Steel Boots",
+      "skill": 160
+     }
     },
     "Prefect's Belt": {
      "spell": 1252308,
@@ -48003,7 +48989,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Prefect's Belt",
+      "skill": 150
+     }
     },
     "Prefect's Boots": {
      "spell": 1252298,
@@ -48029,7 +49019,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Prefect's Boots",
+      "skill": 200
+     }
     },
     "Prefect's Gauntlet": {
      "spell": 1252318,
@@ -48063,7 +49057,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Prefect's Gauntlet",
+      "skill": 175
+     }
     },
     "Prefect's Gloves": {
      "spell": 1252303,
@@ -48089,7 +49087,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Prefect's Gloves",
+      "skill": 250
+     }
     },
     "Prefect's Pauldrons": {
      "spell": 1252328,
@@ -48127,7 +49129,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Prefect's Pauldrons",
+      "skill": 210
+     }
     },
     "Prefect's Sabatons": {
      "spell": 1252313,
@@ -48165,7 +49171,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Prefect's Sabatons",
+      "skill": 240
+     }
     },
     "Prefect's Waistguard": {
      "spell": 1252323,
@@ -48199,7 +49209,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Prefect's Waistguard",
+      "skill": 250
+     }
     },
     "Prefect's Wristguards": {
      "spell": 1252333,
@@ -48237,7 +49251,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Prefect's Wristguard",
+      "skill": 225
+     }
     },
     "Protector's Boots": {
      "spell": 1252254,
@@ -48267,7 +49285,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Protector's Boots",
+      "skill": 85
+     }
     },
     "Protector's Chain Belt": {
      "spell": 1252264,
@@ -48297,7 +49319,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Protector's Chain Belt",
+      "skill": 45
+     }
     },
     "Protector's Chain Helm": {
      "spell": 1252249,
@@ -48323,7 +49349,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Protector's Chain Helm",
+      "skill": 125
+     }
     },
     "Protector's Chain Leggings": {
      "spell": 1252244,
@@ -48349,7 +49379,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Protector's Chain Leggings",
+      "skill": 95
+     }
     },
     "Protector's Chain Shirt": {
      "spell": 1252239,
@@ -48375,7 +49409,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Protector's Chain Shirt",
+      "skill": 80
+     }
     },
     "Protector's Gloves": {
      "spell": 1252259,
@@ -48405,7 +49443,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Protector's Gloves",
+      "skill": 80
+     }
     },
     "Protector's Silvered Chain Helm": {
      "spell": 1252279,
@@ -48439,7 +49481,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Protector's Silvered Chain Helm",
+      "skill": 95
+     }
     },
     "Protector's Silvered Chain Leggings": {
      "spell": 1252274,
@@ -48473,7 +49519,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Protector's Silvered Chain Leggings",
+      "skill": 125
+     }
     },
     "Protector's Silvered Chain Shirt": {
      "spell": 1252269,
@@ -48507,7 +49557,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Protector's Silvered Chain Shirt",
+      "skill": 110
+     }
     },
     "Radiant Belt": {
      "spell": 16645,
@@ -48529,7 +49583,11 @@
       1
      ],
      "icon": "inv_belt_11",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Radiant Belt",
+      "skill": 235
+     }
     },
     "Radiant Boots": {
      "spell": 16656,
@@ -48551,7 +49609,11 @@
       1
      ],
      "icon": "inv_boots_plate_03",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Radiant Boots",
+      "skill": 265
+     }
     },
     "Radiant Breastplate": {
      "spell": 16648,
@@ -48577,7 +49639,11 @@
       1
      ],
      "icon": "inv_chest_plate16",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Radiant Breastplate",
+      "skill": 245
+     }
     },
     "Radiant Circlet": {
      "spell": 16659,
@@ -48599,7 +49665,11 @@
       1
      ],
      "icon": "inv_crown_01",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Radiant Circlet",
+      "skill": 270
+     }
     },
     "Radiant Gloves": {
      "spell": 16654,
@@ -48621,7 +49691,11 @@
       1
      ],
      "icon": "inv_gauntlets_26",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Radiant Gloves",
+      "skill": 260
+     }
     },
     "Radiant Leggings": {
      "spell": 16725,
@@ -48643,7 +49717,11 @@
       1
      ],
      "icon": "inv_pants_03",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Radiant Leggings",
+      "skill": 280
+     }
     },
     "Razorspike Battleplate": {
      "spell": 1213490,
@@ -48767,7 +49845,11 @@
       1
      ],
      "icon": "inv_sword_39",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Refined Arcanite Champion",
+      "skill": 300
+     }
     },
     "Refined Arcanite Reaper": {
      "spell": 461675,
@@ -48789,7 +49871,11 @@
       1
      ],
      "icon": "inv_axe_09",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Refined Arcanite Reaper",
+      "skill": 300
+     }
     },
     "Refined Hammer of the Titans": {
      "spell": 461712,
@@ -48841,7 +49927,11 @@
       1
      ],
      "icon": "inv_helmet_49",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Reflective Truesilver Braincage",
+      "skill": 225
+     }
     },
     "Rough Bronze Boots": {
      "spell": 7817,
@@ -48963,7 +50053,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Rough Copper Chain Boots",
+      "skill": 50
+     }
     },
     "Rough Copper Vest": {
      "spell": 12260,
@@ -48981,7 +50075,8 @@
       1
      ],
      "icon": "inv_chest_chain",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "auto": true
     },
     "Rough Grinding Stone": {
      "spell": 3320,
@@ -49017,7 +50112,8 @@
       1
      ],
      "icon": "inv_stone_sharpeningstone_01",
-     "category": "Weapon Stones"
+     "category": "Weapon Stones",
+     "auto": true
     },
     "Rough Weightstone": {
      "spell": 3115,
@@ -49035,7 +50131,8 @@
       1
      ],
      "icon": "inv_stone_weightstone_01",
-     "category": "Weapon Stones"
+     "category": "Weapon Stones",
+     "auto": true
     },
     "Rune Edge": {
      "spell": 16980,
@@ -49133,7 +50230,11 @@
      ],
      "icon": "inv_chest_plate03",
      "category": "Mail Chestguards",
-     "min": 90
+     "min": 90,
+     "plan": {
+      "item": "Plans: Runed Copper Breastplate",
+      "skill": 55
+     }
     },
     "Runed Copper Gauntlets": {
      "spell": 3323,
@@ -49211,7 +50312,11 @@
       1
      ],
      "icon": "inv_hammer_17",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Runed Mithril Hammer",
+      "skill": 220
+     }
     },
     "Runic Breastplate": {
      "spell": 16731,
@@ -49237,7 +50342,11 @@
       1
      ],
      "icon": "inv_chest_plate11",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Runic Breastplate",
+      "skill": 285
+     }
     },
     "Runic Plate Boots": {
      "spell": 16665,
@@ -49263,7 +50372,11 @@
       1
      ],
      "icon": "inv_boots_plate_01",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Runic Plate Boots",
+      "skill": 275
+     }
     },
     "Runic Plate Helm": {
      "spell": 16726,
@@ -49293,7 +50406,11 @@
       1
      ],
      "icon": "inv_helmet_03",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Runic Plate Helm",
+      "skill": 280
+     }
     },
     "Runic Plate Leggings": {
      "spell": 16732,
@@ -49319,7 +50436,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Runic Plate Leggings",
+      "skill": 285
+     }
     },
     "Runic Plate Shoulders": {
      "spell": 16664,
@@ -49345,7 +50466,11 @@
       1
      ],
      "icon": "inv_shoulder_23",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Runic Plate Shoulders",
+      "skill": 275
+     }
     },
     "Sabatons of Glory": {
      "spell": 1292988,
@@ -49375,7 +50500,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Sabatons of Glory",
+      "skill": 300
+     }
     },
     "Sageblade": {
      "spell": 27832,
@@ -49405,7 +50534,11 @@
       1
      ],
      "icon": "inv_sword_51",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Sageblade",
+      "skill": 300
+     }
     },
     "Sageblade of the Archmagus": {
      "spell": 461743,
@@ -49435,7 +50568,11 @@
       1
      ],
      "icon": "inv_sword_51",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Sageblade of the Archmagus",
+      "skill": 300
+     }
     },
     "Scarlet Soldier's Chestplate": {
      "spell": 1224633,
@@ -49461,7 +50598,11 @@
       1
      ],
      "icon": "inv_chest_plate08",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Chestplate",
+      "skill": 280
+     }
     },
     "Scarlet Soldier's Grips": {
      "spell": 1224636,
@@ -49483,7 +50624,11 @@
       1
      ],
      "icon": "inv_gauntlets_26",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Grips",
+      "skill": 260
+     }
     },
     "Scarlet Soldier's Helmet": {
      "spell": 1224631,
@@ -49509,7 +50654,11 @@
       1
      ],
      "icon": "inv_helmet_12",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Helmet",
+      "skill": 280
+     }
     },
     "Scarlet Soldier's Legplates": {
      "spell": 1224638,
@@ -49535,7 +50684,11 @@
       1
      ],
      "icon": "inv_pants_plate_02",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Legplates",
+      "skill": 270
+     }
     },
     "Scarlet Soldier's Protectors": {
      "spell": 1224635,
@@ -49553,7 +50706,11 @@
       1
      ],
      "icon": "inv_bracer_26b",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Protectors",
+      "skill": 250
+     }
     },
     "Scarlet Soldier's Spaulders": {
      "spell": 1224632,
@@ -49575,7 +50732,11 @@
       1
      ],
      "icon": "inv_shoulder_29",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Spaulders",
+      "skill": 280
+     }
     },
     "Scarlet Soldier's Stompers": {
      "spell": 1224639,
@@ -49597,7 +50758,11 @@
       1
      ],
      "icon": "inv_boots_plate_08",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Stompers",
+      "skill": 260
+     }
     },
     "Scarlet Soldier's Waistguard": {
      "spell": 1224637,
@@ -49619,7 +50784,11 @@
       1
      ],
      "icon": "inv_belt_13",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Scarlet Soldier's Waistguard",
+      "skill": 250
+     }
     },
     "Searing Golden Blade": {
      "spell": 15973,
@@ -49649,7 +50818,11 @@
       1
      ],
      "icon": "inv_weapon_shortblade_05",
-     "category": "Daggers"
+     "category": "Daggers",
+     "plan": {
+      "item": "Plans: Searing Golden Blade",
+      "skill": 165
+     }
     },
     "Sentinel's Belt": {
      "spell": 1252306,
@@ -49675,7 +50848,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Sentinel's Belt",
+      "skill": 150
+     }
     },
     "Sentinel's Boots": {
      "spell": 1252296,
@@ -49701,7 +50878,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Sentinel's Boots",
+      "skill": 200
+     }
     },
     "Sentinel's Gauntlet": {
      "spell": 1252316,
@@ -49735,7 +50916,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Sentinel's Gauntlet",
+      "skill": 175
+     }
     },
     "Sentinel's Gloves": {
      "spell": 1252301,
@@ -49761,7 +50946,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Sentinel's Gloves",
+      "skill": 250
+     }
     },
     "Sentinel's Pauldrons": {
      "spell": 1252326,
@@ -49799,7 +50988,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Sentinel's Pauldrons",
+      "skill": 210
+     }
     },
     "Sentinel's Sabatons": {
      "spell": 1252311,
@@ -49837,7 +51030,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Sentinel's Sabatons",
+      "skill": 240
+     }
     },
     "Sentinel's Waistguard": {
      "spell": 1252321,
@@ -49871,7 +51068,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Sentinel's Waistguard",
+      "skill": 250
+     }
     },
     "Sentinel's Wristguards": {
      "spell": 1252331,
@@ -49909,7 +51110,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Sentinel's Wristguard",
+      "skill": 225
+     }
     },
     "Serenity": {
      "spell": 16983,
@@ -49947,7 +51152,11 @@
       1
      ],
      "icon": "inv_mace_02",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Serenity",
+      "skill": 260
+     }
     },
     "Shadow Crescent Axe": {
      "spell": 3500,
@@ -49985,7 +51194,11 @@
       1
      ],
      "icon": "inv_axe_17",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Shadow Crescent Axe",
+      "skill": 175
+     }
     },
     "Sharpening Wheel": {
      "spell": 1230171,
@@ -50059,7 +51272,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Shining Mithril Boots",
+      "skill": 200
+     }
     },
     "Shining Mithril Breastplate": {
      "spell": 1252289,
@@ -50089,7 +51306,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Shining Mithril Breastplate",
+      "skill": 195
+     }
     },
     "Shining Mithril Gauntlet": {
      "spell": 1252294,
@@ -50119,7 +51340,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Shining Mithril Gauntlet",
+      "skill": 220
+     }
     },
     "Shining Mithril Helm": {
      "spell": 1252292,
@@ -50149,7 +51374,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Shining Mithril Helm",
+      "skill": 215
+     }
     },
     "Shining Mithril Pants": {
      "spell": 1252293,
@@ -50179,7 +51408,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Shining Mithril Pants",
+      "skill": 220
+     }
     },
     "Shining Mithril Pauldrons": {
      "spell": 1252290,
@@ -50209,7 +51442,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Shining Mithril Pauldrons",
+      "skill": 195
+     }
     },
     "Shining Silver Breastplate": {
      "spell": 2675,
@@ -50296,7 +51533,11 @@
       1
      ],
      "icon": "temp",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Shoulders of Glory",
+      "skill": 300
+     }
     },
     "Silver Rod": {
      "spell": 7818,
@@ -50396,7 +51637,11 @@
       1
      ],
      "icon": "inv_chest_chain_09",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Silvered Bronze Breastplate",
+      "skill": 105
+     }
     },
     "Silvered Bronze Gauntlets": {
      "spell": 3333,
@@ -50448,7 +51693,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Silvered Bronze Leggings",
+      "skill": 130
+     }
     },
     "Silvered Bronze Shoulders": {
      "spell": 3330,
@@ -50474,7 +51723,11 @@
       1
      ],
      "icon": "inv_shoulder_09",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Silvered Bronze Shoulders",
+      "skill": 100
+     }
     },
     "Skyrider's Masterwork Stormhammer": {
      "spell": 461647,
@@ -50500,7 +51753,11 @@
       1
      ],
      "icon": "inv_hammer_04",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Skyrider's Masterwork Stormhammer",
+      "skill": 300
+     }
     },
     "Solid Grinding Stone": {
      "spell": 9920,
@@ -50552,7 +51809,11 @@
       1
      ],
      "icon": "inv_hammer_07",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Solid Iron Maul",
+      "skill": 130
+     }
     },
     "Solid Sharpening Stone": {
      "spell": 9918,
@@ -50622,7 +51883,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Stalwart Helm",
+      "skill": 300
+     }
     },
     "Steel Breastplate": {
      "spell": 9916,
@@ -50700,7 +51965,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Polearms"
+     "category": "Polearms",
+     "plan": {
+      "item": "Plans: Steel Spear",
+      "skill": 160
+     }
     },
     "Steel Weapon Chain": {
      "spell": 7224,
@@ -50726,7 +51995,11 @@
       1
      ],
      "icon": "spell_frost_chainsofice",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Steel Weapon Chain",
+      "skill": 165
+     }
     },
     "Sterling Silver Boots": {
      "spell": 1252232,
@@ -50756,7 +52029,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Sterling Silver Boots",
+      "skill": 100
+     }
     },
     "Sterling Silver Breastplate": {
      "spell": 1252236,
@@ -50782,7 +52059,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Sterling Silver Breastplate",
+      "skill": 125
+     }
     },
     "Sterling Silver Gauntlet": {
      "spell": 1252234,
@@ -50808,7 +52089,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Sterling Silver Gauntlet",
+      "skill": 105
+     }
     },
     "Sterling Silver Leggings": {
      "spell": 1252233,
@@ -50834,7 +52119,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Sterling Silver Leggings",
+      "skill": 105
+     }
     },
     "Sterling Silver Shoulders": {
      "spell": 1252235,
@@ -50860,7 +52149,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Pauldrons"
+     "category": "Mail Pauldrons",
+     "plan": {
+      "item": "Plans: Sterling Silver Shoulders",
+      "skill": 110
+     }
     },
     "Stormcarver": {
      "spell": 1252366,
@@ -50886,7 +52179,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Two-Handed Axes"
+     "category": "Two-Handed Axes",
+     "plan": {
+      "item": "Plans: Stormcarver",
+      "skill": 300
+     }
     },
     "Strange Copper Boots": {
      "spell": 1252230,
@@ -50912,7 +52209,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Strange Copper Boots",
+      "skill": 35
+     }
     },
     "Stronger-hold Gauntlets": {
      "spell": 461671,
@@ -50946,7 +52247,11 @@
       1
      ],
      "icon": "inv_gauntlets_30",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Stronger-hold Gauntlets",
+      "skill": 300
+     }
     },
     "Stronghold Gauntlets": {
      "spell": 16741,
@@ -50980,7 +52285,11 @@
       1
      ],
      "icon": "inv_gauntlets_30",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Stronghold Gauntlets",
+      "skill": 300
+     }
     },
     "Sulfuron Hammer": {
      "spell": 21161,
@@ -51022,7 +52331,11 @@
       1
      ],
      "icon": "inv_hammer_unique_sulfuras",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Sulfuron Hammer",
+      "skill": 300
+     }
     },
     "Tempered Dark Iron Plate": {
      "spell": 461667,
@@ -51044,7 +52357,11 @@
       1
      ],
      "icon": "inv_chest_plate08",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Tempered Dark Iron Plate",
+      "skill": 285
+     }
     },
     "Tempered Interference-Negating Helmet": {
      "spell": 435908,
@@ -51074,7 +52391,11 @@
       1
      ],
      "icon": "inv_helmet_49",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Tempered Interference-Negating Helmet",
+      "skill": 225
+     }
     },
     "Tempest Gauntlets": {
      "spell": 461737,
@@ -51104,7 +52425,11 @@
       1
      ],
      "icon": "inv_gauntlets_30",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Tempest Gauntlets",
+      "skill": 295
+     }
     },
     "The Shatterer": {
      "spell": 10003,
@@ -51180,7 +52505,11 @@
       1
      ],
      "icon": "inv_chest_chain_17",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Thick Obsidian Breastplate",
+      "skill": 300
+     }
     },
     "Thick War Axe": {
      "spell": 3294,
@@ -51240,7 +52569,11 @@
       1
      ],
      "icon": "inv_chest_plate08",
-     "category": "Plate Chestguards"
+     "category": "Plate Chestguards",
+     "plan": {
+      "item": "Plans: Thorium Armor",
+      "skill": 225
+     }
     },
     "Thorium Belt": {
      "spell": 16643,
@@ -51262,7 +52595,11 @@
       1
      ],
      "icon": "inv_belt_30",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Thorium Belt",
+      "skill": 225
+     }
     },
     "Thorium Boots": {
      "spell": 16652,
@@ -51288,7 +52625,11 @@
       1
      ],
      "icon": "inv_boots_plate_08",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Thorium Boots",
+      "skill": 255
+     }
     },
     "Thorium Bracers": {
      "spell": 16644,
@@ -51310,7 +52651,11 @@
       1
      ],
      "icon": "inv_bracer_13",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Thorium Bracers",
+      "skill": 230
+     }
     },
     "Thorium Cestus": {
      "spell": 1252363,
@@ -51344,7 +52689,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Fist Weapons"
+     "category": "Fist Weapons",
+     "plan": {
+      "item": "Plans: Thorium Cestus",
+      "skill": 250
+     }
     },
     "Thorium Greatmace": {
      "spell": 1252362,
@@ -51378,7 +52727,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Two-Handed Maces"
+     "category": "Two-Handed Maces",
+     "plan": {
+      "item": "Plans: Thorium Greatmace",
+      "skill": 250
+     }
     },
     "Thorium Greatsword": {
      "spell": 16960,
@@ -51430,7 +52783,11 @@
       1
      ],
      "icon": "inv_helmet_23",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Thorium Helm",
+      "skill": 255
+     }
     },
     "Thorium Leggings": {
      "spell": 16662,
@@ -51452,7 +52809,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Thorium Leggings",
+      "skill": 275
+     }
     },
     "Thorium Poleaxe": {
      "spell": 1252364,
@@ -51486,7 +52847,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Polearms"
+     "category": "Polearms",
+     "plan": {
+      "item": "Plans: Thorium Poleaxe",
+      "skill": 260
+     }
     },
     "Thorium Shield Spike": {
      "spell": 16651,
@@ -51512,7 +52877,11 @@
       1
      ],
      "icon": "inv_misc_armorkit_20",
-     "category": "Miscellaneous"
+     "category": "Miscellaneous",
+     "plan": {
+      "item": "Plans: Thorium Shield Spike",
+      "skill": 250
+     }
     },
     "Titanic Leggings": {
      "spell": 27829,
@@ -51542,7 +52911,11 @@
       1
      ],
      "icon": "inv_pants_04",
-     "category": "Plate Legguards"
+     "category": "Plate Legguards",
+     "plan": {
+      "item": "Plans: Titanic Leggings",
+      "skill": 300
+     }
     },
     "Tranquility": {
      "spell": 461718,
@@ -51764,7 +53137,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Boots"
+     "category": "Mail Boots",
+     "plan": {
+      "item": "Plans: Veteran's Boots",
+      "skill": 85
+     }
     },
     "Veteran's Chain Belt": {
      "spell": 1252262,
@@ -51794,7 +53171,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Veteran's Chain Belt",
+      "skill": 45
+     }
     },
     "Veteran's Chain Helm": {
      "spell": 1252247,
@@ -51820,7 +53201,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Veteran's Chain Helm",
+      "skill": 125
+     }
     },
     "Veteran's Chain Leggings": {
      "spell": 1252242,
@@ -51846,7 +53231,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Veteran's Chain Leggings",
+      "skill": 95
+     }
     },
     "Veteran's Chain Shirt": {
      "spell": 1252237,
@@ -51872,7 +53261,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Veteran's Chain Shirt",
+      "skill": 80
+     }
     },
     "Veteran's Gloves": {
      "spell": 1252257,
@@ -51902,7 +53295,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Veteran's Gloves",
+      "skill": 80
+     }
     },
     "Veteran's Silvered Chain Helm": {
      "spell": 1252277,
@@ -51936,7 +53333,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Helmets"
+     "category": "Mail Helmets",
+     "plan": {
+      "item": "Plans: Veteran's Silvered Chain Helm",
+      "skill": 95
+     }
     },
     "Veteran's Silvered Chain Leggings": {
      "spell": 1252272,
@@ -51970,7 +53371,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Legguards"
+     "category": "Mail Legguards",
+     "plan": {
+      "item": "Plans: Veteran's Silvered Chain Leggings",
+      "skill": 125
+     }
     },
     "Veteran's Silvered Chain Shirt": {
      "spell": 1252267,
@@ -52004,7 +53409,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Chestguards"
+     "category": "Mail Chestguards",
+     "plan": {
+      "item": "Plans: Veteran's Silvered Chain Shirt",
+      "skill": 110
+     }
     },
     "Volcanic Hammer": {
      "spell": 16984,
@@ -52034,7 +53443,11 @@
       1
      ],
      "icon": "inv_hammer_06",
-     "category": "One-Handed Maces"
+     "category": "One-Handed Maces",
+     "plan": {
+      "item": "Plans: Volcanic Hammer",
+      "skill": 265
+     }
     },
     "Warcrest of the Great Chief": {
      "spell": 461739,
@@ -52068,7 +53481,11 @@
       1
      ],
      "icon": "inv_helmet_24",
-     "category": "SEASON OF DISCOVERY"
+     "category": "SEASON OF DISCOVERY",
+     "plan": {
+      "item": "Plans: Warcrest of the Great Chief",
+      "skill": 300
+     }
     },
     "Warder's Belt": {
      "spell": 1252307,
@@ -52094,7 +53511,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Belts"
+     "category": "Mail Belts",
+     "plan": {
+      "item": "Plans: Warder's Belt",
+      "skill": 150
+     }
     },
     "Warder's Boots": {
      "spell": 1252297,
@@ -52120,7 +53541,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Warder's Boots",
+      "skill": 200
+     }
     },
     "Warder's Gauntlet": {
      "spell": 1252317,
@@ -52154,7 +53579,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Mail Gauntlets"
+     "category": "Mail Gauntlets",
+     "plan": {
+      "item": "Plans: Warder's Gauntlet",
+      "skill": 175
+     }
     },
     "Warder's Gloves": {
      "spell": 1252302,
@@ -52180,7 +53609,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Gauntlets"
+     "category": "Plate Gauntlets",
+     "plan": {
+      "item": "Plans: Warder's Gloves",
+      "skill": 250
+     }
     },
     "Warder's Pauldrons": {
      "spell": 1252327,
@@ -52218,7 +53651,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Pauldrons"
+     "category": "Plate Pauldrons",
+     "plan": {
+      "item": "Plans: Warder's Pauldrons",
+      "skill": 210
+     }
     },
     "Warder's Sabatons": {
      "spell": 1252312,
@@ -52256,7 +53693,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Boots"
+     "category": "Plate Boots",
+     "plan": {
+      "item": "Plans: Warder's Sabatons",
+      "skill": 240
+     }
     },
     "Warder's Waistguard": {
      "spell": 1252322,
@@ -52290,7 +53731,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Belts"
+     "category": "Plate Belts",
+     "plan": {
+      "item": "Plans: Warder's Waistguard",
+      "skill": 250
+     }
     },
     "Warder's Wristguards": {
      "spell": 1252332,
@@ -52328,7 +53773,11 @@
       1
      ],
      "icon": "spell_shadow_sealofkings",
-     "category": "Plate Bracers"
+     "category": "Plate Bracers",
+     "plan": {
+      "item": "Plans: Warder's Wristguard",
+      "skill": 225
+     }
     },
     "Whitesoul Helm": {
      "spell": 16724,
@@ -52362,7 +53811,11 @@
       1
      ],
      "icon": "inv_helmet_13",
-     "category": "Plate Helmets"
+     "category": "Plate Helmets",
+     "plan": {
+      "item": "Plans: Whitesoul Helm",
+      "skill": 290
+     }
     },
     "Wicked Mithril Blade": {
      "spell": 9997,
@@ -52392,7 +53845,11 @@
       1
      ],
      "icon": "inv_sword_10",
-     "category": "One-Handed Swords"
+     "category": "One-Handed Swords",
+     "plan": {
+      "item": "Plans: Wicked Mithril Blade",
+      "skill": 200
+     }
     }
    },
    "items": {
@@ -53161,7 +54618,11 @@
       1
      ],
      "icon": "inv_blacksmithingalloys_red",
-     "category": "Camping"
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Molten Foundry",
+      "skill": 300
+     }
     },
     "Rock Garden": {
      "spell": 1262975,
@@ -53187,7 +54648,11 @@
       1
      ],
      "icon": "inv_misc_powder_iron",
-     "category": "Camping"
+     "category": "Camping",
+     "plan": {
+      "item": "Blueprint: Rock Garden",
+      "skill": 140
+     }
     },
     "Smelt Azerothium": {
      "spell": 1249637,
@@ -53249,7 +54714,8 @@
       1
      ],
      "icon": "inv_ingot_02",
-     "category": "Smelted Bars"
+     "category": "Smelted Bars",
+     "auto": true
     },
     "Smelt Dark Iron": {
      "spell": 14891,

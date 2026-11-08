@@ -274,6 +274,10 @@ def prof_shape_checks():
             for f in ("name", "cap", "skill", "level", "where"):
                 if t.get(f) in (None, ""):
                     errors.append("professions %s: tier %s missing %s" % (key, t.get("name"), f))
+            # banner rows are one line (about 60 characters): a longer `where` needs a `short`
+            if len(t.get("short") or t.get("where") or "") > 60:
+                errors.append("professions %s: tier %s: banner text over 60 characters, add a short `short`" %
+                              (key, t.get("name")))
         veins = {v.get("name") for v in P.get("veins") or []}
         smelts = {s.get("name") for s in P.get("smelt") or []}
         for s in P.get("steps") or []:
@@ -362,6 +366,36 @@ def tool_checks(gamedata, ref, profdata, tag):
     if 3503 not in coif or len(coif) < 2:
         errors.append("%s reference: Blacksmithing clashes should list Golden Scale Coif's spells (3503 and more), have %s" %
                       (tag, coif))
+    # plans: the item that teaches a recipe (ItemEffect trigger 6) and the skill it asks for
+    rec = bs.get("recipes") or {}
+    for name, item, skill in (("Imperial Plate Belt", "Plans: Imperial Plate Belt", 240),
+                              ("Heavy Mithril Pants", "Plans: Heavy Mithril Pants", 185)):
+        if (rec.get(name) or {}).get("plan") != {"item": item, "skill": skill}:
+            errors.append("%s reference: %s should be taught by %s (skill %d), has %s" %
+                          (tag, name, item, skill, (rec.get(name) or {}).get("plan")))
+    # learned with the profession (SkillLineAbility.AcquireMethod 1), and points per craft when not 1
+    if not (rec.get("Rough Sharpening Stone") or {}).get("auto") or (rec.get("Rough Bronze Leggings") or {}).get("auto"):
+        errors.append("%s reference: Rough Sharpening Stone should be marked auto (learned with Blacksmithing), "
+                      "Rough Bronze Leggings not" % tag)
+    if profdata:
+        fake = copy.deepcopy(ref)
+        fr = fake["professions"]["Blacksmithing"]["recipes"]
+        fr["Rough Bronze Leggings"]["skillups"] = 2
+        fr["Rough Sharpening Stone"].pop("auto", None)
+        fr["Rough Grinding Stone"]["auto"] = True
+        msgs = [m for _, lvl, m in gamedata.audit_professions(profdata, fake) if lvl == "warn"]
+        for name, what in (("Rough Bronze Leggings", "2 points"), ("Rough Sharpening Stone", "trainer"),
+                           ("Rough Grinding Stone", "learned with")):
+            if not any(name in m and what in m for m in msgs):
+                errors.append("%s tools: the audit doesn't flag %s (%s)" % (tag, name, what))
+    if profdata:
+        fake = copy.deepcopy(ref)
+        fake["professions"]["Blacksmithing"]["recipes"]["Rough Bronze Leggings"]["plan"] = {"item": "Plans: X", "skill": 90}
+        msgs = [m for _, lvl, m in gamedata.audit_professions(profdata, fake) if lvl == "warn" and "Rough Bronze Leggings" in m]
+        if not any("Plans: X" in m and "trainer" in m for m in msgs):
+            errors.append("%s tools: a 'trainer' step whose recipe comes from a plan isn't flagged" % tag)
+        if not any("Plans: X" in m and "90" in m for m in msgs):
+            errors.append("%s tools: a step whose learn level differs from its plan's skill isn't flagged" % tag)
     if profdata:
         fake = copy.deepcopy(ref)
         fake["professions"]["Blacksmithing"]["clashes"] = {"Rough Bronze Leggings": [2668, 999999]}

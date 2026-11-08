@@ -227,7 +227,7 @@ function ns.profCardRows(key, old, new, cap, level)
   local trained, i = ns.profTier(key, new, cap)
   local nextTier = trained and P.tiers[i + 1]
   if nextTier and nextTier.skill > old and nextTier.skill <= new and (level or 1) >= nextTier.level then
-    rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name), ns.plain(nextTier.where) }
+    rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name), ns.plain(nextTier.short or nextTier.where) }
   end
   if nextTier and trained.cap > old and trained.cap <= new then
     rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }
@@ -250,7 +250,8 @@ function ns.profLevelRows(level)
     local skill, cap = ns.profSkill(key)
     local due, nextTier = ns.profTierDue(key, skill, cap, level)
     if P and due == "train" and nextTier.level == level then
-      rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.where), P.name, nextTier }
+      rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.short or nextTier.where),
+        P.name, nextTier }
     end
   end
   return rows

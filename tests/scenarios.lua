@@ -1449,6 +1449,10 @@ function S.profSkillUps()
   MOCK.setSkill("Blacksmithing", 125, 150)      -- Expert can be trained now
   MOCK.advance(1.2)
   check(t:IsShown() and MOCK.textUnder(t):find("TRAIN EXPERT"), "Expert card at 125")
+  for _, row in ipairs(t.rows or {}) do
+    local v = row:IsShown() and row.value and row.value:GetText()
+    check(not v or #v <= 60, "banner row fits on its line: " .. tostring(v))
+  end
   MOCK.fire(t, "OnMouseUp", "LeftButton"); MOCK.advance(1.5)
   check(win() and win():IsShown() and MOCK.textUnder(win()):find("Blacksmithing 125"), "click opens the Professions tab")
   win():Hide()

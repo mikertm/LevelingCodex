@@ -494,11 +494,18 @@ def build_professions(T, S):
                 makes[sid] = (e["EffectItemType"], int(round(float(e["EffectBasePointsF"] or 1))) or 1)
             elif e["Effect"] == "36":
                 learns[sid].append(e["EffectTriggerSpell"])
-    effect = {r["ID"]: r["SpellID"] for r in T.ItemEffect}
+    effect = {r["ID"]: r for r in T.ItemEffect}
     plans = collections.defaultdict(list)  # recipe spell -> plan items
     for r in T.ItemXItemEffect:
-        for taught in learns.get(effect.get(r["ItemEffectID"]), []):
-            plans[taught].append(r["ItemID"])
+        e = effect.get(r["ItemEffectID"])
+        if not e:
+            continue
+        # a plan names its recipe in an effect with trigger 6 (learn spell); older data in a
+        # learn-spell effect of the spell the item casts
+        taught = [e["SpellID"]] if e["TriggerType"] == "6" else learns.get(e["SpellID"], [])
+        for t in taught:
+            if r["ItemID"] not in plans[t]:
+                plans[t].append(r["ItemID"])
     out = {}
     for prof, line in PROFESSIONS.items():
         rows = sorted((r for r in T.SkillLineAbility if r["SkillLine"] == str(line)
@@ -528,6 +535,10 @@ def build_professions(T, S):
             # Sharpening Stone says 125 but goes grey at 115), so it's a warning, not a fact
             if int(r["MinSkillLineRank"] or 0) > 1:
                 rec["min"] = int(r["MinSkillLineRank"])
+            if r.get("AcquireMethod") == "1":
+                rec["auto"] = True  # learned with the profession
+            if int(r.get("NumSkillUps") or 0) != 1:
+                rec["skillups"] = int(r.get("NumSkillUps") or 0)  # points per craft (the counts assume 1)
             if made:
                 items[rec["makes"][0]] = item_icon.get(made[0])
             for p in sorted(plans.get(sid, []), key=int):
@@ -721,6 +732,20 @@ def audit_professions(profdata, ref):
             if clash:
                 add("warn", "%s: the game has %d recipes named %s (spells %s): the reference keeps the lowest, "
                     "check it's the one trainers teach" % (where, len(clash), name, ", ".join(str(c) for c in clash)))
+            if r.get("skillups", 1) != 1:
+                add("warn", "%s: %s gives %d points per craft in game; the craft counts assume 1" % (where, name, r["skillups"]))
+            source = (x.get("source") or "").lower()
+            if source and r.get("auto") and "known when you learn" not in source:
+                add("warn", "%s: %s is learned with %s in game, data says: %s" % (where, name, P["name"], x["source"]))
+            if source and not r.get("auto") and "known when you learn" in source:
+                add("warn", "%s: %s isn't learned with %s in game: a trainer or a plan teaches it" % (where, name, P["name"]))
+            plan = r.get("plan")
+            if plan and "trainer" in source:
+                add("warn", "%s: %s is taught by %s (skill %d) in game, data says a trainer teaches it" %
+                    (where, name, plan["item"], plan["skill"]))
+            if plan and x.get("learn") and plan["skill"] and x["learn"] != plan["skill"]:
+                add("warn", "%s: %s: %s asks for skill %d, data says learned at %d" %
+                    (where, name, plan["item"], plan["skill"], x["learn"]))
             if r.get("min") and x.get("learn") and x["learn"] < r["min"]:
                 add("warn", "%s: %s: the client says it's learned at %d, data says %d (check at a trainer, /codex debug)" %
                     (where, name, r["min"], x["learn"]))
