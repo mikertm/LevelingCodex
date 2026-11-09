@@ -30,7 +30,9 @@ Design: `docs/superpowers/specs/2026-11-08-enchanting-guide-design.md`.
   - Artisan: Annora only, requiring skill 200. Wowhead's overview table says 225; the spell is used.
 - **Formula vendors (Wowhead item "sold by"):**
   - Cloak - Minor Agility: Dalria (Ashenvale) / Kulwia (Stonetalon Mountains), 8s42.
-  - Shield - Greater Stamina: Mythrin'dir (Darnassus, 1g26) / Daniel Bartlett (Undercity, 1g07), limited stock.
+  - Shield - Greater Stamina: Mythrin'dir (Darnassus) / Daniel Bartlett (Undercity), limited stock. Client item 16217 has `Bonding=1` (bind on pickup).
+- WoW-Professions lists Bracer - Greater Strength at Annora (skill 240) and the Lesser Mana Oil formula at Kania in Silithus. Wowhead lists the oil formula in Silithus and Blackrock Depths. Check Annora's recipe list and Kania's stock in game. [Leveling guide](https://www.wow-professions.com/forever/enchanting-leveling-guide) · [Oil formula](https://www.wowhead.com/forever/item=20754/formula-lesser-mana-oil)
+- The Enchanting overview lists Enchanted Lute at 20, Arcane Salvager at 140, and Arcane Forge at 300. The client confirms the spells and the two blueprints' requirements. [Enchanting overview](https://www.wowhead.com/forever/guide/professions/enchanting/overview)
 - **Wowhead leveling guide (3 Nov):** the route's shape; Mote of Magic and the Copper Rod from enchanting supply vendors.
 - **wow-professions' Forever disenchanting guide:**
   - the bands by required level;
@@ -46,7 +48,7 @@ Design: `docs/superpowers/specs/2026-11-08-enchanting-guide-design.md`.
 | 20-90 | Lesser Magic Wand, Chest - Minor Absorption | Chest - Inferior Stamina | 1 Strange Dust instead of an essence (and wood) |
 | 160-180 | Bracer - Lesser Strength (formula) | Boots - Lesser Agility (trainer) | Same Soul Dust, no formula |
 | 225-250 | Gloves - Agility, Boots - Stamina, Chest - Superior Stamina | Gloves - Agility | 1 Vision Dust instead of 2-3 |
-| 250-265 | Lesser Mana Oil (Lokhtos, reputation) | Bracer - Greater Strength (trainer) | No reputation |
+| 250-265 | Lesser Mana Oil | Bracer - Greater Strength (Annora) | Trainer recipe. Lesser Mana Oil from Kania is an alternative. |
 | 265-300 | Shield - Greater Stamina to 294, Runed Arcanite Rod, Cloak - Superior Defense | Shield - Greater Stamina to 300 | Yellow until 305; Dream Dust instead of 120 Illusion Dust and an Arcanite rod (Superior Defense only needs Truesilver) |
 
 ## To check in game
