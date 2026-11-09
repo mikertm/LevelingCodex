@@ -860,50 +860,45 @@ function S.questRecorder()
   check(#LevelingCodexDB.rec == count, "toggling recording off stops new observations")
 end
 
-function S.questController()
+function S.questController(mode)
   MOCK.gamepad, MOCK.gamepadUI = true, true
   S.login()
   local frame = questViewer()
-  check(GamepadMode.FrameControlsManager:GetActiveFrame() ~= frame, "background viewer leaves world controls alone")
+  local manager = GamepadMode.FrameControlsManager
   slash("quests")
   click(win(), "Show step window")
-  check(GamepadMode.FrameControlsManager:GetActiveFrame() == win(), "main window keeps controller focus")
-  win():Hide()
-  local manager = GamepadMode.FrameControlsManager
-  check(manager:GetActiveFrame() == frame, "viewer joins Forever controller navigation")
-  local dialog = CreateFrame("Frame", nil, UIParent)
-  CreateFrame("Button", nil, dialog)
-  manager:FrameShown(dialog)
+  check(manager:GetActiveFrame() == win(), "the Codex has native controller focus")
+  if mode == "backup" then MOCK.padNoFocus = true end
+  win().padChrome.close:Click()
   MOCK.advance(0.6)
-  check(manager:GetActiveFrame() == dialog, "the game dialog keeps native focus")
+  check(not win():IsShown() and frame:IsShown(), "the X closes the Codex and leaves the step guide visible")
+  check(manager:GetActiveFrame() == nil, "closing the Codex returns native focus to gameplay")
   check(not (LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown()),
-    "the viewer does not fall back while another panel has native focus")
-  MOCK.fire(frame, "OnGamePadButtonDown", "PAD2")
-  check(frame:IsShown() and frame._padPropagate, "B passes through the viewer while the game dialog has focus")
-  manager:FrameHidden(dialog)
-  check(manager:GetActiveFrame() == frame, "the viewer is still registered for native navigation")
+    "closing the Codex does not give the step guide backup focus")
+  check(not frame._gamepad and not frame._padStick, "the step guide leaves controller buttons and movement to the game")
+  MOCK.event("GAME_PAD_ACTIVE_CHANGED")
+  check(manager:GetActiveFrame() == nil, "using the controller again leaves focus with gameplay")
+
+  MOCK.padNoFocus = nil
+  slash("quests")
+  check(manager:GetActiveFrame() == win(), "opening the Codex gives its controls native focus again")
+  click(win(), "Next step")
+  check(questText(frame, "Accept - Nibbled-On Book"), "Next step in Quests advances the guide")
+  click(win(), "Previous step")
+  check(questText(frame, "Accept - A Threat Within"), "Previous step in Quests goes back")
+  local pinnedMap
+  TomTom = { AddWaypoint = function(_, map) pinnedMap = map end }
+  click(win(), "Pin step")
+  TomTom = nil
+  check(pinnedMap == 1429, "Pin step sets the current waypoint")
+  click(win(), "Hide step window")
+  check(not frame:IsShown(), "the guide can be hidden from Quests")
+  click(win(), "Show step window")
+  check(frame:IsShown(), "the guide can be shown again from Quests")
 end
 
 function S.questControllerBackup()
-  MOCK.gamepadUI, MOCK.padNoFocus = true, true
-  S.login()
-  slash("quests")
-  click(win(), "Show step window")
-  win():Hide()
-  local frame = questViewer()
-  MOCK.advance(0.6)
-  local focus = LevelingCodexPadFocus
-  check(focus and focus:IsShown() and focus.target:IsVisible(), "backup focus starts on a visible quest control")
-  check(labelOf(focus.target) == "Back", "backup focus starts on Back when there is no suggested section")
-  MOCK.fire(frame, "OnGamePadButtonDown", "PADDUP")
-  check(labelOf(focus.target) == "Back", "the D-pad skips the hidden suggestion button")
-  MOCK.fire(frame, "OnGamePadButtonDown", "PADDRIGHT")
-  check(labelOf(focus.target) == "Next", "the D-pad can reach Next")
-  local before = MOCK.textUnder(frame)
-  MOCK.fire(frame, "OnGamePadButtonDown", "PAD1")
-  check(MOCK.textUnder(frame) ~= before, "A advances the quest step")
-  MOCK.fire(frame, "OnGamePadButtonDown", "PAD2")
-  check(not frame:IsShown() and not focus:IsShown(), "B closes the viewer and clears backup focus")
+  S.questController("backup")
 end
 
 -- the level the plan puts a point in, as the guide reads (nil before 10)

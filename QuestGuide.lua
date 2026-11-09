@@ -4,7 +4,7 @@ local Q, A, C = ns.quests, ns.art, ns.C
 local try = Q.try
 local viewer, arrow, header, title, detail, preview, arrowText, arrowArt, flatBackground, badge, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
-local dismissed, painting, theme, controllerRequested
+local dismissed, painting, theme
 local suggestionButton
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
@@ -42,7 +42,7 @@ local function font(parent, y, width, template)
   return fs
 end
 
-local function pin()
+function ns.pinQuestStep()
   local row = Q.current()
   local s = row and row.step
   if not (s and s.map and s.x and s.y) then return end
@@ -57,6 +57,12 @@ local function pin()
     try(TomTom.AddWaypoint, TomTom, s.map, s.x / 100, s.y / 100,
       { title = s.name or s.text, persistent = false })
   end
+end
+
+function ns.moveQuestStep(back)
+  if back then Q.back() else Q.next() end
+  quiet = true
+  ns.questRefresh()
 end
 
 local function makeViewer()
@@ -77,7 +83,7 @@ local function makeViewer()
     updateItemButton()
   end)
   viewer:HookScript("OnHide", function()
-    if not painting then dismissed, controllerRequested = true, false end
+    if not painting then dismissed = true end
   end)
   viewer:Hide()
   place()
@@ -93,7 +99,6 @@ local function makeViewer()
   detail = font(viewer, 47, 318)
   preview = font(viewer, 126, 318)
 
-  local buttons = {}
   local function button(label, x, width, action, bottom)
     bottom = bottom or 9
     local b = A.button(viewer, width, 22)
@@ -101,22 +106,18 @@ local function makeViewer()
     b:SetLabel(label)
     b.codexLabel = label
     b:SetScript("OnClick", action)
-    buttons[#buttons + 1] = { frame = b, x = x + width / 2, y = 179 - bottom, fixed = true }
     return b
   end
-  button("Back", 12, 62, function() Q.back(); quiet = true; ns.questRefresh() end)
+  -- Keep controller focus in the Quests tab so the overlay can stay up during gameplay.
+  button("Back", 12, 62, function() ns.moveQuestStep(true) end)
   local nextButton = button("Next", 80, 62, function(_, mouse)
-    if mouse == "RightButton" then Q.back() else Q.next() end
-    quiet = true
-    ns.questRefresh()
+    ns.moveQuestStep(mouse == "RightButton")
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  button("Pin", 148, 55, pin)
+  button("Pin", 148, 55, ns.pinQuestStep)
   button("Quests", 209, 70, function() ns.openTab("quests") end)
-  button("Hide", 285, 53, function() viewer:Hide() end)
+  button("Hide", 285, 53, ns.hideQuestViewer)
   suggestionButton = button("", 16, 318, function() ns.followSuggestedQuestSection() end, 35)
-  ns.gamepad.attach(viewer, { passive = true, enabled = function() return controllerRequested end,
-    focusables = function() return buttons end })
 
   -- No box: a rotating arrow over the world with the distance under it, like the game's own pointers.
   arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", viewer)
@@ -345,7 +346,6 @@ function ns.questRefresh()
     end
     viewer:SetHeight(math.max(140, previewY + preview:GetStringHeight() + (suggestion and 64 or 38)))
     viewer:Show()
-    ns.gamepad.refresh(viewer)
     painting = false
     paintArrow()
   elseif viewer and viewer:IsShown() then
@@ -366,7 +366,12 @@ function ns.followSuggestedQuestSection()
 end
 
 function ns.showQuestViewer()
-  dismissed, controllerRequested = false, true
+  dismissed = false
+  ns.questRefresh()
+end
+
+function ns.hideQuestViewer()
+  dismissed = true
   ns.questRefresh()
 end
 
