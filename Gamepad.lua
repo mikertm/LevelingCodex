@@ -125,9 +125,15 @@ local function hideHighlight(f)
 end
 
 local function list(st)
-  local ok, items = false, nil
-  if st.opts.focusables then ok, items = pcall(st.opts.focusables) end
-  return (ok and type(items) == "table") and items or {}
+  if not st.opts.focusables then return {} end
+  local ok, items = pcall(st.opts.focusables)
+  local visible = {}
+  if ok and type(items) == "table" then
+    for _, item in ipairs(items) do
+      if shown(item.frame) then visible[#visible + 1] = item end
+    end
+  end
+  return visible
 end
 
 -- Bring a content piece into view (the header and tabs are fixed and never scroll).
@@ -339,14 +345,14 @@ function G.refresh(f)
   end
 end
 
--- Half a second after joining: no focus inside the frame means Forever didn't take it.
+-- Half a second after joining: if Forever is still on this frame, check that it found a usable control.
 local function checkFocus(f)
   local st = states[f]
-  if not (st and st.mode == "forever") or inCombat() or not shown(f) then return end
+  if not (st and st.mode == "forever") or inCombat() or not shown(f) or not isActive(f) then return end
   local nav = navigation()
   local ok, cur = false, nil
   if nav and type(nav.GetCurrentButton) == "function" then ok, cur = pcall(nav.GetCurrentButton, nav) end
-  if ok and inside(cur, f) then return end
+  if ok and cur and shown(cur) and inside(cur, f) and not cur.padSkip then return end
   local m = manager()
   if m and type(m.FrameHidden) == "function" then pcall(m.FrameHidden, m, f) end
   st.mode = nil

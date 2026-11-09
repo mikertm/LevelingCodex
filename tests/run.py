@@ -568,7 +568,7 @@ def main():
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questRecorder",
-                             "questController", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
+                             "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
                              "questWetlands", "questWetlandsTravel",
