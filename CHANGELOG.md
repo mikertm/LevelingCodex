@@ -1,6 +1,7 @@
 # Leveling Codex
 
 ## Unreleased
+- Mining keeps Smelt Gold available through skill 184 and points to Thelgen Rock for early ore. Blacksmithing adds the Zephras Isle Journeyman trainer and camp objects, and explains how to check the Imperial Plate quest gate and use the vendor-plan fallback.
 - Clarified Enchanting trainer and formula sources, noted that the Greater Stamina shield formula binds on pickup, and added Enchanting camp objects. Herbalism lists Felwood as a reported late route and flags conflicting Dreamfoil cutoffs and Zephras Isle trainer listings.
 - New: **Herbalism guide, 1-300**, in the Professions tab: seven skill bands with every standard herb through Black Lotus, its yellow, green and grey cutoffs, and where to find it (Alliance, Horde and Zephras Isle zones), trainer steps at 1, 50, 125 and 200 and the Incense Candle, Greenhouse and Seed Hybridizer camp objects. Skill-up cards announce a NEW HERB and the next training. Herb colours and zones come from the Forever object pages (the game files don't tie herbs to nodes), so the audit lists what to confirm in game.
 - The Professions tab's switch now shows only the professions you've learned, and updates as you learn or unlearn one. If the Skills heading is collapsed in the character window it tells you to expand it.

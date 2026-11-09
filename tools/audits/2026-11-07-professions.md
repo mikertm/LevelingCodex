@@ -123,6 +123,14 @@ per craft when not 1: none in Mining or Blacksmithing, so the craft counts hold)
     text adds "and gives the Lodestone's attack power".
   - Molten Foundry: source adds "(where it drops isn't known yet)"; text adds the Lodestone bonus.
 
+## Follow-up audit, 8 Nov 2026
+
+- Smelt Gold turns yellow at 170, green at 177 and grey at 185. The Mithril step now keeps the recipe in the crafting hint until grey. Thelgen Rock in the Wetlands is listed as an early Tin and Incendicite route. [Icy Veins Mining](https://www.icy-veins.com/wow-forever/mining-leveling-guide)
+- WoW-Professions reports skill-only Mining ranks. Published guides disagree on character levels, so the existing reminder thresholds are provisional. Check a full trainer at 50, 125 and 200 skill below the displayed character levels. [WoW-Professions trainers](https://www.wow-professions.com/forever/mining-trainers) and [60.tools Mining](https://www.60.tools/guides/mining-leveling-guide)
+- Daeann Steelwind in Valanaar teaches Journeyman Blacksmithing. The Iron Buckle step now spells out the tradeoff between its green points and the orange Bronze Warhammer alternative. [Wowhead Zephras Isle overview](https://www.wowhead.com/forever/guide/zephras-isle-zone-overview)
+- Check A Blue Light Bargain at skill 240 and level 50 before buying materials for Imperial Plate. Ebon Shiv can take the player to 270 if the quests are locked. Equip Spectral Essence to see Magnus Frostwake in Caer Darrow. Bold Dirk from Pexmit in Mount Hyjal can take the player from 270 to 300. [WoW-Professions vendor guide](https://www.wow-professions.com/forever/npc/magnus-frostwake) and [Wowhead Bold Dirk](https://www.wowhead.com/forever/spell=1252365/bold-dirk)
+- Added Sharpening Wheel at 20 (trainer), Anvil at 140 (Gilnid in The Deadmines), and Master Forge at 300 (blueprint drop source unconfirmed). [Wowhead camp guide](https://www.wowhead.com/forever/guide/camping-overview-unlock-rewards) and [Blueprint: Anvil](https://www.wowhead.com/forever/item=273086/blueprint-anvil)
+
 ## Still open (check in game)
 
 - **Learn levels the sources disagree on**: Runed Copper Belt (game files 80, Wowhead 45), Rough Bronze

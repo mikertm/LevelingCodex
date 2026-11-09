@@ -162,7 +162,14 @@ local function renderer(_, snapshot)
     if due then
       top = y
       y = y + 12
-      if due == "train" then
+      if P.levelGatesUnconfirmed then
+        local title = due == "cap" and "AT YOUR CAP" or "CHECK " .. string.upper(nextTier.name)
+        T(title, 16, y, W - 32, "label", C.gold)
+        y = y + 18
+        y = y + T("Ask about " .. nextTier.name .. " at skill " .. nextTier.skill .. " to raise your cap to " .. nextTier.cap ..
+          ". Character-level requirements are unconfirmed. " .. plain(nextTier.where) .. ".",
+          16, y, W - 32, "body", C.light) + 10
+      elseif due == "train" then
         T("TRAIN " .. string.upper(nextTier.name), 16, y, W - 32, "label", C.gold)
         y = y + 18
         y = y + T(plain(nextTier.where) .. ". Needs skill " .. nextTier.skill .. " and level " .. nextTier.level ..

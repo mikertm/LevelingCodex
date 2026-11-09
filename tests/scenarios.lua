@@ -2828,6 +2828,10 @@ function S.craftSmeltingCases()
   t = at(145, { { "Smelt Copper", "trivial", 9 }, { "Smelt Bronze", "trivial", 1 }, { "Smelt Silver", "trivial", 3 },
                 { "Smelt Iron", "trivial", 5 } })
   check(t:find("no points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
+  t = at(184, { { "Smelt Gold", "easy", 3 } })
+  check(t:find("Smelt Gold") and t:find("chance of a point"), "184: Gold still gives points")
+  t = at(185, { { "Smelt Gold", "trivial", 3 } })
+  check(t:find("no points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
 end
