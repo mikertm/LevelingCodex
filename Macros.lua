@@ -12,6 +12,7 @@ local pending
 -- Exact bodies from before the Warrior priority update. Their names stay on existing bars.
 local warriorLegacyBodies = {
   Fight = {
+    "#showtooltip Sunder Armor\n/startattack [harm,nodead]\n/cast [harm,nodead] Sunder Armor",
     "#showtooltip\n/startattack\n/cast [nocombat] Charge\n" ..
       "/castsequence [combat] reset=target Rend, Heroic Strike, Heroic Strike, Heroic Strike",
     "#showtooltip\n/startattack\n/cast [nocombat,nostance:1] Battle Stance\n/cast [nocombat] Charge\n" ..
@@ -25,9 +26,14 @@ local warriorLegacyBodies = {
     "#showtooltip\n/startattack\n/cast [combat,stance:1] Defensive Stance\n" ..
       "/castsequence [combat] reset=target Thunder Clap, Sunder Armor, Cleave, Sunder Armor, Sunder Armor",
   },
-  ["Block & Revenge"] = { "#showtooltip\n/startattack\n/castsequence reset=6/target/combat Shield Block, Revenge" },
+  ["Block & Revenge"] = {
+    "#showtooltip\n/startattack\n/castsequence reset=6/target/combat Shield Block, Revenge",
+    "#showtooltip Shield Block\n/cast [stance:2] Shield Block",
+  },
   ["Rage up"] = { "#showtooltip\n/castsequence reset=60 Bloodrage, Battle Shout" },
   Panic = { "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall" },
+  Taunt = { "#showtooltip Taunt\n/cast [stance:2,harm,nodead] Taunt" },
+  ["Shield Wall"] = { "#showtooltip Shield Wall\n/cast [stance:2] Shield Wall" },
 }
 
 local function trim(s) return (tostring(s or ""):gsub("%s+$", "")) end
