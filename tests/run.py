@@ -569,9 +569,9 @@ def main():
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questRecorder",
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
-                             "questBind", "questGossip", "questFlights", "questDuskwood", "questItem",
+                             "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
-                             "questWetlands", "questWetlandsTravel",
+                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
                              "questDetour", "questCrossZoneResume", "questAlternateRoutes", "questWestfallDetour"):

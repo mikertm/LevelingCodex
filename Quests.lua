@@ -704,12 +704,16 @@ function Q.text(step)
   end
   if step.type == "sethearth" or step.type == "hearth" then
     local bind = Q.bindLocation()
-    if not bind or not step.bind then return step.text end
-    if boundTo(step.bind) then
-      return step.text .. (step.type == "sethearth" and " Your hearthstone is already set to " .. bind .. "." or "")
+    if not step.bind then return step.text end
+    local atTarget = bind and bind:lower() == step.bind:lower()
+    if step.type == "sethearth" then
+      if not bind then return step.text end
+      if atTarget then return "Your hearthstone is already set to " .. bind .. "." end
+      return step.text .. " Your hearthstone is set to " .. bind .. ". Skip this step to keep your current bind."
     end
-    return step.text .. " Your hearthstone is set to " .. bind ..
-      (step.type == "hearth" and ", so travel there instead." or ". Next keeps it there.")
+    if atTarget then return step.text .. " Use your hearthstone if it's ready." end
+    if not bind then return step.text .. " Use your hearthstone if you're bound there and it's ready." end
+    return step.text .. " Your hearthstone is set to " .. bind .. "."
   end
   if step.type ~= "train" then return step.text end
   local visit = ns.trainAt(step.level or level) or ns.nextTrain((step.level or level) - 1)

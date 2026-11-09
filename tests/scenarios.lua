@@ -337,6 +337,7 @@ function S.questBind()
   click(frame, "Next")
   check(questText(frame, "Bind hearthstone"), "bind step follows the flight path")
   check(questText(frame, "Your hearthstone is set to Goldshire"), "bind step names the current bind")
+  check(not questText(frame, "Next keeps it there"), "binding explains the choice without the old Next wording")
   MOCK.bind = "Lakeshire"
   MOCK.event("HEARTHSTONE_BOUND")
   check(not questText(frame, "Bind hearthstone"), "binding at the inn finishes the step")
@@ -354,12 +355,17 @@ function S.questBind()
   check(not questText(win(), "Bind hearthstone"), "skipped bind steps leave the route list")
   local hearth
   for _, button in ipairs(MOCK.buttons(win())) do
-    if button:IsVisible() and button.tipTitle == "Hearth" then hearth = button; break end
+    if button:IsVisible() and button.tipTitle == "Return to Lakeshire" then hearth = button; break end
   end
   check(hearth, "hearth step is in the route list")
   hearth:Click()
-  check(questText(questViewer(), "Your hearthstone is set to Goldshire, so travel there instead"),
-    "hearth step points out a different bind")
+  check(questText(frame, "Your hearthstone is set to Goldshire") and questText(frame, "lake road west"),
+    "return step names the different bind and keeps the route to Lakeshire")
+  check(not questText(frame, "Hearth to Lakeshire"), "return step does not recommend a hearth to the wrong town")
+  MOCK.bind = "Lakeshire"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(questText(frame, "Use your hearthstone") and not questText(frame, "Your hearthstone is set to Goldshire"),
+    "return step offers the hearth when it leads to Lakeshire")
 end
 
 function S.questGossip()
@@ -437,6 +443,28 @@ function S.questDuskwoodHandoff()
   MOCK.level = 26
   MOCK.event("PLAYER_LEVEL_UP", 26)
   check(questText(frame, "return to Darkshire"), "at level 26 the route leads back to the flight path")
+end
+
+function S.questLakeshireHandoff()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 22, 1433, "Lakeshire"
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "lakeshire" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and step.quest ~= 20 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 20, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Blackrock Menace"), "resume at the last Lakeshire turn-in")
+  check(questText(frame, "Next section: Duskwood"), "the last Lakeshire step names the next section")
+  MOCK.questDone[20], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 20)
+  check(questText(frame, "Duskwood  21-27") and questText(frame, "Flight path - Darkshire"),
+    "the final turn-in leads straight to Duskwood")
 end
 
 function S.questItem()
@@ -559,6 +587,26 @@ function S.questWetlandsTravel()
   check(questText(frame, "Fly - Stormwind, Elwynn"), "from Duskwood the Wetlands section starts with the way there")
   click(frame, "Next")
   check(questText(frame, "Deeprun Tram"), "the tram step follows the flight")
+end
+
+function S.questWetlandsEnd()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1453
+  MOCK.questLog = { { questID = 98190, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - A Friend of the Family"), "resume at the final Wetlands turn-in")
+  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  MOCK.questDone[98190], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 98190)
+  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the guide shows its ending after the turn-in")
+  check(not findButton(frame, function(label) return label == "Next" end), "the ending has no dead Next button")
+  click(frame, "Hide")
+  click(win(), "Show step window")
+  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the end card can be reopened")
+  click(frame, "Back")
+  check(questText(frame, "Turn in - A Friend of the Family"), "Back can review the final step")
 end
 
 -- Each Alliance race starts in its own zone at level 1.
@@ -762,11 +810,12 @@ function S.questDetour()
   MOCK.questDone[999101], MOCK.questDone[999102], MOCK.questDone[999103] = true, true, true
   MOCK.level = 16
   MOCK.event("QUEST_LOG_UPDATE")
-  check(questText(frame, "Section complete"), "an alternate ends at its own boundary")
+  check(questText(frame, "End of the alternate route"), "an alternate ends at its own boundary")
   click(frame, "Try Test outbound")
   check(questText(frame, "Continue along the shared route"), "the finished detour returns to the shared route")
   click(frame, "Next")
-  check(not frame:IsShown(), "the shared route does not continue into a detour")
+  check(frame:IsShown() and questText(frame, "End of the leveling guide"),
+    "the shared route ends without continuing into a detour")
 end
 
 function S.questCrossZoneResume()

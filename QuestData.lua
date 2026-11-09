@@ -272,7 +272,7 @@ local forest = {
   along(objective(47, fargodeep.x, fargodeep.y, "Finish collecting gold dust from the kobolds.", "10 Gold Dust"), 60),
   along(objective(60, fargodeep.x, fargodeep.y, "Loot kobolds for any Large Candles you still need.", "8 Large Candles"), 47),
   finish(87, bernice),
-  action("hearth", farley, "Hearth to Goldshire, or take the road north if your hearthstone is on cooldown.", { bind = "Goldshire" }),
+  action("hearth", farley, "Take the road north to Goldshire if you're walking.", { bind = "Goldshire" }),
   finish(62, dughan), accept(76, dughan), finish(91775, dughan), accept(91777, dughan),
   finish(47, remy), accept(40, remy), finish(40, dughan), accept(35, dughan),
   finish(60, pestle), accept(61, pestle), finish(107, pestle), accept(112, pestle),
@@ -310,7 +310,7 @@ local forest = {
   objective(91777, jasperlode.x, jasperlode.y, "With help, loot Geomancy from Geosculptor Yip and Arcane Explainer from Mother Fang. Use Next if the rares are unavailable.",
     "Geomancy for Curious Young Wizards", "Arcane Explainer: Magical Stuff in Simple Words"),
   finish(91723, azora.hamish, "Return west along the road to Hamish at the Tower of Azora."), accept(91724, azora.hamish),
-  action("hearth", farley, "Hearth to Goldshire for the next turn-ins.", { bind = "Goldshire" }),
+  action("hearth", farley, "The next turn-ins are in Goldshire.", { bind = "Goldshire" }),
   finish(39, dughan), accept(59, dughan), finish(76, dughan), accept(239, dughan),
   finish(99129, remy), accept(99130, remy), finish(112, pestle), accept(114, pestle),
   finish(114, maybell), finish(88, ma),
@@ -325,14 +325,14 @@ local forest = {
   objective(91725, 67.8, 43.5, "Look for the scattered enchanting supplies in the gnoll camps west of the lake.", "5 Stolen Enchanting Supplies"),
   finish(46, thomas), finish(59, azora.sara), finish(91732, azora.hagar),
   finish(91724, azora.hamish, "Follow the road west to the Tower of Azora."), finish(91725, azora.blixie),
-  action("hearth", farley, "Hearth to Goldshire, or follow the main road west.", { bind = "Goldshire" }),
+  action("hearth", farley, "Take the main road west to Goldshire if you're walking.", { bind = "Goldshire" }),
   action("train", nil, "Visit your class trainer and learn spells for level", { level = 10 }),
   finish(91777, paxton, "Return the two rare books to Paxton before heading on to Stormwind."),
   action("goto", at(nil, 34.7, 51), "Follow the road through the gates into Stormwind."),
   finish(61, at("Morgan Pestle", 63.2, 74.4, stormwind)),
   action("getfp", at("Dungar Longdrink", 71, 72.5, stormwind), "Learn the flight path from Dungar above the Trade District.",
     { flight = "Stormwind, Elwynn" }),
-  action("hearth", farley, "Hearth to Goldshire. If it is on cooldown, take the road back through the gates.", { bind = "Goldshire" }),
+  action("hearth", farley, "If you're walking, leave Stormwind through the main gates and follow the road to Goldshire.", { bind = "Goldshire" }),
   finish(239, rainer), accept(11, rainer),
   accept(176, at("Wanted Poster", 24.55, 74.69)),
   along(objective(11, 26.3, 91.3, "Loot armbands from Riverpaw gnolls as you clear the camps on the way to Hogger.",
@@ -541,7 +541,7 @@ local west = {
   accept(6181, lewis), finish(6181, thor),
   taxi("getfp", thor, "Sentinel Hill, Westfall", "Learn the Sentinel Hill flight path from Thor."),
   accept(6281, thor), accept(153, galiaan), accept(92742, alba), accept(92744, alba),
-  action("sethearth", wf("Innkeeper Heather", 52.9, 53.7), "Bind at Sentinel Hill for the Westfall loops.", { bind = "Sentinel Hill" }),
+  action("sethearth", wf("Innkeeper Heather", 52.9, 53.7), "Bind your hearthstone with Innkeeper Heather at Sentinel Hill.", { bind = "Sentinel Hill" }),
   along(action("goto", wf(nil, 46.08, 38.14), "Work north through the farms to the Molsen Farm well."), 102, 92742),
   along(withItem("Well Water Sample Kit", objectiveAt(102, wf(nil, 46.5, 38.6),
     "Loot paws from Riverpaw gnolls and sample the Molsen Farm well at 46.1, 38.1.", "8 Gnoll Paws")), 92742),
@@ -602,7 +602,7 @@ local west = {
   finish(142, gryan), accept(155, traitor),
   objectiveAt(155, traitor, "Stay with the Defias Traitor from the tower to Moonbrook. Protect him until the escort gets credit.", "Defias hideout found"),
   finish(155, gryan),
-  action("grind", wf(nil, 46, 68), "Reach level 17 for the next section. Try an alternate route, finish Westfall quests or clear nearby Defias.",
+  action("grind", wf(nil, 46, 68), "Reach level 17 before heading to Lakeshire. Finish Westfall quests, clear nearby Defias, or try an alternate route.",
     { level = 17, suggest = { "loch-modan", "darkshore" } }),
   accept(166, gryan), accept(214, riell),
   deadmines(action("dungeon", wf(nil, 42.5, 71.7), "With a group, enter the mine through the large Moonbrook building. Use Next at the mine entrance.",
@@ -627,7 +627,7 @@ local west = {
 
 local lakeshire = {
   taxi("getfp", ariena, "Lakeshire, Redridge", "Talk to Ariena on the south side of the bridge to learn the Lakeshire flight path."),
-  action("sethearth", rr("Innkeeper Brianna", 22.0, 44.5), "Bind your hearthstone in the Lakeshire inn.", { bind = "Lakeshire" }),
+  action("sethearth", rr("Innkeeper Brianna", 22.0, 44.5), "Bind your hearthstone with Innkeeper Brianna in Lakeshire.", { bind = "Lakeshire" }),
   accept(129, darcy), accept(92, breanna), accept(127, baren),
   accept(3741, rr("Shawn", 24.23, 53.64)),
   accept(125, oslow), accept(118, verner), accept(120, solomon),
@@ -681,9 +681,8 @@ local lakeshire = {
   along(objectiveAt(92, rr(nil, 28.2, 76.5),
     "Finish any missing goulash ingredients south of the lake. Hunt Dire Condors, Great Goretusks and tarantulas as needed.",
     "5 Tough Condor Meat", "5 Great Goretusk Snouts", "5 Crisp Spider Meat"), 122),
-  action("hearth", rr("Innkeeper Brianna", 22, 44.5), "Hearth to Lakeshire for the final turn-ins, or follow the lake road west.", { bind = "Lakeshire" }),
+  action("hearth", rr("Innkeeper Brianna", 22, 44.5), "Return to Lakeshire for the turn-ins. If you're walking, follow the lake road west.", { bind = "Lakeshire" }),
   finish(92, breanna), finish(122, verner), finish(98387, marris), finish(20, marris),
-  action("note", nil, "This route ends in Lakeshire. Review earlier Westfall quests from the Quests tab if you want to catch up."),
 }
 
 local function dw(name, x, y) return at(name, x, y, duskwood) end
@@ -708,8 +707,8 @@ local darkshireHearth = { bind = "Darkshire" }
 -- Three loops out of Darkshire: west to Sven's Camp, then the Raven Hill Cemetery twice.
 local dusk = {
   taxi("getfp", felicia, "Darkshire, Duskwood",
-    "From Lakeshire take the road west to Three Corners and south into Duskwood, then east to Darkshire. Learn the flight path from Felicia Maline."),
-  action("sethearth", trelayne, "Bind your hearthstone at the Scarlet Raven Tavern. Every Duskwood loop ends back here.", darkshireHearth),
+    "Learn the flight path from Felicia Maline in Darkshire. From Lakeshire, head west to Three Corners, then south into Duskwood and east to town."),
+  action("sethearth", trelayne, "Bind your hearthstone with Innkeeper Trelayne at the Scarlet Raven Tavern.", darkshireHearth),
   accept(163, elaine), accept(164, elaine), accept(165, elaine),
   accept(56, althea), accept(101, eva), accept(96139, sirra),
   along(objectiveAt(56, dw(nil, 79.5, 70.5), "Go south to Tranquil Gardens Cemetery. Loot Skeleton Fingers from the Warriors and Mages for Madame Eva.",
@@ -737,7 +736,7 @@ local dusk = {
   action("goto", sven, "Take the west road past Raven Hill to Sven's Camp."),
   finish(230, sven), accept(262, sven), finish(226, lars),
   finish(157, abercrombie), accept(158, abercrombie),
-  action("hearth", trelayne, "Hearth to Darkshire, or walk the road east if it is on cooldown.", darkshireHearth),
+  action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
   finish(158, smitts), accept(156, smitts),
   finish(262, eva), accept(265, eva), finish(265, daltry), accept(266, daltry), finish(266, smitts), accept(453, smitts),
 
@@ -749,14 +748,14 @@ local dusk = {
   objectiveAt(101, dw(nil, 23.7, 36.5), "Loot fangs from Flesh Eaters and Rotted Ones and any missing fingers from skeletons. Hunt spiders in the western woods for any missing venom.",
     "10 Ghoul Fangs", "10 Skeleton Fingers", "5 Vials of Spider Venom"),
   finish(268, sven),
-  action("hearth", trelayne, "Hearth to Darkshire if it is ready, otherwise walk the road east.", darkshireHearth),
+  action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
   finish(57, althea), finish(101, eva),
   finish(156, smitts), accept(159, smitts),
   finish(159, abercrombie, "Take the Zombie Juice back west to Abercrombie's shack."), accept(133, abercrombie),
   objectiveAt(133, dw(nil, 23.8, 36.5), "Loot Ghoul Ribs from the ghouls at the north end of the cemetery.", "7 Ghoul Ribs"),
   finish(133, abercrombie),
   action("grind", dw(nil, 23.7, 36.5), "Reach level 26 for Wetlands. Finish open Duskwood quests or run the Stockade with a group. Use Next to travel early if ready.", { level = 26 }),
-  action("goto", felicia, "Hearth or take the east road to return to Darkshire for the flight to Stormwind."),
+  action("goto", felicia, "Take the east road to return to Darkshire for the flight to Stormwind. You can hearth if you're bound there."),
 }
 
 local function wl(name, x, y) return at(name, x, y, wetlands) end
@@ -841,11 +840,10 @@ local wet = {
   objectiveAt(470, wl(nil, 44.9, 26.1), "Kill the oozes at Ironbeard's Tomb to the north until one drops Sida's bag.", "Sida's Bag"),
   objectiveAt(98282, wl(nil, 48.7, 62.4), "Collect an Unruptured Stalker Gland from the stalkers in Thelgen Rock, the cave south of the road."),
   finish(275, rethiel),
-  action("hearth", helbrek, "Hearth to Menethil Harbor.", menethilHearth),
+  action("hearth", helbrek, "The next turn-ins are in Menethil Harbor.", menethilHearth),
   finish(306, tarrel), finish(464, stoutfist), finish(98221, stoutfist), finish(470, sida), finish(98282, caitlin),
   taxi("fly", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Fly to Ironforge. If you have reached level 30, train your new spells here."),
   finish(98190, sw("Highlord Bolvar Fordragon", 80.21, 38.35), "Take the Deeprun Tram to Stormwind and give the statuette to Highlord Bolvar in Stormwind Keep."),
-  action("note", nil, "The route continues past level 30 in a later update. Duskwood's level 28-30 quests and the Wetlands quests left here are still worth doing."),
 }
 
 -- Dwarf and Gnome start, levels 1-12. Source notes: tools/audits/2026-11-08-dun-morogh.md.
@@ -1125,15 +1123,14 @@ local dm = (function()
     finish(96390, farsen), finish(96391, farsen), finish(95212, rudra),
     action("grind", dm(nil, 71.4, 53.9), "Reach level 12 for Westfall, or head east into Loch Modan. If staying here, finish available solo quests before grinding.",
       { level = 12, suggest = { "loch-modan" } }),
-    action("hearth", belm, "Hearth to Kharanos, or take the road west.", kharanosHearth),
+    action("hearth", belm, "Take the road west to Kharanos if you're walking.", kharanosHearth),
     action("train", nil, "Train spells for level", { level = 12 }),
     finish(291, at("Senator Barin Redstone", 39.55, 57.49, ironforge), "Follow the road north into Ironforge and find Senator Barin Redstone in the High Seat."),
     taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
     action("goto", nil, "Take the Deeprun Tram from Tinker Town to Stormwind for Westfall. Use Next when you arrive.",
       { suggest = { "loch-modan" } }),
     taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the Stormwind flight path from Dungar above the Trade District."),
-    action("note", nil, "Leave by the main gate and follow the road through Goldshire. Turn west at the bridge into Westfall."),
-    action("goto", at(nil, 59.95, 19.36, westfall), "Follow the west road through Elwynn into Westfall and on to the Furlbrow farm."),
+    action("goto", at(nil, 59.95, 19.36, westfall), "Leave Stormwind by the main gate and follow the road through Goldshire. Cross the bridge west into Westfall and continue to the Furlbrow farm."),
   }
 
   local sources = {
@@ -1485,7 +1482,7 @@ zi.valanaar = {
   finish(92685, zi.aamelia), accept(92693, zi.aamelia),
   objectiveAt(92693, zi.aamelia, "Talk to Aamelia and help her beat Ferauu the Bludgeon."),
   finish(92693, zi.aamelia), accept(92703, zi.aamelia),
-  action("hearth", zi.donaal, "Hearth to Valanaar.", zi.hearth),
+  action("hearth", zi.donaal, "Head back to the inn in Valanaar.", zi.hearth),
   finish(92703, zi.alvarion),
   action("train", nil, "Train at your class trainer in Valanaar for level", { level = 10 }),
   finish(92850, zi.fillion), accept(99260, zi.fillion),
@@ -1559,7 +1556,7 @@ zi.valanaar = {
   finish(93165, zi.vayn),
   objectiveAt(94489, zi.vayn, "Enter the Nightfang Den. Heal the druids inside and find Jorel Windsinger."),
   finish(94488, zi.elegael), finish(94489, zi.elegael), finish(94490, zi.elegael), accept(94491, zi.elegael),
-  action("hearth", zi.donaal, "Hearth to Valanaar.", zi.hearth),
+  action("hearth", zi.donaal, "Head back to the inn in Valanaar.", zi.hearth),
   action("train", nil, "Train at your class trainer in Valanaar for level", { level = 12 }),
   finish(93317, zi.nyalah), finish(94003, zi.seena), finish(94491, zi.lotheluum),
   finish(94896, zi.ealaane), finish(94897, zi.ealaane),
@@ -1589,7 +1586,6 @@ zi.valanaar = {
   taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the flight path from Dungar Longdrink above the Trade District."),
   finish(94947, zi.bolvar, "Report to Highlord Bolvar Fordragon in the throne room at Stormwind Keep."),
   accept(98021, zi.bolvar),
-  action("note", nil, "Your hearthstone still points to Valanaar. Bind it at Sentinel Hill once you reach Westfall."),
   action("goto", at(nil, 59.95, 19.36, westfall), "Leave by the main gate, take the road through Goldshire and west across the bridge to the Furlbrow farm."),
 }
 
@@ -1867,7 +1863,7 @@ te.teldrassil = {
   objectiveAt(99053, te.lynessa, "Escort Sentinel Lynessa out of the den. Use Next if the escort fails.", "Lynessa escaped"),
   withItem(5621, objectiveAt(933, te.t(nil, 42.41, 67.07), "Go south to the Pools of Arlithrien and fill the Tourmaline Phial.", "Filled Tourmaline Phial")),
   withItem(5189, accept(930, te.t("Strange Fruited Plant", 42.61, 76.19), "Take the Glowing Fruit from the plant further south.")),
-  action("hearth", te.keldamyr, "Hearth to Dolanaar.", te.hearth),
+  action("hearth", te.keldamyr, "Head back to the inn in Dolanaar.", te.hearth),
   finish(487, te.amara), finish(483, te.athridas), finish(99053, te.kyra),
   finish(933, te.corithras), accept(7383, te.corithras),
   action("grind", te.t(nil, 53.4, 57.5), "If still under level 10, clear nightsabers and owls around Dolanaar.", { level = 10 }),
@@ -1916,7 +1912,7 @@ te.teldrassil = {
   finish(2518, te.amoora), accept(2520, te.amoora),
   withItem(8155, objectiveAt(2520, te.d(nil, 39.0, 85.0), "Place the spinnerets at the fountain inside the temple.", "Spinnerets placed")),
   finish(2520, te.amoora),
-  action("hearth", te.keldamyr, "Hearth to Dolanaar.", te.hearth),
+  action("hearth", te.keldamyr, "Head back to the inn in Dolanaar.", te.hearth),
   finish(99047, te.byancie), accept(99050, te.byancie),
   finish(7383, te.corithras), accept(935, te.corithras),
   finish(98403, te.tallonkai),
@@ -2370,7 +2366,7 @@ local ds = (function()
     objectiveAt(98042, shore(nil, 38.7, 85.6),
       "Loot a Peerless Eye from a Twilight Disciple or Twilight Thug. Pull from the edge of the camp.", "Peerless Eye"),
     finish(950, onu), accept(951, onu),
-    action("hearth", inn, "Hearth to Auberdine if bound there and ready. Otherwise follow the road back north and use Next on arrival.", hearth),
+    action("hearth", inn, "Follow the road north to Auberdine if you're walking.", hearth),
     finish(986, terenthis), accept(993, terenthis),
     finish(98042, thundris), finish(1138, gubber),
     finish(4728, gwennyth), finish(4730, gwennyth), finish(4731, gwennyth),
@@ -2400,7 +2396,7 @@ local ds = (function()
     finish(2098, gelkak),
     objectiveAt(87760, shore(nil, 49.4, 14.4),
       "Swim out to the rock spire off the north shore. Kill a Stormscale Beastmistress for her rod and surface for air between pulls.", "Rod of Deep Dominion"),
-    action("hearth", inn, "Hearth to Auberdine if ready, or walk back by the road. Use Next once you are back.", hearth),
+    action("hearth", inn, "Follow the road back to Auberdine if you're walking.", hearth),
     finish(87760, gwennyth), finish(4763, thundris), finish(2139, tharnariun),
 
     -- Close out the grove turn-ins and the safer Volcor resolution.

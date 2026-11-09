@@ -1,12 +1,13 @@
 # Leveling Codex
 
-## Unreleased
+## v0.13.0
 
 ### Alliance quest guide
 
 - Added an in-game **Alliance leveling guide for levels 1–30**. It starts in Northshire, Coldridge Valley, Shadowglen, or Zephras Isle according to your race, then follows Westfall, Lakeshire, Duskwood, and Wetlands. Loch Modan and Darkshore offer alternate routes, and Deadmines steps are optional.
 - Added class quest routes for abilities and milestones such as Hunter pets, Druid forms, Shaman totems, and class spells. Follow them from the Quests tab and return to your leveling route when finished.
 - Open the **Quests** tab or use `/codex quests` to browse routes and show the step window. The guide reads your quest log, tracks objectives and turn-ins, and can resume an active quest. Missed pickups stay available, and obsolete breadcrumb steps are skipped when you already have their follow-up.
+- The step window names the next zone at section handoffs and shows an end card after the last step. Hearthstone steps explain how to keep your current bind and how to reach the destination if you are bound elsewhere.
 - **Also on this loop** shows live progress for unfinished quests that share the current trip. It covers the four starter routes and loops such as Westfall's harvest fields, Redridge's goulash and Blackrock camps, Raven Hill's skeletons, and Wetlands' Razormaw and Angerfang quests.
 - The waypoint arrow shows distance on the current map and uses known routes or flight paths for cross-zone travel. It pauses during flights and loading, then recalculates after you arrive. The Westfall mine survey and Wetlands attack plans advance to the next unfinished objective. The Lake Everstill toolbox pin now marks the Sunken Chest.
 - Use the Quests tab to move between steps, pin the current step, or show and hide the overlay with a controller. The overlay leaves gameplay input available when the Codex closes. It also has a quest-item button with its own keybind and a completion sound. Settings cover the arrow, item button, class and dungeon steps, hearthstone binding, window lock, and sound.

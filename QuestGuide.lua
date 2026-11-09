@@ -5,7 +5,7 @@ local try = Q.try
 local viewer, arrow, header, title, detail, preview, arrowText, arrowArt, flatBackground, badge, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
-local suggestionButton
+local nextButton, pinButton, suggestionButton
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
@@ -110,11 +110,11 @@ local function makeViewer()
   end
   -- Keep controller focus in the Quests tab so the overlay can stay up during gameplay.
   button("Back", 12, 62, function() ns.moveQuestStep(true) end)
-  local nextButton = button("Next", 80, 62, function(_, mouse)
+  nextButton = button("Next", 80, 62, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  button("Pin", 148, 55, ns.pinQuestStep)
+  pinButton = button("Pin", 148, 55, ns.pinQuestStep)
   button("Quests", 209, 70, function() ns.openTab("quests") end)
   button("Hide", 285, 53, ns.hideQuestViewer)
   suggestionButton = button("", 16, 318, function() ns.followSuggestedQuestSection() end, 35)
@@ -176,6 +176,7 @@ local ACTION = { accept = "Accept", complete = "Complete", turnin = "Turn in", [
   boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note" }
 
 function Q.label(step)
+  if step.type == "hearth" and step.bind then return "Return to " .. step.bind end
   local verb = ACTION[step.type]
   local name = step.name or step.flight
   return name and (verb .. " - " .. name) or verb
@@ -303,11 +304,29 @@ updateItemButton = function()
   itemButton:Show()
 end
 
+local function previewText(row, i)
+  local upcoming = Q.upcoming(i)
+  local nextRow = upcoming[1]
+  if not nextRow then
+    if not row.section.side and Q.autoStep() == row.step then
+      return row.section.alternate and "Last step in this alternate route." or "Last step in this guide."
+    end
+    return ""
+  end
+  local heading = nextRow.section == row.section and "Next: " or ("Next section: " .. nextRow.section.title .. "\n")
+  local text = heading .. Q.label(nextRow.step)
+  local second = upcoming[2]
+  if second and second.section == nextRow.section then text = text .. "\n" .. Q.label(second.step) end
+  return text
+end
+
 function ns.questRefresh()
   local row, i = Q.current()
   local suggestion = Q.suggested()
+  local _, _, _, _, selected = Q.rows()
+  local sec = row and row.section or selected
   completionSound(row)
-  if not dismissed and (row or suggestion) then
+  if not dismissed and sec then
     painting = true
     if not viewer then makeViewer() end
     if theme ~= ns.themeVersion then
@@ -320,25 +339,27 @@ function ns.questRefresh()
       preview:SetTextColor(ns.rgba(backdrop and C.dim or C.inkSoft))
       theme = ns.themeVersion
     end
-    local _, _, _, _, selected = Q.rows()
-    local sec = row and row.section or selected
     header:SetText(sec.title .. "  " .. sec.levels[1] .. "-" .. sec.levels[2])
     badge:SetShown(not sec.verified)
     title:SetWidth(sec.verified and 318 or 252)
-    title:SetText(row and Q.label(row.step) or "Section complete")
-    detail:SetText(row and Q.detail(row.step, row.requiredFor) or "Choose a suggested section or open Quests.")
+    if row then
+      title:SetText(Q.label(row.step))
+      detail:SetText(Q.detail(row.step, row.requiredFor))
+    else
+      title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
+      detail:SetText(suggestion and "Try the suggested section below, or open Quests to choose another."
+        or "Open Quests to revisit a section or check for missed quests.")
+    end
     -- Stack title, detail and preview by their real heights so long lines never overlap.
     local detailY = 28 + math.max(14, title:GetStringHeight()) + 5
     detail:ClearAllPoints()
     detail:SetPoint("TOPLEFT", 16, -detailY)
-    local nextLabels = {}
-    if row then
-      for _, nextRow in ipairs(Q.upcoming(i)) do nextLabels[#nextLabels + 1] = Q.label(nextRow.step) end
-    end
-    preview:SetText(#nextLabels > 0 and ("Next: " .. table.concat(nextLabels, "\n")) or "")
+    preview:SetText(row and previewText(row, i) or "")
     local previewY = detailY + detail:GetStringHeight() + 8
     preview:ClearAllPoints()
     preview:SetPoint("TOPLEFT", 16, -previewY)
+    nextButton:SetShown(row ~= nil)
+    pinButton:SetShown(row ~= nil)
     suggestionButton:SetShown(suggestion ~= nil)
     if suggestion then
       suggestionButton.codexLabel = "Try " .. suggestion.title
