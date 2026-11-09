@@ -9,6 +9,27 @@ local _, ns = ...
 -- Set up while in combat: "full" (asked for by the player) or "refresh" (after a level-up).
 local pending
 
+-- Exact bodies from before the Warrior priority update. Their names stay on existing bars.
+local warriorLegacyBodies = {
+  Fight = {
+    "#showtooltip\n/startattack\n/cast [nocombat] Charge\n" ..
+      "/castsequence [combat] reset=target Rend, Heroic Strike, Heroic Strike, Heroic Strike",
+    "#showtooltip\n/startattack\n/cast [nocombat,nostance:1] Battle Stance\n/cast [nocombat] Charge\n" ..
+      "/cast [combat,stance:1] Defensive Stance\n/castsequence [combat,stance:2] reset=target Rend, Sunder Armor, Sunder Armor",
+    "#showtooltip\n/startattack\n/cast [nocombat] Charge\n/cast [nostance:2] Defensive Stance\n" ..
+      "/castsequence [combat] reset=target Rend, Sunder Armor, Sunder Armor",
+    "#showtooltip\n/startattack\n/cast [nocombat] Charge\n/cast [nostance:2] Defensive Stance\n" ..
+      "/castsequence [combat] reset=target Shield Slam, Rend, Sunder Armor, Sunder Armor, Shield Slam, Sunder Armor, Sunder Armor, Sunder Armor",
+  },
+  ["Fight pack"] = {
+    "#showtooltip\n/startattack\n/cast [combat,stance:1] Defensive Stance\n" ..
+      "/castsequence [combat] reset=target Thunder Clap, Sunder Armor, Cleave, Sunder Armor, Sunder Armor",
+  },
+  ["Block & Revenge"] = { "#showtooltip\n/startattack\n/castsequence reset=6/target/combat Shield Block, Revenge" },
+  ["Rage up"] = { "#showtooltip\n/castsequence reset=60 Bloodrage, Battle Shout" },
+  Panic = { "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall" },
+}
+
 local function trim(s) return (tostring(s or ""):gsub("%s+$", "")) end
 
 local function macroIndex(name)
@@ -22,21 +43,30 @@ local function macroBody(index)
   if ok then return body end
 end
 
--- Does this existing macro look like one the Codex made?
-local function isOurs(index, name)
-  local made = ns.charDB().made
-  if made and made[name] then return true end
-  local body = macroBody(index)
+local function matchesGuideBody(name, body)
   if not body or not ns.D then return false end
   body = trim(body)
   for _, m in ipairs(ns.D.macros) do
     if m.name == name and trim(m.body) == body then return true end
   end
+  local legacy = ns.D == LevelingCodexData.WARRIOR and warriorLegacyBodies[name]
+  if legacy then
+    for _, oldBody in ipairs(legacy) do
+      if oldBody == body then return true end
+    end
+  end
   return false
+end
+
+-- Does this existing macro look like one the Codex made?
+local function isOurs(index, name)
+  local made = ns.charDB().made
+  if made and made[name] then return true end
+  return matchesGuideBody(name, macroBody(index))
 end
 ns.isOurMacro = isOurs
 
--- How many of the guide's macros exist on this character with one of the guide's bodies.
+-- How many of the guide's macros exist with a current or previous Codex body.
 function ns.countOurMacros()
   if not ns.D then return 0 end
   local n, seen = 0, {}
@@ -44,12 +74,7 @@ function ns.countOurMacros()
     if not seen[m.name] then
       seen[m.name] = true
       local i = macroIndex(m.name)
-      if i > 0 then
-        local body = macroBody(i)
-        for _, v in ipairs(ns.D.macros) do
-          if v.name == m.name and body and trim(v.body) == trim(body) then n = n + 1; break end
-        end
-      end
+      if i > 0 and matchesGuideBody(m.name, macroBody(i)) then n = n + 1 end
     end
   end
   return n

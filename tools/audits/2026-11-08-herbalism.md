@@ -40,7 +40,7 @@ The four numbers mark minimum skill, yellow, green and gray. The zone column is 
 | [Black Lotus](https://www.wowhead.com/forever/object=176589) | [13468](https://www.wowhead.com/forever/item=13468) | 300 / 325 / 350 / 400 | Eastern Plaguelands, Burning Steppes, Winterspring, Silithus |
 
 - The Dreamfoil overview gives 270/290/315/370. Icy Veins gives 270/295/320/370. The guide uses the earlier cutoffs so it does not overstate the chance of a point.
-- Several guides recommend Felwood for the last band. The Dreamfoil, Mountain Silversage and Plaguebloom object maps list Eastern and Western Plaguelands and omit Felwood. Eastern Plaguelands also has Golden Sansam, so the route works there at the handoff.
+- Several guides recommend Felwood for the last band. The Dreamfoil, Mountain Silversage and Plaguebloom object maps list Eastern and Western Plaguelands and omit Felwood. Eastern Plaguelands also has Golden Sansam, so the route works there at the handoff. The Codex mentions Felwood as a reported alternative pending a live spawn check.
 - The starter object maps include Zephras Isle. Mageroyal appears on its own island map even though the overview omits the island for that herb. Riverglades appears on the maps for Stranglekelp, Wild Steelbloom, Kingsblood, Liferoot, Goldthorn and Khadgar's Whisker.
 - Seeds and scarce drops are distinct from the standard gathering nodes. The client's item records include Marefoil, Demonsage and Death Lotus. The overview reports a Death Lotus chance with the Lotus Claw enchant in Hyjal. Locations and skill requirements for any dedicated nodes remain open.
 
@@ -55,7 +55,7 @@ The four numbers mark minimum skill, yellow, green and gray. The zone column is 
 | [Expert](https://www.wowhead.com/forever/spell=3570) | 125 | 225 | Tannysa, Jandi, Flora Silverwind |
 | [Artisan](https://www.wowhead.com/forever/spell=11993) | 200 | 300 | Tannysa, Jandi, Flora Silverwind |
 
-The Forever taught-by lists include both Zephras Isle trainers for the first two tiers and omit them from Expert and Artisan. Some guides list them for all four. The Codex recommends mainland trainers from Expert onward. The client has no character-level requirements in `SpellLevels` for the four rank spells. The Forever trainer guide also reports no character-level gate, while some guide text still refers to level requirements. [Forever skill lists](https://www.wowhead.com/forever/skill=182/herbalism) · [WoW-Professions trainer requirements](https://www.wow-professions.com/forever/herbalism-trainers) · [Icy Veins trainer lists](https://www.icy-veins.com/wow-forever/herbalism-leveling-guide)
+The Forever taught-by lists include both Zephras Isle trainers for the first two tiers and omit them from Expert and Artisan. Some guides list them for all four. The Codex suggests checking on the island first and gives mainland trainers as a fallback for Expert and Artisan. The client has no character-level requirements in `SpellLevels` for the four rank spells. The Forever trainer guide also reports no character-level gate, while some guide text still refers to level requirements. [Forever skill lists](https://www.wowhead.com/forever/skill=182/herbalism) · [WoW-Professions trainer requirements](https://www.wow-professions.com/forever/herbalism-trainers) · [Icy Veins trainer lists](https://www.icy-veins.com/wow-forever/herbalism-leveling-guide)
 
 ## Camp objects
 
