@@ -998,8 +998,10 @@ renderers.macros = function(V)
     local top = y
     y = y + 12
     icon(m.icon, 14, y, 36, m.name, macroTip(m))
-    T(m.name, 60, y, 300, "head", C.gold)
-    T("Levels " .. m.lo .. "-" .. m.hi, 60, y + 22, 200, "small", C.dim)
+    T(plain(m.title or m.name), 60, y, 300, "head", C.gold)
+    local details = "Levels " .. m.lo .. "-" .. m.hi
+    if m.title and m.title ~= m.name then details = details .. "  -  Esc > Macros: " .. m.name end
+    T(details, 60, y + 22, W - 150, "small", C.dim)
     btn("Copy", W - 78, y + 6, 64, function() ns.showMacroCopy(m) end, false,
       "Shows the macro text ready to copy, for making it yourself in Esc > Macros.")
     y = y + 46

@@ -1,6 +1,8 @@
 # Leveling Codex
 
 ## Unreleased
+- **Warrior macros and tanking priorities.** Thunder Clap gets its own button from level 6, using the existing Fight pack slot. Fight uses Heroic Strike at levels 1–9 and Sunder Armor from 10. Revenge, Shield Slam, Shield Block, interrupts and defensives can be used independently. Run `/codex macros` to update existing Codex macros and add the new buttons.
+- **Warrior guide.** The leveling tips explain how to pool Rage for Clap, spread threat on packs, and use Victory Rush when lit. Tactical Mastery retains 10 Rage baseline, with up to 15 more from the Arms talent.
 - **Mining**: The crafting hint suggests Smelt Gold through skill 184. Added Thelgen Rock in the Wetlands for Tin and Incendicite. The guide shows the skill needed for each rank and marks the character-level requirements as unconfirmed.
 - **Blacksmithing**: Added Daeann Steelwind in Valanaar for Journeyman, plus the Sharpening Wheel, Anvil and Master Forge camp objects. The guide explains Iron Buckle's green skill-ups and the Bronze Warhammer alternative. Check Derotain's Imperial Plate quest at skill 240 before buying materials. If it's locked, the guide covers Ebon Shiv with Spectral Essence and Bold Dirk to 300.
 - **Enchanting**: Added Annora as the source for Bracer - Greater Strength and Kania as an option for Lesser Mana Oil. The guide flags Shield - Greater Stamina as a limited-stock, bind-on-pickup formula and lists the Enchanted Lute, Arcane Salvager and Arcane Forge camp objects.

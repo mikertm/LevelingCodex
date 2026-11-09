@@ -861,6 +861,69 @@ function S.macroAutoUpdate()
   if toast() then MOCK.advance(12) end
 end
 
+local function installedMacroBody(name)
+  local macro = MOCK.macros[GetMacroIndexByName(name)]
+  return macro and macro.body
+end
+
+function S.warriorPackMacros()
+  MOCK.level = 1
+  slash("macros")
+  check((installedMacroBody("Fight") or ""):find("Heroic Strike", 1, true), "Warrior has a starting attack macro")
+  check(not installedMacroBody("Fight pack"), "no Clap macro before training level")
+
+  MOCK.level = 6
+  slash("macros")
+  check(installedMacroBody("Fight pack") == "#showtooltip Thunder Clap\n/cast Thunder Clap",
+    "Thunder Clap is a standalone cast as soon as it can be trained")
+
+  MOCK.level = 20
+  slash("macros")
+  for name, spell in pairs({
+    Fight = "Sunder Armor", Revenge = "Revenge", Cleave = "Cleave", Taunt = "Taunt",
+    ["Shield Bash"] = "Shield Bash", ["Block & Revenge"] = "Shield Block", ["Victory Rush"] = "Victory Rush",
+  }) do
+    local body = installedMacroBody(name)
+    check(body and body:match("\n/cast [^\n]*" .. spell .. "$") and not body:find("/castsequence", 1, true),
+      name .. " makes " .. spell .. " available independently")
+  end
+  check(not installedMacroBody("Shield Slam"), "no Shield Slam macro before its talent level")
+
+  MOCK.level = 40
+  slash("macros")
+  check(installedMacroBody("Fight"):match("\n/cast [^\n]*Sunder Armor$"), "Sunder stays usable when Shield Slam unlocks")
+  check((installedMacroBody("Shield Slam") or ""):match("\n/cast [^\n]*Shield Slam$"), "Shield Slam has its own button")
+  check(installedMacroBody("Panic"):match("\n/cast Last Stand$"), "Last Stand has its own button")
+  check((installedMacroBody("Shield Wall") or ""):match("\n/cast [^\n]*Shield Wall$"), "Shield Wall has its own button")
+end
+
+function S.warriorMacroUpgrade()
+  LevelingCodexCharDB.made = nil
+  local pack = "#showtooltip\n/startattack\n/cast [combat,stance:1] Defensive Stance\n" ..
+    "/castsequence [combat] reset=target Thunder Clap, Sunder Armor, Cleave, Sunder Armor, Sunder Armor"
+  local fight = "#showtooltip\n/startattack\n/cast [nocombat] Charge\n/cast [nostance:2] Defensive Stance\n" ..
+    "/castsequence [combat] reset=target Shield Slam, Rend, Sunder Armor, Sunder Armor, Shield Slam, Sunder Armor, Sunder Armor, Sunder Armor"
+  MOCK.macros = {
+    { name = "Fight pack", icon = 1, body = pack, perChar = true },
+    { name = "Fight", icon = 1, body = fight, perChar = true },
+    { name = "Panic", icon = 1, body = "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall", perChar = true },
+    { name = "Cleave", icon = 1, body = "/say mine", perChar = true },
+  }
+  MOCK.level = 40
+  MOCK.event("PLAYER_LEVEL_UP", 40)
+  MOCK.advance(1.5)
+  check(#MOCK.macros == 4, "automatic upgrade edits existing macros only")
+  check(MOCK.macros[1].name == "Fight pack" and MOCK.macros[1].body == "#showtooltip Thunder Clap\n/cast Thunder Clap",
+    "legacy pack macro updates in place without SavedVariables")
+  check(MOCK.macros[2].name == "Fight" and MOCK.macros[2].body:match("\n/cast [^\n]*Sunder Armor$"),
+    "legacy single-target loop updates in place without SavedVariables")
+  check(MOCK.macros[3].name == "Panic" and MOCK.macros[3].body:match("\n/cast Last Stand$"),
+    "legacy defensive sequence updates in place without SavedVariables")
+  slash("macros")
+  check(MOCK.macros[4].body == "/say mine" and chatHas("kept your own"), "manual upgrade preserves a player macro")
+  check(installedMacroBody("Shield Wall") and installedMacroBody("Shield Slam"), "setup adds newly available direct buttons")
+end
+
 -- Talent tracing against a mock talent window.
 local function traceCheck(level, expectTrace)
   local hit = planAt(level)
