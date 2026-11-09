@@ -53,12 +53,20 @@ end
 
 local function questText(root, value)
   for _, child in ipairs({ root:GetRegions() }) do
-    if child._text and child._text:find(value, 1, true) then return true end
+    if child:IsShown() and child._text and child._text:find(value, 1, true) then return true end
   end
   for _, child in ipairs({ root:GetChildren() }) do
     if child:IsShown() and questText(child, value) then return true end
   end
   return false
+end
+
+local function questQueue(name)
+  local button = findButton(win(), function(label)
+    return label:match("^" .. name .. " %(%d+%)$")
+  end)
+  check(button, "quest view is available: " .. name)
+  button:Click()
 end
 
 function S.questStart()
@@ -100,10 +108,12 @@ function S.questClassic()
 end
 
 function S.questPastRoute()
-  MOCK.level = 25
+  MOCK.level = 31
   S.login()
   slash("quests")
-  check(questText(win(), "No route covers level 25"), "level 25 is beyond milestone coverage")
+  check(questText(win(), "No route covers level 31"), "level 31 is beyond milestone coverage")
+  click(win(), "Wetlands")
+  check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
   click(win(), "Elwynn Forest")
   check(questText(questViewer(), "Elwynn Forest"), "can jump to the nearest available section")
 end
@@ -121,10 +131,148 @@ function S.questNavigation()
   click(frame, "Next") -- hearth binding
   click(frame, "Next") -- training
   check(questText(frame, "Follow the road south"), "arrives at the first Elwynn travel step")
+  MOCK.onTaxi = true
   MOCK.questX, MOCK.questY = 35.8, 80.3
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(0.5)
+  check(questText(frame, "Follow the road south"), "passing over a waypoint on a taxi does not complete it")
+  MOCK.onTaxi = false
   MOCK.advance(0.5)
   check(not questText(frame, "Follow the road south"), "travel completes within range")
   check(questText(frame, "Accept - Lost Necklace"), "arrival advances to the farm quest")
+end
+
+function S.questTravelArrow()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Skyborne", 19, 1433, 32.5, 31.5
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "lakeshire" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 124 then break end
+        if step.type == "accept" then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 124, objectives = { { text = "Redridge Brutes 4/10" } } } }
+  MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Redridge Brutes 4/10"), "following the active Redridge objective")
+  local arrow = LevelingCodexQuestArrow
+  local art = arrow:GetRegions()
+  check(art:IsShown() and math.abs(math.sin(art._rot) + 1) < 0.01, "east is right when facing north")
+
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1453, 77.2, 82.72
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Redridge Brutes 4/10"), "travel keeps the same quest selected")
+  check(questText(arrow, "Leave Stormwind for Redridge") and not questText(arrow, "140 yd"),
+    "Stormwind points to a named exit and omits the old unlabeled distance")
+
+  MOCK.event("TAXIMAP_OPENED")
+  check(questText(arrow, "Fly to Lakeshire"), "learned routes redirect the arrow to the flight master")
+  MOCK.taxiNodes[2][2] = "DISTANT"
+  MOCK.event("TAXIMAP_OPENED")
+  check(questText(arrow, "Leave Stormwind for Redridge"), "an unavailable flight falls back to the road")
+  MOCK.taxiNodes[2][2] = "REACHABLE"
+  MOCK.event("TAXIMAP_OPENED")
+  MOCK.onTaxi = true
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1433, 32.5, 31.5
+  MOCK.mapSizes = { [1433] = LevelingCodexQuests.ALLIANCE.extents[1433] }
+  LevelingCodexQuests.ALLIANCE.extents[1433] = nil
+  MOCK.advance(0.25)
+  check(questText(arrow, "In flight") and not art:IsShown() and not questText(arrow, " yd"),
+    "flight suspends the heading and distance")
+  MOCK.onTaxi = false
+  MOCK.advance(0.25)
+  check(art:IsShown() and questText(arrow, "43 yd"), "landing restores the arrow and distance using the client map size")
+  MOCK.facing = 3 * math.pi / 2
+  MOCK.advance(0.05)
+  check(math.abs(math.cos(art._rot) - 1) < 0.01, "the arrow straightens promptly when the player faces east")
+
+  MOCK.event("PLAYER_LEAVING_WORLD")
+  check(not art:IsShown() and not questText(arrow, " yd"), "loading clears the old heading immediately")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1429, 42.1, 65.9
+  MOCK.event("PLAYER_ENTERING_WORLD")
+  check(questText(arrow, "Take the east road to Redridge") and not questText(arrow, "43 yd"),
+    "hearthing to Goldshire gives a road leg back to the quest zone")
+  check(questText(frame, "Redridge Brutes 4/10"), "hearth travel preserves objective progress")
+
+  MOCK.questMap = 1457
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(arrow, "Travel to Redridge Mountains") and not art:IsShown() and not questText(arrow, " yd"),
+    "an unsupported connection names the destination zone")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1433, 0, 0
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(arrow, "Position unavailable") and not art:IsShown(), "an invalid map position has no heading")
+end
+
+function S.questObjectiveWaypoints()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 15, 1436, 45.3, 20
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "westfall" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 92745 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  local diggers = { text = "Kobold Diggers 0/4", finished = false }
+  local miners = { text = "Riverpaw Miners 0/6", finished = false }
+  MOCK.questLog = { { questID = 92745, objectives = { diggers, miners } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame, arrow = questViewer(), LevelingCodexQuestArrow
+  check(questText(frame, "Jangolode Mine") and questText(arrow, "Arrived"), "first mine objective points to Jangolode")
+
+  diggers.text, diggers.finished = "Kobold Diggers 4/4", true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Gold Coast Quarry") and not questText(frame, "Kobold Diggers 4/4"),
+    "the first objective advances without waiting for the whole quest")
+  check(questText(arrow, " yd"), "the arrow leaves the completed location")
+  MOCK.questX, MOCK.questY = 29.8, 48.1
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(arrow, "Arrived"), "the new arrow leads to the quarry")
+
+  miners.text, miners.finished = "Riverpaw Miners 6/6", true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - The State of the Mines"), "the last objective advances to the turn-in")
+end
+
+function S.questRedridgeOverlap()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 19, 1433, 52.0, 76.6
+  MOCK.questLog = {
+    { questID = 20, objectives = { { text = "Battleworn Axe 3/10" } } },
+    { questID = 98387, objectives = { { text = "Blackrock Supplies 4/10" } } },
+    { questID = 92, objectives = { { text = "Great Goretusk Snout 2/5" } } },
+    { questID = 122, objectives = { { text = "Underbelly Whelp Scale 1/6" } } },
+  }
+  S.login()
+  slash("quests")
+  local function preview(title)
+    for _, b in ipairs(MOCK.buttons(win())) do
+      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
+    end
+    error("No route objective for " .. title)
+  end
+  preview("Blackrock Blockade")
+  local frame = questViewer()
+  check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
+  check(questText(frame, "Also on this loop") and questText(frame, "Battleworn Axe 3/10"),
+    "the blockade step shows the overlapping axe objective")
+  MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
+  MOCK.questLog[1].isComplete = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "Also on this loop") and questText(frame, "Blackrock Supplies 4/10"),
+    "completed axes leave the panel without changing the primary objective")
+  preview("Redridge Goulash")
+  check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
+    "the south-shore loop shows ingredients and scales together")
+  MOCK.event("QUEST_REMOVED", 122)
+  check(not questText(frame, "Underbelly Whelp Scale"), "abandoned overlap leaves the panel")
 end
 
 function S.questSkyborne()
@@ -135,6 +283,404 @@ function S.questSkyborne()
   slash("quests")
   check(not findButton(win(), function(l) return l == "Northshire Valley" end), "Human start stays race filtered")
   check(findButton(win(), function(l) return l == "Westfall" end), "the shared Westfall section remains available")
+end
+
+function S.questLayout()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 19, 1433
+  MOCK.questLog = { { questID = 3741, isComplete = true }, { questID = 246 } }
+  S.login()
+  slash("quests")
+  local opener = findButton(win(), function(label) return label == "Show step window" end)
+  check(opener, "step window control is visible")
+  local _, content = opener:GetPoint(1)
+  local function checkBounds()
+    local bounds = {}
+    for _, button in ipairs(MOCK.buttons(win())) do
+      local point, relative, _, x, y = button:GetPoint(1)
+      if button:IsVisible() and point == "TOPLEFT" and relative == content then
+        local name = labelOf(button) or button.tipTitle or "unnamed control"
+        local right, bottom = x + button:GetWidth(), -y + button:GetHeight()
+        check(x >= 0 and -y >= 0 and right <= content:GetWidth() and bottom <= content:GetHeight(),
+          "quest control fits the scroll content: " .. name)
+        for _, other in ipairs(bounds) do
+          check(x >= other.right or right <= other.x or -y >= other.bottom or bottom <= other.y,
+            "quest controls overlap: " .. name .. " and " .. other.name)
+        end
+        bounds[#bounds + 1] = { name = name, x = x, y = -y, right = right, bottom = bottom }
+      end
+    end
+    check(#bounds >= 8, "layout check covered the quest controls")
+  end
+  checkBounds()
+  check(questText(win(), "CURRENT STEP"), "current action has a dedicated card")
+  check(not questText(win(), "Accept - Hilary's Necklace"), "finished steps are hidden by default")
+  click(win(), "Show all steps")
+  check(questText(win(), "Accept - Hilary's Necklace"), "finished steps can be shown")
+  check(not questText(win(), "The Defias Brotherhood"), "route shows only the selected section")
+  checkBounds()
+  questQueue("Ready to turn in")
+  check(questText(win(), "Hilary's Necklace"), "ready view lists the turn-in")
+  checkBounds()
+  questQueue("Missed quests")
+  check(questText(win(), "Missed quests"), "missed view has its own heading")
+  checkBounds()
+  click(win(), "Westfall")
+  check(questText(win(), "The Defias Brotherhood"), "switching sections returns to its route")
+  checkBounds()
+end
+
+function S.questBind()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 18, 1433, "Goldshire"
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Flight path - Lakeshire, Redridge"), "Lakeshire starts at its flight path")
+  click(frame, "Next")
+  check(questText(frame, "Bind hearthstone"), "bind step follows the flight path")
+  check(questText(frame, "Your hearthstone is set to Goldshire"), "bind step names the current bind")
+  MOCK.bind = "Lakeshire"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(not questText(frame, "Bind hearthstone"), "binding at the inn finishes the step")
+  check(questText(frame, "Accept - A Free Lunch"), "the route moves on after binding")
+  MOCK.bind = "Goldshire"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(questText(frame, "Bind hearthstone"), "binding elsewhere brings the step back")
+  slash("quests")
+  click(win(), "Settings")
+  click(win(), "Skip hearthstone binding steps")
+  check(LevelingCodexDB.questSkipBind, "skip setting is saved")
+  check(not questText(frame, "Bind hearthstone"), "skip setting hides bind steps")
+  check(questText(frame, "Accept - A Free Lunch"), "skip setting moves on to the next step")
+  click(win(), "Quests")
+  check(not questText(win(), "Bind hearthstone"), "skipped bind steps leave the route list")
+  local hearth
+  for _, button in ipairs(MOCK.buttons(win())) do
+    if button:IsVisible() and button.tipTitle == "Hearth" then hearth = button; break end
+  end
+  check(hearth, "hearth step is in the route list")
+  hearth:Click()
+  check(questText(questViewer(), "Your hearthstone is set to Goldshire, so travel there instead"),
+    "hearth step points out a different bind")
+end
+
+function S.questGossip()
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - A Threat Within"), "fresh route starts with an accept")
+  MOCK.gossipAvailable = { { questID = 999, title = "Other" }, { questID = 783, title = "A Threat Within" } }
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "gossip is left alone while auto-accept is off")
+  LevelingCodexDB.questAutoAccept = true
+  MOCK.alt = true
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "holding Alt keeps the gossip list")
+  MOCK.alt = false
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == 783, "auto-accept picks the guide quest from a gossip list")
+  MOCK.greetingAvailable = { { title = "Other", questID = 999 }, { title = "A Threat Within" } }
+  MOCK.event("QUEST_GREETING")
+  check(MOCK.greetingPicked == 2, "auto-accept picks the guide quest from a greeting by title")
+  local played
+  local original = PlaySound
+  PlaySound = function(id) played = id end
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  check(played, "a step the game finishes plays a sound")
+  played = nil
+  click(frame, "Next")
+  check(not played, "Next stays quiet")
+  PlaySound = original
+end
+
+function S.questFlights()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
+  C_TaxiMap = { GetTaxiNodesForMap = function(map)
+    if map == 1415 then return { { name = "Lakeshire, Redridge", isUndiscovered = false },
+      { name = "Darkshire, Duskwood", isUndiscovered = true } } end
+  end }
+  S.login()
+  check(not questText(questViewer(), "Flight path - Lakeshire, Redridge"), "a flight path the game lists as known is skipped")
+  check(LevelingCodexCharDB.questFlights == nil or not LevelingCodexCharDB.questFlights["Darkshire, Duskwood"],
+    "undiscovered flight paths stay unknown")
+  C_TaxiMap = nil
+end
+
+function S.questDuskwood()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 23, 1431, "Lakeshire"
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Duskwood  21-27"), "a level 23 in Duskwood starts the Duskwood section")
+  check(questText(frame, "Flight path - Darkshire, Duskwood"), "Duskwood starts at the Darkshire flight path")
+  MOCK.bind = "Darkshire"
+  MOCK.event("HEARTHSTONE_BOUND")
+  click(frame, "Next")
+  check(questText(frame, "Accept - Raven Hill"), "binding in Darkshire leads to the first pickups")
+end
+
+function S.questDuskwoodHandoff()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 25, 1431, 23.8, 36.5
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "duskwood" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and step.quest ~= 133 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 133, objectives = { { text = "Ghoul Ribs 6/7" } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Ghoul Ribs 6/7"), "resume the final Duskwood quest")
+  MOCK.questDone[133], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 133)
+  check(questText(frame, "Reach level 26 for Wetlands"), "an underleveled handoff shows the catch-up step")
+  MOCK.level = 26
+  MOCK.event("PLAYER_LEVEL_UP", 26)
+  check(questText(frame, "return to Darkshire"), "at level 26 the route leads back to the flight path")
+end
+
+function S.questItem()
+  S.login()
+  local frame = questViewer()
+  check(not (_G.LevelingCodexQuestItem and _G.LevelingCodexQuestItem:IsShown()), "no item button without a quest item")
+  MOCK.bags["Nibbled-On Book"] = 1
+  click(frame, "Next")
+  check(questText(frame, "Accept - Nibbled-On Book"), "the book step is current")
+  local button = _G.LevelingCodexQuestItem
+  check(button and button:IsShown(), "the step's item gets a button")
+  check(button._secure and button:GetAttribute("type") == "item" and button:GetAttribute("item") == "Nibbled-On Book",
+    "the secure button uses the step's item")
+  hover(button)
+  MOCK.combat = true
+  MOCK.bags["Nibbled-On Book"] = 0
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(button:IsShown(), "the button waits for the end of combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(not button:IsShown(), "after combat the used-up item's button goes")
+  click(frame, "Back")
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.questItems[1] = { "|cffffffff|Hitem:5555::::|h[Thing]|h|r", 134400 }
+  MOCK.bags[5555] = 2
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  check(questText(frame, "A Threat Within"), "the quest in the log is current")
+  check(button:IsShown() and button:GetAttribute("item") == "item:5555", "the quest log's own usable item is used")
+  check(button.count._text == "2", "the button shows how many you carry")
+  LevelingCodexDB.noQuestItem = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not button:IsShown(), "the setting hides the button")
+end
+
+local function routeHas(text)
+  click(win(), "Route")
+  if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end
+  return questText(win(), text)
+end
+
+function S.questRace()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 13, 1436
+  S.login()
+  slash("quests")
+  check(not routeHas("A Swift Message"), "Human-only quests are left out for other races")
+end
+
+function S.questRaceHuman()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 13, 1436
+  S.login()
+  slash("quests")
+  check(routeHas("A Swift Message"), "Humans keep the Swift Message chain")
+end
+
+function S.questPassed()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 15, 1436
+  MOCK.questDone[102] = true
+  S.login()
+  local frame = questViewer()
+  check(not questText(frame, "Accept - Report to Gryan Stoutmantle"), "a pickup you moved past is not the current step")
+  check(questText(frame, "Accept - Westfall Stew"), "a pickup a later quest still needs stays current")
+  slash("quests")
+  local missed = findButton(win(), function(l) return l:match("^Missed quests %((%d+)%)$") end)
+  check(missed, "missed view exists")
+  missed:Click()
+  check(questText(win(), "The Forgotten Heirloom"), "passed pickups are listed under Missed quests")
+end
+
+function S.questBreadcrumb()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 13, 1436
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    for _, step in ipairs(section.steps) do
+      if step.quest == 109 then step.breadcrumb = 12 end
+    end
+  end
+  MOCK.questLog = { { questID = 12 } }
+  S.login()
+  local frame = questViewer()
+  check(not questText(frame, "Report to Gryan Stoutmantle"), "a breadcrumb drops off once its follow-up is in the log")
+  check(questText(frame, "Accept - The Forgotten Heirloom"), "the route continues with the next pickup")
+end
+
+function S.questWetlands()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1437
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Wetlands  26-30"), "a level 28 in the Wetlands follows the Wetlands section")
+  check(questText(frame, "Accept - Razormaw Needling"), "the trip there is skipped once you are in the Wetlands")
+
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and step.quest ~= 98221 and step.quest ~= 464 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  local plans = { { text = "Menethil Harbor 0/1" }, { text = "Thelsamar 0/1" },
+    { text = "Southshore 1/1", finished = true }, { text = "Ironforge 0/1" } }
+  MOCK.questLog = { { questID = 98221, objectives = plans },
+    { questID = 464, objectives = { { text = "Dragonmaw War Banners 3/8" } } } }
+  MOCK.questX, MOCK.questY = 38.46, 46.02
+  MOCK.event("QUEST_LOG_UPDATE")
+  slash("quests")
+  click(win(), "Resume active quest")
+  check(questText(frame, "Ironforge 0/1") and questText(LevelingCodexQuestArrow, "Arrived"),
+    "Angerfang starts at the western Ironforge plan even though it is fourth in the quest log")
+  check(questText(frame, "Dragonmaw War Banners 3/8"), "show banner progress during the plan sweep")
+  plans[4].finished = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Menethil Harbor 0/1"), "the next plan has its own objective")
+  plans[1].finished = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Thelsamar 0/1"), "the route passes the already-destroyed Southshore plan")
+end
+
+function S.questWetlandsTravel()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1431
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Duskwood the Wetlands section starts with the way there")
+  click(frame, "Next")
+  check(questText(frame, "Deeprun Tram"), "the tram step follows the flight")
+end
+
+-- Each Alliance race starts in its own zone at level 1.
+for name, start in pairs({ Dwarf = "Coldridge Valley", Gnome = "Coldridge Valley", NightElf = "Shadowglen",
+    Skyborne = "Thendal Grove" }) do
+  S["questStart" .. name] = function()
+    MOCK.race, MOCK.level = name, 1
+    S.login()
+    check(questText(questViewer(), start), name .. " starts in " .. start)
+    slash("quests")
+    check(not findButton(win(), function(l) return l == "Northshire Valley" end), name .. " doesn't see the Human start")
+    check(findButton(win(), function(l) return l == "Westfall" end), name .. " joins the shared route at Westfall")
+  end
+end
+
+local function classSideFixture()
+  local function step(kind, id, name)
+    return { type = kind, quest = id, name = name, text = "Test class chain.", min = 10, level = 10,
+      chain = id == 999002 and { 999001 } or nil }
+  end
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  sections[#sections + 1] = { id = "test-class-side", title = "Warrior: Test Chain",
+    zone = 1436, levels = { 10, 12 }, side = true, class = "WARRIOR", steps = {
+      step("accept", 999001, "First class quest"),
+      step("complete", 999001, "Find first item"), step("complete", 999001, "Find second item"),
+      step("turnin", 999001, "First class quest"),
+      step("accept", 999002, "Second class quest"), step("turnin", 999002, "Second class quest"),
+    } }
+end
+
+function S.questClassSide()
+  classSideFixture()
+  MOCK.level, MOCK.questMap = 13, 1436
+  S.login()
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "class quests do not interrupt the route")
+  slash("quests")
+  click(win(), "Warrior: Test Chain")
+  check(questText(questViewer(), "Accept - First class quest"), "selecting the side section follows its quest")
+  click(questViewer(), "Next")
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "skipping the chain returns to leveling")
+  click(win(), "Warrior: Test Chain")
+  check(questText(questViewer(), "Accept - First class quest"), "reopening a class guide restores unfinished quests")
+  click(win(), "Return to leveling")
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "you can leave a class guide early")
+  click(win(), "Warrior: Test Chain")
+  MOCK.questLog = { { questID = 999001 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 999001)
+  check(questText(questViewer(), "Complete - Find first item"), "the side guide advances on quest events")
+  click(questViewer(), "Next")
+  check(questText(questViewer(), "Complete - Find second item"), "Next advances one part of a multi-part objective")
+  MOCK.questLog[1].isComplete = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(questViewer(), "Turn in - First class quest"), "the turn-in still follows the final objective")
+  MOCK.questDone[999001], MOCK.questDone[999002] = true, true
+  MOCK.questLog = {}
+  MOCK.event("QUEST_TURNED_IN", 999002)
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "finishing returns to the same leveling step")
+  click(win(), "Settings")
+  click(win(), "Show class quests")
+  click(win(), "Quests")
+  check(not findButton(win(), function(l) return l == "Warrior: Test Chain" end), "hidden side sections are not selectable")
+end
+
+function S.questClassCatchup()
+  classSideFixture()
+  MOCK.level = 31
+  S.login()
+  slash("quests")
+  questQueue("Missed quests")
+  check(questText(win(), "First class quest"), "older characters can still catch up on a class unlock")
+  check(not questText(win(), "Second class quest"), "catch-up does not offer a locked follow-up")
+end
+
+function S.questHunterGuides()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
+  S.login()
+  slash("quests")
+  check(findButton(win(), function(l) return l == "Hunter: Taming in Dun Morogh" end), "Dwarves get their tame guide")
+  check(not findButton(win(), function(l) return l == "Hunter: Taming in Elwynn" end), "Human taming is race filtered")
+  check(not questText(win(), "Warrior: Defensive Stance"), "another class's guides are hidden")
+  click(win(), "Hunter: Taming in Dun Morogh")
+  check(questText(questViewer(), "Accept - Taming the Beast"), "the guide starts at the Dwarf taming pickup")
+end
+
+function S.questShamanGuides()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 30, 1455
+  S.login()
+  slash("quests")
+  click(win(), "Shaman: Air Totem")
+  check(questText(questViewer(), "Accept - Call of Air"), "the Air Totem quest is in the class guide at 30")
+end
+
+function S.questWestfallDeed()
+  MOCK.level, MOCK.questMap = 12, 1436
+  S.login()
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "no random drop needed to start Westfall")
+  MOCK.bags[1972] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(questText(questViewer(), "Accept - Furlbrow's Deed"), "looting the deed reveals its pickup")
+  local item = _G.LevelingCodexQuestItem
+  check(item and item:IsShown(), "the deed can be used from the guide")
+  MOCK.questLog = { { questID = 184 } }
+  MOCK.bags[1972] = 0
+  MOCK.event("QUEST_ACCEPTED", 1, 184)
+  check(questText(questViewer(), "Turn in - Furlbrow's Deed"), "the hand-in stays after the pickup item is consumed")
+  MOCK.questLog = {}
+  MOCK.event("QUEST_TURNED_IN", 184)
+  check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "the route resumes after the deed")
+end
+
+function S.questQuarryKeg()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
+  S.login()
+  slash("quests")
+  check(not questText(win(), "Stolen Blasting Powder"), "the entire powder chain is hidden without the keg")
+  MOCK.bags[268548] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(questText(win(), "Stolen Blasting Powder"), "looting the keg reveals the chain")
+  MOCK.bags[268548] = 0
+  MOCK.questDone[95213] = true
+  MOCK.event("QUEST_TURNED_IN", 95213)
+  check(questText(win(), "Complete - Stolen Blasting Powder"), "the follow-up stays visible after turning in the keg")
 end
 
 function S.questWestfall()
@@ -160,19 +706,122 @@ function S.questCatchup()
   }
   S.login()
   slash("quests")
-  check(questText(win(), "Ready to turn in"), "ready quests have their own list")
+  questQueue("Ready to turn in")
+  check(questText(win(), "Hilary's Necklace"), "ready quests have their own list")
   click(win(), "Resume active quest")
   check(questText(questViewer(), "Accept - The Price of Shoes"), "catch-up retains a prerequisite for later quests")
   MOCK.questDone[118] = true
   MOCK.event("QUEST_TURNED_IN", 118)
   check(questText(questViewer(), "Redridge Mongrels 4/10"), "resume opens an active objective")
-  check(questText(win(), "Missed quests"), "earlier pickups remain available for review")
+  questQueue("Missed quests")
+  check(questText(win(), "Selling Fish"), "earlier pickups remain available for review")
   check(next(LevelingCodexCharDB.questSkips) == nil, "catch-up leaves manual skips alone")
-  click(win(), "Hilary's Necklace")
+  questQueue("Ready to turn in")
+  local ready
+  for _, button in ipairs(MOCK.buttons(win())) do
+    if button:IsVisible() and button.tipTitle == "Hilary's Necklace" then ready = button; break end
+  end
+  check(ready, "ready quest is clickable")
+  ready:Click()
   check(questText(questViewer(), "Turn in - Hilary's Necklace"), "ready quest opens its turn-in")
   MOCK.questDone[3741] = true
   MOCK.event("QUEST_TURNED_IN", 3741)
   check(questText(questViewer(), "Redridge Mongrels 4/10"), "turn-in review returns to the resumed quest")
+  check(not questText(win(), "Hilary's Necklace"), "turned-in quest leaves the ready list")
+end
+
+local function questDetourFixture()
+  local route = LevelingCodexQuests.ALLIANCE
+  local function quest(kind, id, name, chain)
+    return { type = kind, quest = id, name = name, text = name, min = 12, level = 15, chain = chain }
+  end
+  local sections = route.sections
+  sections[#sections + 1] = { id = "test-outbound", title = "Test outbound", zone = 1436, levels = { 12, 18 },
+    verified = true, steps = {
+      { type = "grind", text = "Choose a detour", level = 16, suggest = { "test-detour" } },
+      quest("accept", 999101, "Earlier prerequisite"), quest("turnin", 999101, "Earlier prerequisite"),
+      quest("accept", 999104, "Continue along the shared route"), quest("turnin", 999104, "Continue along the shared route"),
+    } }
+  sections[#sections + 1] = { id = "test-detour", title = "Test detour", zone = 1432, levels = { 12, 18 },
+    verified = true, alternate = true, suggest = { "test-outbound" }, steps = {
+      quest("accept", 999102, "Detour objective"), quest("complete", 999102, "Detour objective"),
+      quest("turnin", 999102, "Detour objective"),
+      quest("accept", 999103, "Detour follow-up", { 999101 }), quest("turnin", 999103, "Detour follow-up", { 999101 }),
+    } }
+end
+
+function S.questDetour()
+  questDetourFixture()
+  MOCK.level, MOCK.questMap = 15, 1436
+  S.login()
+  slash("quests")
+  click(win(), "Test outbound")
+  local frame = questViewer()
+  click(frame, "Try Test detour")
+  check(questText(frame, "Accept - Detour objective"), "suggestion switches to the optional route")
+  MOCK.questDone[999101], MOCK.questDone[999102], MOCK.questDone[999103] = true, true, true
+  MOCK.level = 16
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Section complete"), "an alternate ends at its own boundary")
+  click(frame, "Try Test outbound")
+  check(questText(frame, "Continue along the shared route"), "the finished detour returns to the shared route")
+  click(frame, "Next")
+  check(not frame:IsShown(), "the shared route does not continue into a detour")
+end
+
+function S.questCrossZoneResume()
+  questDetourFixture()
+  MOCK.level, MOCK.questMap = 15, 1432
+  MOCK.questLog = { { questID = 999102, objectives = { { text = "Detour progress 2/5" } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Test outbound")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(not questText(frame, "Choose a detour"), "resume switches away from the selected guide")
+  check(questText(frame, "Accept - Earlier prerequisite"), "cross-zone resume retains an earlier prerequisite")
+  check(questText(frame, "Required for Detour follow-up"), "catch-up explains why the earlier step is required")
+  MOCK.questDone[999101] = true
+  MOCK.event("QUEST_TURNED_IN", 999101)
+  check(questText(frame, "Detour progress 2/5"), "resume returns to the alternate's active objective")
+  check(next(LevelingCodexCharDB.questSkips) == nil, "resume leaves manual skips alone")
+end
+
+function S.questAlternateRoutes()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Loch Modan  11-18"), "starting in Loch Modan selects its local route")
+  check(questText(frame, "Flight path - Thelsamar, Loch Modan"), "local start skips the way there")
+  click(frame, "Next")
+  check(questText(frame, "Accept - Thelsamar Blood Sausages"), "Loch Modan starts with a Thelsamar pickup")
+  slash("quests")
+  click(win(), "Darkshore")
+  check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
+  MOCK.questMap = 1439
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Flight path - Auberdine, Darkshore"), "entering Darkshore skips the approach")
+  click(frame, "Next")
+  MOCK.bind = "Auberdine"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(questText(frame, "Accept - Washed Ashore"), "Darkshore continues with its first pickup")
+end
+
+function S.questWestfallDetour()
+  MOCK.level, MOCK.questMap, MOCK.bind = 14, 1436, "Sentinel Hill"
+  LevelingCodexCharDB = { questFlights = { ["Sentinel Hill, Westfall"] = true } }
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "westfall" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "grind" then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  click(frame, "Try Loch Modan")
+  check(questText(frame, "Loch Modan  11-18"), "Westfall offers quest XP through Loch Modan")
 end
 
 function S.questRecorder()

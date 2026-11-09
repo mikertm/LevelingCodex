@@ -12,6 +12,7 @@
 Data.lua
 ProfessionData.lua
 QuestData.lua
+QuestClassData.lua
 Theme.lua
 Art.lua
 Guide.lua

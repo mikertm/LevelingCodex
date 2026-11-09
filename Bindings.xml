@@ -3,4 +3,6 @@
   <Binding name="LEVELINGCODEX_TOGGLE" header="LEVELINGCODEX" category="ADDONS">
     LevelingCodex_Toggle()
   </Binding>
+  <!-- Uses the quest item shown beside the quest step window. -->
+  <Binding name="CLICK LevelingCodexQuestItem:LeftButton" header="LEVELINGCODEX" category="ADDONS"/>
 </Bindings>

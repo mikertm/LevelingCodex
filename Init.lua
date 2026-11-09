@@ -84,6 +84,7 @@ end
 -- Key binding (Bindings.xml): Esc > Options > Keybindings > AddOns > Leveling Codex.
 BINDING_HEADER_LEVELINGCODEX = "Leveling Codex"
 BINDING_NAME_LEVELINGCODEX_TOGGLE = "Open or close the Codex"
+_G["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = "Use the quest guide item"
 function LevelingCodex_Toggle() ns.toggleWindow() end
 
 SLASH_LEVELINGCODEX1 = "/codex"

@@ -124,7 +124,8 @@ def binding_bodies():
     if not os.path.exists(path):
         return []
     root = ET.parse(path).getroot()
-    return [(b.text or "").strip() for b in root.iter("Binding")]
+    # CLICK bindings have no body: the client clicks the named button.
+    return [(b.text or "").strip() for b in root.iter("Binding") if (b.text or "").strip()]
 
 
 def lua_path(p):
@@ -565,9 +566,18 @@ def main():
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
         if not minimal:
-            for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questRecorder",
-                             "questController", "questSkyborne", "questWestfall", "questCatchup"):
+            for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
+                             "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questRecorder",
+                             "questController", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
+                             "questBind", "questGossip", "questFlights", "questDuskwood", "questItem",
+                             "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
+                             "questWetlands", "questWetlandsTravel",
+                             "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
+                             "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
+                             "questDetour", "questCrossZoneResume", "questAlternateRoutes", "questWestfallDetour"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
+            for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides")):
+                runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))
         for cls in CLASSES + [UNSUPPORTED]:
             runs.append(("%s/%s/main" % (cls, variant), cls, minimal, MAIN))
         for cls in CLASSES:

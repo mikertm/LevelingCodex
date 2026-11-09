@@ -2,6 +2,8 @@
 
     python -I tools/questfacts.py quest 7
     python -I tools/questfacts.py zone Elwynn --flavor classic
+    python -I tools/questfacts.py npc 539      (spawn areas: where to fight it)
+    python -I tools/questfacts.py item 2251    (which NPCs and objects drop it, and where)
 
 Forever uses its own base and player trace additions. Missing fields and
 unobserved eligibility are left for published sources and in-game verification.
@@ -23,7 +25,8 @@ ZONES = {
     "Northshire": (9, 1429), "Elwynn": (12, 1429), "Westfall": (40, 1436),
     "Redridge": (44, 1433), "Stormwind": (1519, 1453), "Duskwood": (10, 1431),
     "Dun Morogh": (1, 1426), "Loch Modan": (38, 1432), "Wetlands": (11, 1437),
-    "Darkshore": (148, 1439), "Teldrassil": (141, 1438),
+    "Darkshore": (148, 1439), "Teldrassil": (141, 1438), "Zephras Isle": (16593, 2521),
+    "Ironforge": (1537, 1455), "Darnassus": (1657, 1457),
 }
 
 
@@ -68,7 +71,7 @@ def entity(lu, read, flavor, kind):
     keys = to_python(read("return " + key_block[1], lu.table()))
     rows = read(data[1], lu.table())
     traces = None
-    if flavor == "forever":
+    if flavor == "forever" and kind != "item":
         name = "Npc" if kind == "npc" else kind.title()
         src = download(f"src/corrections/Forever/traces/forever{name}Traces.lua")
         data = re.search(r"(return \{.*?\n    \})\s*end\s*$", src, re.S)
@@ -112,6 +115,32 @@ def endpoints(value, npcs, objects):
     return result
 
 
+def areas(entry, top=3):
+    """Spawn summary per map: count and the busiest 10% squares with their centres."""
+    maps = {area: map_id for area, map_id in ZONES.values()}
+    result = []
+    for area, coords in (entry.get("spawns") or {}).items():
+        points = [(xy[1], xy[2]) for xy in coords.values() if xy and xy.get(1) is not None and xy[1] >= 0]
+        if not points:
+            continue
+        cells = {}
+        for x, y in points:
+            cells.setdefault((int(x // 10), int(y // 10)), []).append((x, y))
+        busiest = sorted(cells.values(), key=len, reverse=True)[:top]
+        result.append({"area": area, "map": maps.get(area), "count": len(points), "clusters": [
+            {"n": len(c), "x": round(sum(p[0] for p in c) / len(c), 1), "y": round(sum(p[1] for p in c) / len(c), 1)}
+            for c in busiest]})
+    return result
+
+
+def creature(source, id_):
+    entry = record(source, id_)
+    if not entry:
+        return None
+    return {"id": id_, "name": entry.get("name"), "level": [entry.get("minLevel"), entry.get("maxLevel")],
+            "areas": areas(entry)}
+
+
 def lookup(quests, npcs, objects, id_):
     q = record(quests, id_)
     if not q:
@@ -124,12 +153,27 @@ def lookup(quests, npcs, objects, id_):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("quest", "zone"))
+    parser.add_argument("command", choices=("quest", "zone", "npc", "object", "item"))
     parser.add_argument("value")
     parser.add_argument("--flavor", choices=("classic", "forever"), default="forever")
     args = parser.parse_args()
     lu, read = lua_reader()
     quests, npcs, objects = (entity(lu, read, args.flavor, kind) for kind in ("quest", "npc", "object"))
+    if args.command in ("npc", "object"):
+        result = creature(npcs if args.command == "npc" else objects, int(args.value))
+        if not result:
+            parser.error(f"{args.command} {args.value} is absent from {args.flavor} records")
+        print(json.dumps(result, indent=2, ensure_ascii=True))
+        return
+    if args.command == "item":
+        item = record(entity(lu, read, args.flavor, "item"), int(args.value))
+        if not item:
+            parser.error(f"item {args.value} is absent from {args.flavor} records")
+        drops = [creature(npcs, i) for i in (item.get("npcDrops") or {}).values()]
+        drops += [creature(objects, i) for i in (item.get("objectDrops") or {}).values()]
+        print(json.dumps({"id": int(args.value), "name": item.get("name"),
+                          "drops": [d for d in drops if d]}, indent=2, ensure_ascii=True))
+        return
     if args.command == "quest":
         result = lookup(quests, npcs, objects, int(args.value))
         if not result:

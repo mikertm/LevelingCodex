@@ -42,7 +42,7 @@ MOCK.ascii = ascii
 
 -- Events that exist in the client. Anything else throws on RegisterEvent, like Forever.
 MOCK.knownEvents = {
-  PLAYER_LOGIN = true, PLAYER_LOGOUT = true, PLAYER_ENTERING_WORLD = true, PLAYER_LEVEL_UP = true,
+  PLAYER_LOGIN = true, PLAYER_LOGOUT = true, PLAYER_ENTERING_WORLD = true, PLAYER_LEAVING_WORLD = true, PLAYER_LEVEL_UP = true,
   PLAYER_REGEN_ENABLED = true, PLAYER_REGEN_DISABLED = true, ADDON_LOADED = true, VARIABLES_LOADED = true,
   -- optional: the minimal client doesn't know these (MOCK.setup removes them)
   PLAYER_ALIVE = true, PLAYER_UNGHOST = true, MINIMAP_UPDATE_TRACKING = true, LEARNED_SPELL_IN_TAB = true,
@@ -54,7 +54,8 @@ MOCK.optionalEvents = { "GAME_PAD_ACTIVE_CHANGED", "PLAYER_ALIVE", "PLAYER_UNGHO
   "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
   "TRAINER_CLOSED" }
 for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
-  "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND" }) do
+  "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
+  "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -71,11 +72,44 @@ C_QuestLog = {
 }
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
+  GetMapInfo = function(id) return id == 1433 and { name = "Redridge Mountains" } or nil end,
+  GetMapWorldSize = function(id)
+    local size = MOCK.mapSizes and MOCK.mapSizes[id]
+    if size then return size[1], size[2] end
+  end,
   GetPlayerMapPosition = function()
     return { GetXY = function() return MOCK.questX / 100, MOCK.questY / 100 end }
   end,
 }
 function GetPlayerFacing() return MOCK.facing end
+function GetBindLocation() return MOCK.bind end
+function UnitOnTaxi() return MOCK.onTaxi or false end
+function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
+function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
+function TaxiNodeGetType(i) return MOCK.taxiNodes[i][2] end
+-- Quest log usable items, by log index: MOCK.questItems[i] = { link, icon }.
+MOCK.questItems = {}
+function GetQuestLogSpecialItemInfo(i)
+  local q = MOCK.questItems[i]
+  if q then return q[1], q[2], 1, true end
+end
+function GetItemIcon(item) return "Interface\\Icons\\INV_Misc_QuestionMark" end
+-- Gossip list (C_GossipInfo) and the greeting window; selections are recorded.
+MOCK.gossipAvailable, MOCK.gossipActive, MOCK.greetingAvailable = {}, {}, {}
+C_GossipInfo = {
+  GetAvailableQuests = function() return MOCK.gossipAvailable end,
+  GetActiveQuests = function() return MOCK.gossipActive end,
+  SelectAvailableQuest = function(id) MOCK.gossipPicked = id end,
+  SelectActiveQuest = function(id) MOCK.gossipPicked = id end,
+}
+function GetNumAvailableQuests() return #MOCK.greetingAvailable end
+function GetAvailableTitle(i) return MOCK.greetingAvailable[i] and MOCK.greetingAvailable[i].title end
+function GetAvailableQuestInfo(i)
+  local q = MOCK.greetingAvailable[i]
+  if q then return false, 0, false, false, q.questID end
+end
+function SelectAvailableQuest(i) MOCK.greetingPicked = i end
+function IsAltKeyDown() return MOCK.alt or false end
 function GetQuestID() return MOCK.interactionQuest end
 function GetNumQuestChoices() return MOCK.questChoices or 0 end
 function AcceptQuest() MOCK.questAccepted = MOCK.interactionQuest end
@@ -103,7 +137,12 @@ function Region:GetObjectType() return self._type end
 function Region:IsObjectType(t) return self._type == t or (t == "Frame" and self._isFrame) or (t == "Region") end
 function Region:GetName() return self._name end
 function Region:GetParent() return self._parent end
+-- Secure frames (SecureActionButtonTemplate) refuse changes in combat, like the client.
+local function secureCheck(self, what)
+  if self._secure and MOCK.combat then error("ADDON_ACTION_BLOCKED: " .. what .. " on a secure frame in combat", 3) end
+end
 function Region:SetPoint(point, rel, relPoint, x, y)
+  secureCheck(self, "SetPoint")
   if type(rel) == "number" then rel, relPoint, x, y = nil, point, rel, relPoint end
   if type(rel) == "string" then rel = _G[rel] end
   if rel == self then error("Cannot anchor to itself", 2) end
@@ -151,11 +190,13 @@ local function fire(self, script, ...)
 end
 MOCK.fire = fire
 function Region:Show()
+  secureCheck(self, "Show")
   if self._shown then return end
   self._shown = true
   if self:IsVisible() then fire(self, "OnShow") end
 end
 function Region:Hide()
+  secureCheck(self, "Hide")
   if not self._shown then return end
   local wasVisible = self:IsVisible()
   self._shown = false
@@ -365,7 +406,13 @@ end
 
 -- Button
 inherit(Button, Frame)
-function Button:RegisterForClicks() end
+function Button:RegisterForClicks(...) self._clicks = { ... } end
+function Button:SetAttribute(key, value)
+  secureCheck(self, "SetAttribute")
+  self._attrs = self._attrs or {}
+  self._attrs[key] = value
+end
+function Button:GetAttribute(key) return self._attrs and self._attrs[key] end
 function Button:SetHighlightTexture(t) end
 function Button:SetNormalTexture(t) end
 function Button:SetPushedTexture(t) end
@@ -507,6 +554,8 @@ function CreateFrame(kind, name, parent, template)
       elseif t == "UICheckButtonTemplate" then
         if kind ~= "CheckButton" then error("UICheckButtonTemplate needs a CheckButton", 2) end
         f:SetSize(32, 32)
+      elseif t == "SecureActionButtonTemplate" then
+        f._secure = true
       elseif t == "InputBoxTemplate" or t == "UIPanelButtonTemplate" then
         -- nothing extra needed
       else
@@ -1044,7 +1093,7 @@ end
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
-  "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo",
+  "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
   "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",
@@ -1055,6 +1104,7 @@ function MOCK.setup(opts)
   MOCK.minimal = opts.minimal
   if opts.minimal then
     C_QuestLog, C_Map, GetPlayerFacing, GetQuestID, GetNumQuestChoices, AcceptQuest, GetQuestReward = nil, nil, nil, nil, nil, nil, nil
+    UnitOnTaxi, NumTaxiNodes, TaxiNodeName, TaxiNodeGetType = nil, nil, nil, nil
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
     for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end
     Texture.SetGradient = nil
@@ -1079,7 +1129,7 @@ end
 -- Globals the addon is allowed to create (everything else is a leaked local).
 local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
-  BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true,
+  BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true, ["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = true,
   LevelingCodexQuests = true, LevelingCodexQuestViewer = true, LevelingCodexQuestArrow = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,

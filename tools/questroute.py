@@ -7,16 +7,23 @@ import argparse
 import json
 import math
 import os
+from itertools import product
 from pathlib import Path
 
 
 QUEST_TYPES = {"accept", "complete", "turnin"}
 TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note"}
-STEP_FIELDS = {"type", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
-               "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "flight"}
+STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
+               "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
+CLASS_ROUTE = ROOT / "QuestClassData.lua"
+
+
+def matches(value, token):
+    """A section/step filter: None = everyone, a token, or a list of tokens."""
+    return value is None or (token in value if isinstance(value, list) else token == value)
 
 
 def audit(data, ref, cap=20):
@@ -40,18 +47,27 @@ def audit(data, ref, cap=20):
     ids, maps, flights = set(game["ids"]), game["maps"], set(game["flights"])
     for faction, route in data.items():
         sections = route["sections"]
+        route_quests = {step.get("quest") for section in sections for step in section["steps"] if step.get("quest")}
         known_sections = {section["id"] for section in sections}
+        route_sections = {section["id"] for section in sections if not section.get("side")}
         if len(known_sections) != len(sections):
             fail(faction, "duplicate section IDs")
         for race, start in route["starts"].items():
-            if not any(s["id"] == start and s.get("start") == race for s in sections):
+            if not any(s["id"] == start and matches(s.get("start"), race) for s in sections):
                 fail(faction, f"{race} start does not match a section")
         for key, extent in route.get("extents", {}).items():
             mapped = maps.get(key, {})
             if extent != [mapped.get("width"), mapped.get("height")]:
                 fail(faction, f"map {key} extents differ from the client")
 
-        rows = []
+        def check_suggestions(suggestions, section_id, where):
+            if not isinstance(suggestions, list) or not suggestions or any(
+                not isinstance(target, str) or target not in route_sections or target == section_id
+                for target in suggestions
+            ):
+                fail(where, "suggest must list other leveling section IDs")
+
+        rows, main_rows, alternates = [], [], {}
         for section in sections:
             label = section["id"]
             if not ascii_text(section.get("title")) or not ascii_text(label):
@@ -60,6 +76,10 @@ def audit(data, ref, cap=20):
                 fail(label, "unknown section map")
             if type(section.get("verified")) is not bool:
                 fail(label, "verified must be a boolean")
+            if "alternate" in section and (type(section["alternate"]) is not bool or section.get("side")):
+                fail(label, "alternate must be a boolean on a leveling section")
+            if "suggest" in section:
+                check_suggestions(section["suggest"], label, label)
             start, end = section["levels"]
             if not 1 <= start <= end <= 60:
                 fail(label, "section levels must be in order and in 1-60")
@@ -75,7 +95,25 @@ def audit(data, ref, cap=20):
                     continue
                 if not step.get("text") or not ascii_text(step["text"]):
                     fail(where, "step text must be non-empty printable ASCII")
-                for key in ("name", "npc", "flight", "dungeon"):
+                if "suggest" in step:
+                    check_suggestions(step["suggest"], label, where)
+                if "also" in step:
+                    also = step["also"]
+                    if not isinstance(also, list) or not also or any(
+                        type(id_) is not int or id_ not in route_quests or id_ == quest for id_ in also
+                    ) or len(set(also)) != len(also):
+                        fail(where, "also must list distinct other route quest IDs")
+                follow = step.get("breadcrumb")
+                if follow is not None and follow not in route_quests:
+                    fail(where, f"breadcrumb follow-up {follow} isn't a quest in the route")
+                item = step.get("item")
+                if item is not None and not (type(item) is int and item > 0 or ascii_text(item)):
+                    fail(where, "item must be an item ID or an ASCII item name")
+                if "startItem" in step and (not quest or type(step["startItem"]) is not int or step["startItem"] <= 0):
+                    fail(where, "startItem must be a positive item ID on a quest step")
+                if kind in ("sethearth", "hearth") and not step.get("bind"):
+                    warn(where, f"{kind} step has no bind town (GetBindLocation name)")
+                for key in ("name", "npc", "flight", "dungeon", "bind"):
                     if key in step and not ascii_text(step[key]):
                         fail(where, f"{key} must be printable ASCII")
                 for key in ("level", "min"):
@@ -91,6 +129,10 @@ def audit(data, ref, cap=20):
                 if "objectives" in step and not (isinstance(step["objectives"], list)
                                                   and all(map(ascii_text, step["objectives"]))):
                     fail(where, "objectives must be a list of ASCII labels")
+                if "objectiveIndex" in step:
+                    index = step["objectiveIndex"]
+                    if kind != "complete" or type(index) is not int or index < 1:
+                        fail(where, "objectiveIndex must be a positive quest log objective index on a complete step")
                 chain = step.get("chain", [])
                 if not isinstance(chain, list) or any(type(q) is not int or q not in ids for q in chain):
                     fail(where, "chain has an unknown prerequisite")
@@ -126,16 +168,17 @@ def audit(data, ref, cap=20):
                     if quest_level <= level - (5 + level // 10):
                         warn(where, f"{step.get('name')} is grey for level {level}")
                 rows.append((section, step, where))
+                path = alternates.setdefault(label, []) if section.get("alternate") else main_rows
+                path.append((section, step, where))
 
         # Run the actual filtered route for each player shape. Dungeon steps may
         # appear on top of the main route, so also check the combined log.
-        def matches(value, token):
-            return value is None or (token in value if isinstance(value, list) else token == value)
-
         # Check shared sections on a character who has no published racial start.
         races = {""} | set(route["starts"])
         classes = {None}
-        for _, step, _ in rows:
+        for section, step, _ in rows:
+            if isinstance(section.get("class"), str):
+                classes.add(section["class"])
             for key, values in (("race", races), ("class", classes)):
                 rule = step.get(key)
                 if isinstance(rule, list):
@@ -144,11 +187,11 @@ def audit(data, ref, cap=20):
                     values.add(rule)
         for race in sorted(races or {""}):
             for class_ in sorted(classes, key=lambda token: token or ""):
-                for dungeons in (False, True):
+                for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
                     active, finished = set(), set()
-                    for section, step, where in rows:
+                    for section, step, where in path:
                         if not (matches(section.get("start"), race) and matches(step.get("race"), race)
-                                and matches(step.get("class"), class_)) or (step.get("optional") and not dungeons):
+                                and matches(section.get("class"), class_) and matches(step.get("class"), class_)) or (step.get("optional") and not dungeons):
                             continue
                         kind, quest = step["type"], step.get("quest")
                         if kind == "accept":
@@ -227,7 +270,7 @@ def main():
     if args.command == "audit":
         if args.cap < 1:
             parser.error("--cap must be positive")
-        data = load_lua_global(ROUTE, "LevelingCodexQuests")
+        data = load_lua_global([ROUTE, CLASS_ROUTE], "LevelingCodexQuests")
         results = audit(data, load_reference(), args.cap)
         for _, severity, message in results:
             print(f"{severity}: {message}")

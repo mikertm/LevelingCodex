@@ -1144,11 +1144,21 @@ renderers.settings = function()
 
   head("QUEST GUIDE")
   tick("Show dungeon steps", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end)
+  tick("Skip hearthstone binding steps", db.questSkipBind, function()
+    db.questSkipBind = not db.questSkipBind
+    ns.updateQuestSettings()
+  end, "Keep your hearthstone where it is. Bind steps tick off by themselves when your hearthstone is already set to that inn; hearth steps say where yours is set.")
+  tick("Play a sound when a step completes", not db.questNoSound, function() db.questNoSound = not db.questNoSound end)
+  tick("Show class quests", not db.noClassQuests, function() db.noClassQuests = not db.noClassQuests; ns.updateQuestSettings() end,
+    "Your class's quest chains (pets, forms, totems, class spells) as their own sections in the Quests tab. They also show under Missed quests when you reach their level.")
+  tick("Show the quest item button", not db.noQuestItem, function() db.noQuestItem = not db.noQuestItem; ns.questRefresh() end,
+    "A button beside the step window that uses the current step's quest item. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
-  tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end)
+  tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
+    "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. Hold Alt to stop it.")
   tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
-    "Only outside combat and when there are no selectable rewards.")
+    "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. Hold Alt to stop it.")
   y = y + 12
 
   head("MINIMAP BUTTON")

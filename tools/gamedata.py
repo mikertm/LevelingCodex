@@ -765,11 +765,12 @@ def recipe_list(ref, prof, name=None):
 # ---------------------------------------------------------------------------
 
 def load_lua_global(path, name):
-    """Run a data file and return one of its globals as Python lists and dicts (None if unset)."""
+    """Run one or more data files in load order and read a global as Python data."""
     import lupa.lua51 as lupa
     lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
-    with open(path, encoding="utf-8") as f:
-        lua.execute(f.read())
+    for one in (path if isinstance(path, (list, tuple)) else [path]):
+        with open(one, encoding="utf-8") as f:
+            lua.execute(f.read())
 
     def conv(t):
         if lupa.lua_type(t) != "table":
@@ -999,11 +1000,11 @@ def full_audit(ref, only=None):
 
 
 def audit_quests(ref):
-    from questroute import ROUTE, audit
+    from questroute import ROUTE, CLASS_ROUTE, audit
 
     if not ROUTE.exists():
         return []
-    return audit(load_lua_global(ROUTE, "LevelingCodexQuests"), ref)
+    return audit(load_lua_global([ROUTE, CLASS_ROUTE], "LevelingCodexQuests"), ref)
 
 
 def groups(res):
