@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.15.0
+
+- Added **Alchemy, Engineering, First Aid, Cooking, and Fishing guides from 1 to 300**. The Professions tab now covers all 12 WoW: Forever professions.
+- Crafting guides show the tools and stations you need and can highlight intermediate recipes when you have the materials to make them.
+- Rank reminders cover profession books and quests. Cooking keeps the Clamlette Surprise ingredients on your shopping list until you unlock Artisan, and Fishing shows where to catch Nat Pagle's four quest fish.
+
 ## v0.14.0
 
 - Added **Skinning and Leatherworking guides, 1–300**. Skinning shows beasts and farming spots by faction, including Zephras Isle for Skyborne. Leatherworking shows the current recipe, material estimates and a read-only crafting outline. The guide includes the Tanning Rack unlock at skill 125.
