@@ -9,9 +9,17 @@
 - Open the **Quests** tab or use `/codex quests` to browse routes and show the step window. The guide reads your quest log, tracks objectives and turn-ins, and can resume an active quest. Missed pickups stay available, and obsolete breadcrumb steps are skipped when you already have their follow-up.
 - **Also on this loop** shows live progress for unfinished quests that share the current trip. It covers the four starter routes and loops such as Westfall's harvest fields, Redridge's goulash and Blackrock camps, Raven Hill's skeletons, and Wetlands' Razormaw and Angerfang quests.
 - The waypoint arrow shows distance on the current map and uses known routes or flight paths for cross-zone travel. It pauses during flights and loading, then recalculates after you arrive. The Westfall mine survey and Wetlands attack plans advance to the next unfinished objective. The Lake Everstill toolbox pin now marks the Sunken Chest.
-- The step window supports controller navigation, a quest-item button with its own keybind, and a completion sound. Settings cover the arrow, item button, class and dungeon steps, hearthstone binding, window lock, and sound.
+- The step window supports controller navigation, a quest-item button with its own keybind, and a completion sound. Settings cover the arrow, item and target buttons, class quests, dungeon plans, optional quests, hearthstone binding, window lock, and sound.
 - **Auto-accept** and **auto-turn-in** have separate settings and start off, so you can read quest text. With either enabled, hold Alt to handle the interaction yourself. Reward choices stay manual.
 - Duskwood now pairs Night Watch kills with Rot Blossoms after the follow-up unlocks. Players under 26 get catch-up options before the Wetlands trip. Quest data was checked against Forever build `1.60.1.70862`. Solo XP pacing still needs a live playthrough.
+- **More quests, 1-30.** We compared the route with the RestedXP Forever guides and added about 110 quests they route that we didn't, grouped into loops at each hub:
+  - Elwynn and Dun Morogh errands, the Deeprun Tram rats, the Dwarf/Gnome Honor Students flight chain and the Moss-twined Heart.
+  - The Westfall lighthouse, Redridge's late bounties, and Duskwood's Look to the Stars, Sven and Abercrombie chains.
+  - Darkshore's Murkdeep board, escorts and Absent Minded Prospector.
+  - Gaxim's Stonetalon letters and Ashenvale's satyr and Velinde quests.
+  - Forever's reworked Wetlands: Bloom of the Heavens, the Doomed Fleet chain, the Thandol Span and the Dragonmaw Retreat.
+- **Dungeon plans.** In Quests > Guide library > Dungeons, plan your runs one by one, or use Plan recommended / all / none. A planned run's quest pickups join your route. When its pickups are done at the right level, the step window offers **Run <dungeon>** and chat says to find a group. Each dungeon page lists its **bosses in order** with a short tip. The Stockade checklist now continues with the Stormwind chain to King Varian.
+- **Questing helpers.** Step text shows a quest's place in its chain ("Chain: part 2 of 5"). Pickups warn when your quest log is full, and Active quests shows how full your log is. A key-bindable **target button** targets the step's quest giver. Settings > **Show optional quests** turns on side errands such as Camping 101.
 - Added the opt-in `/codex record` quest recorder and quest API diagnostics in `/codex debug` for checking quest credit and waypoints in the client.
 
 ### Classes and professions

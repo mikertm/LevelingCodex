@@ -54,6 +54,7 @@ MOCK.optionalEvents = { "GAME_PAD_ACTIVE_CHANGED", "PLAYER_ALIVE", "PLAYER_UNGHO
   "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
   "TRAINER_CLOSED" }
 for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
+  "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED", "NEW_TAXI_PATH",
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED" }) do
   MOCK.knownEvents[event] = true
@@ -83,6 +84,9 @@ C_Map = {
 }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
+function GetInstanceInfo()
+  return MOCK.instanceName, MOCK.instanceName and "party" or "none", nil, nil, nil, nil, nil, MOCK.instanceID
+end
 function UnitOnTaxi() return MOCK.onTaxi or false end
 function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
 function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
@@ -1130,6 +1134,7 @@ end
 local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
   BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true, ["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = true,
+  ["BINDING_NAME_CLICK LevelingCodexQuestTarget:LeftButton"] = true,
   LevelingCodexQuests = true, LevelingCodexQuestViewer = true, LevelingCodexQuestArrow = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,

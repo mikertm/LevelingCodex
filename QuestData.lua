@@ -127,6 +127,18 @@ q(239, "Westbrook Garrison Needs Help!", 10, 6, 76)
 q(11, "Riverpaw Gnoll Bounty", 10, 6, 239)
 q(176, 'WANTED: "Hogger"', 11, 5)
 q(109, "Report to Gryan Stoutmantle", 10, 9)
+-- Camping 101 profession intros and the skinning errand: optional (Settings > Show optional quests).
+q(97924, "Camping 101: Skinning", 6, 4, 95998, true)
+q(97921, "Camping 101: Herbalism", 6, 4, 95998, true)
+q(97923, "Camping 101: Mining", 6, 4, 95998, true)
+q(91751, "Rough Wolf Pelts", 8, 1, nil, true)
+for _, id in ipairs({ 97924, 97921, 97923, 91751 }) do quest[id].optional = true end
+-- Rare heads: the guide shows these only once the head is in your bags.
+q(91740, "Croaky's Head", 11, 1, nil, true)
+quest[91740].startItem = 247826
+q(91746, "Elmpaw's Head", 12, 1, nil, true)
+quest[91746].startItem = 247862
+q(1097, "Elmore's Task", 15, 9)
 q(98021, "Journey to Sentinel Hill", 13, 7, 94947, true)
 quest[98021].race = "SKYBORNE"
 q(92479, "A Scribbled Letter", 1, 1, 7, true, "HUNTER")
@@ -251,6 +263,11 @@ local forest = {
   finish(96627, sam), accept(95998, sam),
   objective(95998, 45, 63, "Sit by Sam's fire until you get Boosted Rest.", "Boosted Rest"),
   finish(95998, sam), accept(96626, sam),
+  accept(97924, sam, "If you know Skinning, ask Sam for the skinning lesson too."),
+  accept(97921, sam, "If you know Herbalism, ask Sam for the herbalism lesson too."),
+  accept(97923, sam, "If you know Mining, ask Sam for the mining lesson too."),
+  finish(97924, at("Helene Peltskinner", 46.24, 62.24), "Talk to Helene in the house just east of Sam's camp."),
+  accept(91751, at("Helene Peltskinner", 46.24, 62.24), "Skinners can take Helene's wolf pelt order. Skin the wolves you kill east of Goldshire."),
   finish(2158, farley),
   action("sethearth", farley, "Bind your hearthstone at the Lion's Pride Inn.", { bind = "Goldshire" }),
   finish(96626, at("Tomas", 44.37, 65.99), "Speak to Tomas in the inn about Cooking."),
@@ -272,7 +289,7 @@ local forest = {
   along(objective(47, fargodeep.x, fargodeep.y, "Finish collecting gold dust from the kobolds.", "10 Gold Dust"), 60),
   along(objective(60, fargodeep.x, fargodeep.y, "Loot kobolds for any Large Candles you still need.", "8 Large Candles"), 47),
   finish(87, bernice),
-  action("hearth", farley, "Hearth to Goldshire, or take the road north if your hearthstone is on cooldown.", { bind = "Goldshire" }),
+  action("hearth", farley, "Take the road north to Goldshire if you're walking.", { bind = "Goldshire" }),
   finish(62, dughan), accept(76, dughan), finish(91775, dughan), accept(91777, dughan),
   finish(47, remy), accept(40, remy), finish(40, dughan), accept(35, dughan),
   finish(60, pestle), accept(61, pestle), finish(107, pestle), accept(112, pestle),
@@ -294,9 +311,13 @@ local forest = {
   accept(83, azora.sara), accept(91732, azora.hagar),
   along(objective(5545, 81.7, 62.4, "Gather fallen wood and hunt Prowlers and Young Forest Bears around Eastvale.", "8 Bundles of Wood"), 52),
   along(objective(52, 81, 69, "Finish any wolves or bears you still need around Eastvale.", "8 Prowlers", "5 Young Forest Bears"), 5545),
+  along(objective(91751, 81, 69, "Skin the Prowlers you kill around Eastvale for Helene's pelts.", "7 Rough Wolf Pelts"), 52),
   finish(5545, at("Supervisor Raelen", 81.38, 66.11)),
   finish(52, thomas), finish(71, thomas), accept(39, thomas), accept(91733, ormin),
-  objective(91733, 74.3, 76.4, "Search the riverbanks south of the bridge for Ormin's tools.", "Waterlogged Axe", "Waterlogged Saw", "Waterlogged Toolbox"),
+  objective(91733, 74.3, 76.4, "Search the riverbanks south of the bridge for Ormin's tools. Croaky, a level 11 elite frog, roams the same banks; its head starts a quest.",
+    "Waterlogged Axe", "Waterlogged Saw", "Waterlogged Toolbox"),
+  withItem(247826, accept(91740, at("Croaky", 76.5, 86.1), "Use Croaky's Head from your bags to start the quest.")),
+  finish(91740, at("Merell Ross", 84.75, 79.3), "Follow the river east to Merell Ross at Ridgepoint Tower."),
   finish(91733, ormin),
   along(objective(83, 70.9, 80.1, "Loot Defias Bandits outside at Brackwell Pumpkin Patch on the way to Princess.", "6 Red Linen Bandanas"), 88),
   along(objective(88, 69.8, 79.4, "Clear Princess's guards before taking her collar. Loot any remaining bandanas on the way out.", "Brass Collar"), 83),
@@ -310,7 +331,7 @@ local forest = {
   objective(91777, jasperlode.x, jasperlode.y, "With help, loot Geomancy from Geosculptor Yip and Arcane Explainer from Mother Fang. Use Next if the rares are unavailable.",
     "Geomancy for Curious Young Wizards", "Arcane Explainer: Magical Stuff in Simple Words"),
   finish(91723, azora.hamish, "Return west along the road to Hamish at the Tower of Azora."), accept(91724, azora.hamish),
-  action("hearth", farley, "Hearth to Goldshire for the next turn-ins.", { bind = "Goldshire" }),
+  action("hearth", farley, "The next turn-ins are in Goldshire.", { bind = "Goldshire" }),
   finish(39, dughan), accept(59, dughan), finish(76, dughan), accept(239, dughan),
   finish(99129, remy), accept(99130, remy), finish(112, pestle), accept(114, pestle),
   finish(114, maybell), finish(88, ma),
@@ -322,17 +343,25 @@ local forest = {
   objective(46, 79.2, 52.0, "Hunt ordinary murlocs on the eastern shore of Stone Cairn Lake for fins. Pull them one or two at a time.",
     "8 Torn Murloc Fins"),
   objective(91724, 74.4, 53.2, "Fight the Defias Rogue Wizards near Stone Cairn Lake.", "8 Defias Rogue Wizards"),
-  objective(91725, 67.8, 43.5, "Look for the scattered enchanting supplies in the gnoll camps west of the lake.", "5 Stolen Enchanting Supplies"),
+  objective(91725, 67.8, 43.5, "Look for the scattered enchanting supplies in the gnoll camps west of the lake. Elmpaw (level 12) roams north of the lake; its head starts a quest.",
+    "5 Stolen Enchanting Supplies"),
+  withItem(247862, accept(91746, at("Elmpaw", 74.4, 39.6), "Use Elmpaw's Head from your bags to start the quest.")),
   finish(46, thomas), finish(59, azora.sara), finish(91732, azora.hagar),
   finish(91724, azora.hamish, "Follow the road west to the Tower of Azora."), finish(91725, azora.blixie),
-  action("hearth", farley, "Hearth to Goldshire, or follow the main road west.", { bind = "Goldshire" }),
+  action("hearth", farley, "Take the main road west to Goldshire if you're walking.", { bind = "Goldshire" }),
   action("train", nil, "Visit your class trainer and learn spells for level", { level = 10 }),
+  finish(91746, at("Helene Peltskinner", 46.24, 62.24), "Bring Elmpaw's Head to Helene in the house east of Goldshire."),
+  finish(91751, at("Helene Peltskinner", 46.24, 62.24), "Hand Helene the wolf pelts."),
+  accept(1097, at("Smith Argus", 41.71, 65.54), "Smith Argus has an errand for Stormwind. Take it before you head to the city."),
   finish(91777, paxton, "Return the two rare books to Paxton before heading on to Stormwind."),
+  finish(97921, at("Herbalist Pomeroy", 39.96, 48.41), "Stop at Herbalist Pomeroy's house beside the road to Stormwind."),
   action("goto", at(nil, 34.7, 51), "Follow the road through the gates into Stormwind."),
   finish(61, at("Morgan Pestle", 63.2, 74.4, stormwind)),
   action("getfp", at("Dungar Longdrink", 71, 72.5, stormwind), "Learn the flight path from Dungar above the Trade District.",
     { flight = "Stormwind, Elwynn" }),
-  action("hearth", farley, "Hearth to Goldshire. If it is on cooldown, take the road back through the gates.", { bind = "Goldshire" }),
+  finish(1097, at("Grimand Elmore", 59.7, 33.8, stormwind), "Go north to the Dwarven District and find Grimand Elmore. Leave his package for now unless you plan on Loch Modan."),
+  finish(97923, at("Gelman Stonehand", 59.25, 37.83, stormwind), "Talk to Gelman Stonehand a few steps south of Elmore."),
+  action("hearth", farley, "If you're walking, leave Stormwind through the main gates and follow the road to Goldshire.", { bind = "Goldshire" }),
   finish(239, rainer), accept(11, rainer),
   accept(176, at("Wanted Poster", 24.55, 74.69)),
   along(objective(11, 26.3, 91.3, "Loot armbands from Riverpaw gnolls as you clear the camps on the way to Hogger.",
@@ -429,6 +458,8 @@ q(92752, "Explosive Consultation", 16, 9, 92751, true)
 q(92753, "Destruction in Deadmines", 18, 9, 92752, true)
 q(92819, "Destruction in Deadmines", 18, 9, 92753, true)
 q(92909, "Harvesting the Harvesters", 15, 9, nil, true)
+q(103, "Keeper of the Flame", 16, 10)
+q(104, "The Coastal Menace", 20, 15)
 
 q(244, "Encroaching Gnolls", 16, 11)
 q(246, "Assessing the Threat", 17, 11, 244)
@@ -478,6 +509,24 @@ q(56, "The Night Watch", 24, 18)
 q(57, "The Night Watch", 26, 18, 56)
 q(101, "The Totem of Infliction", 25, 18)
 q(96139, "The Valor Family", 23, 18, nil, true)
+q(96137, "Ira's Dagger", 25, 18, nil, true)
+quest[96137].startItem = 281143
+q(174, "Look To The Stars", 25, 20)
+q(175, "Look To The Stars", 25, 20, 174)
+q(177, "Look To The Stars", 25, 20, 175)
+-- Chef Grual only offers the kabobs at Cooking 50: an optional pickup (Settings > Show optional quests).
+q(90, "Seasoned Wolf Kabobs", 25, 18)
+quest[90].optional = true
+q(79362, "Grant's Shield", 25, 18, nil, true)
+quest[79362].startItem = 281147
+q(337, "An Old History Book", 25, 20)
+quest[337].startItem = 2794
+q(323, "Proving Your Worth", 28, 20, 268)
+q(269, "Seeking Wisdom", 29, 20, 323)
+-- After the Wetlands' Blessed Arm (322): Grimand Elmore in Stormwind sends Morbent's Bane to Sven.
+-- Morbent Fel is level 32, past this route; the steps belong to a later Duskwood visit.
+q(325, "Armed and Ready", 29, 20, 322)
+q(55, "Morbent Fel", 32, 20, 325)
 
 q(98245, "Razormaw Needling", 29, 22, nil, true)
 q(98246, "Trying Times", 29, 22, nil, true)
@@ -505,6 +554,33 @@ q(464, "War Banners", 28, 23, 473)
 q(98221, "From the Ashes", 28, 23, nil, true)
 q(305, "In Search of The Excavation Team", 24, 21)
 q(306, "In Search of The Excavation Team", 24, 21, 305)
+-- Wetlands gap fill (tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md).
+q(270, "The Doomed Fleet", 29, 20, 269)
+q(321, "Lightforge Iron", 29, 20, 270)
+q(324, "The Lost Ingots", 29, 20, 321)
+q(322, "Blessed Arm", 29, 20, 324)
+q(290, "Lifting the Curse", 30, 22, 289)
+q(292, "The Eye of Paleth", 30, 22, 290)
+q(293, "Cleansing the Eye", 30, 22, 292)
+q(484, "Young Crocolisk Skins", 22, 18)
+q(471, "Apprentice's Duties", 26, 18, 484)
+q(98072, "Crocs of the Sky", 27, nil, nil, true)
+q(472, "Fall of Dun Modr", 25, 25)
+q(631, "The Thandol Span", 31, 28)
+q(632, "The Thandol Span", 31, 28, 631)
+q(633, "The Thandol Span", 31, 28, 632)
+q(637, "Sully Balloo's Letter", 30, 25)
+quest[637].startItem = 4433
+q(98208, "Bloom of the Heavens", 29, nil, nil, true)
+q(98209, "Bloom of the Heavens", 29, nil, nil, true)
+q(98291, "Death to the Dragonmaw", 30, nil, nil, true)
+q(98293, "Forced Disarmament", 30, nil, nil, true)
+q(95647, "Lost in the Thicket Things", 31, 24, nil, true)
+q(98815, "Highland Hides", 28, nil, nil, true)
+q(95646, "Horrors in the Highland", 31, 24, 275, true)
+q(971, "Knowledge in the Deeps", 23, 10)
+q(3765, "The Corruption Abroad", 24, 18)
+q(1275, "Researching the Corruption", 24, 18, 3765)
 
 local function objectiveAt(id, place, text, ...)
   local step = questAction("complete", id, place, text)
@@ -522,8 +598,9 @@ local function taxi(kind, place, name, text)
   return action(kind, place, text, { flight = name })
 end
 
-local function deadmines(step)
-  step.optional, step.dungeon = true, "The Deadmines"
+-- A pickup for a dungeon detour: shown when that dungeon is planned (Quests tab or Settings).
+local function forDungeon(step, id)
+  step.optional, step.dungeon = true, id
   return step
 end
 
@@ -541,7 +618,7 @@ local west = {
   accept(6181, lewis), finish(6181, thor),
   taxi("getfp", thor, "Sentinel Hill, Westfall", "Learn the Sentinel Hill flight path from Thor."),
   accept(6281, thor), accept(153, galiaan), accept(92742, alba), accept(92744, alba),
-  action("sethearth", wf("Innkeeper Heather", 52.9, 53.7), "Bind at Sentinel Hill for the Westfall loops.", { bind = "Sentinel Hill" }),
+  action("sethearth", wf("Innkeeper Heather", 52.9, 53.7), "Bind your hearthstone with Innkeeper Heather at Sentinel Hill.", { bind = "Sentinel Hill" }),
   along(action("goto", wf(nil, 46.08, 38.14), "Work north through the farms to the Molsen Farm well."), 102, 92742),
   along(withItem("Well Water Sample Kit", objectiveAt(102, wf(nil, 46.5, 38.6),
     "Loot paws from Riverpaw gnolls and sample the Molsen Farm well at 46.1, 38.1.", "8 Gnoll Paws")), 92742),
@@ -557,7 +634,7 @@ local west = {
   action("goto", saldean, "Return south past Saldean's Farm and do the fields before heading to the tower."),
   along(objectiveAt(9, wf(nil, 53.1, 31.1), "Kill Harvest Watchers in the fields. Loot their machine parts for Ozwin and okra for Salma.",
     "20 Harvest Watchers"), 92909, 38),
-  along(objectiveAt(92909, wf(nil, 52.4, 31.3), "Loot Harvest Golems and Watchers for any parts or okra you still need.",
+  along(objectiveAt(92909, wf(nil, 52.4, 31.3), "Loot Harvest Golems and Watchers for any parts or okra you still need. Keep 5 Flasks of Oil from the golems for the lighthouse later.",
     "14 Golem Isosprings", "5 Harvester Gyrostabilizers"), 9, 38),
   along(objectiveAt(22, wf(nil, 54.4, 40.4), "Hunt goretusks south of the farm for livers and snouts. Loot any vultures you pass.",
     "8 Goretusk Livers"), 38),
@@ -599,35 +676,43 @@ local west = {
   finish(6285, lewis), finish(92752, alba), accept(92753, alba),
   finish(141, gryan), accept(142, gryan),
   objectiveAt(142, wf(nil, 44.5, 69.6), "Intercept the Defias Messenger along the road from Moonbrook to Jangolode Mine and loot his message.", "A Mysterious Message"),
+  action("goto", wf("Captain Grayson", 30.01, 86.02), "Follow the road south-west from Moonbrook to the Westfall Lighthouse on the coast."),
+  accept(103, wf("Captain Grayson", 30.01, 86.02)), accept(104, wf("Captain Grayson", 30.01, 86.02)),
+  objectiveAt(103, wf(nil, 46.9, 67.2), "If you kept 5 Flasks of Oil from the fields, this is already done. Otherwise kill Harvest Golems in the fields east of Moonbrook.",
+    "5 Flasks of Oil"),
+  objectiveAt(104, wf("Old Murk-Eye", 29.3, 76), "Old Murk-Eye, a large grey murloc, walks the beach north of the lighthouse. Pull him away from the other murlocs.",
+    "Scale of Old Murk-Eye"),
+  finish(103, wf("Captain Grayson", 30.01, 86.02)), finish(104, wf("Captain Grayson", 30.01, 86.02)),
+  action("goto", gryan, "Follow the road north-east back to Sentinel Hill."),
   finish(142, gryan), accept(155, traitor),
   objectiveAt(155, traitor, "Stay with the Defias Traitor from the tower to Moonbrook. Protect him until the escort gets credit.", "Defias hideout found"),
   finish(155, gryan),
-  action("grind", wf(nil, 46, 68), "Reach level 17 for the next section. Try an alternate route, finish Westfall quests or clear nearby Defias.",
-    { level = 17, suggest = { "loch-modan", "darkshore" } }),
+  action("grind", wf(nil, 46, 68), "Reach level 17 before heading to Lakeshire. Finish Westfall quests, clear nearby Defias, or try an alternate route.",
+    { level = 17, suggest = { "loch-modan", "darkshore" }, guide = "dungeon-deadmines" }),
   accept(166, gryan), accept(214, riell),
-  deadmines(action("dungeon", wf(nil, 42.5, 71.7), "With a group, enter the mine through the large Moonbrook building. Use Next at the mine entrance.",
-    { name = "The Deadmines" })),
-  deadmines(objectiveAt(168, nil, "Loot Miners' Union Cards from undead in the tunnels before the instance portal.", "4 Miners' Union Cards")),
-  deadmines(objectiveAt(167, nil, "Find Foreman Thistlenettle in the tunnels and loot his badge.", "Explorers' League Badge")),
-  deadmines(objectiveAt(214, nil, "Loot Red Silk Bandanas from Defias in the mines and the dungeon.", "10 Red Silk Bandanas")),
-  deadmines(objectiveAt(2040, nil, "Defeat Sneed's Shredder inside the instance and loot the sprocket.", "Gnoam Sprecklesprocket")),
-  deadmines(withItem("Extra-Destructive Explosives", objectiveAt(92753, nil, "Use the Extra-Destructive Explosives near the forge inside the Deadmines.", "Explosives planted"))),
-  deadmines(objectiveAt(166, nil, "Kill Edwin VanCleef on the ship and loot his head and the letter.", "Head of VanCleef")),
-  deadmines(withItem(2874, accept(373, nil, "Use the Letter to the City Architect from VanCleef's loot."))),
-  deadmines(finish(92753, exitAlba, "Leave by the dungeon's back exit and speak to Alba outside.")),
-  deadmines(accept(92819, exitAlba)),
-  deadmines(objectiveAt(92819, exitAlba, "Use the detonator beside Alba.", "Detonator used")),
-  deadmines(finish(92819, exitAlba)),
-  deadmines(finish(166, gryan)), deadmines(finish(214, riell)),
-  deadmines(taxi("fly", dungar, "Stormwind, Elwynn", "Fly to Stormwind for the Deadmines turn-ins.")),
-  deadmines(finish(373, sw("Baros Alexston", 57.74, 47.86))),
-  deadmines(finish(167, wilder)), deadmines(finish(168, wilder)), deadmines(finish(2040, shoni)),
+  forDungeon(action("dungeon", wf(nil, 42.5, 71.7), "With a group, enter the mine through the large Moonbrook building. Use Next at the mine entrance.",
+    { name = "The Deadmines" }), "dungeon-deadmines"),
+  forDungeon(objectiveAt(168, nil, "Loot Miners' Union Cards from undead in the tunnels before the instance portal.", "4 Miners' Union Cards"), "dungeon-deadmines"),
+  forDungeon(objectiveAt(167, nil, "Find Foreman Thistlenettle in the tunnels and loot his badge.", "Explorers' League Badge"), "dungeon-deadmines"),
+  forDungeon(objectiveAt(214, nil, "Loot Red Silk Bandanas from Defias in the mines and the dungeon.", "10 Red Silk Bandanas"), "dungeon-deadmines"),
+  forDungeon(objectiveAt(2040, nil, "Defeat Sneed's Shredder inside the instance and loot the sprocket.", "Gnoam Sprecklesprocket"), "dungeon-deadmines"),
+  forDungeon(withItem("Extra-Destructive Explosives", objectiveAt(92753, nil, "Use the Extra-Destructive Explosives near the forge inside the Deadmines.", "Explosives planted")), "dungeon-deadmines"),
+  forDungeon(objectiveAt(166, nil, "Kill Edwin VanCleef on the ship and loot his head and the letter.", "Head of VanCleef"), "dungeon-deadmines"),
+  forDungeon(withItem(2874, accept(373, nil, "Use the Letter to the City Architect from VanCleef's loot.")), "dungeon-deadmines"),
+  forDungeon(finish(92753, exitAlba, "Leave by the dungeon's back exit and speak to Alba outside."), "dungeon-deadmines"),
+  forDungeon(accept(92819, exitAlba), "dungeon-deadmines"),
+  forDungeon(objectiveAt(92819, exitAlba, "Use the detonator beside Alba.", "Detonator used"), "dungeon-deadmines"),
+  forDungeon(finish(92819, exitAlba), "dungeon-deadmines"),
+  forDungeon(finish(166, gryan), "dungeon-deadmines"), forDungeon(finish(214, riell), "dungeon-deadmines"),
+  forDungeon(taxi("fly", dungar, "Stormwind, Elwynn", "Fly to Stormwind for the Deadmines turn-ins."), "dungeon-deadmines"),
+  forDungeon(finish(373, sw("Baros Alexston", 57.74, 47.86)), "dungeon-deadmines"),
+  forDungeon(finish(167, wilder), "dungeon-deadmines"), forDungeon(finish(168, wilder), "dungeon-deadmines"), forDungeon(finish(2040, shoni), "dungeon-deadmines"),
   taxi("fly", ariena, "Lakeshire, Redridge", "Fly to Lakeshire. If you cannot fly, take the road east through Goldshire."),
 }
 
 local lakeshire = {
   taxi("getfp", ariena, "Lakeshire, Redridge", "Talk to Ariena on the south side of the bridge to learn the Lakeshire flight path."),
-  action("sethearth", rr("Innkeeper Brianna", 22.0, 44.5), "Bind your hearthstone in the Lakeshire inn.", { bind = "Lakeshire" }),
+  action("sethearth", rr("Innkeeper Brianna", 22.0, 44.5), "Bind your hearthstone with Innkeeper Brianna in Lakeshire.", { bind = "Lakeshire" }),
   accept(129, darcy), accept(92, breanna), accept(127, baren),
   accept(3741, rr("Shawn", 24.23, 53.64)),
   accept(125, oslow), accept(118, verner), accept(120, solomon),
@@ -681,9 +766,8 @@ local lakeshire = {
   along(objectiveAt(92, rr(nil, 28.2, 76.5),
     "Finish any missing goulash ingredients south of the lake. Hunt Dire Condors, Great Goretusks and tarantulas as needed.",
     "5 Tough Condor Meat", "5 Great Goretusk Snouts", "5 Crisp Spider Meat"), 122),
-  action("hearth", rr("Innkeeper Brianna", 22, 44.5), "Hearth to Lakeshire for the final turn-ins, or follow the lake road west.", { bind = "Lakeshire" }),
+  action("hearth", rr("Innkeeper Brianna", 22, 44.5), "Return to Lakeshire for the turn-ins. If you're walking, follow the lake road west.", { bind = "Lakeshire" }),
   finish(92, breanna), finish(122, verner), finish(98387, marris), finish(20, marris),
-  action("note", nil, "This route ends in Lakeshire. Review earlier Westfall quests from the Quests tab if you want to catch up."),
 }
 
 local function dw(name, x, y) return at(name, x, y, duskwood) end
@@ -705,58 +789,85 @@ local abercrombie = dw("Abercrombie", 28.11, 31.46)
 local mound = dw("Mound of loose dirt", 49.85, 77.71)
 local darkshireHearth = { bind = "Darkshire" }
 
--- Three loops out of Darkshire: west to Sven's Camp, then the Raven Hill Cemetery twice.
+-- Three Darkshire loops, then a final visit to the north cemetery for Abercrombie.
 local dusk = {
   taxi("getfp", felicia, "Darkshire, Duskwood",
-    "From Lakeshire take the road west to Three Corners and south into Duskwood, then east to Darkshire. Learn the flight path from Felicia Maline."),
-  action("sethearth", trelayne, "Bind your hearthstone at the Scarlet Raven Tavern. Every Duskwood loop ends back here.", darkshireHearth),
+    "Learn the flight path from Felicia Maline in Darkshire. From Lakeshire, head west to Three Corners, then south into Duskwood and east to town."),
+  action("sethearth", trelayne, "Bind your hearthstone with Innkeeper Trelayne at the Scarlet Raven Tavern.", darkshireHearth),
   accept(163, elaine), accept(164, elaine), accept(165, elaine),
   accept(56, althea), accept(101, eva), accept(96139, sirra),
+  accept(90, grual, "With Cooking 50 or higher, take Chef Grual's kabob order in the house next to the tavern. Buy Stormwind Seasoning Herbs from a cooking supplies vendor."),
   along(objectiveAt(56, dw(nil, 79.5, 70.5), "Go south to Tranquil Gardens Cemetery. Loot Skeleton Fingers from the Warriors and Mages for Madame Eva.",
     "8 Skeletal Warriors", "6 Skeletal Mages"), 101),
-  finish(56, althea),
-  accept(245, dodds, "Take the road west out of Darkshire. Watcher Dodds stands at the crossroads."),
-  finish(163, jitters, "Follow the road west to Raven Hill. Jitters hides in a house by the road."), accept(5, jitters),
+  finish(56, althea), accept(57, althea, "Pick up the next Night Watch now. Save its Raven Hill skeletons for the Rot Blossom trip."),
+  withItem(281143, accept(96137, nil, "Use Ira's Dagger from your bags. Use Next to leave the hunt for later.")),
+  objectiveAt(96137, dw(nil, 55.3, 63.7),
+    "Hunt Young Black Ravagers north of Yorgen Farmstead and Black Ravagers by the road near 59.5, 58.3. If the adults are scarce, check Brightwood Grove north of Darkshire on a later pass.",
+    "10 Young Black Ravagers", "7 Black Ravagers"),
+  accept(245, dodds, "Take the road west out of Darkshire to Watcher Dodds at the crossroads. If you meet a Lost Stalker on the way, it can drop Ira's Dagger."),
   objectiveAt(96139, dw("Memory of Valor", 21.2, 55.7), "Find the Raven Hill Tome on the broken table inside the house.", "Raven Hill Tome"),
-  along(objectiveAt(245, dw(nil, 9.5, 50), "Kill Pygmy Venom Web Spiders in the western woods. Keep their venom for Eva and save Gooey Spider Legs for later.",
+  finish(163, jitters, "Follow the road west to Raven Hill. Jitters hides in a house by the road."), accept(5, jitters),
+  along(objectiveAt(245, dw(nil, 9.5, 50), "Kill Pygmy Venom Web Spiders in the western woods. Loot Vials of Spider Venom for Eva and save 6 Gooey Spider Legs for Chef Grual's next quest.",
     "15 Pygmy Venom Web Spiders"), 101),
   finish(164, sven, "Deliver the supplies at Sven's Camp on the western border."), accept(95, sven), accept(226, lars),
-  objectiveAt(226, dw(nil, 22, 26.5), "Hunt Starving and Rabid Dire Wolves on the slopes east of the camp, toward the hermit's shack.",
-    "12 Starving Dire Wolves", "8 Rabid Dire Wolves"),
+  along(objectiveAt(226, dw(nil, 22, 26.5), "Hunt Starving and Rabid Dire Wolves on the slopes east of the camp, toward the hermit's shack. Keep their Lean Wolf Flanks for Chef Grual.",
+    "12 Starving Dire Wolves", "8 Rabid Dire Wolves"), 90),
+  along(objectiveAt(90, dw(nil, 25.4, 27.1), "Loot any Lean Wolf Flanks you still need from the same wolves.", "10 Lean Wolf Flanks"), 226),
   finish(165, abercrombie, "Abercrombie lives in the shack north of the Raven Hill Cemetery."), accept(148, abercrombie),
   finish(245, dodds, "Head south-east back to the crossroads."),
   finish(95, mound, "Go south to Sven's old farm and dig in the mound behind the stump."), accept(230, mound),
-  finish(5, grual, "Walk east to Darkshire. Chef Grual is in the house next to the tavern."), accept(93, grual),
-  finish(148, eva), accept(149, eva), finish(96139, sirra),
+  finish(5, grual, "Walk east to Darkshire. Chef Grual is in the house next to the tavern."), accept(93, grual), finish(90, grual),
+  finish(148, eva), accept(149, eva), finish(96139, sirra), finish(96137, sirra),
+  accept(174, dw("Viktori Prism'Antras", 79.8, 48.02),
+    "Buy a Bronze Tube from Herble Baubbletump on the east side of town (78.0, 48.3), then take Viktori's quest next door. Herble's stock is limited."),
+  finish(174, dw("Viktori Prism'Antras", 79.8, 48.02), "Give Viktori the Bronze Tube. If Herble had none, use Next to leave this chain."),
+  accept(175, dw("Viktori Prism'Antras", 79.8, 48.02)),
   finish(149, mary, "Blind Mary's house is south-east of town."), accept(154, mary),
+  finish(175, mary), accept(177, mary),
+  objectiveAt(177, dw("Insane Ghoul", 80.9, 72), "Go south to the Tranquil Gardens chapel. The Insane Ghoul is level 26: pull it alone. If it is too strong, use Next here and at Viktori's turn-in.",
+    "Mary's Looking Glass"),
   along(objectiveAt(93, dw(nil, 84.4, 52.9), "If you still need spider legs, kill Black Widow Hatchlings north of Mary's house. Loot any missing venom too.",
     "6 Gooey Spider Legs"), 101),
   finish(154, eva), accept(157, eva), finish(93, grual), accept(240, grual),
+  finish(177, dw("Viktori Prism'Antras", 79.8, 48.02)),
 
-  accept(57, althea),
   action("goto", sven, "Take the west road past Raven Hill to Sven's Camp."),
   finish(230, sven), accept(262, sven), finish(226, lars),
   finish(157, abercrombie), accept(158, abercrombie),
-  action("hearth", trelayne, "Hearth to Darkshire, or walk the road east if it is on cooldown.", darkshireHearth),
-  finish(158, smitts), accept(156, smitts),
-  finish(262, eva), accept(265, eva), finish(265, daltry), accept(266, daltry), finish(266, smitts), accept(453, smitts),
+  action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
+  finish(262, eva), accept(265, eva), finish(265, daltry), accept(266, daltry),
+  finish(158, smitts), accept(156, smitts), finish(266, smitts), accept(453, smitts),
 
-  finish(240, jitters, "Bring Jitters the crab cakes on the way into Raven Hill."),
+  action("goto", jitters, "Follow the main road west from Darkshire into Raven Hill. Stop at Jitters' house before going north to the cemetery."),
+  finish(240, jitters),
   finish(453, jitters, "The jittery stranger the clues describe is Jitters, in Raven Hill."), accept(268, jitters),
-  along(objectiveAt(57, dw(nil, 21, 45), "Kill Skeletal Fiends and Horrors in Raven Hill Cemetery. Loot their Rot Blossoms and any missing fingers.",
-    "15 Skeletal Fiends", "15 Skeletal Horrors"), 156, 101),
+  withItem(281147, accept(79362, nil, "Use Grant's Shield from your bags. The Lost Knight ghost that drops it wanders Raven Hill Cemetery.")),
+  along(objectiveAt(57, dw(nil, 21, 45), "Clear the southern graves for Skeletal Fiends and Horrors. Loot their Rot Blossoms and any missing Skeleton Fingers. Give Mor'Ladim room to pass.",
+    "15 Skeletal Fiends", "15 Skeletal Horrors"), 156, 101, 79362),
   along(objectiveAt(156, dw(nil, 22.3, 45.8), "Loot any remaining Rot Blossoms from the same skeletons.", "8 Rot Blossoms"), 57, 101),
+  along(objectiveAt(79362, dw(nil, 22.3, 45.8), "Keep killing the same skeletons until one drops Grant's Mace.", "Grant's Mace"), 57),
   objectiveAt(101, dw(nil, 23.7, 36.5), "Loot fangs from Flesh Eaters and Rotted Ones and any missing fingers from skeletons. Hunt spiders in the western woods for any missing venom.",
     "10 Ghoul Fangs", "10 Skeleton Fingers", "5 Vials of Spider Venom"),
-  finish(268, sven),
-  action("hearth", trelayne, "Hearth to Darkshire if it is ready, otherwise walk the road east.", darkshireHearth),
-  finish(57, althea), finish(101, eva),
+  finish(268, sven), accept(323, sven, "Take Sven's next task now. Its skeletons are tougher: save them for your last trip west."),
+  action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
+  finish(57, althea), finish(101, eva), finish(79362, sirra),
   finish(156, smitts), accept(159, smitts),
-  finish(159, abercrombie, "Take the Zombie Juice back west to Abercrombie's shack."), accept(133, abercrombie),
+  action("goto", abercrombie, "Take the west road from Darkshire, then head north before Raven Hill to Abercrombie's shack."),
+  finish(159, abercrombie), accept(133, abercrombie),
   objectiveAt(133, dw(nil, 23.8, 36.5), "Loot Ghoul Ribs from the ghouls at the north end of the cemetery.", "7 Ghoul Ribs"),
   finish(133, abercrombie),
-  action("grind", dw(nil, 23.7, 36.5), "Reach level 26 for Wetlands. Finish open Duskwood quests or run the Stockade with a group. Use Next to travel early if ready.", { level = 26 }),
-  action("goto", felicia, "Hearth or take the east road to return to Darkshire for the flight to Stormwind."),
+  objectiveAt(323, dw(nil, 16, 35.5),
+    "Go west to the far edge of the cemetery near Sven's camp. Pull Skeletal Raiders, Healers and Warders one at a time and stay clear of Morbent Fel.",
+    "15 Skeletal Raiders", "3 Skeletal Healers", "3 Skeletal Warders"),
+  finish(323, sven), accept(269, sven),
+  action("grind", dw(nil, 23.7, 36.5), "Reach level 26 for Wetlands. Finish open Duskwood quests or run the Stockade with a group. Use Next to travel early if ready.",
+    { level = 26, guide = "dungeon-stockade" }),
+  withItem(2794, accept(337, nil, "If An Old History Book dropped in Duskwood, read it. The Stormwind library takes it on your way north.")),
+  -- A hearth step (done on arrival at Felicia), so the Stormwind turn-ins after it don't mark it as passed.
+  action("hearth", felicia, "Hearth or take the east road to return to Darkshire for the flight to Stormwind.", darkshireHearth),
+  taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
+  finish(269, sw("Bishop Farthing", 49.93, 45.99), "Bring Jitters' journal to Bishop Farthing in the Cathedral of Light."),
+  finish(337, sw("Milton Sheaf", 77.07, 30.21), "Return the history book to Milton Sheaf in the Royal Library of Stormwind Keep."),
 }
 
 local function wl(name, x, y) return at(name, x, y, wetlands) end
@@ -777,9 +888,13 @@ local tarrel = wl("Tarrel Rockweaver", 11.5, 52.17)
 local menethilHearth = { bind = "Menethil Harbor" }
 
 -- Up to 30 in the Wetlands: the Green Belt and Raptor Ridge first, then Menethil Harbor's
--- coast and wreck, then one sweep back east past the dig site, Angerfang and Thelgen Rock.
+-- coast and both wrecks, then one sweep back east past the dig site, Angerfang, Dun Modr,
+-- Thelgen Rock and Dragonmaw Retreat, and the south bay last. Ends with the Stormwind turn-ins
+-- and the ship to Auberdine. Gap notes: tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md.
 local wet = {
   taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
+  accept(270, sw("Bishop Farthing", 49.95, 46.0),
+    "If you brought Jitters' journal to Bishop Farthing, he has orders for Menethil Harbor. Find him in the Cathedral of Light, or use Next."),
   action("goto", nil, "Take the Deeprun Tram from the Dwarven District to Ironforge. Use Next when you arrive."),
   taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
   taxi("getfp", at("Thorgrum Borrelson", 33.9, 51.0, lochModan), "Thelsamar, Loch Modan",
@@ -805,23 +920,40 @@ local wet = {
   accept(279, karl), accept(288, fitz), accept(98282, caitlin), accept(470, sida),
   accept(98197, valstag), accept(473, valstag), accept(305, tarrel),
   finish(473, stoutfist, "Captain Stoutfist is upstairs in Menethil Keep."), accept(464, stoutfist), accept(98221, stoutfist),
+  finish(270, wl("Glorin Steelbrow", 10.59, 60.59), "Glorin Steelbrow waits outside the Deepwater Tavern. Give him the bishop's orders."),
+  accept(484, wl("James Halloran", 8.51, 55.71), "James Halloran by the north gate wants young crocolisk skins. Done already if you ran the coast chapter."),
+  forDungeon(accept(95647, caitlin, "Ask Caitlin about Ardin, lost in the Excavation Site."), "dungeon-excavation-site"),
   objectiveAt(288, helbrek, "Buy a Flagon of Mead from Innkeeper Helbrek.", "Flagon of Mead"),
   finish(288, fitz), accept(289, fitz),
   objectiveAt(98197, wl(nil, 12.1, 52.5), "Gather timber and iron from the harbor floor north of town.", "6 Khaz Modan Timber", "30 Khaz Modan Iron"),
   finish(98197, valstag),
+  objectiveAt(484, wl(nil, 19.15, 47.12), "Kill Young Wetlands Crocolisks in the marsh channels east of the beach.", "Young Crocolisk Skins"),
+  finish(484, wl("James Halloran", 8.51, 55.71), "Bring the skins back to Halloran at the north gate."),
+  accept(471, wl("James Halloran", 8.51, 55.71), "Take his next order. The big crocolisks live by the cursed wreck you visit next."),
   objectiveAt(279, wl(nil, 15, 39.2), "Kill Bluegill Murlocs along the coast to the north. Gobbler walks with them near 18, 40.",
     "12 Bluegill Murlocs", "Gobbler's Head"),
   finish(279, karl), accept(281, karl),
   finish(281, wl("Damaged Crate", 13.52, 41.38), "Search the Damaged Crate in the murloc camp."), accept(284, wl("Damaged Crate", 13.52, 41.38)),
   finish(284, wl("Sealed Barrel", 13.6, 38.22), "Clear the murlocs around the Sealed Barrel before you open it."), accept(285, wl("Sealed Barrel", 13.6, 38.22)),
   finish(285, wl("Half-buried Barrel", 13.94, 34.81)), accept(286, wl("Half-buried Barrel", 13.94, 34.81)),
-  objectiveAt(289, wl(nil, 14.2, 28), "Board the wreck to the north. Kill Cursed Sailors and Marines, and First Mate Snellig for his snuffbox.",
-    "13 Cursed Sailors", "5 Cursed Marines", "Snellig's Snuffbox"),
+  along(objectiveAt(289, wl(nil, 14.2, 28), "Board the wreck to the north. Kill Cursed Sailors and Marines, and First Mate Snellig for his snuffbox.",
+    "13 Cursed Sailors", "5 Cursed Marines", "Snellig's Snuffbox"), 471),
+  along(objectiveAt(471, wl(nil, 17.5, 26.2), "Kill Giant Wetlands Crocolisks on the shore east of the wreck. More sit farther east near 23, 22.",
+    "6 Giant Crocolisk Skins"), 289),
   finish(286, karl, "Return to Menethil Harbor with the statuette."), accept(98189, karl),
   finish(98189, stoutfist), accept(98190, stoutfist),
-  finish(289, fitz),
+  finish(289, fitz), accept(290, fitz),
+  finish(471, wl("James Halloran", 8.51, 55.71)),
+  accept(98072, wl("James Halloran", 8.51, 55.71), "Halloran also wants scales from the red whelps east of the Green Belt. You pass them on the last eastern loop."),
+  forDungeon(accept(98815, wl("James Halloran", 8.51, 55.71), "Ask Halloran about Highland Hides for the Excavation Site."), "dungeon-excavation-site"),
+  accept(472, wl("Harlo Barnaby", 10.85, 55.9), "Harlo Barnaby, north of the keep, has a message for Longbraid at Dun Modr on your eastern loop."),
+  objectiveAt(290, wl("Captain Halyndor", 15.45, 23.61), "Go north past the cursed wreck to the Intrepid. Climb the rudder and kill Captain Halyndor for his key. He reflects spells for a few seconds at a time.",
+    "Intrepid Strongbox Key"),
+  finish(290, wl("Intrepid's Locked Strongbox", 14.37, 24.02), "Enter the hole in the side of the hull and open the strongbox."),
+  accept(292, wl("Intrepid's Locked Strongbox", 14.37, 24.02)),
 
-  finish(305, merrin, "Head back east to the Whelgar Excavation Site."), accept(306, merrin),
+  action("goto", merrin, "Head back south-east across the marsh to the Whelgar Excavation Site."),
+  finish(305, merrin), accept(306, merrin),
   finish(294, ormer), accept(295, ormer),
   along(objectiveAt(295, wl(nil, 33.9, 47.0), "Kill Mottled Scytheclaws and Razormaws as you search the dig site for tablet fragments.",
     "10 Mottled Scytheclaws", "10 Mottled Razormaws"), 299),
@@ -838,14 +970,61 @@ local wet = {
   along(objectivePart(98221, 2, wl(nil, 49.46, 46.81), "Burn the Thelsamar attack plan at the east end of the camp.", "Attack Plan: Thelsamar"), 464),
   along(objectiveAt(464, wl(nil, 45.3, 45.0), "Loot any remaining War Banners from Dragonmaw Raiders and Swamprunners around Angerfang.",
     "8 Dragonmaw War Banners"), 98221),
+  accept(98291, howin, "Stop at Howin by the road east of Angerfang. He wants Dragonmaw Retreat cleared at the end of this loop."),
   objectiveAt(470, wl(nil, 44.9, 26.1), "Kill the oozes at Ironbeard's Tomb to the north until one drops Sida's bag.", "Sida's Bag"),
+  finish(472, wl("Longbraid the Grim", 49.8, 18.26), "Follow the road north to the dwarf camp outside Dun Modr and give Longbraid Harlo's message."),
+  accept(631, wl("Rhag Garmason", 49.92, 18.21), "Rhag Garmason, in the same camp, wants news of Ol' Rustlocke on the Thandol Span."),
+  finish(631, wl("Ebenezer Rustlocke's Corpse", 51.28, 7.95),
+    "Walk north onto the bridge, take the doorway and the stairs down to Rustlocke's body. Two elite Dark Iron saboteurs guard the room: slow or stun them, read the body and leave."),
+  accept(632, wl("Ebenezer Rustlocke's Corpse", 51.28, 7.95)),
+  finish(632, wl("Rhag Garmason", 49.92, 18.21), "Take the parchment back to Rhag at the camp."),
+  accept(633, wl("Rhag Garmason", 49.92, 18.21)),
+  objectiveAt(633, at("Cache of Explosives", 48.8, 88.0, 1417),
+    "Jump off the bridge into the river. Loot the Waterlogged Letter in the water near the Arathi shore, then climb the path east to the Dark Iron cache and destroy it.",
+    "Cache of Explosives Destroyed"),
+  withItem(4433, accept(637, at("Waterlogged Letter", 44.3, 92.9, 1417), "Open the Waterlogged Envelope from the river to start Sully Balloo's letter for Ironforge.")),
+  finish(633, wl("Rhag Garmason", 49.92, 18.21), "Swim back under the bridge and return to Rhag. Plea To The Alliance, his next quest, goes into Arathi; leave it for later."),
   objectiveAt(98282, wl(nil, 48.7, 62.4), "Collect an Unruptured Stalker Gland from the stalkers in Thelgen Rock, the cave south of the road."),
   finish(275, rethiel),
-  action("hearth", helbrek, "Hearth to Menethil Harbor.", menethilHearth),
-  finish(306, tarrel), finish(464, stoutfist), finish(98221, stoutfist), finish(470, sida), finish(98282, caitlin),
+  forDungeon(accept(95646, rethiel, "Take Rethiel's task for the Highland Horror inside the Excavation Site."), "dungeon-excavation-site"),
+  accept(98293, wl("Dragonmaw Armaments", 58.8, 45.1), "Pick up the Dragonmaw Armaments lying at the west edge of Dragonmaw Retreat, south-east of Rethiel."),
+  along(objectiveAt(98291, wl(nil, 64.5, 46.3), "Work east through Dragonmaw Retreat. Kill Reclaimers, Soulbinders and Infiltrators and pull them one at a time.",
+    "8 Dragonmaw Reclaimers", "5 Dragonmaw Soulbinders", "3 Dragonmaw Infiltrators"), 98293, 98072),
+  along(objectiveAt(98293, wl(nil, 63.5, 45.8), "Pick up the armaments lying around the camp between fights.", "30 Dragonmaw Armaments"), 98291, 98072),
+  along(objectiveAt(98072, wl(nil, 63.0, 41.8), "Kill the red whelps on the slope north of the retreat for Pristine Crimson Scales.", "8 Pristine Crimson Scales"),
+    98291, 98293),
+  finish(98291, howin, "Take the road west back to Howin."),
+  action("hearth", helbrek, "The next turn-ins are in Menethil Harbor.", menethilHearth),
+  finish(306, tarrel), finish(464, stoutfist), finish(98221, stoutfist), finish(98293, stoutfist), finish(470, sida), finish(98282, caitlin),
+  finish(98072, wl("James Halloran", 8.51, 55.71)),
+  finish(292, wl("Glorin Steelbrow", 10.59, 60.59), "Bring the Eye of Paleth to Glorin outside the tavern."),
+  accept(293, wl("Glorin Steelbrow", 10.59, 60.59), "Take the Eye on to the Archbishop in Stormwind."),
+  accept(321, wl("Glorin Steelbrow", 10.59, 60.59), "Glorin wants the wreck of the Flying Osprey searched."),
+  accept(98208, wl("Sylessa Duskwhisper", 7.92, 55.82), "Sylessa Duskwhisper, by the west docks, lost something in the bay south of town."),
+  finish(321, wl("Waterlogged Chest", 12.1, 64.17), "Wade out to the wreck of the Flying Osprey in the bay south of town and open the Waterlogged Chest."),
+  accept(324, wl("Waterlogged Chest", 12.1, 64.17)),
+  along(objectiveAt(98208, wl("Nord'el", 12.22, 63.74), "Pick up Nord'el beside the chest.", "Nord'el"), 324),
+  along(objectiveAt(324, wl(nil, 10.5, 67.4), "Kill Bluegill Raiders along the south shore for Lightforge Ingots.", "5 Lightforge Ingots"), 98208),
+  finish(324, wl("Glorin Steelbrow", 10.59, 60.59), "Return to Glorin with the ingots."),
+  accept(322, wl("Glorin Steelbrow", 10.59, 60.59), "Take the crate of ingots for Stormwind."),
+  finish(98208, wl("Sylessa Duskwhisper", 7.92, 55.82)),
+  accept(98209, wl("Sylessa Duskwhisper", 7.92, 55.82), "Sylessa asks you to carry Nord'el to Thundris Windweaver in Auberdine. You take the ship there at the end."),
   taxi("fly", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Fly to Ironforge. If you have reached level 30, train your new spells here."),
-  finish(98190, sw("Highlord Bolvar Fordragon", 80.21, 38.35), "Take the Deeprun Tram to Stormwind and give the statuette to Highlord Bolvar in Stormwind Keep."),
-  action("note", nil, "The route continues past level 30 in a later update. Duskwood's level 28-30 quests and the Wetlands quests left here are still worth doing."),
+  finish(637, at("Sara Balloo", 63.48, 67.29, ironforge), "Give Sully's letter to Sara Balloo in the Mystic Ward."),
+  forDungeon(accept(971, at("Gerrig Bonegrip", 50.83, 5.62, ironforge), "Gerrig Bonegrip in the Forlorn Cavern wants a manuscript from Blackfathom Deeps."),
+    "dungeon-blackfathom-deeps"),
+  finish(322, sw("Grimand Elmore", 59.71, 33.74), "Take the Deeprun Tram to Stormwind and deliver the ingots to Grimand Elmore in the Dwarven District."),
+  accept(325, sw("Grimand Elmore", 59.71, 33.74), "Take Morbent's Bane for Sven. Morbent Fel is level 32: keep it for after 30."),
+  finish(293, sw("Archbishop Benedictus", 50.3, 45.5), "Bring the Eye to Archbishop Benedictus in the Cathedral of Light."),
+  forDungeon(accept(3765, sw("Argos Nightwhisper", 36.24, 67.61), "Argos Nightwhisper sends Blackfathom groups to Auberdine. You are going there next."),
+    "dungeon-blackfathom-deeps"),
+  finish(98190, sw("Highlord Bolvar Fordragon", 80.21, 38.35), "Give the statuette to Highlord Bolvar in Stormwind Keep."),
+  action("boat", sw(nil, 21.8, 56.8), "Board the Auberdine ship at the southernmost harbor dock. Use Next when you reach Auberdine.",
+    { name = "Stormwind Harbor - Auberdine" }),
+  forDungeon(finish(3765, at("Gershala Nightwhisper", 38.33, 43.04, 1439)), "dungeon-blackfathom-deeps"),
+  forDungeon(accept(1275, at("Gershala Nightwhisper", 38.33, 43.04, 1439), "Take Gershala's brain stem request for Blackfathom Deeps."),
+    "dungeon-blackfathom-deeps"),
+  finish(98209, at("Thundris Windweaver", 37.4, 40.13, 1439), "Give Nord'el to Thundris Windweaver in the house north of the Auberdine inn."),
 }
 
 -- Dwarf and Gnome start, levels 1-12. Source notes: tools/audits/2026-11-08-dun-morogh.md.
@@ -922,6 +1101,11 @@ quest[95213].startItem = 268548
 q(95214, "Stolen Blasting Powder", 10, 7, 95213, true)
 q(419, "The Lost Pilot", 10, 8)
 q(417, "A Pilot's Revenge", 11, 8, 419)
+q(96629, "Camping 101: Cooking", 6, 4, 96608, true)
+q(314, "Protecting the Herd", 12, 6)
+-- Deeprun Tram errands; Loch Modan reuses 6661 for players arriving by tram.
+q(6661, "Deeprun Rat Roundup", 12, 10)
+q(6662, "Me Brother, Nipsy", 12, 10, 6661)
 
 -- One main-chunk local for the whole start: dm.coldridge, dm.kharanos, dm.sources.
 local dm = (function()
@@ -1040,9 +1224,10 @@ local dm = (function()
     finish(420, senir, "Senir Whitebeard waits beside the Kharanos road."), finish(96628, eric),
     accept(96608, eric),
     objectiveAt(96608, eric, "Sit at Eric's campfire until you get Boosted Rest.", "Boosted Rest"),
-    finish(96608, eric), accept(98322, senir),
+    finish(96608, eric), accept(96629, eric), accept(98322, senir),
     finish(2160, tannok, "Tannok Frosthammer is inside the Thunderbrew Distillery."),
     action("sethearth", belm, "Bind your hearthstone with Innkeeper Belm in the Thunderbrew Distillery.", kharanosHearth),
+    finish(96629, dm("Gremlock Pilsnor", 47.67, 52.31), "Speak to Gremlock in the distillery about Cooking."),
     accept(384, ragnar), accept(99158, maxan), accept(98321, tognus),
     accept(400, tharek),
     action("train", nil, "Visit your class trainer in Kharanos. Train spells for level", { level = 6 }),
@@ -1097,6 +1282,7 @@ local dm = (function()
     objectiveAt(99161, dm(nil, 58.3, 42.1), "Kill Avala north of the refuge and take its core.", "Avala's Core"),
     finish(99161, gavin), finish(99162, gavin),
     accept(95212, rudra, "Go east to Amberstill Ranch."),
+    accept(314, rudra, "Take Rudra's bounty on Vagash too. Save the fight for your return to the ranch."),
     finish(96408, farsen, "Climb to Farsen's campsite above Gol'Bolar Quarry."),
     accept(96392, farsen),
     objectiveAt(96392, farsen, "Ask Farsen for his far sight. Press Escape once the objective updates."),
@@ -1123,17 +1309,26 @@ local dm = (function()
     finish(417, hammerfoot),
     finish(95214, thesten, "Return to Quarrymaster Thesten at Gol'Bolar Quarry."),
     finish(96390, farsen), finish(96391, farsen), finish(95212, rudra),
+    objectiveAt(314, dm("Vagash", 62.6, 46.0),
+      "Vagash, a tough level 11 beast, prowls the slope just north of the ranch. Pull him south to the ranch guards and do most of the damage yourself. Use Next if he is too strong.",
+      "Fang of Vagash"),
+    finish(314, rudra),
     action("grind", dm(nil, 71.4, 53.9), "Reach level 12 for Westfall, or head east into Loch Modan. If staying here, finish available solo quests before grinding.",
       { level = 12, suggest = { "loch-modan" } }),
-    action("hearth", belm, "Hearth to Kharanos, or take the road west.", kharanosHearth),
+    action("hearth", belm, "Take the road west to Kharanos if you're walking.", kharanosHearth),
     action("train", nil, "Train spells for level", { level = 12 }),
     finish(291, at("Senator Barin Redstone", 39.55, 57.49, ironforge), "Follow the road north into Ironforge and find Senator Barin Redstone in the High Seat."),
     taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
-    action("goto", nil, "Take the Deeprun Tram from Tinker Town to Stormwind for Westfall. Use Next when you arrive.",
+    accept(6661, nil, "Enter the Deeprun Tram from Tinker Town. Monty stands on the Ironforge platform: take his Rat Catcher's Flute."),
+    objectiveAt(6661, nil, "Play the flute next to the Deeprun Rats on the platform and along the tracks, then lead five of them back to Monty.",
+      "5 Rats Captured"),
+    finish(6661, nil, "Give Monty the rats and his flute back."),
+    accept(6662, nil, "Take Monty's carton of meat for his brother on the Stormwind side."),
+    action("goto", nil, "Ride the Deeprun Tram to Stormwind for Westfall. Use Next when you arrive.",
       { suggest = { "loch-modan" } }),
+    finish(6662, nil, "Give the carton to Nipsy on the Stormwind platform before you leave the tram."),
     taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the Stormwind flight path from Dungar above the Trade District."),
-    action("note", nil, "Leave by the main gate and follow the road through Goldshire. Turn west at the bridge into Westfall."),
-    action("goto", at(nil, 59.95, 19.36, westfall), "Follow the west road through Elwynn into Westfall and on to the Furlbrow farm."),
+    action("goto", at(nil, 59.95, 19.36, westfall), "Leave Stormwind by the main gate and follow the road through Goldshire. Cross the bridge west into Westfall and continue to the Furlbrow farm."),
   }
 
   local sources = {
@@ -1148,7 +1343,7 @@ end)()
 
 -- Skyborne (High Order, Alliance) start: Zephras Isle 1-13, then the skycutter to Dalaran and
 -- the portal to Stormwind. Source notes: tools/audits/2026-11-08-zephras-isle.md.
--- Paste after the `deadmines` helper (needs at, q, quest, action, accept, finish, objectiveAt,
+-- Paste after the `forDungeon` helper (needs at, q, quest, action, accept, finish, objectiveAt,
 -- taxi, withItem, withTrainers, dungar, westfall). Everything lives in `zi` to save main-chunk
 -- locals (Lua 5.1 allows 200).
 
@@ -1263,6 +1458,11 @@ q(93089, "What Comes Next", 13, 7, 94369, true)
 q(94946, "The Magical City of Dalaran", 13, 7, 93089, true)
 q(94947, "Welcome to Azeroth", 13, 7, 94946, true)
 q(94912, "Child of Nature", 10, 10, nil, true, "DRUID")
+-- Camping 101 for the gathering professions (Dalia's choice): optional steps.
+q(97970, "Camping 101: Mining", 6, 4, 96101, true)
+q(97971, "Camping 101: Skinning", 6, 4, 96101, true)
+q(97968, "Camping 101: Herbalism", 6, 4, 96101, true)
+for _, id in ipairs({ 97970, 97971, 97968 }) do quest[id].optional = true end
 
 -- (c) places and trainers
 -- Thendal Grove
@@ -1410,6 +1610,11 @@ zi.shendar = {
   finish(96638, zi.raan, "Find Raan by his campfire west of the village."), accept(96101, zi.raan),
   objectiveAt(96101, zi.raan, "Sit by Raan's fire until you get Boosted Rest. If it never comes, take the quest again."),
   finish(96101, zi.raan), accept(96646, zi.raan),
+  accept(97970, zi.raan, "If you picked Mining at Dalia, ask Raan for the mining lesson too."),
+  accept(97971, zi.raan, "If you picked Skinning at Dalia, ask Raan for the skinning lesson too."),
+  accept(97968, zi.raan, "If you picked Herbalism at Dalia, ask Raan for the herbalism lesson too. You finish it in Valanaar."),
+  finish(97971, zi.at("Mendalass Tattermend", 43.3, 43.4), "Talk to Mendalass Tattermend in the village."),
+  finish(97970, zi.at("Messana Crestwind", 44.8, 44.6), "Talk to Messana Crestwind in the village."),
   action("train", nil, "Train at your class trainer in Shen'dar Village for level", { level = 6 }),
   finish(93461, zi.aonda), accept(92517, zi.aonda),
   accept(92516, zi.teeri), accept(93319, zi.teeri), accept(92515, zi.indari),
@@ -1455,6 +1660,7 @@ zi.shendar = {
 -- Valanaar: the orchard, the Shriekling Den, the eastern watchtower, Shadowgale Forest, the Shrine.
 zi.valanaar = {
   accept(93317, zi.nyalah),
+  finish(97968, zi.at("Syriel Nightrain", 57.9, 75.5), "Talk to Syriel Nightrain on the west side of Valanaar."),
   action("sethearth", zi.donaal, "Bind your hearthstone with Donaal Downbreeze at the Valanaar inn.", zi.hearth),
   accept(92679, zi.alvarion, "Alvarion is upstairs in the house. Listen to his story."),
   accept(94484, zi.lotheluum),
@@ -1485,7 +1691,7 @@ zi.valanaar = {
   finish(92685, zi.aamelia), accept(92693, zi.aamelia),
   objectiveAt(92693, zi.aamelia, "Talk to Aamelia and help her beat Ferauu the Bludgeon."),
   finish(92693, zi.aamelia), accept(92703, zi.aamelia),
-  action("hearth", zi.donaal, "Hearth to Valanaar.", zi.hearth),
+  action("hearth", zi.donaal, "Head back to the inn in Valanaar.", zi.hearth),
   finish(92703, zi.alvarion),
   action("train", nil, "Train at your class trainer in Valanaar for level", { level = 10 }),
   finish(92850, zi.fillion), accept(99260, zi.fillion),
@@ -1559,7 +1765,7 @@ zi.valanaar = {
   finish(93165, zi.vayn),
   objectiveAt(94489, zi.vayn, "Enter the Nightfang Den. Heal the druids inside and find Jorel Windsinger."),
   finish(94488, zi.elegael), finish(94489, zi.elegael), finish(94490, zi.elegael), accept(94491, zi.elegael),
-  action("hearth", zi.donaal, "Hearth to Valanaar.", zi.hearth),
+  action("hearth", zi.donaal, "Head back to the inn in Valanaar.", zi.hearth),
   action("train", nil, "Train at your class trainer in Valanaar for level", { level = 12 }),
   finish(93317, zi.nyalah), finish(94003, zi.seena), finish(94491, zi.lotheluum),
   finish(94896, zi.ealaane), finish(94897, zi.ealaane),
@@ -1589,7 +1795,6 @@ zi.valanaar = {
   taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the flight path from Dungar Longdrink above the Trade District."),
   finish(94947, zi.bolvar, "Report to Highlord Bolvar Fordragon in the throne room at Stormwind Keep."),
   accept(98021, zi.bolvar),
-  action("note", nil, "Your hearthstone still points to Valanaar. Bind it at Sentinel Hill once you reach Westfall."),
   action("goto", at(nil, 59.95, 19.36, westfall), "Leave by the main gate, take the road through Goldshire and west across the bridge to the Furlbrow farm."),
 }
 
@@ -1606,7 +1811,7 @@ zi.sources = {
 -- Night Elf start, levels 1-12: Shadowglen, Teldrassil and Darnassus, then the Forever ship
 -- from Auberdine to Stormwind Harbor and the walk to Westfall. Source notes:
 -- tools/audits/2026-11-08-teldrassil.md.
--- Paste after `taxi` and `deadmines` are defined (it uses objectiveAt, taxi, sw, wf, dungar
+-- Paste after `taxi` and `forDungeon` are defined (it uses objectiveAt, taxi, sw, wf, dungar
 -- and furlbrow), e.g. right before `local sources = {`. One main-chunk local only: `te`.
 local te = { map = 1438, darnassus = 1457, darkshore = 1439 }
 function te.t(name, x, y) return at(name, x, y, te.map) end
@@ -1700,6 +1905,11 @@ q(6344, "Nessa Shadowsong", 10, 10)
 q(6341, "The Bounty of Teldrassil", 10, 10, 6344)
 q(6342, "Flight to Auberdine", 10, 10, 6341)
 q(6343, "Return to Nessa", 10, 10, 6342)
+q(927, "The Moss-twined Heart", 12, 5)
+quest[927].startItem = 5179
+q(941, "Planting the Heart", 12, 9, 927)
+q(97220, "Philmor's Favor", 15, 9, nil, true)
+q(97222, "Gatehouse Goods", 15, 9, 97220, true)
 breadcrumb(96630, 96606)
 breadcrumb(99046, 99047)
 breadcrumb(98391, 2519)
@@ -1867,7 +2077,7 @@ te.teldrassil = {
   objectiveAt(99053, te.lynessa, "Escort Sentinel Lynessa out of the den. Use Next if the escort fails.", "Lynessa escaped"),
   withItem(5621, objectiveAt(933, te.t(nil, 42.41, 67.07), "Go south to the Pools of Arlithrien and fill the Tourmaline Phial.", "Filled Tourmaline Phial")),
   withItem(5189, accept(930, te.t("Strange Fruited Plant", 42.61, 76.19), "Take the Glowing Fruit from the plant further south.")),
-  action("hearth", te.keldamyr, "Hearth to Dolanaar.", te.hearth),
+  action("hearth", te.keldamyr, "Head back to the inn in Dolanaar.", te.hearth),
   finish(487, te.amara), finish(483, te.athridas), finish(99053, te.kyra),
   finish(933, te.corithras), accept(7383, te.corithras),
   action("grind", te.t(nil, 53.4, 57.5), "If still under level 10, clear nightsabers and owls around Dolanaar.", { level = 10 }),
@@ -1909,20 +2119,24 @@ te.teldrassil = {
   finish(98398, te.bark, "Touch the Oracle Tree Bark beside the glade."),
   accept(940, te.bark, "Take the report from the Oracle Tree Bark."),
   along(objectiveAt(2518, te.t("Lady Sathrah", 44.2, 25.5), "Find Lady Sathrah near Wellspring Lake. Bring help if needed. Loot tumors from nearby timberlings.", "Lady Sathrah's Silvery Spinnerets"), 923),
-  objectiveAt(923, te.t(nil, 43.8, 27.2), "Kill Elder Timberlings and Mire Beasts around the north lakes for tumors.", "5 Mossy Tumors"),
+  objectiveAt(923, te.t(nil, 43.8, 27.2), "Kill Elder Timberlings and Mire Beasts around the north lakes for tumors. Blackmoss the Fetid (level 13) lurks nearby at 44.0, 30.2; its heart starts a quest.",
+    "5 Mossy Tumors"),
+  withItem(5179, accept(927, te.t("Blackmoss the Fetid", 44.0, 30.2), "Use the Moss-twined Heart from your bags to start the quest.")),
   action("goto", te.gate, "Go back south to the Darnassus gate."),
   finish(940, te.fandral, "Bring the report to Fandral in the Cenarion Enclave."),
   finish(923, te.rellian), accept(2498, te.rellian),
   finish(2518, te.amoora), accept(2520, te.amoora),
   withItem(8155, objectiveAt(2520, te.d(nil, 39.0, 85.0), "Place the spinnerets at the fountain inside the temple.", "Spinnerets placed")),
   finish(2520, te.amoora),
-  action("hearth", te.keldamyr, "Hearth to Dolanaar.", te.hearth),
+  action("hearth", te.keldamyr, "Head back to the inn in Dolanaar.", te.hearth),
   finish(99047, te.byancie), accept(99050, te.byancie),
   finish(7383, te.corithras), accept(935, te.corithras),
   finish(98403, te.tallonkai),
   objectiveAt(99050, te.narret, "Buy an Empty Vial from Narret and a Refreshing Spring Water from the innkeeper.", "Empty Vial", "Refreshing Spring Water"),
   finish(2498, te.denalan, "Go back to Denalan at Lake Al'Ameth."), accept(2499, te.denalan),
   finish(930, te.denalan), finish(931, te.denalan),
+  finish(927, te.denalan, "Give Denalan the Moss-twined Heart."), accept(941, te.denalan),
+  finish(941, te.t("Denalan's Planter", 60.8, 68.6), "Plant the Tainted Heart in the planter beside Denalan."),
   accept(2399, te.t("Sprouted Frond", 60.75, 68.56), "Check the Sprouted Frond in Denalan's planter."),
   finish(2399, te.t("Sprouted Frond", 60.75, 68.56)),
   along(objectiveAt(99050, te.t(nil, 56.0, 66.6), "Loot fronds from Lasher Sproutlings on the way to Oakenscowl's cave.", "6 Dewy Lasher Fronds"), 2499),
@@ -1957,8 +2171,13 @@ te.teldrassil = {
   taxi("fly", te.caylais, "Auberdine, Darkshore", "Return to Auberdine by hippogryph or ferry. If you are already there, use Next."),
   action("boat", te.thamarian, "Take the Stormwind ship from Auberdine's south pier. Use Next in Stormwind Harbor.",
     { name = "Auberdine - Stormwind Harbor", suggest = { "darkshore" } }),
+  accept(97220, sw("Manifest Clerk Philmor", 30.4, 28.9), "Before leaving the harbor, find Manifest Clerk Philmor on the north docks."),
   action("goto", te.harbor, "Leave the harbor east into the city."),
   taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the Stormwind flight path from Dungar above the Trade District."),
+  finish(97220, sw("Elaine Trias", 66.6, 73.4), "Take the shipment to Elaine Trias's cheese shop, just west of Dungar's tower."),
+  accept(97222, sw("Elaine Trias", 66.6, 73.4)),
+  objectiveAt(97222, sw("Elaine Trias", 66.6, 73.4), "Carry the shipment up the stairs in her shop and set it down outside the door."),
+  finish(97222, sw("Elaine Trias", 66.6, 73.4)),
   action("goto", furlbrow, "Leave by the main gate. Take the road through Goldshire, then west over the bridge into Westfall to the Furlbrow farm."),
 }
 
@@ -2016,6 +2235,7 @@ local lm = (function()
   q(436, "Ironband's Excavation", 18, 13)
   q(297, "Gathering Idols", 18, 13)
   breadcrumb(436, 297)
+  q(298, "Excavation Progress Report", 15, 10)
   q(86613, "Excavation Tools", 18, 13, nil, true)
   quest[86613].startItem = 278049
   q(385, "Crocolisk Hunting", 15, 10)
@@ -2027,20 +2247,65 @@ local lm = (function()
   q(86614, "Silver of the Waves", 20, 13, nil, true)
   q(250, "A Dark Threat Looms", 18, 16)
   q(199, "A Dark Threat Looms", 18, 16, 250)
+  q(353, "Stormpike's Delivery", 15, 9, 1097)
+  q(1338, "Stormpike's Order", 14, 9, 1339)
+  quest[1338].optional = true
+  q(414, "Stout to Kadrell", 10, 8, 413)
+  q(2039, "Find Bingles", 15, 12)
+  breadcrumb(2039, 2038)
+  q(6387, "Honor Students", 10, 10)
+  q(6391, "Ride to Ironforge", 10, 10, 6387)
+  q(6388, "Gryth Thurden", 10, 10, 6391)
+  q(6392, "Return to Brock", 10, 10, 6388)
+  for _, id in ipairs({ 6387, 6391, 6388, 6392 }) do quest[id].race = { "DWARF", "GNOME" } end
+
+  -- Pickups on the way in depend on how you arrive: Humans, Night Elves and Skyborne ride the
+  -- tram from Stormwind, Dwarves and Gnomes walk in from South Gate Outpost. They are optional
+  -- errands (Settings > Show optional quests): quest steps before the first Loch Modan step aren't
+  -- skipped as travel, so they would pull a player who is already here back to the city.
+  local byTram, byRoad = { "HUMAN", "NIGHTELF", "SKYBORNE" }, { "DWARF", "GNOME" }
+  local function errand(races, step) step.race, step.optional = races, true; return step end
+  -- Elmore's Task (Elwynn) and Shimmer Stout (Dun Morogh) are done in the racial start section,
+  -- which this alternate's own audit path doesn't include.
+  local function carried(step) step.chain = nil; return step end
+  local brock = loch("Brock Stoneseeker", 37.0, 47.8)
+  local gryth = at("Gryth Thurden", 55.5, 47.7, ironforge)
 
   local steps = {
     -- Keep the approach off the Loch Modan map until the first local step.
-    action("goto", nil, "Reach Ironforge via the Deeprun Tram in Stormwind's Dwarven District. If you are in Kalimdor, take the Auberdine ship to Stormwind. Use Next in Ironforge or Dun Morogh."),
+    errand({ "HUMAN" }, carried(accept(353, sw("Grimand Elmore", 59.7, 33.8),
+      "If you did Elmore's Task in Elwynn, take Grimand Elmore's package in the Dwarven District, beside the tram. Otherwise use Next."))),
+    action("goto", nil, "Reach Ironforge via the Deeprun Tram in Stormwind's Dwarven District. If you are in Kalimdor, take the Auberdine ship to Stormwind. Use Next on the tram's Ironforge platform, or in Dun Morogh."),
+    errand(byTram, accept(6661, nil, "Monty stands on the Ironforge platform of the tram. Take his Rat Catcher's Flute.")),
+    errand(byTram, objectiveAt(6661, nil, "Play the flute next to the Deeprun Rats on the platform and along the tracks, then lead five of them back to Monty.",
+      "5 Rats Captured")),
+    errand(byTram, finish(6661, nil, "Give Monty the rats and his flute back. Leave his brother's carton for a later trip.")),
+    errand(byTram, accept(2039, at("Gnoarn", 69.2, 50.5, ironforge), "From level 12, Gnoarn in Tinker Town, by the tram, sends you to Bingles in Loch Modan.")),
     action("goto", at(nil, 86.28, 48.81, dunMorogh), "If you know the flight from Ironforge to Thelsamar, take it. Otherwise follow the Dun Morogh road east past Gol'Bolar Quarry to South Gate Outpost and enter the tunnel."),
+    errand(byRoad, carried(accept(414, at("Mountaineer Barleybrew", 86.28, 48.81, dunMorogh),
+      "If you finished Shimmer Stout, Barleybrew has a cask for Kadrell in Thelsamar. Otherwise use Next."))),
     taxi("getfp", thorgrum, "Thelsamar, Loch Modan",
       "From the Loch Modan end of South Gate Pass, take the north-east road to Thelsamar. Learn the flight path from Thorgrum Borrelson."),
-    accept(418, vidra, "Find Vidra inside the Stoutlager Inn."),
+    accept(418, vidra, "Find Vidra inside the Stoutlager Inn. Loot boars, bears and spiders as you travel between hubs, then top up on the way back to town."),
     accept(416, kadrell, "Find Kadrell on the road through town. He patrols."),
+    errand(byRoad, finish(414, kadrell, "Give Kadrell the cask of stout.")),
     accept(1339, kadrell),
     accept(86667, grenhild),
 
+    -- Dwarf and Gnome flight errand. It needs the Ironforge flight path from the end of Dun Morogh.
+    accept(6387, brock, "Brock Stoneseeker stands outside the Stoutlager Inn. If you don't know the Ironforge flight yet, use Next to skip this errand."),
+    finish(6387, thorgrum, "Bring Brock's list to Thorgrum at the flight point."),
+    accept(6391, thorgrum),
+    taxi("fly", gryth, "Ironforge, Dun Morogh", "Buy a flight to Ironforge from Thorgrum."),
+    finish(6391, at("Golnir Bouldertoe", 51.5, 26.3, ironforge), "Find Golnir Bouldertoe north of the flight point."),
+    accept(6388, at("Golnir Bouldertoe", 51.5, 26.3, ironforge)),
+    finish(6388, gryth, "Take the picks to Gryth Thurden at the Ironforge flight point."),
+    accept(6392, gryth),
+    taxi("fly", thorgrum, "Thelsamar, Loch Modan", "Fly back to Thelsamar."),
+    finish(6392, brock, "Give Brock the honorary picks."),
+
     -- Valley of Kings opening. Leave the deeper troggs for the second visit.
-    action("goto", cobbleflint, "Take the road south to the Valley of Kings guard tower."),
+    along(action("goto", cobbleflint, "Take the road south to the Valley of Kings guard tower."), 418),
     accept(224, cobbleflint),
     accept(267, rugelfuss, "Climb to the top floor of the tower to find Captain Rugelfuss."),
     along(objectiveAt(224, loch(nil, 26.7, 56.9),
@@ -2053,21 +2318,23 @@ local lm = (function()
 
     -- Start the snow delivery on the way north. Do the mine after the hand-in.
     withItem(279380, objectiveAt(86667, loch(nil, 19.6, 63.1),
-      "Use the Ceramic Jar on the snow by the Loch Modan mouth of South Gate Pass. Once filled, head straight to Norric by the west-shore road.",
+      "Use the Ceramic Jar on the snow at the Loch Modan end of South Gate Pass. Once it is full, take the west-shore road straight to Norric and save side kills for after the delivery.",
       "1 Jar of Snow")),
     finish(86667, norric, "Follow the road north through Thelsamar, then turn east to Norric's house on the north-west shore. If the snow melts, refill the jar or use Next."),
     action("goto", stormpike, "Follow the road west to Algaz Station and go upstairs in the bunker."),
-    finish(1339, stormpike), accept(307, stormpike),
+    finish(1339, stormpike), errand({ "HUMAN" }, finish(353, stormpike, "Hand Stormpike the package from Elmore.")),
+    accept(307, stormpike),
     along(objectiveAt(307, mine,
       "Enter Silver Stream Mine from the north. Open Miners' League Crates, pulling the kobolds singly and looting ears as you go. If the deeper tunnels are unsafe, use Next.",
       "4 Miners' Gear"), 416),
-    along(objectiveAt(416, loch(nil, 25.1, 30.2),
-      "Finish the ears on Tunnel Rat Vermin and Scouts around the road south of Algaz Station. The kobolds in Silver Stream Mine also drop them.",
-      "12 Tunnel Rat Ears"), 307),
-    finish(307, stormpike),
-    objectiveAt(418, loch(nil, 27.7, 25.3),
-      "Hunt Mountain Boars, bears and Forest Lurkers around the north-west woods. Loot the meat, intestines and ichor on your way back to town.",
-      "3 Boar Intestines", "3 Bear Meat", "3 Spider Ichor"),
+    finish(307, stormpike, "Take the gear back to Stormpike at Algaz Station before heading south."),
+    accept(1338, stormpike, "Stormpike's request goes to Furen Longbeard in Stormwind. Take it if your next zone is reached through Stormwind."),
+    along(objectiveAt(418, loch(nil, 27.7, 25.3),
+      "Finish any missing sausage ingredients from Mountain Boars, Elder Black Bears and Forest Lurkers on the road south to Thelsamar.",
+      "3 Boar Intestines", "3 Bear Meat", "3 Spider Ichor"), 416),
+    objectiveAt(416, loch(nil, 25.1, 30.2),
+      "Finish any missing ears on Tunnel Rat Vermin and Scouts farther south, then continue to Thelsamar.",
+      "12 Tunnel Rat Ears"),
     finish(416, kadrell), finish(418, vidra),
     accept(436, jern, "At level 13 or higher, pick this up from Jern before the next circuit. Use Next if it is unavailable."),
 
@@ -2098,10 +2365,9 @@ local lm = (function()
       "Follow the road around the south end of the loch toward Ironband's Excavation. Stay on the Loch Modan road past the wagon."),
     finish(436, magmar),
     accept(297, magmar, "From level 13, Magmar offers Gathering Idols. Take it if you can handle the level 18-20 dig-site troggs. Use Next to save it for a later visit."),
-    action("note", loch(nil, 69.8, 65.0),
-      "From level 13, loot an Excavation Tools pickup from a wooden platform before clearing the dig site. Use Next once you have one or if the platforms are unsafe."),
+    accept(298, ironband, "Take Ironband's report while you are at the dig. Hand it in to Jern when you return to Thelsamar."),
     withItem(278049, accept(86613, dig, "Use the Excavation Tools starter from your bags. Check the tool piles on the wooden platforms for the rest.")),
-    along(objectiveAt(297, dig, "Loot idols from Diggers and Berserk Troggs. Check each platform for excavation tools as you clear the site.",
+    along(objectiveAt(297, dig, "Loot idols from Diggers and Berserk Troggs. Check the wooden platforms near 69.8, 65.0 for an Excavation Tools quest starter. Use it if you find one.",
       "8 Carved Stone Idols"), 86613),
     along(objectiveAt(86613, loch(nil, 69.8, 65.0), "Check the platforms for any remaining excavation tools. Use Next if the piles are empty or unsafe.",
       "6 Excavation Tools"), 297),
@@ -2116,23 +2382,29 @@ local lm = (function()
       "6 Mountain Buzzards"),
     finish(257, daryl, "Return to Daryl before the timer ends. If it expired, abandon and retake the quest, or use Next."),
     accept(258, daryl, "Accept only when ready for the next hunt. The boars and the return trip share a 12-minute timer."),
-    objectiveAt(258, loch(nil, 69.5, 39.2),
-      "Follow the east-shore road north to the Elder Mountain Boars. Stay clear of Mo'grosh Stronghold and head back as soon as the kills count.",
+    objectiveAt(258, loch(nil, 75.9, 45.3),
+      "Start in the hills north of the lodge. If the nearer Elder Mountain Boars are taken, look north-west near 65.1, 41.2 if you have time. Return straight to Daryl and save the crocs for afterward.",
       "5 Elder Mountain Boars"),
     finish(258, daryl, "Return to Daryl before the timer ends. If it expired, abandon and retake the quest, or use Next."),
     -- East shore crocs, then Bingles' island. Finish the timed hunts first.
-    along(objectiveAt(86758, loch("Daggerfang", 62.0, 44.0),
-      "Look for Daggerfang patrolling the east shore. Kill him for Marek's knife. If he is absent, hunt ordinary crocolisks and use Next.",
-      "1 Marek's Croc-Hunting Knife"), 385),
     along(objectiveAt(385, loch(nil, 61.6, 43.8),
-      "Kill Loch Crocolisks along the east bank. If you need more, swim west from opposite the middle island. Avoid Young Threshadons and the Large Loch Crocolisk.",
-      "1 Crocolisk Meat", "6 Crocolisk Skins"), 86758),
+      "Kill Loch Crocolisks along the east bank and watch for Daggerfang on the same pass. If you need more crocs, cross toward the middle island from directly east. Give Young Threshadons and the Large Loch Crocolisk room.",
+      "5 Crocolisk Meat", "6 Crocolisk Skins"), 86758),
+    along(objectiveAt(86758, loch("Daggerfang", 63.4, 45.3),
+      "Look along the east shore for Daggerfang if you still need the knife. Use Next if the patrol is absent.",
+      "1 Marek's Croc-Hunting Knife"), 385),
     finish(385, marek), finish(86758, marek),
+    errand(byTram, finish(2039, bingles, "Follow the east shore north to Bingles by his crashed machine.")),
     accept(2038, bingles, "Follow the east shore north to Bingles by his crashed machine. From level 12, take his supplies quest if offered."),
-    objectiveAt(2038, loch(nil, 51.0, 24.0),
-      "If you can clear the island camps safely, loot the wrench (48, 30), screwdriver (48, 20), hammer (51, 24) and Blastencapper (54, 26). Pull the troggs away from the crates. Use Next if the island is too dangerous.",
-      "1 Bingles' Wrench", "1 Bingles' Screwdriver", "1 Bingles' Hammer", "1 Bingles' Blastencapper"),
-    finish(2038, bingles),
+    objectivePart(2038, 1, loch(nil, 48.73, 30.09),
+      "Start at the southern camp. Pull troggs away from the toolbucket before taking the wrench. Use Next to move past a camp you cannot clear.", "1 Bingles' Wrench"),
+    objectivePart(2038, 2, loch(nil, 48.38, 20.51),
+      "Follow the west side of the island north to the toolbucket with the screwdriver.", "1 Bingles' Screwdriver"),
+    objectivePart(2038, 3, loch(nil, 51.78, 24.09),
+      "Head south-east to the middle camp and take the hammer from its toolbucket.", "1 Bingles' Hammer"),
+    objectivePart(2038, 4, loch(nil, 54.21, 26.60),
+      "Finish at the east camp. Pull the Shamans and Bonesnappers away from the Blastencapper.", "1 Bingles' Blastencapper"),
+    finish(2038, bingles, "Return to Bingles on the east shore. Use Next if you left a tool for a later visit."),
 
     -- Dam and west shore. End in Loch Modan after the local hand-ins.
     action("goto", hinderweir, "Follow the road north toward Stonewrought Dam, taking the shore or dam crossing clear of the Mo'grosh camps."),
@@ -2142,11 +2414,15 @@ local lm = (function()
     finish(199, hinderweir, "Take the clue back to Hinderweir on the west side of the dam."),
     accept(86614, toolbox, "If the Discarded Fishing Toolbox is visible in the loch and the water is clear, take the quest from it. The toolbox has several possible spots. Use Next if absent or unsafe."),
     finish(86614, khara, "Bring the hair clip to Khara on the west-shore dock."),
+    finish(298, jern, "Follow the west-shore road south to Thelsamar and hand Ironband's report to Jern."),
+    finish(1338, sw("Furen Longbeard", 64.6, 37.2),
+      "If your next zone is south of Stormwind, take the tram back and give Stormpike's request to Furen Longbeard in the Dwarven District."),
   }
 
   return { steps = steps, sources = {
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
     "https://bindonforever.com/zones/loch-modan",
+    "https://polestar.guide/guides/alliance/03-loch-modan",
     "https://warcraft.blizzplanet.com/world-of-warcraft-forever-loch-modan-quests/",
     "https://senseos.gg/wiki/wow-forever/interactive-map/loch-modan/",
     "https://zygorguides.com/blog/important-tips-and-info-for-zygors-classic-guides/",
@@ -2186,6 +2462,16 @@ local ds = (function()
   local buzz323 = shore("Buzzbox 323", 51.29, 24.57)
   local buzz525 = shore("Buzzbox 525", 41.39, 80.56)
   local hearth = { bind = "Auberdine" }
+  -- Gap fill places (tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md).
+  local board = shore("Wanted Poster", 37.22, 44.22)
+  local alanndarian = shore("Alanndarian Nightsong", 37.69, 40.66)
+  local gorbold = shore("Gorbold Steelhand", 38.11, 41.17)
+  local greywhisker = te.d("Chief Archaeologist Greywhisker", 31.25, 84.5)
+  -- Profession errands: shown with Settings > Show optional quests.
+  local function errand(step)
+    step.optional = true
+    return step
+  end
 
   q(3524, "Washed Ashore", 13, 11)
   q(4681, "Washed Ashore", 14, 11, 3524)
@@ -2239,8 +2525,26 @@ local ds = (function()
   q(729, "The Absent Minded Prospector", 20, 15)
   q(1138, "Fruit of the Sea", 17, 15)
   q(2098, "Gyromast's Retrieval", 20, 14)
+  q(98025, "WANTED: Jai'vhanel", 13, nil, nil, true)
+  q(4740, "WANTED: Murkdeep!", 18, 15)
+  q(982, "Deep Ocean, Vast Sea", 17, 13)
+  q(2178, "Easy Strider Living", 12, 9)
+  q(1141, "The Family and the Fishing Pole", 14, 10)
+  q(731, "The Absent Minded Prospector", 20, 15, 729)
+  q(741, "The Absent Minded Prospector", 20, 15, 731)
+  q(942, "The Absent Minded Prospector", 20, 15, 741)
+  q(968, "The Powers Below", 20, 10)
+  quest[968].startItem = 5352
+  q(2078, "Gyromast's Revenge", 20, 14, 2098)
+  q(97926, "Making Do", 17, nil, nil, true)
 
+  local makingDo = accept(97926, sw("Baros Alexston", 57.74, 47.86),
+    "Leaving from Stormwind? Baros Alexston near the Cathedral has a reply for Thundris in Auberdine. Use Next if you are already in Darkshore.")
+  local makingDoDone = finish(97926, thundris, "Give Baros's reply to Thundris Windweaver north of the inn.")
+  makingDo.race = { "HUMAN", "DWARF", "GNOME", "SKYBORNE" }
+  makingDoDone.race = { "HUMAN", "DWARF", "GNOME", "SKYBORNE" }
   local steps = {
+    makingDo,
     action("boat", sw(nil, 21.8, 56.8),
       "From Stormwind, board the Auberdine ship at the southernmost harbor dock. From Rut'theran Village, take the Auberdine ferry or fly if you know both flight paths. Use Next after you reach Auberdine.",
       { name = "Stormwind Harbor - Auberdine" }),
@@ -2249,7 +2553,11 @@ local ds = (function()
 
     -- South beach, the nearest Blackwood camp, then the low-level ruins.
     accept(3524, gwennyth), accept(983, wizbang), accept(984, terenthis),
-    accept(4811, glynda), accept(2118, tharnariun), accept(954, thundris),
+    accept(98025, board, "Read the wanted poster outside the inn for Jai'vhanel, a black owl near Ameth'Aran."),
+    accept(4811, glynda), accept(2118, tharnariun),
+    makingDoDone, accept(954, thundris),
+    errand(accept(2178, alanndarian, "With Cooking 10 or higher, take Alanndarian's request for strider meat.")),
+    errand(accept(1141, gubber, "If you fish, take Gubber's request for Darkshore Grouper.")),
     objectiveAt(3524, shore("Beached Sea Creature", 36.37, 50.92),
       "Search the carcass on the beach south of Auberdine. Pull any nearby murlocs clear first.", "Sea Creature Bones"),
     objectiveAt(983, shore(nil, 35.5, 49.9),
@@ -2267,8 +2575,12 @@ local ds = (function()
     finish(956, asterion), accept(957, asterion),
     withItem(7586, objectiveAt(2118, shore(nil, 46.2, 33.5),
       "Set Tharnariun's bear trap, then lead a living Rabid Thistle Bear across it. Return for a replacement if the trap is lost.", "Rabid Thistle Bear Captured")),
+    errand(objectiveAt(2178, shore(nil, 46.0, 33.0), "Loot Strider Meat from the Foreststriders on the hills around the trap.", "5 Strider Meat")),
 
     action("goto", shore(nil, 38.8, 43.4), "Return to Auberdine for the second set of pickups."),
+    errand(finish(2178, alanndarian)),
+    errand(objectiveAt(1141, shore(nil, 35.6, 45.3), "Fish from the end of the Auberdine pier until you have the grouper.", "6 Darkshore Grouper")),
+    errand(finish(1141, gubber)),
     finish(984, terenthis), accept(985, terenthis), accept(4761, terenthis),
     finish(4761, thundris), accept(4762, thundris), accept(958, thundris),
     finish(2118, tharnariun), accept(2138, tharnariun),
@@ -2288,6 +2600,8 @@ local ds = (function()
       "Return to the Blackwood camp south-east of town. Pull the Pathfinders and Windtalkers out of the camp one at a time.",
       "8 Blackwood Pathfinders", "5 Blackwood Windtalkers"),
     accept(953, tysha, "Find Sentinel Tysha Moonblade on the road just west of Ameth'Aran."),
+    along(objectiveAt(98025, shore(nil, 44.3, 57.7), "Kill Jai'vhanel, the black owl on the slope north of the ruins, and take her feather.",
+      "Feather of Jai'vhanel"), 953, 958),
     along(objectiveAt(953, shore(nil, 43.3, 58.7),
       "Read the Lay at 43.3, 58.7 and the Fall at 42.6, 63.1. Loot ghosts for relics as you cross the ruins.",
       "Read the Lay of Ameth'Aran", "Read the Fall of Ameth'Aran"), 958, 963, 957),
@@ -2304,12 +2618,17 @@ local ds = (function()
     action("goto", shore(nil, 38.8, 43.4), "Follow the road back to Auberdine."),
     finish(985, terenthis), accept(986, terenthis),
     finish(958, thundris), finish(963, cerellean), finish(4722, gwennyth),
+    finish(98025, glynda),
     accept(965, elissa),
+    accept(982, gorbold, "Gorbold Steelhand, outside the house north of the inn, lost two lockboxes in the wrecks off the north coast."),
 
     -- North coast and Cliffspring, then back through Bashal'Aran and the crystal.
     objectiveAt(1001, shore(nil, 34.5, 35.4),
       "Take the coast north. Swim out for Darkshore Threshers if the water is safe. Surface between pulls. Use Next to skip the quest if needed.",
       "3 Thresher Eyes"),
+    along(objectiveAt(982, shore(nil, 38.9, 28.1),
+      "Swim out to the two sunken ships off this stretch of coast and loot a lockbox from each deck. Surface between the wrecks.",
+      "Silver Dawning's Lockbox", "Mist Veil Lockbox"), 1001),
     accept(4723, shore("Beached Sea Creature", 41.93, 31.53),
       "Pick up the beached creature quest along the northern shore."),
     finish(1001, buzz411), accept(1002, buzz411),
@@ -2337,14 +2656,18 @@ local ds = (function()
     finish(4812, crystal), accept(4813, crystal),
     finish(4813, glynda), finish(2138, tharnariun),
     finish(947, barithras), accept(948, barithras),
-    finish(4762, thundris),
+    finish(4762, thundris), finish(982, gorbold),
     finish(4723, gwennyth), finish(4725, gwennyth), finish(4727, gwennyth),
 
     -- The south coast, Grove of the Ancients, and Master's Glaive.
     accept(729, hollee, "At level 15 or higher, ask Archaeologist Hollee to check on Remtravel."),
     accept(1138, gubber, "At level 15 or higher, pick up Fruit of the Sea for the southern shore."),
+    accept(4740, board, "Take the Murkdeep poster outside the inn as well."),
     accept(4728, shore("Beached Sea Creature", 36.01, 70.88),
       "Follow the south road, then cut west to the beached creature."),
+    objectiveAt(4740, shore(nil, 36.5, 76.6),
+      "Clear the Greymist murlocs at the huts on the shore to the south. Murkdeep, level 19, comes out after the waves; rest to full before he arrives.",
+      "Murkdeep slain"),
     finish(948, onu, "Return to the road and find Onu at the Grove of the Ancients."),
     accept(944, onu), accept(98013, arbal),
     objectiveAt(1003, shore(nil, 40.2, 81.2),
@@ -2361,6 +2684,8 @@ local ds = (function()
       "Loot crab chunks from Encrusted Tide Crawlers along this coast. Reef Crawlers can also drop them.",
       "6 Fine Crab Chunks"),
     finish(729, remtravel, "Check on Remtravel at the excavation. The escort can wait for a group."),
+    accept(731, remtravel, "Start Remtravel's escort when the dig site is clear, or use Next to leave it."),
+    objectiveAt(731, remtravel, "Stay with Remtravel while he searches the dig. Kill anything that ambushes him on the way.", "Remtravel escorted"),
     withItem(5251, objectiveAt(944, glaive,
       "Enter the Master's Glaive and use the Phial of Scrying in a cleared spot to place the bowl.", "Enter the Master's Glaive")),
     withItem(5251, finish(944, glaive, "If the bowl is missing, use the Phial of Scrying here. Speak to Onu through the bowl.")),
@@ -2369,10 +2694,12 @@ local ds = (function()
     accept(98042, tome, "Check the Twilight Tome for the Peerless Eye quest."),
     objectiveAt(98042, shore(nil, 38.7, 85.6),
       "Loot a Peerless Eye from a Twilight Disciple or Twilight Thug. Pull from the edge of the camp.", "Peerless Eye"),
+    withItem(5352, accept(968, nil, "If a cultist dropped Book: The Powers Below, read it. The book goes to Gerrig Bonegrip in Ironforge.")),
     finish(950, onu), accept(951, onu),
-    action("hearth", inn, "Hearth to Auberdine if bound there and ready. Otherwise follow the road back north and use Next on arrival.", hearth),
+    action("hearth", inn, "Follow the road north to Auberdine if you're walking.", hearth),
     finish(986, terenthis), accept(993, terenthis),
-    finish(98042, thundris), finish(1138, gubber),
+    finish(98042, thundris), finish(1138, gubber), finish(4740, glynda),
+    finish(731, hollee, "If you escorted Remtravel, bring his fossil news to Archaeologist Hollee."), accept(741, hollee),
     finish(4728, gwennyth), finish(4730, gwennyth), finish(4731, gwennyth),
     finish(4732, gwennyth), finish(4733, gwennyth),
 
@@ -2398,9 +2725,13 @@ local ds = (function()
       "Loot the top of the key from Giant Foreststriders, the middle from murlocs, and the bottom from Encrusted Tide Crawlers or Raging Reef Crawlers. Work the north shore between Gelkak and the beached turtle.",
       "Top of Gelkak's Key", "Middle of Gelkak's Key", "Bottom of Gelkak's Key"),
     finish(2098, gelkak),
+    accept(2078, gelkak, "Gelkak wants his robot back. It turns on you once it reaches him, so start at full health."),
+    objectiveAt(2078, shore("The Threshwackonator 4100", 55.8, 18.3),
+      "Find the Threshwackonator on the shore just south of Gelkak, switch it on and lead it to him. Kill it when it attacks.", "Gelkak's First Mate"),
+    finish(2078, gelkak),
     objectiveAt(87760, shore(nil, 49.4, 14.4),
       "Swim out to the rock spire off the north shore. Kill a Stormscale Beastmistress for her rod and surface for air between pulls.", "Rod of Deep Dominion"),
-    action("hearth", inn, "Hearth to Auberdine if ready, or walk back by the road. Use Next once you are back.", hearth),
+    action("hearth", inn, "Follow the road back to Auberdine if you're walking.", hearth),
     finish(87760, gwennyth), finish(4763, thundris), finish(2139, tharnariun),
 
     -- Close out the grove turn-ins and the safer Volcor resolution.
@@ -2411,6 +2742,18 @@ local ds = (function()
     objectiveAt(995, volcor, "Stay with Volcor until he gets clear of the den and the quest updates.", "Volcor escaped"),
     action("goto", shore(nil, 38.8, 43.4), "Follow the road north to Auberdine."),
     finish(995, terenthis),
+
+    -- Remtravel's fossil: Darnassus, then the Menethil ship (the Wetlands chapters start there).
+    taxi("fly", te.vesprystus, "Rut'theran Village, Teldrassil",
+      "Carry the fossil to Darnassus: fly from Caylais to Rut'theran Village, or take the ferry from the north pier."),
+    action("goto", nil, "Take the portal beside the Rut'theran pier up to Darnassus. Use Next when you arrive."),
+    finish(741, greywhisker, "Find Chief Archaeologist Greywhisker on the terrace south-west of the Temple of the Moon."),
+    accept(942, greywhisker, "Greywhisker sends the fossil on to Menethil Harbor."),
+    taxi("fly", te.caylais, "Auberdine, Darkshore", "Take the portal down, then fly or ride the ferry back to Auberdine."),
+    action("boat", shore(nil, 32.4, 44.1), "When you head for the Wetlands, take the Menethil ship from Auberdine's west pier. Use Next in Menethil Harbor.",
+      { name = "Auberdine - Menethil Harbor" }),
+    finish(942, at("Archaeologist Flagongut", 10.84, 60.43, wetlands), "Give the fossil to Archaeologist Flagongut near the Menethil docks."),
+    finish(968, at("Gerrig Bonegrip", 50.83, 5.62, ironforge), "Bring the book to Gerrig Bonegrip in the Forlorn Cavern the next time you are in Ironforge."),
   }
 
   return {
@@ -2446,7 +2789,9 @@ local westSources = {
 }
 local duskSources = {
   "https://bindonforever.com/zones/duskwood",
+  "https://polestar.guide/guides/alliance/04-redridge-mountains",
   "https://questing.wiki/wow-forever/leveling/duskwood/",
+  "https://www.wowhead.com/forever/quest=96137/iras-dagger",
   "https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/",
 }
 local wetSources = {
@@ -2527,7 +2872,7 @@ LevelingCodexQuests = {
 -- Helpers for QuestClassData.lua, which loads next and removes this field.
 LevelingCodexQuests.build = { at = at, q = q, quest = quest, accept = accept, finish = finish,
   objective = objective, objectiveAt = objectiveAt, action = action, taxi = taxi, withItem = withItem,
-  breadcrumb = breadcrumb, withTrainers = withTrainers, maps = { elwynn = elwynn, stormwind = stormwind,
+  breadcrumb = breadcrumb, withTrainers = withTrainers, forDungeon = forDungeon, along = along, maps = { elwynn = elwynn, stormwind = stormwind,
   westfall = westfall, redridge = redridge, duskwood = duskwood, wetlands = wetlands, lochModan = lochModan,
   ironforge = ironforge, dunMorogh = dunMorogh, teldrassil = te.map, darnassus = te.darnassus,
   darkshore = te.darkshore, zephras = zephras } }

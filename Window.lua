@@ -1143,7 +1143,10 @@ renderers.settings = function()
   y = y + 12
 
   head("QUEST GUIDE")
-  tick("Show dungeon steps", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end)
+  tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
+    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guide library > Dungeons plans runs one by one, which overrides this.")
+  tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
+    "Side errands the route can skip, such as Forever's Camping 101 profession introductions.")
   tick("Skip hearthstone binding steps", db.questSkipBind, function()
     db.questSkipBind = not db.questSkipBind
     ns.updateQuestSettings()
@@ -1153,6 +1156,8 @@ renderers.settings = function()
     "Your class's quest chains (pets, forms, totems, class spells) as their own sections in the Quests tab. They also show under Missed quests when you reach their level.")
   tick("Show the quest item button", not db.noQuestItem, function() db.noQuestItem = not db.noQuestItem; ns.questRefresh() end,
     "A button beside the step window that uses the current step's quest item. Changes wait until you leave combat.")
+  tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
+    "A button below the item button that targets the current step's quest giver. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
   tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
@@ -1205,9 +1210,26 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick)
   return hb
 end
 
+local function questSearch(x, y, w, value, onChange, onSubmit)
+  local edit = take("edit", function()
+    local box = CreateFrame("EditBox", "LevelingCodexQuestSearch", overlay, "InputBoxTemplate")
+    box:SetAutoFocus(false)
+    box:SetMaxLetters(80)
+    box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    box:SetScript("OnHide", function(self) self:ClearFocus() end)
+    return box
+  end)
+  edit:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  edit:SetSize(w, 22)
+  if edit:GetText() ~= value then edit:SetText(value) end
+  edit:SetScript("OnTextChanged", function(self) onChange(self:GetText()) end)
+  edit:SetScript("OnEnterPressed", function(self) self:ClearFocus(); onSubmit() end)
+end
+
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
-  sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end }
+  questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
+  refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 
 function ns.placeWindow()
   if not frame then return end
@@ -1229,6 +1251,8 @@ refresh = function(professionSnapshot)
   for _, t in ipairs(tabs) do t:SetSelected(t.key == activeTab) end
   -- remember where the tab we're leaving (or redrawing) was scrolled to
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
+  local edit = pools.edit and pools.edit.list[1]
+  local keepSearchFocus = edit and edit:IsShown() and edit:HasFocus()
   releaseAll()
   local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
@@ -1240,11 +1264,11 @@ refresh = function(professionSnapshot)
   -- the controller's tags, from what each widget is now (pooled widgets change role between tabs,
   -- and some get their click after the helper drew them): padSkip = nothing to press, padX/padY =
   -- its centre in content coordinates
-  for _, kind in ipairs({ "icon", "btn", "check", "hit" }) do
+  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
-      w.padSkip = (w:GetScript("OnClick") == nil) or nil
+      w.padSkip = (kind ~= "edit" and w:GetScript("OnClick") == nil) or nil
       local _, rel, _, x, y = w:GetPoint(1)
       if rel == content and x and y then
         w.padX, w.padY = x + (w:GetWidth() or 0) / 2, -y + (w:GetHeight() or 0) / 2
@@ -1252,6 +1276,7 @@ refresh = function(professionSnapshot)
     end
   end
   if ns.gamepad then ns.gamepad.refresh(frame) end
+  if keepSearchFocus and edit:IsShown() then edit:SetFocus() end
 end
 ns.refresh = refresh
 function ns.refreshQuestTab()
@@ -1275,7 +1300,7 @@ end
 -- buttons, ticks and clickable strips, the header above it and the tabs below it.
 local function listFocusables()
   local out = {}
-  for _, kind in ipairs({ "icon", "btn", "check", "hit" }) do
+  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]

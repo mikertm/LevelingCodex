@@ -5,8 +5,9 @@ local try = Q.try
 local viewer, arrow, header, title, detail, preview, arrowText, arrowArt, flatBackground, badge, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme, controllerRequested
-local suggestionButton
+local nextButton, pinButton, suggestionButton
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
+local announced = {} -- dungeon runs whose "find a group" note was said this session
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
 local events = CreateFrame("Frame")
@@ -105,16 +106,32 @@ local function makeViewer()
     return b
   end
   button("Back", 12, 62, function() Q.back(); quiet = true; ns.questRefresh() end)
-  local nextButton = button("Next", 80, 62, function(_, mouse)
+  nextButton = button("Next", 80, 62, function(_, mouse)
     if mouse == "RightButton" then Q.back() else Q.next() end
     quiet = true
     ns.questRefresh()
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  button("Pin", 148, 55, pin)
+  pinButton = button("Pin", 148, 55, pin)
   button("Quests", 209, 70, function() ns.openTab("quests") end)
   button("Hide", 285, 53, function() viewer:Hide() end)
-  suggestionButton = button("", 16, 318, function() ns.followSuggestedQuestSection() end, 35)
+  suggestionButton = button("", 16, 318, function()
+    local row = Q.current()
+    if row and row.section.side then
+      Q.returnToRoute()
+      quiet = true
+      ns.questRefresh()
+    else
+      local run = Q.readyRun()
+      local suggestion = not run and Q.suggestions()[1]
+      local related = not run and not suggestion and Q.relatedGuide()
+      if run then
+        Q.jump(run)
+        quiet = true
+        ns.questRefresh()
+      elseif related then ns.openQuestGuide(related) else ns.followSuggestedQuestSection(suggestion) end
+    end
+  end, 35)
   ns.gamepad.attach(viewer, { passive = true, enabled = function() return controllerRequested end,
     focusables = function() return buttons end })
 
@@ -175,6 +192,7 @@ local ACTION = { accept = "Accept", complete = "Complete", turnin = "Turn in", [
   boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note" }
 
 function Q.label(step)
+  if step.type == "hearth" and step.bind then return "Return to " .. step.bind end
   local verb = ACTION[step.type]
   local name = step.name or step.flight
   return name and (verb .. " - " .. name) or verb
@@ -209,7 +227,18 @@ function Q.detail(step, requiredFor)
     end
   end
   if #also > 0 then text = text .. "\nAlso on this loop\n" .. table.concat(also, "\n") end
+  local part, length, run = Q.chainInfo(step.quest)
+  if part then
+    text = text .. "\nChain: part " .. part .. " of " .. length .. (run and (", leads to " .. run.title) or "") .. "."
+  end
+  if step.type == "accept" and not Q.log(step.quest) then
+    local count, max = Q.logCapacity()
+    if max and count >= max then
+      text = "Your quest log is full (" .. count .. "/" .. max .. "). Turn in or abandon a quest first.\n" .. text
+    end
+  end
   if requiredFor then text = "Required for " .. requiredFor.name .. ".\n" .. text end
+  if step.uncertain then text = text .. "\nCheck in game: " .. step.uncertain end
   return Q.plain(text)
 end
 
@@ -269,10 +298,73 @@ local function makeItemButton()
   b:Hide()
 end
 
+-- The target button (RestedXP's targeting): a secure macro button under the item button that
+-- targets the current step's quest giver by name. Same combat rules as the item button.
+local targetButton -- false = the client can't make one
+local TARGET_TYPES = { accept = true, turnin = true }
+
+local function stepTarget(step)
+  if not step or not TARGET_TYPES[step.type] or step.item or step.startItem then return end
+  local name = step.npc and Q.plain(step.npc)
+  if name and name:find("%a") and not name:find("[\n/;]") then return name end
+end
+
+local function targetTooltip(self)
+  GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+  GameTooltip:SetText("Target " .. tostring(self.target))
+  GameTooltip:AddLine("Key Bindings > AddOns can give it a key.")
+  GameTooltip:Show()
+end
+
+local function makeTargetButton()
+  local ok, b = pcall(CreateFrame, "Button", "LevelingCodexQuestTarget", UIParent, "SecureActionButtonTemplate")
+  if not ok or not b then targetButton = false; return end
+  targetButton = b
+  b:SetSize(32, 32)
+  b:SetFrameStrata("MEDIUM")
+  b:RegisterForClicks("AnyUp", "AnyDown")
+  b.icon = b:CreateTexture(nil, "ARTWORK")
+  b.icon:SetAllPoints()
+  ns.setIcon(b.icon, "Ability_Hunter_SniperShot")
+  if A.hasFile("Interface\\Buttons\\ButtonHilight-Square") then
+    try(b.SetHighlightTexture, b, "Interface\\Buttons\\ButtonHilight-Square", "ADD")
+  end
+  b:SetScript("OnEnter", targetTooltip)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  b:Hide()
+end
+
+local function updateTargetButton()
+  if targetButton == false then return end
+  local row = viewer and viewer:IsShown() and Q.current()
+  local name = not ns.db().noQuestTarget and stepTarget(row and row.step)
+  if not name then
+    if targetButton then targetButton:Hide() end
+    return
+  end
+  if not targetButton then
+    makeTargetButton()
+    if not targetButton then return end
+  end
+  targetButton:SetAttribute("type", "macro")
+  targetButton:SetAttribute("macrotext", "/targetexact " .. name)
+  targetButton.target = name
+  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
+  targetButton:ClearAllPoints()
+  if left and top then
+    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left - 10, top - 72)
+  else
+    targetButton:SetPoint("CENTER", UIParent, "CENTER", -260, 30)
+  end
+  targetButton:Show()
+end
+
 updateItemButton = function()
-  if itemButton == false then return end
+  if itemButton == false and targetButton == false then return end
   if try(InCombatLockdown) ~= false then itemPending = true; return end
   itemPending = false
+  updateTargetButton()
+  if itemButton == false then return end
   local row = viewer and viewer:IsShown() and Q.current()
   local item, icon = stepItem(row and row.step)
   local count = item and itemCount(item) or 0
@@ -302,11 +394,40 @@ updateItemButton = function()
   itemButton:Show()
 end
 
+local function previewText(row, i)
+  local upcoming = Q.upcoming(i)
+  local nextRow = upcoming[1]
+  if not nextRow then
+    if not row.section.side and Q.autoStep() == row.step then
+      return row.section.alternate and "Last step in this alternate route." or "Last step in this guide."
+    end
+    return ""
+  end
+  local heading = nextRow.section == row.section and "Next: " or ("Next section: " .. nextRow.section.title .. "\n")
+  local text = heading .. Q.label(nextRow.step)
+  local second = upcoming[2]
+  if second and second.section == nextRow.section then text = text .. "\n" .. Q.label(second.step) end
+  return text
+end
+
+local function pinnedText()
+  local lines = {}
+  for _, id in ipairs(Q.pins()) do
+    local entry = Q.incomplete(id)
+    local goals = objectiveLines(entry, true)
+    local name = entry.title or ("Quest " .. id)
+    lines[#lines + 1] = name .. (#goals > 0 and " - " .. table.concat(goals, " / ") or "")
+  end
+  return #lines > 0 and Q.plain("Tracking\n" .. table.concat(lines, "\n")) or ""
+end
+
 function ns.questRefresh()
   local row, i = Q.current()
-  local suggestion = Q.suggested()
+  local suggestion = Q.suggestions()[1]
+  local _, _, _, _, selected = Q.rows()
+  local sec = row and row.section or selected
   completionSound(row)
-  if not dismissed and (row or suggestion) then
+  if not dismissed and sec then
     painting = true
     if not viewer then makeViewer() end
     if theme ~= ns.themeVersion then
@@ -319,31 +440,46 @@ function ns.questRefresh()
       preview:SetTextColor(ns.rgba(backdrop and C.dim or C.inkSoft))
       theme = ns.themeVersion
     end
-    local _, _, _, _, selected = Q.rows()
-    local sec = row and row.section or selected
     header:SetText(sec.title .. "  " .. sec.levels[1] .. "-" .. sec.levels[2])
     badge:SetShown(not sec.verified)
     title:SetWidth(sec.verified and 318 or 252)
-    title:SetText(row and Q.label(row.step) or "Section complete")
-    detail:SetText(row and Q.detail(row.step, row.requiredFor) or "Choose a suggested section or open Quests.")
+    if row then
+      title:SetText(Q.label(row.step))
+      detail:SetText(Q.detail(row.step, row.requiredFor))
+    else
+      title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
+      detail:SetText(suggestion and "Try the suggested section below, or open Quests to choose another."
+        or "Open Quests to revisit a section or check for missed quests.")
+    end
     -- Stack title, detail and preview by their real heights so long lines never overlap.
     local detailY = 28 + math.max(14, title:GetStringHeight()) + 5
     detail:ClearAllPoints()
     detail:SetPoint("TOPLEFT", 16, -detailY)
-    local nextLabels = {}
-    if row then
-      for _, nextRow in ipairs(Q.upcoming(i)) do nextLabels[#nextLabels + 1] = Q.label(nextRow.step) end
-    end
-    preview:SetText(#nextLabels > 0 and ("Next: " .. table.concat(nextLabels, "\n")) or "")
+    local previewLines = row and previewText(row, i) or ""
+    local tracked = pinnedText()
+    if tracked ~= "" then previewLines = previewLines ~= "" and (previewLines .. "\n\n" .. tracked) or tracked end
+    preview:SetText(previewLines)
     local previewY = detailY + detail:GetStringHeight() + 8
     preview:ClearAllPoints()
     preview:SetPoint("TOPLEFT", 16, -previewY)
-    suggestionButton:SetShown(suggestion ~= nil)
-    if suggestion then
-      suggestionButton.codexLabel = "Try " .. suggestion.title
+    nextButton:SetShown(row ~= nil)
+    pinButton:SetShown(row ~= nil)
+    local returnToRoute = sec.side
+    local run, runCount = Q.readyRun()
+    if run and not announced[run.id] then
+      announced[run.id] = true
+      ns.say(Q.plain(run.title .. ": " .. runCount .. " of its quests are in your log. Find a group, then use Run "
+        .. run.title .. " in the step window for the checklist."))
+    end
+    local related = Q.relatedGuide()
+    local offer = returnToRoute or run or suggestion or related
+    suggestionButton:SetShown(offer ~= nil and offer ~= false)
+    if offer then
+      suggestionButton.codexLabel = returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
+        or (suggestion and "Try " .. suggestion.title or "Plan " .. related.title)
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
-    viewer:SetHeight(math.max(140, previewY + preview:GetStringHeight() + (suggestion and 64 or 38)))
+    viewer:SetHeight(math.max(140, previewY + preview:GetStringHeight() + (offer and 64 or 38)))
     viewer:Show()
     ns.gamepad.refresh(viewer)
     painting = false
@@ -357,8 +493,8 @@ function ns.questRefresh()
   ns.refreshQuestTab()
 end
 
-function ns.followSuggestedQuestSection()
-  local section = Q.suggested()
+function ns.followSuggestedQuestSection(section)
+  section = section or Q.suggestions()[1]
   if not section then return end
   if not Q.resumeActive(section) then Q.jump(section) end
   quiet = true
@@ -539,7 +675,7 @@ local function handle(event, a, b)
       return distance and distance <= Q.arrived()
     end)
   end
-  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then Q.checkArrival() end
+  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then Q.checkPosition() end
   if recorder then
     if event == "QUEST_ACCEPTED" or event == "QUEST_TURNED_IN" then
       local entry = (id and Q.log(id)) or old
@@ -571,12 +707,14 @@ end
 function ns.startQuestGuide()
   for _, ev in ipairs({ "PLAYER_LEVEL_UP", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
+    "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)
   Q.update()
+  if type(GetQuestsCompleted) == "function" then try(QueryQuestsCompleted) end
   ns.questRefresh()
   if type(TakeTaxiNode) == "function" then
     try(hooksecurefunc, "TakeTaxiNode", function(node)
@@ -585,16 +723,16 @@ function ns.startQuestGuide()
   end
   ns.every(0.25, function()
     recordFlight()
-    if Q.checkArrival() then ns.questRefresh() else paintArrow() end
+    if Q.checkPosition() then ns.questRefresh() else paintArrow() end
   end)
 end
 
 function ns.questDebugLines()
   local groups = {
-    { "C_QuestLog", C_QuestLog, "IsQuestFlaggedCompleted", "GetNumQuestLogEntries", "GetInfo",
-      "GetQuestIDForLogIndex", "GetQuestObjectives", "GetMaxNumQuestsCanAccept" },
+    { "C_QuestLog", C_QuestLog, "IsQuestFlaggedCompleted", "IsComplete", "GetNumQuestLogEntries", "GetInfo",
+      "GetQuestIDForLogIndex", "GetQuestObjectives", "GetMaxNumQuestsCanAccept", "GetAllCompletedQuestIDs" },
     { "Classic quest APIs", _G, "GetNumQuestLogEntries", "GetQuestLogTitle", "GetQuestLogLeaderBoard",
-      "IsQuestFlaggedCompleted", "GetQuestsCompleted" },
+      "IsQuestFlaggedCompleted", "GetQuestsCompleted", "QueryQuestsCompleted" },
     { "C_Map", C_Map, "GetBestMapForUnit", "GetPlayerMapPosition", "GetMapInfo", "GetMapWorldSize", "SetUserWaypoint" },
     { "C_SuperTrack", C_SuperTrack, "SetSuperTrackedUserWaypoint" },
     { "TomTom", TomTom, "AddWaypoint" },

@@ -5,4 +5,6 @@
   </Binding>
   <!-- Uses the quest item shown beside the quest step window. -->
   <Binding name="CLICK LevelingCodexQuestItem:LeftButton" header="LEVELINGCODEX" category="ADDONS"/>
+  <!-- Targets the current step's quest giver (the button below the item button). -->
+  <Binding name="CLICK LevelingCodexQuestTarget:LeftButton" header="LEVELINGCODEX" category="ADDONS"/>
 </Bindings>

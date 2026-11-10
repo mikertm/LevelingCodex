@@ -1012,11 +1012,11 @@ def full_audit(ref, only=None):
 
 
 def audit_quests(ref):
-    from questroute import ROUTE, CLASS_ROUTE, audit
+    from questroute import ROUTE, ROUTES, audit
 
     if not ROUTE.exists():
         return []
-    return audit(load_lua_global([ROUTE, CLASS_ROUTE], "LevelingCodexQuests"), ref)
+    return audit(load_lua_global(ROUTES, "LevelingCodexQuests"), ref)
 
 
 def groups(res):

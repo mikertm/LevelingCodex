@@ -3,12 +3,25 @@ local _, ns = ...
 local Q, U, C = ns.quests, ns.ui, ns.C
 local W = U.W
 local view, allSteps = "route", false
+local librarySection, query, draft = nil, "", ""
 
-local STATUS = { pending = "To do", done = "Done", deferred = "Earlier", skipped = "Skipped" }
+local STATUS = { pending = "To do", done = "Done", deferred = "Earlier", skipped = "Skipped", blocked = "Blocked" }
 
 local function sectionInfo(section)
-  return "Levels " .. section.levels[1] .. "-" .. section.levels[2] ..
+  return (section.category == "dungeon" and "Suggested levels " or "Levels ") .. section.levels[1] .. "-" .. section.levels[2] ..
     (section.verified and "" or "  |  Unverified")
+end
+
+local function runInfo(section)
+  if not Q.planned(section.id) then return "Not planned" end
+  local inLog, left = Q.runReadiness(section)
+  return "Planned  |  " .. inLog .. " in log" .. (left > 0 and (", " .. left .. " to pick up") or "")
+end
+
+local function setPlans(list, on)
+  for _, section in ipairs(Q.dungeons()) do Q.setPlanned(section.id, false) end
+  for _, section in ipairs(list or {}) do Q.setPlanned(section.id, on) end
+  ns.updateQuestSettings()
 end
 
 local function stepCard(row, y)
@@ -85,6 +98,162 @@ local function renderRoute(rows, selected, current, y)
   return y
 end
 
+local function followGuide(section, phase)
+  Q.jump(section, nil, phase)
+  ns.showQuestViewer()
+end
+
+local function showGuide(section)
+  librarySection = section
+  U.refreshTop()
+end
+
+local function renderLibrarySection(rows, section, y)
+  y = y + U.sectionTitle(section.title, y)
+  y = y + U.T(sectionInfo(section), 0, y, W, "small", C.dim) + 8
+  local col = math.floor((W - 16) / 3)
+  local minimum = Q.guideMinimum(section)
+  if minimum then
+    U.T("Available at level " .. minimum, 0, y + 4, W, "body", C.dim)
+  else
+    U.btn("Follow this guide", 0, y, col, function() followGuide(section) end)
+  end
+  if section.category == "dungeon" then
+    U.btn("Start inside", col + 8, y, col, function() followGuide(section, "inside") end)
+    U.btn("After the run", W - col, y, col, function() followGuide(section, "after") end)
+    y = y + 34
+    local planned = Q.planned(section.id)
+    U.btn(planned and "Planned: its pickups are in your route" or "Plan this run", 0, y, W, function()
+      Q.setPlanned(section.id, not planned)
+      ns.updateQuestSettings()
+    end, planned, "Planned runs add their quest pickups to your leveling route and say when you're ready to find a group.")
+    y = y + 30
+    y = y + U.T(runInfo(section), 0, y, W, "small", C.dim)
+  end
+  y = y + 34
+  for _, id in ipairs(section.links or {}) do
+    local linked = Q.section(id)
+    if linked then
+      U.btn(linked.title, 0, y, W, function() showGuide(linked) end, false, "Open this related guide.")
+      y = y + 28
+    end
+  end
+  if section.bosses and #section.bosses > 0 then
+    y = y + U.sectionTitle("BOSSES IN ORDER", y)
+    for i, boss in ipairs(section.bosses) do
+      y = y + U.T(i .. ". " .. Q.plain(boss.name), 0, y, W, "body", C.gold) + 2
+      y = y + U.T(Q.plain(boss.tip), 12, y, W - 12, "small", C.light) + 8
+    end
+  end
+  local headers = { prepare = "BEFORE YOU GO", inside = "INSIDE", after = "AFTER THE RUN" }
+  local lastPhase
+  for _, row in ipairs(rows) do
+    if row.section == section and row.state ~= "filtered" then
+      local s = row.step
+      local phase = section.category == "dungeon" and (s.phase or "prepare")
+      if phase and phase ~= lastPhase then
+        y = y + U.sectionTitle(headers[phase], y)
+        lastPhase = phase
+      end
+      local status = s.quest and Q.questStatus(row) or STATUS[row.state]
+      local tip = Q.detail(s)
+      y = drawRow(row, y, Q.label(s), STATUS[row.state], status ~= STATUS[row.state] and status or nil,
+        150, false, tip)
+    end
+  end
+  return y
+end
+
+local function renderActive(y)
+  local active, pinned = {}, {}
+  for id in pairs(Q.logEntries()) do active[#active + 1] = id end
+  table.sort(active)
+  for _, id in ipairs(Q.pins()) do pinned[id] = true end
+  if #active == 0 then return y end
+  local count, max = Q.logCapacity()
+  y = y + U.sectionTitle("Active quests" .. (max and (" (" .. count .. "/" .. max .. ")") or ""), y)
+  local buttonWidth = math.floor(W * 0.46)
+  for _, id in ipairs(active) do
+    local entry = Q.log(id)
+    local row = Q.questMatch(id)
+    local name = Q.plain(entry.title or (row and row.step.name) or ("Quest " .. id))
+    if row then
+      U.btn("Show " .. name, 0, y, W - buttonWidth - 8, function()
+        Q.followQuest(row)
+        ns.showQuestViewer()
+      end, false, "Follow the matching guide step.")
+    else
+      U.T(name, 0, y + 4, W - buttonWidth - 8, "small", C.dim)
+    end
+    if Q.incomplete(id) then
+      U.btn((pinned[id] and "Untrack " or "Track ") .. name, W - buttonWidth, y, buttonWidth, function()
+        if Q.togglePin(id) then ns.questRefresh() else ns.say("you can track up to three quests.") end
+      end, pinned[id], "Keep this quest's progress in the step window.")
+    end
+    y = y + 28
+  end
+  return y
+end
+
+local function renderLibrary(rows, sections, y)
+  y = y + U.T("Search by guide, quest name or quest ID", 0, y, W, "small", C.dim) + 5
+  local function search()
+    query, librarySection = draft, nil
+    U.refreshTop()
+  end
+  U.questSearch(8, y, W - 100, draft, function(value) draft = value end, search)
+  U.btn("Search", W - 80, y, 80, search)
+  y = y + 34
+  if librarySection then return renderLibrarySection(rows, librarySection, y) end
+  if query:find("%S") then
+    local guides, matches = Q.find(query)
+    y = y + U.sectionTitle("Search results", y)
+    if #guides + #matches == 0 then return y + U.T("No matching guides or quests.", 0, y, W, "body", C.dim) end
+    for _, guide in ipairs(guides) do
+      U.btn(guide.title, 0, y, W, function() showGuide(guide) end)
+      y = y + 28
+    end
+    for i, row in ipairs(matches) do
+      if i > 35 then return y + U.T("Narrow your search to see more results.", 0, y, W, "small", C.dim) end
+      y = drawRow(row, y, row.step.name, STATUS[row.state] or "Details",
+        row.section.title .. "\n" .. Q.questStatus(row), 160, false, Q.detail(row.step))
+    end
+    return y
+  end
+
+  y = renderActive(y)
+  for _, group in ipairs({ { "dungeon", "Dungeons" }, { "special", "Special quest chains" } }) do
+    local count = 0
+    local col = math.floor((W - 12) / 2)
+    for _, section in ipairs(sections) do
+      if section.category == group[1] then
+        if count == 0 then
+          y = y + U.sectionTitle(group[2], y)
+          if group[1] == "dungeon" then
+            y = y + U.T("Plan the runs you mean to do: their pickups join your route, and the step window says when to find a group.",
+              0, y, W, "small", C.dim) + 6
+            local third = math.floor((W - 16) / 3)
+            U.btn("Plan recommended", 0, y, third, function() setPlans(Q.recommendedRuns(), true) end, false,
+              "Runs near your route or tied to your class quests, still in reach of your level.")
+            U.btn("Plan all", third + 8, y, third, function() setPlans(Q.dungeons(), true) end)
+            U.btn("Plan none", W - third, y, third, function() setPlans(nil) end)
+            y = y + 34
+          end
+        end
+        local x = count % 2 * (col + 12)
+        local planned = section.category == "dungeon" and Q.planned(section.id)
+        U.btn(section.title, x, y, col, function() showGuide(section) end, planned, "View steps and quest readiness.")
+        U.T(section.category == "dungeon" and (sectionInfo(section) .. "\n" .. runInfo(section)) or sectionInfo(section),
+          x, y + 25, col, "small", C.dim, "CENTER")
+        count = count + 1
+        if count % 2 == 0 then y = y + (group[1] == "dungeon" and 60 or 46) end
+      end
+    end
+    if count % 2 == 1 then y = y + (group[1] == "dungeon" and 60 or 46) end
+  end
+  return y
+end
+
 local function render()
   local rows, sections, missed, level, selected, ready = Q.rows()
   local current = Q.current()
@@ -107,7 +276,7 @@ local function render()
     U.btn("Return to leveling", w + 8, y, w, function()
       Q.returnToRoute()
       ns.showQuestViewer()
-    end, false, "Go back to your leveling route. Class quest progress comes from the game.")
+    end, false, "Go back to your leveling route. Detour quest progress comes from the game.")
   else
     U.btn("Resume active quest", w + 8, y, w, function()
       if Q.resumeActive() then ns.showQuestViewer()
@@ -116,10 +285,24 @@ local function render()
   end
   U.btn("Copy recorder log", W - w, y, w, function() ns.questRecord("copy") end)
   y = y + 36
-  local suggested = Q.suggested()
-  if suggested then
-    U.btn("Try " .. suggested.title, 0, y, W, ns.followSuggestedQuestSection, false,
-      "Open this suggested leveling section.")
+  U.btn("Guide library", 0, y, W, function()
+    if view == "library" and not librarySection and not query:find("%S") then view = "route"
+    else view, librarySection, query, draft = "library", nil, "", "" end
+    U.refreshTop()
+  end, view == "library", "Search guides, prepare for a dungeon, or track an active quest.")
+  y = y + 36
+  if view == "library" then return renderLibrary(rows, sections, y) + 12 end
+  local related = Q.relatedGuide()
+  if related then
+    U.btn("Plan " .. related.title, 0, y, W, function() ns.openQuestGuide(related) end, false,
+      "Check the pickups, prerequisites, and turn-ins for this guide.")
+    y = y + 34
+  end
+  local choices = Q.suggestions(true)
+  if #choices > 0 then y = y + U.T("ROUTE OPTIONS FOR YOUR LEVEL", 0, y, W, "label", C.gold) + 6 end
+  for _, suggested in ipairs(choices) do
+    U.btn("Try " .. suggested.title, 0, y, W, function() ns.followSuggestedQuestSection(suggested) end, false,
+      "Follow this section and resume a quest there if you have one.")
     y = y + 36
   end
 
@@ -127,7 +310,7 @@ local function render()
   local function sectionButtons(heading, kind)
     local count = 0
     for _, section in ipairs(sections) do
-      if (section.side and "class" or section.alternate and "alternate" or "main") == kind then
+      if not section.category and (section.side and "class" or section.alternate and "alternate" or "main") == kind then
         if count == 0 then y = y + U.T(heading, 0, y, W, "label", C.gold) + 6 end
         local x = count % 2 * (column + 12)
         U.btn(section.title, x, y, column, function()
@@ -167,3 +350,9 @@ local function render()
 end
 
 ns.addTab("quests", "Quests", render)
+
+function ns.openQuestGuide(section)
+  view, librarySection, query, draft = "library", section, "", ""
+  ns.openTab("quests")
+  U.refreshTop()
+end

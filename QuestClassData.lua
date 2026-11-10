@@ -311,8 +311,13 @@ do
   p(1786, divinity, 13, 12, 1781, human)
   p(1787, divinity, 13, 12, 1786, human)
   p(1788, divinity, 13, 12, 1787, human)
+  -- The trainer referrals; their classic follow-ups (1641, 1645) aren't in the Forever client.
+  p(2998, "Tome of Divinity", 12, 12, nil, human)
+  B.breadcrumb(2998, 1642)
   side({ id = "paladin-redemption-human", title = "Paladin: Redemption (Human)", zone = m.stormwind,
     levels = { 12, 14 }, class = paladin, start = human, sources = paladinSources, steps = {
+      accept(2998, at("Brother Wilhelm", 41.1, 66.0, m.elwynn), "Brother Wilhelm, your Goldshire trainer, sends you to Duthorian Rall."),
+      finish(2998, duthorian, "Find Duthorian in the Cathedral of Light in Stormwind."),
       withItem(6775, accept(1642, duthorian,
         "Bring 10 Linen Cloth. Speak to Duthorian in the Cathedral of Light for the Tome of Divinity. Complete his introductory errand if offered, then use the book to accept this quest.")),
       finish(1642, duthorian),
@@ -348,8 +353,12 @@ do
   p(1783, divinity, 13, 12, 1779, dwarf)
   p(1784, divinity, 13, 12, 1783, dwarf)
   p(1785, divinity, 13, 12, 1784, dwarf)
+  p(2999, "Tome of Divinity", 12, 12, nil, dwarf)
+  B.breadcrumb(2999, 1646)
   side({ id = "paladin-redemption-dwarf", title = "Paladin: Redemption (Dwarf)", zone = m.ironforge,
     levels = { 12, 14 }, class = paladin, start = dwarf, sources = paladinSources, steps = {
+      accept(2999, at("Brandur Ironhammer", 23.1, 6.1, m.ironforge), "Brandur Ironhammer, the paladin trainer in the Mystic Ward, sends you to Tiza."),
+      finish(2999, tiza, "Tiza Battleforge is a few steps south-east in the Mystic Ward."),
       withItem(6916, accept(1646, tiza,
         "Bring 10 Linen Cloth. Speak to Tiza in the Mystic Ward for the Tome of Divinity. Complete her introductory errand if offered, then use the book to accept this quest.")),
       finish(1646, tiza),
@@ -775,6 +784,16 @@ do
   }
 
   q(94773, "Divine Grace", 10, 10, nil, true, priest)
+  -- Josetta's referral (94774) is on the Elwynn route; it and Laurena's own copy exclude each other.
+  q(94774, "Divine Grace", 10, 10, nil, true, priest)
+  B.quest[94774].race = "HUMAN"
+  B.breadcrumb(94773, 94774)
+  inline("elwynn", "accept", 1097, {
+    accept(94774, at("Priestess Josetta", 43.28, 65.72, m.elwynn), "Priestess Josetta upstairs in the inn refers you to High Priestess Laurena in Stormwind."),
+  })
+  inline("elwynn", "turnin", 97923, {
+    finish(94774, laurena, "Go west to the Cathedral of Light and speak with Laurena to learn Divine Grace."),
+  })
   side({ id = "priest-divine-grace", title = "Priest: Divine Grace", zone = m.stormwind,
     levels = { 10, 10 }, class = priest, start = "HUMAN", sources = priestSources, steps = {
       accept(94773, laurena, "Find Laurena inside the Cathedral of Light. If you have a Divine Grace referral from another trainer, hand it in here."),
@@ -1155,6 +1174,22 @@ do
         "Take the Rut'theran boat to Auberdine. In the cave near Bashal'Aran, use Cenarion Moondust at the Moonkin Stone. Defeat Lunaclaw and speak to his spirit.",
         "Speak with Lunaclaw's spirit")),
       finish(6001, mathrengyl, "Take the Auberdine boat back to Rut'theran and return to Mathrengyl to learn Bear Form."),
+    },
+  })
+
+  -- Skyborne druids get their Moonglade call from Sheldras in Stormwind, right after Child of
+  -- Nature. Pick it up on the route; the teleport and hand-in wait for a side trip.
+  q(94914, "Moonglade", 10, 10, nil, true, druid)
+  B.quest[94914].race = "SKYBORNE"
+  inline("valanaar", "turnin", 94912, {
+    accept(94914, at("Sheldras Moontree", 35.84, 67.38, maps.stormwind), "Take Sheldras's next task while you are here."),
+  })
+  side({ id = "druid-moonglade-skyborne", title = "Druid: Moonglade (Skyborne)", zone = moonglade,
+    levels = { 10, 12 }, class = druid, start = "SKYBORNE",
+    sources = { "QuestieDB Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=94914/moonglade" },
+    steps = {
+      finish(94914, dendrite,
+        "Cast Teleport: Moonglade and find Dendrite upstairs in Nighthaven. Ask him about the next lesson before you leave."),
     },
   })
 

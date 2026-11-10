@@ -19,16 +19,20 @@ end
 local log, turnedIn, liveDone, removed = {}, {}, {}, {}
 local knownFlights, flightHubs, flightLinks = {}, {}, {}
 local visited, selected, review = {}, nil, nil
-local classSection
-local history, classHistory, classSkips = {}, {}, {}
+local sideSection
+local sideFrom, sideResumeAt
+local history, sideHistory, sideSkips = {}, {}, {}
 local route, race, class
 local sections, sectionsById, steps, missed, ready = {}, {}, {}, {}, {}
 local startItems = {}
 local questNames = {}
+local chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}
 local index, level, resumeAt
 local inWorld = true
+local lastZone, checkLocalOnLog
 local RADIUS = 35
 local ARRIVAL = { ["goto"] = true, fly = true, hearth = true }
+local PHASE = { prepare = 1, inside = 2, after = 3 }
 
 function Q.inFlight()
   local taxi = try(UnitOnTaxi, "player")
@@ -97,14 +101,22 @@ local function readLog()
     if type(id) == "number" and id > 0 and not removed[id] then
       local objectives = try(C_QuestLog and C_QuestLog.GetQuestObjectives, id)
       if type(objectives) ~= "table" or #objectives == 0 then objectives = classicObjectives(i) end
-      local ready = done == true or done == 1 or try(C_QuestLog and C_QuestLog.ReadyForTurnIn, id) == true
+      local complete, readyForTurnIn
+      local ready = done == true or done == 1
+      if not ready then
+        complete = try(C_QuestLog and C_QuestLog.IsComplete, id)
+        if complete ~= true then readyForTurnIn = try(C_QuestLog and C_QuestLog.ReadyForTurnIn, id) end
+        ready = complete == true or readyForTurnIn == true
+      end
       if not ready and objectives and #objectives > 0 then
         ready = true
         for _, row in ipairs(objectives) do
           if row.finished ~= true and row.finished ~= 1 then ready = false; break end
         end
       end
-      newLog[id] = { title = title or questNames[id], level = questLevel, objectives = objectives or {}, ready = ready, index = i }
+      local readyKnown = done ~= nil or complete ~= nil or readyForTurnIn ~= nil or (objectives and #objectives > 0)
+      newLog[id] = { title = title or questNames[id], level = questLevel, objectives = objectives or {},
+        ready = ready, readyKnown = readyKnown, index = i }
     end
   end
   log = newLog
@@ -112,16 +124,26 @@ end
 
 local function readCompleted()
   turnedIn = {}
+  if #steps == 0 then return end
   local completed = {}
-  local value = try(GetQuestsCompleted, completed)
-  if type(value) == "table" then completed = value end
+  local ids = try(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
+  if type(ids) == "table" then
+    for _, id in ipairs(ids) do completed[id] = true end
+  end
+  local legacy = {}
+  local value = try(GetQuestsCompleted, legacy)
+  if type(value) == "table" then legacy = value end
+  local function check(id)
+    if not id or turnedIn[id] ~= nil then return end
+    if liveDone[id] or completed[id] or legacy[id] then turnedIn[id] = true; return end
+    local done = try(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted, id)
+    if done ~= true and done ~= 1 then done = try(IsQuestFlaggedCompleted, id) end
+    turnedIn[id] = done == true or done == 1
+  end
   for _, row in ipairs(steps) do
-    local id = row.step.quest
-    if id and turnedIn[id] == nil then
-      local done = try(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted, id)
-      if done == nil then done = try(IsQuestFlaggedCompleted, id) end
-      turnedIn[id] = liveDone[id] or done == true or done == 1 or not not completed[id]
-    end
+    check(row.step.quest)
+    check(row.step.breadcrumb)
+    for _, id in ipairs(row.step.chain or {}) do check(id) end
   end
 end
 
@@ -133,6 +155,36 @@ local function matches(rule, token)
   return not rule or rule == token
 end
 
+local function sideHidden(section)
+  return section.side and not section.category and ns.db().noClassQuests
+end
+
+-- Dungeon plans (as RestedXP lets you choose your dungeons): a route step tagged
+-- `dungeon = "<detour id>"` shows only while that run is planned. `db.questDungeons`
+-- plans every run; a per-dungeon choice overrides it. Without SavedVariables nothing is planned.
+local function planTable()
+  local db = ns.db()
+  if type(db.questDungeonPlan) ~= "table" then db.questDungeonPlan = {} end
+  return db.questDungeonPlan
+end
+
+function Q.planned(id)
+  local choice = planTable()[id]
+  if choice ~= nil then return choice == true end
+  return ns.db().questDungeons == true
+end
+
+function Q.setPlanned(id, on)
+  planTable()[id] = on and true or false
+end
+
+-- Optional steps: dungeon pickups follow the plan, the rest (profession intros, errands) a setting.
+local function included(step)
+  if not step.optional then return true end
+  if step.dungeon then return Q.planned(step.dungeon) end
+  return ns.db().questOptional == true
+end
+
 local LEAD_IN = { ["goto"] = true, fly = true, getfp = true, boat = true }
 
 local function buildRoute()
@@ -142,7 +194,7 @@ local function buildRoute()
   race, class = (raceToken or ""):upper(), classToken
   route = LevelingCodexQuests and LevelingCodexQuests[(faction or ""):upper()]
   sections, sectionsById, steps, startItems, flightHubs = {}, {}, {}, {}, {}
-  questNames = {}
+  questNames, chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}, {}
   if not route then return end
   for _, section in ipairs(route.sections) do
     -- start: nil = shared, a race token or a list; class: side sections for one class
@@ -153,6 +205,22 @@ local function buildRoute()
       for n, step in ipairs(section.steps) do
         if matches(step.class, class) and matches(step.race, race) then
           if step.quest and step.name then questNames[step.quest] = step.name end
+          if step.quest then
+            -- A story chain: links where a quest has exactly one prerequisite and one follow-up.
+            local pre = step.chain and #step.chain == 1 and step.chain[1]
+            if pre and pre ~= step.quest and chainBefore[step.quest] == nil then
+              chainBefore[step.quest] = pre
+              local after = chainAfter[pre]
+              if after == nil then chainAfter[pre] = step.quest
+              elseif after ~= step.quest then chainAfter[pre] = false end
+            end
+            local run = step.dungeon or (section.category == "dungeon" and section.id)
+            if run then
+              runQuests[run] = runQuests[run] or {}
+              runQuests[run][step.quest] = true
+              questRun[step.quest] = questRun[step.quest] or run
+            end
+          end
           if step.startItem then startItems[step.startItem] = false end
           if step.type == "getfp" and step.map then flightHubs[step.map] = step end
           local action = step.type .. ":" .. (step.quest or n)
@@ -183,15 +251,20 @@ end
 local function chooseSection()
   if selected then return end
   local map = Q.position()
-  local active = {}
+  local active, progressed = {}, {}
   for _, row in ipairs(steps) do
-    if row.step.quest and log[row.step.quest] then active[row.section] = true end
+    local s = row.step
+    if s.quest and included(s) then
+      if log[s.quest] then active[row.section] = true end
+      if s.type == "accept" and turnedIn[s.quest] then progressed[row.section] = true end
+    end
   end
   local best
   for _, section in ipairs(sections) do
     if not section.side and levelFits(section) and
-        (not section.alternate or section.zone == map or active[section]) then
-      local score = (section.zone == map and 2 or 0) + (active[section] and 1 or 0)
+        (not section.alternate or active[section] or (not section.manual and section.zone == map)) then
+      local score = (section.zone == map and 4 or 0) + (active[section] and 2 or 0)
+        + (progressed[section] and 1 or 0)
       if not best or score > best then
         selected, best = section, score
       end
@@ -226,6 +299,18 @@ local function prerequisitesMet(step)
   return true
 end
 
+local function inDungeon(section)
+  if not section.instanceID then return false end
+  local name, kind, _, _, _, _, _, instanceID = try(GetInstanceInfo)
+  if kind ~= "party" then return false end
+  if type(instanceID) == "number" and instanceID > 0 then return instanceID == section.instanceID end
+  return name == (section.instance or section.title)
+end
+
+local function awaitingObjectives(step, entry)
+  return entry and entry.readyKnown and not entry.ready and step.phase == "after" and step.type == "turnin"
+end
+
 -- The town your hearthstone is set to (GetBindLocation), nil when the client doesn't say.
 function Q.bindLocation()
   local bind = try(GetBindLocation)
@@ -239,40 +324,48 @@ end
 
 local function state(row, skips, blockedQuests, later, map, x, y)
   local s = row.step
-  if s.optional and not ns.db().questDungeons then return "filtered" end
-  if row.section.side and ns.db().noClassQuests then return "filtered" end
+  if row.section.category ~= "dungeon" and not included(s) then return "filtered" end
+  if sideHidden(row.section) then return "filtered" end
   if s.type == "sethearth" then
     if ns.db().questSkipBind then return "filtered" end
     if boundTo(s.bind) then return "done" end
   end
+  if s.type == "getfp" and knownFlights[s.flight] then return "done" end
+  if s.type == "dungeon" and row.section.category == "dungeon" and inDungeon(row.section) then return "done" end
   if s.quest then
     local entry = log[s.quest]
     if gameDone(s) then return "done" end
-    if s.startItem and not entry and not startItems[s.startItem] then
-      blockedQuests[s.quest] = "filtered"
-      return "filtered"
-    end
+    if awaitingObjectives(s, entry) then return "blocked" end
     local follow = s.breadcrumb
     if follow and not entry and (log[follow] or turnedIn[follow]) then return "skipped" end
+    if s.startItem and not entry and not startItems[s.startItem] then
+      local unavailable = row.section.category and "blocked" or "filtered"
+      blockedQuests[s.quest] = unavailable
+      return unavailable
+    end
     if blockedQuests[s.quest] then return blockedQuests[s.quest] end
     if not entry then
+      if row.section.category and s.min and level < s.min then return "blocked" end
       for _, id in ipairs(s.chain or {}) do
         if blockedQuests[id] and not turnedIn[id] then
           blockedQuests[s.quest] = blockedQuests[id]
           return blockedQuests[id]
         end
       end
+      if row.section.category and s.type == "accept" and not prerequisitesMet(s) then
+        blockedQuests[s.quest] = "blocked"
+        return "blocked"
+      end
+      if row.section.category and s.type ~= "accept" then return "blocked" end
     end
   end
   if skips[row.key] then return "skipped" end
   -- Already in the section's zone: the way there no longer applies.
-  if row.leadIn and not visited[row.key] and map == row.section.zone
-      and not (s.type == "getfp" and knownFlights[s.flight]) then
+  if row.leadIn and not visited[row.key] and map == row.section.zone then
     return "skipped"
   end
   if visited[row.key] then return "done" end
   if s.type == "grind" and s.level and level >= s.level then return "done" end
-  if s.type == "getfp" and knownFlights[s.flight] then return "done" end
   if s.type == "goto" or s.type == "fly" then
     local _, dist = Q.vector(s, map, x, y)
     if dist and dist <= RADIUS then
@@ -295,7 +388,7 @@ local function catchup(skips)
     local step = row.step
     if not row.section.side and step.type == "accept" and not gameDone(step) then
       if ((i >= resumeAt and follows(row.section, start)) or needed[step.quest]) and not skips[row.key]
-          and (not step.optional or ns.db().questDungeons) then
+          and included(step) then
         for _, id in ipairs(step.chain or {}) do
           if not turnedIn[id] then needed[id] = needed[id] or step end
         end
@@ -310,15 +403,20 @@ end
 -- Zygor-style catch-up without a saved position: a quest you never picked up counts as
 -- passed (Missed quests) once you have turned in a quest the route picks up after it in the
 -- same section, unless a quest still ahead of you needs it. Walking the route backwards sees
--- what is still needed before reaching its prerequisites. Steps for a passed quest follow it.
+-- what is still needed before reaching its prerequisites. Earlier setup can be reviewed too.
 local function markPassed()
   local progress, needs, passed = {}, {}, {}
   for i = #steps, 1, -1 do
     local row = steps[i]
     local s, sec = row.step, row.section
-    if not sec.side and row.state == "pending" and s.quest and not log[s.quest] and not turnedIn[s.quest]
-        and progress[sec] and not needs[s.quest] and s.type == "accept" then
-      row.state, passed[s.quest] = "deferred", true
+    if not sec.side and row.state == "pending" and progress[sec] then
+      if s.type == "accept" and not log[s.quest] and not needs[s.quest] then
+        passed[sec] = passed[sec] or {}
+        row.state, passed[sec][s.quest] = "deferred", true
+      elseif s.type == "sethearth" or s.type == "hearth" or s.type == "train"
+          or (sec.alternate and s.type == "getfp") then
+        row.state = "deferred"
+      end
     end
     if not sec.side and row.state == "pending" and s.quest then
       for _, id in ipairs(s.chain or {}) do
@@ -329,20 +427,21 @@ local function markPassed()
   end
   for _, row in ipairs(steps) do
     local s = row.step
-    if row.state == "pending" and s.quest and passed[s.quest] and not log[s.quest] then row.state = "deferred" end
+    local skippedHere = passed[row.section]
+    if skippedHere and row.state == "pending" and s.quest and skippedHere[s.quest] and not log[s.quest] then
+      row.state = "deferred"
+    end
   end
 end
 
-local function leaveClass()
-  if review and steps[review].section == classSection then review = nil end
-  classSection, classHistory, classSkips = nil, {}, {}
+local function leaveSide()
+  if review and steps[review].section == sideSection then review = nil end
+  sideSection, sideFrom, sideResumeAt, sideHistory, sideSkips = nil, nil, nil, {}, {}
 end
 
 local function calculate()
-  if ns.db().noClassQuests then
-    if review and steps[review].section.side then review = nil end
-    if classSection then leaveClass() end
-  end
+  if review and sideHidden(steps[review].section) then review = nil end
+  if sideSection and sideHidden(sideSection) then leaveSide() end
   local map, x, y = Q.position()
   if Q.inFlight() then x, y = nil, nil end
   local later, laterSeen = {}, {}
@@ -351,18 +450,23 @@ local function calculate()
     later[i] = laterSeen[row.section]
     if not row.step.optional and gameDone(row.step) then laterSeen[row.section] = true end
   end
-  local skips, blockedQuests, reached, seen = skipTable(), {}, false, {}
+  local skips, blockedQuests, sectionBlocked, reached, seen = skipTable(), {}, {}, false, {}
   local needed, deferred = catchup(skips)
   local fromSection = resumeAt and steps[resumeAt].section or selected
   local grey = try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
   index, missed, ready = nil, {}, {}
   for i, row in ipairs(steps) do
     if row.section == fromSection then reached = true end
-    row.state = state(row, row.section.side and classSkips or skips, blockedQuests, later[i], map, x, y)
+    local blocked = blockedQuests
+    if row.section.side or row.section.alternate then
+      sectionBlocked[row.section] = sectionBlocked[row.section] or {}
+      blocked = sectionBlocked[row.section]
+    end
+    row.state = state(row, row.section.side and sideSkips or skips, blocked, later[i], map, x, y)
     local s = row.step
     local entry = s.quest and log[s.quest]
     row.requiredFor = resumeAt and i < resumeAt and needed[s.quest] or nil
-    if s.quest and row.state == "skipped" then blockedQuests[s.quest] = "skipped" end
+    if s.quest and row.state == "skipped" then blocked[s.quest] = "skipped" end
     if not row.section.side and row.state == "pending" and resumeAt and (deferred[s.quest] or
         (i < resumeAt and not needed[s.quest] and not (reached and entry))) then
       row.state = "deferred"
@@ -370,43 +474,129 @@ local function calculate()
   end
   markPassed()
   reached = false
-  local mainIndex, classIndex
+  local mainIndex, sideIndex
+  local readySeen = {}
   for i, row in ipairs(steps) do
     if row.section == fromSection then reached = true end
     local s = row.step
     local entry = s.quest and log[s.quest]
     if row.state == "pending" then
       if row.section.side then
-        if row.section == classSection and not classIndex then classIndex = i end
+        if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom then
+          sideIndex = i
+        end
       elseif not mainIndex and ((reached and follows(row.section, fromSection)) or needed[s.quest]) then
         mainIndex = i
       end
     end
-    if s.type == "turnin" and entry and entry.ready and not turnedIn[s.quest] and row.state ~= "filtered" then
+    if s.type == "turnin" and entry and entry.ready and not turnedIn[s.quest] and row.state ~= "filtered"
+        and not readySeen[s.quest] then
       ready[#ready + 1] = row
+      readySeen[s.quest] = true
     end
     local side = row.section.side
-    local elsewhere = side and row.section ~= classSection or not side and fromSection
+    local elsewhere = side and row.section ~= sideSection or not side and fromSection
       and (not reached or row.state == "deferred")
     if elsewhere and s.type == "accept" and not turnedIn[s.quest]
         and not entry and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1)
-        and (not side or (row.state == "pending" and not seen[row.section] and prerequisitesMet(s)))
+        and (not side or (not row.section.category and row.state == "pending" and not seen[row.section] and prerequisitesMet(s)))
         and (side or not s.level or s.level > level - grey) then
       missed[#missed + 1], seen[s.quest] = row, true
       if side then seen[row.section] = true end
     end
   end
-  if classSection and not classIndex then
-    leaveClass()
+  if sideSection and not sideIndex then
+    leaveSide()
     return calculate() -- restore temporarily skipped rows to the browser and pickup queue
   end
-  index = classIndex or mainIndex
+  index = sideIndex or mainIndex
   if mainIndex then selected = steps[mainIndex].section end
 end
 
+local function activeGoal(row, entry)
+  local kind = row.step.type
+  return entry and (row.state == "pending" or row.state == "deferred")
+    and ((kind == "complete" and not entry.ready) or (kind == "turnin" and entry.ready))
+end
+
+local function activeStep(section, localMap)
+  local map = localMap or Q.position()
+  local best, score
+  for i, row in ipairs(steps) do
+    local s = row.step
+    local entry = s.quest and log[s.quest]
+    if not row.section.side and (not section or row.section == section) and activeGoal(row, entry)
+        and (not localMap or (row.section.zone == map and (not s.map or s.map == map)
+          and (entry.ready or #entry.objectives > 0))) then
+      local rank = (map and s.map == map and 4 or 0)
+        + (map and row.section.zone == map and 2 or 0) + (row.section == selected and 1 or 0)
+      if not score or rank > score then best, score = i, rank end
+    end
+  end
+  return best
+end
+
+local function hasSectionWork(section, map)
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if row.section == section and (row.state == "pending" or row.state == "deferred") and s.quest
+        and (not map or not s.map or s.map == map)
+        and (log[s.quest] or (s.type == "accept" and level >= (s.min or 1) and prerequisitesMet(s))) then
+      return true
+    end
+  end
+end
+
+local function localSection(map)
+  local early
+  for _, section in ipairs(sections) do
+    if not section.side and not section.manual and section.zone == map and level <= section.levels[2]
+        and hasSectionWork(section, map) then
+      if levelFits(section) then return section end
+      -- The first pickups can open before the section's recommended level.
+      early = early or section
+    end
+  end
+  return early
+end
+
+local function followFrom(i)
+  selected, resumeAt, review, history = steps[i].section, i, nil, {}
+  calculate()
+end
+
+local function followSection(section)
+  selected, resumeAt, review, history = section, nil, nil, {}
+  calculate()
+end
+
+local function resumeLocal(event)
+  local map, x = Q.position()
+  if not (map and x) or Q.inFlight() then return end
+  local changed = map ~= lastZone
+  lastZone = map
+  if not changed and not checkLocalOnLog then return end
+  -- The first log update can arrive after the player's position is available.
+  checkLocalOnLog = event ~= "QUEST_LOG_UPDATE" or next(log) == nil
+  local row = index and steps[index]
+  if sideSection or review or (row and (row.requiredFor or
+      (row.step.map == map and row.section.zone ~= map))) then
+    checkLocalOnLog = false
+    return
+  end
+  local best = next(log) and activeStep(nil, map)
+  if best then
+    checkLocalOnLog = false
+    if best ~= index then followFrom(best) end
+  elseif changed and (not selected or selected.zone ~= map) then
+    local section = localSection(map)
+    if section then followSection(section) end
+  end
+end
+
 -- Known flight paths. The classic client only lists them while the flight map is
--- open, so remember what it showed (charDB, if it loads back) and ask the retail
--- world-map API once per session when Forever has it.
+-- open, so remember what it showed (charDB, if it loads back). Check the world-map
+-- API at startup and after learning a route when Forever has it.
 local function flightStore()
   local db = ns.charDB()
   db.questFlights = db.questFlights or {}
@@ -429,10 +619,13 @@ local function probeFlights()
   for _, map in ipairs(CONTINENTS) do
     local nodes = try(api, map)
     for _, node in ipairs(type(nodes) == "table" and nodes or {}) do
-      local known = type(node) == "table" and (node.isUndiscovered == false or
-        (node.isUndiscovered == nil and (node.state == 0 or node.state == 1)))
-      if known and type(node.name) == "string" then
-        knownFlights[node.name], probeCount = true, probeCount + 1
+      if type(node) == "table" and type(node.name) == "string" then
+        local undiscovered = node.isUndiscovered
+        if undiscovered == true then
+          rememberFlight(node.name, false)
+        elseif undiscovered == false or (undiscovered == nil and (node.state == 0 or node.state == 1)) then
+          knownFlights[node.name], probeCount = true, probeCount + 1
+        end
       end
     end
   end
@@ -465,7 +658,7 @@ function Q.update(event, id, newLevel)
   if event == "PLAYER_LEAVING_WORLD" then inWorld = false; return end
   if event == "PLAYER_ENTERING_WORLD" then inWorld = true end
   if not route then buildRoute() end
-  if not probed then probeFlights() end
+  if not probed or event == "NEW_TAXI_PATH" then probeFlights() end
   level = newLevel or UnitLevel("player") or 1
   if event == "QUEST_TURNED_IN" and id then liveDone[id] = true end
   if event == "QUEST_REMOVED" and id then
@@ -480,6 +673,10 @@ function Q.update(event, id, newLevel)
   readStartItems()
   chooseSection()
   calculate()
+  if not event or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA"
+      or event == "QUEST_LOG_UPDATE" or event == "QUEST_QUERY_COMPLETE" or event == "PLAYER_CONTROL_GAINED" then
+    resumeLocal(event)
+  end
   if event == "QUEST_TURNED_IN" and review and steps[review].step.quest == id then review = nil end
 end
 
@@ -488,7 +685,7 @@ function Q.current()
   return i and steps[i], i
 end
 
-function Q.rows() return steps, sections, missed, level or UnitLevel("player"), classSection or selected, ready end
+function Q.rows() return steps, sections, missed, level or UnitLevel("player"), sideSection or selected, ready end
 function Q.log(id) return log[id] end
 function Q.logEntries() return log end
 function Q.incomplete(id)
@@ -497,22 +694,226 @@ function Q.incomplete(id)
 end
 function Q.arrived() return RADIUS end
 
-function Q.suggested()
-  if classSection or review then return end
-  local row = index and steps[index]
-  local suggestions = row and row.step.suggest or (not row and selected and selected.suggest)
-  for _, id in ipairs(suggestions or {}) do
-    local section = sectionsById[id]
-    if section and levelFits(section) then
-      for _, candidate in ipairs(steps) do
-        local s = candidate.step
-        if candidate.section == section and (candidate.state == "pending" or candidate.state == "deferred") and s.quest
-            and (log[s.quest] or (s.type == "accept" and level >= (s.min or 1))) then
-          return section
-        end
-      end
+function Q.section(id)
+  local section = sectionsById[id]
+  return section and not sideHidden(section) and section or nil
+end
+
+function Q.relatedGuide()
+  local row = Q.current()
+  return row and row.step.guide and Q.section(row.step.guide)
+end
+
+function Q.guideMinimum(section)
+  if section.category == "special" and level < section.levels[1] then return section.levels[1] end
+end
+
+-- Where a quest sits in its story chain (as Zygor's chain data shows): part, length and the
+-- dungeon checklist the chain feeds, if any. Only chains of three or more quests count.
+function Q.chainInfo(id)
+  if not id then return end
+  local first, part = id, 1
+  while chainBefore[first] and part < 40 do first, part = chainBefore[first], part + 1 end
+  local length, cur, run = part, id, questRun[id]
+  while chainAfter[cur] and length < 80 do
+    cur, length = chainAfter[cur], length + 1
+    run = run or questRun[cur]
+  end
+  if length < 3 then return end
+  return part, length, run and Q.section(run)
+end
+
+-- A planned run's quests in your log, and pickups for it you could still take now.
+function Q.runReadiness(section)
+  local quests = runQuests[section.id]
+  if not quests then return 0, 0 end
+  local inLog, left = 0, 0
+  for id in pairs(quests) do
+    if log[id] and not turnedIn[id] then inLog = inLog + 1 end
+  end
+  local counted = {}
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if s.type == "accept" and quests[s.quest] and not counted[s.quest] and not log[s.quest] and not turnedIn[s.quest]
+        and (s.phase == nil or s.phase == "prepare") and row.state ~= "filtered" and row.state ~= "skipped"
+        and not s.startItem and level >= (s.min or 1) and prerequisitesMet(s) then
+      left, counted[s.quest] = left + 1, true
     end
   end
+  return inLog, left
+end
+
+-- Zygor's "find a group" moment: a planned run in your level range whose pickups are done
+-- (or that already has three quests waiting). Nil while you are on a detour.
+function Q.readyRun()
+  if sideSection or not level then return end
+  for _, section in ipairs(sections) do
+    if section.category == "dungeon" and Q.planned(section.id) and level >= section.levels[1]
+        and level <= section.levels[2] + 3 and not sideHidden(section) then
+      local inLog, left = Q.runReadiness(section)
+      if inLog > 0 and (left == 0 or inLog >= 3) then return section, inLog end
+    end
+  end
+end
+
+-- Plans the runs worth doing for this character: ones near the route, or tied to a class
+-- quest of yours, still in reach of your level.
+function Q.recommendedRuns()
+  local near, result = {}, {}
+  for _, section in ipairs(sections) do
+    if not section.category then near[section.zone] = true end
+  end
+  for map in pairs(route and route.flightNetwork or {}) do near[map] = true end
+  for _, section in ipairs(sections) do
+    if section.category == "dungeon" and (level or 1) <= section.levels[2] then
+      local classLink = false
+      for _, id in ipairs(section.links or {}) do
+        local linked = sectionsById[id]
+        if linked and linked.class then classLink = true end
+      end
+      local count = 0
+      for _ in pairs(runQuests[section.id] or {}) do count = count + 1 end
+      if classLink or (near[section.zone] and count >= 3) then result[#result + 1] = section end
+    end
+  end
+  return result
+end
+
+function Q.dungeons()
+  local result = {}
+  for _, section in ipairs(sections) do
+    if section.category == "dungeon" then result[#result + 1] = section end
+  end
+  return result
+end
+
+-- Quests in your log and the most the game lets you hold (nil when the client doesn't say).
+function Q.logCapacity()
+  local count = 0
+  for _ in pairs(log) do count = count + 1 end
+  local max = try(C_QuestLog and C_QuestLog.GetMaxNumQuestsCanAccept)
+  if type(max) ~= "number" or max <= 0 then
+    max = type(MAX_QUESTLOG_QUESTS) == "number" and MAX_QUESTLOG_QUESTS or nil
+  end
+  return count, max
+end
+
+function Q.find(query)
+  local foundSections, foundRows, seen = {}, {}, {}
+  query = (query or ""):lower():match("^%s*(.-)%s*$")
+  if query == "" then return foundSections, foundRows end
+  local id = tonumber(query)
+  for _, section in ipairs(sections) do
+    if not sideHidden(section) and section.title:lower():find(query, 1, true) then
+      foundSections[#foundSections + 1] = section
+    end
+  end
+  for _, row in ipairs(steps) do
+    local s = row.step
+    local key = s.quest and row.section.id .. ":" .. s.quest
+    if key and not seen[key] and not sideHidden(row.section)
+        and (s.quest == id or (s.name and s.name:lower():find(query, 1, true))) then
+      foundRows[#foundRows + 1], seen[key] = row, true
+    end
+  end
+  return foundSections, foundRows
+end
+
+function Q.questMatch(id)
+  local best, bestScore
+  for _, row in ipairs(steps) do
+    if row.step.quest == id and not sideHidden(row.section) and row.state ~= "filtered" then
+      local score = (activeGoal(row, log[id]) and 8 or 0) + (row.state == "pending" and 4 or 0)
+        + (row.section == (sideSection or selected) and 2 or 0) + (not row.section.side and 1 or 0)
+      if not bestScore or score > bestScore then best, bestScore = row, score end
+    end
+  end
+  return best
+end
+
+function Q.followQuest(row)
+  if not activeGoal(row, log[row.step.quest]) then
+    Q.jump(row.section, row)
+  elseif row.section.side then
+    Q.jump(row.section, nil, row.step.phase, row)
+  else
+    leaveSide()
+    for i, candidate in ipairs(steps) do
+      if candidate == row then followFrom(i); return end
+    end
+  end
+end
+
+function Q.questStatus(row)
+  local step = row.step
+  local entry = log[step.quest]
+  if turnedIn[step.quest] then return "Done" end
+  if awaitingObjectives(step, entry) then return "Objectives incomplete" end
+  if entry then return entry.ready and "Ready to turn in" or "In log" end
+  if step.min and level < step.min then return "Requires level " .. step.min end
+  if row.state == "skipped" then
+    local follow = step.breadcrumb
+    return follow and (log[follow] or turnedIn[follow]) and "Follow-up already started" or "Skipped"
+  end
+  local missing = {}
+  for _, id in ipairs(step.chain or {}) do
+    if not turnedIn[id] then missing[#missing + 1] = questNames[id] or ("quest " .. id) end
+  end
+  if #missing > 0 then return "Requires " .. table.concat(missing, ", ") end
+  if step.startItem and not startItems[step.startItem] then return "Starter item needed" end
+  if step.type ~= "accept" then return "Pick up quest first" end
+  if step.phase == "inside" then return "Starts inside" end
+  if step.uncertain then return "Check in game" end
+  return "Available"
+end
+
+local function pinTable()
+  local db = ns.charDB()
+  if type(db.questPins) ~= "table" then db.questPins = {} end
+  return db.questPins
+end
+
+function Q.pins()
+  local result = {}
+  for _, id in ipairs(pinTable()) do
+    if Q.incomplete(id) then result[#result + 1] = id end
+  end
+  return result
+end
+
+function Q.togglePin(id)
+  local pins = pinTable()
+  for i = #pins, 1, -1 do
+    if pins[i] == id then table.remove(pins, i); return true end
+    if not Q.incomplete(pins[i]) then table.remove(pins, i) end
+  end
+  if not Q.incomplete(id) or #pins >= 3 then return false end
+  pins[#pins + 1] = id
+  return true
+end
+
+function Q.suggestions(browse)
+  local choices, seen = {}, {}
+  if sideSection or review then return choices end
+  local row = index and steps[index]
+  local suggestions = row and row.step.suggest or (not row and selected and selected.suggest)
+  local function offer(section)
+    if not section or section == selected or section.side or seen[section] or not levelFits(section) then return end
+    if hasSectionWork(section) then
+      choices[#choices + 1], seen[section] = section, true
+    end
+  end
+  for _, id in ipairs(suggestions or {}) do offer(sectionsById[id]) end
+  local map = not Q.inFlight() and Q.position()
+  if map and selected and selected.zone ~= map then
+    for _, section in ipairs(sections) do
+      if section.zone == map then offer(section) end
+    end
+  end
+  if browse then
+    for _, section in ipairs(sections) do offer(section) end
+  end
+  return choices
 end
 
 function Q.destination(step, map)
@@ -569,31 +970,30 @@ function Q.next()
   if review then
     repeat i = i + 1 until not steps[i] or steps[i].state ~= "filtered"
     local sameSection = steps[i] and steps[i].section == row.section
-    review = index and i < index and (sameSection or (not row.section.side and not classSection
+    review = index and i < index and (sameSection or (not row.section.side and not sideSection
       and follows(steps[i].section, selected))) and i or nil
   elseif hasMoreObjectives(row, i) then
     visited[row.key] = true
-  elseif row.step.quest or row.step.type == "dungeon" then
-    local skips = row.section.side and classSkips or skipTable()
+  elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth" then
+    local skips = row.section.side and sideSkips or skipTable()
     skips[row.key] = true
   else
-    if row.step.type == "getfp" then rememberFlight(row.step.flight, true) end
     visited[row.key] = true
   end
   calculate()
-  if manual and (not row.section.side or classSection) then
-    local trail = classSection and classHistory or history
+  if manual and (not row.section.side or sideSection) then
+    local trail = sideSection and sideHistory or history
     trail[#trail + 1] = { from = i, to = index }
   end
 end
 
 function Q.back()
-  if review and (classSection or steps[review].section.side) and steps[review].section ~= classSection then
+  if review and (sideSection or steps[review].section.side) and steps[review].section ~= sideSection then
     review = nil
     return
   end
   local i = (review or index or (#steps + 1)) - 1
-  local trail = classSection and classHistory or history
+  local trail = sideSection and sideHistory or history
   local previous = trail[#trail]
   if not review and previous and previous.to == index then
     i = previous.from
@@ -601,63 +1001,58 @@ function Q.back()
   else
     local start = resumeAt and steps[resumeAt].section or selected
     while steps[i] and (steps[i].state == "filtered" or steps[i].state == "skipped" or
-        (not classSection and not follows(steps[i].section, start) and not steps[i].requiredFor)) do i = i - 1 end
+        (not sideSection and not follows(steps[i].section, start) and not steps[i].requiredFor)) do i = i - 1 end
   end
   local row = steps[i]
-  if classSection and (not row or row.section ~= classSection) then return end
-  if row and row.section.side and row.section ~= classSection then return end
+  if sideSection and (not row or row.section ~= sideSection) then return end
+  if row and row.section.side and row.section ~= sideSection then return end
   if row then
-    if row.step.type == "getfp" and not row.section.side then rememberFlight(row.step.flight, false) end
-    local skips = row.section.side and classSkips or skipTable()
+    local skips = row.section.side and sideSkips or skipTable()
     skips[row.key], visited[row.key] = nil, nil
-    if not classSection then selected = row.section end
+    if not sideSection then selected = row.section end
     review = i
     calculate()
     if review == index then review = nil end
   end
 end
 
-function Q.jump(section, row)
-  if section.side and ns.db().noClassQuests then return end
+function Q.jump(section, row, phase, resumeRow)
+  if sideHidden(section) then return end
+  checkLocalOnLog = false
   if row then
     for i, candidate in ipairs(steps) do
       if candidate == row then review = i ~= index and i or nil; return end
     end
   elseif section.side then
-    classSection, review, classHistory, classSkips = section, nil, {}, {}
+    if Q.guideMinimum(section) then return end
+    sideSection, review, sideHistory, sideSkips = section, nil, {}, {}
+    sideFrom = PHASE[phase] or (section.category == "dungeon" and inDungeon(section) and PHASE.inside) or PHASE.prepare
+    sideResumeAt = 0
+    if resumeRow then
+      for i, candidate in ipairs(steps) do
+        if candidate == resumeRow then sideResumeAt = i; break end
+      end
+    end
     calculate()
-  elseif classSection and section == selected then
+  elseif sideSection and section == selected then
     Q.returnToRoute()
   else
-    leaveClass()
-    selected, review, resumeAt, history = section, nil, nil, {}
-    calculate()
+    leaveSide()
+    followSection(section)
   end
 end
 
 function Q.returnToRoute()
-  leaveClass()
+  leaveSide()
   review = nil
   calculate()
 end
 
 function Q.resumeActive(section)
-  local map = Q.position()
-  local best, score
-  for i, row in ipairs(steps) do
-    local s = row.step
-    local entry = s.quest and log[s.quest]
-    if not row.section.side and (not section or row.section == section) and entry
-        and (row.state == "pending" or row.state == "deferred")
-        and (s.type == "complete" or (s.type == "turnin" and entry.ready)) then
-      local rank = (map and s.map == map and 4 or 0)
-        + (map and row.section.zone == map and 2 or 0) + (row.section == selected and 1 or 0)
-      if not score or rank > score then best, score = i, rank end
-    end
-  end
+  local best = activeStep(section)
   if not best then return end
-  selected, resumeAt, review, history = steps[best].section, best, nil, {}
-  calculate()
+  checkLocalOnLog = false
+  followFrom(best)
   return true
 end
 
@@ -682,10 +1077,17 @@ function Q.learnFlights(nodes)
   calculate()
 end
 
-function Q.checkArrival()
+function Q.checkPosition()
+  if Q.inFlight() then return end
+  local map, x, y = Q.position()
+  -- The map can still show the previous zone when the zone event fires.
+  if x and map ~= lastZone then
+    Q.update("ZONE_CHANGED_NEW_AREA")
+    return true
+  end
   local row = not review and index and steps[index]
-  if row and ARRIVAL[row.step.type] and not Q.inFlight() then
-    local _, dist = Q.vector(row.step, Q.position())
+  if row and ARRIVAL[row.step.type] then
+    local _, dist = Q.vector(row.step, map, x, y)
     if dist and dist <= RADIUS then
       visited[row.key] = true
       calculate()
@@ -695,6 +1097,7 @@ function Q.checkArrival()
 end
 
 function Q.text(step)
+  if step.type == "getfp" then return step.text .. " Use Next to skip this flight path." end
   if step.quest == 95998 and step.type == "complete" then
     local mining = ns.P and ns.P.MINING
     local first = mining and mining.camp and mining.camp[1]
@@ -704,12 +1107,16 @@ function Q.text(step)
   end
   if step.type == "sethearth" or step.type == "hearth" then
     local bind = Q.bindLocation()
-    if not bind or not step.bind then return step.text end
-    if boundTo(step.bind) then
-      return step.text .. (step.type == "sethearth" and " Your hearthstone is already set to " .. bind .. "." or "")
+    if not step.bind then return step.text end
+    local atTarget = bind and bind:lower() == step.bind:lower()
+    if step.type == "sethearth" then
+      if atTarget then return "Your hearthstone is already set to " .. bind .. "." end
+      local current = bind and (" Your hearthstone is set to " .. bind .. ".") or ""
+      return step.text .. current .. " Use Next to keep your current bind."
     end
-    return step.text .. " Your hearthstone is set to " .. bind ..
-      (step.type == "hearth" and ", so travel there instead." or ". Next keeps it there.")
+    if atTarget then return step.text .. " Use your hearthstone if it's ready." end
+    if not bind then return step.text .. " Use your hearthstone if you're bound there and it's ready." end
+    return step.text .. " Your hearthstone is set to " .. bind .. "."
   end
   if step.type ~= "train" then return step.text end
   local visit = ns.trainAt(step.level or level) or ns.nextTrain((step.level or level) - 1)
