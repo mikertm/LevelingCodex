@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.16.0
+
+- The Alliance quest guide now switches to an available local route when you enter a zone. It resumes active objectives and ready turn-ins, and checks completed quest history to catch you up while keeping required prerequisites.
+- The Quests tab shows route options for your level, including Loch Modan and Darkshore when eligible.
+- Flight-path and hearthstone steps explain how to skip them with Next. Learned flight paths can advance the guide automatically.
+- **Duskwood** batches spider drops, the Darkshire inn hand-ins, and the Raven Hill cemetery quests. Ira's Dagger appears when you find the quest starter.
+- **Loch Modan** streamlines the Silver Stream Mine loop, adds Excavation Progress Report, and gives each of Bingles' supplies its own waypoint. The timed boar hunt starts at a closer spawn cluster.
+
 ## v0.15.0
 
 - Added **Alchemy, Engineering, First Aid, Cooking, and Fishing guides from 1 to 300**. The Professions tab now covers all 12 WoW: Forever professions.
