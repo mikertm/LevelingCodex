@@ -46,6 +46,8 @@ TABLES = [
     "SpellReagents", "ItemSparse", "Item", "ItemEffect", "ItemXItemEffect", "TradeSkillCategory",
     # Enchanting: the tool (rod) a recipe needs, rod categories and masks, disenchanting level bands
     "SpellTotems", "TotemCategory", "ItemDisenchantLoot",
+    # Engineering and Cooking use crafting stations.
+    "SpellCastingRequirements", "SpellFocusObject",
     # Quest IDs, navigation and the small subset of quests with client POIs.
     "QuestV2", "UiMap", "UiMapAssignment", "TaxiNodes", "QuestLine", "QuestLineXQuest",
     "QuestPOIBlob", "QuestPOIPoint",
@@ -55,7 +57,8 @@ TABLES = [
 # Professions with a guide (ProfessionData.lua): name -> skill line.
 PROFESSIONS = {
     "Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333, "Herbalism": 182,
-    "Skinning": 393, "Leatherworking": 165,
+    "Skinning": 393, "Leatherworking": 165, "Alchemy": 171, "Engineering": 202, "First Aid": 129, "Cooking": 185,
+    "Fishing": 356,
 }
 
 # Standard herb item IDs from the Forever node catalog. Lock rows supply the
@@ -577,8 +580,9 @@ def build_professions(T, S):
     reag = {r["SpellID"]: r for r in T.SpellReagents}
     cats = {r["ID"]: r["Name_lang"] for r in T.TradeSkillCategory}
     totem_name = {r["ID"]: r["Name_lang"] for r in T.TotemCategory}
-    tools = {r["SpellID"]: totem_name.get(r["RequiredTotemCategoryID_0"]) for r in T.SpellTotems
-             if r.get("RequiredTotemCategoryID_0") not in (None, "", "0")}
+    totems = {r["SpellID"]: r for r in T.SpellTotems}
+    focus_name = {r["ID"]: r["Name_lang"] for r in T.SpellFocusObject}
+    stations = {r["SpellID"]: focus_name.get(r["RequiresSpellFocus"]) for r in T.SpellCastingRequirements}
     makes, learns = {}, collections.defaultdict(list)
     for sid, effs in S.eff.items():
         for e in effs.values():
@@ -608,6 +612,8 @@ def build_professions(T, S):
             name = S.name.get(sid)
             if name and int(sid) not in spells[name]:
                 spells[name].append(int(sid))
+            if prof == "Cooking" and sid == "818":
+                continue  # the Forever crafting recipe makes a kit (spell 1229737)
             if not name or name in recipes:
                 continue  # a name clash keeps the lowest spell ID (all of them are in "clashes")
             y, g = int(r["TrivialSkillLineRankLow"] or 0), int(r["TrivialSkillLineRankHigh"])
@@ -627,8 +633,17 @@ def build_professions(T, S):
             # Sharpening Stone says 125 but goes grey at 115), so it's a warning, not a fact
             if int(r["MinSkillLineRank"] or 0) > 1:
                 rec["min"] = int(r["MinSkillLineRank"])
-            if tools.get(sid):
-                rec["tool"] = tools[sid]  # e.g. Runed Silver Rod (or a better rod, see "rods")
+            totem = totems.get(sid, {})
+            tool = totem_name.get(totem.get("RequiredTotemCategoryID_0"))
+            if tool:
+                rec["tool"] = tool  # e.g. Runed Silver Rod (or a better rod, see "rods")
+            if prof == "Engineering":
+                required_tools = [totem_name[totem[k]] for k in ("RequiredTotemCategoryID_0", "RequiredTotemCategoryID_1")
+                                  if totem.get(k) in totem_name]
+                if required_tools:
+                    rec["tools"] = required_tools
+            if prof in ("Engineering", "Cooking") and stations.get(sid):
+                rec["station"] = stations[sid]
             if r.get("AcquireMethod") == "1":
                 rec["auto"] = True  # learned with the profession
             if int(r.get("NumSkillUps") or 0) != 1:
@@ -747,19 +762,21 @@ def diff_herbalism(old, new):
     return out
 
 
-def recipe_list(ref, prof, name=None):
+def recipe_list(ref, prof, name=None, *, exact=False):
     """One line per recipe of a profession, by the skill it turns yellow at."""
     P = (ref.get("professions") or {}).get(prof)
     if not P:
         return "no profession '%s' in the reference (have: %s)" % (prof, ", ".join(ref.get("professions") or {}))
     out = []
     for n, r in sorted(P["recipes"].items(), key=lambda kv: (kv[1]["yellow"], kv[1]["grey"], kv[0])):
-        if name and name.lower() not in n.lower():
+        if name and (n != name if exact else name.lower() not in n.lower()):
             continue
         mats = ", ".join("%d %s" % (c, it) for it, c in r["mats"])
         plan = (" plan: %s (%d)" % (r["plan"]["item"], r["plan"]["skill"])) if r.get("plan") else ""
-        out.append("y%-3d g%-3d gr%-3d %-34s [%s]  spell %d  icon %s%s" % (r["yellow"], r["green"], r["grey"], n, mats,
-                   r["spell"], r.get("icon"), plan))
+        tools = " tools: " + ", ".join(r["tools"]) if r.get("tools") else ""
+        station = " station: " + r["station"] if r.get("station") else ""
+        out.append("y%-3d g%-3d gr%-3d %-34s [%s]  spell %d  icon %s%s%s%s" %
+                   (r["yellow"], r["green"], r["grey"], n, mats, r["spell"], r.get("icon"), plan, tools, station))
     return "\n".join(out)
 
 
@@ -884,6 +901,12 @@ def audit_professions(profdata, ref):
                     (where, name, r["yellow"], r["grey"], x.get("yellow"), x.get("grey")))
             if _mats(x.get("mats")) != r["mats"]:
                 add("error", "%s: %s takes %s in game, data says %s" % (where, name, r["mats"], _mats(x.get("mats"))))
+            if key == "ENGINEERING":
+                if (x.get("tools") or []) != (r.get("tools") or []):
+                    add("error", f"{where}: {name} needs tools {r.get('tools')}, guide says {x.get('tools')}")
+            if key in ("ENGINEERING", "COOKING"):
+                if x.get("station") != r.get("station"):
+                    add("error", f"{where}: {name} needs station {r.get('station')}, guide says {x.get('station')}")
             if isinstance(x.get("makes"), list) and [x["makes"][0], int(x["makes"][1])] != r.get("makes"):
                 add("error", "%s: %s makes %s in game, data says %s" % (where, name, r.get("makes"), x["makes"]))
             if x.get("icon") and r.get("icon") and x["icon"].lower() != r["icon"]:
@@ -1419,7 +1442,7 @@ def main():
         want = (a.args[0] if a.args else "").upper()
         res = audit_professions(data, ref)
         for key, P in sorted(data.items()):
-            if want and key != want:
+            if want and key != want and P["name"].upper() != want:
                 continue
             print("#### %s vs WoW: Forever build %s" % (P["name"], ref["build"]))
             print("\n".join("  %-5s %s" % (l, m) for k, l, m in res if k == key) or "  (audit: nothing)")
@@ -1427,7 +1450,7 @@ def main():
                 label = s.get("name") or s.get("title")
                 print("%3d-%3d  %s  (learn %s)" % (s["from"], s["to"], label, s.get("learn", "-")))
                 if s.get("name"):
-                    print("         GAME: " + (recipe_list(ref, P["name"], s["name"]).splitlines() or ["not found"])[0])
+                    print("         GAME: " + (recipe_list(ref, P["name"], s["name"], exact=True) or "not found"))
             print()
         return 1 if any(l == "error" for _, l, _ in res) else 0
     if a.cmd == "recipes":

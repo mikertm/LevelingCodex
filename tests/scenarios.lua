@@ -2655,7 +2655,8 @@ function S.skills(list, api, faction, race)
   if MOCK.skillAPI ~= "professions" then GetProfessions, GetProfessionInfo = nil, nil end
   MOCK.faction, MOCK.race = faction, race
   local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring", EN = "Enchanting",
-    SK = "Skinning", LW = "Leatherworking" }
+    SK = "Skinning", LW = "Leatherworking", AL = "Alchemy", EG = "Engineering", FA = "First Aid",
+    CO = "Cooking", FI = "Fishing" }
   for part in (list or ""):gmatch("[^,]+") do
     local k, r, m = part:match("(%a+);(%d+);(%d+)")
     MOCK.setSkill(names[k], tonumber(r), tonumber(m))
@@ -2929,8 +2930,8 @@ function S.profSkillUps()
   MOCK.advance(1.2)
   check(t:IsShown() and MOCK.textUnder(t):find("Tin Vein"), "new vein card")
   dismiss(t)
-  MOCK.setSkill("Cooking", 1, 75); MOCK.advance(1.2)
-  MOCK.setSkill("Cooking", 50, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Lockpicking", 1, 75); MOCK.advance(1.2)
+  MOCK.setSkill("Lockpicking", 50, 75); MOCK.advance(1.2)
   check(not t:IsShown(), "no card for a profession the guide doesn't cover")
   LevelingCodexDB.noProfCards = true
   MOCK.setSkill("Blacksmithing", 140, 150); MOCK.advance(1.2)
@@ -3060,6 +3061,72 @@ function S.herbalismCards()
   check(t:IsShown() and MOCK.textUnder(t):find("Black Lotus %(300%)"), "Black Lotus unlock at 300")
 end
 
+function S.firstAidTab()
+  if GetProfessions then GetNumSkillLines, GetSkillLineInfo = nil, nil end
+  openAt(10, "Professions")
+  check(profButton("Mining") and profButton("Engineering") and profButton("First Aid"),
+    "First Aid is shown alongside both learned primary professions")
+  click(win(), "First Aid")
+  check(profText():find("First Aid 1 / 75", 1, true) and profText():find("Linen Bandage", 1, true),
+    "First Aid starts with Linen Bandage")
+  MOCK.setSkill("First Aid", 125, 150); MOCK.advance(1.2)
+  local text = profText()
+  check(text:find("UNLOCK EXPERT", 1, true) and text:find("Under Wraps", 1, true) and
+    text:find("Deneb Walker", 1, true) and text:find("Balai Lok'Wein", 1, true),
+    "the Expert book is available at 125 before character level 20")
+  openAt(34, "Professions")
+  MOCK.setSkill("First Aid", 225, 225); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("AT YOUR CAP", 1, true) and text:find("level 35", 1, true) and
+    not text:find("UNLOCK ARTISAN", 1, true), "Triage waits until level 35")
+  MOCK.advance(10)
+  MOCK.chat = {}
+  MOCK.level = 35
+  MOCK.event("PLAYER_LEVEL_UP", 35, 10, 0, 0, 0, 0, 0)
+  MOCK.advance(4.5)
+  local card = toast()
+  check(card and card:IsShown() and MOCK.textUnder(card):find("UNLOCK ARTISAN FIRST AID", 1, true) and
+    chatHas("First Aid: unlock .-Artisan"), "the level-up banner and chat announce the quest unlock")
+  openAt(35, "Professions")
+  text = profText()
+  check(text:find("UNLOCK ARTISAN", 1, true) and text:find("Theramore", 1, true) and
+    text:find("Hammerfall", 1, true) and text:find("15 patients", 1, true),
+    "Triage shows both doctors and the objective")
+  MOCK.setSkill("First Aid", 290, 300); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("Heavy Runecloth Bandage", 1, true) and text:find("22 Runecloth", 1, true),
+    "the last bandage step and cloth estimate")
+  MOCK.setSkill("First Aid", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE", 1, true), "First Aid route ends at 300")
+end
+
+function S.alchemyTab()
+  openAt(35, "Professions")
+  check(profButton("Alchemy"), "learned Alchemy has a guide button")
+  click(win(), "Alchemy")
+  local content = profText()
+  check(content:find("Alchemy 1 / 75", 1, true) and content:find("Minor Arcane Elixir", 1, true),
+    "Apprentice starts with a Forever recipe")
+  MOCK.setSkill("Alchemy", 200, 225); MOCK.advance(1.2)
+  content = profText()
+  check(content:find("TRAIN ARTISAN", 1, true) and content:find("Kylanna Windwhisper", 1, true) and
+    content:find("Rogvar", 1, true) and content:find("level 35", 1, true), "Artisan rank unlock and trainers")
+  check(content:find("75 Leaded Vial (includes 43 for 86 Stonescale Oil", 1, true),
+    "the shared vial row separates oil supplies from the vials for earlier recipes")
+  MOCK.bags = { ["Stonescale Eel"] = 3, ["Leaded Vial"] = 1 }
+  MOCK.setSkill("Alchemy", 265, 300); MOCK.advance(1.2)
+  content = profText()
+  check(content:find("Recipe: Elixir of Superior Defense", 1, true) and
+    content:find("Elixir of Greater Defense", 1, true), "final recipe shows the vendor item's name")
+  check(content:find("43 Stonescale Eel", 1, true) and content:find("43 Leaded Vial", 1, true) and
+    content:find("43 Crystal Vial", 1, true), "shopping list includes both materials for the oil")
+  if GetItemCount then
+    check(content:find("you can make 2", 1, true), "bag estimate is limited by the vial")
+  end
+  MOCK.setSkill("Alchemy", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE", 1, true), "Alchemy route ends at 300")
+end
+
 function S.skinningLeatherworkingTab()
   openAt(35, "Professions")
   click(win(), "Skinning")
@@ -3119,6 +3186,99 @@ local function shoppingText()
   local a = t:find("SHOPPING LIST TO 300", 1, true)
   local b = t:find("\nCLOTH\n", a or 1, true)
   return a and t:sub(a, b or #t) or ""
+end
+
+function S.cookingTab()
+  if GetProfessions then GetNumSkillLines, GetSkillLineInfo = nil, nil end
+  openAt(10, "Professions")
+  check(profButton("Mining") and profButton("Cooking"), "Cooking is shown alongside Mining")
+  click(win(), "Cooking")
+  local text = profText()
+  check(text:find("Cooking 1 / 75", 1, true) and text:find("Basic Campfire", 1, true) and
+    text:find("Station: Cooking Fire", 1, true), "Cooking shows how to make and use a fire")
+  MOCK.setSkill("Cooking", 125, 150); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("UNLOCK EXPERT", 1, true) and text:find("Expert Cookbook", 1, true) and
+    text:find("Shandrina", 1, true) and text:find("Wulan", 1, true), "both factions can find the Expert book")
+  MOCK.setSkill("Cooking", 225, 225); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("AT YOUR CAP", 1, true) and text:find("level 35", 1, true), "Artisan Cooking requires level 35")
+  openAt(35, "Professions")
+  text = profText()
+  check(text:find("UNLOCK ARTISAN", 1, true) and text:find("Clamlette Surprise", 1, true) and
+    text:find("Dirge Quikcleave", 1, true), "Artisan Cooking shows the quest giver")
+  local shopping = shoppingText()
+  check(shopping:find("12 Giant Egg", 1, true) and shopping:find("10 Zesty Clam Meat", 1, true) and
+    shopping:find("20 Alterac Swiss", 1, true), "the shopping list reserves quest materials at the 225 cap")
+  MOCK.setSkill("Cooking", 225, 300); MOCK.advance(1.2)
+  shopping = shoppingText()
+  check(not shopping:find("Giant Egg", 1, true) and not shopping:find("Zesty Clam Meat", 1, true) and
+    not shopping:find("Alterac Swiss", 1, true), "raising the cap clears quest materials at the same skill")
+  MOCK.setSkill("Cooking", 285, 300); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("Nightfin Soup", 1, true) and text:find("Gikkix", 1, true) and
+    shoppingText():find("17 Raw Nightfin Snapper", 1, true), "Nightfin Soup finishes the route at a Cooking Fire")
+  MOCK.setSkill("Cooking", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE", 1, true), "Cooking route ends at 300")
+end
+
+function S.fishingTab()
+  if GetProfessions then GetNumSkillLines, GetSkillLineInfo = nil, nil end
+  openAt(19, "Professions")
+  check(profButton("Mining") and profButton("Engineering") and profButton("Cooking") and
+    profButton("First Aid") and profButton("Fishing"), "both primary and all three secondary professions are shown")
+  click(win(), "Fishing")
+  local text = profText()
+  local starterZone = MOCK.faction == "Horde" and "Durotar" or "Elwynn Forest"
+  check(text:find("Fishing 1 / 75", 1, true) and text:find(starterZone, 1, true) and
+    text:find("Shiny Bauble", 1, true), "the first step gives faction-appropriate water and a starter lure")
+  MOCK.setSkill("Fishing", 125, 150); MOCK.advance(1.2)
+  check(not profText():find("UNLOCK EXPERT", 1, true), "the book waits until character level 20")
+  openAt(20, "Professions")
+  text = profText()
+  check(text:find("UNLOCK EXPERT", 1, true) and text:find("The Bass and You", 1, true) and
+    text:find("Old Man Heming", 1, true), "the book and vendor appear at level 20 and skill 125")
+  openAt(34, "Professions")
+  MOCK.setSkill("Fishing", 225, 225); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("AT YOUR CAP", 1, true) and text:find("level 35", 1, true), "Nat Pagle requires character level 35")
+  openAt(35, "Professions")
+  text = profText()
+  check(text:find("UNLOCK ARTISAN", 1, true) and text:find("Feralas Ahi", 1, true) and
+    text:find("Sar'theris Striker", 1, true) and text:find("Misty Reed Mahi Mahi", 1, true) and
+    text:find("Savage Coast Blue Sailfin", 1, true), "the rank card shows all four quest fish")
+  check(shoppingText() == "", "quest fish are caught during the quest and stay off the shopping list")
+  MOCK.setSkill("Fishing", 225, 300); MOCK.advance(1.2)
+  text = profText()
+  check(text:find("Tidefury Cove", 1, true) and not text:find("UNLOCK ARTISAN", 1, true) and
+    not text:find("Feralas Ahi", 1, true), "raising the cap clears the quest objectives and leaves the final water")
+  MOCK.setSkill("Fishing", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE", 1, true), "Fishing route ends at 300")
+end
+
+function S.engineeringTab()
+  openAt(35, "Professions")
+  check(profButton("Engineering"), "learned Engineering has a guide button")
+  click(win(), "Engineering")
+  local content = profText()
+  check(content:find("Engineering 1 / 75", 1, true) and content:find("Rough Blasting Powder", 1, true),
+    "Engineering starts at actual skill for a Gnome")
+  MOCK.setSkill("Engineering", 200, 225); MOCK.advance(1.2)
+  content = profText()
+  check(content:find("TRAIN ARTISAN", 1, true) and content:find("Buzzek Bracketswing", 1, true),
+    "Artisan Engineering unlocks at 200 and level 35")
+  MOCK.setSkill("Engineering", 235, 300); MOCK.advance(1.2)
+  content = profText()
+  check(content:find("Tools: Blacksmith Hammer, Arclight Spanner", 1, true) and
+    content:find("Station: Anvil", 1, true), "bombs show both bag tools and the station")
+  check(shoppingText():find("114 Solid Stone", 1, true) and
+    not shoppingText():find("\n%d+ Solid Blasting Powder"), "raw stone covers both bombs and their triggers")
+  MOCK.setSkill("Engineering", 285, 300); MOCK.advance(1.2)
+  content = profText()
+  check(content:find("Thorium Tube", 1, true) and content:find("Xizzer Fizzbolt", 1, true) and
+    content:find("binds on pickup", 1, true), "the last stretch names the bind-on-pickup schematic vendor")
+  MOCK.setSkill("Engineering", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE", 1, true), "Engineering route ends at 300")
 end
 
 local function tailoring() click(win(), "Tailoring"); return profText() end
@@ -3493,6 +3653,59 @@ end
 local function openCraft() TradeSkillFrame:Show(); MOCK.event("TRADE_SKILL_SHOW"); MOCK.advance(0.6) end
 local function closeCraft() TradeSkillFrame:Hide(); MOCK.event("TRADE_SKILL_CLOSE"); MOCK.advance(0.6) end
 local function craftReady() return D() and not MOCK.minimal and _G.TradeSkillFrame end
+
+function S.craftFirstAid()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "First Aid", 180, 225
+  MOCK.trade.recipes = { { "Silk Bandage", "easy", 0 } }
+  MOCK.trade.layout()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown() and not trace:IsShown() and
+    MOCK.textUnder(hint):find("Manual: Heavy Silk Bandage", 1, true), "the missing recipe names its manual")
+  MOCK.trade.recipes[2] = { "Heavy Silk Bandage", "medium", 1 }
+  MOCK.trade.layout(); MOCK.advance(1)
+  local _, row = trace:GetPoint(1)
+  check(trace:IsShown() and row == TradeSkillSkill2 and MOCK.trade.selected == 0 and MOCK.trade.offset == 0,
+    "First Aid outlines the learned bandage without touching the list")
+  closeCraft()
+end
+
+function S.craftEngineering()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Engineering", 285, 300
+  MOCK.trade.recipes = { { "Thorium Widget", "medium", 0 } }
+  MOCK.trade.layout()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown() and not trace:IsShown() and MOCK.textUnder(hint):find("Xizzer Fizzbolt", 1, true),
+    "missing Thorium Tube lists the schematic vendor")
+  MOCK.trade.recipes[2] = { "Thorium Tube", "optimal", 1 }
+  MOCK.trade.layout(); MOCK.advance(1)
+  local _, row = trace:GetPoint(1)
+  check(trace:IsShown() and row == TradeSkillSkill2 and MOCK.trade.selected == 0 and MOCK.trade.offset == 0,
+    "Engineering outlines the learned recipe without touching the list")
+  closeCraft()
+end
+
+function S.craftAlchemy()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Alchemy", 265, 300
+  MOCK.trade.recipes = { { "Elixir of Greater Defense", "optimal", 0 }, { "Stonescale Oil", "trivial", 0 } }
+  MOCK.bags = { ["Stonescale Eel"] = 3 }
+  MOCK.trade.layout()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown(), "Alchemy crafting guide opens")
+  local _, row = trace:GetPoint(1)
+  check(row == TradeSkillSkill1, "oil is skipped while a leaded vial is missing")
+  MOCK.bags["Leaded Vial"] = 1; MOCK.advance(1)
+  _, row = trace:GetPoint(1)
+  check(row == TradeSkillSkill2 and MOCK.textUnder(hint):find("you can make 2", 1, true),
+    "make two Stonescale Oil from one eel and the only vial, even when grey")
+  MOCK.bags["Stonescale Oil"] = 2; MOCK.advance(1)
+  _, row = trace:GetPoint(1)
+  check(row == TradeSkillSkill1 and MOCK.trade.selected == 0 and MOCK.trade.offset == 0,
+    "enough oil returns the hint to the elixir without touching the list")
+  closeCraft()
+end
 
 function S.craftLeatherworking()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Leatherworking", 235, 300

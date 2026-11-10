@@ -160,6 +160,7 @@ local function renderer(_, snapshot)
   if skill then
     local due, nextTier = ns.profTierDue(key, skill, cap, level)
     if due then
+      local action = nextTier.action or "Train"
       top = y
       y = y + 12
       if P.levelGatesUnconfirmed then
@@ -170,16 +171,24 @@ local function renderer(_, snapshot)
           ". Character-level requirements are unconfirmed. " .. plain(nextTier.where) .. ".",
           16, y, W - 32, "body", C.light) + 10
       elseif due == "train" then
-        T("TRAIN " .. string.upper(nextTier.name), 16, y, W - 32, "label", C.gold)
+        T(string.upper(action .. " " .. nextTier.name), 16, y, W - 32, "label", C.gold)
         y = y + 18
         y = y + T(plain(nextTier.where) .. ". Needs skill " .. nextTier.skill .. " and level " .. nextTier.level ..
-          "; it lets you go up to " .. nextTier.cap .. ".", 16, y, W - 32, "body", C.light) + 10
+          ". This raises your cap to " .. nextTier.cap .. ".", 16, y, W - 32, "body", C.light) + 10
       else
         local trained = ns.profTier(key, skill, cap)
         T("AT YOUR CAP", 16, y, W - 32, "label", C.gold)
         y = y + 18
-        y = y + T("Train " .. nextTier.name .. " at " .. nextTier.skill .. " (level " .. nextTier.level .. ") to go past " ..
+        y = y + T(action .. " " .. nextTier.name .. " at " .. nextTier.skill .. " (level " .. nextTier.level .. ") to go past " ..
           (trained and trained.cap or cap or skill) .. ". " .. plain(nextTier.where) .. ".", 16, y, W - 32, "body", C.light) + 10
+      end
+      for _, m in ipairs(nextTier.mats or {}) do
+        local count = have(m[1])
+        local label = m[2] .. " " .. m[1] .. (count and (" (you have " .. count .. ")") or "")
+        y = y + T(label, 16, y, W - 32, "body", C.light) + 6
+      end
+      for _, objective in ipairs(nextTier.objectives or {}) do
+        y = y + T(plain(objective), 16, y, W - 32, "body", C.light) + 6
       end
       box(0, top, W, y - top, C.panel, C.edge)
       y = y + 12
@@ -208,6 +217,12 @@ local function renderer(_, snapshot)
     y = y + math.max(50, h + 22)
     y = y + T(colorsLine(step), 16, y, W - 32, "small", C.inkSoft) + 6
     y = y + T("Learn at " .. step.learn .. "  -  " .. plain(step.source), 16, y, W - 32, "small", C.inkSoft) + 8
+    if step.tools then
+      y = y + T("Tools: " .. table.concat(step.tools, ", "), 16, y, W - 32, "small", C.inkSoft) + 6
+    end
+    if step.station then
+      y = y + T("Station: " .. step.station, 16, y, W - 32, "small", C.inkSoft) + 6
+    end
     local rod = ns.profRod(key, step)
     if rod then
       local got = ns.profHasRod(key, rod)
@@ -227,10 +242,20 @@ local function renderer(_, snapshot)
       local part = ns.profPart(key, m[1])
       local src = part and part.mats and part.mats[1]
       if src and ns.profHasRod(key, ns.profRod(key, part)) ~= false then  -- a part that needs a rod you lack can't be made
-        local h = have(src[1])  -- the cloth itself: bolts you hold can't make more bolts
-        local per = (part.makes and part.makes[2]) or 1
-        y = y + T("make them from " .. src[1] .. " (" .. src[2] .. (per > 1 and (" makes " .. per) or " each") .. ")" ..
-          (h and (": your " .. h .. " make " .. math.floor(h / src[2]) * per) or ""), 40, y, W - 56, "small", C.inkSoft) + 2
+        local per = part.makes[2]
+        local line
+        if #part.mats == 1 then
+          local h = have(src[1])
+          line = "make them from " .. src[1] .. " (" .. src[2] .. (per > 1 and (" makes " .. per) or " each") .. ")" ..
+            (h and (": your " .. h .. " make " .. math.floor(h / src[2]) * per) or "")
+        else
+          local reagents = {}
+          for _, mat in ipairs(part.mats) do reagents[#reagents + 1] = mat[2] .. " " .. mat[1] end
+          local nPart = ns.profPartAvailable(part)
+          line = "make " .. per .. " from " .. table.concat(reagents, " + ") ..
+            (nPart and (" (you can make " .. nPart .. ")") or "")
+        end
+        y = y + T(line, 40, y, W - 56, "small", C.inkSoft) + 2
       end
     end
     y = y + 6
@@ -299,7 +324,7 @@ local function renderer(_, snapshot)
   y = y + 10
 
   -- shopping list (crafting) or camp objects (Mining)
-  local list = ns.profShopping(key, skill)
+  local list = ns.profShopping(key, skill, cap)
   if #list > 0 then
     top = y
     y = y + 12
@@ -312,10 +337,12 @@ local function renderer(_, snapshot)
       local cx = 16 + ((i - 1) % 2) * col
       local text = m[2] .. " " .. m[1]
       if m.via then
-        local h = ns.profHave(key, m[1])
         local part = ns.profPart(key, m.via.made or "") or {}
+        local shared = part.mats and #part.mats > 1 and m.via.raw < m[2]
+        local h = shared and have(m[1]) or ns.profHave(key, m[1])
         local what = part.unit or (m.via.part:find("^Bolt") and "bolts") or "parts"
-        text = text .. " (for " .. m.via.n .. " " .. what .. (h and (", you have " .. h) or "") .. ")"
+        local use = shared and ("includes " .. m.via.raw .. " for ") or "for "
+        text = text .. " (" .. use .. m.via.n .. " " .. what .. (h and (", you have " .. h) or "") .. ")"
       end
       rowH = math.max(rowH, (T(text, cx, y, col - 8, "body", C.light)))
       if i % 2 == 0 or i == #list then y = y + math.max(18, rowH + 4); rowH = 0 end

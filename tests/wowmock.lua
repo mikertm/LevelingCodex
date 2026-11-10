@@ -749,9 +749,12 @@ function MOCK.removeSkill(name)
   end
 end
 function GetProfessions()
-  local primary = {}
-  for i, s in ipairs(MOCK.skills) do if not SECONDARY[s.name] then primary[#primary + 1] = i end end
-  return primary[1], primary[2], nil, nil, nil
+  local primary, secondary = {}, {}
+  for i, s in ipairs(MOCK.skills) do
+    if SECONDARY[s.name] then secondary[s.name] = i
+    else primary[#primary + 1] = i end
+  end
+  return primary[1], primary[2], nil, secondary.Fishing, secondary.Cooking, secondary["First Aid"]
 end
 function GetProfessionInfo(i)
   local s = MOCK.skills[i]

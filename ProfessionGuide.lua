@@ -163,9 +163,7 @@ local function chanceAt(r, skill)
   return (r.grey - skill) / (r.grey - r.yellow)
 end
 
--- Bolts first: the step needs a part (a bolt) you have too few of for one craft, you have the cloth
--- for one, and both the part's recipe and the step's are in the window (a step recipe you haven't
--- learned yet gets the usual "not learned" card first). Bags as they are here: a bolt counts as a bolt.
+-- Parts first when you have too few for the step, can make a batch, and know both recipes.
 local function partFirst(key, step)
   if not GetItemCount then return nil end
   local function count(item)
@@ -175,14 +173,15 @@ local function partFirst(key, step)
   if not findRecipe(step.name) then return nil end
   for _, m in ipairs(step.mats or {}) do
     local part = ns.profPart(key, m[1])
-    local src = part and part.mats and part.mats[1]
-    if src and count(m[1]) < m[2] and count(src[1]) >= src[2] and ns.profHasRod(key, ns.profRod(key, part)) ~= false
-        and findRecipe(part.name) then
-      local have = count(src[1])
-      return { name = part.name, spell = part.spell, icon = part.icon, yellow = part.yellow, grey = part.grey,
-               learn = part.learn, mats = part.mats, from = step.from, to = step.to, partOf = step,
-               plural = part.plural or part.name, cloth = src[1], have = have,
-               canMake = math.floor(have / src[2]) * ((part.makes and part.makes[2]) or 1) }
+    if part and count(m[1]) < m[2] and ns.profHasRod(key, ns.profRod(key, part)) ~= false then
+      local canMake = ns.profPartAvailable(part)
+      if canMake and canMake > 0 and findRecipe(part.name) then
+        local reagent = #part.mats == 1 and part.mats[1][1] or nil
+        return { name = part.name, spell = part.spell, icon = part.icon, yellow = part.yellow, grey = part.grey,
+                 learn = part.learn, mats = part.mats, from = step.from, to = step.to, partOf = step,
+                 plural = part.plural or part.name, reagent = reagent, have = reagent and count(reagent),
+                 canMake = canMake }
+      end
     end
   end
 end
@@ -197,8 +196,7 @@ local function rodFirst(key, step)
            mats = rod.mats, from = step.from, to = step.to, rodOf = step }
 end
 
--- What to make in this window at this skill: the crafting step (a missing rod first, its bolts or Motes first when you only have
--- the cloth), or for Mining the step's smelt
+-- What to make at this skill: the crafting step (a missing rod or craftable part first), or the Mining smelt
 -- you can know that has the best chance (one in the window first). A smelt is counted only while
 -- it's orange (sure points, to yellow); after that the card gives its chance instead.
 local function pickFor(key, skill)
@@ -386,7 +384,12 @@ local function tick()
     if pick.rodOf then
       line = "Make your " .. pick.name .. " first: every enchant from here needs it."
     elseif pick.partOf then
-      line = "Make " .. pick.plural .. " first: your " .. pick.have .. " " .. pick.cloth .. " make " .. pick.canMake .. "."
+      line = "Make " .. pick.plural .. " first"
+      if pick.reagent then
+        line = line .. ": your " .. pick.have .. " " .. pick.reagent .. " make " .. pick.canMake .. "."
+      else
+        line = line .. " (you can make " .. pick.canMake .. ")."
+      end
     elseif found and found.available then
       line = line .. "  -  you have materials for " .. found.available
     end

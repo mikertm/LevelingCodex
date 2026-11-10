@@ -253,7 +253,8 @@ def data_checks():
     return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
 
 
-PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING")
+PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING", "ALCHEMY",
+             "ENGINEERING", "FIRST_AID", "COOKING", "FISHING")
 
 
 def prof_shape_checks():
@@ -327,7 +328,7 @@ def prof_shape_checks():
             elif key == "HERBALISM":
                 if not s.get("title") or not s.get("herbs") or any(h not in herb_names for h in s["herbs"]):
                     errors.append(where + ": requires a title and known herbs")
-            elif key == "SKINNING":
+            elif key in ("SKINNING", "FISHING"):
                 if not all(s.get(f) for f in ("title", "icon", "zones", "note")):
                     errors.append(where + ": requires a title, icon, zones and note")
                 zones = s.get("zones") or {}
@@ -619,9 +620,27 @@ def main():
         skills_api = "skilllines" if minimal else "professions"
         runs.append(("WARRIOR/%s/prof-skinning-leatherworking" % variant, "WARRIOR", minimal,
                      ["skills:SK;1;75,LW;1;75:%s:Alliance:Human" % skills_api, "login", "skinningLeatherworkingTab"]))
+        runs.append(("WARRIOR/%s/prof-alchemy" % variant, "WARRIOR", minimal,
+                     ["skills:HE;1;75,AL;1;75:%s:Alliance:Human" % skills_api, "login", "alchemyTab"]))
+        runs.append(("WARRIOR/%s/prof-engineering" % variant, "WARRIOR", minimal,
+                     ["skills:MI;1;75,EG;1;75:%s:Alliance:Gnome" % skills_api, "login", "engineeringTab"]))
+        runs.append(("WARRIOR/%s/prof-first-aid" % variant, "WARRIOR", minimal,
+                     ["skills:MI;1;75,EG;1;75,FA;1;75:%s:Alliance:Human" % skills_api, "login", "firstAidTab"]))
+        runs.append(("WARRIOR/%s/prof-cooking" % variant, "WARRIOR", minimal,
+                     ["skills:MI;1;75,CO;1;75:%s:Alliance:Human" % skills_api, "login", "cookingTab"]))
+        side, race = ("Horde", "Orc") if minimal else ("Alliance", "Human")
+        runs.append(("WARRIOR/%s/prof-fishing" % variant, "WARRIOR", minimal,
+                     ["skills:MI;1;75,EG;1;75,CO;1;75,FA;1;75,FI;1;75:%s:%s:%s" % (skills_api, side, race),
+                      "login", "fishingTab"]))
         if not minimal:
             runs.append(("WARRIOR/full/craft-leatherworking", "WARRIOR", False,
                          ["skills:SK;20;75,LW;235;300:professions", "makeCraftWindow", "login", "craftLeatherworking"]))
+            runs.append(("WARRIOR/full/craft-alchemy", "WARRIOR", False,
+                         ["skills:AL;265;300:professions", "makeCraftWindow", "login", "craftAlchemy"]))
+            runs.append(("WARRIOR/full/craft-engineering", "WARRIOR", False,
+                         ["skills:EG;285;300:professions", "makeCraftWindow", "login", "craftEngineering"]))
+            runs.append(("WARRIOR/full/craft-first-aid", "WARRIOR", False,
+                         ["skills:FA;180;225:professions", "makeCraftWindow", "login", "craftFirstAid"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))

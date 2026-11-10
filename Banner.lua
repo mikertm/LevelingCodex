@@ -28,7 +28,8 @@ function ns.levelUpMessage(level)
   local b = ns.bracketFor(level)
   if b and b.level == level then ns.say("new chapter: " .. WHITE .. plain(b.title) .. "|r. Type /codex for the tips.") end
   for _, r in ipairs(ns.profLevelRows and ns.profLevelRows(level) or {}) do
-    ns.say(r[4] .. ": train " .. WHITE .. r[5].name .. "|r now (" .. plain(r[5].where) .. ").")
+    ns.say(r[4] .. ": " .. string.lower(r[5].action or "Train") .. " " .. WHITE .. r[5].name ..
+      "|r now (" .. plain(r[5].where) .. ").")
   end
 end
 
