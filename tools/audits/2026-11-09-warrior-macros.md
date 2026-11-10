@@ -90,7 +90,7 @@ Vanguard's raw talent record (1310317) overrides Charge 100/6178/11578 with 1240
 - Tank one pack and one caster. Switch targets while Thunder Clap cools, Taunt an add, reserve a Shield Bash, and use Shield Wall while Last Stand cools and vice versa. Repeat on controller to catch stance-page and modifier conflicts.
 - For an optimization comparison, alternate the current and proposed binds on comparable solo pulls with the same weapon and starting Rage. Record kill time, damage taken, downtime, clipped Rend ticks, and presses stuck on unavailable abilities. In dungeons compare time to initial threat on the pack, loose adds and missed interrupts. This audit proposes priorities from the spell and macro constraints. It includes no live DPS or threat benchmark.
 
-## Addon update to mirror into the guide
+## Initial addon update
 
 The Warrior data now uses these macros and bindings. The name column is what the player sees in Esc > Macros. The Macros tab labels the actual ability and shows the stored name where it differs.
 
@@ -110,3 +110,10 @@ The Warrior data now uses these macros and bindings. The name column is what the
 - **Trainer notes.** Charge ranks now describe the out-of-combat and Vanguard requirements. Tactical Mastery explains 10 Rage baseline and up to 25 with the Arms talent. Shield Block describes increased chance and its block limit. Victory Rush lists the qualifying-kill window, cooldown and heal on hit.
 - **Leveling tips.** The five chapters now cover early swings and Rage spending, the level-10 stance quest, pack opening and target-by-target threat, Victory Rush and surplus-Rage Cleave, separate recovery and interrupt binds, and the Shield Slam priority. The group DPS tips cover assisting the tank, Battle Shout, Execute and Pummel.
 - **Upgrade.** The five reused macro names recognize their exact previous Codex bodies even when SavedVariables are absent and the client can read macro bodies. Run `/codex macros` or use **Set up macros** to update existing buttons and create newly available macros. Drag the new ones to the suggested binds. Charge from the spellbook remains the opener to test with Vanguard.
+
+## Stance follow-up to mirror into the guide
+
+- **Fight** uses Heroic Strike alone at 1–3. At 4–9 it Charges out of combat from Battle and queues Heroic Strike in combat. At 10–24 it enters Battle as needed, Charges, then enters Defensive in combat if learned. From 25, Vanguard allows Charge directly from Defensive and the Battle opener remains available without the talent. In combat, Fight casts Sunder once in Defensive. Charge still needs an eligible target and an out-of-combat pull. If the macro reports a Vanguard rank error, use Charge from the spellbook and note the trained rank. [Stance press report](https://eu.forums.blizzard.com/en/wow/t/warrior-stance-dance-now-triggers-micro-gcd/633220), [Vanguard rank report](https://us.forums.blizzard.com/en/wow/t/prot-warrior-charge-in-defensive-issue/2370087/3).
+- **Fight pack** casts Clap directly in Battle or Defensive. From 30 it can switch out of Berserker on the first press. It chooses Defensive if learned and Battle otherwise. **Taunt**, **Shield Block**, and **Shield Wall** can enter Defensive on the first press and use the selected ability on the next. Block and Wall require a shield. Taunt still uses the selected enemy.
+- **Shield Bash** can enter Battle from Berserker with a shield at 30–37. From 38 it uses Pummel in Berserker and Shield Bash with a shield in Battle or Defensive. Without a shield it can enter Berserker if learned, then Pummel on a second press once trained.
+- **Guide and upgrade.** The Vanguard reason and early and group tips describe Fight and the shared interrupt. All stance-aware macros reuse their existing names and suggested binds. Put the same macros on the stance pages you use. The replaced bodies from both updates are recognized for in-place refresh.

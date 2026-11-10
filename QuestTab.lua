@@ -271,7 +271,7 @@ local function render()
 
   local w = math.floor((W - 16) / 3)
   U.btn("Show step window", 0, y, w, ns.showQuestViewer, false,
-    "Open the step window. On a controller, close the Codex afterward to focus it.")
+    "Show the quest step and arrow while you play.")
   if selected and selected.side then
     U.btn("Return to leveling", w + 8, y, w, function()
       Q.returnToRoute()
@@ -285,6 +285,22 @@ local function render()
   end
   U.btn("Copy recorder log", W - w, y, w, function() ns.questRecord("copy") end)
   y = y + 36
+
+  local stepWidth = (W - 24) / 4
+  U.btn("Previous step", 0, y, stepWidth, function() ns.moveQuestStep(true) end)
+  U.btn("Next step", stepWidth + 8, y, stepWidth, function() ns.moveQuestStep(false) end)
+  U.btn("Pin step", 2 * (stepWidth + 8), y, stepWidth, ns.pinQuestStep)
+  U.btn("Hide step window", W - stepWidth, y, stepWidth, ns.hideQuestViewer)
+  y = y + 32
+
+  local run = Q.readyRun()
+  if run then
+    U.btn("Run " .. run.title, 0, y, W, function()
+      Q.jump(run)
+      ns.showQuestViewer()
+    end, true, "Your planned run is ready: its pickups are done. Find a group, then follow its checklist.")
+    y = y + 34
+  end
   U.btn("Guide library", 0, y, W, function()
     if view == "library" and not librarySection and not query:find("%S") then view = "route"
     else view, librarySection, query, draft = "library", nil, "", "" end

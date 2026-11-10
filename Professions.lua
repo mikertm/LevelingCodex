@@ -6,7 +6,8 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING", "ALCHEMY",
+  "ENGINEERING", "FIRST_AID", "COOKING", "FISHING" }
 
 -- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
 function ns.profPart(key, item)
@@ -20,6 +21,18 @@ local function bagCount(item)
   if not GetItemCount then return nil end
   local ok, n = pcall(GetItemCount, item)
   return ok and tonumber(n) or nil
+end
+
+-- Units of a part its raw materials can produce, limited by the scarcest reagent.
+function ns.profPartAvailable(part)
+  local crafts
+  for _, m in ipairs(part.mats) do
+    local have = bagCount(m[1])
+    if have == nil then return nil end
+    local n = math.floor(have / m[2])
+    crafts = math.min(crafts or n, n)
+  end
+  return crafts and crafts * part.makes[2]
 end
 
 -- How much of item you hold, counting the parts made from it (a held Bolt of Mageweave counts as
@@ -88,7 +101,8 @@ local function readProfessions(skills)
   local slots = { pcall(GetProfessions) }
   if not slots[1] then return false end
   local complete = true
-  for i = 2, 6 do
+  -- The first slot holds pcall's result. Clients with First Aid can return six profession slots.
+  for i = 2, 7 do
     if slots[i] then
       local ok, name, _, rank, cap = pcall(GetProfessionInfo, slots[i])
       rank, cap = tonumber(rank), tonumber(cap)
@@ -205,8 +219,8 @@ end
 -- makes itself (Heavy Grinding Stones) only count where it doesn't make enough, and a step's
 -- extra (the Thorium Bars a quest takes for its plan) counts until that step starts. Parts never
 -- show: what's still needed is counted as their materials, and those rows carry
--- via = { part = name, n = parts still to make (the parts' own steps included) }.
-function ns.profShopping(key, skill)
+-- via = { part = name, n = parts still to make, raw = units of this material used for them }.
+function ns.profShopping(key, skill, cap)
   local P = ns.P and ns.P[key]
   local list = {}
   if not P then return list end
@@ -240,17 +254,26 @@ function ns.profShopping(key, skill)
       end
     end
   end
+  -- Rank quest materials stay on the list until the skill cap rises.
+  local _, trained = ns.profTier(key, skill, cap)
+  for i = trained + 1, #P.tiers do
+    for _, m in ipairs(P.tiers[i].mats or {}) do add(m[1], m[2]) end
+  end
+  -- A part that uses another part must come first so its demand reaches the later recipe.
   for _, p in ipairs(P.parts or {}) do
     local item = p.makes and p.makes[1]
     local row = item and byItem[item]
     local left = row and math.max(row[2] - (keep[item] or 0), 0) or 0
     if row then row[2] = 0 end
-    local crafts = math.ceil(left / ((p.makes and p.makes[2]) or 1))
+    local per = p.makes[2]
+    local crafts = math.ceil(left / per)
     for _, m in ipairs(p.mats or {}) do add(m[1], crafts * m[2]) end
     local total = left + (partMade[item] or 0)
     if total > 0 then
       for _, m in ipairs(p.mats or {}) do
-        if byItem[m[1]] then byItem[m[1]].via = { part = p.name, made = item, n = total } end
+        if byItem[m[1]] then
+          byItem[m[1]].via = { part = p.name, made = item, n = total, raw = math.ceil(total / per) * m[2] }
+        end
       end
     end
   end
@@ -360,11 +383,11 @@ function ns.profCardRows(key, old, new, cap, level)
   local trained, i = ns.profTier(key, new, cap)
   local nextTier = trained and P.tiers[i + 1]
   if nextTier and nextTier.skill > old and nextTier.skill <= new and (level or 1) >= nextTier.level then
-    local label = P.levelGatesUnconfirmed and "CHECK " or "TRAIN "
+    local label = P.levelGatesUnconfirmed and "CHECK " or string.upper(nextTier.action or "Train") .. " "
     rows[#rows + 1] = { P.icon, label .. string.upper(nextTier.name), ns.plain(nextTier.short or nextTier.where) }
   end
   if nextTier and trained.cap > old and trained.cap <= new then
-    rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }
+    rows[#rows + 1] = { P.icon, "AT YOUR CAP", (nextTier.action or "Train") .. " " .. nextTier.name .. " to go past " .. trained.cap }
   end
   local unlock = P.herbs and "NEW HERB" or "NEW VEIN"
   for _, node in ipairs(P.herbs or P.veins or {}) do
@@ -387,8 +410,8 @@ function ns.profLevelRows(level)
       local due, nextTier = ns.profTierDue(key, reading.rank, reading.cap, level)
       if due == "train" and nextTier.level == level then
         local P = ns.P[key]
-        rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name .. " " .. P.name), ns.plain(nextTier.short or nextTier.where),
-          P.name, nextTier }
+        local label = (nextTier.action or "Train") .. " " .. nextTier.name .. " " .. P.name
+        rows[#rows + 1] = { P.icon, string.upper(label), ns.plain(nextTier.short or nextTier.where), P.name, nextTier }
       end
     end
   end

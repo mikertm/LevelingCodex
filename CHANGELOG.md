@@ -4,29 +4,55 @@
 
 ### Alliance quest guide
 
-- Added an in-game **Alliance leveling guide for levels 1–30**. It starts in Northshire, Coldridge Valley, Shadowglen, or Zephras Isle according to your race, then follows Westfall, Lakeshire, Duskwood, and Wetlands. Loch Modan and Darkshore offer alternate routes, and Deadmines steps are optional.
-- Added class quest routes for abilities and milestones such as Hunter pets, Druid forms, Shaman totems, and class spells. Follow them from the Quests tab and return to your leveling route when finished.
-- Open the **Quests** tab or use `/codex quests` to browse routes and show the step window. The guide reads your quest log, tracks objectives and turn-ins, and can resume an active quest. Missed pickups stay available, and obsolete breadcrumb steps are skipped when you already have their follow-up.
-- **Also on this loop** shows live progress for unfinished quests that share the current trip. It covers the four starter routes and loops such as Westfall's harvest fields, Redridge's goulash and Blackrock camps, Raven Hill's skeletons, and Wetlands' Razormaw and Angerfang quests.
-- The waypoint arrow shows distance on the current map and uses known routes or flight paths for cross-zone travel. It pauses during flights and loading, then recalculates after you arrive. The Westfall mine survey and Wetlands attack plans advance to the next unfinished objective. The Lake Everstill toolbox pin now marks the Sunken Chest.
-- The step window supports controller navigation, a quest-item button with its own keybind, and a completion sound. Settings cover the arrow, item and target buttons, class quests, dungeon plans, optional quests, hearthstone binding, window lock, and sound.
-- **Auto-accept** and **auto-turn-in** have separate settings and start off, so you can read quest text. With either enabled, hold Alt to handle the interaction yourself. Reward choices stay manual.
-- Duskwood now pairs Night Watch kills with Rot Blossoms after the follow-up unlocks. Players under 26 get catch-up options before the Wetlands trip. Quest data was checked against Forever build `1.60.1.70862`. Solo XP pacing still needs a live playthrough.
+- **More routes.** New alternate routes for Ashenvale, Stonetalon, the early Wetlands, late Redridge and Duskwood, and Southshore. The **Guide library** in the Quests tab searches guides, quest names and IDs. It also has dungeon checklists (before, inside and after the run) and special quest chains such as Seeking Caitlin and the Cozy Sleeping Bag. You can track up to three active quests in the step window.
 - **More quests, 1-30.** We compared the route with the RestedXP Forever guides and added about 110 quests they route that we didn't, grouped into loops at each hub:
   - Elwynn and Dun Morogh errands, the Deeprun Tram rats, the Dwarf/Gnome Honor Students flight chain and the Moss-twined Heart.
   - The Westfall lighthouse, Redridge's late bounties, and Duskwood's Look to the Stars, Sven and Abercrombie chains.
   - Darkshore's Murkdeep board, escorts and Absent Minded Prospector.
   - Gaxim's Stonetalon letters and Ashenvale's satyr and Velinde quests.
   - Forever's reworked Wetlands: Bloom of the Heavens, the Doomed Fleet chain, the Thandol Span and the Dragonmaw Retreat.
-- **Dungeon plans.** In Quests > Guide library > Dungeons, plan your runs one by one, or use Plan recommended / all / none. A planned run's quest pickups join your route. When its pickups are done at the right level, the step window offers **Run <dungeon>** and chat says to find a group. Each dungeon page lists its **bosses in order** with a short tip. The Stockade checklist now continues with the Stormwind chain to King Varian.
+- **Dungeon plans.** In Quests > Guide library > Dungeons, plan your runs one by one, or use Plan recommended / all / none. A planned run's quest pickups join your route. When its pickups are done at the right level, the step window and the Quests tab offer **Run <dungeon>**, and chat says to find a group. Each dungeon page lists its **bosses in order** with a short tip. The Stockade checklist now continues with the Stormwind chain to King Varian.
 - **Questing helpers.** Step text shows a quest's place in its chain ("Chain: part 2 of 5"). Pickups warn when your quest log is full, and Active quests shows how full your log is. A key-bindable **target button** targets the step's quest giver. Settings > **Show optional quests** turns on side errands such as Camping 101.
+- Fixed: the quest step window no longer takes Forever's controller focus, which could leave the analog sticks unresponsive. Controller step controls stay in the Quests tab.
+
+## v0.16.0
+
+- The Alliance quest guide now switches to an available local route when you enter a zone. It resumes active objectives and ready turn-ins, and checks completed quest history to catch you up while keeping required prerequisites.
+- The Quests tab shows route options for your level, including Loch Modan and Darkshore when eligible.
+- Flight-path and hearthstone steps explain how to skip them with Next. Learned flight paths can advance the guide automatically.
+- **Duskwood** batches spider drops, the Darkshire inn hand-ins, and the Raven Hill cemetery quests. Ira's Dagger appears when you find the quest starter.
+- **Loch Modan** streamlines the Silver Stream Mine loop, adds Excavation Progress Report, and gives each of Bingles' supplies its own waypoint. The timed boar hunt starts at a closer spawn cluster.
+
+## v0.15.0
+
+- Added **Alchemy, Engineering, First Aid, Cooking, and Fishing guides from 1 to 300**. The Professions tab now covers all 12 WoW: Forever professions.
+- Crafting guides show the tools and stations you need and can highlight intermediate recipes when you have the materials to make them.
+- Rank reminders cover profession books and quests. Cooking keeps the Clamlette Surprise ingredients on your shopping list until you unlock Artisan, and Fishing shows where to catch Nat Pagle's four quest fish.
+
+## v0.14.0
+
+- Added **Skinning and Leatherworking guides, 1–300**. Skinning shows beasts and farming spots by faction, including Zephras Isle for Skyborne. Leatherworking shows the current recipe, material estimates and a read-only crafting outline. The guide includes the Tanning Rack unlock at skill 125.
+- **Tailoring** now finishes with Runecloth Shoulders from 280 to 300 and lists the Cenarion Circle ranks for the Venomspew alternative.
+- **Enchanting** adds fallbacks for sold-out formulas. Disenchanting estimates use item level and show Nexus Crystals for high-level epics.
+
+## v0.13.0
+
+### Alliance quest guide
+
+- Added an in-game **Alliance leveling guide for levels 1–30**. It starts in Northshire, Coldridge Valley, Shadowglen, or Zephras Isle according to your race, then follows Westfall, Lakeshire, Duskwood, and Wetlands. Loch Modan and Darkshore offer alternate routes, and Deadmines steps are optional.
+- Added class quest routes for abilities and milestones such as Hunter pets, Druid forms, Shaman totems, and class spells. Follow them from the Quests tab and return to your leveling route when finished.
+- Open the **Quests** tab or use `/codex quests` to browse routes and show the step window. The guide reads your quest log, tracks objectives and turn-ins, and can resume an active quest. Missed pickups stay available, and obsolete breadcrumb steps are skipped when you already have their follow-up.
+- The step window names the next zone at section handoffs and shows an end card after the last step. Hearthstone steps explain how to keep your current bind and how to reach the destination if you are bound elsewhere.
+- **Also on this loop** shows live progress for unfinished quests that share the current trip. It covers the four starter routes and loops such as Westfall's harvest fields, Redridge's goulash and Blackrock camps, Raven Hill's skeletons, and Wetlands' Razormaw and Angerfang quests.
+- The waypoint arrow shows distance on the current map and uses known routes or flight paths for cross-zone travel. It pauses during flights and loading, then recalculates after you arrive. The Westfall mine survey and Wetlands attack plans advance to the next unfinished objective. The Lake Everstill toolbox pin now marks the Sunken Chest.
+- Use the Quests tab to move between steps, pin the current step, or show and hide the overlay with a controller. The overlay leaves gameplay input available when the Codex closes. It also has a quest-item button with its own keybind and a completion sound. Settings cover the arrow, item button, class and dungeon steps, hearthstone binding, window lock, and sound.
+- **Auto-accept** and **auto-turn-in** have separate settings and start off, so you can read quest text. With either enabled, hold Alt to handle the interaction yourself. Reward choices stay manual.
+- Duskwood now pairs Night Watch kills with Rot Blossoms after the follow-up unlocks. Players under 26 get catch-up options before the Wetlands trip. Quest data was checked against Forever build `1.60.1.70862`. Solo XP pacing still needs a live playthrough.
 - Added the opt-in `/codex record` quest recorder and quest API diagnostics in `/codex debug` for checking quest credit and waypoints in the client.
 
 ### Classes and professions
 
-- **Tailoring and Enchanting:** Checked both 1–300 routes against Forever's client and Zygor. Tailoring now finishes with Runecloth Shoulders and shows the reputation requirements for the Venomspew alternative. Enchanting has fallbacks for sold-out formulas, and disenchanting estimates use item level and show Nexus Crystals for high-level epics.
-- Added **Skinning and Leatherworking guides, 1–300**. Skinning lists beasts and farming spots for your faction, including a Skyborne start on Zephras Isle. Leatherworking shows the current recipe, materials and shopping estimates, and traces its row in the crafting window. The route uses Forever recipe data and includes the Tanning Rack hotfix at skill 125.
-- **Warrior macros and tanking priorities.** Thunder Clap gets its own button from level 6, using the existing Fight pack slot. Fight uses Heroic Strike at levels 1–9 and Sunder Armor from 10. Revenge, Shield Slam, Shield Block, interrupts and defensives can be used independently. Run `/codex macros` to update existing Codex macros and add the new buttons.
+- **Warrior macros and tanking priorities.** Fight gains Charge at 4 and handles the Battle-to-Defensive opener from 10, with direct Defensive Charge when Vanguard is learned. Thunder Clap gets its own button from 6 in the existing Fight pack slot. Taunt, Shield Block and Shield Wall can enter Defensive on the same bind. From 38, the interrupt button picks Shield Bash or Pummel by stance and equipment. Run `/codex macros` to refresh your bars.
 - **Warrior guide.** The leveling tips explain how to pool Rage for Clap, spread threat on packs, and use Victory Rush when lit. Tactical Mastery retains 10 Rage baseline, with up to 15 more from the Arms talent.
 - **Mining**: The crafting hint suggests Smelt Gold through skill 184. Added Thelgen Rock in the Wetlands for Tin and Incendicite. The guide shows the skill needed for each rank and marks the character-level requirements as unconfirmed.
 - **Blacksmithing**: Added Daeann Steelwind in Valanaar for Journeyman, plus the Sharpening Wheel, Anvil and Master Forge camp objects. The guide explains Iron Buckle's green skill-ups and the Bronze Warhammer alternative. Check Derotain's Imperial Plate quest at skill 240 before buying materials. If it's locked, the guide covers Ebon Shiv with Spectral Essence and Bold Dirk to 300.

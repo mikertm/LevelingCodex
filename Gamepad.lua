@@ -56,13 +56,6 @@ local function shown(f)
   return ok and v
 end
 
-local function foregroundShown()
-  for frame, state in pairs(states) do
-    if not state.opts.passive and shown(frame) then return true end
-  end
-  return false
-end
-
 -- Every shown Button, CheckButton or EditBox inside f.
 local function pieces(f, out)
   out = out or {}
@@ -365,10 +358,6 @@ local function pick(f)
   if inCombat() then st.waiting = true; return end
   st.waiting = nil
   if not shown(f) then return end
-  if st.opts.passive and (foregroundShown() or (st.opts.enabled and not st.opts.enabled())) then
-    if st.mode then leave(f, st) end
-    return
-  end
   if not G.inUse() then
     if st.mode then leave(f, st) end
     return
@@ -403,7 +392,6 @@ end
 local function onButton(self, button)
   if inCombat() then return end -- leave input alone in combat
   local st = states[self]
-  if st and st.opts.passive and (not st.mode or (st.mode == "forever" and not isActive(self))) then return end
   local codex = st and st.mode == "codex"
   local close = button == "PAD2" or button == "PADBACK"
   local tab = st and st.mode and st.opts.onTab and (button == "PADLSHOULDER" or button == "PADRSHOULDER")
@@ -423,8 +411,7 @@ local function onButton(self, button)
   end
 end
 
--- A passive HUD yields controller focus to the Codex windows while they are open.
--- opts: { main, popup, passive, enabled, scroll, focusables, onTab }.
+-- opts: { main, popup, scroll, focusables, onTab }.
 -- focusables() returns { { frame, x, y, fixed }, ... } at logical positions (y grows downwards).
 function G.attach(f, opts)
   states[f] = { opts = opts or {} }
@@ -434,12 +421,7 @@ function G.attach(f, opts)
       and pcall(f.EnableGamePadButton, f, true) and pcall(f.SetPropagateGamePadInput, f, true) then
     f:SetScript("OnGamePadButtonDown", onButton)
   end
-  f:HookScript("OnShow", function(self)
-    if not states[self].opts.passive then
-      for frame, state in pairs(states) do if state.opts.passive then pick(frame) end end
-    end
-    pick(self)
-  end)
+  f:HookScript("OnShow", pick)
   f:HookScript("OnHide", function(self)
     local st = states[self]
     if st then
@@ -447,9 +429,6 @@ function G.attach(f, opts)
       st.waiting, st.keep = nil, nil
     end
     propagate(self, true)
-    if st and not st.opts.passive then
-      for frame, state in pairs(states) do if state.opts.passive then pick(frame) end end
-    end
   end)
 end
 
