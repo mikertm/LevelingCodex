@@ -124,10 +124,11 @@ local function render()
   U.btn("Hide step window", W - stepWidth, y, stepWidth, ns.hideQuestViewer)
   y = y + 32
 
-  local suggested = Q.suggested()
-  if suggested then
-    U.btn("Try " .. suggested.title, 0, y, W, ns.followSuggestedQuestSection, false,
-      "Open this suggested leveling section.")
+  local choices = Q.suggestions(true)
+  if #choices > 0 then y = y + U.T("ROUTE OPTIONS FOR YOUR LEVEL", 0, y, W, "label", C.gold) + 6 end
+  for _, suggested in ipairs(choices) do
+    U.btn("Try " .. suggested.title, 0, y, W, function() ns.followSuggestedQuestSection(suggested) end, false,
+      "Follow this section and resume a quest there if you have one.")
     y = y + 36
   end
 

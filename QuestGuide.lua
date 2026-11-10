@@ -322,7 +322,7 @@ end
 
 function ns.questRefresh()
   local row, i = Q.current()
-  local suggestion = Q.suggested()
+  local suggestion = Q.suggestions()[1]
   local _, _, _, _, selected = Q.rows()
   local sec = row and row.section or selected
   completionSound(row)
@@ -378,8 +378,8 @@ function ns.questRefresh()
   ns.refreshQuestTab()
 end
 
-function ns.followSuggestedQuestSection()
-  local section = Q.suggested()
+function ns.followSuggestedQuestSection(section)
+  section = section or Q.suggestions()[1]
   if not section then return end
   if not Q.resumeActive(section) then Q.jump(section) end
   quiet = true
@@ -565,7 +565,7 @@ local function handle(event, a, b)
       return distance and distance <= Q.arrived()
     end)
   end
-  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then Q.checkArrival() end
+  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then Q.checkPosition() end
   if recorder then
     if event == "QUEST_ACCEPTED" or event == "QUEST_TURNED_IN" then
       local entry = (id and Q.log(id)) or old
@@ -597,12 +597,14 @@ end
 function ns.startQuestGuide()
   for _, ev in ipairs({ "PLAYER_LEVEL_UP", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
+    "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)
   Q.update()
+  if type(GetQuestsCompleted) == "function" then try(QueryQuestsCompleted) end
   ns.questRefresh()
   if type(TakeTaxiNode) == "function" then
     try(hooksecurefunc, "TakeTaxiNode", function(node)
@@ -611,16 +613,16 @@ function ns.startQuestGuide()
   end
   ns.every(0.25, function()
     recordFlight()
-    if Q.checkArrival() then ns.questRefresh() else paintArrow() end
+    if Q.checkPosition() then ns.questRefresh() else paintArrow() end
   end)
 end
 
 function ns.questDebugLines()
   local groups = {
-    { "C_QuestLog", C_QuestLog, "IsQuestFlaggedCompleted", "GetNumQuestLogEntries", "GetInfo",
-      "GetQuestIDForLogIndex", "GetQuestObjectives", "GetMaxNumQuestsCanAccept" },
+    { "C_QuestLog", C_QuestLog, "IsQuestFlaggedCompleted", "IsComplete", "GetNumQuestLogEntries", "GetInfo",
+      "GetQuestIDForLogIndex", "GetQuestObjectives", "GetMaxNumQuestsCanAccept", "GetAllCompletedQuestIDs" },
     { "Classic quest APIs", _G, "GetNumQuestLogEntries", "GetQuestLogTitle", "GetQuestLogLeaderBoard",
-      "IsQuestFlaggedCompleted", "GetQuestsCompleted" },
+      "IsQuestFlaggedCompleted", "GetQuestsCompleted", "QueryQuestsCompleted" },
     { "C_Map", C_Map, "GetBestMapForUnit", "GetPlayerMapPosition", "GetMapInfo", "GetMapWorldSize", "SetUserWaypoint" },
     { "C_SuperTrack", C_SuperTrack, "SetSuperTrackedUserWaypoint" },
     { "TomTom", TomTom, "AddWaypoint" },

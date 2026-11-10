@@ -478,6 +478,8 @@ q(56, "The Night Watch", 24, 18)
 q(57, "The Night Watch", 26, 18, 56)
 q(101, "The Totem of Infliction", 25, 18)
 q(96139, "The Valor Family", 23, 18, nil, true)
+q(96137, "Ira's Dagger", 25, 18, nil, true)
+quest[96137].startItem = 281143
 
 q(98245, "Razormaw Needling", 29, 22, nil, true)
 q(98246, "Trying Times", 29, 22, nil, true)
@@ -704,7 +706,7 @@ local abercrombie = dw("Abercrombie", 28.11, 31.46)
 local mound = dw("Mound of loose dirt", 49.85, 77.71)
 local darkshireHearth = { bind = "Darkshire" }
 
--- Three loops out of Darkshire: west to Sven's Camp, then the Raven Hill Cemetery twice.
+-- Three Darkshire loops, then a final visit to the north cemetery for Abercrombie.
 local dusk = {
   taxi("getfp", felicia, "Darkshire, Duskwood",
     "Learn the flight path from Felicia Maline in Darkshire. From Lakeshire, head west to Three Corners, then south into Duskwood and east to town."),
@@ -713,11 +715,15 @@ local dusk = {
   accept(56, althea), accept(101, eva), accept(96139, sirra),
   along(objectiveAt(56, dw(nil, 79.5, 70.5), "Go south to Tranquil Gardens Cemetery. Loot Skeleton Fingers from the Warriors and Mages for Madame Eva.",
     "8 Skeletal Warriors", "6 Skeletal Mages"), 101),
-  finish(56, althea),
-  accept(245, dodds, "Take the road west out of Darkshire. Watcher Dodds stands at the crossroads."),
-  finish(163, jitters, "Follow the road west to Raven Hill. Jitters hides in a house by the road."), accept(5, jitters),
+  finish(56, althea), accept(57, althea, "Pick up the next Night Watch now. Save its Raven Hill skeletons for the Rot Blossom trip."),
+  withItem(281143, accept(96137, nil, "Use Ira's Dagger from your bags. Use Next to leave the hunt for later.")),
+  objectiveAt(96137, dw(nil, 55.3, 63.7),
+    "Hunt Young Black Ravagers north of Yorgen Farmstead and Black Ravagers by the road near 59.5, 58.3. If the adults are scarce, check Brightwood Grove north of Darkshire on a later pass.",
+    "10 Young Black Ravagers", "7 Black Ravagers"),
+  accept(245, dodds, "Take the road west out of Darkshire to Watcher Dodds at the crossroads. If you meet a Lost Stalker on the way, it can drop Ira's Dagger."),
   objectiveAt(96139, dw("Memory of Valor", 21.2, 55.7), "Find the Raven Hill Tome on the broken table inside the house.", "Raven Hill Tome"),
-  along(objectiveAt(245, dw(nil, 9.5, 50), "Kill Pygmy Venom Web Spiders in the western woods. Keep their venom for Eva and save Gooey Spider Legs for later.",
+  finish(163, jitters, "Follow the road west to Raven Hill. Jitters hides in a house by the road."), accept(5, jitters),
+  along(objectiveAt(245, dw(nil, 9.5, 50), "Kill Pygmy Venom Web Spiders in the western woods. Loot Vials of Spider Venom for Eva and save 6 Gooey Spider Legs for Chef Grual's next quest.",
     "15 Pygmy Venom Web Spiders"), 101),
   finish(164, sven, "Deliver the supplies at Sven's Camp on the western border."), accept(95, sven), accept(226, lars),
   objectiveAt(226, dw(nil, 22, 26.5), "Hunt Starving and Rabid Dire Wolves on the slopes east of the camp, toward the hermit's shack.",
@@ -726,23 +732,23 @@ local dusk = {
   finish(245, dodds, "Head south-east back to the crossroads."),
   finish(95, mound, "Go south to Sven's old farm and dig in the mound behind the stump."), accept(230, mound),
   finish(5, grual, "Walk east to Darkshire. Chef Grual is in the house next to the tavern."), accept(93, grual),
-  finish(148, eva), accept(149, eva), finish(96139, sirra),
+  finish(148, eva), accept(149, eva), finish(96139, sirra), finish(96137, sirra),
   finish(149, mary, "Blind Mary's house is south-east of town."), accept(154, mary),
   along(objectiveAt(93, dw(nil, 84.4, 52.9), "If you still need spider legs, kill Black Widow Hatchlings north of Mary's house. Loot any missing venom too.",
     "6 Gooey Spider Legs"), 101),
   finish(154, eva), accept(157, eva), finish(93, grual), accept(240, grual),
 
-  accept(57, althea),
   action("goto", sven, "Take the west road past Raven Hill to Sven's Camp."),
   finish(230, sven), accept(262, sven), finish(226, lars),
   finish(157, abercrombie), accept(158, abercrombie),
   action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
-  finish(158, smitts), accept(156, smitts),
-  finish(262, eva), accept(265, eva), finish(265, daltry), accept(266, daltry), finish(266, smitts), accept(453, smitts),
+  finish(262, eva), accept(265, eva), finish(265, daltry), accept(266, daltry),
+  finish(158, smitts), accept(156, smitts), finish(266, smitts), accept(453, smitts),
 
-  finish(240, jitters, "Bring Jitters the crab cakes on the way into Raven Hill."),
+  action("goto", jitters, "Follow the main road west from Darkshire into Raven Hill. Stop at Jitters' house before going north to the cemetery."),
+  finish(240, jitters),
   finish(453, jitters, "The jittery stranger the clues describe is Jitters, in Raven Hill."), accept(268, jitters),
-  along(objectiveAt(57, dw(nil, 21, 45), "Kill Skeletal Fiends and Horrors in Raven Hill Cemetery. Loot their Rot Blossoms and any missing fingers.",
+  along(objectiveAt(57, dw(nil, 21, 45), "Clear the southern graves for Skeletal Fiends and Horrors. Loot their Rot Blossoms and any missing Skeleton Fingers. Give Mor'Ladim room to pass.",
     "15 Skeletal Fiends", "15 Skeletal Horrors"), 156, 101),
   along(objectiveAt(156, dw(nil, 22.3, 45.8), "Loot any remaining Rot Blossoms from the same skeletons.", "8 Rot Blossoms"), 57, 101),
   objectiveAt(101, dw(nil, 23.7, 36.5), "Loot fangs from Flesh Eaters and Rotted Ones and any missing fingers from skeletons. Hunt spiders in the western woods for any missing venom.",
@@ -751,7 +757,8 @@ local dusk = {
   action("hearth", trelayne, "Take the road east to Darkshire if you're walking.", darkshireHearth),
   finish(57, althea), finish(101, eva),
   finish(156, smitts), accept(159, smitts),
-  finish(159, abercrombie, "Take the Zombie Juice back west to Abercrombie's shack."), accept(133, abercrombie),
+  action("goto", abercrombie, "Take the west road from Darkshire, then head north before Raven Hill to Abercrombie's shack."),
+  finish(159, abercrombie), accept(133, abercrombie),
   objectiveAt(133, dw(nil, 23.8, 36.5), "Loot Ghoul Ribs from the ghouls at the north end of the cemetery.", "7 Ghoul Ribs"),
   finish(133, abercrombie),
   action("grind", dw(nil, 23.7, 36.5), "Reach level 26 for Wetlands. Finish open Duskwood quests or run the Stockade with a group. Use Next to travel early if ready.", { level = 26 }),
@@ -2012,6 +2019,7 @@ local lm = (function()
   q(436, "Ironband's Excavation", 18, 13)
   q(297, "Gathering Idols", 18, 13)
   breadcrumb(436, 297)
+  q(298, "Excavation Progress Report", 15, 10)
   q(86613, "Excavation Tools", 18, 13, nil, true)
   quest[86613].startItem = 278049
   q(385, "Crocolisk Hunting", 15, 10)
@@ -2030,13 +2038,13 @@ local lm = (function()
     action("goto", at(nil, 86.28, 48.81, dunMorogh), "If you know the flight from Ironforge to Thelsamar, take it. Otherwise follow the Dun Morogh road east past Gol'Bolar Quarry to South Gate Outpost and enter the tunnel."),
     taxi("getfp", thorgrum, "Thelsamar, Loch Modan",
       "From the Loch Modan end of South Gate Pass, take the north-east road to Thelsamar. Learn the flight path from Thorgrum Borrelson."),
-    accept(418, vidra, "Find Vidra inside the Stoutlager Inn."),
+    accept(418, vidra, "Find Vidra inside the Stoutlager Inn. Loot boars, bears and spiders as you travel between hubs, then top up on the way back to town."),
     accept(416, kadrell, "Find Kadrell on the road through town. He patrols."),
     accept(1339, kadrell),
     accept(86667, grenhild),
 
     -- Valley of Kings opening. Leave the deeper troggs for the second visit.
-    action("goto", cobbleflint, "Take the road south to the Valley of Kings guard tower."),
+    along(action("goto", cobbleflint, "Take the road south to the Valley of Kings guard tower."), 418),
     accept(224, cobbleflint),
     accept(267, rugelfuss, "Climb to the top floor of the tower to find Captain Rugelfuss."),
     along(objectiveAt(224, loch(nil, 26.7, 56.9),
@@ -2049,7 +2057,7 @@ local lm = (function()
 
     -- Start the snow delivery on the way north. Do the mine after the hand-in.
     withItem(279380, objectiveAt(86667, loch(nil, 19.6, 63.1),
-      "Use the Ceramic Jar on the snow by the Loch Modan mouth of South Gate Pass. Once filled, head straight to Norric by the west-shore road.",
+      "Use the Ceramic Jar on the snow at the Loch Modan end of South Gate Pass. Once it is full, take the west-shore road straight to Norric and save side kills for after the delivery.",
       "1 Jar of Snow")),
     finish(86667, norric, "Follow the road north through Thelsamar, then turn east to Norric's house on the north-west shore. If the snow melts, refill the jar or use Next."),
     action("goto", stormpike, "Follow the road west to Algaz Station and go upstairs in the bunker."),
@@ -2057,13 +2065,13 @@ local lm = (function()
     along(objectiveAt(307, mine,
       "Enter Silver Stream Mine from the north. Open Miners' League Crates, pulling the kobolds singly and looting ears as you go. If the deeper tunnels are unsafe, use Next.",
       "4 Miners' Gear"), 416),
-    along(objectiveAt(416, loch(nil, 25.1, 30.2),
-      "Finish the ears on Tunnel Rat Vermin and Scouts around the road south of Algaz Station. The kobolds in Silver Stream Mine also drop them.",
-      "12 Tunnel Rat Ears"), 307),
-    finish(307, stormpike),
-    objectiveAt(418, loch(nil, 27.7, 25.3),
-      "Hunt Mountain Boars, bears and Forest Lurkers around the north-west woods. Loot the meat, intestines and ichor on your way back to town.",
-      "3 Boar Intestines", "3 Bear Meat", "3 Spider Ichor"),
+    finish(307, stormpike, "Take the gear back to Stormpike at Algaz Station before heading south."),
+    along(objectiveAt(418, loch(nil, 27.7, 25.3),
+      "Finish any missing sausage ingredients from Mountain Boars, Elder Black Bears and Forest Lurkers on the road south to Thelsamar.",
+      "3 Boar Intestines", "3 Bear Meat", "3 Spider Ichor"), 416),
+    objectiveAt(416, loch(nil, 25.1, 30.2),
+      "Finish any missing ears on Tunnel Rat Vermin and Scouts farther south, then continue to Thelsamar.",
+      "12 Tunnel Rat Ears"),
     finish(416, kadrell), finish(418, vidra),
     accept(436, jern, "At level 13 or higher, pick this up from Jern before the next circuit. Use Next if it is unavailable."),
 
@@ -2094,10 +2102,9 @@ local lm = (function()
       "Follow the road around the south end of the loch toward Ironband's Excavation. Stay on the Loch Modan road past the wagon."),
     finish(436, magmar),
     accept(297, magmar, "From level 13, Magmar offers Gathering Idols. Take it if you can handle the level 18-20 dig-site troggs. Use Next to save it for a later visit."),
-    action("note", loch(nil, 69.8, 65.0),
-      "From level 13, loot an Excavation Tools pickup from a wooden platform before clearing the dig site. Use Next once you have one or if the platforms are unsafe."),
+    accept(298, ironband, "Take Ironband's report while you are at the dig. Hand it in to Jern when you return to Thelsamar."),
     withItem(278049, accept(86613, dig, "Use the Excavation Tools starter from your bags. Check the tool piles on the wooden platforms for the rest.")),
-    along(objectiveAt(297, dig, "Loot idols from Diggers and Berserk Troggs. Check each platform for excavation tools as you clear the site.",
+    along(objectiveAt(297, dig, "Loot idols from Diggers and Berserk Troggs. Check the wooden platforms near 69.8, 65.0 for an Excavation Tools quest starter. Use it if you find one.",
       "8 Carved Stone Idols"), 86613),
     along(objectiveAt(86613, loch(nil, 69.8, 65.0), "Check the platforms for any remaining excavation tools. Use Next if the piles are empty or unsafe.",
       "6 Excavation Tools"), 297),
@@ -2112,23 +2119,28 @@ local lm = (function()
       "6 Mountain Buzzards"),
     finish(257, daryl, "Return to Daryl before the timer ends. If it expired, abandon and retake the quest, or use Next."),
     accept(258, daryl, "Accept only when ready for the next hunt. The boars and the return trip share a 12-minute timer."),
-    objectiveAt(258, loch(nil, 69.5, 39.2),
-      "Follow the east-shore road north to the Elder Mountain Boars. Stay clear of Mo'grosh Stronghold and head back as soon as the kills count.",
+    objectiveAt(258, loch(nil, 75.9, 45.3),
+      "Start in the hills north of the lodge. If the nearer Elder Mountain Boars are taken, look north-west near 65.1, 41.2 if you have time. Return straight to Daryl and save the crocs for afterward.",
       "5 Elder Mountain Boars"),
     finish(258, daryl, "Return to Daryl before the timer ends. If it expired, abandon and retake the quest, or use Next."),
     -- East shore crocs, then Bingles' island. Finish the timed hunts first.
-    along(objectiveAt(86758, loch("Daggerfang", 62.0, 44.0),
-      "Look for Daggerfang patrolling the east shore. Kill him for Marek's knife. If he is absent, hunt ordinary crocolisks and use Next.",
-      "1 Marek's Croc-Hunting Knife"), 385),
     along(objectiveAt(385, loch(nil, 61.6, 43.8),
-      "Kill Loch Crocolisks along the east bank. If you need more, swim west from opposite the middle island. Avoid Young Threshadons and the Large Loch Crocolisk.",
-      "1 Crocolisk Meat", "6 Crocolisk Skins"), 86758),
+      "Kill Loch Crocolisks along the east bank and watch for Daggerfang on the same pass. If you need more crocs, cross toward the middle island from directly east. Give Young Threshadons and the Large Loch Crocolisk room.",
+      "5 Crocolisk Meat", "6 Crocolisk Skins"), 86758),
+    along(objectiveAt(86758, loch("Daggerfang", 63.4, 45.3),
+      "Look along the east shore for Daggerfang if you still need the knife. Use Next if the patrol is absent.",
+      "1 Marek's Croc-Hunting Knife"), 385),
     finish(385, marek), finish(86758, marek),
     accept(2038, bingles, "Follow the east shore north to Bingles by his crashed machine. From level 12, take his supplies quest if offered."),
-    objectiveAt(2038, loch(nil, 51.0, 24.0),
-      "If you can clear the island camps safely, loot the wrench (48, 30), screwdriver (48, 20), hammer (51, 24) and Blastencapper (54, 26). Pull the troggs away from the crates. Use Next if the island is too dangerous.",
-      "1 Bingles' Wrench", "1 Bingles' Screwdriver", "1 Bingles' Hammer", "1 Bingles' Blastencapper"),
-    finish(2038, bingles),
+    objectivePart(2038, 1, loch(nil, 48.73, 30.09),
+      "Start at the southern camp. Pull troggs away from the toolbucket before taking the wrench. Use Next to move past a camp you cannot clear.", "1 Bingles' Wrench"),
+    objectivePart(2038, 2, loch(nil, 48.38, 20.51),
+      "Follow the west side of the island north to the toolbucket with the screwdriver.", "1 Bingles' Screwdriver"),
+    objectivePart(2038, 3, loch(nil, 51.78, 24.09),
+      "Head south-east to the middle camp and take the hammer from its toolbucket.", "1 Bingles' Hammer"),
+    objectivePart(2038, 4, loch(nil, 54.21, 26.60),
+      "Finish at the east camp. Pull the Shamans and Bonesnappers away from the Blastencapper.", "1 Bingles' Blastencapper"),
+    finish(2038, bingles, "Return to Bingles on the east shore. Use Next if you left a tool for a later visit."),
 
     -- Dam and west shore. End in Loch Modan after the local hand-ins.
     action("goto", hinderweir, "Follow the road north toward Stonewrought Dam, taking the shore or dam crossing clear of the Mo'grosh camps."),
@@ -2138,11 +2150,13 @@ local lm = (function()
     finish(199, hinderweir, "Take the clue back to Hinderweir on the west side of the dam."),
     accept(86614, toolbox, "If the Discarded Fishing Toolbox is visible in the loch and the water is clear, take the quest from it. The toolbox has several possible spots. Use Next if absent or unsafe."),
     finish(86614, khara, "Bring the hair clip to Khara on the west-shore dock."),
+    finish(298, jern, "Follow the west-shore road south to Thelsamar and hand Ironband's report to Jern."),
   }
 
   return { steps = steps, sources = {
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
     "https://bindonforever.com/zones/loch-modan",
+    "https://polestar.guide/guides/alliance/03-loch-modan",
     "https://warcraft.blizzplanet.com/world-of-warcraft-forever-loch-modan-quests/",
     "https://senseos.gg/wiki/wow-forever/interactive-map/loch-modan/",
     "https://zygorguides.com/blog/important-tips-and-info-for-zygors-classic-guides/",
@@ -2442,7 +2456,9 @@ local westSources = {
 }
 local duskSources = {
   "https://bindonforever.com/zones/duskwood",
+  "https://polestar.guide/guides/alliance/04-redridge-mountains",
   "https://questing.wiki/wow-forever/leveling/duskwood/",
+  "https://www.wowhead.com/forever/quest=96137/iras-dagger",
   "https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/",
 }
 local wetSources = {

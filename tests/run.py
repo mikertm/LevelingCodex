@@ -574,14 +574,18 @@ def main():
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
-                             "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questRecorder",
+                             "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questDuskwoodZoneEntry",
+                             "questDuskwoodDagger",
+                             "questRecorder",
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
                              "questWetlands", "questWetlandsTravel", "questWetlandsEnd",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
-                             "questDetour", "questCrossZoneResume", "questAlternateRoutes", "questWestfallDetour"):
+                             "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
+                             "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
+                             "questLochFlight", "questLochBingles", "questWestfallDetour"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides")):
                 runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))
