@@ -17,7 +17,7 @@ Design: `docs/superpowers/specs/2026-11-08-enchanting-guide-design.md`.
 - Dust to Motes needs the Runed Copper Rod, and the rod needs a Mote, so the first Mote is bought (the
   route starts with the rod at 1-2).
 - Disenchant has colours (y20/gr60); `ItemDisenchantLoot.SkillRequired` is 0 everywhere.
-- The disenchant level bands (item level) are 5-15, 16-20, 21-25 ... 51-55 for green items.
+- The disenchant level bands use item level. Uncommon gear starts at 5–15 and the last client row covers 61–99. Epic rows include separate 51–55, 56–60 and 61–99 brackets.
 - Zone names (AreaTable): Riverglades 16591, Zephras Isle 16593, Uldaman 1337.
 - Forever's UI source has `Blizzard_Professions` and no Craft UI.
 
@@ -34,11 +34,11 @@ Design: `docs/superpowers/specs/2026-11-08-enchanting-guide-design.md`.
 - WoW-Professions lists Bracer - Greater Strength at Annora (skill 240) and the Lesser Mana Oil formula at Kania in Silithus. Wowhead lists the oil formula in Silithus and Blackrock Depths. Check Annora's recipe list and Kania's stock in game. [Leveling guide](https://www.wow-professions.com/forever/enchanting-leveling-guide) · [Oil formula](https://www.wowhead.com/forever/item=20754/formula-lesser-mana-oil)
 - The Enchanting overview lists Enchanted Lute at 20, Arcane Salvager at 140, and Arcane Forge at 300. The client confirms the spells and the two blueprints' requirements. [Enchanting overview](https://www.wowhead.com/forever/guide/professions/enchanting/overview)
 - **Wowhead leveling guide (3 Nov):** the route's shape; Mote of Magic and the Copper Rod from enchanting supply vendors.
-- **wow-professions' Forever disenchanting guide:**
-  - the bands by required level;
+- **WoW-Professions' Forever disenchanting guide:**
+  - a player-facing approximation of the brackets by required level;
   - armour mostly dust, weapons mostly essence, blue items a shard;
   - no skill needed to disenchant.
-  - Its band edges (10, 15, 20 ...) sit five below the client's (15, 20, 25 ...).
+  - its band edges sit five below the client item-level edges for ordinary gear.
 
 ## Differences from Wowhead's route (3 Nov), and why
 
@@ -49,11 +49,19 @@ Design: `docs/superpowers/specs/2026-11-08-enchanting-guide-design.md`.
 | 160-180 | Bracer - Lesser Strength (formula) | Boots - Lesser Agility (trainer) | Same Soul Dust, no formula |
 | 225-250 | Gloves - Agility, Boots - Stamina, Chest - Superior Stamina | Gloves - Agility | 1 Vision Dust instead of 2-3 |
 | 250-265 | Lesser Mana Oil | Bracer - Greater Strength (Annora) | Trainer recipe. Lesser Mana Oil from Kania is an alternative. |
-| 265-300 | Shield - Greater Stamina to 294, Runed Arcanite Rod, Cloak - Superior Defense | Shield - Greater Stamina to 300 | Yellow until 305; Dream Dust instead of 120 Illusion Dust and an Arcanite rod (Superior Defense only needs Truesilver) |
+| 265-300 | Shield - Greater Stamina to 294, Runed Arcanite Rod, Cloak - Superior Defense | Shield - Greater Stamina to 300 | Yellow from 285 through 304. Both enchants require Truesilver. |
+
+## Cross-check on 9 Nov 2026
+
+Zygor Forever 1.6.37551 agrees on Annora in Uldaman, the cloak and shield formula vendors, and the early rod progression. Its Classic opening uses spell 7418, **Minor Health**, through 90. Forever calls the same spell **Inferior Stamina**, uses Mote of Magic, and turns it gray at 25. Zygor also budgets an Arcanite rod for Cloak - Superior Defense. The Forever `SpellTotems` record calls for category 376, Runed Truesilver Rod. [Alliance Zygor route](<C:/Dev/Starbreak/reference/Release Forever 1.6.37551/ZygorGuidesViewerForever/Guides-Forever/Professions/ZygorProfessionsAllianceCLASSIC.lua:4299>) · [Horde Zygor route](<C:/Dev/Starbreak/reference/Release Forever 1.6.37551/ZygorGuidesViewerForever/Guides-Forever/Professions/ZygorProfessionsHordeCLASSIC.lua:3957>) · [Forever's 7418 recipe and in-game record](https://wowforever.ninja/professions/enchanting/7418-enchant-bracer-minor-health/) · [Forever SpellTotems](https://wago.tools/db2/SpellTotems?build=1.60.1.70862)
+
+The main route stays at Shield - Greater Stamina through 300. If Dalria or Kulwia is out of stock, Minor Stamina reaches 120 and Chest - Stamina reaches 135. If Mythrin'dir or Daniel Bartlett is out of stock, Annora's Greater Strength reaches 285, then Lorelae Wintersong's Superior Defense reaches 300. The last five points of the Greater Strength fallback are green. The shopping list follows the main route. [Forever leveling guide](https://www.wow-professions.com/forever/enchanting-leveling-guide) · [Forever shield formula record](https://www.wowhead.com/forever/item=16217/formula-enchant-shield-greater-stamina) · [Forever cloak formula record](https://www.wowhead.com/forever/item=16224/formula-enchant-cloak-superior-defense)
+
+Bag estimates now read item level from `GetItemInfo`, which also works for quest gear with a low or missing equip requirement. Epics at item level 56 or above show Nexus Crystal. The client supplies bracket bounds and the zero minimum Enchanting skill. The exact loot distribution lives on the server. Item levels 5–15 have client rare rows, but the lowest rare shard result is unconfirmed, so the bag list leaves those estimates out. [Forever ItemDisenchantLoot](https://wago.tools/db2/ItemDisenchantLoot?build=1.60.1.70862) · [Forever loot and epic results](https://www.wow-professions.com/forever/disenchanting-guide) · [Item-level comparison](https://bytetavern.com/wow-forever-enchanting-leveling-guide/)
 
 ## To check in game
 
 - Copper Rod and Mote of Magic at an enchanting supply vendor; the formula vendors' stock.
-- Disenchant in the Professions window; the bag list against your bags.
+- Compare the bag list with a quest reward that has an item level above its equip level, and with a high-level epic.
 - Annora as the only Artisan trainer; `/codex debug` at a trainer for the learn levels.
 - A better rod counting for a lower one (Truesilver Rod for a Silver Rod enchant).

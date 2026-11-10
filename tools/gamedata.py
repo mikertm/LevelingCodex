@@ -53,7 +53,10 @@ TABLES = [
 ]
 
 # Professions with a guide (ProfessionData.lua): name -> skill line.
-PROFESSIONS = {"Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333, "Herbalism": 182}
+PROFESSIONS = {
+    "Blacksmithing": 164, "Mining": 186, "Tailoring": 197, "Enchanting": 333, "Herbalism": 182,
+    "Skinning": 393, "Leatherworking": 165,
+}
 
 # Standard herb item IDs from the Forever node catalog. Lock rows supply the
 # possible minimum skills; the client does not link these named nodes to locks.
@@ -851,16 +854,6 @@ def audit_herbalism(guide, reference, add):
                     add("error", f"step {step['from']}-{step['to']}: no usable herb at skill {skill} for {faction}")
                     break
 
-    for camp in guide.get("camp") or []:
-        name = camp["name"]
-        recipe = reference["recipes"].get(name)
-        if not recipe or camp.get("spell") != recipe["spell"]:
-            add("error", f"{name}: camp recipe spell does not match the client")
-            continue
-        plan = recipe.get("plan")
-        if plan and camp.get("skill") != plan["skill"]:
-            add("error", f"{name}: {plan['item']} needs {plan['skill']}, guide says {camp.get('skill')}")
-
 
 def audit_professions(profdata, ref):
     """[(PROFESSION, 'error'|'warn', message)]: ProfessionData.lua against the game reference."""
@@ -873,6 +866,8 @@ def audit_professions(profdata, ref):
         if not R:
             add("error", "no profession '%s' in the game reference" % P.get("name"))
             continue
+        if P.get("skillLine") != R["skillLine"]:
+            add("error", "skill line does not match the client")
         recipes, items = R["recipes"], R["items"]
         if key == "HERBALISM":
             audit_herbalism(P, R, add)
@@ -929,14 +924,17 @@ def audit_professions(profdata, ref):
                 add("error", "tier %s needs %d but %s stops at %d" % (n["name"], n["skill"], t["name"], t["cap"]))
         if tiers and steps and tiers[-1]["cap"] < steps[-1]["to"]:
             add("error", "the last tier stops at %d, the route goes to %d" % (tiers[-1]["cap"], steps[-1]["to"]))
-        # items this profession makes: a step may only use one that parts or an earlier step's makes provides
+        # Crafted inputs need a part or an earlier step, unless the route gathers them directly.
         own = {r["makes"][0] for r in recipes.values() if r.get("makes")}
+        gathered = set(P.get("gathered") or [])
+        for item in sorted(gathered - set(items)):
+            add("error", f"gathered material {item} does not match a client item")
         provided = {(p.get("makes") or [p.get("name")])[0] for p in P.get("parts") or []}
         for s in steps:
             where = "step %d-%d" % (s["from"], s["to"])
             for m in s.get("mats") or []:
                 item = _mats([m])[0][0]
-                if item in own and item not in provided:
+                if item in own and item not in provided and item not in gathered:
                     add("error", "%s: %s is made by a %s recipe: add it to parts or a step's makes" % (where, item, P["name"]))
             if isinstance(s.get("makes"), list):
                 provided.add(s["makes"][0])
@@ -956,6 +954,20 @@ def audit_professions(profdata, ref):
                     add("warn", "%s: %s is learned at %d, after the step starts" % (where, s["name"], s["learn"]))
         for sm in P.get("smelt") or []:
             check_recipe("smelt", sm, sm["name"])
+        for camp in P.get("camp") or []:
+            name = camp["name"]
+            recipe = recipes.get(name)
+            spell = camp.get("spell")
+            legacy = spell is None and key in ("BLACKSMITHING", "MINING")
+            if not recipe or (not legacy and spell != recipe["spell"]):
+                add("error", f"{name}: camp recipe spell does not match the client")
+                continue
+            plan = recipe.get("plan")
+            if plan and camp["skill"] != plan["skill"]:
+                # Blizzard's Nov 6 server hotfix still overrides build 1.60.1.70862.
+                if key == "LEATHERWORKING" and name == "Tanning Rack" and (camp["skill"], plan["skill"]) == (125, 140):
+                    continue
+                add("error", f"{name}: {plan['item']} needs {plan['skill']}, guide says {camp['skill']}")
         for p in P.get("parts") or []:
             r = check_recipe("part", p, p["name"])
             if r and P.get("rods") and r.get("tool") != p.get("rod"):
@@ -970,7 +982,7 @@ def audit_professions(profdata, ref):
                 add("error", "rod %s: category %s mask %s in game, data says %s / %s" %
                     (rod["name"], want["category"], want["mask"], rod.get("category"), rod.get("mask")))
         for b in ((P.get("disenchant") or {}).get("bands") or []):
-            for f in ("dust", "essence", "shard"):
+            for f in ("dust", "essence", "shard", "epic"):
                 if b.get(f) and b[f] not in items:
                     add("error", "disenchant: %s is not an %s material" % (b[f], P["name"]))
         for c in P.get("cloth") or []:

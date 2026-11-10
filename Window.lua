@@ -1123,9 +1123,9 @@ renderers.settings = function()
 
   head("PROFESSIONS")
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open Blacksmithing, Smelting, Tailoring or Enchanting, the Codex outlines the recipe to make for your skill and shows a card with how many more and your materials.")
+    "When you open Blacksmithing, Smelting, Tailoring, Enchanting or Leatherworking, the Codex outlines the recipe to make for your skill and shows how many more to make.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "A card like the level-up one when Mining, Blacksmithing, Tailoring, Enchanting or Herbalism reaches a new step, can train the next tier, or unlocks a new vein or herb.")
+    "Shows a card for new steps, training or skill caps in Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning and Leatherworking. Mining and Herbalism also announce new nodes.")
   y = y + 12
 
   head("GATHERING")

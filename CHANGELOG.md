@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.14.0
+
+- Added **Skinning and Leatherworking guides, 1–300**. Skinning shows beasts and farming spots by faction, including Zephras Isle for Skyborne. Leatherworking shows the current recipe, material estimates and a read-only crafting outline. The guide includes the Tanning Rack unlock at skill 125.
+- **Tailoring** now finishes with Runecloth Shoulders from 280 to 300 and lists the Cenarion Circle ranks for the Venomspew alternative.
+- **Enchanting** adds fallbacks for sold-out formulas. Disenchanting estimates use item level and show Nexus Crystals for high-level epics.
+
 ## v0.13.0
 
 ### Alliance quest guide

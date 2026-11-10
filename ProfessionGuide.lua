@@ -76,7 +76,8 @@ end
 local function keyFor(name)
   for _, key in ipairs(ns.PROF_ORDER) do
     local P = ns.P and ns.P[key]
-    if P and not P.herbs and (P.name == name or (key == "MINING" and name == "Smelting")) then return key end
+    if P and (P.smelt or (P.steps[1] and P.steps[1].name))
+        and (P.name == name or (key == "MINING" and name == "Smelting")) then return key end
   end
 end
 
@@ -396,8 +397,9 @@ local function tick()
         h.status:SetText("You know it, but it's not in the list: clear the search or filter, or open its heading.")
         guide.how = "filtered"
       else
-        h.status:SetText("Not learned yet (or hidden by a filter): learn it at a " .. P.name .. " trainer (" ..
-          (pick.learn or "?") .. ")." .. ((pick.alt and pick.alt ~= "") and ("  Instead: " .. plain(pick.alt)) or ""))
+        local source = pick.source or (P.name .. " trainer")
+        h.status:SetText("Not learned yet or filtered. Learn at " .. (pick.learn or "?") .. "  -  " .. plain(source) ..
+          "." .. ((pick.alt and pick.alt ~= "") and ("  Instead: " .. plain(pick.alt)) or ""))
         guide.how = "not learned"
       end
       t:Hide(); guide.row = nil
@@ -432,6 +434,7 @@ local function tick()
     end
   end
   guide.pick = pick and pick.name
+  h:SetHeight(math.max(104, 55 + h.line:GetStringHeight() + h.status:GetStringHeight()))
   ns.placeByWindow(h, root, guide)
   h:Show()
 end

@@ -253,7 +253,7 @@ def data_checks():
     return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
 
 
-PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM")
+PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING")
 
 
 def prof_shape_checks():
@@ -327,6 +327,12 @@ def prof_shape_checks():
             elif key == "HERBALISM":
                 if not s.get("title") or not s.get("herbs") or any(h not in herb_names for h in s["herbs"]):
                     errors.append(where + ": requires a title and known herbs")
+            elif key == "SKINNING":
+                if not all(s.get(f) for f in ("title", "icon", "zones", "note")):
+                    errors.append(where + ": requires a title, icon, zones and note")
+                zones = s.get("zones") or {}
+                if not zones.get("All") and not (zones.get("Alliance") and zones.get("Horde")):
+                    errors.append(where + ": missing a route for one or both factions")
             else:
                 for f in ("name", "spell", "icon", "yellow", "grey", "mats", "learn", "source"):
                     if s.get(f) in (None, ""):
@@ -354,17 +360,17 @@ def prof_shape_checks():
                 errors.append("professions %s step %s-%s: rod %s is not in the rods list" % (key, s.get("from"), s.get("to"), s["rod"]))
         bands = (P.get("disenchant") or {}).get("bands") or []
         if P.get("disenchant"):
-            at = 1
+            at = 5
             for b in bands:
                 if b.get("from") != at or not isinstance(b.get("to"), int) or b["to"] < b["from"]:
-                    errors.append("professions %s: disenchant bands must run 1-60 without gaps (at %s)" % (key, b.get("from")))
+                    errors.append("professions %s: disenchant item levels must run 5-99 without gaps (at %s)" % (key, b.get("from")))
                     break
                 for f in ("dust", "essence"):
                     if not b.get(f):
                         errors.append("professions %s: disenchant band %s-%s missing %s" % (key, b.get("from"), b.get("to"), f))
                 at = b["to"] + 1
-            if at != 61:
-                errors.append("professions %s: disenchant bands must run 1-60 without gaps (end %s)" % (key, at - 1))
+            if at != 100:
+                errors.append("professions %s: disenchant item levels must run 5-99 without gaps (end %s)" % (key, at - 1))
         cloth = P.get("cloth") or []
         for c in cloth:
             for f in ("name", "icon", "levels", "zones"):
@@ -610,6 +616,12 @@ def main():
                      ["skills:MI;30;75:skilllines", "login", "profOpenHeadingWithClosedWeapons"]))
         runs.append(("WARRIOR/%s/prof-herbalism" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismTab"]))
         runs.append(("WARRIOR/%s/prof-herbalism-cards" % variant, "WARRIOR", minimal, HERBALISM + ["herbalismCards"]))
+        skills_api = "skilllines" if minimal else "professions"
+        runs.append(("WARRIOR/%s/prof-skinning-leatherworking" % variant, "WARRIOR", minimal,
+                     ["skills:SK;1;75,LW;1;75:%s:Alliance:Human" % skills_api, "login", "skinningLeatherworkingTab"]))
+        if not minimal:
+            runs.append(("WARRIOR/full/craft-leatherworking", "WARRIOR", False,
+                         ["skills:SK;20;75,LW;235;300:professions", "makeCraftWindow", "login", "craftLeatherworking"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))

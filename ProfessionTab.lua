@@ -242,6 +242,9 @@ local function renderer(_, snapshot)
     T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
     y = y + 18
     y = y + T(plain(step.title), 16, y, W - 32, "head", C.ink) + 8
+    if step.zones then
+      y = y + T("Where: " .. plain(table.concat(ns.profZones(step), ", ")), 16, y, W - 32, "small", C.inkSoft) + 6
+    end
     for _, name in ipairs(step.herbs or step.veins or {}) do
       local node = ns.profNode(key, name)
       if node then
@@ -263,7 +266,7 @@ local function renderer(_, snapshot)
   local nxt = step and P.steps[(index or 0) + 1]
   if nxt then
     T("NEXT", 0, y + 4, 60, "label", C.goldDim)
-    if nxt.icon then icon(nxt.icon, 52, y, 22, nxt.name, plain(nxt.note)) end
+    if nxt.icon then icon(nxt.icon, 52, y, 22, nxt.name or nxt.title, plain(nxt.note)) end
     T(nxt.from .. ": " .. (nxt.name or nxt.title), nxt.icon and 82 or 52, y + 4, W - 90, "body", C.light)
     y = y + 32
   end
@@ -350,13 +353,16 @@ local function renderer(_, snapshot)
     y = y + 20
     y = y + T(plain(P.disenchant.note or ""), 16, y, W - 32, "small", C.inkSoft) + 6
     local need = ns.deNeeded(key, (ns.profStep(key, skill or 1)))
-    local function wanted(b) return need[b.dust] or need[b.essence] or (b.shard and need[b.shard]) end
+    local function wanted(b)
+      return need[b.dust] or need[b.essence] or (b.shard and need[b.shard]) or (b.epic and need[b.epic])
+    end
     local rows = {}
     for _, b in ipairs(P.disenchant.bands or {}) do if wanted(b) then rows[#rows + 1] = b end end
     for _, b in ipairs(P.disenchant.bands or {}) do if not wanted(b) then rows[#rows + 1] = b end end
     for _, b in ipairs(rows) do
       local w = wanted(b)
-      y = y + T("Level " .. b.from .. "-" .. b.to .. ": " .. b.dust .. ", " .. b.essence .. (b.shard and (", " .. b.shard) or "") ..
+      y = y + T("Item level " .. b.from .. "-" .. b.to .. "  -  " .. b.dust .. ", " .. b.essence ..
+        (b.shard and (", " .. b.shard) or "") .. (b.epic and (", " .. b.epic .. " (epic)") or "") ..
         (w and "  -  you need this now" or ""), 16, y, W - 32, "small", w and C.gold or C.light) + 3
     end
     y = y + T("3 Lesser make 1 Greater, and back: right-click the essence.", 16, y + 3, W - 32, "small", C.dim) + 10
@@ -365,7 +371,7 @@ local function renderer(_, snapshot)
       T("IN YOUR BAGS", 16, y, W - 32, "label", C.goldDim)
       y = y + 18
       if #items == 0 then
-        y = y + T("No green or blue weapons or armour in your bags.", 16, y, W - 32, "small", C.dim) + 4
+        y = y + T("No material estimates for gear in your bags.", 16, y, W - 32, "small", C.dim) + 4
       else
         local function gives(it) for _, g in ipairs(it.gives) do if need[g] then return true end end end
         table.sort(items, function(a, b)
@@ -376,7 +382,7 @@ local function renderer(_, snapshot)
         end)
         for i = 1, math.min(8, #items) do
           local it = items[i]
-          y = y + T(it.name .. " (level " .. it.level .. "): " .. table.concat(it.gives, " or "), 16, y, W - 32, "small",
+          y = y + T(it.name .. " (item level " .. it.level .. "): " .. table.concat(it.gives, " or "), 16, y, W - 32, "small",
             gives(it) and C.gold or C.light) + 3
         end
       end

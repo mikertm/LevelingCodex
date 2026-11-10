@@ -805,7 +805,7 @@ function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
 
--- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), class
+-- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), itemLevel, class
 -- = "Armor"|"Weapon"|"Trade Goods", loaded (false = GetItemInfo not cached yet) } } in bag 0.
 MOCK.bagItems = {}
 local function bagLink(i) return "|cff1eff00|Hitem:" .. (90000 + i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
@@ -821,7 +821,7 @@ function GetItemInfo(link)
     if it.name == name then
       if it.loaded == false then return nil end
       local classID = ({ Armor = 4, Weapon = 2 })[it.class] or 7
-      return it.name, link, it.quality, it.level + 5, it.level, it.class, "", 1, "", 134400, 1, classID
+      return it.name, link, it.quality, it.itemLevel or it.level + 5, it.level, it.class, "", 1, "", 134400, 1, classID
     end
   end
 end
