@@ -16,6 +16,8 @@
 
 ### Classes and professions
 
+- **Tailoring and Enchanting:** Checked both 1–300 routes against Forever's client and Zygor. Tailoring now finishes with Runecloth Shoulders and shows the reputation requirements for the Venomspew alternative. Enchanting has fallbacks for sold-out formulas, and disenchanting estimates use item level and show Nexus Crystals for high-level epics.
+- Added **Skinning and Leatherworking guides, 1–300**. Skinning lists beasts and farming spots for your faction, including a Skyborne start on Zephras Isle. Leatherworking shows the current recipe, materials and shopping estimates, and traces its row in the crafting window. The route uses Forever recipe data and includes the Tanning Rack hotfix at skill 125.
 - **Warrior macros and tanking priorities.** Thunder Clap gets its own button from level 6, using the existing Fight pack slot. Fight uses Heroic Strike at levels 1–9 and Sunder Armor from 10. Revenge, Shield Slam, Shield Block, interrupts and defensives can be used independently. Run `/codex macros` to update existing Codex macros and add the new buttons.
 - **Warrior guide.** The leveling tips explain how to pool Rage for Clap, spread threat on packs, and use Victory Rush when lit. Tactical Mastery retains 10 Rage baseline, with up to 15 more from the Arms talent.
 - **Mining**: The crafting hint suggests Smelt Gold through skill 184. Added Thelgen Rock in the Wetlands for Tin and Incendicite. The guide shows the skill needed for each rank and marks the character-level requirements as unconfirmed.

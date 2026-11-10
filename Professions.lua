@@ -6,7 +6,7 @@
 local _, ns = ...
 
 ns.P = LevelingCodexProfessions
-ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM" }
+ns.PROF_ORDER = { "BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING" }
 
 -- Parts: items a profession makes for its own recipes (Tailoring's bolts). The part that makes item.
 function ns.profPart(key, item)
@@ -353,14 +353,15 @@ function ns.profCardRows(key, old, new, cap, level)
       else
         local names = s.herbs or s.veins
         local node = names and ns.profNode(key, names[1])
-        rows[#rows + 1] = { node and node.icon or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
+        rows[#rows + 1] = { s.icon or (node and node.icon) or P.icon, now and "NEW STEP" or "STEP PASSED", s.title }
       end
     end
   end
   local trained, i = ns.profTier(key, new, cap)
   local nextTier = trained and P.tiers[i + 1]
   if nextTier and nextTier.skill > old and nextTier.skill <= new and (level or 1) >= nextTier.level then
-    rows[#rows + 1] = { P.icon, "TRAIN " .. string.upper(nextTier.name), ns.plain(nextTier.short or nextTier.where) }
+    local label = P.levelGatesUnconfirmed and "CHECK " or "TRAIN "
+    rows[#rows + 1] = { P.icon, label .. string.upper(nextTier.name), ns.plain(nextTier.short or nextTier.where) }
   end
   if nextTier and trained.cap > old and trained.cap <= new then
     rows[#rows + 1] = { P.icon, "AT YOUR CAP", "Train " .. nextTier.name .. " to go past " .. trained.cap }

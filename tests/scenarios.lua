@@ -2547,7 +2547,8 @@ function S.skills(list, api, faction, race)
   MOCK.skillAPI = api or "professions"
   if MOCK.skillAPI ~= "professions" then GetProfessions, GetProfessionInfo = nil, nil end
   MOCK.faction, MOCK.race = faction, race
-  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring", EN = "Enchanting" }
+  local names = { BS = "Blacksmithing", MI = "Mining", HE = "Herbalism", TA = "Tailoring", EN = "Enchanting",
+    SK = "Skinning", LW = "Leatherworking" }
   for part in (list or ""):gmatch("[^,]+") do
     local k, r, m = part:match("(%a+);(%d+);(%d+)")
     MOCK.setSkill(names[k], tonumber(r), tonumber(m))
@@ -2952,6 +2953,35 @@ function S.herbalismCards()
   check(t:IsShown() and MOCK.textUnder(t):find("Black Lotus %(300%)"), "Black Lotus unlock at 300")
 end
 
+function S.skinningLeatherworkingTab()
+  openAt(35, "Professions")
+  click(win(), "Skinning")
+  local content = profText()
+  check(content:find("Skinning 1 / 75") and content:find("Skinning Knife") and content:find("Elwynn Forest"),
+    "starter Skinning guide")
+  check(not content:find("Durotar") and not content:find("SHOPPING LIST"), "faction-filtered gathering guide")
+  MOCK.faction, MOCK.race = "Horde", "Skyborne"
+  click(win(), "Skinning")
+  check(profText():find("Zephras Isle") and profText():find("Durotar") and not profText():find("Elwynn Forest"),
+    "Skyborne and Horde Skinning locations")
+  MOCK.setSkill("Skinning", 279, 300); MOCK.advance(1.2)
+  local card = toast()
+  if card and card:IsShown() then MOCK.fire(card, "OnMouseUp", "RightButton"); MOCK.advance(1.5) end
+  MOCK.setSkill("Skinning", 280, 300); MOCK.advance(1.2)
+  check(profText():find("Un'Goro Crater") and profText():find("280%-300"), "late Skinning route")
+  card = toast()
+  check(card and card:IsShown() and MOCK.textUnder(card):find("NEW STEP"), "Skinning step card")
+  MOCK.setSkill("Skinning", 300, 300); MOCK.advance(1.2)
+  check(profText():find("ROUTE DONE"), "Skinning cap")
+  click(win(), "Leatherworking")
+  content = profText()
+  check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
+    content:find("SHOPPING LIST TO 300"), "Leatherworking starter and shopping estimate")
+  check(content:find("125  Tanning Rack") and content:find("Runic Leather Headband"), "hotfixed camp unlock and final step")
+  MOCK.setSkill("Leatherworking", 200, 225); MOCK.advance(1.2)
+  check(profText():find("TRAIN ARTISAN") and profText():find("Hahrana Ironhide"), "Leatherworking Artisan trainer")
+end
+
 ----------------------------------------------------------------------------
 -- Crafting window mock: TradeSkillFrame with 8 visible rows TradeSkillSkill1..8 showing the
 -- recipes from `offset`. Row text carries a count and orange ones a colour code, like the game.
@@ -3078,6 +3108,10 @@ function S.tailorTabCases()
   t = tailoring()
   check(t:find("Runecloth Cuffs") and t:find("Pexmit"), "step at 260: Runecloth Cuffs from Pexmit")
   check(t:find("Runecloth  %-  you need this now"), "Runecloth marked at 260")
+  MOCK.setSkill("Tailoring", 285, 300)
+  t = tailoring()
+  check(t:find("Runecloth Shoulders") and t:find("Venomspew Gloves") and t:find("Venomspew Cord"),
+    "Runecloth finish with vendor alternatives")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
   check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
@@ -3151,7 +3185,7 @@ function S.enchantTab()
     check(t:find("Rod: Runed Silver Rod") and not t:find("you need it"), "rod line without bag counts")
   end
   check(not shoppingText():find("%d+ Mote of Magic"), "no Mote rows in the shopping list")
-  local marked, first = textY(win(), "^Level 26%-30: Soul Dust.*you need this now"), textY(win(), "^Level 1%-10:")
+  local marked, first = textY(win(), "^Item level 31%-35  %-  Soul Dust.*you need this now"), textY(win(), "^Item level 5%-15")
   check(marked and first and marked < first, "the Soul Dust band first and marked")
   check(t:find("3 Lesser make 1 Greater"), "essence line")
   if not C_Container then check(not t:find("IN YOUR BAGS"), "no bag list without the bag API") end
@@ -3187,7 +3221,7 @@ function S.enchantTabCases()
     check(enchanting():find("Rod: Runed Truesilver Rod %(you have it%)"), "an Arcanite rod counts for the Truesilver one")
     MOCK.bags = {}
   end
-  check(t:find("Level 1%-10: Strange Dust[^\n]*you need this now"), "the Strange Dust band marked at 1")
+  check(t:find("Item level 5%-15  %-  Strange Dust[^\n]*you need this now"), "the Strange Dust band marked at 1")
   MOCK.setSkill("Enchanting", 265, 300)
   t = enchanting()
   check(t:find("Enchant Shield %- Greater Stamina") and t:find("Mythrin'dir") and t:find("any shield"), "skill 265: shield, formula vendor")
@@ -3204,6 +3238,8 @@ function S.enchantBags()
     { name = "Ironforge Boots", quality = 2, level = 22, class = "Armor" },
     { name = "Rusty Sword", quality = 2, level = 8, class = "Weapon" },
     { name = "Blue Cloak", quality = 3, level = 33, class = "Armor" },
+    { name = "Quest Gloves", quality = 2, level = 1, itemLevel = 53, class = "Armor" },
+    { name = "Epic Boots", quality = 4, level = 45, itemLevel = 63, class = "Armor" },
     { name = "Linen Shirt", quality = 1, level = 5, class = "Armor" },
     { name = "Copper Ore", quality = 1, level = 1, class = "Trade Goods" },
     { name = "Unseen Gloves", quality = 2, level = 30, class = "Armor", loaded = false },
@@ -3211,9 +3247,12 @@ function S.enchantBags()
   openAt(30, "Professions")
   local t = enchanting()
   check(t:find("IN YOUR BAGS"), "bag list")
-  check(t:find("Ironforge Boots %(level 22%): Soul Dust or Greater Astral Essence"), "green armour: dust then essence")
-  check(t:find("Rusty Sword %(level 8%): Lesser Magic Essence or Strange Dust"), "green weapon: essence then dust")
-  check(t:find("Blue Cloak %(level 33%): Large Glowing Shard"), "blue: the shard")
+  check(t:find("Quest Gloves %(item level 53%): Dream Dust or Lesser Eternal Essence"),
+    "disenchant uses item level even when a quest item has no equip level")
+  check(t:find("Epic Boots %(item level 63%): Nexus Crystal"), "high-level epics give Nexus Crystals")
+  check(t:find("Ironforge Boots %(item level 27%): Soul Dust or Greater Astral Essence"), "green armour: dust then essence")
+  check(t:find("Rusty Sword %(item level 13%): Lesser Magic Essence or Strange Dust"), "green weapon: essence then dust")
+  check(t:find("Blue Cloak %(item level 38%): Large Glowing Shard"), "blue: the shard")
   check(not t:find("Linen Shirt") and not t:find("Copper Ore") and not t:find("Unseen Gloves"), "white, non-gear and unloaded items left out")
   local boots, sword = textY(win(), "^Ironforge Boots"), textY(win(), "^Rusty Sword")
   check(boots and sword and boots < sword, "the Soul Dust item first at 150")
@@ -3221,10 +3260,10 @@ function S.enchantBags()
   for i = 1, 12 do MOCK.bagItems[i] = { name = "Green Thing " .. i, quality = 2, level = 10 + i, class = "Armor" } end
   t = enchanting()
   local rows = 0
-  for _ in t:gmatch("Green Thing %d+ %(level") do rows = rows + 1 end
+  for _ in t:gmatch("Green Thing %d+ %(item level") do rows = rows + 1 end
   check(rows == 8, "at most 8 bag rows (" .. rows .. ")")
   MOCK.bagItems = {}
-  check(enchanting():find("No green or blue weapons or armour in your bags"), "empty bags")
+  check(enchanting():find("No material estimates for gear in your bags"), "empty bags")
   win():Hide()
 end
 
@@ -3347,6 +3386,28 @@ end
 local function openCraft() TradeSkillFrame:Show(); MOCK.event("TRADE_SKILL_SHOW"); MOCK.advance(0.6) end
 local function closeCraft() TradeSkillFrame:Hide(); MOCK.event("TRADE_SKILL_CLOSE"); MOCK.advance(0.6) end
 local function craftReady() return D() and not MOCK.minimal and _G.TradeSkillFrame end
+
+function S.craftLeatherworking()
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Leatherworking", 235, 300
+  MOCK.trade.recipes = { { "Nightscape Pants", "easy", 0 } }
+  MOCK.trade.layout()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  check(hint and hint:IsShown() and MOCK.textUnder(hint):find("Wicked Leather Gauntlets"), "Leatherworking hint")
+  local status = MOCK.textUnder(hint)
+  check(status:find("Not learned yet") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
+    "missing Leatherworking recipe names the pattern vendors")
+  MOCK.trade.recipes[2] = { "Wicked Leather Gauntlets", "optimal", 3 }
+  MOCK.trade.layout(); MOCK.advance(1)
+  local _, row = trace:GetPoint(1)
+  check(trace:IsShown() and row == TradeSkillSkill2 and MOCK.trade.selected == 0 and MOCK.trade.offset == 0,
+    "Leatherworking trace leaves the recipe list alone")
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Skinning", 20, 75
+  MOCK.trade.recipes = { { "Camp Chair", "optimal", 3 } }
+  MOCK.trade.layout(); MOCK.advance(1)
+  check(not hint:IsShown() and not trace:IsShown(), "Skinning gathering route has no crafting overlay")
+  closeCraft()
+end
 
 function S.craftTrace()
   if not craftReady() then return end
