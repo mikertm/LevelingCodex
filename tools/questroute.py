@@ -217,6 +217,11 @@ def audit(data, ref, cap=20):
                     values.update(v for v in rule if isinstance(v, str))
                 elif isinstance(rule, str):
                     values.add(rule)
+        # A dungeon pickup on the route is handed in inside its dungeon guide; once the route is past
+        # that dungeon's run window (its last level + 3, as Q.readyRun uses) it no longer holds a slot.
+        dungeon_end = {s["id"]: s["levels"][1] + 3 for s in sections if s.get("category") == "dungeon"}
+        dungeon_pick = {s.get("quest"): dungeon_end.get(s.get("dungeon")) for _, s, _ in rows
+                        if s["type"] == "accept" and s.get("dungeon") in dungeon_end}
         for race in sorted(races or {""}):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
@@ -234,6 +239,9 @@ def audit(data, ref, cap=20):
                         kind, quest = step["type"], step.get("quest")
                         # A clean-up note: quests the player abandons here if they still hold them.
                         active.difference_update(step.get("drop", []))
+                        if not section.get("category"):
+                            active.difference_update({q for q in active if dungeon_pick.get(q) is not None
+                                                      and section["levels"][0] > dungeon_pick[q]})
                         if kind == "accept":
                             for required in step.get("chain", []):
                                 if required not in finished:
