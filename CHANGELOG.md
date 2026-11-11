@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Alliance quest guide
+
+- **Early Wetlands (20-25) rebuilt around Menethil Harbor.** The chapter now starts where the Auberdine ship lands: two short coast loops, then one trip east and back along the road. That trip covers the Green Belt, Thelgen Rock, the Mosshide camps, Ironbeard's Tomb and then the Whelgar dig. It adds quests already on the way: Alchemical Hazards, Digging Through the Ooze, the Excavation Team delivery, The Third Fleet, the statuette's Forever follow-up for Captain Stoutfist, The Greenwarden, and Hollee's note when you carry it. That's 19 quests instead of 12, with less walking.
+
 ### Quest guide helpers
 
 - **Map pin.** The current step gets the game's own map waypoint, so it shows on your world map and minimap. A waypoint you place yourself is never replaced (Settings > Pin the current step on the map).

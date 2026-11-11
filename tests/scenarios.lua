@@ -869,6 +869,22 @@ function S.questWetlandsTravel()
   check(questText(frame, "Deeprun Tram"), "the tram step follows the Stormwind pickup")
 end
 
+function S.questWetlandsEarly()
+  -- The 20-25 Wetlands chapter starts in Menethil Harbor, where the Auberdine ship lands, and
+  -- takes Fitzsimmons' Greenwarden breadcrumb as a normal step (it is optional in the 26-30 route).
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 21, 1437, 9.6, 59.8
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Levels 20-25"), "a level 21 in Menethil follows the early Wetlands chapter")
+  check(questText(frame, "Flight path - Menethil Harbor, Wetlands"), "the early chapter starts at the Menethil flight master")
+  click(frame, "Next")
+  MOCK.bind = "Menethil Harbor"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(questText(frame, "Accept - The Absent Minded Prospector"), "the Menethil pickups follow the bind")
+  click(frame, "Next")
+  check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
+end
+
 function S.questWetlandsEnd()
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris after the Stormwind turn-ins.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
