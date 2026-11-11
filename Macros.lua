@@ -9,9 +9,17 @@ local _, ns = ...
 -- Set up while in combat: "full" (asked for by the player) or "refresh" (after a level-up).
 local pending
 
--- Exact bodies from before the Warrior priority update. Their names stay on existing bars.
+-- Exact bodies from earlier Warrior builds (the priority update and the one-spell-per-button
+-- set it was replaced by). Their names stay on existing bars.
+local SA = "/startattack [harm,nodead]\n"
 local warriorLegacyBodies = {
   Fight = {
+    "#showtooltip Heroic Strike\n" .. SA .. "/cast [harm,nodead] Heroic Strike",
+    "#showtooltip\n" .. SA .. "/cast [nocombat,stance:1,harm,nodead] Charge; [harm,nodead] Heroic Strike",
+    "#showtooltip\n" .. SA .. "/cast [nocombat,stance:1,harm,nodead] Charge; [nocombat,harm,nodead] Battle Stance; " ..
+      "[combat,nostance:2,known:71,harm,nodead] Defensive Stance; [harm,nodead] Sunder Armor",
+    "#showtooltip\n" .. SA .. "/cast [nocombat,stance:2,known:1310317,harm,nodead][nocombat,stance:1,harm,nodead] Charge; " ..
+      "[nocombat,harm,nodead] Battle Stance; [combat,nostance:2,known:71,harm,nodead] Defensive Stance; [harm,nodead] Sunder Armor",
     "#showtooltip Sunder Armor\n/startattack [harm,nodead]\n/cast [harm,nodead] Sunder Armor",
     "#showtooltip\n/startattack\n/cast [nocombat] Charge\n" ..
       "/castsequence [combat] reset=target Rend, Heroic Strike, Heroic Strike, Heroic Strike",
@@ -25,15 +33,33 @@ local warriorLegacyBodies = {
   ["Fight pack"] = {
     "#showtooltip\n/startattack\n/cast [combat,stance:1] Defensive Stance\n" ..
       "/castsequence [combat] reset=target Thunder Clap, Sunder Armor, Cleave, Sunder Armor, Sunder Armor",
+    "#showtooltip Thunder Clap\n/cast Thunder Clap",
+    "#showtooltip Thunder Clap\n/cast [stance:3,known:71] Defensive Stance; [stance:3] Battle Stance; Thunder Clap",
   },
   ["Block & Revenge"] = {
     "#showtooltip\n/startattack\n/castsequence reset=6/target/combat Shield Block, Revenge",
     "#showtooltip Shield Block\n/cast [stance:2] Shield Block",
+    "#showtooltip Shield Block\n/cast [nostance:2,equipped:Shields] Defensive Stance; [stance:2,equipped:Shields] Shield Block",
   },
   ["Rage up"] = { "#showtooltip\n/castsequence reset=60 Bloodrage, Battle Shout" },
-  Panic = { "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall" },
-  Taunt = { "#showtooltip Taunt\n/cast [stance:2,harm,nodead] Taunt" },
+  Panic = { "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall", "#showtooltip\n/cast Last Stand" },
+  Taunt = {
+    "#showtooltip Taunt\n/cast [stance:2,harm,nodead] Taunt",
+    "#showtooltip Taunt\n/cast [nostance:2,harm,nodead] Defensive Stance; [stance:2,harm,nodead] Taunt",
+  },
   ["Shield Wall"] = { "#showtooltip Shield Wall\n/cast [stance:2] Shield Wall" },
+  ["Rend again"] = { "#showtooltip Rend\n/startattack\n/cast Rend" },
+  Hamstring = { "#showtooltip Hamstring\n/startattack\n/cast [stance:2] Battle Stance; Hamstring" },
+  ["Shield Bash"] = {
+    "#showtooltip Shield Bash\n/cast [harm,nodead] Shield Bash",
+    "#showtooltip Shield Bash\n/cast [stance:3,equipped:Shields,harm,nodead] Battle Stance; [harm,nodead] Shield Bash",
+    "#showtooltip\n/cast [stance:3,harm,nodead] Pummel; [equipped:Shields,harm,nodead] Shield Bash; " ..
+      "[known:2458,harm,nodead] Berserker Stance",
+  },
+  Revenge = { "#showtooltip\n/startattack\n/cast Revenge" },
+  ["Victory Rush"] = { "#showtooltip Victory Rush\n" .. SA .. "/cast [harm,nodead] Victory Rush" },
+  ["Challenge Shout"] = { "#showtooltip Challenging Shout\n/cast Challenging Shout" },
+  ["Shield Slam"] = { "#showtooltip Shield Slam\n" .. SA .. "/cast [harm,nodead] Shield Slam" },
 }
 
 local function trim(s) return (tostring(s or ""):gsub("%s+$", "")) end

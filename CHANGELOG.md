@@ -19,6 +19,17 @@
 - Fixed: logging in or arriving in a zone could keep you on another zone's guide. This happened when a quest ahead needed an earlier chain you skipped there, such as Sven's chain in Duskwood for The Doomed Fleet in the Wetlands. The guide now starts with work in your zone, drops chains you skipped elsewhere, and only sends you for a single missing pickup when the route reaches the quest that needs it. The Greenwarden's turn-in now shows if you have it.
 - Fixed: the quest step window no longer takes Forever's controller focus, which could leave the analog sticks unresponsive. Controller step controls stay in the Quests tab.
 
+### Warrior macros
+
+- **Smarter buttons, fewer slots.** Each Warrior macro now does something a spellbook icon can't. Abilities that skip the global cooldown ride along on the attack they belong with:
+  - **Fight** fires Bloodrage in combat whenever it's ready.
+  - **Fight pack** queues Cleave after every Thunder Clap that lands.
+  - **Revenge** and **Shield Slam** keep Shield Block rolling, and **Shield Block** fires Revenge when it's lit.
+  - **Taunt** puts a Sunder Armor on the enemy in the same press.
+  - The separate Bloodrage and Cleave macros are gone.
+- **Context, not copies.** **Fight** and **Victory Rush** select the nearest enemy when you have none or yours just died. **Battle Shout** casts Demoralizing Shout in combat. **Revenge** casts Overpower in Battle Stance. **Taunt** reaches the enemy hitting a party member you've selected, or the enemy under your mouse. **Shield Bash** takes a mouseover enemy.
+- Run Set up macros (or `/codex macros`) to update your buttons in place. You can delete the old Rage up and Cleave macros.
+
 ## v0.16.0
 
 - The Alliance quest guide now switches to an available local route when you enter a zone. It resumes active objectives and ready turn-ins, and checks completed quest history to catch you up while keeping required prerequisites.

@@ -2222,59 +2222,71 @@ local function installedMacroBody(name)
 end
 
 function S.warriorPackMacros()
+  local function has(name, text)
+    local body = installedMacroBody(name)
+    return body and body:find(text, 1, true) and true or false
+  end
   MOCK.level = 1
   slash("macros")
-  check((installedMacroBody("Fight") or ""):find("Heroic Strike", 1, true), "Warrior has a starting attack macro")
+  check(has("Fight", "Heroic Strike") and has("Fight", "/targetenemy [noharm][dead]"),
+    "Warrior's first Fight attacks and picks the nearest enemy when none is selected")
   check(not installedMacroBody("Fight pack"), "no Clap macro before training level")
 
   MOCK.level = 6
   slash("macros")
-  check(installedMacroBody("Fight"):find("[nocombat,stance:1,harm,nodead] Charge", 1, true),
-    "Fight can Charge from Battle Stance after level 4")
-  check(installedMacroBody("Fight pack") == "#showtooltip Thunder Clap\n/cast Thunder Clap",
-    "Thunder Clap is a standalone cast as soon as it can be trained")
+  check(has("Fight", "[nocombat,harm,nodead] Charge; [harm,nodead] Heroic Strike"),
+    "Fight Charges out of combat and queues Heroic Strike in combat after level 4")
+  check(installedMacroBody("Fight pack"):match("\n/cast Thunder Clap$") and not has("Fight pack", "Cleave"),
+    "Thunder Clap has its button as soon as it can be trained, without Cleave yet")
 
   MOCK.level = 20
   slash("macros")
-  for name, spell in pairs({
-    Fight = "Sunder Armor", Revenge = "Revenge", Cleave = "Cleave", Taunt = "Taunt",
-    ["Shield Bash"] = "Shield Bash", ["Block & Revenge"] = "Shield Block", ["Victory Rush"] = "Victory Rush",
-  }) do
-    local body = installedMacroBody(name)
-    check(body and body:match("\n/cast [^\n]*" .. spell .. "$") and not body:find("/castsequence", 1, true),
-      name .. " makes " .. spell .. " available independently")
-  end
   local fight = installedMacroBody("Fight")
   check(fight:find("[nocombat,harm,nodead] Battle Stance", 1, true) and
-    fight:find("[combat,nostance:2,known:71,harm,nodead] Defensive Stance", 1, true),
-    "pre-Vanguard Fight swaps for Charge out of combat and Defensive after the pull")
-  check(installedMacroBody("Taunt"):find("[nostance:2,harm,nodead] Defensive Stance;", 1, true),
-    "Taunt can enter Defensive before taunting the selected enemy")
-  check(installedMacroBody("Block & Revenge"):find("[nostance:2,equipped:Shields] Defensive Stance;", 1, true),
-    "Shield Block can enter Defensive with a shield equipped")
+    fight:find("[combat,nostance:2,known:71] Defensive Stance", 1, true) and fight:find("Sunder Armor\n", 1, true),
+    "pre-Vanguard Fight dances to Battle for Charge and back to Defensive for Sunder")
+  check(fight:match("\n/cast %[combat%] Bloodrage$"), "Bloodrage rides after the attack, in combat only")
+  check(not installedMacroBody("Rage up") and not installedMacroBody("Cleave"),
+    "Bloodrage and Cleave no longer take their own macro slots")
+  check(installedMacroBody("Fight pack"):match("\n/cast Thunder Clap\n/cast %[harm,nodead%] Cleave$"),
+    "Cleave rides after Thunder Clap from 20")
+  check(has("Battle Shout", "[combat,harm,nodead,known:1160] Demoralizing Shout; Battle Shout"),
+    "the Shout button buffs out of combat and Demoralizing Shouts in combat")
+  check(has("Taunt", "[@targettarget,harm,nodead] Taunt\n") and
+    installedMacroBody("Taunt"):match("\n/cast [^\n]*Sunder Armor$"),
+    "Taunt works through a selected party member and Sunders on the same press")
+  check(has("Revenge", "[stance:1,harm,nodead] Overpower; [harm,nodead] Revenge\n") and
+    installedMacroBody("Revenge"):match("Shield Block$"), "Revenge casts Overpower in Battle and Shield Block rides along")
+  check(has("Block & Revenge", "[nostance:2,equipped:Shields] Defensive Stance;") and
+    installedMacroBody("Block & Revenge"):match("\n/cast %[stance:2,harm,nodead%] Revenge$"),
+    "Shield Block can enter Defensive and Revenge rides along")
+  check(has("Victory Rush", "/targetenemy [noharm][dead]"), "Victory Rush picks the next enemy after a kill")
+  check(has("Shield Bash", "[@mouseover,harm,nodead][harm,nodead] Shield Bash"), "Shield Bash takes a mouseover enemy")
   check(not installedMacroBody("Shield Slam"), "no Shield Slam macro before its talent level")
+  for _, m in ipairs(MOCK.macros) do
+    check(not m.body:find("/castsequence", 1, true), m.name .. " never uses a cast sequence")
+  end
 
   MOCK.level = 30
   slash("macros")
   fight = installedMacroBody("Fight")
-  check(fight:find("[nocombat,stance:2,known:1310317,harm,nodead]", 1, true) and
-    fight:find("[nocombat,harm,nodead] Battle Stance", 1, true),
+  check(fight:find("[nocombat,stance:2,known:1310317,harm]", 1, true) and
+    fight:find("[nocombat,harm] Battle Stance", 1, true),
     "Fight uses Defensive Charge with Vanguard and retains a Battle fallback")
   local clap = installedMacroBody("Fight pack")
-  check(clap:find("[stance:3,known:71] Defensive Stance;", 1, true) and clap:match("; Thunder Clap$") and
-    not clap:find("/castsequence", 1, true) and not clap:find("Sunder", 1, true),
-    "Berserker can swap for Clap and pack Rage remains independent")
+  check(clap:find("[stance:3,known:71] Defensive Stance;", 1, true) and clap:find("; Thunder Clap\n", 1, true) and
+    not clap:find("Sunder", 1, true), "Berserker can swap for Clap")
 
   MOCK.level = 40
   slash("macros")
-  check(installedMacroBody("Fight"):match("\n/cast [^\n]*Sunder Armor$"), "Sunder stays usable when Shield Slam unlocks")
-  check((installedMacroBody("Shield Slam") or ""):match("\n/cast [^\n]*Shield Slam$"), "Shield Slam has its own button")
+  check(installedMacroBody("Fight"):find("Sunder Armor\n", 1, true), "Sunder stays usable when Shield Slam unlocks")
+  check(has("Shield Slam", "[harm,nodead] Shield Slam\n") and installedMacroBody("Shield Slam"):match("Shield Block$"),
+    "Shield Slam has its own button with Shield Block riding along")
   check(installedMacroBody("Panic"):match("\n/cast Last Stand$"), "Last Stand has its own button")
   check((installedMacroBody("Shield Wall") or ""):match("\n/cast [^\n]*Shield Wall$"), "Shield Wall has its own button")
-  check(installedMacroBody("Shield Wall"):find("[nostance:2,equipped:Shields] Defensive Stance;", 1, true),
+  check(has("Shield Wall", "[nostance:2,equipped:Shields] Defensive Stance;"),
     "Shield Wall can enter Defensive with a shield equipped")
-  check(installedMacroBody("Shield Bash"):find("[stance:3,harm,nodead] Pummel;", 1, true) and
-    installedMacroBody("Shield Bash"):find("[equipped:Shields,harm,nodead] Shield Bash;", 1, true),
+  check(has("Shield Bash", "[stance:3,harm,nodead] Pummel;") and has("Shield Bash", "[equipped:Shields,harm,nodead] Shield Bash;"),
     "one interrupt button chooses Pummel or Shield Bash")
 end
 
@@ -2288,24 +2300,30 @@ function S.warriorMacroUpgrade()
     { name = "Fight pack", icon = 1, body = pack, perChar = true },
     { name = "Fight", icon = 1, body = fight, perChar = true },
     { name = "Panic", icon = 1, body = "#showtooltip\n/castsequence reset=180 Last Stand, Shield Wall", perChar = true },
-    { name = "Cleave", icon = 1, body = "/say mine", perChar = true },
+    { name = "Victory Rush", icon = 1, body = "/say mine", perChar = true },
     { name = "Taunt", icon = 1, body = "#showtooltip Taunt\n/cast [stance:2,harm,nodead] Taunt", perChar = true },
+    -- from the one-spell-per-button build
+    { name = "Revenge", icon = 1, body = "#showtooltip\n/startattack\n/cast Revenge", perChar = true },
+    { name = "Shield Slam", icon = 1, perChar = true,
+      body = "#showtooltip Shield Slam\n/startattack [harm,nodead]\n/cast [harm,nodead] Shield Slam" },
   }
   MOCK.level = 40
   MOCK.event("PLAYER_LEVEL_UP", 40)
   MOCK.advance(1.5)
-  check(#MOCK.macros == 5, "automatic upgrade edits existing macros only")
-  check(MOCK.macros[1].name == "Fight pack" and MOCK.macros[1].body:match("; Thunder Clap$"),
+  check(#MOCK.macros == 7, "automatic upgrade edits existing macros only")
+  check(MOCK.macros[1].name == "Fight pack" and MOCK.macros[1].body:match("Cleave$"),
     "legacy pack macro updates in place without SavedVariables")
-  check(MOCK.macros[2].name == "Fight" and MOCK.macros[2].body:match("\n/cast [^\n]*Sunder Armor$"),
+  check(MOCK.macros[2].name == "Fight" and MOCK.macros[2].body:match("Bloodrage$"),
     "legacy single-target loop updates in place without SavedVariables")
   check(MOCK.macros[3].name == "Panic" and MOCK.macros[3].body:match("\n/cast Last Stand$"),
     "legacy defensive sequence updates in place without SavedVariables")
-  check(MOCK.macros[5].name == "Taunt" and MOCK.macros[5].body:find("Defensive Stance;", 1, true),
+  check(MOCK.macros[5].name == "Taunt" and MOCK.macros[5].body:find("Sunder Armor", 1, true),
     "Taunt from the split-macro build updates in place without SavedVariables")
+  check(MOCK.macros[6].body:find("Overpower", 1, true) and MOCK.macros[7].body:match("Shield Block$"),
+    "one-spell buttons from the previous build update in place without SavedVariables")
   slash("macros")
   check(MOCK.macros[4].body == "/say mine" and chatHas("kept your own"), "manual upgrade preserves a player macro")
-  check(installedMacroBody("Shield Wall") and installedMacroBody("Shield Slam"), "setup adds newly available direct buttons")
+  check(installedMacroBody("Shield Wall") and installedMacroBody("Block & Revenge"), "setup adds newly available buttons")
 end
 
 -- Talent tracing against a mock talent window.
