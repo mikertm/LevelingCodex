@@ -503,6 +503,60 @@ function S.questQuestieTracker()
   check(chatHas("Step window: saved position"), "debug names the saved position")
 end
 
+-- QuestieDB fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
+local function koboldDB(opts)
+  opts = opts or {}
+  MOCK.makeQuestieDB({
+    contract = opts.contract, noZones = opts.noZones,
+    quests = { [7] = { objectives = opts.objectives or { [1] = { { 6, nil, 0 }, { 257, nil, 0 }, { 999, nil, 0 } } } } },
+    npcs = {
+      [6] = { name = "Kobold Vermin", spawns = {
+        [12] = { { 50.0, 38.0 }, { 47.0, 34.0 }, { 48.9, 40.6, 5 }, { 48.8, 54.0 } },
+        [40] = { { 48.8, 44.0 } } } },
+      [257] = { name = "Kobold Worker", spawns = { [12] = { { 44.0, 36.4 } } } },
+      [999] = { name = "Ghost" },
+    },
+    objects = opts.objects, items = opts.items,
+  })
+end
+
+function S.questQuestieDB()
+  S.login()
+  slash("quests")
+  click(win(), "Settings")
+  check(not questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "no setting without QuestieDB")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: not loaded") and chatHas("QuestieDB: not installed"), "debug names what is missing")
+  koboldDB({ contract = 0 })
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(contract check failed%)"), "an incompatible QuestieDB is refused")
+  koboldDB({ noZones = true })
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(no zone table%)"), "QuestieDB without its zone table is refused")
+  koboldDB()
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable QuestieDB is reported")
+  click(win(), "Settings")
+  check(questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "the setting shows with QuestieDB")
+end
+
+function S.questQuestieMinimal()
+  MOCK.makeQuestie({ autoAccept = true })
+  koboldDB()
+  S.login()
+  slash("quests")
+  click(win(), "Settings")
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("QUEST_DETAIL")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: loaded") and chatHas("QuestieDB: contract 4"), "the Questie block works on a minimal client")
+end
+
 function S.questFlights()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
   LevelingCodexCharDB = { questFlights = { ["Darkshire, Duskwood"] = true } }

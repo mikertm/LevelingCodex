@@ -1161,6 +1161,12 @@ renderers.settings = function()
   tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
     "A button below the item button that targets the current step's quest giver. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+  if ns.questie.usable() then
+    tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
+      db.noNearestSpawn = not db.noNearestSpawn
+      ns.questRefresh()
+    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need. The spawns come from your QuestieDB addon.")
+  end
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."

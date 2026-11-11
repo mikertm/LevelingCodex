@@ -572,6 +572,8 @@ def main():
     for minimal in (False, True):
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
+        if minimal:
+            runs.append(("WARRIOR/minimal/questie", "WARRIOR", True, ["questQuestieMinimal"]))
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questDuskwoodZoneEntry",
@@ -588,7 +590,7 @@ def main():
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
                              "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
-                             "questQuestieAuto", "questQuestieTracker"):
+                             "questQuestieAuto", "questQuestieTracker", "questQuestieDB"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
                                   ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman")):
