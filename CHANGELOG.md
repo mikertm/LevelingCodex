@@ -12,7 +12,16 @@
   - Everyone: the Crossroads and the northern and southern Barrens, Sun Rock and Camp Taurajo, Zoram'gar, then the Sepulcher, Hillsbrad, Stonetalon, Ashenvale (Splintertree) and Thousand Needles to Freewind Post. Shimmering Flats is an alternate at the end.
 - **Forever content included:** the new starting-zone quests, Camping 101's Cooking intro (other professions are optional), the Orc Mage and Troll Warlock class letters, Forever's new quests in Durotar, the Barrens, Stonetalon and Ashenvale, and Orgrimmar's city errands.
 - **Horde dungeon checklists:** Ragefire Chasm, Ruins of Lordaeron, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps and Razorfen Kraul, with their Horde quest chains before, inside and after the run, and bosses in order. Planned runs add their solo pickups to the route.
-- Not yet: Horde class quest chains beyond the short ones in the starting zones.
+- **Horde class quests to 30**, inline where they sit on the route and as class guides in the Quests tab otherwise:
+  - Warrior: Defensive Stance, Forged Steel, Agamand Heirlooms, the Field of Giants trial, the Brutal armor set, Berserker Stance.
+  - Paladin (Undead): Redemption, Lumina Windsinger, Wolfsbane.
+  - Hunter: Taming the Beast for Orcs and Trolls.
+  - Rogue: the Orgrimmar chain, Lockpicking, Poisons, Tools of the Trade, the Horn of Xelthos, Ravenholdt, Syndicate Sabotage, the Eye of Bhossca.
+  - Priest: Hex and Touch of Weakness, Shadowguard, Dark Sacrifice.
+  - Mage: Study, Ju-Ju Heaps, Spellfire Robes, Nether-lace Garment, the Mage's Wand.
+  - Warlock: Voidwalker for Orcs and Trolls, Succubus and Incubus, the Orb of Soran'ruk, Felhunter.
+  - Druid: Bear Form, Moonglade (Skyborne), Cure Poison, Aquatic Form, Cat Form.
+  - Shaman: the Fire, Water and Air totems.
 
 ### Alliance quest guide
 

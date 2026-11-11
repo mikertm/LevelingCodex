@@ -935,6 +935,25 @@ function S.questHunterGuides()
   check(questText(questViewer(), "Accept - Taming the Beast"), "the guide starts at the Dwarf taming pickup")
 end
 
+-- Horde class quests: inline steps on the route and side guides filtered by race.
+function S.questHordeHunter()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 11, 1411
+  S.login()
+  slash("quests")
+  check(routeHas("Taming the Beast"), "an Orc Hunter's Durotar route includes Taming the Beast")
+  MOCK.faction = nil
+end
+
+function S.questHordeShaman()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 20, 1413
+  S.login()
+  slash("quests")
+  check(findButton(win(), function(l) return l == "Shaman: Water Totem" end), "Tauren Shamans get the Horde Water Totem guide")
+  click(win(), "Shaman: Water Totem")
+  check(questText(questViewer(), "Call of Water"), "the Water Totem guide opens at its first step")
+  MOCK.faction = nil
+end
+
 function S.questShamanGuides()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 30, 1455
   S.login()

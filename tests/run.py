@@ -589,7 +589,8 @@ def main():
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
                              "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
-            for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides")):
+            for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
+                                  ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman")):
                 runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))
         for cls in CLASSES + [UNSUPPORTED]:
             runs.append(("%s/%s/main" % (cls, variant), cls, minimal, MAIN))
