@@ -152,7 +152,7 @@ chapter("ashenvale-early", "Ashenvale: Astranaar and the Coast", ashenvale, 18, 
     finish(973, delgren),
     action("hearth", kimlya, "Head back to Astranaar for the last turn-in.", ashHearth), finish(1034, pelturas),
     action("grind", kimlya, "Level 22 is a good point to enter Stonetalon. Finish an open hunt or take one of the suggested routes for more experience.",
-      { level = 22, suggest = { "lakeshire", "wetlands-early", "duskwood", "darkshore" } }),
+      { level = 22, suggest = { "lakeshire", "wetlands-early", "duskwood", "stonetalon" } }),
   })
 
 q(1070, "On Guard in Stonetalon", 21, 17)
@@ -247,6 +247,9 @@ q(1035, "Fallen Sky Lake", 30, 20)
 q(1140, "The Tower of Althalaxx", 28, 13)
 q(1021, "Vile Satyr! Dryads in Danger!", 32, 26)
 q(1031, "The Branch of Cenarius", 32, 26, 1021)
+-- Forever's Forest Song pair (Maseara Autumnmoon): the scroll at Satyrnaar, then the Xavian satyrs.
+q(98417, "Vengeful Trail", 30, nil, nil, true)
+q(98418, "Shared Fury", 30, nil, 98417, true)
 q(1037, "Velinde Starsong", 30, 25, 1022)
 q(1038, "Velinde's Effects", 30, 25, 1037)
 
@@ -309,11 +312,12 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
       { level = 28, suggest = { "duskwood-late", "wetlands", "redridge-late", "southshore" } }),
 
     -- The last circuit: west for new orders, then one sweep east from Lake Mystral to Xavian.
+    accept(1030, raene, "Before you leave Astranaar: take this only if you want to finish the rod chain. The last hand-in takes the transformation rod."),
     action("goto", melyria, "Follow the road west of Astranaar to the Shrine of Aessina."),
     finish(1022, melyria), accept(1037, melyria, "Melyria sends you to Darnassus about Velinde. You go there at the end of this chapter."),
     accept(1021, illiyana, "Illiyana, beside Melyria, sends you to the dryad Anilia in Xavian, the satyr camp in the far north-east."),
     accept(1140, delgren, "Go north to Maestra's Post. If you finished Delgren's tower chain, he wants two trapped souls freed in the east. Otherwise use Next."),
-    accept(1030, raene, "Return to Astranaar. Take this only if you want to finish the rod chain. The last hand-in takes the transformation rod."),
+    action("goto", ash(nil, 50.22, 56.23), "Head back south past Astranaar and take the east road toward Lake Mystral."),
     B.withItem(5462, finish(1030, krolg, "Find Krolg southeast of Lake Mystral and use Dartol's Rod of Transformation before speaking to him.")),
     B.withItem(5462, accept(1045, krolg, "Speak to Krolg in furbolg form.")),
     objective(1045, ash(nil, 54.75, 79.62), "Find Ran Bloodtooth southeast of the lake and loot his skull. Pull his guards separately and use Next if you need help with the camp.",
@@ -324,12 +328,20 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
       "Follow the south road east to Fallen Sky Lake. Kill the Shadethicket Oracle, level 30, on the shore and loot the Fallen Moonstone.", "Fallen Moonstone"),
     along(part(objective(1140, ash("Circle of Imprisonment", 66.6, 57.0),
       "Go north to Night Run and use the Circle of Imprisonment. Watch for Felmusk satyrs in stealth.", "Free the Highborne soul in Night Run"), 1), 1021),
-    finish(1021, anilia, "Continue north-east to Xavian. Anilia hides at the edge of the satyr camp."),
-    accept(1031, anilia),
-    objective(1031, ash("Geltharis", 78.0, 42.4), "Kill Geltharis, level 32, in Xavian for the Branch of Cenarius. Pull his guards first, bring a partner or use Next.",
-      "Branch of Cenarius"),
-    part(objective(1140, ash("Circle of Imprisonment", 81.6, 48.6), "Go south-east to Satyrnaar and use the circle there to free the second soul.",
+    action("goto", ash("Maseara Autumnmoon", 86.24, 45.86), "Follow the road east to Forest Song. Learn the flight path there if you can."),
+    accept(98417, ash("Maseara Autumnmoon", 86.24, 45.86), "Maseara Autumnmoon in Forest Song is looking for her husband Kurothel."),
+    part(objective(1140, ash("Circle of Imprisonment", 81.6, 48.6), "Go west to Satyrnaar and use the circle there to free the second soul.",
       "Free the Highborne soul in Satyrnaar"), 2),
+    objective(98417, ash("Vine-Wrapped Scroll", 80.92, 49.63), "Search just south-west of the circle for the Vine-Wrapped Scroll.", "Vine-Wrapped Scroll"),
+    finish(98417, ash("Maseara Autumnmoon", 86.24, 45.86), "Bring the scroll back east to Maseara."),
+    accept(98418, ash("Maseara Autumnmoon", 86.24, 45.86)),
+    finish(1021, anilia, "Go west to Xavian. Anilia hides at the edge of the satyr camp."),
+    accept(1031, anilia),
+    along(objective(1031, ash("Geltharis", 78.0, 42.4), "Kill Geltharis, level 32, in Xavian for the Branch of Cenarius. Pull his guards first, bring a partner or use Next.",
+      "Branch of Cenarius"), 98418),
+    objective(98418, ash(nil, 78.8, 45.8), "Finish the Xavian Rogues, Felsworn, Betrayers and Hellcallers around the camp.",
+      "5 Xavian Rogues", "5 Xavian Felsworn", "5 Xavian Betrayers", "5 Xavian Hellcallers"),
+    finish(98418, ash("Maseara Autumnmoon", 86.24, 45.86), "Return east to Maseara in Forest Song."),
     action("hearth", kimlya, "Return to Astranaar. On foot, take the main road west past Forest Song.", ashHearth),
     finish(1046, raene), finish(1035, pelturas),
     action("goto", illiyana, "Ride west to the Shrine of Aessina."), finish(1031, illiyana),
@@ -547,9 +559,10 @@ chapter("duskwood-late", "Darkshire: Worgen and the Night Watch", M.duskwood, 25
   action("hearth", trelayne, "Return to Darkshire for the last turn-ins.", darkshireHearth),
   finish(58, althea), finish(222, calor), accept(223, calor), finish(223, dw("Jonathan Carevin", 75.32, 49.02)),
   finish(160, ello, "Lord Ello Ebonlocke is in the town hall."), accept(251, ello),
-  finish(251, sirra), accept(401, sirra), finish(401, sirra, "Wait a moment while Sirra translates, then speak to her again."), accept(252, sirra),
+  finish(251, sirra), finish(79363, sirra), finish(96138, sirra),
+  accept(401, sirra), finish(401, sirra, "Wait a moment while Sirra translates, then speak to her again."), accept(252, sirra),
   finish(252, ello),
-  finish(181, viktori), finish(79363, sirra), finish(96138, sirra),
+  finish(181, viktori),
 })
 
 q(536, "Down the Coast", 30, 25)
@@ -571,6 +584,7 @@ chapter("southshore", "Southshore: Coastal Patrols", hillsbrad, 27, 30, {
   taxi("getfp", darla, "Southshore, Hillsbrad", "Take the ship from Menethil Harbor's northern pier or Auberdine's west pier. Stay aboard until Southshore, then walk north through town to Darla Harris."),
   action("grind", darla, "The western murlocs are level 30 to 32. Try them around level 29 with a partner, or finish more quests before returning.",
     { level = 29, suggest = { "wetlands", "duskwood-late", "ashenvale-late" }, guide = "dungeon-city-of-dalaran" }),
+  finish(98219, farren, "Lieutenant Farren Orinelle is on the Southshore dock road. Report to him for Lord Grayson."),
   accept(536, farren),
   objective(536, hill(nil, 47.6, 64.6), "Work west from the docks along the Western Strand. Pull Tidehunters and Oracles to dry land and watch for adds from the surf.",
     "10 Torn Fin Tidehunters", "10 Torn Fin Oracles"),
