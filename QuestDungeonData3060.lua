@@ -774,17 +774,274 @@ do
   })
 end
 
--- Guides not filled in yet: entrance stubs, so the route's forDungeon tags have a target.
-for _, s in ipairs({
-  { "dungeon-dire-maul-east", "Dire Maul: East", M.feralas, 55, 60, 429, "Dire Maul", dmDoor },
-  { "dungeon-dire-maul-west", "Dire Maul: West", M.feralas, 57, 60, 429, "Dire Maul", dmDoor },
-  { "dungeon-dire-maul-north", "Dire Maul: North", M.feralas, 57, 60, 429, "Dire Maul", dmDoor },
-  { "dungeon-scholomance", "Scholomance", M.wpl, 57, 60, 289, "Scholomance", at("Caer Darrow", 69.4, 72.8, M.wpl) },
-  { "dungeon-stratholme", "Stratholme", M.epl, 57, 60, 329, "Stratholme", at("Stratholme gate", 31.2, 15.6, M.epl) },
-}) do
-  add({ id = s[1], title = s[2], zone = s[3], levels = { s[4], s[5] }, instanceID = s[6], instance = s[7],
-    sources = { qdb } }, {
-    uncertain(enter(s[2], s[8], "Meet your group at the entrance and go in together."),
-      "Entrance position from the classic map; check it in game."),
+-- Dire Maul: East. Feathermoon, the Lariss Pavilion and Rabine Saturna's Felvine.
+do
+  local name = "Dire Maul: East"
+  local fe = on.feralas
+  local goodman = on.stormwind("Crier Goodman", 56.39, 74.09)
+  local latronicus = fe("Latronicus Moonspear", 30.38, 46.17)
+  local azj = fe("Azj'Tordin", 76.91, 37.35)
+  local rabine = on.moonglade("Rabine Saturna", 51.69, 45.1)
+  need(7494, "Feathermoon Stronghold", 57, 54)
+  need(7488, "Lethtendris's Web", 57, 54, 7494)
+  need(7441, "Pusillin and the Elder Azj'Tordin", 58, 54)
+  need(5526, "Shards of the Felvine", 60, 56, 5527)
+  B.breadcrumb(7494, 7488)
+  add({ id = "dungeon-dire-maul-east", title = name, zone = M.feralas, levels = { 55, 60 }, instanceID = 429, instance = "Dire Maul",
+    links = { "dungeon-dire-maul-west", "dungeon-dire-maul-north" },
+    bosses = {
+      { name = "Pusillin", npc = 14354,
+        tip = "An imp who runs off when you speak to him. Chase him through the halls; he fights at the end with his imps." },
+      { name = "Zevrim Thornhoof", npc = 11490,
+        tip = "His Sacrifice stuns and drains one player. Burn him and heal through it." },
+      { name = "Hydrospawn", npc = 13280,
+        tip = "A water elemental. His Riptide and knockback scatter the group; tank him against a wall." },
+      { name = "Lethtendris", npc = 14327,
+        tip = "Kill her pimgib imp first. She casts Shadow Bolt Volley; spread and interrupt." },
+      { name = "Alzzin the Wildshaper", npc = 11492,
+        tip = "He changes form often. Kill his adds and keep moving with him. Use the Reliquary on the Felvine after he dies." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, join(copy("silithus-59", { 5527 }), copy("silithus-60", { 5527 }), {
+    accept(5526, rabine, "Rabine wants a shard of the Felvine sealed in the Reliquary."),
+    accept(7494, goodman, "Crier Goodman in Stormwind's Trade District announces the Feathermoon call."),
+    finish(7494, latronicus, "Latronicus Moonspear commands Feathermoon Stronghold."),
+    accept(7488, latronicus),
+    accept(7441, azj, "Azj'Tordin waits at the Lariss Pavilion in eastern Feralas."),
+    uncertain(enter(name, dmDoor, "Ride to the ruined city in central Feralas. The East wing's portal is in the courtyard reached from the Broken Commons."),
+      "Wing entrance positions from the classic map; check in game."),
+  }), {
+    objective(7441, nil, "Speak to Pusillin and chase him; loot his book when he gives up.", "Azj'Tordin's Book of Incantations"),
+    objective(7488, nil, "Kill Lethtendris and loot her web.", "Lethtendris's Web"),
+    withItem(18539, objective(5526, nil, "Kill Alzzin, then use the Reliquary of Purity on the Felvine.", "Felvine Shard")),
+  }, {
+    finish(7441, azj), finish(7488, latronicus), finish(5526, rabine),
+  })
+end
+
+-- Dire Maul: West. The pylons, Immol'thar and the Athenaeum.
+do
+  local name = "Dire Maul: West"
+  local runethorn = on.feralas("Scholar Runethorn", 31.65, 43.45)
+  need(7482, "Elven Legends", 60, 54)
+  need(7461, "The Madness Within", 60, 56)
+  need(7462, "The Treasure of the Shen'dralar", 60, 56, 7461)
+  add({ id = "dungeon-dire-maul-west", title = name, zone = M.feralas, levels = { 57, 60 }, instanceID = 429, instance = "Dire Maul",
+    links = { "dungeon-dire-maul-east", "dungeon-dire-maul-north" },
+    bosses = {
+      { name = "Tendris Warpwood", npc = 11489,
+        tip = "A treant with heavy roots and stuns. Tank him near the courtyard door and heal through the roots." },
+      { name = "Illyanna Ravenoak", npc = 11488,
+        tip = "A hunter with a pet bear. Kill or crowd control the bear; she volleys the group." },
+      { name = "Magister Kalendris", npc = 11487,
+        tip = "Interrupt his Mind Blast and dispel his Shadow Word: Pain." },
+      { name = "Immol'thar", npc = 11496,
+        tip = "Shut down the five pylons first. He summons eyes of Immol'thar; kill them and avoid his Trample." },
+      { name = "Prince Tortheldrin", npc = 11486,
+        tip = "In the Athenaeum. He whirlwinds and teleports to random players; keep healers ready." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, {
+    accept(7482, runethorn, "Scholar Runethorn at Feathermoon wants news of Kariel Winthalus."),
+    uncertain(enter(name, dmDoor, "Ride to the ruined city in central Feralas. The West wing's portal is in the Capital Gardens courtyard."),
+      "Wing entrance positions from the classic map; check in game."),
+  }, {
+    accept(7461, nil, "The Shen'dralar Ancient in the gardens wants Immol'thar freed and killed."),
+    objective(7461, nil, "Kill the guardians at the five pylons, then Immol'thar in his prison.", "Pylons powered down", "Immol'thar"),
+    finish(7461, nil, "Return to the Shen'dralar Ancient."),
+    accept(7462, nil, "Kill Prince Tortheldrin, then look for the treasure in the Athenaeum."),
+    finish(7462, nil, "Open the Treasure of the Shen'dralar in the Athenaeum."),
+    uncertain(objective(7482, nil, "Kariel Winthalus's spirit is in the Athenaeum library. Speak to him.", "Kariel Winthalus"),
+      "Some guides do Elven Legends in the Gordok wing; check where Kariel is."),
+  }, {
+    finish(7482, runethorn),
+  })
+end
+
+-- Dire Maul: North. The Gordok ogres and the tribute run.
+do
+  local name = "Dire Maul: North"
+  need(5528, "The Gordok Taste Test", 60, 57)
+  need(7703, "Unfinished Gordok Business", 60, 56)
+  add({ id = "dungeon-dire-maul-north", title = name, zone = M.feralas, levels = { 57, 60 }, instanceID = 429, instance = "Dire Maul",
+    links = { "dungeon-dire-maul-west", "dungeon-dire-maul-east" },
+    bosses = {
+      { name = "Guard Mol'dar", npc = 14326,
+        tip = "For the tribute run, leave the guards alive. If you fight him, face his cleave away." },
+      { name = "Stomper Kreeg", npc = 14322,
+        tip = "A drunk ogre. If fought, his whirlwind hits melee." },
+      { name = "Guard Fengus", npc = 14321,
+        tip = "Tribute run: leave him alive. Otherwise tank him away from patrols." },
+      { name = "Guard Slip'kik", npc = 14323,
+        tip = "Use the Ogre Suit or freeze trap to slip past him for the tribute; otherwise a plain fight." },
+      { name = "Captain Kromcrush", npc = 14325,
+        tip = "He calls two ogre guards at low health. Save cooldowns for that." },
+      { name = "Cho'Rush the Observer", npc = 14324,
+        tip = "A caster beside King Gordok. Interrupt him; he becomes friendly if you kill the King last." },
+      { name = "King Gordok", npc = 11501,
+        tip = "Kill him after Cho'Rush engages; his Mortal Strike and knockback need a steady tank. The ogres then crown your group." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, {
+    uncertain(enter(name, dmDoor, "Ride to the ruined city in central Feralas. The Gordok wing's portal is on the north side of the courtyard."),
+      "Wing entrance positions from the classic map; check in game."),
+  }, {
+    tip("Tribute run", "Leave the guards alive and kill only King Gordok for the tribute chest. Any guard you kill makes the chest smaller."),
+    accept(5528, nil, "After King Gordok falls, Stomper Kreeg offers a taste test."),
+    finish(5528, nil, "Try the brew and turn the quest in to Kreeg."),
+    accept(7703, nil, "Captain Kromcrush wants the Gauntlet of Gordok Might; Prince Tortheldrin in the West wing has it."),
+    uncertain(objective(7703, nil, "Kill Prince Tortheldrin in Dire Maul West and take the gauntlet from the chest.", "Gauntlet of Gordok Might"),
+      "The gauntlet's chest is in the West wing; open that guide."),
+    finish(7703, nil, "Bring the gauntlet back to Kromcrush."),
+  })
+end
+
+-- Scholomance. Light's Hope, Chillwind Camp and Caer Darrow; Ras Frostwhisper's chain runs through Stratholme.
+do
+  local name = "Scholomance"
+  local betina = on.epl("Betina Bigglezink", 71.66, 49.94)
+  local leonid = on.epl("Leonid Barthalomew the Revered", 71.89, 48.29)
+  local weldon = on.wpl("Weldon Barov", 43.45, 83.73)
+  local eva = on.wpl("Eva Sarkhoff", 70.22, 73.71)
+  local marduke = on.wpl("Magistrate Marduke", 70.57, 74.11)
+  need(5529, "Plagued Hatchlings", 58, 55)
+  need(5343, "Barov Family Fortune", 60, 52)
+  need(5382, "Doctor Theolen Krastinov, the Butcher", 60, 55)
+  need(5515, "Krastinov's Bag of Horrors", 60, 55, 5382)
+  need(5384, "Kirtonos the Herald", 60, 55, 5515)
+  need(5461, "The Human, Ras Frostwhisper", 60, 57, 5384)
+  need(5462, "The Dying, Ras Frostwhisper", 60, 57, 5461)
+  need(5463, "Menethil's Gift", 60, 57, 5462)
+  need(5464, "Menethil's Gift", 60, 57, 5463)
+  need(5465, "Soulbound Keepsake", 60, 57, 5464)
+  need(5466, "The Lich, Ras Frostwhisper", 60, 57, 5465)
+  add({ id = "dungeon-scholomance", title = name, zone = M.wpl, levels = { 57, 60 }, instanceID = 289, instance = name,
+    links = { "dungeon-stratholme" },
+    bosses = {
+      { name = "Kirtonos the Herald (summoned)", npc = 10506,
+        tip = "Placing the Blood of Innocents on the porch brazier calls him. Pull the lever on the wall to drop the gates and stop the adds." },
+      { name = "Jandice Barov", npc = 10503,
+        tip = "She splits into many images. Area damage clears them; find the real one and burn her." },
+      { name = "Rattlegore", npc = 11622,
+        tip = "A bone giant who hits very hard. Tank him in the corner and keep the healer on the tank." },
+      { name = "Ras Frostwhisper", npc = 10508,
+        tip = "Frost Nova and Frostbolt Volley. Use the Soulbound Keepsake on him for Ras's quest, then fight him as a mortal." },
+      { name = "Doctor Theolen Krastinov", npc = 11261,
+        tip = "In the room past the viewing hall. He frenzies at low health; burn him and save a stun." },
+      { name = "Lorekeeper Polkelt", npc = 10901,
+        tip = "His disease stacks on the tank; cure it." },
+      { name = "Lady Illucia Barov and Lord Alexei Barov", npc = 10502,
+        tip = "Two separate rooms. Illucia mind controls and fears; Alexei casts Unholy Aura. Clear their rooms first." },
+      { name = "The Ravenian", npc = 10507,
+        tip = "A plain melee boss with a wide cleave. Face him away from the group." },
+      { name = "Instructor Malicia", npc = 10505,
+        tip = "Interrupt her heals and cleanse her poison." },
+      { name = "Darkmaster Gandling", npc = 1853,
+        tip = "Appears once the six side bosses are dead. He teleports players into rooms with adds; those players fight their way out while the tank holds him." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2057", qdb } }, {
+    tip("Skeleton Key", "Scholomance needs the Skeleton Key from the Chillwind Camp key chain. One key holder opens the door for everyone."),
+    accept(5529, betina, "Betina Bigglezink at Light's Hope Chapel wants the plagued hatchlings cleared."),
+    accept(5343, weldon, "Weldon Barov at Chillwind Camp wants his family's deeds."),
+    accept(5382, eva, "Eva Sarkhoff waits by the Caer Darrow ruins with her husband."),
+    enter(name, at("Caer Darrow", 69.4, 72.8, M.wpl), "Cross to Caer Darrow and enter the Scholomance through the castle's crypt with your key."),
+  }, {
+    objective(5529, nil, "Kill the plagued hatchlings in the dragon nests past the first halls.",
+      "20 Plagued Hatchlings"),
+    objective(5382, nil, "Kill Doctor Theolen Krastinov, then burn the Remains of Eva and Lucien Sarkhoff in his room.", "Doctor Theolen Krastinov", "Remains burned"),
+    objective(5343, nil, "Loot the four deeds from the Barov family members and the chests in their rooms.",
+      "Deed to Caer Darrow", "Deed to Brill", "Deed to Tarren Mill", "Deed to Southshore"),
+    finish(5382, eva, "Step outside to Eva Sarkhoff if you want to keep going in the same run."),
+    accept(5515, eva), objective(5515, nil, "Kill Jandice Barov and loot Krastinov's bag.", "Krastinov's Bag of Horrors"),
+    finish(5515, eva), accept(5384, eva, "Eva gives you the Blood of Innocents for Kirtonos."),
+    withItem(13523, objective(5384, nil, "Place the Blood of Innocents in the brazier on the porch and kill Kirtonos.", "Kirtonos the Herald")),
+  }, {
+    finish(5384, eva), finish(5529, betina), finish(5343, weldon),
+    accept(5461, marduke, "Magistrate Marduke, beside Eva, starts the Ras Frostwhisper chain."),
+    objective(5461, at("Stromgarde", 22.5, 65.8, M.arathi), "Search the ruins of Stromgarde in the Arathi Highlands for the Keepsake of Remembrance.", "Keepsake of Remembrance"),
+    finish(5461, marduke), accept(5462, marduke),
+    finish(5462, leonid, "Leonid Barthalomew is in Light's Hope Chapel."), accept(5463, leonid),
+    finish(5463, nil, "In Stratholme, place the Keepsake on Menethil's Gift, the unholy ground of the dead side."),
+    accept(5464, nil, "Take the Soulbound Keepsake back."),
+    finish(5464, leonid), accept(5465, leonid), finish(5465, marduke), accept(5466, marduke),
+    withItem(13752, objective(5466, nil, "On your next Scholomance run, use the Soulbound Keepsake on Ras Frostwhisper, then kill him.", "Human Head of Ras Frostwhisper")),
+    finish(5466, marduke),
+  })
+end
+
+-- Stratholme. Light's Hope pickups, Egan by the gate and Tirion's painting.
+do
+  local name = "Stratholme"
+  local epl = on.epl
+  local alen = epl("Caretaker Alen", 69.93, 53.72)
+  local egan = epl("Egan", 11.36, 26.6)
+  local zverenhoff = epl("Duke Nicholas Zverenhoff", 71.63, 50.09)
+  local betina = epl("Betina Bigglezink", 71.66, 49.94)
+  local smokey = epl("Smokey LaRue", 70.88, 48.43)
+  local leonid = epl("Leonid Barthalomew the Revered", 71.89, 48.29)
+  local tyrosus = epl("Lord Maxwell Tyrosus", 71.9, 48.41)
+  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local renfray = on.wpl("Artist Renfray", 65.77, 75.37)
+  need(5281, "The Restless Souls", 60, 55)
+  need(5282, "The Restless Souls", 60, 55, 5281)
+  need(5251, "The Archivist", 60, 55)
+  fromItem(5262, 13250, "The Truth Comes Crashing Down", 60, 55, 5251)
+  need(5263, "Above and Beyond", 60, 55, 5262)
+  need(5264, "Lord Maxwell Tyrosus", 60, 55, 5263)
+  need(5212, "The Flesh Does Not Lie", 60, 55)
+  need(5213, "The Active Agent", 60, 55, 5212)
+  need(5214, "The Great Fras Siabi", 60, 55)
+  need(5243, "Houses of the Holy", 60, 55)
+  need(5848, "Of Love and Family", 60, 52, 5846)
+  local prep = join(copy("plaguelands-57", { 5542, 5543, 5544, 5742, 5781, 5845 }),
+    copy("plaguelands-58", { 5845, 5846 }), {
+    accept(5848, renfray, "Renfray describes where the painting hangs in Stratholme."),
+    accept(5281, alen, "Caretaker Alen at Light's Hope wants Egan found."),
+    accept(5251, zverenhoff, "Duke Nicholas Zverenhoff wants Archivist Galford dead."),
+    accept(5212, betina, "Betina wants plagued flesh samples."),
+    accept(5214, smokey, "Smokey LaRue wants Fras Siabi's tobacco."),
+    accept(5243, leonid, "Leonid wants Stratholme's holy water."),
+    finish(5281, egan, "Egan waits outside Stratholme's gate."), accept(5282, egan, "He gives you a blaster for the restless souls."),
+    enter(name, at("Stratholme gate", 31.2, 15.6, M.epl),
+      "The main gate leads to the living side (Scarlet Bastion). The service gate on the east side leads to the dead side and Baron Rivendare."),
+  })
+  add({ id = "dungeon-stratholme", title = name, zone = M.epl, levels = { 57, 60 }, instanceID = 329, instance = name,
+    links = { "dungeon-scholomance" },
+    bosses = {
+      { name = "The Unforgiven", npc = 10516,
+        tip = "Ghosts come first. Kill them, then dispel or heal through his frost spells." },
+      { name = "Timmy the Cruel", npc = 10808,
+        tip = "Appears after the market's undead are cleared. A heavy hitter; keep the tank healed." },
+      { name = "Cannon Master Willey", npc = 10997,
+        tip = "His riflemen shoot from the platform. Kill them, then pull him; his cannon knocks people back." },
+      { name = "Archivist Galford", npc = 10811,
+        tip = "In the archive. Burn the archive after he dies for Zverenhoff's quest." },
+      { name = "Balnazzar", npc = 10813,
+        tip = "Grand Crusader Dathrohan turns into Balnazzar at half health. He mind controls and casts Psychic Scream; spread out." },
+      { name = "Baroness Anastari", npc = 10436,
+        tip = "Dead side. She possesses a player; keep crowd control ready and dispel her silence." },
+      { name = "Nerub'enkan", npc = 10437,
+        tip = "Dead side. Kill the scarabs he calls and cure the poison." },
+      { name = "Maleki the Pallid", npc = 10438,
+        tip = "Dead side. Interrupt his Frostbolt and dispel Drain Life." },
+      { name = "Ramstein the Gorger", npc = 10439,
+        tip = "After the abominations. He knocks the tank back; tank him against a wall." },
+      { name = "Baron Rivendare", npc = 10440,
+        tip = "He calls skeletons and uses Death Pact. Kill the skeletons fast; there is no timer unless you started the run's event." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2017", qdb } }, prep, {
+    withItem(13289, objective(5282, nil, "Use Egan's Blaster on ghostly citizens, then again on the souls that break free.", "15 Restless Souls freed")),
+    objective(5212, nil, "Any creature in the city can drop plagued flesh.", "10 Plagued Flesh Samples"),
+    objective(5243, nil, "Search the supply crates through the streets for holy water.", "5 Stratholme Holy Water"),
+    objective(5214, nil, "Fras Siabi's smoke shop is on the living side. Open the box to fight him, then loot the tobacco.", "Siabi's Premium Tobacco"),
+    objective(5848, nil, "In the Scarlet Bastion, the painting hangs behind the twin moons painting.", "Of Love and Family"),
+    objective(5251, nil, "Kill Archivist Galford and burn the Scarlet Archive.", "Archivist Galford", "Scarlet Archive"),
+    tip("Head of Balnazzar", "Loot the Head of Balnazzar and keep it. It starts its quest once The Archivist is handed in."),
+  }, {
+    finish(5282, egan), finish(5214, smokey), finish(5243, leonid), finish(5212, betina),
+    accept(5213, betina, "Betina's follow-up needs Scourge data from the dead side's ziggurats."),
+    finish(5251, zverenhoff), withItem(13250, accept(5262, zverenhoff, "Use the Head of Balnazzar now.")),
+    finish(5262, zverenhoff), accept(5263, zverenhoff, "Zverenhoff now wants Baron Rivendare."),
+    objective(5213, nil, "On a dead-side run, search the ziggurats for new Scourge data.", "Scourge Data"),
+    objective(5263, nil, "On a dead-side run, kill Baron Rivendare and take his head.", "Head of Baron Rivendare"),
+    finish(5213, betina), finish(5263, zverenhoff), accept(5264, zverenhoff), finish(5264, tyrosus, "Lord Maxwell Tyrosus is inside the chapel."),
+    finish(5848, tirion, "Bring the painting to Tirion Fordring at his hut."),
   })
 end

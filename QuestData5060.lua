@@ -944,6 +944,9 @@ do
   q(6182, "The First and the Last", 60, 56)
   q(6183, "Honor the Dead", 60, 56, 6182)
   q(6184, "Flint Shadowmore", 60, 56, 6183)
+  q(4286, "The Good Stuff", 56, 50)
+  q(4701, "Put Her Down", 59, 55)
+  q(4341, "Kharan Mighthammer", 59, 50, 3701)
 
   chapter("steppes-56", "Burning Steppes: Morgan's Vigil and the True Masters", M.steppes, 56, 57, {
     "https://www.wowhead.com/forever/zone=46/burning-steppes",
@@ -966,7 +969,9 @@ do
       "Head of Lathoric the Black", "Heart of Obsidion"),
     taxi("fly", sg("Lanie Reed", 37.9, 30.9), MORGANS, "Fly to Morgan's Vigil."),
     accept(3824, oralius), accept(4283, oralius, "Oralius also wants 50 Blackrock Medallions from the orcs across the Steppes."),
+    forDungeon(accept(4286, oralius, "His Blackrock Depths job: Dark Iron fanny packs."), "dungeon-blackrock-depths"),
     accept(4182, helendis),
+    forDungeon(accept(4701, helendis, "Helendis also wants the worg Halycon in Lower Blackrock Spire put down."), "dungeon-lower-blackrock-spire"),
     accept(4726, tinkee, "Ride north-west to Flame Crest. Tinkee Steamboil gives you a device for the broodlings."),
     accept(4296, maxwort),
     accept(4022, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
@@ -1001,7 +1006,10 @@ do
     objective(3825, bs("Soft Dirt Mound", 81.0, 46.8), "Climb Dreadmaul Rock and plant Gor'tesh's head in the soft dirt mound on top.", "Soft Dirt Mound"),
     finish(3825, oralius), finish(4224, maxwell),
     action("hearth", ironforge("Innkeeper Firebrew", 18.1, 51.5), "Hearth to Ironforge.", ironforgeBind),
-    finish(3701, archesonus), finish(3566, thorius),
+    finish(3701, archesonus),
+    forDungeon(accept(4341, ironforge("King Magni Bronzebeard", 39.09, 56.2), "King Magni, beside Archesonus, asks you to find Kharan Mighthammer in Blackrock Depths."),
+      "dungeon-blackrock-depths"),
+    finish(3566, thorius),
   })
 end
 
@@ -1141,6 +1149,9 @@ do
   q(5181, "Villains of Darrowshire", 57, 50, 5210)
   q(5168, "Heroes of Darrowshire", 56, 50, 5210)
   q(5846, "Of Love and Family", 58, 52, 5845)
+  q(5848, "Of Love and Family", 60, 52, 5846)
+  q(5281, "The Restless Souls", 60, 55)
+  q(5382, "Doctor Theolen Krastinov, the Butcher", 60, 55)
   q(5226, "Return to Chillwind Point", 58, 50, 5225)
   q(6389, "A Plague Upon Thee", 55, 48, 5904)
   q(6004, "Unfinished Business", 56, 50)
@@ -1156,6 +1167,7 @@ do
     action("sethearth", chambers, "Bind at Light's Hope Chapel.", lightsHope),
     finish(5210, carlin), accept(5181, carlin), accept(5168, carlin),
     finish(6021, alen),
+    forDungeon(accept(5281, alen, "Alen's Stratholme task: find Egan by the city gate."), "dungeon-stratholme"),
     objective(5845, epl(nil, 71.3, 34.0), "Ride north to Northdale and search the ruined house for the Symbol of Lost Honor.", "Symbol of Lost Honor"),
     objective(6024, epl("Infiltrator Hameya", 62.0, 11.1), "Infiltrator Hameya roams the far north. Kill him for his key.", "Hameya's Key"),
     B.objectivePart(5211, 1, epl(nil, 57.7, 31.5), "Kill ghouls and flayers across the zone and free the Darrowshire spirits that rise from them.", "15 Darrowshire Spirits"),
@@ -1184,6 +1196,9 @@ do
     taxi("fly", epl("Khaelyn Steelwing", 71.8, 49.6), CHILLWIND, "Fly to Chillwind Camp."),
     finish(5226, macdonnell), finish(6389, dumah),
     finish(5846, wpl("Artist Renfray", 65.77, 75.37), "Ride east to Caer Darrow's lake shore. Artist Renfray's ghost stands on the island."),
+    forDungeon(accept(5848, wpl("Artist Renfray", 65.77, 75.37), "Renfray says the painting hangs in Stratholme."), "dungeon-stratholme"),
+    forDungeon(accept(5382, wpl("Eva Sarkhoff", 70.22, 73.71), "Eva Sarkhoff, nearby on the island, wants Doctor Krastinov of the Scholomance dead."),
+      "dungeon-scholomance"),
   })
 end
 
@@ -1314,6 +1329,7 @@ do
   q(6845, "Uncovering Past Secrets", 57, 54, 6844)
   q(1185, "Under the Chitin Was...", 57, 54, 6845)
   q(4902, "Wildkin of Elune", 57, 52, 4901)
+  q(5526, "Shards of the Felvine", 60, 56, 5527)
 
   chapter("silithus-60", "The Road to 60: Moonglade and Darnassus", M.darnassus, 59, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
@@ -1335,6 +1351,7 @@ do
     taxi("fly", at("Vesprystus", 58.4, 94.0, M.teldrassil), MOONGLADE, "Fly to Nighthaven in Moonglade."),
     finish(6844, umber, "Umber is in the house on the north side of the lake."), accept(6845, umber),
     finish(6845, rabine), finish(5527, rabine),
+    forDungeon(accept(5526, rabine, "Rabine's next task, the Felvine, grows in Dire Maul."), "dungeon-dire-maul-east"),
     accept(1185, umber), finish(1185, umber, "Hand Umber the object one last time. This is the end of the route: well done on reaching 60."),
   })
 end
