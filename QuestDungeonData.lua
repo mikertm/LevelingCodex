@@ -289,8 +289,8 @@ do
       "https://www.method.gg/wow-forever/dungeons/wailing-caverns" } }, {
       note("Alliance approach", "Use Ratchet as your hub. The Booty Bay boat reaches Ratchet. If walking in from Ashenvale, give Horde outposts and the Crossroads a wide berth."),
       accept(865, mebok),
-      objective(865, at("Sunscale raptors", 43.36, 15.57, barrens),
-        "Collect intact horns from Sunscale Scytheclaws in the northern Barrens.", "5 Intact Raptor Horns"),
+      objective(865, at("Sunscale raptors", 56.2, 52.7, barrens),
+        "Collect intact horns from Sunscale Scytheclaws in the plains south-east of the Crossroads.", "5 Intact Raptor Horns"),
       finish(865, mebok), accept(1491, mebok),
       accept(959, bigglefuzz),
       action("goto", at("Hill trail", 50.32, 35.44, barrens),
