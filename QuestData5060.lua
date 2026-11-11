@@ -80,7 +80,9 @@ local function optional(step)
 end
 
 -- A turn-in for a quest the 40-50 route may have given you: shown only while it is in your log.
+local carriedSteps = {}
 local function carried(step)
+  carriedSteps[step] = true
   return optional(step)
 end
 
@@ -113,6 +115,10 @@ local function build()
         if not keep then gone[id] = true end
       elseif id and (gone[id] or dropped[id]) then
         keep = false
+      elseif id and step.type == "turnin" and carriedSteps[step] and not alternate then
+        -- A carried hand-in: gone if an earlier chapter already handed it in, a normal step
+        -- once an earlier chapter gives you the quest.
+        if done[id] then keep = false elseif taken[id] then step.optional = nil end
       end
       if keep then
         if step.also then
@@ -717,8 +723,6 @@ do
     objective(4502, ug(nil, 49.8, 53.4), "Kill Scorching Elementals and Living Blazes on Fire Plume Ridge for the ash.", "9 Un'Goro Ash"),
     finish(4501, spraggle), finish(3882, spark),
     finish(3881, williden),
-    withItem(11116, accept(3884, williden, "Williden's journal can drop anywhere in the crater. Use it from your bags if you have it.")),
-    finish(3884, williden),
     finish(4503, shizzle),
     objective(4301, ug("U'cha", 68.1, 12.6), "U'cha lives at the back of the gorilla cave in the north-east. Clear the way in first.", "U'cha's Pelt"),
     finish(4301, torwa, "Ride back to Torwa at the south-east entrance, then leave the crater toward Gadgetzan."),
@@ -1244,7 +1248,6 @@ do
     objective(3783, ws(nil, 66.3, 42.6), "Ice Thistle yetis live in the hills east of Everlook.", "10 Thick Yeti Fur"),
     finish(3783, umi), accept(977, umi),
     objective(977, ws(nil, 69.9, 41.7), "The Ice Thistle Matriarch and Patriarch live in the yeti cave south of the village.", "2 Pristine Yeti Horn"),
-    finish(979, ws("Ranshalla", 63.07, 59.48), "If you still carry Find Ranshalla, ride south to her camp."),
     accept(4901, ws("Ranshalla", 63.07, 59.48), "Ranshalla's escort is hard at this level. Bring a friend."),
     objective(4901, ws(nil, 64.8, 63.8), "Follow Ranshalla through the Altar of Elune caves and protect her while she lights the torches.", "Altar of Elune"),
     action("hearth", vizzie, "Hearth to Everlook.", everlook),
@@ -1382,7 +1385,7 @@ do
       finish(5121, on.winterspring("Donova Snowden", 31.27, 45.16), "Ride back west to Donova."),
       finish(5123, on.winterspring("Donova Snowden", 31.27, 45.16)),
     }, from("silithus-59", { 3783 }, "rest"), from("silithus-59", { 977 })),
-    with(alt, { "silithus-alt", "plaguelands-57" }))
+    with(alt, { "silithus-alt", "silithus-60" }))
 
   chapter("silithus-alt", "Silithus: Cenarion Hold", M.silithus, 55, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",

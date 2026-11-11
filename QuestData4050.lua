@@ -713,7 +713,7 @@ do
     "https://bindonforever.com/zones/un-goro-crater",
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
     qdb,
-  }, { "blasted-lands-47" }, {
+  }, { "stv-50", "azshara-alt", "searing-alt" }, {
     accept(1691, bilgewhizzle),
     accept(2781, poster, "Read the wanted poster on the wall by the inn."), accept(2875, poster),
     accept(10, fizzledowser),
