@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Horde quest guide (new)
+
+- **Horde levels 1-30.** The step window, arrow and Quests tab now guide Horde characters. Every Horde race starts in its own zone and joins the shared route at the Crossroads:
+  - Orcs and Trolls: Valley of Trials, Sen'jin and Razor Hill, northern Durotar and Orgrimmar.
+  - Tauren: Camp Narache, Bloodhoof Village and Thunder Bluff.
+  - Undead: Deathknell, Brill and the Undercity, then Silverpine Forest.
+  - Everyone: the Crossroads and the northern and southern Barrens, Sun Rock and Camp Taurajo, Zoram'gar, then the Sepulcher, Hillsbrad, Stonetalon, Ashenvale (Splintertree) and Thousand Needles to Freewind Post. Shimmering Flats is an alternate at the end.
+- **Forever content included:** the new starting-zone quests, Camping 101's Cooking intro (other professions are optional), the Orc Mage and Troll Warlock class letters, Forever's new quests in Durotar, the Barrens, Stonetalon and Ashenvale, and Orgrimmar's city errands.
+- **Horde dungeon checklists:** Ragefire Chasm, Ruins of Lordaeron, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps and Razorfen Kraul, with their Horde quest chains before, inside and after the run, and bosses in order. Planned runs add their solo pickups to the route.
+- Not yet: Horde class quest chains beyond the short ones in the starting zones, and a Skyborne (Windshaper) start on the Horde side.
+
 ### Alliance quest guide
 
 - **More routes.** New alternate routes for Ashenvale, Stonetalon, the early Wetlands, late Redridge and Duskwood, and Southshore. The **Guide library** in the Quests tab searches guides, quest names and IDs. It also has dungeon checklists (before, inside and after the run) and special quest chains such as Seeking Caitlin and the Cozy Sleeping Bag. You can track up to three active quests in the step window.
