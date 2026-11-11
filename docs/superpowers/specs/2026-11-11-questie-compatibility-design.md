@@ -152,7 +152,8 @@ than a table of numbers is ignored.
 
 Every LibQuestieDB call goes through `pcall`. The first error, a failed contract check or a
 missing zone table turns the last-mile arrow off for the session and records the reason; the
-arrow then behaves exactly as today. Nothing is retried in a loop.
+arrow then behaves exactly as today. It gets one more try 10 s later (QuestieDB may still be
+starting up); a second failure turns it off for the session. Nothing is retried in a loop.
 
 ## 3. Debug and load order
 

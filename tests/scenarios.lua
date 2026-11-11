@@ -895,6 +895,101 @@ function S.questQuestieNearestPart()
     "an objective-part step only uses its own objective")
 end
 
+-- Deferred review minors, one scenario each.
+function S.questQuestieNearestCleared()
+  koboldDB()
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "the nearest spawn first")
+  moveTo(50.0, 38.5)
+  check(questText(arrow, "Kobold Vermin nearby"), "standing at the spawn")
+  moveTo(48.8, 44.0)
+  check(questText(arrow, "Kobold Vermin - 240 yd"), "a spawn you just visited is skipped")
+  MOCK.advance(90)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "it counts again after 90 seconds")
+end
+
+function S.questQuestieArrowClamp()
+  S.login()
+  local _, _, top = questViewer():GetClampRectInsets()
+  check(top and top >= 76, "the screen clamp keeps the arrow above the window on screen")
+end
+
+function S.questQuestieNearestRetext()
+  koboldDB()
+  local line = { text = "", finished = false } -- objective text not loaded yet
+  koboldCamp({ line }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "no text yet: the wide search")
+  line.text = "Kobold Worker 0/5"
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Kobold Worker - 242 yd"), "the objective text arriving narrows the search")
+end
+
+function S.questQuestieNearestLateData()
+  local quests = {}
+  MOCK.makeQuestieDB({ quests = quests, npcs = { [6] = { name = "Kobold Vermin", spawns = { [12] = { { 50.0, 38.0 } } } } } })
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "176 yd"), "no QuestieDB objectives yet: today's arrow")
+  quests[7] = { objectives = { [1] = { { 6, nil, 0 } } } }
+  MOCK.advance(5)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "an empty spawn list is looked up again after 5 seconds")
+end
+
+function S.questQuestieRecheck()
+  koboldDB({ contract = 0 })
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "176 yd"), "a refused contract keeps today's arrow")
+  LibQuestieDB.RequireContract = function() return true end -- QuestieDB finished starting up
+  MOCK.advance(10)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "QuestieDB is checked once more after 10 seconds")
+end
+
+function S.questQuestieNearestEmptyText()
+  koboldDB({ objectives = { [1] = { { 6, "", 0 } } } })
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty objective text falls back to the NPC's name")
+end
+
+function S.questQuestieNearestEmptyName()
+  MOCK.makeQuestieDB({ quests = { [7] = { objectives = { [1] = { { 6, "Kobold Vermin", 0 } } } } },
+    npcs = { [6] = { name = "", spawns = { [12] = { { 50.0, 38.0 } } } } } })
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty NPC name falls back to the objective's")
+end
+
+function S.questQuestieNearestNoRows()
+  koboldDB()
+  koboldCamp({}, 48.8, 44.0) -- the log gives no objective lines
+  check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "no objective lines: the wide search")
+end
+
+function S.questQuestieNearestNoScale()
+  koboldDB()
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  LevelingCodexQuests.ALLIANCE.extents[1429] = nil
+  MOCK.advance(0.25)
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("arrow: no map scale"), "debug says the map scale is missing")
+end
+
+function S.questQuestieNearestRoundTrip()
+  koboldDB()
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local frame, arrow = questViewer(), LevelingCodexQuestArrow
+  moveTo(48.8, 48.0)
+  check(questText(arrow, "Kobold Vermin - 235 yd"), "inside the camp")
+  click(frame, "Next")
+  MOCK.advance(0.25)
+  click(frame, "Back")
+  MOCK.advance(0.25)
+  check(questText(arrow, "268 yd"), "leaving the step and coming back starts outside the camp")
+end
+
 function S.questQuestieNearestError()
   koboldDB()
   MOCK.questieDBError = true
@@ -906,7 +1001,17 @@ function S.questQuestieNearestError()
   check(chatHas("QuestieDB: off %(read failed"), "debug names the read error")
   MOCK.questieDBError = false
   MOCK.advance(0.25)
-  check(questText(arrow, "176 yd"), "no retry in the same session")
+  check(questText(arrow, "176 yd"), "no retry straight away")
+  MOCK.advance(10)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "one retry after 10 seconds")
+  MOCK.questieDBError = true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", finished = false },
+    { text = "Kobold Worker 0/5", finished = false } } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  MOCK.questieDBError = false
+  MOCK.advance(15)
+  check(questText(arrow, "176 yd"), "a second read error turns it off for the session")
 end
 
 function S.questFlights()

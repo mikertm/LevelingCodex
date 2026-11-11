@@ -112,11 +112,24 @@ local function check(lib)
   return state
 end
 
+local function now()
+  local ok, t = ns.try(GetTime)
+  return ok and type(t) == "number" and t or 0
+end
+
+-- A failed check or read error gets one more try 10 s later (QuestieDB may still be starting).
+local RETRY = 10
+
 function M.usable()
   local lib = _G.LibQuestieDB
   if type(lib) ~= "table" then return false, "not installed" end
   if not db or db.lib ~= lib then
     db = check(lib)
+    if not db.ok then db.retryAt = now() + RETRY end
+    M.arrowState = "waiting"
+  elseif not db.ok and db.retryAt and now() >= db.retryAt then
+    db = check(lib)
+    db.retried = true
     M.arrowState = "waiting"
   end
   return db.ok == true, db.reason
@@ -127,18 +140,28 @@ function M.mapFor(area)
 end
 
 function M.disable(reason)
-  if M.usable() then db.ok, db.reason = false, reason end
+  if M.usable() then
+    db.ok, db.reason = false, reason
+    if not db.retried then db.retryAt = now() + RETRY end
+  end
 end
 
 -- The last-mile arrow: once you reach a kill/collect step's camp, the nearest spawn of
 -- something you still need. Distances in yards; first guesses, tuned in game.
 local CAMP_ENTER, CAMP_LEAVE, SPAWN_RANGE = 200, 300, 400
+local VISITED_FOR = 90 -- a spawn you stood at is skipped this long (its mob is likely dead)
+local EMPTY_RETRY = 5  -- an empty spawn list is looked up again after this long
 local campStep, inCamp
-local cacheKey, candidates
+local cacheKey, candidates, builtAt
+local visited = {}
 
-local function lower(s) return ns.plain(s or ""):lower() end
+-- Matching uses the client's own text (lower-cased), not ns.plain: on a Cyrillic or Asian
+-- client ns.plain would strip the names to nothing. Only display goes through ns.plain.
+local function lower(s) return type(s) == "string" and s:lower() or "" end
 
 local function finished(obj) return obj.finished == true or obj.finished == 1 end
+
+local function text(s) if type(s) == "string" and s ~= "" then return s end end
 
 -- QuestieDB's objectives for a quest as { name, sources = { { kind, id } } }.
 local function entries(lib, quest)
@@ -149,35 +172,39 @@ local function entries(lib, quest)
     if type(name) == "string" and name ~= "" and #sources > 0 then out[#out + 1] = { name = name, sources = sources } end
   end
   for _, row in ipairs(type(groups[1]) == "table" and groups[1] or {}) do
-    add(row[2] or lib.Npc.name(row[1]), { { "npc", row[1] } })
+    add(text(row[2]) or lib.Npc.name(row[1]), { { "npc", row[1] } })
   end
   for _, row in ipairs(type(groups[2]) == "table" and groups[2] or {}) do
-    add(row[2] or lib.Object.name(row[1]), { { "object", row[1] } })
+    add(text(row[2]) or lib.Object.name(row[1]), { { "object", row[1] } })
   end
   for _, row in ipairs(type(groups[3]) == "table" and groups[3] or {}) do
     local sources = {}
     for _, id in ipairs(lib.Item.npcDrops(row[1]) or {}) do sources[#sources + 1] = { "npc", id } end
     for _, id in ipairs(lib.Item.objectDrops(row[1]) or {}) do sources[#sources + 1] = { "object", id } end
-    add(row[2] or lib.Item.name(row[1]), sources)
+    add(text(row[2]) or lib.Item.name(row[1]), sources)
   end
   for _, row in ipairs(type(groups[5]) == "table" and groups[5] or {}) do
     local sources = {}
     for _, id in ipairs(type(row[1]) == "table" and row[1] or {}) do sources[#sources + 1] = { "npc", id } end
-    add(row[3] or lib.Npc.name(row[2]), sources)
+    add(text(row[3]) or lib.Npc.name(row[2]), sources)
   end
   return out
 end
 
 local function names(entry, lines)
-  for _, text in ipairs(lines) do
-    if text:find(lower(entry.name), 1, true) then return true end
+  local name = lower(entry.name)
+  if name == "" then return false end
+  for _, line in ipairs(lines) do
+    if line:find(name, 1, true) then return true end
   end
   return false
 end
 
 -- The entries the unfinished log objectives name. When a line matches none (another client
--- language, a renamed objective), every entry counts except those a finished line names.
-local function needed(list, texts, doneTexts)
+-- language, a renamed objective) or the log gives no lines at all, every entry counts except
+-- those a finished line names.
+local function needed(list, texts, doneTexts, noLines)
+  if noLines then return list end
   local picked = {}
   for _, text in ipairs(texts) do
     local found = false
@@ -198,10 +225,10 @@ local function needed(list, texts, doneTexts)
   return picked
 end
 
-local function build(step, texts, doneTexts)
+local function build(step, texts, doneTexts, noLines)
   local lib, Q = _G.LibQuestieDB, ns.quests
   local spots = {}
-  for _, entry in ipairs(needed(entries(lib, step.quest), texts, doneTexts)) do
+  for _, entry in ipairs(needed(entries(lib, step.quest), texts, doneTexts, noLines)) do
     for _, source in ipairs(entry.sources) do
       local entity = source[1] == "npc" and lib.Npc or lib.Object
       local spawns = entity.spawns(source[2])
@@ -217,7 +244,9 @@ local function build(step, texts, doneTexts)
             end
           end
         end
-        local name = ns.plain(entity.name(source[2]) or entry.name)
+        local name = ns.plain(text(entity.name(source[2])) or "")
+        if name == "" then name = ns.plain(entry.name) end
+        if name == "" then name = "Objective" end
         for _, at in ipairs(#plain > 0 and plain or phased) do
           local spot = { map = step.map, x = at[1], y = at[2], name = name }
           local _, fromCamp = Q.vector(step, step.map, spot.x, spot.y)
@@ -238,19 +267,24 @@ function M.nearest(step, map, x, y)
   local Q = ns.quests
   local entry = step and step.quest and Q.log(step.quest)
   if not (entry and not entry.ready and step.type == "complete" and step.map and step.x and step.y and map == step.map) then
+    campStep, inCamp = nil, false -- coming back to a step starts outside its camp
     M.arrowState = "waiting"
     return
   end
   if step ~= campStep then campStep, inCamp = step, false end
   local _, fromCamp = Q.vector(step, map, x, y)
-  if not fromCamp then return end
+  if not fromCamp then
+    M.arrowState = "no map scale"
+    return
+  end
   if inCamp then inCamp = fromCamp <= CAMP_LEAVE else inCamp = fromCamp <= CAMP_ENTER end
   if not inCamp then
     M.arrowState = "outside the camp"
     return
   end
   local open, texts, doneTexts = {}, {}, {}
-  for i, obj in ipairs(entry.objectives or {}) do
+  local rows = entry.objectives or {}
+  for i, obj in ipairs(rows) do
     if finished(obj) then
       doneTexts[#doneTexts + 1] = lower(obj.text)
     elseif not step.objectiveIndex or step.objectiveIndex == i then
@@ -258,20 +292,34 @@ function M.nearest(step, map, x, y)
       texts[#texts + 1] = lower(obj.text)
     end
   end
-  local key = tostring(step) .. ":" .. table.concat(open, ",")
-  if key ~= cacheKey then
-    local ok, result = pcall(build, step, texts, doneTexts)
+  local noLines = #rows == 0 and not step.objectiveIndex
+  -- Counts change with every kill; only the names and which objectives are open matter.
+  local labels = (table.concat(texts, "|") .. "#" .. table.concat(doneTexts, "|")):gsub("%d", "")
+  local key = tostring(step) .. ":" .. table.concat(open, ",") .. ":" .. labels
+  local t = now()
+  if key ~= cacheKey or (#candidates == 0 and t - builtAt >= EMPTY_RETRY) then
+    local ok, result = pcall(build, step, texts, doneTexts, noLines)
     if not ok then
       M.disable("read failed: " .. tostring(result):sub(1, 80))
       return
     end
-    cacheKey, candidates = key, result
+    if key ~= cacheKey then visited = {} end
+    cacheKey, candidates, builtAt = key, result, t
   end
-  local best, bestYards
+  -- The nearest spawn, skipping ones you stood at in the last VISITED_FOR seconds (unless
+  -- you're still standing there, or every spawn was visited).
+  local best, bestYards, any, anyYards
   for _, spot in ipairs(candidates) do
     local _, yards = Q.vector(spot, map, x, y)
-    if yards and (not bestYards or yards < bestYards) then best, bestYards = spot, yards end
+    if yards then
+      local here = yards <= Q.arrived()
+      if here then visited[spot] = t end
+      if not anyYards or yards < anyYards then any, anyYards = spot, yards end
+      local fresh = here or not visited[spot] or t - visited[spot] >= VISITED_FOR
+      if fresh and (not bestYards or yards < bestYards) then best, bestYards = spot, yards end
+    end
   end
+  best = best or any
   if not best then
     M.arrowState = "inside the camp, no spawns"
     return
