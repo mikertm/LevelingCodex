@@ -20,7 +20,8 @@ STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
-ROUTES = [ROUTE, ROOT / "QuestAlternateData.lua", ROOT / "QuestDungeonData.lua", ROOT / "QuestSpecialData.lua", CLASS_ROUTE]
+ROUTES = [ROUTE, ROOT / "QuestAlternateData.lua", *(ROOT / f"QuestData{band}.lua" for band in ("3040", "4050", "5060")),
+          ROOT / "QuestDungeonData.lua", ROOT / "QuestDungeonData3060.lua", ROOT / "QuestSpecialData.lua", CLASS_ROUTE]
 
 
 def matches(value, token):

@@ -2919,7 +2919,8 @@ LevelingCodexQuests = {
 -- Helpers for QuestClassData.lua, which loads next and removes this field.
 LevelingCodexQuests.build = { at = at, q = q, quest = quest, accept = accept, finish = finish,
   objective = objective, objectiveAt = objectiveAt, action = action, taxi = taxi, withItem = withItem,
-  breadcrumb = breadcrumb, withTrainers = withTrainers, forDungeon = forDungeon, along = along, maps = { elwynn = elwynn, stormwind = stormwind,
+  breadcrumb = breadcrumb, withTrainers = withTrainers, forDungeon = forDungeon, along = along,
+  withGuide = withGuide, objectivePart = objectivePart, maps = { elwynn = elwynn, stormwind = stormwind,
   westfall = westfall, redridge = redridge, duskwood = duskwood, wetlands = wetlands, lochModan = lochModan,
   ironforge = ironforge, dunMorogh = dunMorogh, teldrassil = te.map, darnassus = te.darnassus,
   darkshore = te.darkshore, zephras = zephras } }

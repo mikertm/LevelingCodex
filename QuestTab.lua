@@ -9,7 +9,7 @@ local STATUS = { pending = "To do", done = "Done", deferred = "Earlier", skipped
 local GUIDE_TAG = { current = "Current", done = "Done", outleveled = "Outleveled", suggested = "Suggested", later = "Later" }
 -- Leveling guides are listed by the band their first level falls in.
 local BANDS = { { 1, 11, "LEVELS 1-12: STARTING ZONES" }, { 12, 19, "LEVELS 12-20" }, { 20, 29, "LEVELS 20-30" },
-  { 30, 60, "LEVELS 30-60" } }
+  { 30, 39, "LEVELS 30-40" }, { 40, 49, "LEVELS 40-50" }, { 50, 60, "LEVELS 50-60" } }
 
 local function sectionInfo(section)
   return (section.category == "dungeon" and "Suggested levels " or "Levels ") .. section.levels[1] .. "-" .. section.levels[2]

@@ -27,6 +27,14 @@ ZONES = {
     "Dun Morogh": (1, 1426), "Loch Modan": (38, 1432), "Wetlands": (11, 1437),
     "Darkshore": (148, 1439), "Teldrassil": (141, 1438), "Zephras Isle": (16593, 2521),
     "Ironforge": (1537, 1455), "Darnassus": (1657, 1457),
+    "Stranglethorn": (33, 1434), "Arathi": (45, 1417), "Alterac": (36, 1416), "Hillsbrad": (267, 1424),
+    "Thousand Needles": (400, 1441), "Dustwallow": (15, 1445), "Desolace": (405, 1443), "Swamp of Sorrows": (8, 1435),
+    "Badlands": (3, 1418), "Tanaris": (440, 1446), "Feralas": (357, 1444), "Hinterlands": (47, 1425),
+    "Searing Gorge": (51, 1427), "Blasted Lands": (4, 1419), "Burning Steppes": (46, 1428),
+    "Western Plaguelands": (28, 1422), "Eastern Plaguelands": (139, 1423), "Felwood": (361, 1448),
+    "Winterspring": (618, 1452), "Azshara": (16, 1447), "Un'Goro": (490, 1449), "Silithus": (1377, 1451),
+    "Moonglade": (493, 1450), "Riverglades": (16591, 2548), "Shen'dralas": (16651, 2652), "Mount Hyjal": (616, 2482),
+    "Deadwind Pass": (41, 1430), "Barrens": (17, 1413), "Ashenvale": (331, 1440), "Stonetalon": (406, 1442),
 }
 
 

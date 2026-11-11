@@ -116,7 +116,7 @@ function S.questPastRoute()
   MOCK.level = 31
   S.login()
   slash("quests")
-  check(questText(win(), "No route covers level 31"), "level 31 is beyond milestone coverage")
+  check(questText(win(), "Darkshire: Mor'Ladim and the Worgen"), "level 31 lists the Darkshire chapter")
   click(win(), "Wetlands")
   check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
   click(win(), "Elwynn Forest")
@@ -653,10 +653,11 @@ function S.questWetlands()
 end
 
 function S.questWetlandsTravel()
-  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1431
+  -- Redridge, not Duskwood: at 28 Duskwood now offers the Darkshire chapter's first pickups.
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1433
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Duskwood the Wetlands section starts with the way there")
+  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Redridge the Wetlands section starts with the way there")
   click(frame, "Next")
   check(questText(frame, "The Doomed Fleet"), "Bishop Farthing's pickup in Stormwind follows the flight")
   click(frame, "Next")
@@ -664,7 +665,7 @@ function S.questWetlandsTravel()
 end
 
 function S.questWetlandsEnd()
-  -- The Wetlands section ends in Auberdine: Nord'el for Thundris after the Stormwind turn-ins.
+  -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
   MOCK.questLog = { { questID = 98209, isComplete = true } }
   S.login()
@@ -672,16 +673,11 @@ function S.questWetlandsEnd()
   click(win(), "Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Bloom of the Heavens"), "resume at the final Wetlands turn-in")
-  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  check(not questText(frame, "Last step in this guide"), "the Wetlands turn-in is no longer the end of the route")
   MOCK.questDone[98209], MOCK.questLog = true, {}
   MOCK.event("QUEST_TURNED_IN", 98209)
-  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the guide shows its ending after the turn-in")
-  check(not findButton(frame, function(label) return label == "Next" end), "the ending has no dead Next button")
-  click(frame, "Hide")
-  click(win(), "Show step window")
-  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the end card can be reopened")
-  click(frame, "Back")
-  check(questText(frame, "Turn in - Bloom of the Heavens"), "Back can review the final step")
+  check(frame:IsShown() and questText(frame, "Auberdine - Stormwind Harbor"), "the route continues with the ship to Stormwind")
+  check(questText(frame, "Darkshire"), "the next guide is the Darkshire chapter")
 end
 
 
