@@ -635,8 +635,28 @@ SOUNDKIT = { LEVEL_UP = 888 }
 function ReloadUI() error("ReloadUI is protected in Forever", 2) end
 function CreateColor(r, g, b, a) return { r = r, g = g, b = b, a = a } end
 function GetMinimapShape() return MOCK.minimapShape or "ROUND" end
-function IsShiftKeyDown() return false end
-function IsControlKeyDown() return false end
+function IsShiftKeyDown() return MOCK.shift or false end
+function IsControlKeyDown() return MOCK.ctrl or false end
+
+-- Questie (opt-in, made by scenarios): its settings and its tracker frame.
+-- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx }
+function MOCK.makeQuestie(opts)
+  opts = opts or {}
+  local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
+  if opts.legacyAccept then profile.autoaccept = true else profile.autoAccept = { enabled = opts.autoAccept == true } end
+  Questie = { db = { profile = profile } }
+  local tracker = _G.Questie_BaseFrame
+  if opts.tracker == false then
+    if tracker then tracker:Hide() end
+    return
+  end
+  if not tracker then
+    tracker = CreateFrame("Frame", "Questie_BaseFrame", UIParent)
+    tracker:SetSize(280, 400)
+  end
+  tracker._cx, tracker._cy = opts.cx or 1700, 700
+  tracker:Show()
+end
 
 function MOCK.fileID(path)
   local k = path:lower()
@@ -1147,6 +1167,7 @@ local ALLOWED_GLOBALS = {
   TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
   GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
+  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 function MOCK.snapshotGlobals()

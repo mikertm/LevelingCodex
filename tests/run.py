@@ -587,7 +587,8 @@ def main():
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
-                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume"):
+                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
+                             "questQuestieAuto"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
                                   ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman")):

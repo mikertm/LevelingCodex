@@ -406,6 +406,66 @@ function S.questGossip()
   PlaySound = original
 end
 
+-- Questie side by side: its auto-questing and hold-back key take precedence over the Codex's.
+function S.questQuestieAuto()
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - A Threat Within"), "fresh route starts with an accept")
+  LevelingCodexDB.questAutoAccept = true
+  MOCK.gossipAvailable = { { questID = 783, title = "A Threat Within" } }
+  Questie = {} -- loaded, settings not built yet
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == 783, "Questie without settings leaves auto-accept to the Codex")
+  MOCK.gossipPicked = nil
+  MOCK.makeQuestie({ autoAccept = true })
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "Questie's auto-accept handles gossip lists")
+  MOCK.interactionQuest = 783
+  MOCK.event("QUEST_DETAIL")
+  check(not MOCK.questAccepted, "Questie's auto-accept handles the quest window")
+  MOCK.makeQuestie({ legacyAccept = true })
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "an older Questie's autoaccept counts too")
+  slash("quests")
+  click(win(), "Settings")
+  check(questText(win(), "Questie's auto-accept is on, so Questie accepts quests."), "the tickbox says Questie handles it")
+
+  MOCK.makeQuestie({}) -- auto-accept off, key Shift
+  click(win(), "Settings")
+  local box = findButton(win(), function(l) return l == "Auto-accept the current guide quest" end)
+  MOCK.fire(box, "OnEnter")
+  check(table.concat(GameTooltip._lines or {}, " "):find("Hold Alt or Shift to stop it.", 1, true),
+    "the tooltip names Questie's key")
+  MOCK.shift = true
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("QUEST_DETAIL")
+  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "Questie's key holds the Codex back")
+  MOCK.shift, MOCK.alt = false, true
+  MOCK.event("QUEST_DETAIL")
+  check(not MOCK.questAccepted, "Alt holds back the quest window too")
+  MOCK.alt = false
+  MOCK.event("QUEST_DETAIL")
+  check(MOCK.questAccepted == 783, "the Codex accepts when Questie's auto-accept is off and no key is held")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
+    "debug reports Questie's settings")
+
+  local objective = { text = "Speak to McBride 1/1", numFulfilled = 1, numRequired = 1, finished = true }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within", objectives = { objective } } }
+  MOCK.event("QUEST_ACCEPTED", 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  LevelingCodexDB.questAutoTurnin, MOCK.questChoices = true, 0
+  MOCK.makeQuestie({ autocomplete = true })
+  MOCK.event("QUEST_COMPLETE")
+  check(not MOCK.questRewarded, "Questie's auto-complete handles turn-ins")
+  click(win(), "Settings")
+  check(questText(win(), "Questie's auto-complete is on, so Questie turns quests in."), "the turn-in tickbox says so")
+  MOCK.makeQuestie({})
+  MOCK.event("QUEST_COMPLETE")
+  check(MOCK.questRewarded == 783, "the Codex turns in when Questie's auto-complete is off")
+end
+
 function S.questFlights()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
   LevelingCodexCharDB = { questFlights = { ["Darkshire, Duskwood"] = true } }

@@ -5,6 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: LevelingCodexDB
 ## SavedVariablesPerCharacter: LevelingCodexCharDB
+## OptionalDeps: Questie, QuestieDB
 ## IconTexture: Interface\Icons\Achievement_Level_60
 ## X-Curse-Project-ID: 1789784
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
@@ -31,6 +32,7 @@ Theme.lua
 Art.lua
 Guide.lua
 Quests.lua
+QuestieSupport.lua
 Professions.lua
 Disenchant.lua
 Macros.lua

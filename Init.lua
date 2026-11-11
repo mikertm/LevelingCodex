@@ -160,6 +160,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.questieDebugLines()) do out[#out + 1] = line end
   out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet") ..
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..
     ", banner: " .. (ns.db().toastPos and "moved by you" or (ns.builtInSpotY and "in its spot" or "default spot"))

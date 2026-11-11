@@ -591,17 +591,27 @@ function ns.questRecord(command)
   ns.say(recorder and "quest recorder on. Use /codex record copy to export." or "quest recorder off.")
 end
 
+-- Alt, or Questie's own hold-back key, stops the Codex's automation.
+local function heldBack()
+  if try(IsAltKeyDown) then return true end
+  return ns.questie.modifierHeld()
+end
+
+-- Questie's own auto-accept / auto-complete handles the quest when it is on.
+local function autoAccepting(db) return db.questAutoAccept and not ns.questie.autoAccept() end
+local function autoTurningIn(db) return db.questAutoTurnin and not ns.questie.autoComplete() end
+
 local function interact(event)
   local id = try(GetQuestID)
   if event == "QUEST_DETAIL" then
     observation("detail", id, { name = Q.plain(try(GetTitleText)), text = Q.plain(try(GetObjectiveText)) })
   end
   local s = Q.autoStep()
-  if not id or not s or s.quest ~= id or try(InCombatLockdown) ~= false then return end
+  if not id or not s or s.quest ~= id or try(InCombatLockdown) ~= false or heldBack() then return end
   local db = ns.db()
-  if event == "QUEST_DETAIL" and s.type == "accept" and db.questAutoAccept then
+  if event == "QUEST_DETAIL" and s.type == "accept" and autoAccepting(db) then
     try(AcceptQuest)
-  elseif s.type == "turnin" and db.questAutoTurnin then
+  elseif s.type == "turnin" and autoTurningIn(db) then
     if event == "QUEST_PROGRESS" and try(IsQuestCompletable) == true then
       try(CompleteQuest)
     elseif event == "QUEST_COMPLETE" and try(GetNumQuestChoices) == 0 and (try(GetQuestMoneyToGet) or 0) == 0 then
@@ -615,13 +625,13 @@ local function sameTitle(a, b)
 end
 
 -- Many NPCs open a gossip or greeting list before the quest window. With auto-accept or
--- auto-turn-in on, pick the guide's current quest there (never another; Alt holds it back).
+-- auto-turn-in on, pick the guide's current quest there (never another; Alt or Questie's key holds it back).
 local function pickFromList(event)
   local s = Q.autoStep()
-  if not s or not s.quest or try(InCombatLockdown) ~= false or try(IsAltKeyDown) then return end
+  if not s or not s.quest or try(InCombatLockdown) ~= false or heldBack() then return end
   local db = ns.db()
-  local accept = s.type == "accept" and db.questAutoAccept
-  local turnin = s.type == "turnin" and db.questAutoTurnin
+  local accept = s.type == "accept" and autoAccepting(db)
+  local turnin = s.type == "turnin" and autoTurningIn(db)
   if not accept and not turnin then return end
   if event == "GOSSIP_SHOW" then
     local G = C_GossipInfo

@@ -1162,10 +1162,17 @@ renderers.settings = function()
     "A button below the item button that targets the current step's quest giver. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
+  local questieKey = ns.questie.keyName()
+  local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
+  local function questieNote(on, text)
+    if on then y = y - 4 + T(text, 28, y - 4, W - 28, "small", C.dim) + 6 end
+  end
   tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
-    "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. Hold Alt to stop it.")
+    "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. " .. holdBack)
+  questieNote(ns.questie.autoAccept(), "Questie's auto-accept is on, so Questie accepts quests.")
   tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
-    "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. Hold Alt to stop it.")
+    "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
+  questieNote(ns.questie.autoComplete(), "Questie's auto-complete is on, so Questie turns quests in.")
   y = y + 12
 
   head("MINIMAP BUTTON")
