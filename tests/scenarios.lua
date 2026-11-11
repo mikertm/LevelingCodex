@@ -680,6 +680,27 @@ function S.questWetlandsEnd()
   check(questText(frame, "Darkshire"), "the next guide is the Darkshire chapter")
 end
 
+function S.questRouteEnd()
+  -- The leveling route ends in Moonglade at 60: Umber's last hand-in is the final step.
+  MOCK.level, MOCK.questMap = 60, 1450
+  MOCK.questLog = { { questID = 1185, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "resume at the last turn-in of the route")
+  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  MOCK.questDone[1185], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 1185)
+  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the guide shows its ending after the turn-in")
+  check(not findButton(frame, function(label) return label == "Next" end), "the ending has no dead Next button")
+  click(frame, "Hide")
+  click(win(), "Show step window")
+  check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the end card can be reopened")
+  click(frame, "Back")
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "Back can review the final step")
+end
+
 
 -- Each Alliance race starts in its own zone at level 1.
 for name, start in pairs({ Dwarf = "Coldridge Valley", Gnome = "Coldridge Valley", NightElf = "Shadowglen",
