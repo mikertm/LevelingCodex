@@ -653,6 +653,13 @@ do
       "Guard level from the classic data."),
     objective(2989, hl(nil, 48.8, 68.4), "Ride back west to the Altar of Zul and do as Talonaxe asked there.", "Altar of Zul"),
     finish(2877, fraggar, "Ride west to Aerie Peak for the last turn-ins."), finish(2989, talonaxe),
+    taxi("fly", talonaxe, "Stormwind, Elwynn", "Fly to Stormwind."),
+    finish(1469, on.stormwind("Brohann Caskbelly", 69.45, 40.4), "Brohann Caskbelly runs the Dwarven District's ale shop."),
+    taxi("fly", on.stormwind("Dungar Longdrink", 71.3, 72.2), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
+    finish(580, on.stv("Whiskey Slim", 27.14, 77.45), "Bring Whiskey Slim his grog."),
+    finish(1122, on.stv("Crank Fizzlebub", 27.12, 77.21)),
+    finish(2767, on.stv("Oglethorpe Obnoticus", 28.36, 76.35), "Oglethorpe Obnoticus, on the dock by the bank, built the OOX robots."),
+    finish(836, on.stv("Oglethorpe Obnoticus", 28.36, 76.35)),
     action("hearth", fizzgrimble, "Hearth back to Gadgetzan.", gadgetzan),
   })
 end
@@ -719,10 +726,9 @@ do
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
     qdb,
   }, { "blasted-lands-47" }, {
-    accept(1691, bilgewhizzle), accept(5863, andi, "Andi Lynn, by the bank, wants the Dunemaul ogres cleared."),
+    accept(1691, bilgewhizzle),
     accept(2781, poster, "Read the wanted poster on the wall by the inn."), accept(2875, poster),
-    accept(10, fizzledowser), accept(2605, marin, "Marin Noggenfogger, upstairs by the inn, wants a dew gland."),
-    accept(3362, tranrek),
+    accept(10, fizzledowser),
     finish(3445, marvon, "Ride south to Marvon Rivetseeker's camp at the Broken Pillar."),
     accept(3161, marvon),
     objective(2781, tn("Caliph Scorpidsting", 60.9, 37.8), "Caliph Scorpidsting roams the dunes northeast of Marvon. Kill him for his head.",
@@ -751,6 +757,9 @@ do
     finish(1691, bilgewhizzle), finish(2781, bilgewhizzle),
     finish(10, fizzledowser), accept(110, fizzledowser), finish(110, pestlezugg), accept(113, pestlezugg),
     finish(113, fizzledowser), accept(162, fizzledowser, "Fizzledowser's report goes to Darnassus. Keep it for later."),
+    accept(5863, andi, "Andi Lynn, by the bank, wants the Dunemaul ogres cleared."),
+    accept(2605, marin, "Marin Noggenfogger, upstairs by the inn, wants a dew gland."),
+    accept(3362, tranrek),
     finish(3161, marvon, "Ride back south to Marvon with the ornaments."),
     along(objective(5863, tn(nil, 42.6, 55.1), "Go west to the Dunemaul Compound. Clear Brutes and Enforcers, then Gor'marok in the middle.",
       "10 Dunemaul Brutes", "10 Dunemaul Enforcers", "Gor'marok the Ravager"), 3362),
@@ -776,5 +785,162 @@ do
     finish(2605, marin), accept(2606, marin), finish(2606, sprinkle), accept(2641, sprinkle),
     finish(5863, andi), finish(3362, tranrek),
     taxi("fly", tn("Bera Stonehammer", 51.0, 29.3), "Ratchet, The Barrens", "Fly to Ratchet for the boat to Booty Bay."),
+    action("boat", at(nil, 63.7, 38.6, M.barrens), "Take the boat from the Ratchet dock to Booty Bay. Use Next when you land.",
+      { name = "Ratchet - Booty Bay" }),
+    finish(2874, on.stv("\"Sea Wolf\" MacKinley", 27.78, 77.07), "Give Stoley's message to MacKinley."),
+    finish(648, on.stv("Oglethorpe Obnoticus", 28.36, 76.35), "Report the third robot to Oglethorpe on the dock by the bank."),
+  })
+end
+
+-- Alternate, 40-46: Shen'dralas, Forever's hidden Highborne temple south of the Valley of Bones.
+do
+  local sh = on.shendralas
+  local mordent = sh("Mordent Evenshade", 35.0, 46.4)
+  local biraxas = sh("Historian Biraxas", 45.8, 78.2)
+  local kirandis = sh("Magister Kirandis", 47.2, 75.8)
+  local liranne = sh("Liranne", 47.2, 65.2)
+  local kogthug = sh("Kog'thug the Brave", 72.6, 31.4)
+  local pylon = sh("Shen'dralar Pylon", 43.6, 34.2)
+
+  q(92914, "Strange Pylons", 43, 35, nil, true)
+  q(96010, "Fragments of the Pylons", 41, 35, 92914, true)
+  q(96018, "Powering the Pylons", 43, 35, 96010, true)
+  q(93016, "A Brief History Lesson", 43, 35, 96018, true)
+  q(93394, "Meeting the Magister", 43, 35, 93016, true)
+  q(99257, "A Heart of Crystal", 43, 35, nil, true)
+  q(99258, "Mana Mania", 43, 35, 99257, true)
+  q(93568, "Partially Digested Collar", 45, 35, nil, true)
+  quest[93568].startItem = 259461
+  q(93574, "Corpsefeeder's Carapace", 45, 35, nil, true)
+  quest[93574].startItem = 259893
+  q(93644, "Tattered Journal", 45, 35, nil, true)
+  quest[93644].startItem = 260347
+
+  alternate("shendralas", "Shen'dralas: The Pylons and the Temple", M.shendralas, 40, 46, {
+    "https://www.wowhead.com/forever/zone=16651/shendralas",
+    "https://www.wowhead.com/forever/quest=92914/strange-pylons",
+    "https://www.wowhead.com/forever/quest=99257/a-heart-of-crystal",
+    "https://warcraft.wiki.gg/wiki/Shen'dralas",
+  }, { "feralas-44", "searing-gorge" }, {
+    note(action("goto", pylon, "From Nijel's Point, ride south through Desolace past the Valley of Bones into Shen'dralas."),
+      "Entrance path not published; check the way in from the Valley of Bones in game."),
+    accept(92914, pylon, "Examine the strange pylon on the rise north of the temple."),
+    finish(92914, mordent, "Mordent Evenshade studies the pylons from a camp west of the temple."),
+    accept(96010, mordent),
+    accept(99257, biraxas, "Historian Biraxas works inside the temple. Ask him about the pylon protectors."),
+    objective(99257, sh(nil, 43.3, 32.7), "Destroy Decrepit Pylon Protectors around the northern pylons until a depleted crystal heart drops.",
+      "Depleted Crystal Heart"),
+    along(note(objective(96010, sh(nil, 33.0, 26.0), "Collect pylon fragments. The shards lie guarded in the Magram and Gelkis camps around the valley's edge.",
+      "Pylon Fragment"), "Fragment positions need an in-game check."), 93644, 93574),
+    withItem(259893, accept(93574, nil, "If Corpsefeeder dropped its carapace, read it. The beetle prowls the north of the zone.")),
+    finish(93574, kogthug, "Kog'thug the Brave camps on the eastern ridge and wants the carapace."),
+    withItem(260347, accept(93644, nil, "If an Outcast Necromancer dropped a tattered journal, read it.")),
+    finish(96010, mordent), finish(93644, mordent), accept(96018, mordent),
+    finish(99257, biraxas), accept(99258, biraxas),
+    note(objective(96018, sh(nil, 47.0, 74.0), "Take the mana sieve from inside the temple and use it on the ancient mana crystals you find there.",
+      "Ancient Mana Crystals"), "Crystal positions need an in-game check."),
+    objective(99258, sh(nil, 37.6, 52.8), "Throw the crystal heart into an unstable mana rift where the Nascent Pylon Protectors gather.",
+      "Rift fed"),
+    withItem(259461, accept(93568, nil, "If a Prowler coughed up a partially digested collar, read it.")),
+    finish(93568, liranne, "Liranne waits in the gardens south of the temple."),
+    finish(99258, biraxas),
+    finish(96018, mordent), accept(93016, mordent),
+    finish(93016, mordent, "Listen to Mordent's account of the crystals."),
+    accept(93394, mordent), finish(93394, kirandis, "Magister Kirandis waits deep inside the temple."),
+  })
+end
+
+-- Alternate, 45-50: Thorium Point and the Cauldron in the Searing Gorge.
+do
+  local sg = on.searing
+  local poster = sg("Wanted/Missing/Lost & Found", 37.65, 26.47)
+  local scrange = sg("Taskmaster Scrange", 38.97, 27.51)
+  local hansel = sg("Hansel Heavyhands", 38.58, 27.81)
+  local lolo = sg("Lookout Captain Lolo Longstriker", 37.74, 26.56)
+  local kalaran = sg("Kalaran Windblade", 39.06, 38.99)
+  local outhouse = sg("Wooden Outhouse", 65.59, 62.17)
+  local dorius = sg("Dorius Stonetender", 63.92, 60.99)
+
+  q(7728, "STOLEN: Smithing Tuyere and Lookout's Spyglass", 48, 45)
+  q(7729, "JOB OPPORTUNITY: Culling the Competition", 48, 45)
+  q(7723, "Curse These Fat Fingers", 49, 45)
+  q(7724, "Fiery Menace!", 49, 45)
+  q(7727, "Incendosaurs? Whateverosaur is More Like It", 49, 45)
+  q(7701, "WANTED: Overseer Maltorius", 50, 45)
+  q(3441, "Divine Retribution", 48, 40)
+  q(3442, "The Flawless Flame", 48, 40, 3441)
+  q(4449, "Caught!", 45, 43)
+  q(3367, "Suntara Stones", 48, 40)
+
+  alternate("searing-gorge", "Searing Gorge: Thorium Point", M.searing, 45, 50, {
+    "https://bindonforever.com/zones/searing-gorge",
+    "https://www.wowhead.com/forever/zone=51/searing-gorge",
+    qdb,
+  }, { "ungoro-49", "blasted-lands-47" }, {
+    taxi("fly", on.ironforge("Gryth Thurden", 55.5, 47.7), "Thorium Point, Searing Gorge",
+      "Fly to Thorium Point. You learned it from the Badlands; if not, ride west from the Badlands through the gorge gate."),
+    accept(7728, poster, "Read the board at Thorium Point."), accept(7729, poster), accept(7701, poster),
+    accept(7723, hansel), accept(7724, hansel), accept(7727, hansel),
+    accept(3441, kalaran, "Kalaran Windblade stands on the ledge south of Thorium Point."),
+    finish(3441, kalaran, "Listen to Kalaran's story."), accept(3442, kalaran),
+    along(objective(7729, sg(nil, 44.0, 36.0), "Go down into the Cauldron and kill Dark Iron Taskmasters and Slavers along the slave pens.",
+      "15 Dark Iron Taskmasters", "15 Dark Iron Slavers"), 7723, 3442, 7728),
+    along(objective(7723, sg(nil, 36.0, 45.3), "Heavy War Golems patrol the Cauldron's west rim. Their oil counts for Kalaran too.",
+      "20 Heavy War Golems"), 7729, 3442),
+    along(objective(3442, sg(nil, 54.5, 44.9), "Kill magma elementals on the east side for Hearts of Flame. Golem oil drops from the war golems.",
+      "4 Heart of Flame", "4 Golem Oil"), 7729, 7723),
+    along(objective(7728, sg(nil, 41.2, 49.8), "The Smithing Tuyere drops from Dark Iron Steamsmiths; the spyglass from the Lookouts on the south ramp.",
+      "Smithing Tuyere", "Lookout's Spyglass"), 7729),
+    along(objective(7727, sg(nil, 50.7, 35.7), "Enter the Slag Pit on the north side of the Cauldron and kill Incendosaurs in its lava pools.",
+      "20 Incendosaurs"), 7701),
+    note(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius stands deep in the Slag Pit. Bring a group for him.",
+      "Head of Overseer Maltorius"), "Elite in the classic data; check in game."),
+    objective(7724, sg(nil, 27.3, 76.5), "Climb out of the Cauldron and hunt Greater Lava Spiders on the southwest plateaus.", "20 Greater Lava Spiders"),
+    accept(4449, outhouse, "Cross to the Grimesilt dig site in the southeast and knock on the outhouse door."),
+    objective(4449, sg(nil, 63.3, 60.6), "Kill Dark Iron Geologists at the dig site. You also need 15 Silk Cloth from your bags or the Auction House.",
+      "8 Dark Iron Geologists", "15 Silk Cloth"),
+    finish(4449, outhouse),
+    note(accept(3367, dorius, "Dorius Stonetender is held at the dig site. Escort him out; it is a hard fight at the end."),
+      "Escort difficulty needs an in-game check."),
+    objective(3367, sg(nil, 74.45, 19.29), "Keep Dorius alive on the walk north.", "Escort Dorius"),
+    finish(3367, sg("Singed Letter", 74.45, 19.29), "Pick up the singed letter Dorius leaves behind."),
+    finish(3442, kalaran),
+    finish(7729, scrange), finish(7728, scrange), finish(7701, lolo),
+    finish(7723, hansel), finish(7724, hansel), finish(7727, hansel),
+  })
+end
+
+-- Alternate, 47-50: the Bloodmages' collections in the Blasted Lands.
+do
+  local bl = on.blasted
+  local drazial = bl("Bloodmage Drazial", 50.55, 14.2)
+  local lynnore = bl("Bloodmage Lynnore", 50.64, 14.3)
+
+  q(2581, "Snickerfang Jowls", 50, 45)
+  q(2583, "A Boar's Vitality", 50, 45)
+  q(2585, "The Decisive Striker", 50, 45)
+  q(2601, "The Basilisk's Bite", 50, 45)
+  q(2603, "Vulture's Vigor", 50, 45)
+
+  alternate("blasted-lands-47", "Blasted Lands: The Bloodmages' Collections", M.blasted, 47, 50, {
+    "https://bindonforever.com/zones/blasted-lands",
+    "https://www.wowhead.com/forever/zone=4/blasted-lands",
+    qdb,
+  }, { "ungoro-49" }, {
+    taxi("fly", on.stormwind("Dungar Longdrink", 71.3, 72.2), "Nethergarde Keep, Blasted Lands", "Fly to Nethergarde Keep."),
+    accept(2581, drazial, "The Bloodmages Drazial and Lynnore camp west of Nethergarde on the edge of the Dreadmaul hills."),
+    accept(2583, drazial), accept(2585, drazial), accept(2601, lynnore), accept(2603, lynnore),
+    along(objective(2581, bl(nil, 46.7, 20.6), "Starving Snickerfangs roam just south of the camp. Collect jowls, and gather the other parts as you go.",
+      "3 Snickerfang Jowl", "2 Blasted Boar Lung", "Scorpok Pincer"), 2583, 2585, 2601, 2603),
+    along(objective(2585, bl(nil, 49.6, 18.5), "Scorpok Stingers in the same hills give the pincers.", "3 Scorpok Pincer", "2 Vulture Gizzard",
+      "Blasted Boar Lung"), 2581, 2583),
+    along(objective(2583, bl(nil, 59.7, 28.3), "Go east to the Grunters and Ashmane Boars for lungs.", "3 Blasted Boar Lung", "2 Scorpok Pincer",
+      "Basilisk Brain"), 2601, 2603),
+    along(objective(2601, bl(nil, 61.3, 28.1), "Redstone Basilisks share those hills. Collect their brains.", "10 Basilisk Brain", "2 Vulture Gizzard"),
+      2583, 2603),
+    along(objective(2603, bl(nil, 60.0, 35.9), "Spiteflayer vultures circle farther south. Take their gizzards and any extra parts for the second round.",
+      "10 Vulture Gizzard", "2 Snickerfang Jowl"), 2601),
+    action("goto", drazial, "Ride back north to the Bloodmages' camp."),
+    finish(2581, drazial), finish(2583, drazial), finish(2585, drazial), finish(2601, lynnore), finish(2603, lynnore),
   })
 end
