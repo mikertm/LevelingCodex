@@ -500,13 +500,15 @@ local needles = (function()
     finish(5881, tn("Grish Longrunner", 31.86, 21.66)),
     accept(4542, tn("Brave Moonhorn", 32.24, 22.17)),
     withItem(12564, accept(4881, tn("Galak Messenger", 39.4, 33.1), "If you kill the Galak Messenger, a centaur who patrols the road, use the note he drops.")),
+    -- One pass across the mesa: the flight master and Elu on the north edge, Hagar, Longhorn and the
+    -- poster in the middle, then the inn, Rau and Jandia on the south side.
     taxi("getfp", nyse, "Freewind Post, Thousand Needles", "Follow the road south-east to Freewind Post on its mesa. Learn the flight path from Nyse."),
-    action("sethearth", tn("Innkeeper Abeqwa", 46.07, 51.5), "Set your hearthstone at Freewind Post.", { bind = "Freewind Post" }),
+    accept(4767, elu), accept(4821, hagar),
     finish(4542, longhorn), accept(4841, longhorn),
     accept(5147, tn("Wanted Poster - Arnak Grimtotem", 46.0, 50.86), "Read the wanted poster for Arnak Grimtotem beside Longhorn."),
+    action("sethearth", tn("Innkeeper Abeqwa", 46.07, 51.5), "Set your hearthstone at Freewind Post.", { bind = "Freewind Post" }),
     finish(1196, rau), accept(1197, rau),
     accept(98069, jandia), accept(98070, jandia),
-    accept(4821, hagar), accept(4767, elu),
     accept(1149, dorn, "Leave Freewind and ride north-east to Dorn Plainstalker on his wooden platform."),
     objectiveAt(1149, tn(nil, 26.6, 34.2), "Wait for Dorn to send you to the planks on a needle. Jump from the very end of the plank: it teleports you down safely."),
     finish(1149, dorn), accept(1150, dorn),

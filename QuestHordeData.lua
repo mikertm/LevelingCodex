@@ -138,6 +138,7 @@ do
   }
   local valley = {
     accept(4641, kaltunk, "Speak to Kaltunk where you arrive in the valley."),
+    accept(1485, ruzan, "Warlocks: Ruzan stands beside Kaltunk."),
     finish(4641, gornek, "Go into the Den, the large hut just west, and find Gornek."),
     accept(788, gornek),
   }
@@ -150,7 +151,6 @@ do
   end
   for _, step in ipairs({
     action("train", nil, "Visit your class trainer around the Den. Train spells for level", { level = 2 }),
-    accept(1485, ruzan),
     accept(4402, galgar, "Galgar cooks by the fire just north of the Den."),
     accept(790, hanazua, "Hana'zua lies wounded under the trees north-west of the Den."),
     along(objective(788, du(nil, 43.9, 65.8),
@@ -169,6 +169,7 @@ do
     action("train", nil, "Visit your class trainer around the Den. Train spells for level", { level = 4 }),
     withItem(16114, along(objective(5441, du(nil, 45.0, 69.1),
       "Use the Foreman's Blackjack on sleeping Lazy Peons around the lumber piles to wake them.", "5 Peons Awoken"), 4402)),
+    finish(5441, thazzril, "Return the blackjack to Thazz'ril by the lumber piles."), accept(6394, thazzril),
     along(objective(789, du(nil, 43.3, 58.3),
       "Head north. Kill Scorpid Workers on the way to the imp camp for their tails.", "10 Scorpid Worker Tails"), 792),
     along(objective(792, du(nil, 43.9, 58.4), "Kill Vile Familiars in the imp camp at the north end of the valley.",
@@ -176,7 +177,6 @@ do
     objective(4402, du(nil, 44.7, 64.9), "Finish collecting Cactus Apples from the cactuses on the way back south.",
       "10 Cactus Apples"),
     finish(4402, galgar), finish(789, gornek),
-    finish(5441, thazzril), accept(6394, thazzril),
     finish(792, zureetha),
     accept(794, zureetha),
     accept(1516, canaga),
@@ -393,11 +393,11 @@ do
       "Follow the road north-west to the far end of the Razormane Grounds. Kill Dustrunners and Battleguards there.",
       "4 Razormane Dustrunners", "4 Razormane Battleguards"),
     accept(816, misha, "Misha lives at the farmstead north-west of Razor Hill."),
-    accept(834, rezlak, "Continue north to Rezlak's wrecked caravan near Drygulch Ravine."),
+    objective(806, du(nil, 42.1, 26.7),
+      "Go north-west into Thunder Ridge. Kill Fizzle Darkstorm at the Burning Blade camp and loot his claw.", "Fizzle's Claw"),
+    accept(834, rezlak, "Head north-east to Rezlak's wrecked caravan near Drygulch Ravine."),
     objective(834, du(nil, 49.7, 21.9), "Search the ravine east of Rezlak for Sacks of Supplies.", "5 Sacks of Supplies"),
     finish(834, rezlak), accept(835, rezlak),
-    objective(806, du(nil, 42.1, 26.7),
-      "Go west to Thunder Ridge. Kill Fizzle Darkstorm at the Burning Blade camp and loot his claw.", "Fizzle's Claw"),
     action("goto", orgGate, "Enter Orgrimmar through the south gate."),
     taxi("getfp", doras, "Orgrimmar, Durotar", "Speak to Doras on the tower in the Valley of Strength for the flight path."),
     finish(831, nazgrel, "Cross the city west to Grommash Hold. Nazgrel stands beside Thrall."),
@@ -467,5 +467,6 @@ do
     steps = B.withTrainers(senjin, razorTrainers) }
   route.sections[#route.sections + 1] = { id = "northern-durotar", title = "Northern Durotar", zone = durotar,
     levels = { 10, 12 }, start = { ORC, TROLL }, verified = false, sources = sources,
+    suggest = { "crossroads", "silverpine-early" },
     steps = B.withTrainers(north, razorTrainers) }
 end

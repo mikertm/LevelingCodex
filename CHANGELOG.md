@@ -12,6 +12,9 @@
   - Everyone: the Crossroads and the northern and southern Barrens, Sun Rock and Camp Taurajo, Zoram'gar, then the Sepulcher, Hillsbrad, Stonetalon, Ashenvale (Splintertree) and Thousand Needles to Freewind Post. Shimmering Flats is an alternate at the end.
 - **Forever content included:** the new starting-zone quests, Camping 101's Cooking intro (other professions are optional), the Orc Mage and Troll Warlock class letters, Forever's new quests in Durotar, the Barrens, Stonetalon and Ashenvale, and Orgrimmar's city errands.
 - **Horde dungeon checklists:** Ragefire Chasm, Ruins of Lordaeron, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps and Razorfen Kraul, with their Horde quest chains before, inside and after the run, and bosses in order. Planned runs add their solo pickups to the route.
+- **Tirisfal and Silverpine alternate** for Orcs, Trolls, Tauren and Skyborne at 12-15: the zeppelin to Brill, the Undercity flight path, the Silverpine quest loop and back to the Crossroads. Offered at the end of Durotar, Mulgore and Zephras Isle beside the Barrens.
+- **Tighter loops:** the Crossroads arrival, Freewind Post, Thunder Bluff and several starting-zone hubs are now one pass each, and northern Durotar no longer doubles back for Fizzle Darkstorm.
+- Fixed: Undead objective steps in Deathknell, Tirisfal and Silverpine pointed the arrow at Elwynn Forest.
 - **Horde class quests to 30**, inline where they sit on the route and as class guides in the Quests tab otherwise:
   - Warrior: Defensive Stance, Forged Steel, Agamand Heirlooms, the Field of Giants trial, the Brutal armor set, Berserker Stance.
   - Paladin (Undead): Redemption, Lumina Windsinger, Wolfsbane.

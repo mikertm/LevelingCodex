@@ -250,3 +250,4 @@ for _, section in ipairs({
     levels = { section[3], section[4] }, start = "SKYBORNE", verified = false, sources = sources,
     steps = B.withTrainers(section[5], section[6]) }
 end
+route.sections[#route.sections].suggest = { "crossroads", "silverpine-early" }

@@ -175,9 +175,20 @@ local town = {
   },
 }
 
+-- B.objective(id, x, y, ...) places the step on the Alliance default map; these sections
+-- need theirs set.
+local function objectiveOn(map)
+  return function(id, x, y, text, ...)
+    local step = B.objective(id, x, y, text, ...)
+    step.map = map
+    return step
+  end
+end
+
 -- Deathknell (1-6)
 local deathknell = (function()
-  local accept, finish, objective, along, action = B.accept, B.finish, B.objective, B.along, B.action
+  local accept, finish, along, action = B.accept, B.finish, B.along, B.action
+  local objective = objectiveOn(B.maps.tirisfal)
   local mordo = ti("Undertaker Mordo", 30.22, 71.65)
   local sarvis = ti("Shadow Priest Sarvis", 30.84, 66.2)
   local elreth = ti("Novice Elreth", 30.86, 66.05)
@@ -205,6 +216,7 @@ local deathknell = (function()
     objective(364, 31.7, 64.0, "Kill the zombies shambling around the graves just north of the chapel.",
       "8 Mindless Zombies", "8 Wretched Zombies"),
     finish(364, sarvis),
+    accept(3901, sarvis), accept(376, elreth, "Novice Elreth stands beside Sarvis."),
     accept(3095, sarvis), finish(3095, dannal, "Read the scroll, then find Dannal Stern in the house east of the chapel."),
     accept(3096, sarvis), finish(3096, david, "Read the scroll, then find David Trias in the house east of the chapel."),
     accept(3097, sarvis), finish(3097, duesten, "Read the scroll, then speak to Dark Cleric Duesten inside the chapel."),
@@ -212,7 +224,6 @@ local deathknell = (function()
     accept(3099, sarvis), finish(3099, maximillion, "Read the scroll, then speak to Maximillion inside the chapel."),
     accept(98601, sarvis), finish(98601, aramis, "Read the scroll, then speak to Aramis Hammerhand inside the chapel."),
     accept(90902, aramis),
-    accept(3901, sarvis), accept(376, elreth),
     action("train", nil, "Train spells for level", { level = 2 }),
     along(objective(90902, 31.9, 65.1, "Cast Holy Light on the Injured Deathguards lying around the village.",
       "5 Injured Deathguards healed"), 3901),
@@ -253,8 +264,9 @@ end)()
 
 -- Brill, Tirisfal Glades and a first Undercity visit (6-12)
 local glades = (function()
-  local accept, finish, objective, objectiveAt, along, action, withItem, forDungeon =
-    B.accept, B.finish, B.objective, B.objectiveAt, B.along, B.action, B.withItem, B.forDungeon
+  local accept, finish, objectiveAt, along, action, withItem, forDungeon =
+    B.accept, B.finish, B.objectiveAt, B.along, B.action, B.withItem, B.forDungeon
+  local objective = objectiveOn(B.maps.tirisfal)
   local only = B.only
   local simmer = ti("Deathguard Simmer", 40.91, 54.17)
   local gordo = ti("Gordo", 40.77, 54.42)
@@ -468,8 +480,9 @@ end)()
 
 -- The Sepulcher, Silverpine Forest, and the trip to the Barrens (12-15)
 local sepulcher = (function()
-  local accept, finish, objective, objectiveAt, along, action, forDungeon =
-    B.accept, B.finish, B.objective, B.objectiveAt, B.along, B.action, B.forDungeon
+  local accept, finish, objectiveAt, along, action, forDungeon =
+    B.accept, B.finish, B.objectiveAt, B.along, B.action, B.forDungeon
+  local objective = objectiveOn(B.maps.silverpine)
   local erland = sp("Deathstalker Erland", 56.18, 9.18)
   local rane = sp("Rane Yorick", 53.46, 13.43)
   local quinn = sp("Quinn Yorick", 53.43, 12.59)
@@ -575,3 +588,92 @@ sections[#sections + 1] = { id = "tirisfal", title = "Tirisfal Glades", zone = t
   start = "SCOURGE", verified = false, sources = sources, steps = glades }
 sections[#sections + 1] = { id = "silverpine", title = "Silverpine Forest", zone = silverpine, levels = { 12, 15 },
   start = "SCOURGE", verified = false, sources = sources, steps = sepulcher }
+
+-- Alternate for Orcs, Trolls, Tauren and Skyborne at 12-15: RestedXP's Forever route for Kalimdor
+-- races who want Silverpine before the Barrens. The zeppelin to Tirisfal, the Brill pickups RestedXP
+-- takes (The Argent Emissary, the Cult of the Damned, Rear Guard Patrol, Delivery to Silverpine),
+-- the Undercity flight path, then the Undead Silverpine loop without its Undead and Rogue quests,
+-- and back to Durotar for the Crossroads. Source notes: tools/audits/2026-11-10-horde-loop-audit.md.
+do
+  local function stepsOf(id)
+    for _, section in ipairs(route.sections) do
+      if section.id == id then return section.steps end
+    end
+    error("Horde Silverpine alternate: no section " .. id)
+  end
+  local lead = { [96895] = true, [445] = true, [356] = true, [96897] = true, [96898] = true }
+  -- Undead only (Supplying the Sepulcher and its ride), and the Undead Rogue chain.
+  local skip = { [6321] = true, [6323] = true, [6322] = true, [840] = true, [842] = true }
+  local kept = {}
+  local function copy(step)
+    local result = {}
+    for key, value in pairs(step) do result[key] = value end
+    return result
+  end
+  local function tidy(steps)
+    for _, step in ipairs(steps) do
+      if step.chain then
+        local chain = {}
+        for _, id in ipairs(step.chain) do if kept[id] then chain[#chain + 1] = id end end
+        step.chain = #chain > 0 and chain or nil
+      end
+      if step.also then
+        local also = {}
+        for _, id in ipairs(step.also) do if kept[id] and id ~= step.quest then also[#also + 1] = id end end
+        step.also = #also > 0 and also or nil
+      end
+    end
+    return steps
+  end
+
+  local durotarTower = B.at("Zeppelin tower", 50.8, 13.8, M.durotar)
+  local garrett = B.at("Michael Garrett", 63.25, 48.56, undercity)
+  local ucEntrance = B.at("Undercity entrance", 61.8, 65.1, tirisfal)
+  local steps = {
+    B.action("boat", durotarTower,
+      "Take the zeppelin to Tirisfal Glades from the tower just outside Orgrimmar's south gate. Use Next when you land."),
+  }
+  -- In Brill: Johaan (north), Terrence and Linnea on the way south-east, then Hadric's camp.
+  local first = { [445] = 1, [96895] = 2, [356] = 3 }
+  local pickups, rest = {}, {}
+  for _, step in ipairs(stepsOf("tirisfal")) do
+    if step.quest and lead[step.quest] and not step.class and not step.optional then
+      kept[step.quest] = true
+      if step.type == "accept" and first[step.quest] then
+        pickups[first[step.quest]] = copy(step)
+      else
+        rest[#rest + 1] = copy(step)
+      end
+    end
+  end
+  for _, step in ipairs(pickups) do steps[#steps + 1] = step end
+  for _, step in ipairs(rest) do steps[#steps + 1] = step end
+  steps[#steps + 1] = B.action("goto", ucEntrance,
+    "Enter the Undercity through the ruined city south of Brill and ride an elevator down.")
+  steps[#steps + 1] = B.taxi("getfp", garrett, "Undercity, Tirisfal",
+    "Learn the Undercity flight path from Michael Garrett, the bat handler east of the Trade Quarter.")
+  for _, step in ipairs(stepsOf("silverpine")) do
+    if step.type == "boat" then break end
+    local wanted = step.quest and not skip[step.quest] and not step.class and not step.optional
+      or (not step.quest and (step.type == "goto" or step.type == "getfp" and step.flight ~= "Undercity, Tirisfal"))
+    if step.type == "hearth" then
+      steps[#steps + 1] = B.taxi("fly", town.karos, "Undercity, Tirisfal",
+        "Fly to the Undercity from Karos Razok.")
+    elseif wanted then
+      if step.quest then kept[step.quest] = true end
+      steps[#steps + 1] = copy(step)
+    end
+  end
+  steps[#steps + 1] = B.action("boat", town.tower,
+    "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin back to Durotar. Use Next when you land.")
+  steps[#steps + 1] = B.action("goto", B.at("The Crossroads", 51.5, 30.34, M.barrens),
+    "From the landing, take the road west past Orgrimmar's gate and on through the Barrens to the Crossroads.")
+
+  local alternate = { id = "silverpine-early", title = "Tirisfal and Silverpine", zone = silverpine,
+    levels = { 12, 15 }, start = { "ORC", "TROLL", "TAUREN", "SKYBORNE" }, alternate = true,
+    suggest = { "crossroads" }, verified = false, sources = {
+      "https://bindonforever.com/zones/silverpine-forest",
+      "https://bindonforever.com/zones/tirisfal-glades",
+    }, steps = tidy(steps) }
+  route.sections[#route.sections + 1] = alternate
+end

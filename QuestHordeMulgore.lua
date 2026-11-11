@@ -259,6 +259,7 @@ do
     taxi("getfp", tb("Tal", 47.0, 49.82), "Thunder Bluff, Mulgore", "Learn the flight path from Tal at the top of the wind rider tower."),
     finish(97935, tb("Brek Stonehoof", 34.37, 57.9), "Miners: Brek Stonehoof has the next mining lesson."),
     finish(97933, tb("Komin Winterhoof", 49.95, 40.41), "Herbalists: Komin Winterhoof has the next herbalism lesson."),
+    accept(744, eyahn, "Eyahn Eagletalon stands near the top of the lift."),
     action("goto", liftTop, "Ride the lift back down to Mulgore."),
     withItem(4854, accept(770, nil, "If Ghost Howl, a level 12 grey wolf that roams Mulgore, dropped the Demon Scarred Cloak, use it to start the quest.")),
     accept(833, raintotem, "Go east from Thunder Bluff to Red Rocks. Lorekeeper Raintotem waits at the foot of the rocks."),
@@ -303,7 +304,6 @@ do
     action("hearth", pala, "Hearth to Thunder Bluff.", { bind = "Thunder Bluff" }),
     finish(76156, boarton), accept(76160, boarton),
     finish(6089, tb("Holt Thunderhorn", 57.3, 89.79), "Hunters: Holt Thunderhorn is on Hunter Rise."),
-    accept(744, eyahn),
     finish(775, cairne, "Cross the bridges to High Chieftain Cairne Bloodhoof in the great lodge."),
     accept(776, cairne), finish(99082, cairne), finish(98430, cairne),
     finish(5926, tb("Turak Runetotem", 76.48, 27.22), "Druids: Turak Runetotem is on Elder Rise. Your next druid quests are in the class guides."),
@@ -348,7 +348,7 @@ do
   }
   route.sections[#route.sections + 1] = { id = "camp-narache", title = "Camp Narache", zone = mulgore, levels = { 1, 6 },
     start = "TAUREN", verified = false, sources = sources, steps = B.withTrainers(narache, naracheTrainers) }
-  route.sections[#route.sections + 1] = { id = "mulgore", title = "Mulgore", zone = mulgore, levels = { 6, 12 },
+  route.sections[#route.sections + 1] = { id = "mulgore", title = "Mulgore", zone = mulgore, levels = { 6, 12 }, suggest = { "crossroads", "silverpine-early" },
     start = "TAUREN", verified = false, sources = sources, steps = B.withTrainers(bloodhoof, bloodhoofTrainers) }
 
   -- Arrow legs for the lift and the road east.

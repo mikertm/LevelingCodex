@@ -725,6 +725,14 @@ function S.questHordeSkyborne()
   MOCK.faction = nil
 end
 
+-- Kalimdor races who take the zeppelin to Silverpine at 12 get the alternate route there.
+function S.questHordeSilverpine()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 13, 1421
+  S.login()
+  check(questText(questViewer(), "Tirisfal and Silverpine"), "an Orc in Silverpine at 13 is on the Silverpine alternate")
+  MOCK.faction = nil
+end
+
 -- All Horde starts join the Barrens; each race only sees its own arrival quests.
 function S.questHordeBarrens()
   MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 13, 1413

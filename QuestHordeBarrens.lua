@@ -199,25 +199,29 @@ local crossroads = (function()
     only(objectiveAt(924, ba("Altar of Fire", 47.97, 19.07),
       "Orcs and Trolls: with the Flawed Power Stone from Far Watch, follow the road west and climb Dreadmist Peak. Use the altar in the den at the top before the stone crumbles (30 minutes).",
       "Destroy the Demon Seed"), { race = { "ORC", "TROLL" } }),
-    action("goto", p.sergra, "Make for the Crossroads, the walled town where the Barrens roads meet. From Far Watch Post follow the road west; from Camp Taurajo follow it north."),
+    action("goto", p.devrak, "Make for the Crossroads, the walled town where the Barrens roads meet. From Far Watch Post follow the road west; from Camp Taurajo follow it north."),
+    -- One loop through town: the flight tower, the south half (Helbrim, Thork, Sergra, Tonga), then
+    -- the north half (Gazrog, the inn, Zargh, Jahan) and back to the tower. Arrival turn-ins from the
+    -- starting zones (accepted in the Durotar, Mulgore, Tirisfal and Skyborne files) are on the way.
     taxi("getfp", p.devrak, "Crossroads, The Barrens", "Learn the flight path from Devrak on the tower in the middle of town."),
-    action("sethearth", p.boorand, "Bind your hearthstone with Innkeeper Boorand Plainswind at the inn.", crossroadsBind),
-    -- Arrival turn-ins from the starting zones (accepted in the Durotar, Mulgore and Tirisfal files).
+    only(finish(1358, p.helbrim), { race = "SCOURGE" }),
+    -- Other races carry the sample only after the Tirisfal and Silverpine alternate.
+    only(finish(1358, p.helbrim), { race = { "ORC", "TROLL", "TAUREN", "SKYBORNE" }, optional = true }),
+    accept(1492, p.helbrim, "Apothecary Helbrim stands at the foot of the flight tower."), accept(848, p.helbrim),
+    only(finish(854, p.thork), TAUREN),
+    only(finish(98024, p.thork), { race = "SKYBORNE" }),
+    accept(871, p.thork), accept(5041, p.thork),
     only(finish(842, p.sergra), { race = { "ORC", "TROLL", "SCOURGE" } }),
     only(finish(860, p.sergra), TAUREN),
-    only(finish(886, p.tonga), { race = "TAUREN", class = "DRUID" }),
-    only(finish(854, p.thork), TAUREN),
-    only(finish(1358, p.helbrim), { race = "SCOURGE" }),
-    only(finish(98024, p.thork), { race = "SKYBORNE" }),
     accept(844, p.sergra, "Sergra Darkthorn stands at the south end of town, by the watch tower."),
-    accept(870, p.tonga),
-    accept(871, p.thork), accept(5041, p.thork),
-    accept(1492, p.helbrim), accept(848, p.helbrim),
-    accept(869, p.gazrog),
+    only(finish(886, p.tonga), { race = "TAUREN", class = "DRUID" }),
+    accept(870, p.tonga, "Tonga Runetotem stands just outside the south gate."),
+    accept(869, p.gazrog, "Walk back north through town to Gazrog."),
+    action("sethearth", p.boorand, "Bind your hearthstone with Innkeeper Boorand Plainswind at the inn.", crossroadsBind),
     accept(6365, p.zargh, "Zargh sells meat by the inn. He has a delivery that starts the flight-path errand."),
+    accept(6361, p.jahan, "Jahan Hawkwing has hides for Thunder Bluff. He stands on the north side of town."),
     finish(6365, p.devrak, "Hand the meat to Devrak at the flight tower."),
     accept(6384, p.devrak, "Keep this until the route visits Orgrimmar. Don't fly there now."),
-    accept(6361, p.jahan, "Jahan Hawkwing has hides for Thunder Bluff. He stands on the north side of town."),
     finish(6361, p.devrak), accept(6362, p.devrak, "Keep this until you fly to Thunder Bluff after the Ratchet trip."),
 
     -- The Razormane camps north-east of town.
@@ -265,9 +269,9 @@ local crossroads = (function()
     accept(892, p.dizzywig), accept(896, p.dizzywig),
     finish(892, p.gazlowe), accept(888, p.gazlowe, "Leave the stolen boots and lens for the next visit south of Ratchet."),
     taxi("fly", p.devrak, "Crossroads, The Barrens", "Fly back to the Crossroads from Bragok."),
+    finish(5041, p.thork, "Thork stands beside the flight tower."), finish(872, p.thork),
     objectiveAt(845, ba(nil, 48.3, 36.8),
       "If you still need hooves, hunt Zhevra Runners in the grassland just south-west of town.", "4 Zhevra Hooves"),
-    finish(5041, p.thork), finish(872, p.thork),
     finish(845, p.sergra), accept(903, p.sergra),
 
     -- Tauren: the flight errand to Thunder Bluff.
@@ -502,10 +506,10 @@ local sunrock = (function()
     taxi("getfp", p.tal, "Thunder Bluff, Mulgore", "Learn the flight path from Tal on the central rise."),
     action("sethearth", p.pala, "Bind your hearthstone with Innkeeper Pala.", bluffBind),
     action("train", nil, "Train spells for level", { level = 20 }),
-    accept(264, p.clarice, "Clarice Foster stands on the Spirit Rise. Her quest leads to Silverpine; keep it."),
-    -- CARRY: turnin 264 Until Death Do Us Part at Yuriv's Tombstone, Silverpine Forest (22-30 file)
     finish(853, p.zamah, "Apothecary Zamah is in the Pools of Vision, under the Spirit Rise."),
     dungeon(accept(962, p.zamah), "wailing-caverns"),
+    accept(264, p.clarice, "Climb up to the Spirit Rise. Clarice Foster's quest leads to Silverpine; keep it."),
+    -- Until Death Do Us Part is turned in at Yuriv's Tombstone in the 22-30 file's Silverpine section.
     finish(1489, p.hamuul, "Cross to the Elder Rise to Hamuul Runetotem."), accept(1490, p.hamuul),
     finish(1490, p.nara),
     dungeon(accept(914, p.nara), "wailing-caverns"),

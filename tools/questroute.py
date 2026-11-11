@@ -120,6 +120,15 @@ def audit(data, ref, cap=20):
                 fail(label, "bosses must be a dungeon guide's list of { name, tip } in printable ASCII")
             previous = None
             level = start
+            # On a leveling route, a step on another map between two steps on the same map, with no
+            # travel step around it, is usually a place built with the wrong map (an x, y without its map).
+            mapped = [] if section.get("side") else [
+                (i, step) for i, step in enumerate(section["steps"], 1) if step.get("map") is not None]
+            for (_, before), (i, step), (_, after) in zip(mapped, mapped[1:], mapped[2:]):
+                if (step["map"] != before["map"] and before["map"] == after["map"]
+                        and not {before.get("type"), step.get("type"), after.get("type")} & TRAVEL_TYPES
+                        and str(step["map"]) in maps and str(before["map"]) in maps):
+                    warn(f"{label} step {i}", f"hops to map {step['map']} and back to {before['map']} with no travel step")
             for i, step in enumerate(section["steps"], 1):
                 where = f"{label} step {i}"
                 kind, quest = step.get("type"), step.get("quest")
@@ -230,10 +239,17 @@ def audit(data, ref, cap=20):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
                     active, finished = set(), set()
+                    # An optional turn-in for a quest picked up in another guide (a carried breadcrumb):
+                    # the guide shows it only while the quest is in your log, so it needs no accept here.
+                    picked = {s.get("quest") for sec, s, _ in path if s["type"] == "accept"
+                              and matches(sec.get("start"), race) and matches(s.get("race"), race)
+                              and matches(sec.get("class"), class_) and matches(s.get("class"), class_)}
                     for section, step, where in path:
                         if not (matches(section.get("start"), race) and matches(step.get("race"), race)
                                 and matches(section.get("class"), class_) and matches(step.get("class"), class_)) or (
-                                step.get("optional") and not dungeons and section.get("category") != "dungeon"):
+                                step.get("optional") and not dungeons and section.get("category") != "dungeon") or (
+                                step.get("optional") and step["type"] in {"complete", "turnin"}
+                                and step.get("quest") not in picked):
                             continue
                         kind, quest = step["type"], step.get("quest")
                         if kind == "accept":

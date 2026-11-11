@@ -54,7 +54,7 @@ do
   quest[5642].race = "TROLL"
   q(5644, "Dark Sacrifice", 20, 20, nil, nil, priest)
   quest[5644].race = "SCOURGE"
-  B.hordeInline("sun-rock", "accept", 264, {
+  B.hordeInline("sun-rock", "turnin", 853, {
     accept(5642, miles, "Priests: Miles Welsh, the priest trainer on the Spirit Rise, sends Trolls to Ur'kyo for Shadowguard."),
     accept(5644, miles, "Priests: Miles Welsh sends the Undead to Aelthalyste in the Undercity for Dark Sacrifice."),
   })
