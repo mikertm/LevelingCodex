@@ -26,6 +26,32 @@ function B.objectivePart(id, index, place, text, label)
   return step
 end
 
+-- Horde class quests (the QuestHordeClass*.lua files): `B.hordeInline` puts short class quests
+-- into a Horde section after the step matching type and quest (or at its end); `B.hordeSide` adds
+-- a side section (`side = true`, `class = TOKEN`) for a longer chain.
+function B.hordeInline(sectionId, afterType, afterQuest, steps)
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == sectionId then
+      local index = not afterType and #section.steps
+      if afterType then
+        for i, step in ipairs(section.steps) do
+          if step.type == afterType and step.quest == afterQuest then index = i; break end
+        end
+      end
+      assert(index, "Horde class quests: insertion point missing in " .. sectionId)
+      for n, step in ipairs(steps) do table.insert(section.steps, index + n, step) end
+      return
+    end
+  end
+  error("Horde class quests: no section " .. tostring(sectionId))
+end
+
+function B.hordeSide(section)
+  section.side, section.verified = true, false
+  local sections = LevelingCodexQuests.HORDE.sections
+  sections[#sections + 1] = section
+end
+
 local route = {
   -- Racial starts are added by the file that holds each start.
   starts = {},

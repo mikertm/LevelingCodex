@@ -22,6 +22,10 @@ QuestHordeSkyborne.lua
 QuestHordeBarrens.lua
 QuestHorde22to30.lua
 QuestHordeDungeons.lua
+QuestHordeClassWarriorPaladin.lua
+QuestHordeClassHunterRogue.lua
+QuestHordeClassCasters.lua
+QuestHordeClassDruidShaman.lua
 QuestClassData.lua
 Theme.lua
 Art.lua

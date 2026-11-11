@@ -1,0 +1,3 @@
+-- Horde class quests through level 30: Warrior and Paladin. Source notes: tools/audits/2026-11-10-horde-class-*.md.
+local B = LevelingCodexQuests.build
+local route = LevelingCodexQuests.HORDE
