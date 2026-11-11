@@ -466,6 +466,43 @@ function S.questQuestieAuto()
   check(MOCK.questRewarded == 783, "the Codex turns in when Questie's auto-complete is off")
 end
 
+-- Questie side by side: the step window sits beside Questie's tracker until you move it.
+function S.questQuestieTracker()
+  S.login()
+  local viewer = questViewer()
+  local p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without Questie")
+  MOCK.makeQuestie({ cx = 1700 }) -- Questie builds its tracker after login
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "TOPRIGHT" and rel == Questie_BaseFrame and rp == "TOPLEFT" and x == -12 and y == -40,
+    "beside a right-hand tracker, on its left")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: beside Questie's tracker"), "debug names the placement")
+  Questie_BaseFrame._cx = 200
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "TOPLEFT" and rel == Questie_BaseFrame and rp == "TOPRIGHT" and x == 12 and y == -40,
+    "beside a left-hand tracker, on its right")
+  Questie_BaseFrame.GetCenter = function() return nil end
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(select(2, viewer:GetPoint()) == UIParent, "a tracker without a position yet is ignored")
+  Questie_BaseFrame.GetCenter = nil
+  Questie_BaseFrame:Hide()
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "a hidden tracker restores the default spot")
+  MOCK.drag(viewer, -30, 0)
+  Questie_BaseFrame:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(rel == UIParent and x == -78, "a dragged position wins over Questie's tracker")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: saved position"), "debug names the saved position")
+end
+
 function S.questFlights()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
   LevelingCodexCharDB = { questFlights = { ["Darkshire, Duskwood"] = true } }

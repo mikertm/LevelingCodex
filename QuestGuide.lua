@@ -27,12 +27,28 @@ local function turnArrow()
   arrowText:SetText(rotated and arrowCaption or (compass .. (arrowCaption ~= "" and " - " .. arrowCaption or "")))
 end
 
+-- A saved position wins; without one the window sits beside Questie's tracker (built some
+-- seconds after login, so this runs on every refresh) or in its default spot. It only
+-- re-anchors when the answer changes.
+local placedBy
+local PLACED = { saved = "saved position", left = "beside Questie's tracker", right = "beside Questie's tracker",
+  default = "default spot" }
+
 local function place()
-  viewer:ClearAllPoints()
   local p = ns.db().questPosition
+  local tracker, side
+  if not p then tracker, side = ns.questie.trackerSide() end
+  local key = (p and "saved") or side or "default"
+  if key == placedBy then return end
+  placedBy = key
+  viewer:ClearAllPoints()
   if p then viewer:SetPoint(p[1], UIParent, p[2], p[3], p[4])
+  elseif side == "left" then viewer:SetPoint("TOPRIGHT", tracker, "TOPLEFT", -12, -40)
+  elseif side == "right" then viewer:SetPoint("TOPLEFT", tracker, "TOPRIGHT", 12, -40)
   else viewer:SetPoint("RIGHT", UIParent, "RIGHT", -48, 80) end
 end
+
+function ns.questViewerPlacement() return PLACED[placedBy or "default"] end
 
 local function font(parent, y, width, template)
   local fs = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlightSmall")
@@ -84,6 +100,7 @@ local function makeViewer()
     self:StopMovingOrSizing()
     local point, _, relative, x, y = self:GetPoint()
     if point then ns.db().questPosition = { point, relative, x, y } end
+    placedBy = nil -- the next refresh anchors the saved spot to UIParent
     updateItemButton()
   end)
   viewer:HookScript("OnHide", function()
@@ -431,6 +448,7 @@ function ns.questRefresh()
   if not dismissed and sec then
     painting = true
     if not viewer then makeViewer() end
+    place()
     if theme ~= ns.themeVersion then
       local backdrop = A.backdrop(viewer, "dialog", C.parch, C.edge)
       flatBackground:SetColorTexture(ns.rgba(C.parch))

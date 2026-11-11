@@ -46,6 +46,25 @@ function M.modifierHeld()
   return ok and down ~= nil and down ~= false -- older clients return 1/nil
 end
 
+local function scaleOf(frame)
+  local ok, s = ns.try(frame.GetEffectiveScale, frame)
+  return ok and type(s) == "number" and s > 0 and s or 1
+end
+
+-- Questie's tracker, when shown and laid out, and which side of it the step window goes:
+-- "left" for a tracker on the right half of the screen, else "right".
+function M.trackerSide()
+  local tracker = _G.Questie_BaseFrame
+  if type(tracker) ~= "table" or type(tracker.IsShown) ~= "function" then return end
+  local ok, shown = ns.try(tracker.IsShown, tracker)
+  if not ok or not shown then return end
+  local cok, cx = ns.try(tracker.GetCenter, tracker)
+  local wok, width = ns.try(UIParent.GetWidth, UIParent)
+  if not cok or type(cx) ~= "number" or not wok or type(width) ~= "number" then return end
+  local onRight = cx * scaleOf(tracker) > width * scaleOf(UIParent) / 2
+  return tracker, onRight and "left" or "right"
+end
+
 local function onOff(on) return on and "on" or "off" end
 
 function ns.questieDebugLines()
@@ -59,5 +78,6 @@ function ns.questieDebugLines()
   else
     lines[#lines + 1] = "Questie: not loaded"
   end
+  if ns.questViewerPlacement then lines[#lines + 1] = "Step window: " .. ns.questViewerPlacement() end
   return lines
 end
