@@ -698,6 +698,21 @@ for name, start in pairs({ Dwarf = "Coldridge Valley", Gnome = "Coldridge Valley
   end
 end
 
+-- Each Horde race starts in its own zone at level 1 and never sees the Alliance route.
+for name, start in pairs({ Orc = { "Valley of Trials", "Your Place In The World" },
+    Troll = { "Valley of Trials", "Your Place In The World" } }) do
+  S["questStartHorde" .. name] = function()
+    MOCK.faction, MOCK.race, MOCK.level = "Horde", name, 1
+    S.login()
+    check(questText(questViewer(), start[1]) and questText(questViewer(), start[2]),
+      name .. " starts in " .. start[1])
+    slash("quests")
+    check(not findButton(win(), function(l) return l == "Northshire Valley" or l == "Westfall" end),
+      name .. " doesn't see Alliance guides")
+    MOCK.faction = nil
+  end
+end
+
 local function classSideFixture()
   local function step(kind, id, name)
     return { type = kind, quest = id, name = name, text = "Test class chain.", min = 10, level = 10,

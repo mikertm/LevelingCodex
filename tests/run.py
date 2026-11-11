@@ -582,6 +582,7 @@ def main():
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
                              "questWetlands", "questWetlandsTravel", "questWetlandsEnd",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
+                             "questStartHordeOrc", "questStartHordeTroll",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
