@@ -2,7 +2,7 @@
 
 The detours separate outdoor preparation, in-instance objectives and turn-ins after the run. The Deadmines detour reuses the Westfall quest IDs and the Wetlands detour reuses the Rethiel chain. Completed quests and quests already in the log carry across guides through those IDs. The level ranges describe when to plan a run. Each quest can have a different minimum, and the game controls entry and offers.
 
-Quest and map IDs were checked against the repository's Forever client reference, build 1.60.1.70862. Starting-item IDs were checked against that build's ItemSparse table. NPC and objective facts use the pinned QuestieDB records where available, with public walkthroughs for paths and room landmarks. The local Zygor Forever reference helped identify the sequence to verify. The data uses original route text and remains unverified until tested in game. [Blizzard's dungeon announcement](https://worldofwarcraft.blizzard.com/en-us/news/24301455/) · [QuestieDB Forever snapshot](https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever)
+Quest and map IDs were checked against the repository's Forever client reference, build 1.60.1.70862. Starting-item IDs were checked against that build's ItemSparse table. NPC and objective facts use the pinned QuestieDB records where available, with public walkthroughs for paths and room landmarks. A local reference guide helped identify the sequence to verify. The data uses original route text and remains unverified until tested in game. [Blizzard's dungeon announcement](https://worldofwarcraft.blizzard.com/en-us/news/24301455/) · [QuestieDB Forever snapshot](https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever)
 
 ## Coverage
 

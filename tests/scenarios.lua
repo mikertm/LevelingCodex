@@ -367,14 +367,220 @@ function S.questBind()
     if button:IsVisible() and button.tipTitle == "Return to Lakeshire" then hearth = button; break end
   end
   check(hearth, "hearth step is in the route list")
+  MOCK.bags[6948] = 1
   hearth:Click()
   check(questText(frame, "Your hearthstone is set to Goldshire") and questText(frame, "lake road west"),
     "return step names the different bind and keeps the route to Lakeshire")
   check(not questText(frame, "Hearth to Lakeshire"), "return step does not recommend a hearth to the wrong town")
+  local item = _G.LevelingCodexQuestItem
+  check(not (item and item:IsShown()), "no Hearthstone button while it is set to another town")
   MOCK.bind = "Lakeshire"
   MOCK.event("HEARTHSTONE_BOUND")
   check(questText(frame, "Use your hearthstone") and not questText(frame, "Your hearthstone is set to Goldshire"),
     "return step offers the hearth when it leads to Lakeshire")
+  item = _G.LevelingCodexQuestItem
+  check(item and item:IsShown() and item:GetAttribute("item") == "item:6948",
+    "a hearth step to your bind town puts the Hearthstone on the item button")
+end
+
+function S.questTravelFlight()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1431
+  MOCK.taxiNodes = { { "Darkshire, Duskwood", "CURRENT" }, { "Stormwind, Elwynn", "REACHABLE" } }
+  MOCK.gossipOptions = { { gossipOptionID = 7, name = "I want to browse your goods." },
+    { gossipOptionID = 8, name = "Show me where I can fly." } }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Fly - Stormwind, Elwynn"), "the Wetlands section starts with the flight to Stormwind")
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("TAXIMAP_OPENED")
+  check(MOCK.gossipOption == nil and MOCK.tookTaxi == nil, "travel automation is off by default")
+  slash("quests")
+  click(win(), "Settings")
+  click(win(), "Take the guide's flights and binds")
+  check(LevelingCodexDB.questAutoTravel, "the travel setting is saved")
+  MOCK.alt = true
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("TAXIMAP_OPENED")
+  check(MOCK.gossipOption == nil and MOCK.tookTaxi == nil, "holding Alt keeps the flight master's choices")
+  MOCK.alt = false
+  MOCK.combat = true
+  MOCK.event("TAXIMAP_OPENED")
+  check(MOCK.tookTaxi == nil, "no flights taken in combat")
+  MOCK.combat = false
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipOption == 8, "the flight master's flight option is picked")
+  MOCK.event("TAXIMAP_OPENED")
+  check(MOCK.tookTaxi == 2 and chatHas("flying to Stormwind, Elwynn"), "the step's flight is taken")
+  MOCK.tookTaxi = nil
+  MOCK.taxiNodes[2][2] = "UNREACHABLE"
+  MOCK.event("TAXIMAP_OPENED")
+  check(MOCK.tookTaxi == nil, "an unreachable destination is left to the player")
+end
+
+function S.questTravelBind()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 18, 1433, "Goldshire"
+  MOCK.gossipOptions = { { gossipOptionID = 3, name = "Make this inn your home." },
+    { gossipOptionID = 4, name = "Show me where I can fly." } }
+  LevelingCodexDB = { questAutoTravel = true }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Flight path - Lakeshire, Redridge"), "Lakeshire starts at its flight path")
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipOption == 4, "a flight path step opens the flight master's map")
+  MOCK.gossipOption = nil
+  click(frame, "Next")
+  check(questText(frame, "Bind hearthstone"), "the bind step follows")
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("CONFIRM_BINDER", "Lakeshire")
+  check(MOCK.gossipOption == nil and not MOCK.binderConfirmed, "no binding away from the step's inn")
+  MOCK.questX, MOCK.questY = 22.1, 44.6
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipOption == 3, "the innkeeper's bind option is picked at the step's inn")
+  MOCK.event("CONFIRM_BINDER", "Goldshire")
+  check(not MOCK.binderConfirmed, "a different town's bind is never confirmed")
+  MOCK.event("CONFIRM_BINDER", "Lakeshire")
+  check(MOCK.binderConfirmed and MOCK.popupHidden == "CONFIRM_BINDER", "the bind is confirmed and its popup closed")
+end
+
+function S.questGrind()
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 14, 1436
+  LevelingCodexCharDB = { questFlights = { ["Sentinel Hill, Westfall"] = true } }
+  local grind
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "westfall" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "grind" then grind = step; break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.xp, MOCK.xpMax, MOCK.rested = 1000, 4000, 600
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Level up") and questText(frame, "Reach level 15"), "the Westfall grind step is current")
+  check(questText(frame, "XP 1000 / 4000 (25%)") and questText(frame, "3000 XP to level 15")
+    and questText(frame, "Rested: 600 XP"), "the grind step shows the XP still to go")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Defias Looter dies, you gain 150 experience.")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "You gain 300 experience.")
+  MOCK.xp = 1150
+  MOCK.event("PLAYER_XP_UPDATE", "player")
+  check(questText(frame, "2850 XP to level 15, about 19 kills"), "kills are estimated from the last kills' XP")
+  MOCK.questLog = { { questID = 999, title = "Elsewhere", isComplete = true } }
+  MOCK.rewardXP = { [999] = 875 }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Ready turn-ins: about 875 XP"), "XP waiting in finished quests is shown")
+  -- A grind target inside a level: level 15 and 40%.
+  grind.xp = 0.4
+  MOCK.level, MOCK.xp, MOCK.questLog = 15, 800, {}
+  MOCK.event("PLAYER_LEVEL_UP", 15)
+  check(questText(frame, "800 XP to 40% of level 15"), "a share of a level is a grind target")
+  MOCK.xp = 1700
+  MOCK.event("PLAYER_XP_UPDATE", "player")
+  check(not questText(frame, "Reach level 15"), "reaching the share finishes the grind step")
+end
+
+function S.questCleanup()
+  MOCK.level = 20
+  MOCK.questLog = { { questID = 783, title = "A Threat Within", level = 1 },
+    { questID = 999, title = "Stray Errand", level = 19 },
+    { questID = 7, title = "Kobold Camp Cleanup", level = 2, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Guide library")
+  check(questText(win(), "Quest log cleanup"), "the library lists quests to clean up")
+  check(questText(win(), "Stray Errand\nNot in your guides") and questText(win(), "A Threat Within\nGrey"),
+    "each quest says why it is listed")
+  check(not findButton(win(), function(l) return l == "Abandon Kobold Camp Cleanup" end),
+    "a finished grey quest is left for its turn-in")
+  click(win(), "Abandon Stray Errand")
+  check(MOCK.abandoned == nil, "the first click only asks")
+  click(win(), "Click again to abandon")
+  check(MOCK.abandoned == 999 and chatHas("abandoned Stray Errand"), "the second click abandons the quest")
+end
+
+function S.questReward()
+  S.login()
+  local buttons = {}
+  for i = 1, 3 do buttons[i] = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, UIParent) end
+  MOCK.questChoices = 3
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, nil }, { "Rough Arrow", 200, 1 } }
+  MOCK.event("QUEST_COMPLETE")
+  check(not chatHas("sells for the most"), "waits while an item's info is still loading")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(0.6)
+  local mark = _G.LevelingCodexRewardMark
+  check(mark and mark:IsShown() and mark:GetParent() == buttons[2], "a coin marks the best-selling choice")
+  check(chatHas("Cloth Gloves sells for the most %(13s%)"), "chat names it with its price")
+  check(not MOCK.questRewarded, "the Codex never picks the reward")
+  MOCK.event("QUEST_FINISHED")
+  check(not mark:IsShown(), "the mark goes when the quest window closes")
+  LevelingCodexDB.noRewardHint = true
+  MOCK.event("QUEST_COMPLETE")
+  check(not mark:IsShown(), "the setting turns the mark off")
+end
+
+function S.questMobTarget()
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  local vermin = { text = "Kobold Vermin 4/10", numFulfilled = 4, numRequired = 10 }
+  MOCK.questLog = { { questID = 7, objectives = { vermin } } }
+  S.login()
+  local target = _G.LevelingCodexQuestTarget
+  check(target and target:IsShown() and target:GetAttribute("macrotext") == "/targetexact Kobold Vermin",
+    "an objective step targets the creatures it needs")
+  hover(target)
+  MOCK.ns.questMobs[7] = { "Kobold Vermin", "Kobold Worker" }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(target:GetAttribute("macrotext") == "/targetexact Kobold Worker\n/targetexact Kobold Vermin",
+    "the first creature listed goes last, so it wins when both are near")
+  local many = {}
+  for i = 1, 30 do many[i] = "Kobold Tunnel Rat " .. i end
+  MOCK.ns.questMobs[7] = many
+  MOCK.event("QUEST_LOG_UPDATE")
+  local macro = target:GetAttribute("macrotext")
+  check(#macro <= 255 and macro:find("Kobold Tunnel Rat 1$"), "a long list is cut to fit a macro, keeping the first")
+  vermin.text, vermin.numFulfilled, vermin.finished = "Kobold Vermin 10/10", 10, true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not (target:IsShown() and target:GetAttribute("macrotext"):find("Kobold")),
+    "finished objectives stop targeting their creatures")
+end
+
+function S.questMapPin()
+  S.login()
+  local frame = questViewer()
+  local function pin() local w = MOCK.userWaypoint; return w and w.uiMapID, w and w.position.x, w and w.position.y end
+  local map, x, y = pin()
+  check(map == 1429 and math.abs(x - 0.4817) < 0.0001 and math.abs(y - 0.4294) < 0.0001 and MOCK.superTracked,
+    "the current step gets the game's map waypoint")
+  click(frame, "Next")
+  local _, x2 = pin()
+  check(x2 and math.abs(x2 - 0.4817) > 0.0001, "the waypoint follows the next step")
+  MOCK.userWaypoint = { uiMapID = 1429, position = { x = 0.1, y = 0.1 } }
+  click(frame, "Back")
+  map, x = pin()
+  check(x == 0.1, "a waypoint the player placed is never replaced")
+  MOCK.userWaypoint = nil
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(pin() == 1429, "once the player's waypoint is gone the step is pinned again")
+  LevelingCodexDB.noQuestMapPin = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
+end
+
+function S.questCorpse()
+  S.login()
+  local arrow = _G.LevelingCodexQuestArrow
+  MOCK.ghost, MOCK.corpse = true, { 1429, 50, 50 }
+  MOCK.advance(0.5)
+  check(arrow:IsShown() and questText(arrow, "Your corpse - "), "a ghost's arrow leads to the corpse")
+  MOCK.questX, MOCK.questY = 50, 50.2
+  MOCK.advance(0.5)
+  check(questText(arrow, "Your corpse is here"), "the arrow says when you reach the corpse")
+  MOCK.corpse = nil
+  MOCK.advance(0.5)
+  check(questText(arrow, "Return to your corpse"), "a corpse the client can't place still gets a hint")
+  MOCK.ghost = false
+  MOCK.advance(0.5)
+  check(not questText(arrow, "corpse"), "alive again, the arrow leads to the step")
 end
 
 function S.questGossip()
@@ -981,7 +1187,7 @@ function S.questLoginWetlandsLocal()
   check(questText(win(), "The Greenwarden"), "an optional breadcrumb in your log shows its turn-in")
 end
 
--- Outleveled pickups leave the route (Zygor/RestedXP) and guides show progress by level band.
+-- Outleveled pickups leave the route and guides show progress by level band.
 function S.questGrey()
   local sections = LevelingCodexQuests.ALLIANCE.sections
   local function step(kind, id, name, level, chain)
@@ -1008,7 +1214,7 @@ function S.questGrey()
   check(questText(frame, "Accept - Grey Errand"), "the setting keeps grey pickups in the route")
 end
 
--- RestedXP-style dungeon plans, Zygor-style "find a group", chain position and a full log.
+-- Dungeon plans, the "find a group" moment, chain position and a full log.
 function S.questDungeonPlan()
   local sections = LevelingCodexQuests.ALLIANCE.sections
   local function step(kind, id, name, text, extra)
@@ -4339,6 +4545,50 @@ function S.craftSmelting()
   closeCraft()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
+end
+
+-- The class trainer card: the guide's spells you can learn now, their cost, what else is on offer.
+function S.classTrainer()
+  MOCK.level = 8
+  local window = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+  window:SetSize(384, 512)
+  window:Show()
+  MOCK.trainer = { { "Heroic Strike", rank = "Rank 2", cost = 200 }, { "Hamstring", rank = "Rank 1", cost = 300 },
+    { "Thunder Clap", rank = "Rank 1", category = "used" }, { "Parry", cost = 100 },
+    { "Rend", rank = "Rank 2", category = "unavailable", cost = 600 } }
+  MOCK.money = 400
+  MOCK.event("TRAINER_SHOW")
+  local card = _G.LevelingCodexTrainerHint
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no trainer card without the trainer APIs")
+    return
+  end
+  check(card and card:IsShown(), "the class trainer gets a card")
+  check(questText(card, "Train 2 spells  -  5s") and questText(card, "Heroic Strike (Rank 2), Hamstring (Rank 1)"),
+    "the card lists the guide's spells to train now and their cost")
+  check(questText(card, "Also here, not in the guide: Parry.") and questText(card, "You have 4s: 1s short"),
+    "the card names other spells on offer and says when money is short")
+  check(not questText(card, "Rend"), "spells the trainer can't teach yet are left out")
+  hover(card)
+  MOCK.trainer[1].category = "used"
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Train 1 spell  -  3s"), "the card updates as you train")
+  MOCK.trainer[2].category = "used"
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Nothing from the guide to train") and questText(card, "Next visit: level 10"),
+    "with the guide's spells trained the card points to the next visit")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("class trainer: yes, guide spells now: 0"), "/codex debug reports the class trainer")
+  MOCK.event("TRAINER_CLOSED")
+  check(not card:IsShown(), "closing the trainer hides the card")
+  MOCK.tradeskillTrainer = true
+  MOCK.event("TRAINER_SHOW")
+  check(not card:IsShown(), "profession trainers get no class card")
+  MOCK.tradeskillTrainer = false
+  LevelingCodexDB.noTrainerGuide = true
+  MOCK.event("TRAINER_SHOW")
+  check(not card:IsShown(), "the setting turns the card off")
 end
 
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.

@@ -54,6 +54,21 @@ function Q.position()
   return map
 end
 
+-- Your corpse while you are a ghost: { map, x, y } on your current map, {} when the client
+-- doesn't say where it is (or it's on another map), nil while alive.
+function Q.corpse()
+  local ghost = try(UnitIsGhost, "player")
+  if ghost ~= true and ghost ~= 1 then return end
+  local map = Q.position()
+  local pos = map and try(C_DeathInfo and C_DeathInfo.GetCorpseMapPosition, map)
+  local x, y = type(pos) == "table" and pos.x, type(pos) == "table" and pos.y
+  if type(pos) == "table" and type(pos.GetXY) == "function" then x, y = try(pos.GetXY, pos) end
+  if type(x) == "number" and type(y) == "number" and (x > 0 or y > 0) then
+    return { map = map, x = x * 100, y = y * 100 }
+  end
+  return {}
+end
+
 function Q.vector(step, map, x, y)
   if not (step and x and y and step.x and step.y and step.map == map) then return end
   local size = route and route.extents and route.extents[map]
@@ -160,7 +175,7 @@ local function sideHidden(section)
   return section.side and not section.category and ns.db().noClassQuests
 end
 
--- Dungeon plans (as RestedXP lets you choose your dungeons): a route step tagged
+-- Dungeon plans (you choose your dungeons): a route step tagged
 -- `dungeon = "<detour id>"` shows only while that run is planned. `db.questDungeons`
 -- plans every run; a per-dungeon choice overrides it. Without SavedVariables nothing is planned.
 local function planTable()
@@ -322,6 +337,21 @@ local function boundTo(town)
   local bind = Q.bindLocation()
   return bind and town and bind:lower() == town:lower()
 end
+Q.boundTo = boundTo
+
+-- Your XP into this level, the level's total and rested XP (nil when the client doesn't say).
+function Q.xp()
+  local cur, max = tonumber(try(UnitXP, "player")), tonumber(try(UnitXPMax, "player"))
+  if cur and max and max > 0 then return cur, max, tonumber(try(GetXPExhaustion)) or 0 end
+end
+
+-- A grind step's `xp` is a share of its level (0.4 = level 15 and 40%). Without XP from the
+-- client, reaching the level counts.
+local function grindReached(step)
+  if not step.xp then return true end
+  local cur, max = Q.xp()
+  return not cur or cur / max >= step.xp
+end
 
 local function state(row, skips, blockedQuests, later, map, x, y)
   local s = row.step
@@ -366,7 +396,9 @@ local function state(row, skips, blockedQuests, later, map, x, y)
     return "skipped"
   end
   if visited[row.key] then return "done" end
-  if s.type == "grind" and s.level and level >= s.level then return "done" end
+  if s.type == "grind" and s.level and (level > s.level or (level == s.level and grindReached(s))) then
+    return "done"
+  end
   if s.type == "goto" or s.type == "fly" then
     local _, dist = Q.vector(s, map, x, y)
     if dist and dist <= RADIUS then
@@ -433,7 +465,7 @@ local function catchup(skips)
   return needed, deferred, cut
 end
 
--- Zygor-style catch-up without a saved position: a quest you never picked up counts as
+-- Catch-up without a saved position: a quest you never picked up counts as
 -- passed (Missed quests) once you have turned in a quest the route picks up after it in the
 -- same section, unless a quest still ahead of you needs it. Walking the route backwards sees
 -- what is still needed before reaching its prerequisites. Earlier setup can be reviewed too.
@@ -467,7 +499,7 @@ local function markPassed()
   end
 end
 
--- Outleveled pickups (Zygor's "outleveled", RestedXP's max level): a leveling pickup that has gone
+-- Outleveled pickups: a leveling pickup that has gone
 -- grey leaves the route, with the rest of its steps, unless a quest still ahead needs it. Walking
 -- backwards sees every later quest's prerequisites before reaching them. Settings > Keep grey
 -- quests in the route turns this off.
@@ -511,6 +543,11 @@ local function leaveSide()
   sideSection, sideFrom, sideResumeAt, sideHistory, sideSkips = nil, nil, nil, {}, {}
 end
 
+-- How far below your level a quest goes grey (the client's own range when it says).
+local function greyRange()
+  return try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
+end
+
 local function calculate()
   if review and sideHidden(steps[review].section) then review = nil end
   if sideSection and sideHidden(sideSection) then leaveSide() end
@@ -525,7 +562,7 @@ local function calculate()
   local skips, blockedQuests, sectionBlocked, reached, seen = skipTable(), {}, {}, false, {}
   local needed, deferred, cut = catchup(skips)
   local fromSection = resumeAt and steps[resumeAt].section or selected
-  local grey = try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
+  local grey = greyRange()
   index, missed, ready = nil, {}, {}
   for i, row in ipairs(steps) do
     if row.section == fromSection then reached = true end
@@ -599,6 +636,13 @@ local function calculate()
   end
   index = sideIndex or mainIndex
   if mainIndex then selected = steps[mainIndex].section end
+end
+
+-- The flight the current Fly step wants. A Fly step sits at the destination's flight master,
+-- so it stays current until you land there.
+function Q.flightStep()
+  local row = not review and index and steps[index]
+  if row and row.step.type == "fly" and row.step.flight and not Q.inFlight() then return row.step end
 end
 
 local function activeGoal(row, entry)
@@ -775,7 +819,7 @@ end
 
 function Q.greyPickups() return greyRows end
 
--- A guide's progress and status for the Quests tab (Zygor's guide menu): quests turned in out of
+-- A guide's progress and status for the Quests tab: quests turned in out of
 -- the quests it turns in, and "current", "done", "outleveled", "suggested", "later" or "open".
 function Q.sectionProgress(section)
   local total, done, seen = 0, 0, {}
@@ -823,7 +867,7 @@ function Q.guideMinimum(section)
   if section.category == "special" and level < section.levels[1] then return section.levels[1] end
 end
 
--- Where a quest sits in its story chain (as Zygor's chain data shows): part, length and the
+-- Where a quest sits in its story chain: part, length and the
 -- dungeon checklist the chain feeds, if any. Only chains of three or more quests count.
 function Q.chainInfo(id)
   if not id then return end
@@ -858,7 +902,7 @@ function Q.runReadiness(section)
   return inLog, left
 end
 
--- Zygor's "find a group" moment: a planned run in your level range whose pickups are done
+-- The "find a group" moment: a planned run in your level range whose pickups are done
 -- (or that already has three quests waiting). Nil while you are on a detour.
 function Q.readyRun()
   if sideSection or not level then return end
@@ -911,6 +955,54 @@ function Q.logCapacity()
     max = type(MAX_QUESTLOG_QUESTS) == "number" and MAX_QUESTLOG_QUESTS or nil
   end
   return count, max
+end
+
+-- Quests in your log that no guide of yours uses, then grey ones not yet finished (little XP
+-- left), for the library's cleanup list.
+function Q.unusedQuests()
+  local used, result = {}, {}
+  for _, row in ipairs(steps) do
+    if row.step.quest then used[row.step.quest] = true end
+  end
+  local grey = level and greyRange()
+  for id, entry in pairs(log) do
+    local reason
+    if not used[id] then
+      reason = "Not in your guides"
+    elseif grey and entry.level and not entry.ready and entry.level <= level - grey then
+      reason = "Grey"
+    end
+    if reason then
+      result[#result + 1] = { id = id, reason = reason, title = entry.title or questNames[id] or ("Quest " .. id) }
+    end
+  end
+  table.sort(result, function(a, b)
+    if a.reason ~= b.reason then return a.reason > b.reason end
+    return a.id < b.id
+  end)
+  return result
+end
+
+-- Abandons a quest in your log (the modern calls, else the classic ones by log index).
+function Q.abandon(id)
+  local entry = log[id]
+  if not entry then return false end
+  local L = C_QuestLog
+  if L and type(L.SetSelectedQuest) == "function" and type(L.SetAbandonQuest) == "function"
+      and type(L.AbandonQuest) == "function" then
+    try(L.SetSelectedQuest, id)
+    try(L.SetAbandonQuest)
+    try(L.AbandonQuest)
+    return true
+  end
+  if entry.index and type(SelectQuestLogEntry) == "function" and type(SetAbandonQuest) == "function"
+      and type(AbandonQuest) == "function" then
+    try(SelectQuestLogEntry, entry.index)
+    try(SetAbandonQuest)
+    try(AbandonQuest)
+    return true
+  end
+  return false
 end
 
 function Q.find(query)

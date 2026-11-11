@@ -16,7 +16,7 @@ TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide"}
+               "phase", "uncertain", "guide", "xp", "mobs"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"

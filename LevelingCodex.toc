@@ -16,6 +16,7 @@ QuestAlternateData.lua
 QuestDungeonData.lua
 QuestSpecialData.lua
 QuestClassData.lua
+QuestMobData.lua
 Theme.lua
 Art.lua
 Guide.lua
@@ -33,4 +34,5 @@ Minimap.lua
 Tracking.lua
 TalentGuide.lua
 ProfessionGuide.lua
+TrainerGuide.lua
 Init.lua

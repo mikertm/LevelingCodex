@@ -1,11 +1,28 @@
 # Leveling Codex
 
+## Unreleased
+
+### Quest guide helpers
+
+- **Map pin.** The current step gets the game's own map waypoint, so it shows on your world map and minimap. A waypoint you place yourself is never replaced (Settings > Pin the current step on the map).
+- **Corpse arrow.** As a ghost, the quest arrow leads back to your corpse ("Your corpse - 120 yd"), then returns to your step once you're alive.
+- **Target quest mobs.** On objective steps the target button now targets the creatures the quest needs, for kills and for drops near the step, so you can bind it to a key and pull the next one. It still targets the quest giver on pickup and turn-in steps.
+- **Hearthstone on the item button.** Hearth steps put your Hearthstone on the item button when it's set to the step's town.
+- **XP to go.** "Level up" steps show your XP, how much is left, about how many kills that is (from your last kills), your rested XP, and the XP waiting in finished quests in your log. A grind step can now stop partway through a level.
+- **Flights and binds for you (optional).** Settings > **Take the guide's flights and binds**: at a flight master on a Fly step the Codex takes the step's flight, and at the step's inn it sets your hearthstone. Off by default, and Alt holds it back.
+- **Quest log cleanup.** Quests > Guide library lists quests no guide of yours uses and grey quests worth little XP, each with an Abandon button that asks twice. The full-log warning points there.
+- **Best-selling reward.** When a quest offers a choice, a coin marks the reward that sells for the most and chat names its price. The Codex never picks for you (Settings > Mark the best-selling quest reward).
+
+### Class trainer
+
+- **What to train.** At your class trainer a card above the window lists the guide's spells you can learn now, their total cost and anything else on offer, or your next visit when there's nothing to train. It never buys anything (Settings > Class trainer).
+
 ## v0.17.0
 
 ### Alliance quest guide
 
 - **More routes.** New alternate routes for Ashenvale, Stonetalon, the early Wetlands, late Redridge and Duskwood, and Southshore. The **Guide library** in the Quests tab searches guides, quest names and IDs. It also has dungeon checklists (before, inside and after the run) and special quest chains such as Seeking Caitlin and the Cozy Sleeping Bag. You can track up to three active quests in the step window.
-- **More quests, 1-30.** We compared the route with the RestedXP Forever guides and added about 110 quests they route that we didn't, grouped into loops at each hub:
+- **More quests, 1-30:**
   - Elwynn and Dun Morogh errands, the Deeprun Tram rats, the Dwarf/Gnome Honor Students flight chain and the Moss-twined Heart.
   - The Westfall lighthouse, Redridge's late bounties, and Duskwood's Look to the Stars, Sven and Abercrombie chains.
   - Darkshore's Murkdeep board, escorts and Absent Minded Prospector.
@@ -16,7 +33,7 @@
 - **Guide list by level.** The Quests tab groups the leveling guides into level bands. Each guide shows how much of it you've done and whether it's current, suggested, done, outleveled or for later. Suggested guides are in gold.
 - **Outleveled pickups leave the route.** A pickup that has gone grey for your level is dropped, unless a later quest needs it. Dropped pickups are listed under Missed quests > Outleveled. Turn on Settings > Keep grey quests in the route to keep them.
 - **Tidier step window.** The banner shows the guide's short name and always fits its frame. The level range sits beside the step title. The Pin button and the "Unverified" labels are gone.
-- **Forever quests RestedXP skips.** Added:
+- **More Forever quests.** Added:
   - the Dwarf/Gnome and Night Elf Camping 101 skinning lessons;
   - Stormwind's library errand (Reading Room, Shelf Picked);
   - Business in Auberdine and Unrequited Love (Darkshore to Menethil);

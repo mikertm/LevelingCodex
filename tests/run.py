@@ -250,7 +250,35 @@ def data_checks():
                                         % (step, at, m.lo, at - 1))
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
-    return errors + prof_errors + game_errors, warnings + prof_warnings + game_warnings
+    return (errors + prof_errors + game_errors + quest_mob_checks(),
+            warnings + prof_warnings + game_warnings)
+
+
+def quest_mob_checks():
+    """QuestMobData.lua (tools/questmobs.py): quest ID -> 1-6 ASCII creature names a macro can target."""
+    errors = []
+    path = os.path.join(ROOT, "QuestMobData.lua")
+    if not os.path.exists(path):
+        return ["quest mobs: QuestMobData.lua missing"]
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    lua.execute("local f = ...; f('LevelingCodex', select(2, ...))",
+                lua.eval("loadstring")(open(path, encoding="utf-8").read()), ns)
+    mobs = ns["questMobs"]
+    if lupa.lua_type(mobs) != "table":
+        return ["quest mobs: QuestMobData.lua sets no ns.questMobs"]
+    for quest, names in mobs.items():
+        where = "quest mobs %s" % quest
+        if not isinstance(quest, int) or lupa.lua_type(names) != "table":
+            errors.append(where + ": expected [questID] = { names }")
+            continue
+        values = list(names.values())
+        if not 1 <= len(values) <= 6:
+            errors.append(where + ": %d names (1-6 expected)" % len(values))
+        for name in values:
+            if not isinstance(name, str) or not name.strip() or any(ord(c) > 127 for c in name) or re.search(r"[\n/;]", name):
+                errors.append(where + ": bad creature name %r" % (name,))
+    return errors
 
 
 PROF_KEYS = ("BLACKSMITHING", "MINING", "TAILORING", "ENCHANTING", "HERBALISM", "SKINNING", "LEATHERWORKING", "ALCHEMY",
@@ -586,7 +614,9 @@ def main():
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
-                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume"):
+                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
+                             "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
+                             "questMapPin"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides")):
                 runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))
@@ -612,6 +642,7 @@ def main():
             for cls in ("WARRIOR", "PRIEST", "DRUID"):
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
+        runs.append(("WARRIOR/%s/class-trainer" % variant, "WARRIOR", minimal, ["login", "classTrainer"]))
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))

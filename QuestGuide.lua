@@ -154,11 +154,32 @@ local function makeViewer()
   arrow:SetScript("OnUpdate", turnArrow)
 end
 
+-- As a ghost the arrow leads back to your corpse instead of the step.
+local function paintCorpse(corpse)
+  arrow:Show()
+  arrowArt:Hide()
+  local map, x, y = Q.position()
+  local bearing, yards = Q.vector(corpse, map, x, y)
+  if yards and yards <= Q.arrived() then
+    arrowText:SetText("Your corpse is here")
+  elseif bearing then
+    arrowBearing, arrowCaption, arrowFacing = bearing, "Your corpse - " .. math.floor(yards + 0.5) .. " yd", false
+    turnArrow()
+  else
+    arrowText:SetText("Return to your corpse")
+  end
+end
+
 local function paintArrow()
   if not viewer or not viewer:IsShown() then return end
   local row = Q.current()
   local goal = row and row.step
   arrowBearing = nil
+  local corpse = not ns.db().noQuestArrow and Q.corpse()
+  if corpse then
+    paintCorpse(corpse)
+    return
+  end
   if ns.db().noQuestArrow or not goal then
     arrow:Hide()
     return
@@ -210,6 +231,52 @@ local function objectiveLines(entry, incompleteOnly, index)
   return lines
 end
 
+-- XP for grind steps: the last five kills (CHAT_MSG_COMBAT_XP_GAIN) estimate the kills left.
+local killXP = {}
+
+local function noteKill(msg)
+  if type(msg) ~= "string" or not msg:find("dies", 1, true) then return end
+  local digits = msg:match("(%d[%d,%.]*) experience")
+  local n = digits and tonumber((digits:gsub("[,%.]", "")))
+  if not n or n <= 0 then return end
+  killXP[#killXP + 1] = n
+  if #killXP > 5 then table.remove(killXP, 1) end
+end
+
+-- XP waiting in finished quests in your log (GetQuestLogRewardXP by quest ID).
+local function readyQuestXP()
+  local total = 0
+  for id, entry in pairs(Q.logEntries()) do
+    if entry.ready then total = total + (tonumber(try(GetQuestLogRewardXP, id)) or 0) end
+  end
+  return total
+end
+
+local function grindLines(step, level)
+  local cur, max, rested = Q.xp()
+  if not cur then return "" end
+  local lines = { "XP " .. cur .. " / " .. max .. " (" .. math.floor(cur * 100 / max) .. "%)" }
+  local need, goal
+  if step.xp and step.level == level then
+    need, goal = math.ceil(step.xp * max) - cur, math.floor(step.xp * 100 + 0.5) .. "% of level " .. level
+  else
+    need, goal = max - cur, "level " .. (level + 1)
+  end
+  if need > 0 then
+    local kills = ""
+    if #killXP > 0 then
+      local sum = 0
+      for _, n in ipairs(killXP) do sum = sum + n end
+      kills = ", about " .. math.ceil(need * #killXP / sum) .. " kills"
+    end
+    lines[#lines + 1] = need .. " XP to " .. goal .. kills
+  end
+  if rested > 0 then lines[#lines + 1] = "Rested: " .. rested .. " XP" end
+  local waiting = readyQuestXP()
+  if waiting > 0 then lines[#lines + 1] = "Ready turn-ins: about " .. waiting .. " XP" end
+  return "\n" .. table.concat(lines, "\n")
+end
+
 function Q.detail(step, requiredFor)
   local _, _, _, level = Q.rows()
   local text = Q.text(step)
@@ -219,6 +286,7 @@ function Q.detail(step, requiredFor)
     if #lines == 0 then lines = step.objectives or {} end
     if #lines > 0 then text = text .. "\n" .. table.concat(lines, "  /  ") end
   end
+  if step.type == "grind" and step.level then text = text .. grindLines(step, level) end
   local also = {}
   for _, id in ipairs(step.also or {}) do
     local entry = Q.incomplete(id)
@@ -235,7 +303,8 @@ function Q.detail(step, requiredFor)
   if step.type == "accept" and not Q.log(step.quest) then
     local count, max = Q.logCapacity()
     if max and count >= max then
-      text = "Your quest log is full (" .. count .. "/" .. max .. "). Turn in or abandon a quest first.\n" .. text
+      text = "Your quest log is full (" .. count .. "/" .. max .. "). Turn in or abandon a quest first:"
+        .. " Quests > Guide library lists ones you can drop.\n" .. text
     end
   end
   if requiredFor then text = "Required for " .. requiredFor.name .. ".\n" .. text end
@@ -255,8 +324,14 @@ end
 -- The use-item button: a secure button beside the step window that uses the current
 -- step's quest item (the quest log's own usable item, else the step's `item`, an ID or
 -- a name). Secure frames can't change in combat, so changes wait for PLAYER_REGEN_ENABLED.
+-- A hearth step offers the Hearthstone, but only when it is set to the step's town.
+local HEARTHSTONE = 6948
 local function stepItem(step)
   if not step then return end
+  if step.type == "hearth" then
+    if not step.bind or Q.boundTo(step.bind) then return HEARTHSTONE end
+    return
+  end
   local entry = step.quest and Q.log(step.quest)
   if entry and entry.index then
     local link, icon = try(GetQuestLogSpecialItemInfo, entry.index)
@@ -282,7 +357,7 @@ local function makeItemButton()
   itemButton = b
   b:SetSize(40, 40)
   b:SetFrameStrata("MEDIUM")
-  b:RegisterForClicks("AnyUp", "AnyDown") -- Forever follows retail's key-down setting (as Zygor does)
+  b:RegisterForClicks("AnyUp", "AnyDown") -- Forever follows retail's key-down setting
   b.icon = b:CreateTexture(nil, "ARTWORK")
   b.icon:SetAllPoints()
   local border = b:CreateTexture(nil, "OVERLAY")
@@ -299,20 +374,53 @@ local function makeItemButton()
   b:Hide()
 end
 
--- The target button (RestedXP's targeting): a secure macro button under the item button that
--- targets the current step's quest giver by name. Same combat rules as the item button.
+-- The target button: a secure macro button under the item button that targets the current
+-- step's quest giver, or on an objective step the creatures it needs (QuestMobData.lua, or the
+-- step's own `mobs`). Same combat rules as the item button.
 local targetButton -- false = the client can't make one
 local TARGET_TYPES = { accept = true, turnin = true }
+local MACRO_LIMIT = 255
 
-local function stepTarget(step)
-  if not step or not TARGET_TYPES[step.type] or step.item or step.startItem then return end
-  local name = step.npc and Q.plain(step.npc)
+local function targetName(value)
+  local name = type(value) == "string" and Q.plain(value)
   if name and name:find("%a") and not name:find("[\n/;]") then return name end
+end
+
+local function stepTargets(step)
+  if not step then return end
+  if TARGET_TYPES[step.type] then
+    local name = not step.item and not step.startItem and targetName(step.npc)
+    return name and { name }
+  end
+  if step.type ~= "complete" or not step.quest then return end
+  local entry = Q.log(step.quest)
+  if entry and entry.ready then return end
+  local names = {}
+  for _, value in ipairs(step.mobs or (ns.questMobs and ns.questMobs[step.quest]) or {}) do
+    names[#names + 1] = targetName(value)
+  end
+  return #names > 0 and names or nil
+end
+
+-- One /targetexact line per creature, as many as fit in a macro. The last line that finds a
+-- creature wins, so the most important (the first listed) goes last.
+local function targetMacro(names)
+  local kept, length = {}, 0
+  for _, name in ipairs(names) do
+    local add = #"/targetexact " + #name + (#kept > 0 and 1 or 0)
+    if length + add > MACRO_LIMIT then break end
+    kept[#kept + 1], length = name, length + add
+  end
+  local lines = {}
+  for i = #kept, 1, -1 do lines[#lines + 1] = "/targetexact " .. kept[i] end
+  return table.concat(lines, "\n"), kept
 end
 
 local function targetTooltip(self)
   GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-  GameTooltip:SetText("Target " .. tostring(self.target))
+  local names = self.targets or {}
+  GameTooltip:SetText(#names > 1 and "Target the nearest of" or ("Target " .. tostring(names[1])))
+  if #names > 1 then GameTooltip:AddLine(table.concat(names, ", "), 1, 1, 1, true) end
   GameTooltip:AddLine("Key Bindings > AddOns can give it a key.")
   GameTooltip:Show()
 end
@@ -338,8 +446,8 @@ end
 local function updateTargetButton()
   if targetButton == false then return end
   local row = viewer and viewer:IsShown() and Q.current()
-  local name = not ns.db().noQuestTarget and stepTarget(row and row.step)
-  if not name then
+  local names = not ns.db().noQuestTarget and stepTargets(row and row.step)
+  if not names then
     if targetButton then targetButton:Hide() end
     return
   end
@@ -347,9 +455,10 @@ local function updateTargetButton()
     makeTargetButton()
     if not targetButton then return end
   end
+  local macro, kept = targetMacro(names)
   targetButton:SetAttribute("type", "macro")
-  targetButton:SetAttribute("macrotext", "/targetexact " .. name)
-  targetButton.target = name
+  targetButton:SetAttribute("macrotext", macro)
+  targetButton.targets = kept
   local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
   targetButton:ClearAllPoints()
   if left and top then
@@ -393,6 +502,53 @@ updateItemButton = function()
     itemButton:SetPoint("CENTER", UIParent, "CENTER", -260, 80)
   end
   itemButton:Show()
+end
+
+-- The map pin (Settings > Pin the current step on the map): the game's own map waypoint on the
+-- current step's spot, when the client has one. A waypoint you placed yourself is never replaced.
+local pinned -- the point the Codex set last: { map, x, y } in 0-1
+
+local function samePoint(a, map, x, y)
+  return a and a.map == map and math.abs(a.x - x) < 0.0005 and math.abs(a.y - y) < 0.0005
+end
+
+local function userWaypoint()
+  local point = try(C_Map.GetUserWaypoint)
+  local pos = type(point) == "table" and point.position
+  if type(pos) ~= "table" then return end
+  local x, y = pos.x, pos.y
+  if type(pos.GetXY) == "function" then x, y = try(pos.GetXY, pos) end
+  if type(x) == "number" and type(y) == "number" then return point.uiMapID, x, y end
+end
+
+local function updateMapPin()
+  local M = C_Map
+  if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
+  local row = viewer and viewer:IsShown() and Q.current()
+  local step = row and row.step
+  local want = not ns.db().noQuestMapPin and step and step.map and step.x and step.y
+  local map, x, y = userWaypoint()
+  local ours = pinned and map and samePoint(pinned, map, x, y)
+  if map and not ours then pinned = nil; return end -- the player's own waypoint
+  if not want then
+    if ours then try(M.ClearUserWaypoint) end
+    pinned = nil
+    return
+  end
+  x, y = step.x / 100, step.y / 100
+  if ours and samePoint(pinned, step.map, x, y) then return end
+  if try(M.CanSetUserWaypointOnMap, step.map) == false then
+    if ours then try(M.ClearUserWaypoint) end
+    pinned = nil
+    return
+  end
+  local point = UiMapPoint and try(UiMapPoint.CreateFromCoordinates, step.map, x, y)
+  if type(point) ~= "table" then
+    point = { uiMapID = step.map, position = try(CreateVector2D, x, y) or { x = x, y = y } }
+  end
+  try(M.SetUserWaypoint, point)
+  pinned = { map = step.map, x = x, y = y }
+  try(C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint, true)
 end
 
 local function previewText(row, i)
@@ -489,6 +645,7 @@ function ns.questRefresh()
     painting = false
   end
   updateItemButton()
+  updateMapPin()
   ns.refreshQuestTab()
 end
 
@@ -610,6 +767,52 @@ local function interact(event)
   end
 end
 
+-- The quest reward that sells for the most gets a coin mark and a chat line (Settings > Mark
+-- the best-selling quest reward). The Codex never picks a reward for you.
+local rewardMark
+
+local function rewardButton(i)
+  local list = type(QuestInfoRewardsFrame) == "table" and QuestInfoRewardsFrame.RewardButtons
+  return _G["QuestInfoRewardsFrameQuestInfoItem" .. i] or (type(list) == "table" and list[i])
+    or _G["QuestRewardItem" .. i]
+end
+
+local function markReward(tries)
+  if rewardMark then rewardMark:Hide() end
+  if ns.db().noRewardHint then return end
+  local choices = tonumber(try(GetNumQuestChoices)) or 0
+  if choices < 2 then return end
+  local best, bestValue, bestName, missing = nil, 0, nil, false
+  for i = 1, choices do
+    local name, _, count = try(GetQuestItemInfo, "choice", i)
+    local link = try(GetQuestItemLink, "choice", i)
+    local price = link and select(11, try(GetItemInfo, link))
+    if price == nil then missing = true end
+    local value = (tonumber(price) or 0) * math.max(1, tonumber(count) or 1)
+    if value > bestValue then best, bestValue, bestName = i, value, name end
+  end
+  if missing and (tries or 0) < 3 then
+    ns.after(0.5, function() markReward((tries or 0) + 1) end) -- item info still loading
+    return
+  end
+  if not best then return end
+  ns.say(Q.plain((bestName or ("Reward " .. best)) .. " sells for the most (" .. ns.money(bestValue) .. ")."))
+  local button = rewardButton(best)
+  if type(button) ~= "table" or type(button.GetFrameLevel) ~= "function" then return end
+  if not rewardMark then
+    rewardMark = CreateFrame("Frame", "LevelingCodexRewardMark", button)
+    rewardMark:SetSize(18, 18)
+    rewardMark.icon = rewardMark:CreateTexture(nil, "OVERLAY")
+    rewardMark.icon:SetAllPoints()
+    ns.setIcon(rewardMark.icon, "INV_Misc_Coin_02")
+  end
+  rewardMark:SetParent(button)
+  rewardMark:ClearAllPoints()
+  rewardMark:SetPoint("TOPLEFT", button, "TOPLEFT", -4, 4)
+  rewardMark:SetFrameLevel((tonumber(try(button.GetFrameLevel, button)) or 1) + 5)
+  rewardMark:Show()
+end
+
 local function sameTitle(a, b)
   return type(a) == "string" and type(b) == "string" and Q.plain(a):lower() == Q.plain(b):lower()
 end
@@ -630,7 +833,7 @@ local function pickFromList(event)
     for _, q in ipairs(type(list) == "table" and list or {}) do
       if type(q) == "table" and (q.questID == s.quest or sameTitle(q.title, s.name)) then
         try(accept and G.SelectAvailableQuest or G.SelectActiveQuest, q.questID)
-        return
+        return true
       end
     end
     return
@@ -640,19 +843,130 @@ local function pickFromList(event)
     if accept then id = select(5, try(GetAvailableQuestInfo, i)) else id = try(GetActiveQuestID, i) end
     if id == s.quest or sameTitle(try(accept and GetAvailableTitle or GetActiveTitle, i), s.name) then
       try(accept and SelectAvailableQuest or SelectActiveQuest, i)
+      return true
+    end
+  end
+end
+
+-- Travel automation (Settings > Take the guide's flights and binds, off by default): the
+-- flight master's and innkeeper's gossip options, the step's flight and the bind confirmation.
+-- Alt holds it back, and nothing happens in combat.
+local function travelAllowed()
+  return ns.db().questAutoTravel and try(InCombatLockdown) == false and not try(IsAltKeyDown)
+end
+
+-- A bind step only binds at its own inn: you must be near the step's innkeeper.
+local function nearStep(step)
+  local _, yards = Q.vector(step, Q.position())
+  return yards and yards <= Q.arrived() * 2
+end
+
+local GOSSIP = {
+  taxi = { icon = "TaxiGossipIcon", words = { "where i can fly", "i need a ride" } },
+  binder = { icon = "BinderGossipIcon", words = { "inn your home", "make this inn" } },
+}
+
+local function gossipIs(option, kind)
+  local want = GOSSIP[kind]
+  if option.type == kind then return true end
+  local icon = option.icon
+  if type(icon) == "string" and icon:find(want.icon, 1, true) then return true end
+  if type(icon) == "number" and icon == try(GetFileIDFromPath, "Interface\\GossipFrame\\" .. want.icon) then
+    return true
+  end
+  local name = type(option.name) == "string" and Q.plain(option.name):lower() or ""
+  for _, word in ipairs(want.words) do
+    if name:find(word, 1, true) then return true end
+  end
+  return false
+end
+
+local function pickGossip(kind)
+  local G = C_GossipInfo
+  local options = type(G) == "table" and try(G.GetOptions)
+  if type(options) == "table" then
+    for _, option in ipairs(options) do
+      if type(option) == "table" and option.gossipOptionID and gossipIs(option, kind) then
+        try(G.SelectOption, option.gossipOptionID)
+        return true
+      end
+    end
+    return false
+  end
+  local list = { try(GetGossipOptions) } -- classic: text, type pairs
+  for i = 1, #list, 2 do
+    if gossipIs({ name = list[i], type = list[i + 1] }, kind) then
+      try(SelectGossipOption, (i + 1) / 2)
+      return true
+    end
+  end
+  return false
+end
+
+local function travelGossip()
+  if not travelAllowed() then return end
+  local s = Q.autoStep()
+  if Q.flightStep() or (s and s.type == "getfp") then
+    pickGossip("taxi")
+  elseif s and s.type == "sethearth" and nearStep(s) then
+    pickGossip("binder")
+  end
+end
+
+local function takeFlight()
+  local fly = travelAllowed() and Q.flightStep()
+  if not fly then return end
+  local want = Q.plain(fly.flight):lower()
+  for i = 1, tonumber(try(NumTaxiNodes)) or 0 do
+    local name = try(TaxiNodeName, i)
+    if type(name) == "string" and Q.plain(name):lower() == want then
+      if try(TaxiNodeGetType, i) == "REACHABLE" then
+        ns.say("flying to " .. Q.plain(name) .. ". Hold Alt at the flight master to pick your own flight.")
+        try(TakeTaxiNode, i)
+      end
       return
     end
   end
 end
 
+local function confirmBind(area)
+  local s = Q.autoStep()
+  if not travelAllowed() or not s or s.type ~= "sethearth" or not nearStep(s) then return end
+  if type(area) == "string" and area ~= "" and s.bind and Q.plain(area):lower() ~= s.bind:lower() then return end
+  if type(ConfirmBinder) == "function" then
+    try(ConfirmBinder)
+  else
+    local manager, kinds = C_PlayerInteractionManager, Enum and Enum.PlayerInteractionType
+    if not (manager and kinds and kinds.Binder) then return end
+    try(manager.ConfirmationInteraction, kinds.Binder)
+    try(manager.ClearInteraction, kinds.Binder)
+  end
+  try(StaticPopup_Hide, "CONFIRM_BINDER")
+end
+
 local function handle(event, a, b)
-  if event == "QUEST_DETAIL" or event == "QUEST_PROGRESS" or event == "QUEST_COMPLETE" then
+  if event == "QUEST_DETAIL" or event == "QUEST_PROGRESS" or event == "QUEST_COMPLETE" or event == "QUEST_FINISHED" then
+    if rewardMark then rewardMark:Hide() end
+    if event == "QUEST_FINISHED" then return end
     interact(event)
+    if event == "QUEST_COMPLETE" then markReward() end
     return
   end
   if event == "GOSSIP_SHOW" or event == "QUEST_GREETING" then
-    pickFromList(event)
+    if not pickFromList(event) and event == "GOSSIP_SHOW" then travelGossip() end
     return
+  end
+  if event == "CONFIRM_BINDER" then
+    confirmBind(a)
+    return
+  end
+  if event == "CHAT_MSG_COMBAT_XP_GAIN" then
+    noteKill(a)
+    return
+  end
+  if event == "PLAYER_XP_UPDATE" then
+    local row = Q.current()
+    if not (row and row.step.type == "grind") then return end
   end
   if event == "BAG_UPDATE_DELAYED" then
     if Q.bagsChanged() then
@@ -672,7 +986,10 @@ local function handle(event, a, b)
   local old = id and Q.log(id)
   Q.update(event, id, event == "PLAYER_LEVEL_UP" and id or nil)
   local nodes = event == "TAXIMAP_OPENED" and taxiSnapshot()
-  if nodes then Q.learnFlights(nodes) end
+  if nodes then
+    Q.learnFlights(nodes)
+    takeFlight()
+  end
   if event == "HEARTHSTONE_BOUND" or event == "PLAYER_BIND_CHANGED" then
     Q.acknowledge("sethearth", function(step)
       local _, distance = Q.vector(step, Q.position())
@@ -713,7 +1030,8 @@ function ns.startQuestGuide()
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
-    "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED" }) do
+    "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED", "CONFIRM_BINDER",
+    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)
@@ -737,13 +1055,21 @@ function ns.questDebugLines()
       "GetQuestIDForLogIndex", "GetQuestObjectives", "GetMaxNumQuestsCanAccept", "GetAllCompletedQuestIDs" },
     { "Classic quest APIs", _G, "GetNumQuestLogEntries", "GetQuestLogTitle", "GetQuestLogLeaderBoard",
       "IsQuestFlaggedCompleted", "GetQuestsCompleted", "QueryQuestsCompleted" },
-    { "C_Map", C_Map, "GetBestMapForUnit", "GetPlayerMapPosition", "GetMapInfo", "GetMapWorldSize", "SetUserWaypoint" },
+    { "C_Map", C_Map, "GetBestMapForUnit", "GetPlayerMapPosition", "GetMapInfo", "GetMapWorldSize", "SetUserWaypoint",
+      "GetUserWaypoint", "ClearUserWaypoint", "CanSetUserWaypointOnMap" },
     { "C_SuperTrack", C_SuperTrack, "SetSuperTrackedUserWaypoint" },
     { "TomTom", TomTom, "AddWaypoint" },
     { "Facing", _G, "GetPlayerFacing" },
+    { "Death", _G, "UnitIsGhost" },
+    { "XP", _G, "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP" },
+    { "Rewards", _G, "GetQuestItemInfo", "GetQuestItemLink", "GetItemInfo" },
+    { "C_DeathInfo", C_DeathInfo, "GetCorpseMapPosition" },
     { "Flights and binds", _G, "UnitOnTaxi", "GetBindLocation", "NumTaxiNodes", "TaxiNodeGetType" },
     { "C_TaxiMap", C_TaxiMap, "GetTaxiNodesForMap", "GetAllTaxiNodes" },
-    { "Gossip", C_GossipInfo, "GetAvailableQuests", "GetActiveQuests", "SelectAvailableQuest", "SelectActiveQuest" },
+    { "Gossip", C_GossipInfo, "GetAvailableQuests", "GetActiveQuests", "SelectAvailableQuest", "SelectActiveQuest",
+      "GetOptions", "SelectOption" },
+    { "Travel", _G, "TakeTaxiNode", "GetGossipOptions", "SelectGossipOption", "ConfirmBinder", "StaticPopup_Hide" },
+    { "C_PlayerInteractionManager", C_PlayerInteractionManager, "ConfirmationInteraction", "ClearInteraction" },
     { "Greeting", _G, "GetNumAvailableQuests", "GetNumActiveQuests", "SelectAvailableQuest", "SelectActiveQuest" },
   }
   local lines = { "Quest guide APIs (+: present, -: absent)" }
@@ -755,6 +1081,11 @@ function ns.questDebugLines()
     end
     lines[#lines + 1] = group[1] .. ": " .. table.concat(bits, " ")
   end
+  local frames = {}
+  for _, name in ipairs({ "QuestInfoRewardsFrameQuestInfoItem1", "QuestInfoRewardsFrame", "QuestRewardItem1" }) do
+    frames[#frames + 1] = (_G[name] and "+" or "-") .. name
+  end
+  lines[#lines + 1] = "Reward buttons: " .. table.concat(frames, " ")
   local known, probed = Q.flightDebug()
   lines[#lines + 1] = "Known flight paths: " .. known .. (probed and (" (" .. probed .. " from C_TaxiMap)") or " (no C_TaxiMap)")
     .. ". Hearth: " .. Q.plain(Q.bindLocation() or "unknown") .. ". Arrow art: " .. tostring(arrowFile or "text only")
