@@ -95,7 +95,6 @@ do
   }, { "badlands-41", "shendralas" }, {
     taxi("fly", on.dustwallow("Baldruc", 67.5, 51.3), "Nijel's Point, Desolace", "Fly from Theramore to Nijel's Point."),
     action("sethearth", inn, "Bind at the Nijel's Point inn. You will come back twice.", nijels),
-    accept(261, anton, "Brother Anton wants the Undead Ravagers in the Valley of Bones thinned out."),
     accept(1466, kreldig, "Kreldig's last reagent run sends you to the demons of Mannoroc Coven."),
     accept(6134, hornizz, "Hornizz, the goblin on the hill west of the Kodo Graveyard, hands you a crate of ghost magnets."),
     finish(1373, uthek, "Bring the Draenethyst shard to Uthek the Wise in the Gelkis village."),
@@ -106,9 +105,7 @@ do
       "10 Felhound Brain", "10 Nether Wing", "Doomwarder Blood"),
     finish(93034, nerlokh, "Nerlokh waits at the southern entrance of the Valley of Bones."),
     accept(93035, nerlokh), accept(93037, nerlokh),
-    along(objective(261, ds(nil, 62.0, 90.0), "Destroy Undead Ravagers through the valley. Each one counts for Brother Anton and Nerlokh.",
-      "30 Undead Ravagers"), 93035, 93037, 6134),
-    along(objective(93037, ds(nil, 63.8, 90.4), "Loot a Necromantic Garb from the Outcast Necromancers deeper in the valley.", "Necromantic Garb"), 261, 6134),
+    along(objective(93037, ds(nil, 63.8, 90.4), "Loot a Necromantic Garb from the Outcast Necromancers deeper in the valley.", "Necromantic Garb"), 93035, 6134),
     along(objective(6134, ds(nil, 64.0, 91.7), "Use the ghost magnets near the Magrami Spectres and collect the ghost-o-plasm they leave.", "8 Ghost-o-plasm"),
       261, 93035),
     finish(93035, nerlokh), finish(93037, nerlokh), accept(93041, nerlokh),
@@ -137,7 +134,6 @@ do
     accept(1106, fizzle, "Fizzle Brassbolts has a letter for his old partner Martek in the Badlands."),
     finish(1117, kravel), accept(1118, kravel, "Keep Kravel's scheme for Booty Bay."),
     action("hearth", inn, "Hearth back to Nijel's Point.", nijels),
-    finish(261, anton),
     finish(1466, kreldig), accept(1467, kreldig, "Carry Leftwitch's package to Ironforge."),
     taxi("fly", ds("Baritanas Skyriver", 64.7, 10.5), "Theramore, Dustwallow Marsh", "Fly to Theramore."),
     action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship from the Theramore docks to Menethil Harbor. Use Next when you land.",
@@ -191,12 +187,10 @@ do
     "https://bindonforever.com/zones/badlands",
     "https://www.wowhead.com/forever/zone=3/badlands",
     qdb,
-  }, { "stv-41", "searing-gorge" }, {
+  }, { "stv-41", "searing-gorge", "riverglades-shroud" }, {
     finish(1467, roetten, "Take the deep road to the Hall of Explorers and give Roetten his package."),
-    finish(554, stormpike, "Prospector Stormpike, in the Hall of Explorers, reads the parchment from Southshore."),
-    accept(707, stormpike, "Stormpike sends you to his partner Ironband in Loch Modan."),
-    finish(653, gerrig, "Gerrig Bonegrip in the Forlorn Cavern reads Myzrael's tablet."),
-    accept(687, gerrig, "Gerrig sends you to Theldurin, camped in the southern Badlands."),
+    accept(707, stormpike, "Prospector Stormpike, in the Hall of Explorers, sends you to his partner Ironband in Loch Modan."),
+    accept(687, gerrig, "Gerrig Bonegrip in the Forlorn Cavern sends you to Theldurin, camped in the southern Badlands."),
     taxi("fly", ifg("Gryth Thurden", 55.5, 47.7), "Thelsamar, Loch Modan", "Fly to Thelsamar."),
     action("sethearth", hearthstove, "Bind at the Thelsamar inn. The Badlands road starts just south of here.", thelsamar),
     accept(2500, ghak, "Ghak Healtouch, beside the inn, wants reagents from the Badlands."),
@@ -269,7 +263,6 @@ do
   q(3636, "Bring the Light", 42, 39)
   q(1477, "Vital Supplies", 45, 40)
   q(1395, "Supplies for Nethergarde", 45, 40, 1477)
-  q(1364, "Mazen's Behest", 41, 37)
   q(1116, "Dream Dust in the Swamp", 36, 30, 1115)
   q(209, "Skullsplitter Tusks", 42, 37, 189)
   q(669, "Sunken Treasure", 40, 35, 668)
@@ -313,10 +306,8 @@ do
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
     qdb,
   }, { "tanaris-43", "shendralas" }, {
-    finish(543, sw("Count Remington Ridgewell", 74.0, 30.2), "Take the tram to Stormwind. Count Remington Ridgewell waits in Stormwind Keep with the tiara."),
-    finish(542, sw("Milton Sheaf", 77.07, 30.21), "Milton Sheaf is in the keep's library."),
-    finish(3636, sw("Archbishop Benedictus", 50.3, 45.5), "Archbishop Benedictus is in the Cathedral of Light."),
-    accept(1364, sw("Acolyte Dellis", 51.4, 73.81), "Acolyte Dellis in the Mage Quarter wants a book from the Swamp of Sorrows taken to Nethergarde."),
+    action("goto", nil, "Take the tram to Stormwind."),
+    B.optional(finish(3636, sw("Archbishop Benedictus", 50.3, 45.5), "If you killed Amnennar in Razorfen Downs, report to Archbishop Benedictus in the Cathedral of Light.")),
     accept(1477, sw("High Sorcerer Andromath", 48.71, 87.62), "High Sorcerer Andromath, in the Wizard's Sanctum, sends supplies toward Nethergarde."),
     taxi("fly", sw("Dungar Longdrink", 71.3, 72.2), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
     finish(1116, krazek, "Krazek stands on the top floor of the inn."),
@@ -381,14 +372,11 @@ do
     finish(624, sp("A Soggy Scroll", 22.87, 48.19), "Read the soggy scroll under the bridge in the swamp's west."),
     accept(625, sp("A Soggy Scroll", 22.87, 48.19), "The riddle continues in Dustwallow Marsh. Keep it for Theramore."),
     accept(1398, biggs, "Watcher Biggs camps on the road south of the bridge."),
-    along(objective(1364, sp(nil, 15.0, 37.3), "Swampwalkers and Tangled Horrors around the western pools carry Khadgar's essays.",
-      "Khadgar's Essays on Dimensional Convergence"), 1258),
     along(objective(1398, sp(nil, 91.6, 70.1), "Cross the swamp to Misty Reed Strand in the far east. Pick up the sundried driftwood on the beach.",
       "Sundried Driftwood"), 1258),
     along(objective(1258, sp(nil, 91.6, 70.1), "Kill crawlers on the same beach for their legs.", "12 Pristine Crawler Leg"), 1398),
     finish(1398, biggs), accept(1425, biggs),
     action("goto", on.blasted(nil, 60.0, 15.0), "Take the road south out of the swamp into the Blasted Lands and head to Nethergarde Keep."),
-    finish(1364, on.blasted("Watcher Mahar Ba", 67.65, 19.17)),
     finish(1425, on.blasted("Quartermaster Lungertz", 66.52, 21.39)), finish(1395, on.blasted("Quartermaster Lungertz", 66.52, 21.39)),
     taxi("getfp", on.blasted("Alexandra Constantine", 65.5, 24.3), "Nethergarde Keep, Blasted Lands", "Learn the Nethergarde flight path."),
     taxi("fly", on.blasted("Alexandra Constantine", 65.5, 24.3), "Booty Bay, Stranglethorn", "Fly back to Booty Bay."),

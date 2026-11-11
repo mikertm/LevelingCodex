@@ -722,7 +722,7 @@ do
     taxi("fly", rg(nil, 60.6, 81.6), "Stormwind, Elwynn", "Ride back to Farholde Keep and fly to Stormwind."),
     finish(94893, at("Abigail Lawson", 50.2, 51.8, M.stormwind), "Deliver Marshal Ryan's last words to Abigail Lawson near the Cathedral."),
     finish(94894, at("Highlord Bolvar Fordragon", 80.21, 38.35, M.stormwind), "Report the Twilight threat to Highlord Bolvar in Stormwind Keep."),
-  }, { alternate = true, suggest = { "dustwallow-40", "arathi-39" } })
+  }, { alternate = true, suggest = { "feralas-44", "searing-gorge", "shendralas" } })
 end
 
 
@@ -996,7 +996,7 @@ do
     taxi("fly", on.stv("Gyll", 27.5, 77.8), "Stormwind, Elwynn", "Fly to Stormwind."),
     accept(1260, sw("Angus Stern", 51.79, 93.64), "Angus Stern, by the Mage Quarter's south gate, has a letter for his brother in Theramore."),
     accept(1363, sw("Mazen Mac'Nadir", 51.8, 74.24), "Mazen Mac'Nadir works in the Mage Quarter's tower."),
-    finish(1363, dellis, "Acolyte Dellis stands beside him."), accept(1364, dellis, "Keep Khadgar's essays for Nethergarde Keep in the Blasted Lands."),
+    finish(1363, dellis, "Acolyte Dellis stands beside him."), accept(1364, dellis, "Dellis wants Khadgar's lost essays found in the swamp and taken to Nethergarde Keep."),
     accept(1448, brohann, "Brohann Caskbelly in the Dwarven District is looking for a lost temple in the swamp."),
     accept(543, sw("Count Remington Ridgewell", 76.94, 47.83), "Count Remington Ridgewell, in Stormwind Keep, wants the Perenolde Tiara from Alterac. Keep it for later."),
     taxi("fly", sw("Dungar Longdrink", 71.3, 72.2), "Darkshire, Duskwood", "Fly to Darkshire."),
@@ -1006,6 +1006,8 @@ do
     withItem(6196, accept(1392, nil, "If Noboru's Cudgel dropped from the mossy giant Noboru, read it to start the quest.")),
     accept(1389, magtoor, "Ride north to the Harborage, the draenei refuge on the swamp's northwest shore, and find Magtoor."),
     finish(1392, magtoor),
+    objective(1364, sm(nil, 15.0, 37.3), "Swampwalkers and Tangled Horrors around the western pools carry Khadgar's essays.",
+      "Khadgar's Essays on Dimensional Convergence"),
     objective(1396, sm(nil, 44.0, 41.6), "Hunt Young Sawtooth Crocolisks, Sorrow Spinners and Swamp Jaguars across the western swamp.",
       "8 Young Sawtooth Crocolisks", "10 Sorrow Spinners", "10 Swamp Jaguars"),
     finish(1396, biggs), accept(1421, biggs),
@@ -1227,8 +1229,8 @@ do
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
   }, {
     action("sethearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Bind in Darkshire. This run starts and ends there.", darkshire),
-    action("goto", st(nil, 38.0, 3.5), "Take the road south out of Duskwood into Stranglethorn and climb to the Rebel Camp."),
-    accept(215, st("Private Thorsen", 40.3, 8.4), "Private Thorsen sometimes patrols the road below the camp. Take his note if you see him."),
+    accept(215, st("Private Thorsen", 40.3, 8.4), "Take the road south out of Duskwood into Stranglethorn. Private Thorsen sometimes patrols the road below the Rebel Camp: take his note if you see him."),
+    action("goto", st(nil, 38.0, 3.5), "Climb to the Rebel Camp."),
     finish(215, doren), accept(203, yohwa), accept(204, yohwa), accept(200, doren),
     accept(583, st("Barnil Stonepot", 35.7, 10.8), "Walk down to Nesingwary's Expedition."),
     finish(583, hemet), accept(185, ajeck), accept(190, erlgadin), accept(194, hemet),
@@ -1245,12 +1247,12 @@ do
     objective(186, st(nil, 46.7, 15.8), "Hunt Stranglethorn Tigers in the jungle south of the compound.", "10 Stranglethorn Tigers"),
     finish(203, yohwa), finish(204, yohwa), finish(329, doren), accept(330, doren),
     finish(330, st("Corporal Sethman", 37.66, 3.39)), accept(331, st("Corporal Sethman", 37.66, 3.39)), finish(331, doren),
+    accept(207, nimetz, "Brother Nimetz has the troll tablets for later. Keep the quest for your next Stranglethorn visit."),
     finish(186, ajeck), accept(187, ajeck),
     along(objective(191, st(nil, 29.8, 11.2), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 187, 194),
     along(objective(187, st(nil, 31.9, 19.9), "Elder Stranglethorn Tigers live farther south and west.", "10 Elder Stranglethorn Tigers"), 191, 194),
     along(objective(194, st(nil, 27.2, 16.1), "Stranglethorn Raptors hunt near the western coast.", "10 Stranglethorn Raptors"), 191, 187),
     finish(191, erlgadin), finish(187, ajeck), finish(194, hemet),
-    accept(207, nimetz, "Back at the Rebel Camp, Brother Nimetz has the troll tablets for later."),
     action("hearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Hearth to Darkshire.", darkshire),
   }, { alternate = true, suggest = { "needles-33", "theramore-33" } })
 
@@ -1288,12 +1290,12 @@ do
     objective(1177, dm(nil, 57.0, 13.0), "Ride to the north shore and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
     finish(1206, jarl),
     action("hearth", janene, "Hearth to Theramore.", theramore),
+    finish(1222, dm("Morgan Stern", 66.34, 45.47), "Stinky's escape ends with Morgan Stern in the inn's kitchen."),
     finish(1219, dm("Theramore Lieutenant", 67.07, 53.22)), accept(1220, dm("Theramore Lieutenant", 67.07, 53.22)),
     finish(1220, vimes), finish(1284, vimes), finish(1252, vimes), accept(1259, vimes),
     finish(1259, tesoran), accept(1285, tesoran), finish(1285, vimes), accept(1286, vimes),
     finish(1253, vimes), accept(1319, vimes),
     finish(1319, dm("Caz Twosprocket", 64.75, 50.43)), accept(1320, dm("Caz Twosprocket", 64.75, 50.43)), finish(1320, vimes),
-    finish(1222, dm("Morgan Stern", 66.34, 45.47), "Stinky's escape ends with Morgan Stern in the inn's kitchen."),
     action("goto", dm("Balos Jacken", 36.09, 54.31), "Ride back west past the Shady Rest to Balos Jacken's camp."),
     finish(1286, dm("Balos Jacken", 36.09, 54.31)), accept(1287, dm("Balos Jacken", 36.09, 54.31)),
     finish(1177, dm("Mudcrush Durtfeet", 35.15, 38.26), "Hand Mudcrush his heads on the way back."),
