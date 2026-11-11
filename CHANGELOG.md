@@ -17,6 +17,16 @@
 
 - **What to train.** At your class trainer a card above the window lists the guide's spells you can learn now, their total cost and anything else on offer, or your next visit when there's nothing to train. It never buys anything (Settings > Class trainer).
 
+### Forever hotfixes (November 5-10)
+
+- **Blacksmithing:** Coarse Grinding Stone now gives points up to 90, so the 65-80 and 80-95 steps list it as a cheap alternative.
+- **Enchanting:** the Arcane Salvager camp object needs a Runed Golden Rod (was Truesilver), and its disenchanting bonus now works for lower-level enchanters.
+- **Cooking:** the Journeyman Campfire places from Cooking 90 (was 140).
+- **Engineering:** Iron Grenades sell for only 1s 25c now, so the step says to use them.
+- **Fishing:** the Fishing Rack's lure fix, and Blizzard's note that some "There is no loot" errors remain.
+- **Zephras Isle:** Camping 101: Herbalism is now handed in to Halassa Fernbreeze in Shen'dar Village, not in Valanaar.
+- **Razorfen Kraul:** Lonebrow's Journal has moved a little down the road, and the step says so.
+
 ## v0.17.0
 
 ### Alliance quest guide

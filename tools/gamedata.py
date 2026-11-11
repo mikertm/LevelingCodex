@@ -987,7 +987,7 @@ def audit_professions(profdata, ref):
                 continue
             plan = recipe.get("plan")
             if plan and camp["skill"] != plan["skill"]:
-                # Blizzard's Nov 6 server hotfix still overrides build 1.60.1.70862.
+                # Blizzard's Nov 6 server hotfix still overrides the client (140 in builds up to 1.60.1.70888).
                 if key == "LEATHERWORKING" and name == "Tanning Rack" and (camp["skill"], plan["skill"]) == (125, 140):
                     continue
                 add("error", f"{name}: {plan['item']} needs {plan['skill']}, guide says {camp['skill']}")
