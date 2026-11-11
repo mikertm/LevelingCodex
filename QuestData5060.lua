@@ -53,11 +53,15 @@ local function copy(step)
 end
 
 -- Copies of a main chapter's quest steps for the given quests, in route order.
-local function from(id, ids)
+-- `part` = "accept" keeps only the pickups, "rest" everything after them.
+local function from(id, ids, part)
   local wanted, result = {}, {}
   for _, quest in ipairs(ids) do wanted[quest] = true end
   for _, step in ipairs(byId[id].steps) do
-    if step.quest and wanted[step.quest] and not step.optional then result[#result + 1] = copy(step) end
+    local kind = step.type == "accept" and "accept" or "rest"
+    if step.quest and wanted[step.quest] and not step.optional and (not part or part == kind) then
+      result[#result + 1] = copy(step)
+    end
   end
   return result
 end
@@ -1359,7 +1363,8 @@ do
   }, from("searing-50", { 7722, 7723, 7724, 7727, 7728, 7729, 7701, 3441, 3442, 3443, 3452, 3453, 3454, 3462, 3463, 3481,
     4451, 4449 }), {
     taxi("fly", on.searing("Lanie Reed", 37.9, 30.9), MORGANS, "Fly to Morgan's Vigil. Without that flight path, fly to Lakeshire and ride north."),
-  }, from("blasted-51", { 3823 }), from("steppes-56", { 3824, 3825, 4283, 4182, 4726, 4296, 4022 })),
+  }, from("blasted-51", { 3823 }, "accept"), from("steppes-56", { 4283, 4182, 4726, 4296, 4022 }, "accept"),
+    from("blasted-51", { 3823 }, "rest"), from("steppes-56", { 4283, 4182, 4726, 4296, 4022 }, "rest")),
     with(alt, { "steppes-56", "winterspring-alt", "silithus-alt" }))
 
   chapter("winterspring-alt", "Winterspring: Everlook and the Winterfall", M.winterspring, 55, 60, {
@@ -1367,7 +1372,8 @@ do
   }, join({
     taxi("fly", at("Mishellena", 62.5, 24.2, M.felwood), EVERLOOK,
       "Fly to Everlook. Without that flight path, ride through Timbermaw Hold from northern Felwood."),
-  }, from("felwood-52", { 6603 }), from("winterspring-54", { 6603, 5082, 5083, 5084, 5085, 5086, 5087, 4861 }),
+  }, from("felwood-52", { 6603 }), from("silithus-59", { 3783 }, "accept"),
+    from("winterspring-54", { 6603, 5082, 5083, 5084, 5085, 5086, 5087, 4861 }),
     from("winterspring-55", { 5087, 4861, 4863, 4864, 969 }), {
       accept(5121, on.winterspring("Donova Snowden", 31.27, 45.16), "Donova wants High Chief Winterfall dead. Bring a friend for his cave."),
       objective(5121, on.winterspring("High Chief Winterfall", 69.6, 38.3), "Fight into Winterfall Village, north-east of Everlook. High Chief Winterfall waits in the back cave.",
@@ -1375,7 +1381,7 @@ do
       withItem(12842, accept(5123, on.winterspring(nil, 69.8, 38.2), "The High Chief drops a Crudely-written Log. Use it from your bags.")),
       finish(5121, on.winterspring("Donova Snowden", 31.27, 45.16), "Ride back west to Donova."),
       finish(5123, on.winterspring("Donova Snowden", 31.27, 45.16)),
-    }, from("silithus-59", { 3783, 977 })),
+    }, from("silithus-59", { 3783 }, "rest"), from("silithus-59", { 977 })),
     with(alt, { "silithus-alt", "plaguelands-57" }))
 
   chapter("silithus-alt", "Silithus: Cenarion Hold", M.silithus, 55, 60, {
