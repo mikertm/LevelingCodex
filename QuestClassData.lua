@@ -1572,4 +1572,162 @@ do
     } })
 end
 
-linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone" })
+-- Hunter and Priest: Ogtinc on the Azshara cliffs, ending with Morphaz in the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal = B.accept, B.finish, B.objectiveAt
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local ogtinc = at("Ogtinc", 42.4, 42.62, m.azshara)
+  local coursers = at(nil, 40.0, 70.0, m.azshara)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  local ogtincText = "Ogtinc lives on the clifftop above the Ruins of Eldarath in Azshara. Fly to Talrendis Point and ride north-east."
+
+  local hunter = "HUNTER"
+  q(8151, "The Hunter's Charm", 52, 50, nil, nil, hunter)
+  q(8153, "Courser Antlers", 52, 50, 8151, nil, hunter)
+  q(8231, "Wavethrashing", 52, 50, 8153, nil, hunter)
+  q(8232, "The Green Drake", 52, 50, 8231, nil, hunter)
+  side({ id = "hunter-green-drake", title = "Hunter: The Green Drake", zone = m.azshara,
+    levels = { 52, 54 }, class = hunter, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8232" },
+    steps = {
+      accept(8151, at("Ulfir Ironbeard", 67.59, 35.78, m.stormwind),
+        "From level 50, any Alliance Hunter trainer has The Hunter's Charm: Ulfir Ironbeard in Stormwind's Dwarven District, Olmin Burningbeard in Ironforge or Dorion in Darnassus."),
+      finish(8151, ogtinc, ogtincText),
+      accept(8153, ogtinc),
+      goal(8153, coursers, "Hunt Mosshoof Coursers in the forests of southern Azshara until a pair of perfect antlers drops.", "Perfect Courser Antlers"),
+      finish(8153, ogtinc),
+      accept(8231, ogtinc),
+      goal(8231, at(nil, 88.0, 30.0, m.azshara), "Ride to the eastern coast and kill Wavethrashers in the surf for their scales.",
+        "6 Wavethrasher Scales"),
+      finish(8231, ogtinc),
+      accept(8232, ogtinc, "The Green Drake needs a Sunken Temple group."),
+      goal(8232, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for his tooth.", "Tooth of Morphaz"),
+      finish(8232, ogtinc, "Bring the tooth back to Ogtinc in Azshara."),
+    } })
+
+  local priest = "PRIEST"
+  q(8254, "Cenarion Aid", 52, 50, nil, nil, priest)
+  q(8255, "Of Coursers We Know", 52, 50, 8254, nil, priest)
+  q(8256, "The Ichor of Undeath", 52, 50, 8255, nil, priest)
+  q(8257, "Blood of Morphaz", 52, 50, 8256, nil, priest)
+  side({ id = "priest-blood-of-morphaz", title = "Priest: Blood of Morphaz", zone = m.azshara,
+    levels = { 52, 54 }, class = priest, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8257" },
+    steps = {
+      accept(8254, at("High Priestess Laurena", 49.53, 44.6, m.stormwind),
+        "From level 50, High Priestess Laurena in the Cathedral of Light has Cenarion Aid. High Priest Rohan in Ironforge and the priestesses in Darnassus give it too."),
+      finish(8254, ogtinc, ogtincText),
+      accept(8255, ogtinc),
+      goal(8255, coursers, "Hunt Mosshoof Coursers in the forests of southern Azshara for healthy glands.", "4 Healthy Courser Gland"),
+      finish(8255, ogtinc),
+      accept(8256, ogtinc),
+      goal(8256, at(nil, 49.0, 80.0, m.wpl),
+        "Kill skeletons in the Western Plaguelands, around Andorhal or east of Chillwind Camp, until an Ichor of Undeath drops. Zanzil's zombies in Stranglethorn drop it too.",
+        "Ichor of Undeath"),
+      finish(8256, ogtinc),
+      accept(8257, ogtinc, "Blood of Morphaz needs a Sunken Temple group. It is handed in at the Emerald Sanctuary in Felwood."),
+      goal(8257, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for his blood.", "Blood of Morphaz"),
+      finish(8257, at("Greta Mosshoof", 51.21, 82.11, m.felwood),
+        "Bring the blood to Greta Mosshoof at the Emerald Sanctuary in southern Felwood."),
+    } })
+end
+
+-- Rogue and Mage: Archmage Xylem's errands in Azshara, ending with Morphaz in the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note = B.accept, B.finish, B.objectiveAt, B.note
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local xylem = at("Archmage Xylem", 29.25, 40.21, m.azshara)
+  local sanath = at("Sanath Lim-yo", 28.11, 50.09, m.azshara)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  local passage = "Check what Sanath Lim-yo asks before he sends you up to Xylem."
+
+  local rogue = "ROGUE"
+  local jorach = at("Lord Jorach Ravenholdt", 86.02, 78.88, m.alterac)
+  q(8233, "A Simple Request", 52, 50, nil, nil, rogue)
+  q(8234, "Sealed Azure Bag", 52, 50, 8233, nil, rogue)
+  q(8235, "Encoded Fragments", 52, 50, 8234, nil, rogue)
+  q(8236, "The Azure Key", 52, 50, 8235, nil, rogue)
+  side({ id = "rogue-azure-key", title = "Rogue: The Azure Key", zone = m.azshara,
+    levels = { 52, 54 }, class = rogue, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8236" },
+    steps = {
+      accept(8233, at("Lord Tony Romano", 80.28, 68.58, m.stormwind),
+        "From level 50, Lord Tony Romano at SI:7 has A Simple Request. Ormyr Flinteye in Ironforge and Anishar in Darnassus give it too."),
+      finish(8233, jorach, "Lord Jorach waits in Ravenholdt Manor. Take the cave trail north of Durnholde Keep in Hillsbrad."),
+      accept(8234, jorach),
+      goal(8234, at(nil, 44.0, 23.0, m.azshara), "In northern Azshara, kill Timbermaw Shamans until the Sealed Azure Bag drops.",
+        "Sealed Azure Bag"),
+      note(finish(8234, xylem,
+        "Archmage Xylem's tower stands on the western cliffs of Azshara. Ask Sanath Lim-yo, at its foot, for passage up."), passage),
+      accept(8235, xylem),
+      goal(8235, at(nil, 52.0, 25.0, m.azshara), "Kill Thunderhead hippogryphs across Azshara for their encoded fragments.",
+        "10 Encoded Fragment"),
+      finish(8235, xylem),
+      accept(8236, xylem, "The Azure Key needs a Sunken Temple group."),
+      goal(8236, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for the Azure Key.", "Azure Key"),
+      finish(8236, jorach, "Take the key back to Lord Jorach at Ravenholdt Manor."),
+    } })
+
+  local mage = "MAGE"
+  q(8250, "Magecraft", 52, 50, nil, nil, mage)
+  q(8251, "Magic Dust", 52, 50, 8250, nil, mage)
+  q(8252, "The Siren's Coral", 52, 50, 8251, nil, mage)
+  q(8253, "Destroy Morphaz", 52, 50, 8252, nil, mage)
+  side({ id = "mage-destroy-morphaz", title = "Mage: Destroy Morphaz", zone = m.azshara,
+    levels = { 52, 54 }, class = mage, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8253" },
+    steps = {
+      accept(8250, at("Elsharin", 48.21, 87.22, m.stormwind),
+        "From level 50, Elsharin in Stormwind's Mage Quarter has Magecraft. Juli Stormkettle in Ironforge gives it too."),
+      finish(8250, sanath, "Sanath Lim-yo stands at the foot of Archmage Xylem's tower on the western cliffs of Azshara."),
+      note(accept(8251, xylem, "Ask Sanath for passage up the tower, then take Magic Dust from Xylem."), passage),
+      goal(8251, at(nil, 57.0, 28.0, m.azshara), "Kill blood elves at their camp in northern Azshara for glittering dust.",
+        "10 Glittering Dust"),
+      finish(8251, xylem),
+      accept(8252, xylem),
+      goal(8252, at(nil, 39.0, 54.0, m.azshara), "Kill Spitelash Sirens around the Ruins of Eldarath for enchanted coral.",
+        "6 Enchanted Coral"),
+      finish(8252, xylem),
+      accept(8253, xylem, "Destroy Morphaz needs a Sunken Temple group."),
+      goal(8253, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for the Arcane Shard.", "Arcane Shard"),
+      finish(8253, xylem, "Bring the shard back to Archmage Xylem."),
+    } })
+
+  local tabetha = at("Tabetha", 46.06, 57.09, m.dustwallow)
+  q(1953, "Return to the Marsh", 40, 35, nil, nil, mage)
+  q(1954, "The Infernal Orb", 40, 35, 1953, nil, mage)
+  q(1955, "The Exorcism", 40, 35, 1954, nil, mage)
+  q(1956, "Power in Uldaman", 40, 35, 1955, nil, mage)
+  q(1957, "Mana Surges", 40, 35, 1956, nil, mage)
+  q(1958, "Celestial Power", 40, 35, 1957, nil, mage)
+  side({ id = "mage-celestial-power", title = "Mage: Celestial Power", zone = m.dustwallow,
+    levels = { 38, 42 }, class = mage, links = { "dungeon-uldaman" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1958" },
+    steps = {
+      accept(1953, at("Jennea Cannon", 49.56, 85.8, m.stormwind),
+        "From level 35, Jennea Cannon in the Wizard's Sanctum sends you back to Tabetha. Bink in Ironforge gives the same quest."),
+      finish(1953, tabetha, "Take the Menethil ship to Theramore and follow the road west to Tabetha's hut."),
+      accept(1954, tabetha),
+      goal(1954, at(nil, 53.0, 78.0, m.desolace),
+        "In Desolace, kill Burning Blade Summoners at Mannoroc Coven or in Shadowbreak Ravine until an Infernal Orb drops.",
+        "Infernal Orb"),
+      finish(1954, tabetha),
+      accept(1955, tabetha, "Heal up first: Tabetha calls out the Demon of the Orb, a level 40 elite."),
+      goal(1955, tabetha, "Kill the Demon of the Orb beside Tabetha's hut, then speak with her.", "Demon of the Orb slain"),
+      finish(1955, tabetha),
+      accept(1956, tabetha, "Power in Uldaman needs an Uldaman group."),
+      goal(1956, at("Uldaman entrance", 42.4, 12.9, m.badlands), "Inside Uldaman, kill the Obsidian Sentinel for its power source.",
+        "Obsidian Power Source"),
+      finish(1956, tabetha),
+      accept(1957, tabetha, "The Mana Surges come at once and the quest is timed. Start with full mana."),
+      goal(1957, tabetha, "Kill the Mana Surges around Tabetha's hut before the timer runs out.", "12 Mana Surge"),
+      finish(1957, tabetha),
+      accept(1958, tabetha),
+      finish(1958, tabetha, "Speak with Tabetha again and choose your reward."),
+    } })
+end
+
+linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone", "hunter-green-drake", "priest-blood-of-morphaz", "rogue-azure-key", "mage-destroy-morphaz" })
+linkRun("dungeon-uldaman", { "mage-celestial-power" })
