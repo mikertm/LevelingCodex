@@ -1,6 +1,14 @@
 # Leveling Codex
 
-## Unreleased
+## v0.19.0
+
+### Questie compatibility
+
+- **Works side by side with Questie.** While Questie's own auto-accept or auto-complete is on, the Codex leaves those quests to Questie, so the two never pick different quests from one NPC. Settings says so under each tickbox.
+- **One key holds both back.** Questie's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
+- **The step window sits beside Questie's tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
+- **Last-mile arrow with QuestieDB.** With QuestieDB installed (Questie needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (QuestieDB).
+- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks QuestieDB once more if it wasn't ready at login.
 
 ### Alliance quest guide
 
@@ -30,15 +38,6 @@
 - **Fishing:** the Fishing Rack's lure fix, and Blizzard's note that some "There is no loot" errors remain.
 - **Zephras Isle:** Camping 101: Herbalism is now handed in to Halassa Fernbreeze in Shen'dar Village, not in Valanaar.
 - **Razorfen Kraul:** Lonebrow's Journal has moved a little down the road, and the step says so.
-
-### Questie compatibility
-
-- **Works side by side with Questie.** While Questie's own auto-accept or auto-complete is on, the Codex leaves those quests to Questie, so the two never pick different quests from one NPC. Settings says so under each tickbox.
-- **One key holds both back.** Questie's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
-- **The step window sits beside Questie's tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
-- **Last-mile arrow with QuestieDB.** With QuestieDB installed (Questie needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (QuestieDB).
-- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks QuestieDB once more if it wasn't ready at login.
-
 
 ## v0.18.0
 
