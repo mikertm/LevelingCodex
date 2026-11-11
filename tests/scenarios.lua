@@ -1706,6 +1706,22 @@ function S.questWarriorFangsNotTaken()
     "without Fire Hardened Mail in the log there is no fang step")
 end
 
+-- Reported in game: with Show optional quests on, the step window said "Turn in - Unrequited Love"
+-- (Hollee's note, carried from Darkshore) to a player who never took it.
+function S.questCarriedTurninNotTaken()
+  LevelingCodexDB = { questOptional = true }
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Turn in - Unrequited Love"),
+    "no turn-in for an optional quest you don't have, even with optional quests shown")
+end
+
+function S.questCarriedTurninCarried()
+  LevelingCodexDB = { questOptional = true }
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 98461, isComplete = true } })
+  check(questText(win(), "Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
+end
+
 -- Outleveled pickups leave the route and guides show progress by level band.
 function S.questGrey()
   local sections = LevelingCodexQuests.ALLIANCE.sections

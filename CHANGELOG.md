@@ -5,6 +5,7 @@
 ### Alliance quest guide
 
 - **Warriors: Fire Hardened Mail's fangs at Thelgen Rock.** The Leech and Cave Stalkers you kill for Alchemical Hazards' gland also drop the 50 Scorched Spider Fangs, so with Fire Hardened Mail in your log the Wetlands guides add a step to collect them there. Other classes, and Warriors without the quest, don't see it.
+- Fixed: with Settings > Show optional quests on, the step window could ask you to turn in a quest you never took, such as Unrequited Love (Hollee's note from Darkshore) in Menethil. Optional turn-ins and objectives now show only while the quest is in your log.
 
 ## v0.19.0
 
