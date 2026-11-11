@@ -6,10 +6,13 @@ local view, allSteps = "route", false
 local librarySection, query, draft = nil, "", ""
 
 local STATUS = { pending = "To do", done = "Done", deferred = "Earlier", skipped = "Skipped", blocked = "Blocked" }
+local GUIDE_TAG = { current = "Current", done = "Done", outleveled = "Outleveled", suggested = "Suggested", later = "Later" }
+-- Leveling guides are listed by the band their first level falls in.
+local BANDS = { { 1, 11, "LEVELS 1-12: STARTING ZONES" }, { 12, 19, "LEVELS 12-20" }, { 20, 29, "LEVELS 20-30" },
+  { 30, 60, "LEVELS 30-60" } }
 
 local function sectionInfo(section)
-  return (section.category == "dungeon" and "Suggested levels " or "Levels ") .. section.levels[1] .. "-" .. section.levels[2] ..
-    (section.verified and "" or "  |  Unverified")
+  return (section.category == "dungeon" and "Suggested levels " or "Levels ") .. section.levels[1] .. "-" .. section.levels[2]
 end
 
 local function runInfo(section)
@@ -87,7 +90,7 @@ local function renderRoute(rows, selected, current, y)
     if row.section == selected and row.state ~= "filtered" and
         (allSteps or row == current or row.state == "pending") then
       local active = row == current
-      y = drawRow(row, y, Q.label(row.step), active and "Current" or STATUS[row.state],
+      y = drawRow(row, y, Q.label(row.step), active and "Current" or row.grey and "Grey" or STATUS[row.state],
         row.step.forever and "Forever" or nil, 62, active)
       visible = true
     end
@@ -286,10 +289,9 @@ local function render()
   U.btn("Copy recorder log", W - w, y, w, function() ns.questRecord("copy") end)
   y = y + 36
 
-  local stepWidth = (W - 24) / 4
+  local stepWidth = (W - 16) / 3
   U.btn("Previous step", 0, y, stepWidth, function() ns.moveQuestStep(true) end)
   U.btn("Next step", stepWidth + 8, y, stepWidth, function() ns.moveQuestStep(false) end)
-  U.btn("Pin step", 2 * (stepWidth + 8), y, stepWidth, ns.pinQuestStep)
   U.btn("Hide step window", W - stepWidth, y, stepWidth, ns.hideQuestViewer)
   y = y + 32
 
@@ -322,35 +324,55 @@ local function render()
     y = y + 36
   end
 
+  -- Guides by level band (as Zygor's guide menu): progress, a status tag, the suggested ones in gold.
   local column = (W - 12) / 2
-  local function sectionButtons(heading, kind)
-    local count = 0
-    for _, section in ipairs(sections) do
-      if not section.category and (section.side and "class" or section.alternate and "alternate" or "main") == kind then
-        if count == 0 then y = y + U.T(heading, 0, y, W, "label", C.gold) + 6 end
-        local x = count % 2 * (column + 12)
-        U.btn(section.title, x, y, column, function()
-          view = "route"
-          Q.jump(section)
-          ns.showQuestViewer()
-        end, selected == section, "Follow this section in the step window.")
-        U.T(sectionInfo(section), x, y + 25, column, "small", C.dim, "CENTER")
-        count = count + 1
-        if count % 2 == 0 then y = y + 46 end
+  local suggestedSet = {}
+  for _, section in ipairs(choices) do suggestedSet[section] = true end
+  local function guideButtons(heading, list)
+    if #list == 0 then return end
+    y = y + U.T(heading, 0, y, W, "label", C.gold) + 6
+    local rowHeight = 0
+    for count, section in ipairs(list) do
+      local x = (count - 1) % 2 * (column + 12)
+      local status, done, total = Q.sectionStatus(section, suggestedSet)
+      local parts = { "Levels " .. section.levels[1] .. "-" .. section.levels[2] }
+      if total > 0 then parts[#parts + 1] = math.floor(done * 100 / total + 0.5) .. "% done" end
+      if GUIDE_TAG[status] then parts[#parts + 1] = GUIDE_TAG[status] end
+      if section.alternate then parts[#parts + 1] = "Alternate" end
+      U.btn(section.title, x, y, column, function()
+        view = "route"
+        Q.jump(section)
+        ns.showQuestViewer()
+      end, status == "current" or status == "suggested", "Follow this section in the step window.")
+      local faded = status == "done" or status == "outleveled" or status == "later"
+      local h = U.T(table.concat(parts, "  |  "), x, y + 25, column, "small",
+        status == "suggested" and C.gold or faded and C.dim or C.light, "CENTER")
+      rowHeight = math.max(rowHeight, 25 + h + 9, 46)
+      if count % 2 == 0 or count == #list then y, rowHeight = y + rowHeight, 0 end
+    end
+  end
+  local bands, classes = {}, {}
+  for _, band in ipairs(BANDS) do bands[band] = {} end
+  for _, section in ipairs(sections) do
+    if not section.category then
+      if section.side then
+        classes[#classes + 1] = section
+      else
+        for _, band in ipairs(BANDS) do
+          if section.levels[1] <= band[2] then table.insert(bands[band], section); break end
+        end
       end
     end
-    if count % 2 == 1 then y = y + 46 end
   end
-  sectionButtons("ROUTE SECTIONS", "main")
-  sectionButtons("ALTERNATE ROUTES", "alternate")
-  if not ns.db().noClassQuests then sectionButtons("CLASS QUESTS", "class") end
+  for _, band in ipairs(BANDS) do guideButtons(band[3], bands[band]) end
+  if not ns.db().noClassQuests then guideButtons("CLASS QUESTS", classes) end
 
   local function viewButton(key, label, x)
     U.btn(label, x, y, w, function() view = key; U.refresh() end, view == key)
   end
   viewButton("route", "Route", 0)
   viewButton("ready", "Ready to turn in (" .. #ready .. ")", w + 8)
-  viewButton("missed", "Missed quests (" .. #missed .. ")", W - w)
+  viewButton("missed", "Missed quests (" .. (#missed + #Q.greyPickups()) .. ")", W - w)
   y = y + 34
 
   if view == "ready" then
@@ -359,6 +381,12 @@ local function render()
   elseif view == "missed" then
     y = renderQueue(y, "Missed quests", missed, "Pickup", "No earlier pickups match your level.",
       "Review this earlier pickup in the step window.")
+    local grey = Q.greyPickups()
+    if #grey > 0 then
+      y = y + 8
+      y = renderQueue(y, "Outleveled (grey)", grey, "Grey", "",
+        "Grey pickups left the route. Settings > Keep grey quests in the route brings them back.")
+    end
   else
     y = renderRoute(rows, selected, current, y)
   end

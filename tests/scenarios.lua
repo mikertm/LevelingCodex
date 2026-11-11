@@ -80,7 +80,9 @@ function S.questStart()
   click(frame, "Back")
   check(questText(frame, "A Threat Within"), "back returns to initial step")
   click(frame, "Quests")
-  check(questText(win(), "Unverified"), "quest tab shows section verification")
+  check(not questText(win(), "Unverified") and not questText(frame, "Unverified"), "no Unverified labels for players")
+  check(questText(frame, "Levels 1-5") and not findButton(frame, function(l) return l == "Pin" end),
+    "the step window shows the level range and has no Pin button")
 end
 
 function S.questProgress()
@@ -422,7 +424,7 @@ function S.questDuskwood()
   MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 23, 1431, "Lakeshire"
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Duskwood  21-27"), "a level 23 in Duskwood starts the Duskwood section")
+  check((questText(frame, "Duskwood") and questText(frame, "Levels 21-27")), "a level 23 in Duskwood starts the Duskwood section")
   check(questText(frame, "Flight path - Darkshire, Duskwood"), "Duskwood starts at the Darkshire flight path")
   MOCK.bind = "Darkshire"
   MOCK.event("HEARTHSTONE_BOUND")
@@ -491,7 +493,7 @@ function S.questLakeshireHandoff()
   check(questText(frame, "Next section: Duskwood"), "the last Lakeshire step names the next section")
   MOCK.questDone[20], MOCK.questLog = true, {}
   MOCK.event("QUEST_TURNED_IN", 20)
-  check(questText(frame, "Duskwood  21-27") and questText(frame, "Flight path - Darkshire"),
+  check((questText(frame, "Duskwood") and questText(frame, "Levels 21-27")) and questText(frame, "Flight path - Darkshire"),
     "the final turn-in leads straight to Duskwood")
 end
 
@@ -515,7 +517,7 @@ function S.questDuskwoodZoneEntry()
 
   MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 77.7, 44.4
   MOCK.event("ZONE_CHANGED_NEW_AREA")
-  check(questText(frame, "Duskwood  21-27") and not questText(frame, "Return to Lakeshire"),
+  check((questText(frame, "Duskwood") and questText(frame, "Levels 21-27")) and not questText(frame, "Return to Lakeshire"),
     "walking into Duskwood switches to local pickups even without an accepted quest there")
   check(questText(frame, "Bind hearthstone") and questText(frame, "Accept - Raven Hill"),
     "Duskwood starts with the next local steps, including pickups available at level 20")
@@ -523,7 +525,7 @@ function S.questDuskwoodZoneEntry()
   MOCK.event("ZONE_CHANGED_NEW_AREA") -- Sometimes the map still shows the old zone during the event.
   MOCK.questMap, MOCK.questX, MOCK.questY = 1433, 25, 40
   MOCK.advance(0.5)
-  check(questText(frame, "Lakeshire  17-22") and questText(frame, "Turn in - Blackrock Menace"),
+  check((questText(frame, "Lakeshire") and questText(frame, "Levels 17-22")) and questText(frame, "Turn in - Blackrock Menace"),
     "a delayed map update still resumes the old zone's unfinished turn-in")
   check(next(LevelingCodexCharDB.questSkips) == nil, "changing zones does not skip any quest permanently")
 end
@@ -621,7 +623,7 @@ function S.questWetlands()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1437
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Wetlands  26-30"), "a level 28 in the Wetlands follows the Wetlands section")
+  check((questText(frame, "Wetlands") and questText(frame, "Levels 26-30")), "a level 28 in the Wetlands follows the Wetlands section")
   check(questText(frame, "Accept - Razormaw Needling"), "the trip there is skipped once you are in the Wetlands")
 
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
@@ -948,6 +950,64 @@ function S.questWestfall()
   check(questText(win(), "Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
 end
 
+-- Reported in game: logging in at Menethil with Wetlands turn-ins ready kept the Duskwood guide,
+-- because catch-up pulled Sven's whole chain (needed for The Doomed Fleet) from Duskwood.
+function S.questLoginWetlandsLocal()
+  local log = {
+    { questID = 163, isComplete = true }, { questID = 164, isComplete = true },
+    { questID = 96139, objectives = { { text = "Raven Hill Tome: 0/1" } } },
+    { questID = 56, objectives = { { text = "Skeletal Warrior slain: 0/8" } } },
+    { questID = 174, objectives = { { text = "Bronze Tube: 0/1" } } },
+    { questID = 279, objectives = { { text = "Bluegill Murloc slain: 0/12" } } },
+    { questID = 484, isComplete = true }, { questID = 98197, isComplete = true },
+    { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 305, isComplete = true }, { questID = 463, isComplete = true },
+    { questID = 470, objectives = { { text = "Sida's Bag: 0/1" } } },
+    { questID = 288, objectives = { { text = "Flagon of Dwarven Honeymead: 0/1" } } },
+    { questID = 98208, objectives = { { text = "Nord'el: 0/1" } } },
+  }
+  -- The client often has no position at the first update; Proving Your Worth makes Seeking Wisdom takeable.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questLog = "Human", 24, nil, log
+  for _, id in ipairs({ 245, 268, 323 }) do MOCK.questDone[id] = true end
+  S.login()
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 10.4, 60.6
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(2)
+  local frame = questViewer()
+  check(questText(frame, "Wetlands") and not questText(frame, "Duskwood") and not questText(frame, "Sven"),
+    "logging in at Menethil follows the Wetlands, not a Duskwood prerequisite")
+  slash("quests")
+  questQueue("Ready to turn in")
+  check(questText(win(), "The Greenwarden"), "an optional breadcrumb in your log shows its turn-in")
+end
+
+-- Outleveled pickups leave the route (Zygor/RestedXP) and guides show progress by level band.
+function S.questGrey()
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  local function step(kind, id, name, level, chain)
+    return { type = kind, quest = id, name = name, text = name, level = level, min = 1, chain = chain }
+  end
+  sections[#sections + 1] = { id = "test-grey", title = "Test grey route", zone = 1436, levels = { 12, 30 },
+    verified = true, steps = {
+      step("accept", 999301, "Grey Errand", 5), step("turnin", 999301, "Grey Errand", 5),
+      step("accept", 999302, "Grey Prerequisite", 6), step("turnin", 999302, "Grey Prerequisite", 6),
+      step("accept", 999303, "Fresh Follow-up", 20, { 999302 }), step("turnin", 999303, "Fresh Follow-up", 20, { 999302 }),
+    } }
+  MOCK.level, MOCK.questMap = 20, 1436
+  S.login()
+  slash("quests")
+  click(win(), "Test grey route")
+  local frame = questViewer()
+  check(questText(frame, "Accept - Grey Prerequisite"), "a grey pickup leaves the route unless a later quest needs it")
+  check(questText(win(), "LEVELS 12-20") and questText(win(), "0% done") and questText(win(), "Current"),
+    "guides are grouped by level band with progress and status")
+  questQueue("Missed quests")
+  check(questText(win(), "Outleveled (grey)") and questText(win(), "Grey Errand"), "the grey pickup is listed as outleveled")
+  click(win(), "Settings")
+  click(win(), "Keep grey quests in the route")
+  check(questText(frame, "Accept - Grey Errand"), "the setting keeps grey pickups in the route")
+end
+
 -- RestedXP-style dungeon plans, Zygor-style "find a group", chain position and a full log.
 function S.questDungeonPlan()
   local sections = LevelingCodexQuests.ALLIANCE.sections
@@ -1096,11 +1156,14 @@ function S.questCrossZoneResume()
   click(win(), "Resume active quest")
   local frame = questViewer()
   check(not questText(frame, "Choose a detour"), "resume switches away from the selected guide")
+  check(questText(frame, "Detour progress 2/5"), "resume starts with the objective in your zone")
+  MOCK.questDone[999102], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 999102)
   check(questText(frame, "Accept - Earlier prerequisite"), "cross-zone resume retains an earlier prerequisite")
   check(questText(frame, "Required for Detour follow-up"), "catch-up explains why the earlier step is required")
   MOCK.questDone[999101] = true
   MOCK.event("QUEST_TURNED_IN", 999101)
-  check(questText(frame, "Detour progress 2/5"), "resume returns to the alternate's active objective")
+  check(questText(frame, "Accept - Detour follow-up"), "the prerequisite leads back to the quest that needed it")
   check(next(LevelingCodexCharDB.questSkips) == nil, "resume leaves manual skips alone")
 end
 
@@ -1110,18 +1173,21 @@ function S.questZoneResume()
   MOCK.questLog = { { questID = 999102, objectives = { { text = "Detour progress 2/5" } } } }
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Westfall  12-18"), "a remote active quest does not pull the guide away at login")
+  check((questText(frame, "Westfall") and questText(frame, "Levels 12-18")), "a remote active quest does not pull the guide away at login")
 
   MOCK.onTaxi, MOCK.questMap = true, 1432
   MOCK.event("ZONE_CHANGED_NEW_AREA")
-  check(questText(frame, "Westfall  12-18"), "a taxi flyover does not change sections")
+  check((questText(frame, "Westfall") and questText(frame, "Levels 12-18")), "a taxi flyover does not change sections")
   MOCK.onTaxi = false
   MOCK.event("PLAYER_CONTROL_GAINED")
-  check(questText(frame, "Accept - Earlier prerequisite"), "entering a zone catches up to its active quest")
-  check(questText(frame, "Required for Detour follow-up"), "zone catch-up keeps required pickups")
+  check(questText(frame, "Detour progress 2/5"), "entering a zone catches up to its active quest")
+  MOCK.questDone[999102], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 999102)
+  check(questText(frame, "Accept - Earlier prerequisite") and questText(frame, "Required for Detour follow-up"),
+    "zone catch-up keeps the required pickup for when the route needs it")
   MOCK.questDone[999101] = true
   MOCK.event("QUEST_TURNED_IN", 999101)
-  check(questText(frame, "Detour progress 2/5"), "catch-up returns to the local objective")
+  check(questText(frame, "Accept - Detour follow-up"), "catch-up returns to the quest that needed it")
   check(next(LevelingCodexCharDB.questSkips) == nil, "zone catch-up does not write skips")
 end
 
@@ -1153,7 +1219,7 @@ function S.questAlternateRoutes()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Loch Modan  11-18"), "starting in Loch Modan selects its local route")
+  check((questText(frame, "Loch Modan") and questText(frame, "Levels 11-18")), "starting in Loch Modan selects its local route")
   check(questText(frame, "Flight path - Thelsamar, Loch Modan"), "local start skips the way there")
   check(questText(frame, "Use Next to skip this flight path"), "the flight path explains how to skip")
   click(frame, "Next")
@@ -1172,7 +1238,7 @@ function S.questAlternateRoutes()
   check(questText(frame, "Accept - Washed Ashore"), "Darkshore continues with its first pickup")
   MOCK.questMap = 1432
   MOCK.event("ZONE_CHANGED_NEW_AREA")
-  check(questText(frame, "Loch Modan  11-18"), "entering another alternate zone follows its available pickups")
+  check((questText(frame, "Loch Modan") and questText(frame, "Levels 11-18")), "entering another alternate zone follows its available pickups")
 end
 
 function S.questLochHistory()
@@ -1259,7 +1325,7 @@ function S.questWestfallDetour()
   slash("quests")
   check(findButton(win(), function(label) return label == "Try Loch Modan" end), "Westfall offers Loch Modan")
   click(win(), "Try Darkshore")
-  check(questText(frame, "Darkshore  12-20"), "Westfall also offers quest XP through Darkshore")
+  check((questText(frame, "Darkshore") and questText(frame, "Levels 12-20")), "Westfall also offers quest XP through Darkshore")
 end
 
 function S.questRecorder()
@@ -1324,11 +1390,6 @@ function S.questController(mode)
   check(questText(frame, "Accept - Nibbled-On Book"), "Next step in Quests advances the guide")
   click(win(), "Previous step")
   check(questText(frame, "Accept - A Threat Within"), "Previous step in Quests goes back")
-  local pinnedMap
-  TomTom = { AddWaypoint = function(_, map) pinnedMap = map end }
-  click(win(), "Pin step")
-  TomTom = nil
-  check(pinnedMap == 1429, "Pin step sets the current waypoint")
   click(win(), "Hide step window")
   check(not frame:IsShown(), "the guide can be hidden from Quests")
   click(win(), "Show step window")

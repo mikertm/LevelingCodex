@@ -2,10 +2,10 @@
 local _, ns = ...
 local Q, A, C = ns.quests, ns.art, ns.C
 local try = Q.try
-local viewer, arrow, header, title, detail, preview, arrowText, arrowArt, flatBackground, badge, arrowFile
+local viewer, arrow, header, headerArt, title, detail, preview, arrowText, arrowArt, flatBackground, levels, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
-local nextButton, pinButton, suggestionButton
+local nextButton, suggestionButton
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local announced = {} -- dungeon runs whose "find a group" note was said this session
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
@@ -43,27 +43,30 @@ local function font(parent, y, width, template)
   return fs
 end
 
-function ns.pinQuestStep()
-  local row = Q.current()
-  local s = row and row.step
-  if not (s and s.map and s.x and s.y) then return end
-  local point = try(UiMapPoint and UiMapPoint.CreateFromCoordinates, s.map, s.x / 100, s.y / 100)
-  if point and C_Map and type(C_Map.SetUserWaypoint) == "function" then
-    if pcall(C_Map.SetUserWaypoint, point) then
-      try(C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint, true)
-      return
-    end
-  end
-  if TomTom and type(TomTom.AddWaypoint) == "function" then
-    try(TomTom.AddWaypoint, TomTom, s.map, s.x / 100, s.y / 100,
-      { title = s.name or s.text, persistent = false })
-  end
-end
-
 function ns.moveQuestStep(back)
   if back then Q.back() else Q.next() end
   quiet = true
   ns.questRefresh()
+end
+
+-- The banner shows the guide's short name (the part before a colon; the Quests tab has the full
+-- title). The dialog header art's plate is about 45% of the texture's width, so the art widens
+-- with the name, Morpheus drops to 12 for long names, and anything longer still is cut off.
+local HEADER_FONT, PLATE = "Fonts\\MORPHEUS.TTF", 0.45
+local function fitHeader(text)
+  header:SetText(Q.plain(text))
+  try(header.SetFont, header, HEADER_FONT, 14, "")
+  try(header.SetWidth, header, 0)
+  local width = tonumber(try(header.GetStringWidth, header)) or 0
+  if width > 150 then
+    try(header.SetFont, header, HEADER_FONT, 12, "")
+    width = tonumber(try(header.GetStringWidth, header)) or width
+  end
+  local fits = math.min(width, 190)
+  try(header.SetWidth, header, fits + 4)
+  if headerArt and headerArt:IsShown() then
+    headerArt:SetWidth(math.max(300, (fits + 44) / PLATE))
+  end
 end
 
 local function makeViewer()
@@ -90,12 +93,10 @@ local function makeViewer()
   place()
   flatBackground = viewer:CreateTexture(nil, "BACKGROUND")
   flatBackground:SetAllPoints()
-  local _, caption = A.header(viewer, "Quest Guide", 300)
-  header = caption
-  try(header.SetFont, header, "Fonts\\MORPHEUS.TTF", 14, "")
-  badge = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  badge:SetPoint("TOPRIGHT", -16, -30)
-  badge:SetText("Unverified")
+  headerArt, header = A.header(viewer, "Quest Guide", 300)
+  try(header.SetWordWrap, header, false)
+  levels = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  levels:SetPoint("TOPRIGHT", -16, -30)
   title = font(viewer, 28, 318, "GameFontNormal")
   detail = font(viewer, 47, 318)
   preview = font(viewer, 126, 318)
@@ -110,14 +111,13 @@ local function makeViewer()
     return b
   end
   -- Keep controller focus in the Quests tab so the overlay can stay up during gameplay.
-  button("Back", 12, 62, function() ns.moveQuestStep(true) end)
-  nextButton = button("Next", 80, 62, function(_, mouse)
+  button("Back", 12, 72, function() ns.moveQuestStep(true) end)
+  nextButton = button("Next", 92, 72, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  pinButton = button("Pin", 148, 55, ns.pinQuestStep)
-  button("Quests", 209, 70, function() ns.openTab("quests") end)
-  button("Hide", 285, 53, ns.hideQuestViewer)
+  button("Quests", 172, 86, function() ns.openTab("quests") end)
+  button("Hide", 266, 72, ns.hideQuestViewer)
   suggestionButton = button("", 16, 318, function()
     local row = Q.current()
     if row and row.section.side then
@@ -441,9 +441,9 @@ function ns.questRefresh()
       preview:SetTextColor(ns.rgba(backdrop and C.dim or C.inkSoft))
       theme = ns.themeVersion
     end
-    header:SetText(sec.title .. "  " .. sec.levels[1] .. "-" .. sec.levels[2])
-    badge:SetShown(not sec.verified)
-    title:SetWidth(sec.verified and 318 or 252)
+    fitHeader(sec.title:match("^([^:]+):") or sec.title)
+    levels:SetText("Levels " .. sec.levels[1] .. "-" .. sec.levels[2])
+    title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     if row then
       title:SetText(Q.label(row.step))
       detail:SetText(Q.detail(row.step, row.requiredFor))
@@ -464,7 +464,6 @@ function ns.questRefresh()
     preview:ClearAllPoints()
     preview:SetPoint("TOPLEFT", 16, -previewY)
     nextButton:SetShown(row ~= nil)
-    pinButton:SetShown(row ~= nil)
     local returnToRoute = sec.side
     local run, runCount = Q.readyRun()
     if run and not announced[run.id] then

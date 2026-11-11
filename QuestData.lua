@@ -531,6 +531,10 @@ q(55, "Morbent Fel", 32, 20, 325)
 q(98245, "Razormaw Needling", 29, 22, nil, true)
 q(98246, "Trying Times", 29, 22, nil, true)
 q(276, "Tramping Paws", 21, 20)
+-- Fitzsimmons' breadcrumb only helps players who arrive by ship; optional steps still show once it is in the log.
+q(463, "The Greenwarden", 21, 20)
+quest[463].optional = true
+breadcrumb(463, 276)
 q(277, "Fire Taboo", 23, 20, 276)
 q(275, "Blisters on The Land", 26, 20, 277)
 q(294, "Ormer's Revenge", 24, 22)
@@ -901,6 +905,8 @@ local wet = {
     "Leave Ironforge and follow the road east through Dun Morogh into Loch Modan. Learn the Thelsamar flight path."),
   accept(98245, howin, "Take the road north through Dun Algaz into the Wetlands. Howin Kindfeather camps beside the road."),
   accept(98246, howin),
+  accept(463, fitz, "Only if you came by ship: First Mate Fitzsimmons on the Menethil docks sends you to Rethiel."),
+  finish(463, rethiel, "Rethiel the Greenwarden stands among the trees east of Howin."),
   accept(276, rethiel, "Rethiel the Greenwarden stands among the trees east of Howin."),
   objectiveAt(276, wl(nil, 63, 66.1), "Kill Mosshide Gnolls and Mongrels at the camps to the south-east.", "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
   finish(276, rethiel), accept(277, rethiel),

@@ -26,6 +26,7 @@ local route, race, class
 local sections, sectionsById, steps, missed, ready = {}, {}, {}, {}, {}
 local startItems = {}
 local questNames = {}
+local greyRows = {} -- outleveled pickups this pass
 local chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}
 local index, level, resumeAt
 local inWorld = true
@@ -180,7 +181,7 @@ end
 
 -- Optional steps: dungeon pickups follow the plan, the rest (profession intros, errands) a setting.
 local function included(step)
-  if not step.optional then return true end
+  if not step.optional or (step.quest and log[step.quest]) then return true end
   if step.dungeon then return Q.planned(step.dungeon) end
   return ns.db().questOptional == true
 end
@@ -378,11 +379,26 @@ local function state(row, skips, blockedQuests, later, map, x, y)
 end
 
 -- Keep earlier pickups only if a remaining quest needs them. Reverse route
--- order visits a quest before its prerequisites and follows whole chains.
+-- order visits a quest before its prerequisites and follows whole chains, but only within a
+-- zone: a prerequisite picked up in another zone is kept only if you could take it now. A chain
+-- you skipped elsewhere is cut (with everything after it) instead of sending you back there.
 local function catchup(skips)
-  local needed, deferred = {}, {}
-  if not resumeAt then return needed, deferred end
+  local needed, deferred, cut = {}, {}, {}
+  if not resumeAt then return needed, deferred, cut end
   local start = steps[resumeAt].section
+  local pickup = {}
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if not row.section.side and s.type == "accept" and s.quest and not pickup[s.quest] then pickup[s.quest] = row end
+  end
+  local function takeable(id)
+    local from = pickup[id]
+    if not from then return false end
+    for _, pre in ipairs(from.step.chain or {}) do
+      if not turnedIn[pre] and not log[pre] then return false end
+    end
+    return true
+  end
   for i = #steps, 1, -1 do
     local row = steps[i]
     local step = row.step
@@ -390,14 +406,31 @@ local function catchup(skips)
       if ((i >= resumeAt and follows(row.section, start)) or needed[step.quest]) and not skips[row.key]
           and included(step) then
         for _, id in ipairs(step.chain or {}) do
-          if not turnedIn[id] then needed[id] = needed[id] or step end
+          if not turnedIn[id] then
+            local from = pickup[id]
+            if log[id] or (from and (from.section.zone == row.section.zone or takeable(id))) then
+              needed[id] = needed[id] or step
+            else
+              cut[step.quest] = true
+            end
+          end
         end
       elseif i < resumeAt and not needed[step.quest] then
         deferred[step.quest] = true
       end
     end
   end
-  return needed, deferred
+  -- Whatever follows a cut quest is cut too, and a cut quest isn't needed any more.
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if not row.section.side and s.type == "accept" and not log[s.quest] and not turnedIn[s.quest] then
+      for _, id in ipairs(s.chain or {}) do
+        if cut[id] and not turnedIn[id] and not log[id] then cut[s.quest] = true end
+      end
+    end
+  end
+  for id in pairs(cut) do needed[id] = nil end
+  return needed, deferred, cut
 end
 
 -- Zygor-style catch-up without a saved position: a quest you never picked up counts as
@@ -434,6 +467,45 @@ local function markPassed()
   end
 end
 
+-- Outleveled pickups (Zygor's "outleveled", RestedXP's max level): a leveling pickup that has gone
+-- grey leaves the route, with the rest of its steps, unless a quest still ahead needs it. Walking
+-- backwards sees every later quest's prerequisites before reaching them. Settings > Keep grey
+-- quests in the route turns this off.
+local function markGrey(grey)
+  greyRows = {}
+  if ns.db().questKeepGrey or not level then return end
+  local candidate, needs, dropped = {}, {}, {}
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if not row.section.side and s.type == "accept" and row.state == "pending" and s.level
+        and s.level <= level - grey and not log[s.quest] and not turnedIn[s.quest] then
+      candidate[s.quest] = true
+    end
+  end
+  for i = #steps, 1, -1 do
+    local row = steps[i]
+    local s = row.step
+    if not row.section.side and s.quest and (row.state == "pending" or row.state == "deferred") then
+      if candidate[s.quest] and not needs[s.quest] then
+        dropped[s.quest] = true
+      elseif row.state == "pending" then
+        for _, id in ipairs(s.chain or {}) do
+          if not turnedIn[id] then needs[id] = true end
+        end
+      end
+    end
+  end
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if dropped[s.quest] and not row.section.side and (row.state == "pending" or row.state == "deferred") then
+      row.state, row.grey = "deferred", true
+      if s.type == "accept" then greyRows[#greyRows + 1] = row end
+    else
+      row.grey = nil
+    end
+  end
+end
+
 local function leaveSide()
   if review and steps[review].section == sideSection then review = nil end
   sideSection, sideFrom, sideResumeAt, sideHistory, sideSkips = nil, nil, nil, {}, {}
@@ -451,7 +523,7 @@ local function calculate()
     if not row.step.optional and gameDone(row.step) then laterSeen[row.section] = true end
   end
   local skips, blockedQuests, sectionBlocked, reached, seen = skipTable(), {}, {}, false, {}
-  local needed, deferred = catchup(skips)
+  local needed, deferred, cut = catchup(skips)
   local fromSection = resumeAt and steps[resumeAt].section or selected
   local grey = try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
   index, missed, ready = nil, {}, {}
@@ -471,11 +543,21 @@ local function calculate()
         (i < resumeAt and not needed[s.quest] and not (reached and entry))) then
       row.state = "deferred"
     end
+    row.cut = nil
+    if cut[s.quest] and not row.section.side and not entry and not turnedIn[s.quest]
+        and (row.state == "pending" or row.state == "deferred") then
+      row.state, row.cut = "deferred", true
+    end
   end
   markPassed()
+  markGrey(grey)
   reached = false
-  local mainIndex, sideIndex
+  local mainIndex, sideIndex, away
   local readySeen = {}
+  -- A kept prerequisite in another zone waits until the route reaches the quest that needs it.
+  local function here(row)
+    return not map or row.step.map == map or (not row.step.map and row.section.zone == map)
+  end
   for i, row in ipairs(steps) do
     if row.section == fromSection then reached = true end
     local s = row.step
@@ -485,8 +567,14 @@ local function calculate()
         if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom then
           sideIndex = i
         end
-      elseif not mainIndex and ((reached and follows(row.section, fromSection)) or needed[s.quest]) then
-        mainIndex = i
+      elseif not mainIndex then
+        local onRoute = reached and follows(row.section, fromSection)
+        local early = resumeAt and i < resumeAt
+        if onRoute and not early then
+          mainIndex = (away and s.type == "accept" and not entry and not prerequisitesMet(s)) and away or i
+        elseif needed[s.quest] or onRoute then
+          if here(row) then mainIndex = i else away = away or i end
+        end
       end
     end
     if s.type == "turnin" and entry and entry.ready and not turnedIn[s.quest] and row.state ~= "filtered"
@@ -497,7 +585,7 @@ local function calculate()
     local side = row.section.side
     local elsewhere = side and row.section ~= sideSection or not side and fromSection
       and (not reached or row.state == "deferred")
-    if elsewhere and s.type == "accept" and not turnedIn[s.quest]
+    if elsewhere and s.type == "accept" and not turnedIn[s.quest] and not row.cut
         and not entry and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1)
         and (not side or (not row.section.category and row.state == "pending" and not seen[row.section] and prerequisitesMet(s)))
         and (side or not s.level or s.level > level - grey) then
@@ -539,7 +627,7 @@ end
 local function hasSectionWork(section, map)
   for _, row in ipairs(steps) do
     local s = row.step
-    if row.section == section and (row.state == "pending" or row.state == "deferred") and s.quest
+    if row.section == section and (row.state == "pending" or row.state == "deferred") and s.quest and not row.grey
         and (not map or not s.map or s.map == map)
         and (log[s.quest] or (s.type == "accept" and level >= (s.min or 1) and prerequisitesMet(s))) then
       return true
@@ -579,7 +667,7 @@ local function resumeLocal(event)
   -- The first log update can arrive after the player's position is available.
   checkLocalOnLog = event ~= "QUEST_LOG_UPDATE" or next(log) == nil
   local row = index and steps[index]
-  if sideSection or review or (row and (row.requiredFor or
+  if sideSection or review or (row and ((row.requiredFor and row.step.map == map) or
       (row.step.map == map and row.section.zone ~= map))) then
     checkLocalOnLog = false
     return
@@ -685,6 +773,33 @@ function Q.current()
   return i and steps[i], i
 end
 
+function Q.greyPickups() return greyRows end
+
+-- A guide's progress and status for the Quests tab (Zygor's guide menu): quests turned in out of
+-- the quests it turns in, and "current", "done", "outleveled", "suggested", "later" or "open".
+function Q.sectionProgress(section)
+  local total, done, seen = 0, 0, {}
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if row.section == section and s.type == "turnin" and not seen[s.quest] and row.state ~= "filtered" then
+      seen[s.quest] = true
+      total = total + 1
+      if turnedIn[s.quest] then done = done + 1 end
+    end
+  end
+  return done, total
+end
+
+function Q.sectionStatus(section, suggested)
+  local done, total = Q.sectionProgress(section)
+  local lvl = level or 1
+  if section == (sideSection or selected) then return "current", done, total end
+  if total > 0 and done == total then return "done", done, total end
+  if lvl > section.levels[2] then return "outleveled", done, total end
+  if suggested and suggested[section] then return "suggested", done, total end
+  if lvl < section.levels[1] then return "later", done, total end
+  return "open", done, total
+end
 function Q.rows() return steps, sections, missed, level or UnitLevel("player"), sideSection or selected, ready end
 function Q.log(id) return log[id] end
 function Q.logEntries() return log end

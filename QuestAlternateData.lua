@@ -368,6 +368,8 @@ chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 
   "https://www.wowhead.com/forever/quest=484/young-crocolisk-skins",
 }, { "duskwood", "redridge-late", "ashenvale-late", "wetlands", "duskwood-late" }, {
   action("goto", rethiel, "From Thelsamar, follow the road north through Dun Algaz, then head east into the Green Belt. From Menethil, follow the road east through the marsh."),
+  accept(463, wet("First Mate Fitzsimmons", 10.9, 59.64), "Only if you came by ship: First Mate Fitzsimmons on the Menethil docks sends you to Rethiel."),
+  finish(463, rethiel),
   accept(276, rethiel),
   objective(276, wet(nil, 63, 66.1), "Start with the Mosshide camps near the southern road. Focus on the lower-level Gnolls and Mongrels.", "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
   finish(276, rethiel), accept(277, rethiel),
