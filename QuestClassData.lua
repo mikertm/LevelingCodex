@@ -1428,3 +1428,148 @@ do
     },
   })
 end
+
+-- Levels 30-60. Source notes: tools/audits/2026-11-10-class-30-60.md.
+-- A class chain that ends inside a dungeon is listed on that dungeon's guide, so the library
+-- recommends the run to that class.
+local function linkRun(dungeonId, sectionIds)
+  for _, section in ipairs(route.sections) do
+    if section.id == dungeonId then
+      section.links = section.links or {}
+      for _, id in ipairs(sectionIds) do section.links[#section.links + 1] = id end
+      return
+    end
+  end
+  error("class quests: no dungeon guide " .. dungeonId)
+end
+
+-- Warrior: the Whirlwind weapon from Bath'rah in Alterac, then the Fallen Hero's chain at 50.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, part, note = B.accept, B.finish, B.objectiveAt, B.objectivePart, B.note
+  local warrior = "WARRIOR"
+  local qdb = "QuestieDB Forever 0f7d8ad"
+
+  local klannoc = at("Klannoc Macleod", 68.62, 49.16, m.barrens)
+  local bathrah = at("Bath'rah the Windwatcher", 80.5, 66.92, m.alterac)
+  local cauldron = at("Bath'rah's Cauldron", 79.32, 66.8, m.alterac)
+  q(1791, "The Windwatcher", 30, 30, 1719, nil, warrior)
+  q(1712, "Cyclonian", 40, 30, 1791, nil, warrior)
+  q(1713, "The Summoning", 40, 30, 1712, nil, warrior)
+  q(1792, "Whirlwind Weapon", 40, 30, 1713, nil, warrior)
+  side({ id = "warrior-whirlwind-weapon", title = "Warrior: Whirlwind Weapon", zone = m.alterac,
+    levels = { 30, 40 }, class = warrior, start = { "HUMAN", "DWARF", "GNOME", "NIGHTELF", "SKYBORNE" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1712", "https://www.wowhead.com/forever/quest=1713" },
+    steps = {
+      accept(1791, klannoc, "After The Affray, ask Klannoc on Fray Island about the Windwatcher. Keep it until you reach Alterac."),
+      finish(1791, bathrah,
+        "Bath'rah camps beside his cauldron in the south-east hills of Alterac, a short climb from the Hillsbrad and Arathi roads."),
+      accept(1712, bathrah, "Take Cyclonian. Bath'rah's Parchment lists a Liferoot, 30 Bloodscalp Tusks and the Essence of the Exile."),
+      part(1712, 2, at(nil, 24.8, 11.7, m.stv),
+        "In northern Stranglethorn, kill Bloodscalp trolls in the coastal camps for 30 tusks. Stranglethorn's Bloodscalp Ears stop uses the same camps.",
+        "30 Bloodscalp Tusk"),
+      part(1712, 1, nil,
+        "Pick a Liferoot from a herb node by a stream or lake, or buy one from the Auction House or an herb vendor.", "Liferoot"),
+      note(goal(1712, at("Burning Exile", 25.6, 30.4, m.arathi),
+        "In Arathi, kill Exile elementals until each charm drops: Burning Exiles in the north-west hills, Thundering Exiles in the middle (52, 50) and Cresting Exiles in the north-east (67, 30). Drywhisker kobolds in the eastern gorge drop all three. Use Next once you have them.",
+        "Burning Charm", "Thundering Charm", "Cresting Charm"),
+        "Charm drop sources are classic data; check them in game."),
+      note(part(1712, 3, cauldron,
+        "Take the three charms to Bath'rah's Cauldron beside him and combine them there for the Essence of the Exile.",
+        "Essence of the Exile"),
+        "The cauldron's own quest (Essence of the Exile, 1714) is not in the Forever client. Check how the essence is made."),
+      finish(1712, bathrah),
+      accept(1713, bathrah, "Accept when you are ready to fight. Cyclonian is a level 40 elite, so bring a friend or two."),
+      note(goal(1713, bathrah,
+        "Kill Cyclonian when it is summoned near Bath'rah and loot the Whirlwind Heart.", "Whirlwind Heart"),
+        "Check where Cyclonian appears and whether Bath'rah starts the summoning."),
+      finish(1713, bathrah),
+      accept(1792, bathrah),
+      finish(1792, bathrah, "Speak with Bath'rah again and choose your Whirlwind weapon."),
+    } })
+
+  local wu = at("Wu Shen", 80.55, 59.87, m.stormwind)
+  local hero = at("Fallen Hero of the Horde", 34.29, 66.14, m.swamp)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  q(8417, "A Troubled Spirit", 50, 50, nil, nil, warrior)
+  q(8423, "Warrior Kinship", 52, 50, 8417, nil, warrior)
+  q(8424, "War on the Shadowsworn", 52, 50, 8423, nil, warrior)
+  q(8425, "Voodoo Feathers", 52, 50, 8424, nil, warrior)
+  side({ id = "warrior-voodoo-feathers", title = "Warrior: Voodoo Feathers", zone = m.swamp,
+    levels = { 52, 54 }, class = warrior, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8425" },
+    steps = {
+      accept(8417, wu,
+        "From level 50, Wu Shen in Stormwind's Old Town has A Troubled Spirit. Kelv Sternhammer in Ironforge and Darnath Bladesinger in Darnassus give the same quest."),
+      finish(8417, hero, "The Fallen Hero kneels by the road where the Swamp of Sorrows meets the Blasted Lands."),
+      accept(8423, hero),
+      goal(8423, at(nil, 52.0, 54.0, m.blasted), "Ride south into the Blasted Lands and kill Helboars in the middle of the zone.", "7 Helboar"),
+      finish(8423, hero),
+      accept(8424, hero),
+      goal(8424, at(nil, 65.0, 34.0, m.blasted),
+        "Clear the Shadowsworn camps south of Nethergarde Keep: adepts, cultists and thugs.",
+        "Shadowsworn Adepts", "Shadowsworn Cultists", "Shadowsworn Thugs"),
+      finish(8424, hero),
+      accept(8425, hero, "Voodoo Feathers needs a Sunken Temple group."),
+      goal(8425, temple,
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8425, hero, "Bring the feathers back to the Fallen Hero for your reward."),
+    } })
+end
+
+-- Paladin: the warhorse at 40 on the route's Stormwind visit, the Mightstone chain at 50.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note, optional = B.accept, B.finish, B.objectiveAt, B.note, B.optional
+  local paladin, races = "PALADIN", { "HUMAN", "DWARF" }
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local function p(id, name, level, min, prev)
+    q(id, name, level, min, prev, nil, paladin)
+    B.quest[id].race = races
+  end
+
+  local duthorian = at("Duthorian Rall", 50.48, 47.49, m.stormwind)
+  p(4485, "The Tome of Nobility", 40, 40)
+  p(4486, "The Tome of Nobility", 40, 40)
+  p(1661, "The Tome of Nobility", 40, 40)
+  -- The trainers' referrals (Arthur the Faithful, Brandur Ironhammer) lead to Duthorian.
+  B.breadcrumb(4485, 1661)
+  B.breadcrumb(4486, 1661)
+  inline("stv-41", "goto", nil, {
+    optional(finish(4485, duthorian, "Hand Arthur's Tome of Nobility referral to Duthorian Rall in the Cathedral of Light.")),
+    optional(finish(4486, duthorian, "Hand Brandur's Tome of Nobility referral to Duthorian Rall in the Cathedral of Light.")),
+    accept(1661, duthorian, "Paladins: from level 40, Duthorian Rall in the Cathedral of Light has The Tome of Nobility."),
+    note(finish(1661, duthorian, "Speak with Duthorian again to learn Summon Warhorse."),
+      "Check that the quest still teaches the warhorse in Forever."),
+  })
+
+  local grayson = at("Lord Grayson Shadowbreaker", 48.43, 50.22, m.stormwind)
+  local ashlam = at("Commander Ashlam Valorfist", 42.7, 84.03, m.wpl)
+  local thelDanis = at("High Priest Thel'danis", 52.05, 83.27, m.wpl)
+  p(8415, "Chillwind Point", 52, 50)
+  p(8414, "Dispelling Evil", 52, 50, 8415)
+  p(8416, "Inert Scourgestones", 52, 50, 8414)
+  p(8418, "Forging the Mightstone", 52, 50, 8416)
+  side({ id = "paladin-mightstone", title = "Paladin: Forging the Mightstone", zone = m.wpl,
+    levels = { 52, 54 }, class = paladin, start = races, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8418" },
+    steps = {
+      accept(8415, grayson, "From level 50, Lord Grayson Shadowbreaker in the Cathedral of Light sends you to Chillwind Camp."),
+      finish(8415, ashlam, "Fly to Chillwind Camp in the Western Plaguelands. Commander Ashlam stands in the middle of the camp."),
+      accept(8414, ashlam),
+      goal(8414, at(nil, 49.0, 80.0, m.wpl),
+        "Kill skeletons in the graveyard hills east of Chillwind Camp, or around Andorhal, for 20 Minion's Scourgestones.",
+        "20 Minion's Scourgestone"),
+      finish(8414, thelDanis, "High Priest Thel'danis waits a short ride east of Chillwind Camp."),
+      accept(8416, thelDanis),
+      finish(8416, ashlam, "Take the Inert Scourgestone back to Commander Ashlam."),
+      accept(8418, ashlam, "Forging the Mightstone needs a Sunken Temple group."),
+      goal(8418, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8418, ashlam, "Bring the feathers to Commander Ashlam for your reward."),
+    } })
+end
+
+linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone" })
