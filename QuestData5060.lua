@@ -914,5 +914,309 @@ do
   })
 end
 
+-- 56-57: Ironforge, the Searing Gorge's Slag Pit, Morgan's Vigil and the True Masters.
+do
+  local bs, sg = on.steppes, on.searing
+  local ironforge = function(name, x, y) return at(name, x, y, M.ironforge) end
+  local archesonus = ironforge("Royal Historian Archesonus", 38.37, 55.31)
+  local thorius = ironforge("Curator Thorius", 71.5, 15.74)
+  local archaeologist = sg("Dying Archaeologist", 41.14, 25.56)
+  local altar = sg("Altar of Suntara", 41.25, 25.41)
+  local zamael = sg("Zamael Lunthistle", 29.57, 26.29)
+  local oralius = bs("Oralius", 84.56, 68.68)
+  local helendis = bs("Helendis Riverhorn", 85.82, 68.95)
+  local maxwell = bs("Marshal Maxwell", 84.74, 69.02)
+  local tinkee = bs("Tinkee Steamboil", 65.24, 24.0)
+  local maxwort = bs("Maxwort Uberglint", 65.15, 23.91)
+  local cyrus = bs("Cyrus Therepentous", 95.09, 31.56)
+  local borgus = bs("Borgus Stoutarm", 84.3, 68.3)
+  local solomon = at("Magistrate Solomon", 24.9, 44.45, M.redridge)
+  local bolvar = at("Highlord Bolvar Fordragon", 80.21, 38.35, M.stormwind)
+  local shaw = at("Master Mathias Shaw", 78.31, 70.74, M.stormwind)
+  local ironforgeBind = { bind = "Ironforge" }
+
+  q(3702, "The Smoldering Ruins of Thaurissan", 54, 50)
+  q(3701, "The Smoldering Ruins of Thaurissan", 54, 50, 3702)
+  q(3371, "Dwarven Justice", 55, 40, 3368)
+  q(3372, "Release Them", 52, 40, 3371)
+  q(3566, "Rise, Obsidion!", 52, 45, 3372)
+  q(3377, "Prayer to Elune", 50, 40)
+  q(3378, "Prayer to Elune", 50, 40, 3377)
+  q(3824, "Gor'tesh the Brute Lord", 53, 48, 3823)
+  q(3825, "Ogre Head On A Stick = Party", 53, 48, 3824)
+  q(4283, "FIFTY! YEP!", 56, 50)
+  q(4182, "Dragonkin Menace", 54, 48)
+  q(4183, "The True Masters", 54, 48, 4182)
+  q(4184, "The True Masters", 54, 48, 4183)
+  q(4185, "The True Masters", 54, 48, 4184)
+  q(4186, "The True Masters", 54, 48, 4185)
+  q(4223, "The True Masters", 54, 48, 4186)
+  q(4224, "The True Masters", 54, 48, 4223)
+  q(4726, "Broodling Essence", 52, 50)
+  q(4808, "Felnok Steelspring", 54, 50, 4726)
+  q(4296, "Tablet of the Seven", 50, 50)
+  q(4022, "A Taste of Flame", 54, 52, 3481)
+  q(6182, "The First and the Last", 60, 56)
+  q(6183, "Honor the Dead", 60, 56, 6182)
+  q(6184, "Flint Shadowmore", 60, 56, 6183)
+  q(1475, "Into The Temple of Atal'Hakkar", 50, 41, 1469)
+
+  chapter("steppes-56", "Burning Steppes: Morgan's Vigil and the True Masters", M.steppes, 56, 57, {
+    "https://www.wowhead.com/forever/zone=46/burning-steppes",
+    "https://www.wowhead.com/forever/zone=51/searing-gorge",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    accept(3702, archesonus, "Royal Historian Archesonus stands beside King Magni in the High Seat."),
+    objective(3702, archesonus, "Listen to the history of Thaurissan.", "The Smoldering Ruins of Thaurissan"),
+    finish(3702, archesonus), accept(3701, archesonus),
+    action("sethearth", ironforge("Innkeeper Firebrew", 18.1, 51.5), "Bind at the Stonefire Tavern.", ironforgeBind),
+    accept(3371, thorius, "Curator Thorius in the Hall of Explorers has news of Dorius's dig team."),
+    taxi("fly", ironforge("Gryth Thurden", 55.5, 47.7), THORIUM, "Fly to Thorium Point."),
+    finish(3371, archaeologist, "Go down into the Slag Pit. The dying archaeologist lies near its upper entrance."),
+    accept(3372, archaeologist),
+    accept(3377, zamael, "On the way west, Zamael Lunthistle sits in a small camp on the north-west ridge."),
+    finish(3377, zamael, "Listen to his tale."), accept(3378, zamael, "Zamael's prayer goes to Astarii Starseeker in Darnassus. Keep it for your next Darnassus visit."),
+    objective(3372, sg(nil, 29.1, 25.8), "Twilight Idolaters in the north-west guard the Mysterious Artifact.", "Mysterious Artifact"),
+    objective(3378, sg(nil, 23.0, 37.8), "The Twilight cultists at Firewatch Ridge carry the Prayer to Elune.", "Prayer to Elune"),
+    finish(3372, altar, "Place the artifact on the Altar of Suntara in the Slag Pit."), accept(3566, archaeologist),
+    objective(3566, sg("Obsidion", 41.8, 24.3), "Lathoric the Black and his golem Obsidion appear at the altar. Kill Lathoric first, then Obsidion.",
+      "Head of Lathoric the Black", "Heart of Obsidion"),
+    taxi("fly", sg("Lanie Reed", 37.9, 30.9), MORGANS, "Fly to Morgan's Vigil."),
+    accept(3824, oralius), accept(4283, oralius, "Oralius also wants 50 Blackrock Medallions from the orcs across the Steppes."),
+    accept(4182, helendis),
+    accept(4726, tinkee, "Ride north-west to Flame Crest. Tinkee Steamboil gives you a device for the broodlings."),
+    accept(4296, maxwort),
+    accept(4022, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
+    objective(4022, cyrus, "Show Cyrus the Black Dragonflight Molt from the Searing Gorge hoard.", "Black Dragonflight Molt"),
+    finish(4022, cyrus),
+    along(withItem(12284, objective(4726, bs(nil, 90.6, 43.6), "Use the Draco-Incarcinatrix 900 on Black Broodlings in the east, then kill them for their essence.",
+      "8 Broodling Essence")), 4182),
+    along(objective(4182, bs(nil, 90.6, 43.6), "Kill the black dragonkin around the eastern spires.",
+      "15 Black Broodlings", "10 Black Dragonspawn", "4 Black Wyrmkin", "Black Drake"), 4726),
+    along(objective(4296, bs("Tablet of the Seven", 54.1, 40.8), "Ride west to the tablet at the edge of the Ruins of Thaurissan and copy it.", "Tablet Transcript"), 3701, 4283),
+    along(objective(3701, bs(nil, 57.4, 36.4), "Search the Thaurissan Relics scattered through the ruins.", "Thaurissan Relic"), 4283),
+    along(objective(3824, bs("Gor'tesh", 39.3, 55.3), "Gor'tesh holds the Blackrock camp south-west of the mountain.", "Gor'tesh's Lopped Off Head"), 4283),
+    objective(4283, bs(nil, 48.8, 59.6), "Finish the medallions in the Blackrock camps of the southern Steppes.", "50 Blackrock Medallion"),
+    finish(4283, oralius, "Ride back east to Morgan's Vigil."), finish(3824, oralius), accept(3825, oralius),
+    finish(4182, helendis), accept(4183, helendis),
+    taxi("fly", borgus, LAKESHIRE, "Fly to Lakeshire."),
+    finish(4183, solomon, "Magistrate Solomon is in the Lakeshire town hall."), accept(4184, solomon),
+    taxi("fly", at("Ariena Stormfeather", 25.5, 59.4, M.redridge), SW_FLIGHT, "Fly to Stormwind."),
+    finish(4184, bolvar, "Highlord Bolvar is in the throne room of Stormwind Keep."), accept(4185, bolvar),
+    objective(4185, bolvar, "Speak with Lady Katrana Prestor beside him, then with Bolvar again.", "Lady Prestor's counsel"),
+    finish(4185, bolvar), accept(4186, bolvar),
+    accept(6182, bolvar, "Bolvar also sends you to Mathias Shaw."),
+    finish(6182, shaw, "Mathias Shaw is in SI:7, in Old Town."), accept(6183, shaw),
+    finish(6183, shaw), accept(6184, shaw, "Shaw's contact waits at Chillwind Camp. Keep this for the Plaguelands."),
+    forDungeon(accept(1475, at("Brohann Caskbelly", 69.45, 40.4, M.stormwind),
+      "Brohann wants Atal'ai tablets from the Sunken Temple."), "dungeon-sunken-temple"),
+    taxi("fly", at("Dungar Longdrink", 71.3, 72.2, M.stormwind), LAKESHIRE, "Fly back to Lakeshire."),
+    finish(4186, solomon), accept(4223, solomon),
+    taxi("fly", at("Ariena Stormfeather", 25.5, 59.4, M.redridge), MORGANS, "Fly to Morgan's Vigil."),
+    finish(4223, maxwell), accept(4224, maxwell),
+    objective(4224, bs("Ragged John", 65.0, 23.8), "Ragged John wanders near Flame Crest. Hear his whole story.", "Ragged John's tale"),
+    finish(4726, tinkee), accept(4808, tinkee, "Tinkee's letter is for Felnok Steelspring in Everlook. Keep it for Winterspring."),
+    finish(4296, maxwort),
+    objective(3825, bs("Soft Dirt Mound", 81.0, 46.8), "Climb Dreadmaul Rock and plant Gor'tesh's head in the soft dirt mound on top.", "Soft Dirt Mound"),
+    finish(3825, oralius), finish(4224, maxwell),
+    action("hearth", ironforge("Innkeeper Firebrew", 18.1, 51.5), "Hearth to Ironforge.", ironforgeBind),
+    finish(3701, archesonus), finish(3566, thorius),
+  })
+end
+
+-- 57-58: Andorhal and the cauldrons, Tirion Fordring and Darrowshire's first loop.
+do
+  local wpl, epl = on.wpl, on.epl
+  local ashlam = wpl("Commander Ashlam Valorfist", 42.7, 84.03)
+  local macdonnell = wpl("High Priestess MacDonnell", 42.97, 84.5)
+  local pureheart = wpl("Argent Officer Pureheart", 42.97, 83.55)
+  local arbington = wpl("Alchemist Arbington", 42.66, 83.77)
+  local dumah = wpl("Nathaniel Dumah", 43.42, 84.83)
+  local flint = wpl("Flint Shadowmore", 43.61, 84.51)
+  local marlene = wpl("Marlene Redpath", 49.17, 78.57)
+  local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
+  local chromie = wpl("Chromie", 39.46, 66.76)
+  local bibilfaz = wpl("Bibilfaz Featherwhistle", 42.9, 85.1)
+  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local pamela = epl("Pamela Redpath", 31.15, 77.98)
+  local carlin = epl("Carlin Redpath", 71.7, 50.04)
+  local alen = epl("Caretaker Alen", 69.93, 53.72)
+  local anderson = at("Innkeeper Anderson", 51.2, 58.9, M.hillsbrad)
+  local southshore = { bind = "Southshore" }
+
+  q(5097, "All Along the Watchtowers", 56, 50, 5092)
+  q(5219, "Target: Dalson's Tears", 55, 50, 5217)
+  q(5220, "Return to Chillwind Camp", 55, 50, 5219)
+  q(5222, "Target: Writhing Haunt", 55, 50, 5220)
+  q(5223, "Return to Chillwind Camp", 55, 50, 5222)
+  q(5903, "A Plague Upon Thee", 55, 48)
+  q(5904, "A Plague Upon Thee", 55, 48, 5903)
+  q(6185, "The Eastern Plagues", 60, 56, 6184)
+  q(6186, "The Blightcaller Cometh", 60, 56, 6185)
+  q(5142, "Little Pamela", 55, 50)
+  q(5149, "Pamela's Doll", 55, 50, 5142)
+  q(5152, "Auntie Marlene", 56, 50, 5149)
+  q(5241, "Uncle Carlin", 56, 50, 5149)
+  q(5211, "Defenders of Darrowshire", 55, 50, 5241)
+  q(5153, "A Strange Historian", 56, 50, 5152)
+  q(5154, "The Annals of Darrowshire", 56, 50, 5153)
+  q(5210, "Brother Carlin", 56, 50, 5154)
+  q(4971, "A Matter of Time", 56, 53)
+  q(4972, "Counting Out Time", 56, 53, 4971)
+  q(4984, "The Wildlife Suffers Too", 54, 51)
+  q(4985, "The Wildlife Suffers Too", 56, 51, 4984)
+  q(5058, "Mrs. Dalson's Diary", 55, 52)
+  q(5533, "Scholomance", 55, 55, 5097)
+  q(5537, "Skeletal Fragments", 57, 55, 5533)
+  q(5225, "Target: Gahrron's Withering", 58, 50, 5223)
+  q(5542, "Demon Dogs", 56, 52)
+  q(5543, "Blood Tinged Skies", 56, 52)
+  q(5544, "Carrion Grubbage", 56, 52)
+  q(5742, "Redemption", 56, 52, { 5542, 5543, 5544 })
+  q(5781, "Of Forgotten Memories", 57, 52, 5742)
+  q(5845, "Of Lost Honor", 58, 52, 5781)
+  q(6026, "That's Asking A Lot", 58, 54)
+  q(5281, "The Restless Souls", 60, 55)
+  q(6021, "Zaeldarr the Outcast", 55, 50)
+  q(6024, "Hameya's Plea", 60, 54)
+
+  chapter("plaguelands-57", "Plaguelands: Andorhal and Tirion Fordring", M.wpl, 57, 58, {
+    "https://www.wowhead.com/forever/zone=28/western-plaguelands",
+    "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    taxi("fly", at("Gryth Thurden", 55.5, 47.7, M.ironforge), "Southshore, Hillsbrad", "Fly to Southshore."),
+    action("sethearth", anderson, "Bind at the Southshore inn, the closest inn to the Plaguelands.", southshore),
+    taxi("fly", at("Darla Harris", 49.3, 52.3, M.hillsbrad), CHILLWIND, "Fly to Chillwind Camp."),
+    finish(6028, pureheart, "Give the Everlook report to Argent Officer Pureheart."),
+    accept(5097, ashlam, "Ashlam gives you a beacon torch for the Andorhal towers."),
+    accept(5219, macdonnell), accept(5903, dumah, "Nathaniel Dumah hands you a jar for termites from the Eastern Plaguelands."),
+    finish(6184, flint, "Flint Shadowmore waits by the camp's edge."), accept(6185, flint),
+    accept(5142, marlene, "Marlene Redpath lives in the house south of Andorhal."),
+    withItem(12815, B.objectivePart(5097, 1, wpl("Andorhal Tower One", 40.0, 71.7), "Stand in the doorway of each Andorhal tower and use the Beacon Torch. Start with the south-west tower.", "Andorhal Tower One")),
+    withItem(12815, B.objectivePart(5097, 2, wpl("Andorhal Tower Two", 42.4, 66.2), "Mark the north-west tower.", "Andorhal Tower Two")),
+    withItem(12815, B.objectivePart(5097, 3, wpl("Andorhal Tower Three", 44.2, 63.1), "Mark the north-east tower.", "Andorhal Tower Three")),
+    withItem(12815, B.objectivePart(5097, 4, wpl("Andorhal Tower Four", 46.6, 71.2), "Mark the south-east tower.", "Andorhal Tower Four")),
+    accept(4984, mulgris, "Mulgris Deepriver, a troll druid, stands on the hill above the Writhing Haunt."),
+    accept(5058, wpl("Mrs. Dalson's Diary", 47.8, 50.67), "Read the diary in the Dalson farmhouse to the north."),
+    finish(5058, wpl("Mrs. Dalson's Diary", 47.8, 50.67)),
+    objective(5219, wpl(nil, 46.2, 52.4), "Kill the Cauldron Lord beside the cauldron at Dalson's Tears for its key.", "Dalson's Tears Cauldron Key"),
+    finish(5219, wpl("Scourge Cauldron", 46.18, 51.9), "Use the key and fill the bottle."), accept(5220, wpl("Scourge Cauldron", 46.18, 51.9)),
+    objective(4984, wpl(nil, 46.6, 40.4), "Diseased Wolves roam the fields north of Dalson's Tears.", "8 Diseased Wolf"),
+    finish(5097, ashlam, "Ride back to Chillwind Camp."), accept(5533, ashlam),
+    finish(5533, arbington), accept(5537, arbington, "Arbington wants Skeletal Fragments from Andorhal's skeletons."),
+    finish(5220, macdonnell), accept(5222, macdonnell),
+    objective(5222, wpl(nil, 53.0, 66.1), "Kill the Cauldron Lord at the Writhing Haunt.", "Writhing Haunt Cauldron Key"),
+    finish(5222, wpl("Scourge Cauldron", 53.02, 65.61)), accept(5223, wpl("Scourge Cauldron", 53.02, 65.61)),
+    finish(4984, mulgris), accept(4985, mulgris, "Save the grizzlies for your next pass through the east of the zone."),
+    action("goto", epl(nil, 7.5, 43.6), "Follow the road east into the Eastern Plaguelands. Tirion Fordring's hut is on the hill north of the road."),
+    accept(5542, tirion), accept(5543, tirion), accept(5544, tirion),
+    B.objectivePart(6185, 2, epl(nil, 22.9, 63.7), "Search the dead SI:7 agents around the Undercroft area for their insignias.", "SI:7 Insignia (Fredo)"),
+    B.objectivePart(6185, 3, epl(nil, 24.3, 63.6), "The second agent lies nearby.", "SI:7 Insignia (Turyen)"),
+    B.objectivePart(6185, 1, epl(nil, 24.3, 68.1), "The third lies a little further south.", "SI:7 Insignia (Rutger)"),
+    finish(5142, pamela, "Pamela Redpath's ghost plays in ruined Darrowshire."), accept(5149, pamela),
+    objective(5149, epl(nil, 34.0, 77.3), "Search the Darrowshire houses for the doll's head, left side and right side, then combine them.", "Pamela's Doll"),
+    finish(5149, pamela), accept(5152, pamela), accept(5241, pamela),
+    along(objective(5543, epl(nil, 47.5, 49.3), "Kill Plaguebats, hounds and Carrion Grubs as you ride north-east across the zone.", "30 Plaguebat"), 5542, 5544),
+    along(objective(5544, epl(nil, 47.5, 49.3), "Carrion Grubs and Devourers drop the worm meat.", "15 Slab of Carrion Worm Meat"), 5542, 5543),
+    finish(6030, epl("Duke Nicholas Zverenhoff", 71.63, 50.09), "Duke Nicholas Zverenhoff stands inside Light's Hope Chapel."),
+    finish(5241, carlin), accept(5211, carlin),
+    optional(accept(6026, epl("Smokey LaRue", 70.88, 48.43), "Smokey LaRue wants bars, a rod, bombs and triggers. Only take it if you bought or crafted them.")),
+    optional(finish(6026, epl("Smokey LaRue", 70.88, 48.43))),
+    taxi("getfp", epl("Khaelyn Steelwing", 71.8, 49.6), LIGHTSHOPE, "Learn the Light's Hope Chapel flight path."),
+    accept(6021, alen), forDungeon(accept(5281, alen, "Caretaker Alen's Restless Souls chain ends in Stratholme."), "dungeon-stratholme"),
+    carried(finish(5245, epl("Aurora Skycaller", 46.49, 16.03), "Ride north to Aurora Skycaller at the Kel'Theril relic site if you carry Jaron's relics.")),
+    withItem(15042, objective(5903, epl(nil, 26.6, 22.9), "Use the termite jar on the termite mounds in the north-west.", "100 Plagueland Termites")),
+    forDungeon(finish(5281, epl("Egan", 11.36, 26.6), "Egan hides in a hut near the Stratholme road."), "dungeon-stratholme"),
+    objective(5542, epl(nil, 44.2, 30.7), "Finish the plaguehounds in the northern hills.", "20 Plaguehound Runt", "5 Plaguehound", "5 Frenzied Plaguehound"),
+    finish(5542, tirion), finish(5543, tirion), finish(5544, tirion),
+    accept(5742, tirion), objective(5742, tirion, "Listen to Tirion's story.", "Redemption"), finish(5742, tirion),
+    accept(5781, tirion),
+    objective(6021, epl("Zaeldarr the Outcast", 23.1, 72.6), "Zaeldarr the Outcast waits at the Undercroft.", "Zaeldarr's Head"),
+    accept(6024, epl(nil, 22.9, 72.9), "Read Hameya's plea near the Undercroft."),
+    objective(5781, epl(nil, 23.8, 74.5), "Go into the Undercroft and kill Mercutio Filthgorger for Taelan's Hammer.", "Taelan's Hammer"),
+    finish(5781, tirion), accept(5845, tirion),
+    action("hearth", anderson, "Hearth to Southshore.", southshore),
+    taxi("fly", at("Darla Harris", 49.3, 52.3, M.hillsbrad), CHILLWIND, "Fly to Chillwind Camp."),
+    finish(5223, macdonnell), accept(5225, macdonnell),
+    finish(5903, dumah), accept(5904, dumah),
+    finish(6185, flint), accept(6186, flint, "Take the news to Bolvar the next time you are in Stormwind."),
+    finish(5152, marlene), accept(5153, marlene),
+    objective(5153, wpl(nil, 49.7, 76.8), "Search the grave behind Marlene's house for Joseph's ring.", "Joseph's Wedding Ring"),
+    finish(5153, chromie, "Chromie hides in the inn ruins of Andorhal."), accept(5154, chromie), accept(4971, chromie),
+    withItem(12627, objective(4971, wpl(nil, 48.1, 66.2), "Use the Temporal Displacer near an Andorhal silo and kill the Temporal Parasites that appear.", "10 Temporal Parasite")),
+    objective(5154, wpl(nil, 43.5, 69.5), "Find the Annals of Darrowshire in the town hall.", "Annals of Darrowshire"),
+    finish(4971, chromie), accept(4972, chromie), finish(5154, chromie), accept(5210, chromie),
+    along(objective(4972, wpl(nil, 42.7, 70.3), "Open lockboxes in the rubble of Andorhal for the watches.", "5 Andorhal Watch"), 5537),
+    along(objective(5537, wpl(nil, 39.8, 67.4), "Andorhal's skeletons drop Skeletal Fragments.", "15 Skeletal Fragments"), 4972),
+    finish(4972, chromie), finish(5537, arbington),
+  })
+end
+
+-- 58-59: Light's Hope, Northdale, Hearthglen and the last cauldron.
+do
+  local wpl, epl = on.wpl, on.epl
+  local carlin = epl("Carlin Redpath", 71.7, 50.04)
+  local alen = epl("Caretaker Alen", 69.93, 53.72)
+  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local kirsta = wpl("Kirsta Deepshadow", 51.92, 28.06)
+  local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
+  local macdonnell = wpl("High Priestess MacDonnell", 42.97, 84.5)
+  local dumah = wpl("Nathaniel Dumah", 43.42, 84.83)
+  local chambers = epl("Jessica Chambers", 71.8, 48.5)
+  local lightsHope = { bind = "Light's Hope Chapel" }
+
+  q(5181, "Villains of Darrowshire", 57, 50, 5210)
+  q(5168, "Heroes of Darrowshire", 56, 50, 5210)
+  q(5846, "Of Love and Family", 58, 52, 5845)
+  q(5226, "Return to Chillwind Point", 58, 50, 5225)
+  q(4986, "Glyphed Oaken Branch", 56, 51, 4985)
+  q(6389, "A Plague Upon Thee", 55, 48, 5904)
+  q(6004, "Unfinished Business", 56, 50)
+  q(6023, "Unfinished Business", 57, 50, 6004)
+  q(6025, "Unfinished Business", 58, 50, 6023)
+
+  chapter("plaguelands-58", "Plaguelands: Darrowshire's Heroes and Hearthglen", M.epl, 58, 59, {
+    "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
+    "https://www.wowhead.com/forever/zone=28/western-plaguelands",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    taxi("fly", wpl("Bibilfaz Featherwhistle", 42.9, 85.1), LIGHTSHOPE, "Fly to Light's Hope Chapel."),
+    action("sethearth", chambers, "Bind at Light's Hope Chapel.", lightsHope),
+    finish(5210, carlin), accept(5181, carlin), accept(5168, carlin),
+    finish(6021, alen),
+    objective(5845, epl(nil, 71.3, 34.0), "Ride north to Northdale and search the ruined house for the Symbol of Lost Honor.", "Symbol of Lost Honor"),
+    objective(6024, epl("Infiltrator Hameya", 62.0, 11.1), "Infiltrator Hameya roams the far north. Kill him for his key.", "Hameya's Key"),
+    B.objectivePart(5211, 1, epl(nil, 57.7, 31.5), "Kill ghouls and flayers across the zone and free the Darrowshire spirits that rise from them.", "15 Darrowshire Spirits"),
+    B.objectivePart(5181, 1, epl(nil, 44.3, 41.2), "Horgus's skull lies at the Infectis Scar.", "Skull of Horgus"),
+    B.objectivePart(5181, 2, epl(nil, 46.9, 55.4), "Marduk's broken sword lies in the Pestilent Scar to the south.", "Shattered Sword of Marduk"),
+    finish(6024, epl("Mound of Dirt", 23.58, 73.79), "Use Hameya's key on the mound of dirt behind the Undercroft."),
+    finish(5845, tirion), accept(5846, tirion, "Tirion asks you to look for a painting on Caer Darrow."),
+    action("goto", wpl(nil, 63.8, 57.2), "Ride west into the Western Plaguelands toward Gahrron's Withering."),
+    B.objectivePart(5168, 2, wpl(nil, 63.8, 57.2), "Redpath's Shield lies at Gahrron's Withering.", "Redpath's Shield"),
+    objective(5225, wpl(nil, 62.6, 58.9), "Kill the last Cauldron Lord at Gahrron's Withering.", "Gahrron's Withering Cauldron Key"),
+    finish(5225, wpl("Scourge Cauldron", 62.54, 58.47)), accept(5226, wpl("Scourge Cauldron", 62.54, 58.47)),
+    objective(4985, wpl(nil, 60.8, 50.8), "Diseased grizzlies roam the woods north of the cauldron.", "8 Diseased Grizzly"),
+    finish(4985, mulgris), accept(4986, mulgris, "Carry the branch to the Cenarion Enclave the next time you are in Darnassus."),
+    finish(5904, wpl("Termite Barrel", 48.34, 31.99), "Place the termite barrel in the middle of Northridge Lumber Camp."),
+    accept(6389, wpl("Termite Barrel", 48.34, 31.99)),
+    accept(6004, kirsta, "Kirsta Deepshadow waits in the hills north of the lumber camp."),
+    objective(6004, wpl(nil, 50.8, 40.7), "Kill Scarlet medics, hunters, mages and knights at the Scarlet camps.",
+      "2 Scarlet Medic", "2 Scarlet Hunter", "2 Scarlet Mage", "2 Scarlet Knight"),
+    finish(6004, kirsta), accept(6023, kirsta),
+    B.objectivePart(6023, 1, wpl("Huntsman Radley", 57.8, 36.1), "Huntsman Radley is at the Scarlet camp to the east.", "Huntsman Radley"),
+    B.objectivePart(6023, 2, wpl("Cavalier Durgen", 55.1, 23.6), "Cavalier Durgen guards the tower to the north.", "Cavalier Durgen"),
+    finish(6023, kirsta), accept(6025, kirsta),
+    objective(6025, wpl(nil, 45.7, 18.8), "Climb a tower in Hearthglen to look over the Scarlet forces.", "Hearthglen surveyed"),
+    B.objectivePart(5168, 1, wpl(nil, 42.5, 19.0), "Davil's Libram is in the Hearthglen town hall.", "Davil's Libram"),
+    finish(6025, kirsta),
+    action("hearth", chambers, "Hearth to Light's Hope Chapel.", lightsHope),
+    finish(5211, carlin), finish(5181, carlin), finish(5168, carlin),
+    taxi("fly", epl("Khaelyn Steelwing", 71.8, 49.6), CHILLWIND, "Fly to Chillwind Camp."),
+    finish(5226, macdonnell), finish(6389, dumah),
+    finish(5846, wpl("Artist Renfray", 65.77, 75.37), "Ride east to Caer Darrow's lake shore. Artist Renfray's ghost stands on the island."),
+  })
+end
+
 -- Every chapter above is added here, in order.
 build()
