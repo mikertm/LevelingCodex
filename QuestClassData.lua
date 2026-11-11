@@ -1428,3 +1428,458 @@ do
     },
   })
 end
+
+-- Levels 30-60. Source notes: tools/audits/2026-11-10-class-30-60.md.
+-- A class chain that ends inside a dungeon is listed on that dungeon's guide, so the library
+-- recommends the run to that class.
+local function linkRun(dungeonId, sectionIds)
+  for _, section in ipairs(route.sections) do
+    if section.id == dungeonId then
+      section.links = section.links or {}
+      for _, id in ipairs(sectionIds) do section.links[#section.links + 1] = id end
+      return
+    end
+  end
+  error("class quests: no dungeon guide " .. dungeonId)
+end
+
+-- Warrior: the Whirlwind weapon from Bath'rah in Alterac, then the Fallen Hero's chain at 50.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, part, note = B.accept, B.finish, B.objectiveAt, B.objectivePart, B.note
+  local warrior = "WARRIOR"
+  local qdb = "QuestieDB Forever 0f7d8ad"
+
+  local klannoc = at("Klannoc Macleod", 68.62, 49.16, m.barrens)
+  local bathrah = at("Bath'rah the Windwatcher", 80.5, 66.92, m.alterac)
+  local cauldron = at("Bath'rah's Cauldron", 79.32, 66.8, m.alterac)
+  q(1791, "The Windwatcher", 30, 30, 1719, nil, warrior)
+  q(1712, "Cyclonian", 40, 30, 1791, nil, warrior)
+  q(1713, "The Summoning", 40, 30, 1712, nil, warrior)
+  q(1792, "Whirlwind Weapon", 40, 30, 1713, nil, warrior)
+  side({ id = "warrior-whirlwind-weapon", title = "Warrior: Whirlwind Weapon", zone = m.alterac,
+    levels = { 30, 40 }, class = warrior, start = { "HUMAN", "DWARF", "GNOME", "NIGHTELF", "SKYBORNE" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1712", "https://www.wowhead.com/forever/quest=1713" },
+    steps = {
+      accept(1791, klannoc, "After The Affray, ask Klannoc on Fray Island about the Windwatcher. Keep it until you reach Alterac."),
+      finish(1791, bathrah,
+        "Bath'rah camps beside his cauldron in the south-east hills of Alterac, a short climb from the Hillsbrad and Arathi roads."),
+      accept(1712, bathrah, "Take Cyclonian. Bath'rah's Parchment lists a Liferoot, 30 Bloodscalp Tusks and the Essence of the Exile."),
+      part(1712, 2, at(nil, 24.8, 11.7, m.stv),
+        "In northern Stranglethorn, kill Bloodscalp trolls in the coastal camps for 30 tusks. Stranglethorn's Bloodscalp Ears stop uses the same camps.",
+        "30 Bloodscalp Tusk"),
+      part(1712, 1, nil,
+        "Pick a Liferoot from a herb node by a stream or lake, or buy one from the Auction House or an herb vendor.", "Liferoot"),
+      note(goal(1712, at("Burning Exile", 25.6, 30.4, m.arathi),
+        "In Arathi, kill Exile elementals until each charm drops: Burning Exiles in the north-west hills, Thundering Exiles in the middle (52, 50) and Cresting Exiles in the north-east (67, 30). Drywhisker kobolds in the eastern gorge drop all three. Use Next once you have them.",
+        "Burning Charm", "Thundering Charm", "Cresting Charm"),
+        "Charm drop sources are classic data; check them in game."),
+      note(part(1712, 3, cauldron,
+        "Take the three charms to Bath'rah's Cauldron beside him and combine them there for the Essence of the Exile.",
+        "Essence of the Exile"),
+        "The cauldron's own quest (Essence of the Exile, 1714) is not in the Forever client. Check how the essence is made."),
+      finish(1712, bathrah),
+      accept(1713, bathrah, "Accept when you are ready to fight. Cyclonian is a level 40 elite, so bring a friend or two."),
+      note(goal(1713, bathrah,
+        "Kill Cyclonian when it is summoned near Bath'rah and loot the Whirlwind Heart.", "Whirlwind Heart"),
+        "Check where Cyclonian appears and whether Bath'rah starts the summoning."),
+      finish(1713, bathrah),
+      accept(1792, bathrah),
+      finish(1792, bathrah, "Speak with Bath'rah again and choose your Whirlwind weapon."),
+    } })
+
+  local wu = at("Wu Shen", 80.55, 59.87, m.stormwind)
+  local hero = at("Fallen Hero of the Horde", 34.29, 66.14, m.swamp)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  q(8417, "A Troubled Spirit", 50, 50, nil, nil, warrior)
+  q(8423, "Warrior Kinship", 52, 50, 8417, nil, warrior)
+  q(8424, "War on the Shadowsworn", 52, 50, 8423, nil, warrior)
+  q(8425, "Voodoo Feathers", 52, 50, 8424, nil, warrior)
+  side({ id = "warrior-voodoo-feathers", title = "Warrior: Voodoo Feathers", zone = m.swamp,
+    levels = { 52, 54 }, class = warrior, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8425" },
+    steps = {
+      accept(8417, wu,
+        "From level 50, Wu Shen in Stormwind's Old Town has A Troubled Spirit. Kelv Sternhammer in Ironforge and Darnath Bladesinger in Darnassus give the same quest."),
+      finish(8417, hero, "The Fallen Hero kneels by the road where the Swamp of Sorrows meets the Blasted Lands."),
+      accept(8423, hero),
+      goal(8423, at(nil, 52.0, 54.0, m.blasted), "Ride south into the Blasted Lands and kill Helboars in the middle of the zone.", "7 Helboar"),
+      finish(8423, hero),
+      accept(8424, hero),
+      goal(8424, at(nil, 65.0, 34.0, m.blasted),
+        "Clear the Shadowsworn camps south of Nethergarde Keep: adepts, cultists and thugs.",
+        "Shadowsworn Adepts", "Shadowsworn Cultists", "Shadowsworn Thugs"),
+      finish(8424, hero),
+      accept(8425, hero, "Voodoo Feathers needs a Sunken Temple group."),
+      goal(8425, temple,
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8425, hero, "Bring the feathers back to the Fallen Hero for your reward."),
+    } })
+end
+
+-- Paladin: the warhorse at 40 on the route's Stormwind visit, the Mightstone chain at 50.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note, optional = B.accept, B.finish, B.objectiveAt, B.note, B.optional
+  local paladin, races = "PALADIN", { "HUMAN", "DWARF" }
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local function p(id, name, level, min, prev)
+    q(id, name, level, min, prev, nil, paladin)
+    B.quest[id].race = races
+  end
+
+  local duthorian = at("Duthorian Rall", 50.48, 47.49, m.stormwind)
+  p(4485, "The Tome of Nobility", 40, 40)
+  p(4486, "The Tome of Nobility", 40, 40)
+  p(1661, "The Tome of Nobility", 40, 40)
+  -- The trainers' referrals (Arthur the Faithful, Brandur Ironhammer) lead to Duthorian.
+  B.breadcrumb(4485, 1661)
+  B.breadcrumb(4486, 1661)
+  inline("stv-41", "goto", nil, {
+    optional(finish(4485, duthorian, "Hand Arthur's Tome of Nobility referral to Duthorian Rall in the Cathedral of Light.")),
+    optional(finish(4486, duthorian, "Hand Brandur's Tome of Nobility referral to Duthorian Rall in the Cathedral of Light.")),
+    accept(1661, duthorian, "Paladins: from level 40, Duthorian Rall in the Cathedral of Light has The Tome of Nobility."),
+    note(finish(1661, duthorian, "Speak with Duthorian again to learn Summon Warhorse."),
+      "Check that the quest still teaches the warhorse in Forever."),
+  })
+
+  local grayson = at("Lord Grayson Shadowbreaker", 48.43, 50.22, m.stormwind)
+  local ashlam = at("Commander Ashlam Valorfist", 42.7, 84.03, m.wpl)
+  local thelDanis = at("High Priest Thel'danis", 52.05, 83.27, m.wpl)
+  p(8415, "Chillwind Point", 52, 50)
+  p(8414, "Dispelling Evil", 52, 50, 8415)
+  p(8416, "Inert Scourgestones", 52, 50, 8414)
+  p(8418, "Forging the Mightstone", 52, 50, 8416)
+  side({ id = "paladin-mightstone", title = "Paladin: Forging the Mightstone", zone = m.wpl,
+    levels = { 52, 54 }, class = paladin, start = races, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8418" },
+    steps = {
+      accept(8415, grayson, "From level 50, Lord Grayson Shadowbreaker in the Cathedral of Light sends you to Chillwind Camp."),
+      finish(8415, ashlam, "Fly to Chillwind Camp in the Western Plaguelands. Commander Ashlam stands in the middle of the camp."),
+      accept(8414, ashlam),
+      goal(8414, at(nil, 49.0, 80.0, m.wpl),
+        "Kill skeletons in the graveyard hills east of Chillwind Camp, or around Andorhal, for 20 Minion's Scourgestones.",
+        "20 Minion's Scourgestone"),
+      finish(8414, thelDanis, "High Priest Thel'danis waits a short ride east of Chillwind Camp."),
+      accept(8416, thelDanis),
+      finish(8416, ashlam, "Take the Inert Scourgestone back to Commander Ashlam."),
+      accept(8418, ashlam, "Forging the Mightstone needs a Sunken Temple group."),
+      goal(8418, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8418, ashlam, "Bring the feathers to Commander Ashlam for your reward."),
+    } })
+end
+
+-- Hunter and Priest: Ogtinc on the Azshara cliffs, ending with Morphaz in the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal = B.accept, B.finish, B.objectiveAt
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local ogtinc = at("Ogtinc", 42.4, 42.62, m.azshara)
+  local coursers = at(nil, 40.0, 70.0, m.azshara)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  local ogtincText = "Ogtinc lives on the clifftop above the Ruins of Eldarath in Azshara. Fly to Talrendis Point and ride north-east."
+
+  local hunter = "HUNTER"
+  q(8151, "The Hunter's Charm", 52, 50, nil, nil, hunter)
+  q(8153, "Courser Antlers", 52, 50, 8151, nil, hunter)
+  q(8231, "Wavethrashing", 52, 50, 8153, nil, hunter)
+  q(8232, "The Green Drake", 52, 50, 8231, nil, hunter)
+  side({ id = "hunter-green-drake", title = "Hunter: The Green Drake", zone = m.azshara,
+    levels = { 52, 54 }, class = hunter, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8232" },
+    steps = {
+      accept(8151, at("Ulfir Ironbeard", 67.59, 35.78, m.stormwind),
+        "From level 50, any Alliance Hunter trainer has The Hunter's Charm: Ulfir Ironbeard in Stormwind's Dwarven District, Olmin Burningbeard in Ironforge or Dorion in Darnassus."),
+      finish(8151, ogtinc, ogtincText),
+      accept(8153, ogtinc),
+      goal(8153, coursers, "Hunt Mosshoof Coursers in the forests of southern Azshara until a pair of perfect antlers drops.", "Perfect Courser Antlers"),
+      finish(8153, ogtinc),
+      accept(8231, ogtinc),
+      goal(8231, at(nil, 88.0, 30.0, m.azshara), "Ride to the eastern coast and kill Wavethrashers in the surf for their scales.",
+        "6 Wavethrasher Scales"),
+      finish(8231, ogtinc),
+      accept(8232, ogtinc, "The Green Drake needs a Sunken Temple group."),
+      goal(8232, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for his tooth.", "Tooth of Morphaz"),
+      finish(8232, ogtinc, "Bring the tooth back to Ogtinc in Azshara."),
+    } })
+
+  local priest = "PRIEST"
+  q(8254, "Cenarion Aid", 52, 50, nil, nil, priest)
+  q(8255, "Of Coursers We Know", 52, 50, 8254, nil, priest)
+  q(8256, "The Ichor of Undeath", 52, 50, 8255, nil, priest)
+  q(8257, "Blood of Morphaz", 52, 50, 8256, nil, priest)
+  side({ id = "priest-blood-of-morphaz", title = "Priest: Blood of Morphaz", zone = m.azshara,
+    levels = { 52, 54 }, class = priest, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8257" },
+    steps = {
+      accept(8254, at("High Priestess Laurena", 49.53, 44.6, m.stormwind),
+        "From level 50, High Priestess Laurena in the Cathedral of Light has Cenarion Aid. High Priest Rohan in Ironforge and the priestesses in Darnassus give it too."),
+      finish(8254, ogtinc, ogtincText),
+      accept(8255, ogtinc),
+      goal(8255, coursers, "Hunt Mosshoof Coursers in the forests of southern Azshara for healthy glands.", "4 Healthy Courser Gland"),
+      finish(8255, ogtinc),
+      accept(8256, ogtinc),
+      goal(8256, at(nil, 49.0, 80.0, m.wpl),
+        "Kill skeletons in the Western Plaguelands, around Andorhal or east of Chillwind Camp, until an Ichor of Undeath drops. Zanzil's zombies in Stranglethorn drop it too.",
+        "Ichor of Undeath"),
+      finish(8256, ogtinc),
+      accept(8257, ogtinc, "Blood of Morphaz needs a Sunken Temple group. It is handed in at the Emerald Sanctuary in Felwood."),
+      goal(8257, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for his blood.", "Blood of Morphaz"),
+      finish(8257, at("Greta Mosshoof", 51.21, 82.11, m.felwood),
+        "Bring the blood to Greta Mosshoof at the Emerald Sanctuary in southern Felwood."),
+    } })
+end
+
+-- Rogue and Mage: Archmage Xylem's errands in Azshara, ending with Morphaz in the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note = B.accept, B.finish, B.objectiveAt, B.note
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local xylem = at("Archmage Xylem", 29.25, 40.21, m.azshara)
+  local sanath = at("Sanath Lim-yo", 28.11, 50.09, m.azshara)
+  local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
+  local passage = "Check what Sanath Lim-yo asks before he sends you up to Xylem."
+
+  local rogue = "ROGUE"
+  local jorach = at("Lord Jorach Ravenholdt", 86.02, 78.88, m.alterac)
+  q(8233, "A Simple Request", 52, 50, nil, nil, rogue)
+  q(8234, "Sealed Azure Bag", 52, 50, 8233, nil, rogue)
+  q(8235, "Encoded Fragments", 52, 50, 8234, nil, rogue)
+  q(8236, "The Azure Key", 52, 50, 8235, nil, rogue)
+  side({ id = "rogue-azure-key", title = "Rogue: The Azure Key", zone = m.azshara,
+    levels = { 52, 54 }, class = rogue, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8236" },
+    steps = {
+      accept(8233, at("Lord Tony Romano", 80.28, 68.58, m.stormwind),
+        "From level 50, Lord Tony Romano at SI:7 has A Simple Request. Ormyr Flinteye in Ironforge and Anishar in Darnassus give it too."),
+      finish(8233, jorach, "Lord Jorach waits in Ravenholdt Manor. Take the cave trail north of Durnholde Keep in Hillsbrad."),
+      accept(8234, jorach),
+      goal(8234, at(nil, 44.0, 23.0, m.azshara), "In northern Azshara, kill Timbermaw Shamans until the Sealed Azure Bag drops.",
+        "Sealed Azure Bag"),
+      note(finish(8234, xylem,
+        "Archmage Xylem's tower stands on the western cliffs of Azshara. Ask Sanath Lim-yo, at its foot, for passage up."), passage),
+      accept(8235, xylem),
+      goal(8235, at(nil, 52.0, 25.0, m.azshara), "Kill Thunderhead hippogryphs across Azshara for their encoded fragments.",
+        "10 Encoded Fragment"),
+      finish(8235, xylem),
+      accept(8236, xylem, "The Azure Key needs a Sunken Temple group."),
+      goal(8236, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for the Azure Key.", "Azure Key"),
+      finish(8236, jorach, "Take the key back to Lord Jorach at Ravenholdt Manor."),
+    } })
+
+  local mage = "MAGE"
+  q(8250, "Magecraft", 52, 50, nil, nil, mage)
+  q(8251, "Magic Dust", 52, 50, 8250, nil, mage)
+  q(8252, "The Siren's Coral", 52, 50, 8251, nil, mage)
+  q(8253, "Destroy Morphaz", 52, 50, 8252, nil, mage)
+  side({ id = "mage-destroy-morphaz", title = "Mage: Destroy Morphaz", zone = m.azshara,
+    levels = { 52, 54 }, class = mage, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8253" },
+    steps = {
+      accept(8250, at("Elsharin", 48.21, 87.22, m.stormwind),
+        "From level 50, Elsharin in Stormwind's Mage Quarter has Magecraft. Juli Stormkettle in Ironforge gives it too."),
+      finish(8250, sanath, "Sanath Lim-yo stands at the foot of Archmage Xylem's tower on the western cliffs of Azshara."),
+      note(accept(8251, xylem, "Ask Sanath for passage up the tower, then take Magic Dust from Xylem."), passage),
+      goal(8251, at(nil, 57.0, 28.0, m.azshara), "Kill blood elves at their camp in northern Azshara for glittering dust.",
+        "10 Glittering Dust"),
+      finish(8251, xylem),
+      accept(8252, xylem),
+      goal(8252, at(nil, 39.0, 54.0, m.azshara), "Kill Spitelash Sirens around the Ruins of Eldarath for enchanted coral.",
+        "6 Enchanted Coral"),
+      finish(8252, xylem),
+      accept(8253, xylem, "Destroy Morphaz needs a Sunken Temple group."),
+      goal(8253, temple, "Inside the Sunken Temple, kill the green dragon Morphaz for the Arcane Shard.", "Arcane Shard"),
+      finish(8253, xylem, "Bring the shard back to Archmage Xylem."),
+    } })
+
+  local tabetha = at("Tabetha", 46.06, 57.09, m.dustwallow)
+  q(1953, "Return to the Marsh", 40, 35, nil, nil, mage)
+  q(1954, "The Infernal Orb", 40, 35, 1953, nil, mage)
+  q(1955, "The Exorcism", 40, 35, 1954, nil, mage)
+  q(1956, "Power in Uldaman", 40, 35, 1955, nil, mage)
+  q(1957, "Mana Surges", 40, 35, 1956, nil, mage)
+  q(1958, "Celestial Power", 40, 35, 1957, nil, mage)
+  side({ id = "mage-celestial-power", title = "Mage: Celestial Power", zone = m.dustwallow,
+    levels = { 38, 42 }, class = mage, links = { "dungeon-uldaman" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1958" },
+    steps = {
+      accept(1953, at("Jennea Cannon", 49.56, 85.8, m.stormwind),
+        "From level 35, Jennea Cannon in the Wizard's Sanctum sends you back to Tabetha. Bink in Ironforge gives the same quest."),
+      finish(1953, tabetha, "Take the Menethil ship to Theramore and follow the road west to Tabetha's hut."),
+      accept(1954, tabetha),
+      goal(1954, at(nil, 53.0, 78.0, m.desolace),
+        "In Desolace, kill Burning Blade Summoners at Mannoroc Coven or in Shadowbreak Ravine until an Infernal Orb drops.",
+        "Infernal Orb"),
+      finish(1954, tabetha),
+      accept(1955, tabetha, "Heal up first: Tabetha calls out the Demon of the Orb, a level 40 elite."),
+      goal(1955, tabetha, "Kill the Demon of the Orb beside Tabetha's hut, then speak with her.", "Demon of the Orb slain"),
+      finish(1955, tabetha),
+      accept(1956, tabetha, "Power in Uldaman needs an Uldaman group."),
+      goal(1956, at("Uldaman entrance", 42.4, 12.9, m.badlands), "Inside Uldaman, kill the Obsidian Sentinel for its power source.",
+        "Obsidian Power Source"),
+      finish(1956, tabetha),
+      accept(1957, tabetha, "The Mana Surges come at once and the quest is timed. Start with full mana."),
+      goal(1957, tabetha, "Kill the Mana Surges around Tabetha's hut before the timer runs out.", "12 Mana Surge"),
+      finish(1957, tabetha),
+      accept(1958, tabetha),
+      finish(1958, tabetha, "Speak with Tabetha again and choose your reward."),
+    } })
+end
+
+-- Warlock: the felsteed at 40 on the route, the Orb of Orahil, and Impsy's chains in Felwood.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note, optional, withItem = B.accept, B.finish, B.objectiveAt, B.note, B.optional, B.withItem
+  local warlock = "WARLOCK"
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local strahad = at("Strahad Farsan", 62.63, 35.5, m.barrens)
+  local menara = at("Menara Voidrender", 62.51, 35.45, m.barrens)
+  local demisette = at("Demisette Cloyce", 39.24, 84.96, m.stormwind)
+  local tabetha = at("Tabetha", 46.06, 57.09, m.dustwallow)
+
+  -- Briarthorn (Ironforge) and Demisette (Stormwind) give the same letter for Strahad.
+  q(4487, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  q(4488, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  q(4490, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  B.breadcrumb(4487, 4490)
+  B.breadcrumb(4488, 4490)
+  inline("badlands-41", "accept", 687, {
+    accept(4487, at("Briarthorn", 50.35, 5.66, m.ironforge),
+      "Warlocks: from level 40, Briarthorn, the warlock trainer in the same cavern, has your felsteed letter for Strahad in Ratchet."),
+  })
+  inline("stv-41", nil, nil, {
+    optional(finish(4488, strahad, "Give Demisette's letter to Strahad Farsan, uphill behind Ratchet.")),
+    finish(4487, strahad, "Warlocks: climb the hill behind Ratchet to Strahad Farsan."),
+    accept(4490, strahad),
+    finish(4490, strahad, "Speak with Strahad again to learn Summon Felsteed."),
+  })
+
+  q(4965, "Knowledge of the Orb of Orahil", 35, 35, nil, nil, warlock)
+  q(4968, "Knowledge of the Orb of Orahil", 35, 35, nil, nil, warlock)
+  q(1799, "Fragments of the Orb of Orahil", 40, 35, nil, nil, warlock)
+  q(4962, "Shard of a Felhound", 40, 35, nil, nil, warlock)
+  q(4961, "Cleansing of the Orb of Orahil", 40, 35, 1799, nil, warlock)
+  q(4976, "Returning the Cleansed Orb", 40, 35, 4961, nil, warlock)
+  q(4964, "The Completed Orb of Dar'Orahil", 40, 35, 4976, nil, warlock)
+  B.breadcrumb(4965, 1799)
+  B.breadcrumb(4968, 1799)
+  side({ id = "warlock-orb-of-orahil", title = "Warlock: The Orb of Orahil", zone = m.barrens,
+    levels = { 38, 41 }, class = warlock,
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1799", "https://www.wowhead.com/forever/quest=4964" },
+    steps = {
+      accept(4968, demisette,
+        "From level 35, Demisette Cloyce below the Slaughtered Lamb has Knowledge of the Orb of Orahil. Briarthorn in Ironforge gives the same referral."),
+      optional(finish(4965, menara, "Give Briarthorn's referral to Menara Voidrender above Ratchet.")),
+      finish(4968, menara, "Take the Booty Bay boat to Ratchet. Menara Voidrender stands beside Strahad, uphill behind the town."),
+      accept(1799, menara),
+      note(accept(4962, at("Acolyte Wytula", 62.64, 35.3, m.barrens),
+        "Speak with Menara's acolytes. This guide takes Acolyte Wytula's felhound path; Acolyte Magaz offers an infernal one instead."),
+        "Check which orb each acolyte's path leads to."),
+      withItem(12647, goal(4962, at(nil, 56.0, 75.0, m.desolace),
+        "In Desolace, use the Felhas Ruby on a felhound (Mage Hunters and Mana Eaters) at Mannoroc Coven.",
+        "Imprisoned Felhound Spirit")),
+      goal(1799, at(nil, 53.0, 78.0, m.desolace), "Kill Burning Blade Summoners at Mannoroc Coven until an Infernal Orb drops.",
+        "Infernal Orb"),
+      finish(1799, tabetha, "Fly to Theramore and follow the road west to Tabetha's hut."),
+      accept(4961, tabetha, "Heal up first: Tabetha calls out the Demon of the Orb, a level 40 elite."),
+      goal(4961, tabetha, "Kill the Demon of the Orb beside Tabetha's hut, then speak with her.", "Demon of the Orb slain"),
+      finish(4961, tabetha),
+      accept(4976, tabetha),
+      finish(4962, menara, "Take the cleansed orb, the ruby and the spirit back to Menara above Ratchet."),
+      finish(4976, menara),
+      accept(4964, menara),
+      finish(4964, menara, "Wait while Menara completes the orb, then speak with her again for the Orb of Dar'Orahil."),
+    } })
+
+  local impsy = at("Impsy", 41.36, 45.02, m.felwood)
+  local niby = at("Niby the Almighty", 41.38, 44.85, m.felwood)
+  q(8419, "An Imp's Request", 52, 50, nil, nil, warlock)
+  q(8420, "Hot and Itchy", 52, 50, nil, nil, warlock)
+  -- Either An Imp's Request or Impsy's own Hot and Itchy opens The Wrong Stuff.
+  q(8421, "The Wrong Stuff", 52, 50, nil, nil, warlock)
+  q(8422, "Trolls of a Feather", 52, 50, 8421, nil, warlock)
+  side({ id = "warlock-trolls-of-a-feather", title = "Warlock: Trolls of a Feather", zone = m.felwood,
+    levels = { 52, 54 }, class = warlock, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8422" },
+    steps = {
+      accept(8419, demisette,
+        "From level 50, Demisette Cloyce below the Slaughtered Lamb has An Imp's Request. If you are already in Felwood, use Next and take Hot and Itchy from Impsy: same task, same follow-up."),
+      goal(8419, nil,
+        "Get a piece of Felcloth: Legashi satyrs in north-east Azshara and the Felguard Sentries by the Dark Portal drop it, or buy one.", "Felcloth"),
+      finish(8419, impsy, "Impsy floats beside Niby the Almighty, west of the road through Felwood."),
+      optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy.")),
+      accept(8421, impsy),
+      goal(8421, at(nil, 49.8, 23.2, m.felwood),
+        "Kill Irontree Stompers in the Irontree Woods of northern Felwood for Rotting Wood. Tainted Oozes along the Bloodvenom river near Jaedenar (40, 52) drop the essence.",
+        "10 Rotting Wood", "4 Bloodvenom Essence"),
+      finish(8421, impsy),
+      accept(8422, impsy, "Trolls of a Feather needs a Sunken Temple group."),
+      goal(8422, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8422, impsy, "Bring the feathers back to Impsy in Felwood."),
+    } })
+
+  q(7601, "What Niby Commands", 50, 50, nil, nil, warlock)
+  q(7602, "Flawless Fel Essence", 55, 50, 7601, nil, warlock)
+  q(7603, "Kroshius' Infernal Core", 55, 50, 7602, nil, warlock)
+  side({ id = "warlock-kroshius", title = "Warlock: Kroshius' Infernal Core", zone = m.felwood,
+    levels = { 54, 56 }, class = warlock,
+    sources = { qdb, "https://www.wowhead.com/forever/quest=7603" },
+    steps = {
+      accept(7601, niby, "Niby the Almighty and his imp Impsy stand west of the road through central Felwood."),
+      finish(7601, impsy),
+      accept(7602, impsy),
+      goal(7602, at(nil, 37.6, 50.2, m.felwood),
+        "Collect three Flawless Fel Essences: from Jaedenar Legionnaires in Felwood, Legashi satyrs in north-east Azshara (61, 21) and Felguard Sentries by the Dark Portal in the Blasted Lands (58, 51).",
+        "Flawless Fel Essence (Jaedenar)", "Flawless Fel Essence (Azshara)", "Flawless Fel Essence (Dark Portal)"),
+      finish(7602, impsy),
+      accept(7603, impsy, "Kroshius is a level 55 elite infernal. Bring help if you need it."),
+      withItem(18626, goal(7603, at("Kroshius' Remains", 45.7, 34.76, m.felwood),
+        "Go to Shatter Scar Vale and use the Fel Fire beside Kroshius' remains. Kill Kroshius when he wakes and take his core.",
+        "Kroshius' Infernal Core")),
+      finish(7603, niby, "Bring the core back to Niby the Almighty."),
+    } })
+end
+
+-- Druid: Torwa Pathfinder's poison in Un'Goro, ending at the bottom of the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, withItem = B.accept, B.finish, B.objectiveAt, B.withItem
+  local druid = "DRUID"
+  local torwa = at("Torwa Pathfinder", 71.64, 75.96, m.ungoro)
+  q(9063, "Torwa Pathfinder", 52, 50, nil, nil, druid)
+  q(9052, "Bloodpetal Poison", 52, 50, 9063, nil, druid)
+  q(9051, "Toxic Test", 52, 50, 9052, nil, druid)
+  q(9053, "A Better Ingredient", 52, 50, 9051, nil, druid)
+  side({ id = "druid-better-ingredient", title = "Druid: A Better Ingredient", zone = m.ungoro,
+    levels = { 52, 54 }, class = druid, links = { "dungeon-sunken-temple" },
+    sources = { "QuestieDB Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=9053" },
+    steps = {
+      accept(9063, at("Mathrengyl Bearwalker", 35.37, 8.4, m.darnassus),
+        "From level 50, Mathrengyl upstairs in the Cenarion Enclave sends you to Torwa. Sheldras Moontree in Stormwind and Loganaar in Moonglade give it too."),
+      finish(9063, torwa, "Torwa Pathfinder camps just inside Un'Goro Crater's south-east entrance from Tanaris."),
+      accept(9052, torwa),
+      goal(9052, at(nil, 49.0, 80.0, m.ungoro),
+        "Kill Gorishi wasps at the hive in southern Un'Goro for their stings. Pick Bloodcaps from the red Bloodpetal sprouts you pass across the crater.",
+        "8 Gorishi Sting", "8 Bloodcap"),
+      finish(9052, torwa),
+      accept(9051, torwa),
+      withItem(22432, goal(9051, at("Devilsaur", 41.0, 27.5, m.ungoro),
+        "Find a Devilsaur and use the Devilsaur Barb on it. Devilsaurs are elite: get clear once you have stabbed it.",
+        "Stab a Devilsaur")),
+      finish(9051, torwa),
+      accept(9053, torwa, "A Better Ingredient needs a Sunken Temple group."),
+      goal(9053, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Kill Atal'alarion, the guardian at the bottom of the Sunken Temple, for the Putrid Vine.", "Putrid Vine"),
+      finish(9053, torwa, "Bring the vine back to Torwa in Un'Goro Crater."),
+    } })
+end
+
+linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone", "hunter-green-drake",
+  "priest-blood-of-morphaz", "rogue-azure-key", "mage-destroy-morphaz", "warlock-trolls-of-a-feather",
+  "druid-better-ingredient" })
+linkRun("dungeon-uldaman", { "mage-celestial-power" })
