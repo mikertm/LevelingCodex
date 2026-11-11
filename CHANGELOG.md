@@ -10,6 +10,7 @@
   - **50-60:** Booty Bay, the Searing Gorge, the Blasted Lands, the Plaguelands, Felwood, Feralas, Azshara, Un'Goro, Winterspring and the Burning Steppes, ending in Silithus and Moonglade.
 - **Alternate routes for every level.** Each level from 30 to 60 has at least three guides to choose from. They include Forever's **Riverglades** (Farholde Keep, then Sunnyglade and the Twilight's Shroud), **Shen'dralas**, early Stranglethorn, Theramore, the Searing Gorge, the Blasted Lands, Azshara, Winterspring and Silithus.
 - **Dungeon checklists for 30-60.** Each dungeon from the Scarlet Monastery to Stratholme has a checklist, including Forever's Krol'dok Stronghold.
+- **Class quests 30-60.** These include the Warrior Whirlwind weapon, the Paladin Tome of Nobility, the Warlock Felsteed and Orb of Orahil, Mage Celestial Power, and each class's Sunken Temple chain. Each dungeon checklist recommends itself to the classes whose chains need it.
 - **Attunement guides.** New guides cover the Drakefire Amulet (Onyxia), the Seal of Ascension (Upper Blackrock Spire), Attunement to the Core, the Key to Scholomance and the Shadowforge Key.
 - **Item notes.** Steps say what to buy and where: Soothing Spices, Elixir of Water Breathing, Thorium Bars and Fine Thread. They also say what to get from a crafter or the Auction House.
 - **Quest log clean-up.** At 30 and again in Booty Bay, the guide reminds you to drop grey dungeon quests you never ran.

@@ -383,3 +383,21 @@ do
     },
   })
 end
+
+-- Dungeon guides point at the attunements they feed.
+do
+  local add = {
+    ["dungeon-blackrock-depths"] = { "onyxia-attunement", "shadowforge-key", "molten-core-attunement" },
+    ["dungeon-lower-blackrock-spire"] = { "ubrs-seal" },
+    ["dungeon-upper-blackrock-spire"] = { "onyxia-attunement", "ubrs-seal" },
+    ["dungeon-scholomance"] = { "scholomance-key" },
+  }
+  for _, section in ipairs(route.sections) do
+    for _, id in ipairs(add[section.id] or {}) do
+      section.links = section.links or {}
+      local seen = false
+      for _, have in ipairs(section.links) do seen = seen or have == id end
+      if not seen then section.links[#section.links + 1] = id end
+    end
+  end
+end
