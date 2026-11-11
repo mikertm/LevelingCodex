@@ -68,7 +68,6 @@ do
   local fizzle = on.needles("Fizzle Brassbolts", 78.06, 77.13)
   local kravel = on.needles("Kravel Koalbeard", 77.79, 77.27)
 
-  q(1459, "Reagents for Reclaimers Inc.", 35, 30, 1458)
   q(1466, "Reagents for Reclaimers Inc.", 40, 30, 1459)
   q(1467, "Reagents for Reclaimers Inc.", 40, 30, 1466)
   q(261, "Down the Scarlet Path", 39, 34)
@@ -97,9 +96,7 @@ do
     taxi("fly", on.dustwallow("Baldruc", 67.5, 51.3), "Nijel's Point, Desolace", "Fly from Theramore to Nijel's Point."),
     action("sethearth", inn, "Bind at the Nijel's Point inn. You will come back twice.", nijels),
     accept(261, anton, "Brother Anton wants the Undead Ravagers in the Valley of Bones thinned out."),
-    accept(1459, kreldig), accept(1466, kreldig, "Kreldig's last reagent run sends you to the demons of Mannoroc Coven."),
-    objective(1459, ds(nil, 52.2, 57.5), "Kill Scorpashi scorpids for venom and Aged Kodos for hides around the Kodo Graveyard.",
-      "Scorpashi Venom", "3 Aged Kodo Hide"),
+    accept(1466, kreldig, "Kreldig's last reagent run sends you to the demons of Mannoroc Coven."),
     accept(6134, hornizz, "Hornizz, the goblin on the hill west of the Kodo Graveyard, hands you a crate of ghost magnets."),
     finish(1373, uthek, "Bring the Draenethyst shard to Uthek the Wise in the Gelkis village."),
     accept(1374, uthek),
@@ -407,9 +404,6 @@ do
   local curgle = tn("Curgle Cranklehop", 52.36, 26.91)
   local tranrek = tn("Tran'rek", 51.57, 26.76)
   local shreev = tn("Shreev", 50.96, 27.24)
-  local modiste = tn("Haughty Modiste", 66.56, 22.27)
-  local chief = tn("Security Chief Bilgewhizzle", 67.06, 23.89)
-  local stoley = tn("Stoley", 67.11, 23.98)
   local yehkinya = tn("Yeh'kinya", 67.0, 22.4)
   local razzeric = fl("Razzeric", 80.33, 76.09)
   local pozzik = fl("Pozzik", 80.18, 75.88)
@@ -426,9 +420,6 @@ do
   q(1690, "Wastewander Justice", 43, 40)
   q(1707, "Water Pouch Bounty", 44, 40)
   q(3022, "Handle With Care", 47, 42)
-  q(2873, "Stoley's Shipment", 45, 40, 2872)
-  q(8365, "Pirate Hats Ahoy!", 45, 40)
-  q(8366, "Southsea Shakedown", 45, 40)
   q(3520, "Screecher Spirits", 44, 40)
   q(626, "Cortello's Riddle", 51, 35, 625)
   q(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
@@ -464,12 +455,326 @@ do
     action("goto", tn(nil, 51.5, 28.0), "Ride back south to Gadgetzan."),
     finish(1188, shreev, "Shreev sells goods by the north gate."),
     action("goto", tn(nil, 66.6, 23.0), "Take the road northeast to Steamwheedle Port."),
-    accept(8365, modiste), accept(3520, yehkinya, "Yeh'kinya wants screecher spirits from Feralas."),
-    accept(8366, chief), finish(2872, stoley), accept(2873, stoley),
+    accept(3520, yehkinya, "Yeh'kinya wants screecher spirits from Feralas. The pirate quests here wait until you are back at 49."),
     along(objective(1690, tn(nil, 63.9, 31.6), "Kill Wastewander Bandits and Thieves in the dunes south of the port.",
       "10 Wastewander Bandits", "10 Wastewander Thieves"), 1707),
     along(objective(1707, tn(nil, 63.9, 31.6), "The same bandits carry the water pouches.", "5 Wastewander Water Pouch"), 1690),
     B.objectivePart(1452, 1, tn(nil, 44.6, 39.6), "Hunt Rocs in the hills southwest of Gadgetzan for Rhapsody's gizzards.", "3 Roc Gizzard"),
     finish(1690, bilgewhizzle), finish(1707, luglunket),
+  })
+end
+
+-- Feathermoon Stronghold and the Feralas mainland, with a trip to Rut'theran and Darnassus.
+do
+  local fe, tel = on.feralas, on.teldrassil
+  local shandris = fe("Shandris Feathermoon", 30.28, 46.17)
+  local latronicus = fe("Latronicus Moonspear", 30.38, 46.17)
+  local ginro = fe("Ginro Hearthkindle", 31.86, 45.13)
+  local quintis = fe("Quintis Jonespyre", 32.45, 43.79)
+  local vestia = fe("Vestia Moonspear", 30.08, 45.06)
+  local pratt = fe("Pratt McGrubben", 30.63, 42.71)
+  local troyas = fe("Troyas Moonbreeze", 31.78, 45.5)
+  local angelas = fe("Angelas Moonbreeze", 31.83, 45.61)
+  local kindal = fe("Kindal Moonweaver", 65.94, 45.65)
+  local jerkai = fe("Jer'kai Moonweaver", 65.95, 45.61)
+  local gazebo = fe("Solarsal Gazebo", 26.31, 52.34)
+  local rowboat = fe("Wrecked Row Boat", 45.44, 64.96)
+  local backpacks = fe("Large Leather Backpacks", 73.32, 56.31)
+  local pod = fe("Zukk'ash Pod", 72.07, 63.72)
+  local fyldren = fe("Fyldren Moonfeather", 30.2, 43.2)
+  local shyria = fe("Innkeeper Shyria", 31.0, 43.5)
+  local erelas = tel("Erelas Ambersky", 55.5, 92.05)
+  local daryn = tel("Daryn Lightwind", 55.41, 92.23)
+  local feathermoon = { bind = "Feathermoon Stronghold" }
+
+  q(4124, "The Missing Courier", 43, 40)
+  q(4125, "The Missing Courier", 43, 40, 4124)
+  q(4127, "Boat Wreckage", 44, 40, 4125)
+  q(4129, "The Knife Revealed", 44, 40, 4127)
+  q(4130, "Psychometric Reading", 44, 40, 4129)
+  q(4131, "The Woodpaw Gnolls", 44, 40, 4130)
+  q(4135, "The Writhing Deep", 46, 40, 4131)
+  q(4265, "Freed from the Hive", 46, 40, 4135)
+  q(4266, "A Hero's Welcome", 46, 40, 4265)
+  q(4267, "Rise of the Silithid", 46, 40, 4266)
+  q(2866, "The Ruins of Solarsal", 43, 40)
+  q(2867, "Return to Feathermoon Stronghold", 43, 40, 2866)
+  q(3130, "Against the Hatecrest", 43, 40, 2867)
+  q(2869, "Against the Hatecrest", 43, 40, 3130)
+  q(2870, "Against Lord Shalzaru", 45, 40, 2869)
+  q(2871, "Delivering the Relic", 45, 40, 2870)
+  q(2821, "The Mark of Quality", 46, 40)
+  q(2939, "In Search of Knowledge", 47, 42)
+  q(2940, "Feralas: A History", 47, 42, 2939)
+  q(2941, "The Borrower", 48, 42, 2940)
+  q(2982, "The High Wilderness", 44, 39)
+  q(2766, "Find OOX-22/FE!", 45, 40)
+  quest[2766].startItem = 8705
+  q(2767, "Rescue OOX-22/FE!", 45, 40, 2766)
+  q(2969, "Freedom for All Creatures", 47, 38)
+  q(2970, "Doling Justice", 47, 38, 2969)
+  q(2972, "Doling Justice", 47, 38, 2970)
+  q(4281, "Thalanaar Delivery", 44, 40)
+  quest[4281].startItem = 11463
+  q(3661, "Favored of Elune?", 47, 42)
+  q(3445, "The Sunken Temple", 51, 46)
+
+  chapter("feralas-44", "Feralas: Feathermoon and the Twin Colossals", M.feralas, 44, 48, {
+    "https://bindonforever.com/zones/feralas",
+    "https://www.wowhead.com/forever/zone=357/feralas",
+    qdb,
+  }, { "hinterlands-48", "searing-gorge", "blasted-lands-47" }, {
+    taxi("fly", on.tanaris("Bera Stonehammer", 51.0, 29.3), "Feathermoon, Feralas", "Fly from Gadgetzan to Feathermoon Stronghold."),
+    accept(2821, pratt, "Pratt McGrubben, by the flight master, wants thick yeti hides."),
+    action("sethearth", shyria, "Bind at the Feathermoon inn.", feathermoon),
+    accept(2866, shandris, "Shandris Feathermoon commands the stronghold from the building at its south end."),
+    accept(4124, latronicus),
+    accept(2939, troyas), accept(2982, angelas),
+    finish(4124, ginro), accept(4125, ginro),
+    finish(2866, gazebo, "Swim south to the Isle of Dread and find the gazebo at the Ruins of Solarsal."),
+    accept(2867, gazebo), finish(2867, shandris), accept(3130, shandris),
+    finish(3130, latronicus), accept(2869, latronicus),
+    objective(2869, fe(nil, 26.6, 53.4), "Kill Hatecrest naga around the Ruins of Solarsal for their scales.", "10 Hatecrest Naga Scale"),
+    finish(2869, latronicus), accept(2870, latronicus),
+    objective(2870, fe("Lord Shalzaru", 28.5, 70.6), "Lord Shalzaru holds the cave at the south tip of the isle. Kill him for the relic.", "Mysterious Relic"),
+    finish(2870, latronicus), accept(2871, latronicus), finish(2871, vestia),
+    finish(4125, rowboat, "Take the ferry to the mainland and follow the coast south to the wrecked rowboat."),
+    accept(4127, rowboat), finish(4127, ginro, "Bring the knife back to Ginro on Feathermoon."), accept(4129, ginro),
+    finish(4129, quintis), accept(4130, quintis), finish(4130, ginro), accept(4131, ginro),
+    action("goto", fe(nil, 55.4, 45.5), "Ferry back to the mainland and ride east along the road to the Twin Colossals."),
+    objective(2821, fe(nil, 53.5, 55.5), "Kill Feral Scar yetis in the cave south of the road for thick hides. Keep any OOX distress beacon that drops.",
+      "10 Thick Yeti Hide"),
+    withItem(8705, accept(2766, nil, "If a yeti dropped the OOX-22/FE beacon, use it.")),
+    finish(2766, fe("Homing Robot OOX-22/FE", 53.35, 55.7), "The robot hides in the yeti cave."),
+    note(accept(2767, fe("Homing Robot OOX-22/FE", 53.35, 55.7), "Escort OOX-22/FE out of the cave and up the coast. It is a long escort; bring a partner."),
+      "Escort path and ambushes need an in-game check."),
+    objective(2767, fe(nil, 45.7, 43.4), "Keep the robot alive until it flies off.", "Escort OOX-22/FE"),
+    along(objective(2982, fe(nil, 61.0, 56.1), "Clear Gordunni ogres in the ruins east of the Colossals.",
+      "8 Gordunni Brutes", "8 Gordunni Shamans", "8 Gordunni Warlocks"), 3520, 1452),
+    along(objective(3520, fe(nil, 58.6, 58.8), "Kill Vale Screechers and use the spirit flask on their corpses.", "Screecher Spirit"), 2982),
+    B.objectivePart(1452, 2, fe(nil, 59.3, 60.6), "Hunt Ironfur bears for Rhapsody's livers.", "3 Ironfur Liver"),
+    B.objectivePart(1452, 3, fe(nil, 62.0, 58.0), "Groddoc apes in the same valley give the other livers.", "3 Groddoc Liver"),
+    accept(2969, kindal, "Kindal and Jer'kai Moonweaver camp at Ancient Glade, just north of the road."),
+    objective(2969, fe(nil, 66.7, 46.8), "Free the sprite darters trapped in cages at the Grimtotem camp.", "Sprite darters freed"),
+    finish(2969, kindal), accept(2970, jerkai),
+    objective(2970, fe(nil, 66.9, 38.8), "Kill Grimtotem naturalists, raiders and shamans at the camp north of the glade.",
+      "12 Grimtotem Naturalists", "12 Grimtotem Raiders", "12 Grimtotem Shamans"),
+    finish(2970, jerkai), accept(2972, jerkai, "Jer'kai's report goes to Tyrande in Darnassus."),
+    finish(4131, backpacks, "Go southeast to the Woodpaw gnoll camp and find the backpacks."),
+    accept(4135, backpacks),
+    withItem(11463, accept(4281, backpacks, "If you found the undelivered parcel, keep it for Thalanaar.")),
+    finish(4135, pod, "Enter the Writhing Deep south of the camp and find the Zukk'ash pod."),
+    accept(4265, pod),
+    objective(4265, pod, "Free the captive from the pod and help him out of the hive.", "Captive freed"),
+    finish(4281, fe("Falfindel Waywarder", 89.64, 46.57), "Ride east along the road to Thalanaar and hand Falfindel the parcel."),
+    action("hearth", shyria, "Hearth back to Feathermoon.", feathermoon),
+    finish(2821, pratt), finish(4265, ginro), accept(4266, ginro), finish(4266, shandris), accept(4267, shandris),
+    finish(2982, angelas), accept(3445, angelas, "Angelas sends you to Marvon Rivetseeker in Tanaris. Keep it for later."),
+    taxi("fly", fyldren, "Rut'theran Village, Teldrassil", "Fly to Rut'theran Village."),
+    finish(3022, erelas, "Give Curgle's crate to Erelas Ambersky."),
+    accept(3661, erelas, "Erelas wants wildkin feathers from the Hinterlands. Keep it for later."),
+    finish(2939, daryn),
+    accept(2940, tel("Feralas: A History", 55.22, 91.46), "Read the book on the table beside Daryn."),
+    finish(2940, daryn), accept(2941, daryn, "Daryn's book goes back to Curgle in Gadgetzan."),
+    action("goto", tel(nil, 55.9, 89.5), "Take the portal up into Darnassus."),
+    finish(4267, on.darnassus("Gracina Spiritmight", 41.83, 85.62), "Gracina is in the Temple of the Moon."),
+    finish(2972, on.darnassus("Tyrande Whisperwind", 39.1, 81.59), "Tyrande stands at the temple's upper level."),
+    action("buy", on.darnassus("Auctioneer Tolon", 56.4, 51.8),
+      "Optional: buy 5 Troll Tribal Necklaces for the Hinterlands and red, blue, green and yellow Power Crystals for Un'Goro at the Auction House."),
+    taxi("fly", tel("Vesprystus", 58.4, 94.0), "Gadgetzan, Tanaris", "Fly back down to Gadgetzan."),
+  })
+end
+
+-- Gadgetzan's water survey, then the Hinterlands from Aerie Peak.
+do
+  local tn, hl = on.tanaris, on.hinterlands
+  local fizzledowser = tn("Senior Surveyor Fizzledowser", 50.21, 27.48)
+  local pestlezugg = tn("Alchemist Pestlezugg", 50.89, 26.96)
+  local curgle = tn("Curgle Cranklehop", 52.36, 26.91)
+  local fizzgrimble = tn("Innkeeper Fizzgrimble", 52.5, 27.9)
+  local talonaxe = hl("Gryphon Master Talonaxe", 9.75, 44.47)
+  local rhapsody = hl("Rhapsody Shindigger", 26.94, 48.59)
+  local fraggar = hl("Fraggar Thundermantle", 14.83, 44.57)
+  local gadgetzan = { bind = "Gadgetzan" }
+
+  q(2944, "The Super Snapper FX", 48, 42, 2941)
+  q(992, "Gadgetzan Water Survey", 46, 38)
+  q(82, "Noxious Lair Investigation", 47, 39, 992)
+  q(2988, "Witherbark Cages", 45, 40)
+  q(2989, "The Altar of Zul", 48, 40, 2988)
+  q(1469, "Rhapsody's Tale", 43, 38, 1452)
+  q(2880, "Troll Necklace Bounty", 45, 40)
+  q(2877, "Skulk Rock Clean-up", 48, 40)
+  q(485, "Find OOX-09/HL!", 48, 43)
+  quest[485].startItem = 8704
+  q(836, "Rescue OOX-09/HL!", 48, 43, 485)
+
+  chapter("hinterlands-48", "The Hinterlands from Aerie Peak", M.hinterlands, 48, 49, {
+    "https://bindonforever.com/zones/the-hinterlands",
+    "https://bindonforever.com/zones/tanaris",
+    "https://www.wowhead.com/forever/zone=47/the-hinterlands",
+    qdb,
+  }, { "ungoro-49", "searing-gorge", "blasted-lands-47" }, {
+    action("sethearth", fizzgrimble, "Bind at the Gadgetzan inn. You come back here for Un'Goro.", gadgetzan),
+    finish(2941, curgle, "Return Daryn's book to Curgle Cranklehop."),
+    accept(2944, curgle, "Curgle lends you his camera for a turtle photo in the Hinterlands."),
+    accept(992, fizzledowser, "Senior Surveyor Fizzledowser stands by the Gadgetzan water tower."),
+    objective(992, tn(nil, 39.0, 29.2), "Ride west to the Noxious Lair and use the dowsing widget at its mouth.", "Tapped Dowsing Widget"),
+    finish(992, fizzledowser), accept(82, fizzledowser),
+    objective(82, tn(nil, 35.7, 39.8), "Kill Centipaar silithids in and around the Noxious Lair until the insect parts drop.", "Centipaar Insect Parts"),
+    finish(82, pestlezugg, "Alchemist Pestlezugg is in the house beside the inn."),
+    taxi("fly", tn("Bera Stonehammer", 51.0, 29.3), "Theramore, Dustwallow Marsh", "Fly to Theramore."),
+    action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship to Menethil Harbor. Use Next when you land.",
+      { name = "Theramore - Menethil Harbor" }),
+    taxi("fly", on.wetlands("Shellei Brondir", 9.5, 59.7), "Refuge Pointe, Arathi", "Fly to Refuge Pointe."),
+    action("goto", hl(nil, 9.0, 47.0), "Ride west out of Arathi through Hillsbrad and take the pass north into the Hinterlands. Aerie Peak is just inside."),
+    taxi("getfp", talonaxe, "Aerie Peak, The Hinterlands", "Learn the Aerie Peak flight path from Talonaxe."),
+    accept(2988, talonaxe),
+    accept(2880, fraggar, "Fraggar wants troll necklaces. Witherbark trolls drop them; turn them in when you have five."),
+    accept(2877, fraggar),
+    finish(1452, rhapsody, "Rhapsody waits at the small camp east of Aerie Peak with his kocktail."),
+    accept(1469, rhapsody, "Rhapsody's tale goes to Brohann Caskbelly in Stormwind."),
+    along(B.objectivePart(2988, 1, hl(nil, 23.1, 58.8), "Open the Witherbark cages at the troll camp south of the road.",
+      "First Witherbark Cage"), 2880, 3661),
+    along(B.objectivePart(2988, 2, hl(nil, 23.4, 58.4), "The second cage is in the same camp.", "Second Witherbark Cage"), 2880, 3661),
+    along(objective(3661, hl(nil, 28.1, 58.1), "Kill wildkin on the hills east of the camp for feathers.", "15 Wildkin Feather"), 2880),
+    along(B.objectivePart(2988, 3, hl(nil, 32.0, 57.3), "The third cage sits in the eastern troll camp.", "Third Witherbark Cage"), 2880),
+    finish(2880, fraggar, "Back at Aerie Peak, hand Fraggar the necklaces."),
+    finish(2988, talonaxe), accept(2989, talonaxe),
+    withItem(8704, accept(485, nil, "If a troll dropped the OOX-09/HL beacon, use it.")),
+    objective(2877, hl(nil, 57.7, 42.8), "Ride east to Skulk Rock and kill the oozes in and around it.", "10 Green Sludges", "10 Jade Oozes"),
+    finish(485, hl("Homing Robot OOX-09/HL", 49.35, 37.66), "The robot waits north of the road near Skulk Rock."),
+    note(accept(836, hl("Homing Robot OOX-09/HL", 49.35, 37.66), "Escort OOX-09/HL to the coast in the southeast. Expect ambushes on the way."),
+      "Escort route needs an in-game check."),
+    objective(836, hl(nil, 79.3, 61.3), "Keep the robot alive until it reaches the shore.", "Escort OOX-09/HL"),
+    objective(2944, hl("Gammerita", 75.9, 63.8), "Find the turtle Gammerita on the beach and take her photo with the camera.", "Snapshot of Gammerita"),
+    objective(580, hl(nil, 77.9, 65.5), "Search the wreck at Pupellyverbos Port for Whiskey Slim's grog.", "Pupellyverbos Port"),
+    note(finish(626, hl("Cortello's Treasure", 80.8, 46.82), "Follow the last riddle to Cortello's treasure north along the coast. Its guardian is level 50; bring help or use Next."),
+      "Guard level from the classic data."),
+    objective(2989, hl(nil, 48.8, 68.4), "Ride back west to the Altar of Zul and do as Talonaxe asked there.", "Altar of Zul"),
+    finish(2877, fraggar, "Ride west to Aerie Peak for the last turn-ins."), finish(2989, talonaxe),
+    action("hearth", fizzgrimble, "Hearth back to Gadgetzan.", gadgetzan),
+  })
+end
+
+-- Tanaris at 49: the pirate coast, the southern ruins and Thistleshrub, then a first pass through Un'Goro.
+do
+  local tn, ug = on.tanaris, on.ungoro
+  local bilgewhizzle = tn("Chief Engineer Bilgewhizzle", 52.46, 28.51)
+  local andi = tn("Andi Lynn", 52.82, 27.4)
+  local poster = tn("Wanted Poster", 51.83, 27.04)
+  local fizzledowser = tn("Senior Surveyor Fizzledowser", 50.21, 27.48)
+  local pestlezugg = tn("Alchemist Pestlezugg", 50.89, 26.96)
+  local marin = tn("Marin Noggenfogger", 51.81, 28.66)
+  local sprinkle = tn("Sprinkle", 51.06, 26.87)
+  local tranrek = tn("Tran'rek", 51.57, 26.76)
+  local marvon = tn("Marvon Rivetseeker", 52.71, 45.92)
+  local modiste = tn("Haughty Modiste", 66.56, 22.27)
+  local chief = tn("Security Chief Bilgewhizzle", 67.06, 23.89)
+  local stoley = tn("Stoley", 67.11, 23.98)
+  local yehkinya = tn("Yeh'kinya", 67.0, 22.4)
+  local fizzgrimble = tn("Innkeeper Fizzgrimble", 52.5, 27.9)
+  local torwa = ug("Torwa Pathfinder", 71.64, 75.96)
+  local muigin = ug("Muigin", 42.94, 9.64)
+  local linken = ug("Linken", 44.66, 8.1)
+  local williden = ug("Williden Marshal", 43.95, 7.14)
+  local pack = ug("A Small Pack", 63.11, 69.06)
+  local gadgetzan = { bind = "Gadgetzan" }
+
+  q(1691, "More Wastewander Justice", 44, 40, 1690)
+  q(5863, "The Dunemaul Compound", 49, 44)
+  q(2781, "WANTED: Caliph Scorpidsting", 46, 39)
+  q(2875, "WANTED: Andre Firebeard", 45, 40)
+  q(10, "The Scrimshank Redemption", 48, 39, 82)
+  q(110, "Insect Part Analysis", 48, 39, 10)
+  q(113, "Insect Part Analysis", 48, 39, 110)
+  q(162, "Rise of the Silithid", 49, 39, 113)
+  q(3161, "Gahz'ridian", 48, 43)
+  q(2873, "Stoley's Shipment", 45, 40, 2872)
+  q(2874, "Deliver to MacKinley", 45, 40, 2873)
+  q(8365, "Pirate Hats Ahoy!", 45, 40)
+  q(8366, "Southsea Shakedown", 45, 40)
+  q(2876, "Ship Schedules", 45, 40)
+  quest[2876].startItem = 9250
+  q(351, "Find OOX-17/TN!", 48, 43)
+  quest[351].startItem = 8623
+  q(648, "Rescue OOX-17/TN!", 48, 43, 351)
+  q(2605, "The Thirsty Goblin", 49, 44)
+  q(2606, "In Good Taste", 49, 44, 2605)
+  q(2641, "Sprinkle's Secret Ingredient", 49, 44, 2606)
+  q(3362, "Thistleshrub Valley", 50, 45)
+  q(4290, "The Fare of Lar'korwi", 53, 48)
+  q(4291, "The Scent of Lar'korwi", 53, 48, 4290)
+  q(3844, "It's a Secret to Everybody", 52, 47)
+  q(3845, "It's a Secret to Everybody", 52, 47, 3844)
+  q(3908, "It's a Secret to Everybody", 52, 47, 3845)
+  q(3884, "Williden's Journal", 50, 48)
+  quest[3884].startItem = 11116
+  q(4141, "Muigin and Larion", 52, 47)
+  q(4142, "A Visit to Gregan", 52, 47, 4141)
+
+  chapter("ungoro-49", "Tanaris and Un'Goro Crater", M.tanaris, 49, 50, {
+    "https://bindonforever.com/zones/tanaris",
+    "https://bindonforever.com/zones/un-goro-crater",
+    "https://www.wowhead.com/forever/zone=490/ungoro-crater",
+    qdb,
+  }, { "blasted-lands-47" }, {
+    accept(1691, bilgewhizzle), accept(5863, andi, "Andi Lynn, by the bank, wants the Dunemaul ogres cleared."),
+    accept(2781, poster, "Read the wanted poster on the wall by the inn."), accept(2875, poster),
+    accept(10, fizzledowser), accept(2605, marin, "Marin Noggenfogger, upstairs by the inn, wants a dew gland."),
+    accept(3362, tranrek),
+    finish(3445, marvon, "Ride south to Marvon Rivetseeker's camp at the Broken Pillar."),
+    accept(3161, marvon),
+    objective(2781, tn("Caliph Scorpidsting", 60.9, 37.8), "Caliph Scorpidsting roams the dunes northeast of Marvon. Kill him for his head.",
+      "Caliph Scorpidsting's Head"),
+    objective(1691, tn(nil, 65.4, 36.6), "Clear Wastewander Rogues, Assassins and Shadow Mages around the camps north of the pirate coast.",
+      "10 Wastewander Rogues", "10 Wastewander Assassins", "10 Wastewander Shadow Mages"),
+    accept(8365, modiste, "Steamwheedle Port is just north. Haughty Modiste wants pirate hats."),
+    accept(8366, chief), finish(2872, stoley), accept(2873, stoley),
+    along(objective(8366, tn(nil, 72.2, 46.8), "Go south to Lost Rigger Cove and work through the Southsea pirates.",
+      "10 Southsea Pirates", "10 Southsea Freebooters", "10 Southsea Dock Workers", "10 Southsea Swashbucklers"), 8365, 2873, 2875),
+    along(objective(8365, tn(nil, 72.2, 46.8), "Every pirate there can drop a hat.", "20 Southsea Pirate Hat"), 8366, 2873),
+    along(objective(2873, tn(nil, 72.2, 46.8), "Stoley's shipment is in a crate inside the cove.", "Stoley's Shipment"), 8366, 8365),
+    objective(2875, tn("Andre Firebeard", 73.4, 47.1), "Andre Firebeard holds the upper deck of the ship at the cove's mouth.", "Firebeard's Head"),
+    withItem(9250, accept(2876, nil, "If a pirate dropped a ship schedule, read it.")),
+    objective(3161, tn(nil, 47.8, 64.8), "Go southwest to the Gahz'ridian ruins and dig up ornaments with Marvon's detector.", "30 Gahz'ridian Ornament"),
+    objective(10, tn(nil, 56.0, 71.2), "Find Scrimshank's surveying gear in the silithid tunnels to the southeast.", "Scrimshank's Surveying Gear"),
+    withItem(8623, accept(351, tn("Homing Robot OOX-17/TN", 60.23, 64.72), "If a silithid dropped the OOX-17/TN beacon, use it and find the robot.")),
+    finish(351, tn("Homing Robot OOX-17/TN", 60.23, 64.72)),
+    note(accept(648, tn("Homing Robot OOX-17/TN", 60.23, 64.72), "Escort OOX-17/TN north to Steamwheedle Port."),
+      "Escort route needs an in-game check."),
+    objective(648, tn(nil, 67.0, 23.1), "Stay with the robot until it reaches the port.", "Escort OOX-17/TN"),
+    finish(8366, chief), finish(2875, chief), finish(2876, chief),
+    finish(2873, stoley), accept(2874, stoley, "Stoley sends word back to MacKinley in Booty Bay. Keep it for 50."),
+    finish(8365, modiste), finish(3520, yehkinya),
+    action("hearth", fizzgrimble, "Hearth back to Gadgetzan.", gadgetzan),
+    finish(1691, bilgewhizzle), finish(2781, bilgewhizzle),
+    finish(10, fizzledowser), accept(110, fizzledowser), finish(110, pestlezugg), accept(113, pestlezugg),
+    finish(113, fizzledowser), accept(162, fizzledowser, "Fizzledowser's report goes to Darnassus. Keep it for later."),
+    finish(3161, marvon, "Ride back south to Marvon with the ornaments."),
+    along(objective(5863, tn(nil, 42.6, 55.1), "Go west to the Dunemaul Compound. Clear Brutes and Enforcers, then Gor'marok in the middle.",
+      "10 Dunemaul Brutes", "10 Dunemaul Enforcers", "Gor'marok the Ravager"), 3362),
+    along(objective(3362, tn(nil, 30.5, 66.1), "Continue southwest into Thistleshrub Valley and kill the Thistleshrubs.",
+      "8 Gnarled Thistleshrubs", "8 Thistleshrub Rootshapers"), 2605),
+    along(objective(2605, tn(nil, 30.5, 66.1), "Dew Collectors in the valley drop the dew gland.", "Laden Dew Gland"), 3362),
+    action("goto", ug(nil, 70.0, 80.0), "Take the ramp west out of Tanaris down into Un'Goro Crater."),
+    accept(4290, torwa, "Torwa Pathfinder waits just inside the crater's eastern entrance."),
+    accept(3844, ug("A Wrecked Raft", 63.02, 68.6), "Search the wrecked raft on the lakeshore."),
+    finish(3844, pack), accept(3845, pack),
+    objective(3845, pack, "Gather the compass, map and key from the raft's pack.", "Large Compass", "Curled Map Parchment", "Lion-headed Key"),
+    objective(4290, ug(nil, 68.7, 56.7), "Find the threshadon carcass on the east shore and take a piece.", "Piece of Threshadon Carcass"),
+    withItem(11116, accept(3884, nil, "If a crater beast dropped a mangled journal, read it.")),
+    finish(3845, linken, "Ride north to Marshal's Refuge and give Linken his things."), accept(3908, linken),
+    finish(3884, williden), accept(4141, muigin),
+    taxi("getfp", ug("Gryfe", 45.2, 5.8), "Marshal's Refuge, Un'Goro Crater", "Learn the Marshal's Refuge flight path."),
+    objective(4141, ug(nil, 67.6, 32.6), "Go east to the Bloodpetal hills and pick bloodpetals from the plants you kill.", "15 Bloodpetal"),
+    finish(4141, muigin), accept(4142, muigin, "Muigin's next errand is in Feralas. Keep it for later."),
+    finish(4290, torwa, "Ride south to Torwa."), accept(4291, torwa),
+    objective(4291, ug(nil, 63.2, 77.4), "Kill the Lar'korwi mates west of Torwa for their pheromone glands.", "2 Ravasaur Pheromone Gland"),
+    finish(4291, torwa),
+    action("hearth", fizzgrimble, "Hearth back to Gadgetzan.", gadgetzan),
+    finish(2605, marin), accept(2606, marin), finish(2606, sprinkle), accept(2641, sprinkle),
+    finish(5863, andi), finish(3362, tranrek),
+    taxi("fly", tn("Bera Stonehammer", 51.0, 29.3), "Ratchet, The Barrens", "Fly to Ratchet for the boat to Booty Bay."),
   })
 end
