@@ -580,7 +580,7 @@ def main():
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
-                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questRouteEnd",
+                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questRouteEnd", "questStranglethornRoad",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",

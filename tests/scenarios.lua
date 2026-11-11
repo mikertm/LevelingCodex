@@ -664,6 +664,33 @@ function S.questWetlandsTravel()
   check(questText(frame, "Deeprun Tram"), "the tram step follows the Stormwind pickup")
 end
 
+function S.questStranglethornRoad()
+  -- A 30-60 map: the arrow knows its size, and from Duskwood it names the road south.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 38.5, 5.0
+  -- Everything the route picks up before this point is done.
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if not section.side and not section.alternate then
+      for _, step in ipairs(section.steps) do
+        if section.id == "stv-36" and step.quest == 203 then break end
+        if step.type == "accept" and step.quest then MOCK.questDone[step.quest] = true end
+      end
+      if section.id == "stv-36" then break end
+    end
+  end
+  MOCK.questLog = { { questID = 203, objectives = { { text = "Kurzen Jungle Fighters 3/15" } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 36-38"), "Stranglethorn resumes its 36-38 guide")
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, " yd"), "the Stranglethorn waypoint shows a distance")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 44.0, 80.0
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
+end
+
 function S.questWetlandsEnd()
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
