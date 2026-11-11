@@ -1,10 +1,6 @@
 # Leveling Codex
 
-## v0.17.0
-
-### Alliance quest guide
-
-- Tighter loops in Westfall (Poor Old Blanchy's oats on the first farm visit), Stormwind (Shoni with Sprite), Darkshire's arrival and Anvilmar.
+## v0.18.0
 
 ### Horde quest guide (new)
 
@@ -29,6 +25,13 @@
   - Warlock: Voidwalker for Orcs and Trolls, Succubus and Incubus, the Orb of Soran'ruk, Felhunter.
   - Druid: Bear Form, Moonglade (Skyborne), Cure Poison, Aquatic Form, Cat Form.
   - Shaman: the Fire, Water and Air totems.
+
+### Alliance quest guide
+
+- Fixed: the Wailing Caverns checklist's Raptor Horns step pointed at the far northern Barrens instead of the plains south-east of the Crossroads.
+- Tighter loops in Westfall (Poor Old Blanchy's oats on the first farm visit), Stormwind (Shoni with Sprite), Darkshire's arrival and Anvilmar.
+
+## v0.17.0
 
 ### Alliance quest guide
 
