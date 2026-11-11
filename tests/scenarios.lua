@@ -689,8 +689,8 @@ function S.questQuestieTracker()
   Questie_BaseFrame._cx = 200
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
-  check(p == "TOPLEFT" and rel == Questie_BaseFrame and rp == "TOPRIGHT" and x == 12 and y == -40,
-    "beside a left-hand tracker, on its right")
+  check(p == "TOPLEFT" and rel == Questie_BaseFrame and rp == "TOPRIGHT" and x == 58 and y == -40,
+    "beside a left-hand tracker, on its right, clear of the item and target buttons")
   Questie_BaseFrame.GetCenter = function() return nil end
   MOCK.event("QUEST_LOG_UPDATE")
   check(select(2, viewer:GetPoint()) == UIParent, "a tracker without a position yet is ignored")
@@ -707,6 +707,34 @@ function S.questQuestieTracker()
   MOCK.chat = {}
   slash("debug")
   check(chatHas("Step window: saved position"), "debug names the saved position")
+end
+
+-- Questie's tracker changing without a quest event, in combat, and an anchor the client refuses.
+function S.questQuestieTrackerLive()
+  S.login()
+  local viewer = questViewer()
+  MOCK.makeQuestie({ cx = 1700 })
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "a tracker shown without a quest event is noticed on the next tick")
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  Questie_BaseFrame:Hide()
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "the window stays put in combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.25)
+  local p, rel, _, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "after combat it moves to the default spot")
+  Questie_BaseFrame:ClearAllPoints()
+  Questie_BaseFrame:SetPoint("TOP", viewer, "BOTTOM") -- anchoring to it would now be a loop
+  Questie_BaseFrame:Show()
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == UIParent, "an anchor the client refuses leaves the window in its default spot")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: default spot"), "debug says where the window is")
 end
 
 -- QuestieDB fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
@@ -818,6 +846,12 @@ function S.questQuestieNearest()
   MOCK.event("QUEST_TURNED_IN", 7)
   MOCK.advance(0.25)
   check(not questText(arrow, "Kobold Vermin"), "a new step drops the old nearest target")
+end
+
+function S.questQuestieNearestFallback()
+  koboldDB()
+  koboldCamp({ { text = "Kobold Vermin 10/10", finished = true }, { text = "Gnoll Pelt 0/5", finished = false } }, 48.8, 44.0)
+  check(questText(LevelingCodexQuestArrow, "Kobold Worker - 242 yd"), "the wide fallback leaves out finished objectives")
 end
 
 function S.questQuestieNearestItem()

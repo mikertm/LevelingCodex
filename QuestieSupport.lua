@@ -168,26 +168,40 @@ local function entries(lib, quest)
   return out
 end
 
--- The entries the unfinished log objectives name; all of them when a line matches none.
-local function needed(list, texts)
-  local picked, seen = {}, {}
+local function names(entry, lines)
+  for _, text in ipairs(lines) do
+    if text:find(lower(entry.name), 1, true) then return true end
+  end
+  return false
+end
+
+-- The entries the unfinished log objectives name. When a line matches none (another client
+-- language, a renamed objective), every entry counts except those a finished line names.
+local function needed(list, texts, doneTexts)
+  local picked = {}
   for _, text in ipairs(texts) do
     local found = false
-    for i, entry in ipairs(list) do
-      if text:find(lower(entry.name), 1, true) then
-        found = true
-        if not seen[i] then seen[i], picked[#picked + 1] = true, entry end
-      end
+    for _, entry in ipairs(list) do
+      if names(entry, { text }) then found = true end
     end
-    if not found then return list end
+    if not found then
+      local wide = {}
+      for _, entry in ipairs(list) do
+        if not names(entry, doneTexts) then wide[#wide + 1] = entry end
+      end
+      return wide
+    end
+  end
+  for _, entry in ipairs(list) do
+    if names(entry, texts) then picked[#picked + 1] = entry end
   end
   return picked
 end
 
-local function build(step, texts)
+local function build(step, texts, doneTexts)
   local lib, Q = _G.LibQuestieDB, ns.quests
   local spots = {}
-  for _, entry in ipairs(needed(entries(lib, step.quest), texts)) do
+  for _, entry in ipairs(needed(entries(lib, step.quest), texts, doneTexts)) do
     for _, source in ipairs(entry.sources) do
       local entity = source[1] == "npc" and lib.Npc or lib.Object
       local spawns = entity.spawns(source[2])
@@ -235,16 +249,18 @@ function M.nearest(step, map, x, y)
     M.arrowState = "outside the camp"
     return
   end
-  local open, texts = {}, {}
+  local open, texts, doneTexts = {}, {}, {}
   for i, obj in ipairs(entry.objectives or {}) do
-    if (not step.objectiveIndex or step.objectiveIndex == i) and not finished(obj) then
+    if finished(obj) then
+      doneTexts[#doneTexts + 1] = lower(obj.text)
+    elseif not step.objectiveIndex or step.objectiveIndex == i then
       open[#open + 1] = i
       texts[#texts + 1] = lower(obj.text)
     end
   end
   local key = tostring(step) .. ":" .. table.concat(open, ",")
   if key ~= cacheKey then
-    local ok, result = pcall(build, step, texts)
+    local ok, result = pcall(build, step, texts, doneTexts)
     if not ok then
       M.disable("read failed: " .. tostring(result):sub(1, 80))
       return

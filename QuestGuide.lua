@@ -28,9 +28,10 @@ local function turnArrow()
 end
 
 -- A saved position wins; without one the window sits beside Questie's tracker (built some
--- seconds after login, so this runs on every refresh) or in its default spot. It only
--- re-anchors when the answer changes.
-local placedBy
+-- seconds after login, so the refresh and the ticker both check) or in its default spot. It
+-- only re-anchors when the answer changes. On the tracker's right it keeps 58 px clear: the
+-- item and target buttons hang up to 46 px off the window's left edge.
+local placedBy, refused -- refused: a tracker the client wouldn't let us anchor to (not retried)
 local PLACED = { saved = "saved position", left = "beside Questie's tracker", right = "beside Questie's tracker",
   default = "default spot" }
 
@@ -38,14 +39,22 @@ local function place()
   local p = ns.db().questPosition
   local tracker, side
   if not p then tracker, side = ns.questie.trackerSide() end
+  if tracker and tracker == refused then tracker, side = nil, nil end
   local key = (p and "saved") or side or "default"
   if key == placedBy then return end
-  placedBy = key
+  -- A placed window stays put in combat: the secure buttons beside it can't follow until after.
+  if placedBy and try(InCombatLockdown) then return end
   viewer:ClearAllPoints()
+  local ok = true
   if p then viewer:SetPoint(p[1], UIParent, p[2], p[3], p[4])
-  elseif side == "left" then viewer:SetPoint("TOPRIGHT", tracker, "TOPLEFT", -12, -40)
-  elseif side == "right" then viewer:SetPoint("TOPLEFT", tracker, "TOPRIGHT", 12, -40)
-  else viewer:SetPoint("RIGHT", UIParent, "RIGHT", -48, 80) end
+  elseif side == "left" then ok = pcall(viewer.SetPoint, viewer, "TOPRIGHT", tracker, "TOPLEFT", -12, -40)
+  elseif side == "right" then ok = pcall(viewer.SetPoint, viewer, "TOPLEFT", tracker, "TOPRIGHT", 58, -40) end
+  if not ok then refused, key = tracker, "default" end
+  if key == "default" then
+    viewer:ClearAllPoints()
+    viewer:SetPoint("RIGHT", UIParent, "RIGHT", -48, 80)
+  end
+  placedBy = key
 end
 
 function ns.questViewerPlacement() return PLACED[placedBy or "default"] end
@@ -1060,6 +1069,20 @@ local function handle(event, a, b)
   ns.questRefresh()
 end
 
+-- Questie's tracker can appear, hide or move without a quest event: check every tick, and
+-- move the item and target buttons (placed by screen position) when the window moved with it.
+local followLeft, followTop
+local function followTracker()
+  if not viewer or not viewer:IsShown() then return end
+  place()
+  if placedBy ~= "left" and placedBy ~= "right" then return end
+  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
+  if left ~= followLeft or top ~= followTop then
+    followLeft, followTop = left, top
+    updateItemButton()
+  end
+end
+
 function ns.startQuestGuide()
   for _, ev in ipairs({ "PLAYER_LEVEL_UP", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
@@ -1080,6 +1103,7 @@ function ns.startQuestGuide()
   end
   ns.every(0.25, function()
     recordFlight()
+    followTracker()
     if Q.checkPosition() then ns.questRefresh() else paintArrow() end
   end)
 end

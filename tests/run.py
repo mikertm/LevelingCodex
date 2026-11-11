@@ -620,6 +620,7 @@ def main():
                              "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
                              "questQuestieAuto", "questQuestieTracker", "questQuestieDB", "questQuestieNearest",
                              "questQuestieNearestItem", "questQuestieNearestPart", "questQuestieNearestError",
+                             "questQuestieTrackerLive", "questQuestieNearestFallback",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
