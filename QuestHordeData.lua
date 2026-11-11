@@ -423,7 +423,8 @@ do
     action("goto", du(nil, 34.6, 42.6), "Take the road west across the bridge into the Barrens."),
     finish(840, kargal, "Kargal waits at the Far Watch Outpost on the far side of the bridge."),
     accept(842, kargal),
-    finish(809, akzeloth), accept(924, akzeloth),
+    finish(809, akzeloth),
+    accept(924, akzeloth, "Take The Demon Seed, then pick up a Flawed Power Stone from the pile beside Ak'Zeloth. It lasts 30 minutes."),
   }
 
   local sources = {

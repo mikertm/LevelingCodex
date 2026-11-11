@@ -275,8 +275,6 @@ do
     finish(758, mull), accept(759, mull),
     finish(761, harken), finish(766, maur),
     action("train", nil, "Visit your class trainer in the village. Train spells for level", { level = 10 }),
-    accept(1505, krang, "Warriors: Krang sends you to Far Watch Post in the Barrens. Keep it for later."),
-    accept(2984, mu("Narm Skychaser", 47.4, 62.54), "Shamans: Narm sends you to Kranal Fiss in the Barrens. Keep it for later."),
     accept(5926, mu("Gennia Runetotem", 47.48, 62.95), "Druids: Gennia sends you to Turak Runetotem in Thunder Bluff. If she offers nothing, use Next."),
     accept(6061, yaw, "Hunters: Yaw Sharpmane starts your pet training."),
     withItem(15914, objective(6061, 39.88, 61.1, "Hunters: use the Taming Rod on an Adult Plainstrider west of the village, from as far away as you can.", "Tame an Adult Plainstrider")),
@@ -328,8 +326,7 @@ do
     accept(860, melor),
     -- CARRY: turnin 860 Sergra Darkthorn at Sergra Darkthorn, Crossroads (the Barrens file owns the Crossroads).
     -- CARRY: turnin 886 The Barrens Oases at Tonga Runetotem, Crossroads (druids only here).
-    -- CARRY: turnin 1505 Veteran Uzzek at Uzzek, Far Watch Post (warriors).
-    -- CARRY: turnin 2984 Call of Fire at Kranal Fiss, the Barrens (shamans).
+    -- Veteran Uzzek (1505, Warriors) and Call of Fire (2984, Shamans) are left for the class-quest pass.
     action("goto", liftTop, "Ride the lift down and follow the road south to Bloodhoof Village."),
     finish(760, mull),
     accept(98435, mull, "Mull has a report for Arch Druid Hamuul in Thunder Bluff. Keep it until your next visit there."),

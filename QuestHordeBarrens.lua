@@ -196,15 +196,18 @@ q(6563, "The Essence of Aku'Mai", 22, 17, 6562)
 -- The Crossroads, 12-15: hub pickups, Thorn Hill, Ratchet and the coast.
 local crossroads = (function()
   return {
+    only(objectiveAt(924, ba("Altar of Fire", 47.97, 19.07),
+      "Orcs and Trolls: with the Flawed Power Stone from Far Watch, follow the road west and climb Dreadmist Peak. Use the altar in the den at the top before the stone crumbles (30 minutes).",
+      "Destroy the Demon Seed"), { race = { "ORC", "TROLL" } }),
     action("goto", p.sergra, "Make for the Crossroads, the walled town where the Barrens roads meet. From Far Watch Post follow the road west; from Camp Taurajo follow it north."),
     taxi("getfp", p.devrak, "Crossroads, The Barrens", "Learn the flight path from Devrak on the tower in the middle of town."),
     action("sethearth", p.boorand, "Bind your hearthstone with Innkeeper Boorand Plainswind at the inn.", crossroadsBind),
-    -- CARRY: turnin 842 Crossroads Conscription at Sergra Darkthorn (accepted from Kargal at Far Watch Post in the Durotar/Tirisfal files)
-    -- CARRY: turnin 860 Sergra Darkthorn at Sergra Darkthorn (Tauren, Mulgore file)
-    -- CARRY: turnin 886 The Barrens Oases at Tonga Runetotem (Tauren, Mulgore file; leads to 870)
-    -- CARRY: turnin 854 Journey to the Crossroads at Thork (Tauren, Mulgore file)
-    -- CARRY: turnin 98024 Journey to the Crossroads at Thork (from Thrall in Orgrimmar, Durotar/Tirisfal files)
-    -- CARRY: turnin 1358 Sample for Helbrim at Apothecary Helbrim (Undead, Tirisfal file)
+    -- Arrival turn-ins from the starting zones (accepted in the Durotar, Mulgore and Tirisfal files).
+    only(finish(842, p.sergra), { race = { "ORC", "TROLL", "SCOURGE" } }),
+    only(finish(860, p.sergra), TAUREN),
+    only(finish(886, p.tonga), { race = "TAUREN", class = "DRUID" }),
+    only(finish(854, p.thork), TAUREN),
+    only(finish(1358, p.helbrim), { race = "SCOURGE" }),
     accept(844, p.sergra, "Sergra Darkthorn stands at the south end of town, by the watch tower."),
     accept(870, p.tonga),
     accept(871, p.thork), accept(5041, p.thork),
@@ -225,7 +228,6 @@ local crossroads = (function()
     along(objectiveAt(844, ba(nil, 53.7, 29.2),
       "Head back toward town through the grassland and loot beaks from the plainstriders. Keep killing Sunscale raptors for their heads.",
       "7 Plainstrider Beaks"), 869),
-    -- CARRY: complete 924 The Demon Seed at the Altar of Fire (47.97, 19.07) and turnin at Ak'Zeloth, Far Watch Post (Orc/Troll, accepted in the Durotar file)
     finish(844, p.sergra), accept(845, p.sergra),
     finish(871, p.thork), accept(872, p.thork),
     accept(867, p.darsok),
@@ -238,6 +240,8 @@ local crossroads = (function()
       "Work north through Thorn Hill, killing Geomancers and Defenders. Look for the supply crates as you go.",
       "8 Razormane Geomancers", "8 Razormane Defenders"), 5041, 845),
     objectiveAt(5041, ba(nil, 59.5, 24.6), "Search the huts on Thorn Hill for the Crossroads' supply crates.", "Crossroads' Supply Crates"),
+    only(finish(924, ba("Ak'Zeloth", 62.34, 20.07), "Far Watch Post is just north-east of Thorn Hill. Tell Ak'Zeloth the seed is destroyed."),
+      { race = { "ORC", "TROLL" } }),
     along(action("goto", p.gazlowe, "Take the road south-east to Ratchet on the coast. Kill Zhevra Runners for hooves on the way."), 845, 869),
     accept(97253, p.wrenix), accept(887, p.gazlowe),
     taxi("getfp", p.bragok, "Ratchet, The Barrens", "Learn the flight path from Bragok on the hill above the docks."),
@@ -269,6 +273,7 @@ local crossroads = (function()
     only(taxi("fly", p.tal, "Thunder Bluff, Mulgore",
       "Fly to Thunder Bluff with the hides. Without the flight path, ride south to Camp Taurajo and west through Mulgore."), TAUREN),
     finish(6362, p.ahanu, "Ahanu stands on the central rise of Thunder Bluff."),
+    only(finish(98435, p.hamuul, "Cross the rope bridges to Elder Rise and give Hamuul Runetotem Thunderhorn's report."), TAUREN),
     accept(6363, p.ahanu), finish(6363, p.tal, "Tal keeps the wind riders on the central rise."),
     accept(6364, p.tal),
     only(taxi("fly", p.devrak, "Crossroads, The Barrens", "Fly back to the Crossroads."), TAUREN),
