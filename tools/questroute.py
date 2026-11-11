@@ -16,7 +16,7 @@ TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide"}
+               "phase", "uncertain", "guide", "drop"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -124,6 +124,9 @@ def audit(data, ref, cap=20):
                     fail(where, "guide must be an existing guide ID")
                 if "suggest" in step:
                     check_suggestions(step["suggest"], label, where)
+                if "drop" in step and (kind != "note" or not isinstance(step["drop"], list) or not step["drop"] or any(
+                        type(id_) is not int or id_ not in ids for id_ in step["drop"])):
+                    fail(where, "drop must be a note step's list of quest IDs to abandon")
                 if "also" in step:
                     also = step["also"]
                     if not isinstance(also, list) or not also or any(
@@ -229,6 +232,8 @@ def audit(data, ref, cap=20):
                                 and step.get("quest") not in picked):
                             continue
                         kind, quest = step["type"], step.get("quest")
+                        # A clean-up note: quests the player abandons here if they still hold them.
+                        active.difference_update(step.get("drop", []))
                         if kind == "accept":
                             for required in step.get("chain", []):
                                 if required not in finished:
