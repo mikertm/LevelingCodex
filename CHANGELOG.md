@@ -16,6 +16,16 @@
 - **Guide list by level.** The Quests tab groups the leveling guides into level bands. Each guide shows how much of it you've done and whether it's current, suggested, done, outleveled or for later. Suggested guides are in gold.
 - **Outleveled pickups leave the route.** A pickup that has gone grey for your level is dropped, unless a later quest needs it. Dropped pickups are listed under Missed quests > Outleveled. Turn on Settings > Keep grey quests in the route to keep them.
 - **Tidier step window.** The banner shows the guide's short name and always fits its frame. The level range sits beside the step title. The Pin button and the "Unverified" labels are gone.
+- **Forever quests RestedXP skips.** Added:
+  - the Dwarf/Gnome and Night Elf Camping 101 skinning lessons;
+  - Stormwind's library errand (Reading Room, Shelf Picked);
+  - Business in Auberdine and Unrequited Love (Darkshore to Menethil);
+  - Bolvar's A Friend of the Family follow-up and The Shamed Lieutenant to Southshore;
+  - Forest Song's Vengeful Trail and Shared Fury in Ashenvale.
+
+  The detours are optional, and their turn-ins show whenever the quest is in your log.
+- **Shorter town loops.** About a dozen hubs no longer send you away and back for a turn-in that was already ready. These include Saldean's Farm, Sentinel Hill, Menethil, Auberdine, Dolanaar, Darkshire, Astranaar and the end-of-Wetlands Stormwind visit.
+- **Special chains offered on the way.** The step window offers "Plan Cozy Sleeping Bag" in Westfall, "Plan The Legend of Stalvan" at Madame Eva and "Plan The Missing Diplomat" in the Cathedral.
 - Fixed: logging in or arriving in a zone could keep you on another zone's guide. This happened when a quest ahead needed an earlier chain you skipped there, such as Sven's chain in Duskwood for The Doomed Fleet in the Wetlands. The guide now starts with work in your zone, drops chains you skipped elsewhere, and only sends you for a single missing pickup when the route reaches the quest that needs it. The Greenwarden's turn-in now shows if you have it.
 - Fixed: the quest step window no longer takes Forever's controller focus, which could leave the analog sticks unresponsive. Controller step controls stay in the Quests tab.
 

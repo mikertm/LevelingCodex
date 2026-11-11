@@ -217,10 +217,15 @@ def audit(data, ref, cap=20):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
                     active, finished = set(), set()
+                    # An optional turn-in for a quest picked up in another guide (a carried breadcrumb):
+                    # the guide shows it only while the quest is in your log, so it needs no accept here.
+                    picked = {s.get("quest") for _, s, _ in path if s["type"] == "accept"}
                     for section, step, where in path:
                         if not (matches(section.get("start"), race) and matches(step.get("race"), race)
                                 and matches(section.get("class"), class_) and matches(step.get("class"), class_)) or (
-                                step.get("optional") and not dungeons and section.get("category") != "dungeon"):
+                                step.get("optional") and not dungeons and section.get("category") != "dungeon") or (
+                                step.get("optional") and step["type"] in {"complete", "turnin"}
+                                and step.get("quest") not in picked):
                             continue
                         kind, quest = step["type"], step.get("quest")
                         if kind == "accept":
