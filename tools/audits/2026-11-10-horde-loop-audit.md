@@ -85,3 +85,25 @@ Not added:
   - the Orgrimmar zeppelin tower in Durotar (50.8, 13.8);
   - that an Orc, Troll, Tauren or Skyborne can take Delivery to Silverpine, The Argent Emissary and Rear Guard Patrol in Brill;
   - the Engraved Ring turn-in for non-Undead.
+
+## 5. Alliance pass with the same tool (after merging main's 2026-11-10 audit)
+
+`python tools/questloops.py ALLIANCE HUMAN,DWARF,NIGHTELF,SKYBORNE` over every class, on the route as main left it (`2026-11-10-route-audit-pass-2.md`). The tool now leaves out item-started (`startItem`) steps, which only show when you have the item. Main's pass had already fixed the hubs it lists. The rest:
+
+| Where | Problem | Fix |
+|---|---|---|
+| Westfall, first visit | Poor Old Blanchy's oats were finished on a return trip from the north shore. The sacks are by the wardrobe farmhouse you visit first. | Oats right after the wardrobe. Both quests go to the Furlbrows on the same visit. About 360 yards less, and a free log slot through the Jangolode loop. |
+| Stormwind (Westfall chapter) | Underground Assault from Shoni was picked up after a walk to Wilder Thistlenettle, then back to the Dwarven District. Shoni stands next to Sprite. | Shoni straight after Sprite. About 245 yards less. |
+| Darkshire, arrival | Felicia, the inn, Elaine (south), Althea, Eva (north), then Sirra (west): back and forth across town. | Felicia, Eva, the inn and Grual, Sirra, Althea, then Elaine on the south side, which is on the way to the cemetery. About 150 yards less. |
+| Coldridge, Anvilmar | Durnan inside, out to Balir at the door, back in for Felix and the trainer. | Durnan, Felix and the trainer inside, then Balir on the way out. |
+
+**Reviewed and left as they are:**
+- Marshal Marris's Blackrock pickups: level 18. The route grinds to 18 for them.
+- The Nibbled-On Book: used from bags anywhere.
+- The Lost Runner and Eyes of the Sentinels in Teldrassil and Darnassus: later prerequisites or levels the data doesn't carry.
+- Shayla's bounty: the order is the same distance either way.
+- Fall of Dun Modr: level 25.
+- Death to the Dragonmaw: level 30.
+- Dun Morogh's 46-yard Thunderbrew step.
+
+**Alternates:** the nine Alliance alternates are all offered from at least two places and all have exits, so none was added or rewired. On the Horde side, Shimmering Flats has no exit because it runs to the end of the guide at 30.

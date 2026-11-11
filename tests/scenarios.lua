@@ -429,7 +429,7 @@ function S.questDuskwood()
   MOCK.bind = "Darkshire"
   MOCK.event("HEARTHSTONE_BOUND")
   click(frame, "Next")
-  check(questText(frame, "Accept - Raven Hill"), "binding in Darkshire leads to the first pickups")
+  check(questText(frame, "Accept - The Totem of Infliction"), "Darkshire starts with the first pickups, Madame Eva by the flight master")
 end
 
 function S.questDuskwoodDagger()
@@ -519,7 +519,7 @@ function S.questDuskwoodZoneEntry()
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check((questText(frame, "Duskwood") and questText(frame, "Levels 21-27")) and not questText(frame, "Return to Lakeshire"),
     "walking into Duskwood switches to local pickups even without an accepted quest there")
-  check(questText(frame, "Bind hearthstone") and questText(frame, "Accept - Raven Hill"),
+  check(questText(frame, "Bind hearthstone") and questText(frame, "Accept - The Totem of Infliction"),
     "Duskwood starts with the next local steps, including pickups available at level 20")
 
   MOCK.event("ZONE_CHANGED_NEW_AREA") -- Sometimes the map still shows the old zone during the event.

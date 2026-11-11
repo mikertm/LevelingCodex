@@ -2,6 +2,10 @@
 
 ## v0.17.0
 
+### Alliance quest guide
+
+- Tighter loops in Westfall (Poor Old Blanchy's oats on the first farm visit), Stormwind (Shoni with Sprite), Darkshire's arrival and Anvilmar.
+
 ### Horde quest guide (new)
 
 - **Horde levels 1-30.** The step window, arrow and Quests tab now guide Horde characters. Every Horde race starts in its own zone and joins the shared route at the Crossroads:

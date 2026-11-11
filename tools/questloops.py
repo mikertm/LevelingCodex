@@ -39,8 +39,9 @@ def check(route, race, class_):
     for section in route["sections"]:
         if section.get("side") or section.get("alternate") or not matches(section.get("start"), race):
             continue
+        # Optional steps and item-started quests (shown only with the item) are not part of the walk.
         steps = [s for s in section["steps"] if matches(s.get("race"), race) and matches(s.get("class"), class_)
-                 and not s.get("optional")]
+                 and not s.get("optional") and not s.get("startItem")]
         low, high = section["levels"]
         for i, step in enumerate(steps):
             rows.append((section["id"], section["steps"].index(step) + 1, step,
