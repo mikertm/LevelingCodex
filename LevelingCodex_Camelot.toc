@@ -18,6 +18,7 @@ QuestSpecialData.lua
 QuestHordeData.lua
 QuestHordeMulgore.lua
 QuestHordeTirisfal.lua
+QuestHordeSkyborne.lua
 QuestHordeBarrens.lua
 QuestHorde22to30.lua
 QuestHordeDungeons.lua

@@ -8,10 +8,11 @@
   - Orcs and Trolls: Valley of Trials, Sen'jin and Razor Hill, northern Durotar and Orgrimmar.
   - Tauren: Camp Narache, Bloodhoof Village and Thunder Bluff.
   - Undead: Deathknell, Brill and the Undercity, then Silverpine Forest.
+  - Skyborne (Windshaper): Zephras Isle with the Windshaper chains and the Shaman totem quests, then the airship to Mulgore, Thrall in Orgrimmar and the Crossroads.
   - Everyone: the Crossroads and the northern and southern Barrens, Sun Rock and Camp Taurajo, Zoram'gar, then the Sepulcher, Hillsbrad, Stonetalon, Ashenvale (Splintertree) and Thousand Needles to Freewind Post. Shimmering Flats is an alternate at the end.
 - **Forever content included:** the new starting-zone quests, Camping 101's Cooking intro (other professions are optional), the Orc Mage and Troll Warlock class letters, Forever's new quests in Durotar, the Barrens, Stonetalon and Ashenvale, and Orgrimmar's city errands.
 - **Horde dungeon checklists:** Ragefire Chasm, Ruins of Lordaeron, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps and Razorfen Kraul, with their Horde quest chains before, inside and after the run, and bosses in order. Planned runs add their solo pickups to the route.
-- Not yet: Horde class quest chains beyond the short ones in the starting zones, and a Skyborne (Windshaper) start on the Horde side.
+- Not yet: Horde class quest chains beyond the short ones in the starting zones.
 
 ### Alliance quest guide
 

@@ -208,6 +208,7 @@ local crossroads = (function()
     only(finish(886, p.tonga), { race = "TAUREN", class = "DRUID" }),
     only(finish(854, p.thork), TAUREN),
     only(finish(1358, p.helbrim), { race = "SCOURGE" }),
+    only(finish(98024, p.thork), { race = "SKYBORNE" }),
     accept(844, p.sergra, "Sergra Darkthorn stands at the south end of town, by the watch tower."),
     accept(870, p.tonga),
     accept(871, p.thork), accept(5041, p.thork),

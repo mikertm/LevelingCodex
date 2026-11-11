@@ -702,7 +702,7 @@ end
 for name, start in pairs({ Orc = { "Valley of Trials", "Your Place In The World" },
     Troll = { "Valley of Trials", "Your Place In The World" },
     Tauren = { "Camp Narache", "Camp Narache" },
-    Scourge = { "Deathknell", "Deathknell" } }) do
+    Scourge = { "Deathknell", "Deathknell" }, Skyborne = { "Thendal Grove", "Coming of Age" } }) do
   S["questStartHorde" .. name] = function()
     MOCK.faction, MOCK.race, MOCK.level = "Horde", name, 1
     S.login()
@@ -713,6 +713,16 @@ for name, start in pairs({ Orc = { "Valley of Trials", "Your Place In The World"
       name .. " doesn't see Alliance guides")
     MOCK.faction = nil
   end
+end
+
+-- Windshaper Skyborne share Zephras Isle with the High Order but take their own faction's chains.
+function S.questHordeSkyborne()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Skyborne", 6, 2521
+  S.login()
+  slash("quests")
+  check(routeHas("The Windshapers") and routeHas("Meddlesome Mages"), "Horde Skyborne get the Windshaper chain")
+  check(not routeHas("The High Order") and not routeHas("A Magical Affront"), "Horde Skyborne don't get the High Order chain")
+  MOCK.faction = nil
 end
 
 -- All Horde starts join the Barrens; each race only sees its own arrival quests.

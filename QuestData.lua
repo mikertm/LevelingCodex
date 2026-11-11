@@ -2881,4 +2881,4 @@ LevelingCodexQuests.build = { at = at, q = q, quest = quest, accept = accept, fi
   breadcrumb = breadcrumb, withTrainers = withTrainers, forDungeon = forDungeon, along = along, maps = { elwynn = elwynn, stormwind = stormwind,
   westfall = westfall, redridge = redridge, duskwood = duskwood, wetlands = wetlands, lochModan = lochModan,
   ironforge = ironforge, dunMorogh = dunMorogh, teldrassil = te.map, darnassus = te.darnassus,
-  darkshore = te.darkshore, zephras = zephras } }
+  darkshore = te.darkshore, zephras = zephras }, zi = zi }
