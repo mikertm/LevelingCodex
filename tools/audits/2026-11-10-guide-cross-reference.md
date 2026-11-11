@@ -1,9 +1,9 @@
-# 2026-11-10: Alliance 1-30 cross-reference with the RestedXP Forever guides
+# 2026-11-10: Alliance 1-30 cross-reference with reference A's Forever guides
 
 ## Method
 
-- **Reference copies.** The owner supplied local copies of RestedXP Guides v4.11.35 (`Guides/forever/*.lua`, the Forever Alliance guides and the dungeon guides) and Zygor Guides Viewer Forever 1.6. RestedXP's text is never copied. We use quest IDs, which quests a chapter groups together and in what order, and the dungeon handling. Zygor is paid and licensed, so it was read only to compare features, never for route data or code.
-- **Quest diff.** A script parsed every `.accept`, `.turnin` and `.complete` in the RestedXP Alliance chapters and compared the quest IDs with every section of our route. That covers `QuestData.lua`, `QuestAlternateData.lua`, `QuestDungeonData.lua`, `QuestSpecialData.lua` and `QuestClassData.lua`. Each missing ID was resolved with `tools/questfacts.py` (cached QuestieDB, Forever traces) to its name, level, races, start and end NPCs, and prerequisites, and checked against the Forever client reference. The script lives in the session scratchpad. Its rules are simple enough to rerun: parse `RegisterGuide([[ ... ]])` blocks, skip Horde blocks, and collect quest IDs per `#name`.
+- **Reference copies.** The owner supplied local copies of two reference leveling guides for Forever, called reference A (its Alliance and dungeon guides) and reference B in these audits. Reference A's text is never copied. We use quest IDs, which quests a chapter groups together and in what order, and the dungeon handling. Reference B is paid and licensed, so it was read only to compare features, never for route data or code.
+- **Quest diff.** A script parsed every `.accept`, `.turnin` and `.complete` in the reference A Alliance chapters and compared the quest IDs with every section of our route. That covers `QuestData.lua`, `QuestAlternateData.lua`, `QuestDungeonData.lua`, `QuestSpecialData.lua` and `QuestClassData.lua`. Each missing ID was resolved with `tools/questfacts.py` (cached QuestieDB, Forever traces) to its name, level, races, start and end NPCs, and prerequisites, and checked against the Forever client reference. The script lives in the session scratchpad. Its rules are simple enough to rerun: parse `RegisterGuide([[ ... ]])` blocks, skip Horde blocks, and collect quest IDs per `#name`.
 - **Gap filling.** The gaps were filled area by area, each with its own audit file:
   - `2026-11-10-starter-gaps.md`: starting zones, Loch Modan and the Stormwind and Ironforge errands, levels 1-15.
   - `2026-11-10-westfall-redridge-duskwood-gaps.md`: levels 12-30.
@@ -14,7 +14,7 @@
 
 No zone of that name exists. The Forever client's `AreaTable` has no area called Swamplands. The only swamp zones are Swamp of Sorrows (8, classic 35-45) and Swamplight Manor (a Dustwallow sub-area). Neither reference add-on has the name. Forever's new levelling zones are Zephras Isle (1-12), Riverglades (35-45), Shen'dralas (40-53, sources disagree) and Mount Hyjal (60).
 
-The new Forever content that starts at about level 20 for the Alliance is the reworked **Wetlands**. It has 25+ new quests, the Excavation Site dungeon and the Auberdine to Menethil to Southshore boat line. RestedXP routes it in two chapters, "23-24 Wetlands" and "27-29 Wetlands / Excavation Site". That area is treated as the one meant. Its new quests are covered in the Darkshore/Ashenvale/Wetlands audit.
+The new Forever content that starts at about level 20 for the Alliance is the reworked **Wetlands**. It has 25+ new quests, the Excavation Site dungeon and the Auberdine to Menethil to Southshore boat line. Reference A routes it in two chapters, "23-24 Wetlands" and "27-29 Wetlands / Excavation Site". That area is treated as the one meant. Its new quests are covered in the Darkshore/Ashenvale/Wetlands audit.
 
 - [Icy Veins: new levelling zones](https://www.icy-veins.com/wow-forever/news/new-leveling-zones-in-wow-forever-riverglades-mount-hyjal/)
 - [Warcraft Tavern: all new zones](https://www.warcrafttavern.com/forever/news/all-new-zones-areas-in-wow-forever-revealed-at-blizzcon/)
@@ -22,9 +22,9 @@ The new Forever content that starts at about level 20 for the Alliance is the re
 
 ## Gap summary (before this pass)
 
-These are RestedXP Alliance chapters up to level 30, counted as quest IDs we had nowhere. Duplicates across chapters are counted once in the totals.
+These are reference A Alliance chapters up to level 30, counted as quest IDs we had nowhere. Duplicates across chapters are counted once in the totals.
 
-| Area | RestedXP chapters | Missing | Main themes |
+| Area | Reference A chapters | Missing | Main themes |
 |---|---|---|---|
 | Starting zones | Human 6-11, Dwarf/Gnome 5-11, Night Elf 6-11, Zephras 1-13 | about 40, with the Zephras ones mostly Horde | Camping 101 profession intros, Elmore/Stormpike, Deeprun rats, Honor Students flight chain, Thunderbrew rivals, Moss-twined Heart |
 | City errands | 11-16 chapters | 8 | Humble Beginnings, Philmor's Favor, Gatehouse Goods, Fishin' Time, Exploring the Alliance, Making Do |
@@ -36,7 +36,7 @@ These are RestedXP Alliance chapters up to level 30, counted as quest IDs we had
 
 ## Result
 
-Across RestedXP's Alliance chapters up to level 30 (excluding the Mage AoE variants), the unique quest IDs we lacked went from **213 to 105**, so **108 were added**. Of the 105 left, 36 are Horde-only (Zephras Isle Horde steps). The other 69 were skipped on purpose; each area audit gives the reason. They are:
+Across reference A's Alliance chapters up to level 30 (excluding the Mage AoE variants), the unique quest IDs we lacked went from **213 to 105**, so **108 were added**. Of the 105 left, 36 are Horde-only (Zephras Isle Horde steps). The other 69 were skipped on purpose; each area audit gives the reason. They are:
 
 - quests not in the Forever client (308, 1641, 1645, 117);
 - level 31+ links (Southshore 538, Morbent Fel 55, Weathered Grave, the Villards, Nek'rosh);
@@ -47,11 +47,11 @@ Across RestedXP's Alliance chapters up to level 30 (excluding the Mage AoE varia
 
 Route audit: 2941 steps, passes. Full harness: passes.
 
-Everything from about level 31 up (Thousand Needles onward) is outside this pass. The same script shows the size of that work, with each RestedXP chapter at 30-60 missing nearly all its quests.
+Everything from about level 31 up (Thousand Needles onward) is outside this pass. The same script shows the size of that work, with each reference A chapter at 30-60 missing nearly all its quests.
 
 ## How the two add-ons handle dungeon quests
 
-| | RestedXP | Zygor | Leveling Codex before | Leveling Codex now |
+| | Reference A | Reference B | Leveling Codex before | Leveling Codex now |
 |---|---|---|---|---|
 | Choosing dungeons | Settings list per dungeon, with "recommended" scored by travel, quest XP and class value. Leveling steps tagged `.dungeon X` appear only for chosen ones. | An in-route "Run X later" confirm sets a flag. Dungeon pickups then show with `\|only if` that flag. | One switch, "Show dungeon steps", wired only to the Deadmines run | Per-dungeon plans: Quests > Guide library > Dungeons has Plan recommended/all/none and a toggle on each dungeon page. Any route step tagged `forDungeon(step, id)` follows its dungeon's plan. Settings > "Plan every dungeon run" sets the default. |
 | When to run | The dungeon chapter is placed in the chapter sequence (e.g. 17-18 Hall of Thanes) | "Begin finding a dungeon group" step when the pickups are done, then "Starting dungeon run" | Nothing. The player opened the checklist. | `Q.readyRun()` triggers when a planned run is in your level range with its pickups done, or with three of its quests in your log. The step window then offers "Run <dungeon>" and says once in chat to find a group. |
@@ -61,7 +61,7 @@ Everything from about level 31 up (Thousand Needles onward) is outside this pass
 
 ## Questing features compared
 
-| Feature | RestedXP | Zygor | Codex |
+| Feature | Reference A | Reference B | Codex |
 |---|---|---|---|
 | Waypoint arrow, flight and boat legs | yes | yes | yes |
 | Auto accept / turn in, gossip picking | yes | yes | yes |

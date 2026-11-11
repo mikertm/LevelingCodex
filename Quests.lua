@@ -160,7 +160,7 @@ local function sideHidden(section)
   return section.side and not section.category and ns.db().noClassQuests
 end
 
--- Dungeon plans (as RestedXP lets you choose your dungeons): a route step tagged
+-- Dungeon plans (choose your dungeons): a route step tagged
 -- `dungeon = "<detour id>"` shows only while that run is planned. `db.questDungeons`
 -- plans every run; a per-dungeon choice overrides it. Without SavedVariables nothing is planned.
 local function planTable()
@@ -433,7 +433,7 @@ local function catchup(skips)
   return needed, deferred, cut
 end
 
--- Zygor-style catch-up without a saved position: a quest you never picked up counts as
+-- Catch-up without a saved position: a quest you never picked up counts as
 -- passed (Missed quests) once you have turned in a quest the route picks up after it in the
 -- same section, unless a quest still ahead of you needs it. Walking the route backwards sees
 -- what is still needed before reaching its prerequisites. Earlier setup can be reviewed too.
@@ -467,7 +467,7 @@ local function markPassed()
   end
 end
 
--- Outleveled pickups (Zygor's "outleveled", RestedXP's max level): a leveling pickup that has gone
+-- Outleveled pickups: a leveling pickup that has gone
 -- grey leaves the route, with the rest of its steps, unless a quest still ahead needs it. Walking
 -- backwards sees every later quest's prerequisites before reaching them. Settings > Keep grey
 -- quests in the route turns this off.
@@ -775,7 +775,7 @@ end
 
 function Q.greyPickups() return greyRows end
 
--- A guide's progress and status for the Quests tab (Zygor's guide menu): quests turned in out of
+-- A guide's progress and status for the Quests tab: quests turned in out of
 -- the quests it turns in, and "current", "done", "outleveled", "suggested", "later" or "open".
 function Q.sectionProgress(section)
   local total, done, seen = 0, 0, {}
@@ -823,7 +823,7 @@ function Q.guideMinimum(section)
   if section.category == "special" and level < section.levels[1] then return section.levels[1] end
 end
 
--- Where a quest sits in its story chain (as Zygor's chain data shows): part, length and the
+-- Where a quest sits in its story chain: part, length and the
 -- dungeon checklist the chain feeds, if any. Only chains of three or more quests count.
 function Q.chainInfo(id)
   if not id then return end
@@ -858,7 +858,7 @@ function Q.runReadiness(section)
   return inLog, left
 end
 
--- Zygor's "find a group" moment: a planned run in your level range whose pickups are done
+-- The "find a group" moment: a planned run in your level range whose pickups are done
 -- (or that already has three quests waiting). Nil while you are on a detour.
 function Q.readyRun()
   if sideSection or not level then return end

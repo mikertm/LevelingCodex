@@ -2,12 +2,12 @@
 
 This pass checked every leveling guide added this month, using four checks:
 
-- the quest-ID diff against the RestedXP Forever guides, rerun;
-- the same diff against Zygor's Forever chapters, using quest IDs only, to find Forever-only quests that RestedXP doesn't route;
+- the quest-ID diff against reference A's Forever guides, rerun;
+- the same diff against reference B's Forever chapters, using quest IDs only, to find Forever-only quests that reference A doesn't route;
 - a loop check over the route data;
 - a link check over the alternate routes.
 
-The scripts live in the session scratchpad (`xref.py`, `missing.py`, `zxref.py`, `loops.py`, `alts.py`). The rules are short enough to rewrite.
+The scripts live in the session scratchpad (`xref.py`, `missing.py`, `xref-b.py`, `loops.py`, `alts.py`). The rules are short enough to rewrite.
 
 ## 1. Loop check
 
@@ -45,9 +45,9 @@ Each guide's total walking distance changed by under 5%. The new quests account 
 - Valanaar's class trainers.
 - Menethil's Lightforge Iron: it's picked up on the same visit as the other two Glorin steps.
 
-## 2. RestedXP diff, rerun
+## 2. Reference A diff, rerun
 
-The RestedXP Alliance quests up to level 30 that we still don't route are unchanged since the first pass. Each has a reason in the area audits. In brief:
+The reference A Alliance quests up to level 30 that we still don't route are unchanged since the first pass. Each has a reason in the area audits. In brief:
 
 - not in the Forever client: 308, 1641, 1645, 117;
 - level 31 or higher, or a link into it: 538, 55, 225-231, Nek'rosh, 634, Stranglethorn, Sara Balloo, Brassbolts, James Hyal;
@@ -59,11 +59,11 @@ The RestedXP Alliance quests up to level 30 that we still don't route are unchan
 
 **Humble Beginnings (399), re-checked.** The quest is accepted in Stormwind, the compass is at Alexston Farmstead in Westfall, and the turn-in is back in Stormwind. Our route never passes the farmstead between two Stormwind visits before level 18, so it would cost a dedicated round trip. It stays out.
 
-## 3. Forever quests RestedXP doesn't route (from Zygor's quest IDs, facts checked with `questfacts.py`)
+## 3. Forever quests reference A doesn't route (from reference B's quest IDs, facts checked with `questfacts.py`)
 
 | Quest | Where it went | Notes |
 |---|---|---|
-| Camping 101: Skinning 96056 (Dwarf/Gnome) | `dunmorogh`: offered by Eric Brighthammer in Kharanos. Turned in to Balthus Stoneflayer, the Ironforge skinning trainer, on the level 12 Ironforge visit. | Optional, like Elwynn's. Zygor tracks a "Skinning 20" objective, and the step says so. |
+| Camping 101: Skinning 96056 (Dwarf/Gnome) | `dunmorogh`: offered by Eric Brighthammer in Kharanos. Turned in to Balthus Stoneflayer, the Ironforge skinning trainer, on the level 12 Ironforge visit. | Optional, like Elwynn's. Reference B tracks a "Skinning 20" objective, and the step says so. |
 | Camping 101: Skinning 97949 (Night Elf) | `teldrassil`: offered by Lyreena in Dolanaar. Turned in to Radnaal Maneweaver beside the Darnassus road. | Optional. Skinning 20. |
 | Business in Auberdine 97894 | `darkshore` lead-in: Borgus Steelhand (Stormwind, Dwarven District) to Gorbold Steelhand in Auberdine. | Optional and for races that leave from Stormwind, like Making Do. The turn-in shows whenever it's in your log. |
 | Reading Room 97234 / Shelf Picked 97237 | `lakeshire`: added to the Stormwind visit for Messenger to Stormwind. Roy Lewells (park), then Donyal Tovald's library, four books, then back to Roy. | Optional: the errand crosses the city twice for two level 18 quests. |
@@ -77,7 +77,7 @@ The RestedXP Alliance quests up to level 30 that we still don't route are unchan
 - 77573: the client has the ID, but neither source names it.
 - Soothing Turtle Bisque 555: needs Cooking, level 31.
 
-**Cozy Sleeping Bag.** Neither reference routes it inside the leveling chapters. RestedXP has no Alliance version at all, and Zygor keeps a separate guide. Ours is the Cozy Sleeping Bag special guide (QuestSpecialData.lua). Until now nothing in the route pointed to it.
+**Cozy Sleeping Bag.** Neither reference routes it inside the leveling chapters. Reference A has no Alliance version at all, and reference B keeps a separate guide. Ours is the Cozy Sleeping Bag special guide (QuestSpecialData.lua). Until now nothing in the route pointed to it.
 
 ## 4. Alternate routes and special guides
 

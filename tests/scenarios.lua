@@ -1025,7 +1025,7 @@ function S.questLoginWetlandsLocal()
   check(questText(win(), "The Greenwarden"), "an optional breadcrumb in your log shows its turn-in")
 end
 
--- Outleveled pickups leave the route (Zygor/RestedXP) and guides show progress by level band.
+-- Outleveled pickups leave the route and guides show progress by level band.
 function S.questGrey()
   local sections = LevelingCodexQuests.ALLIANCE.sections
   local function step(kind, id, name, level, chain)
@@ -1052,7 +1052,7 @@ function S.questGrey()
   check(questText(frame, "Accept - Grey Errand"), "the setting keeps grey pickups in the route")
 end
 
--- RestedXP-style dungeon plans, Zygor-style "find a group", chain position and a full log.
+-- Dungeon plans, "find a group", chain position and a full log.
 function S.questDungeonPlan()
   local sections = LevelingCodexQuests.ALLIANCE.sections
   local function step(kind, id, name, text, extra)

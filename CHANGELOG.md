@@ -22,7 +22,7 @@
 ### Alliance quest guide
 
 - **More routes.** New alternate routes for Ashenvale, Stonetalon, the early Wetlands, late Redridge and Duskwood, and Southshore. The **Guide library** in the Quests tab searches guides, quest names and IDs. It also has dungeon checklists (before, inside and after the run) and special quest chains such as Seeking Caitlin and the Cozy Sleeping Bag. You can track up to three active quests in the step window.
-- **More quests, 1-30.** We compared the route with the RestedXP Forever guides and added about 110 quests they route that we didn't, grouped into loops at each hub:
+- **More quests, 1-30.** We compared the route with published Forever leveling guides and added about 110 quests they route that we didn't, grouped into loops at each hub:
   - Elwynn and Dun Morogh errands, the Deeprun Tram rats, the Dwarf/Gnome Honor Students flight chain and the Moss-twined Heart.
   - The Westfall lighthouse, Redridge's late bounties, and Duskwood's Look to the Stars, Sven and Abercrombie chains.
   - Darkshore's Murkdeep board, escorts and Absent Minded Prospector.
@@ -33,7 +33,7 @@
 - **Guide list by level.** The Quests tab groups the leveling guides into level bands. Each guide shows how much of it you've done and whether it's current, suggested, done, outleveled or for later. Suggested guides are in gold.
 - **Outleveled pickups leave the route.** A pickup that has gone grey for your level is dropped, unless a later quest needs it. Dropped pickups are listed under Missed quests > Outleveled. Turn on Settings > Keep grey quests in the route to keep them.
 - **Tidier step window.** The banner shows the guide's short name and always fits its frame. The level range sits beside the step title. The Pin button and the "Unverified" labels are gone.
-- **Forever quests RestedXP skips.** Added:
+- **Forever quests other guides skip.** Added:
   - the Dwarf/Gnome and Night Elf Camping 101 skinning lessons;
   - Stormwind's library errand (Reading Room, Shelf Picked);
   - Business in Auberdine and Unrequited Love (Darkshore to Menethil);

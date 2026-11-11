@@ -2467,7 +2467,6 @@ local lm = (function()
     "https://polestar.guide/guides/alliance/03-loch-modan",
     "https://warcraft.blizzplanet.com/world-of-warcraft-forever-loch-modan-quests/",
     "https://senseos.gg/wiki/wow-forever/interactive-map/loch-modan/",
-    "https://zygorguides.com/blog/important-tips-and-info-for-zygors-classic-guides/",
   } }
 end)()
 
@@ -2813,7 +2812,6 @@ local ds = (function()
       "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf",
       "https://www.wowhead.com/forever/quests/kalimdor/darkshore",
       "https://bindonforever.com/zones/darkshore",
-      "https://zygorguides.com/blog/new-smart-injection-system-quest-catchup-feature-for-classic/",
     },
   }
 end)()

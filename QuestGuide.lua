@@ -282,7 +282,7 @@ local function makeItemButton()
   itemButton = b
   b:SetSize(40, 40)
   b:SetFrameStrata("MEDIUM")
-  b:RegisterForClicks("AnyUp", "AnyDown") -- Forever follows retail's key-down setting (as Zygor does)
+  b:RegisterForClicks("AnyUp", "AnyDown") -- Forever follows retail's key-down setting
   b.icon = b:CreateTexture(nil, "ARTWORK")
   b.icon:SetAllPoints()
   local border = b:CreateTexture(nil, "OVERLAY")
@@ -299,7 +299,7 @@ local function makeItemButton()
   b:Hide()
 end
 
--- The target button (RestedXP's targeting): a secure macro button under the item button that
+-- The target button: a secure macro button under the item button that
 -- targets the current step's quest giver by name. Same combat rules as the item button.
 local targetButton -- false = the client can't make one
 local TARGET_TYPES = { accept = true, turnin = true }

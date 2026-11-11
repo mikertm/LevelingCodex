@@ -324,7 +324,7 @@ local function render()
     y = y + 36
   end
 
-  -- Guides by level band (as Zygor's guide menu): progress, a status tag, the suggested ones in gold.
+  -- Guides by level band: progress, a status tag, the suggested ones in gold.
   local column = (W - 12) / 2
   local suggestedSet = {}
   for _, section in ipairs(choices) do suggestedSet[section] = true end

@@ -1,6 +1,6 @@
-# Darkshore, Ashenvale, Stonetalon, Wetlands and Southshore: RXP gap fill
+# Darkshore, Ashenvale, Stonetalon, Wetlands and Southshore: reference gap fill
 
-This pass routes the quests that the RestedXP Forever guides use between levels 12 and 30 in Darkshore, Ashenvale, Stonetalon and the Wetlands, where our route didn't have them. The gaps come from the RXP chapters 14-16 and 16-19 Darkshore, 19-21 and 20-21 Darkshore/Ashenvale, both copies of 21-23 Ashenvale/Stonetalon, 23-24 Wetlands (including the Hunter variant), 27-29 Wetlands/Hillsbrad, 27-29 Wetlands/Excavation Site and 29-30 Ashenvale. Every added quest ID is in the Forever client reference (build 1.60.1.70862). Levels, prerequisites, races, NPC and object positions come from `tools/questfacts.py`. RXP and Zygor were used only for quest order, grouping and the positions of Forever-only objects (RXP world yards were converted to map percentages using two known NPCs per map). All step text is original.
+This pass routes the quests that reference A's Forever guides use between levels 12 and 30 in Darkshore, Ashenvale, Stonetalon and the Wetlands, where our route didn't have them. The gaps come from the reference A chapters 14-16 and 16-19 Darkshore, 19-21 and 20-21 Darkshore/Ashenvale, both copies of 21-23 Ashenvale/Stonetalon, 23-24 Wetlands (including the Hunter variant), 27-29 Wetlands/Hillsbrad, 27-29 Wetlands/Excavation Site and 29-30 Ashenvale. Every added quest ID is in the Forever client reference (build 1.60.1.70862). Levels, prerequisites, races, NPC and object positions come from `tools/questfacts.py`. The references were used only for quest order, grouping and the positions of Forever-only objects (Reference A world yards were converted to map percentages using two known NPCs per map). All step text is original.
 
 **"The new Forever area at level 20."** The client has no zone named Swamplands. The match is Forever's reworked Wetlands: more than 25 new quests from about level 20, the Excavation Site dungeon, and the Auberdine to Menethil to Southshore boat line. This pass completes the Wetlands coverage in the main `wet` route (26-30) and the early `wetlands-early` chapter (20-25).
 
@@ -16,11 +16,11 @@ Sections touched: QuestData.lua `ds` (Darkshore) and `wet` (Wetlands), QuestAlte
 | 982 Deep Ocean, Vast Sea | Gorbold in the third Auberdine stop. Both lockboxes (38.2, 28.8 and 39.6, 27.5) go `along` with the Thresher Eyes on the north coast. Turned in on the north-loop return. | Same stretch of water as Buzzbox 411. |
 | 4740 WANTED: Murkdeep! | Poster at the south-loop pickups (min 15). Murkdeep spawns at the huts (36.5, 76.6) between the beached creature and Onu. Turned in after the hearth. | On the road south, next to 4728. |
 | 731 The Absent Minded Prospector (escort) | Taken right after 729 at Remtravel and turned in to Hollee after the hearth. | The escort starts where 729 ends. |
-| 741, 942 The Absent Minded Prospector | 741 from Hollee. A Darnassus leg after Volcor (flight or ferry to Rut'theran, portal, Greywhisker) gives 942. The chapter then ends with the Menethil ship and the 942 hand-in to Flagongut. | Both RXP and Zygor carry the fossil through Darnassus to the Wetlands. The Wetlands chapters start in Menethil, so the section now ends there. |
+| 741, 942 The Absent Minded Prospector | 741 from Hollee. A Darnassus leg after Volcor (flight or ferry to Rut'theran, portal, Greywhisker) gives 942. The chapter then ends with the Menethil ship and the 942 hand-in to Flagongut. | Both references carry the fossil through Darnassus to the Wetlands. The Wetlands chapters start in Menethil, so the section now ends there. |
 | 968 The Powers Below | `startItem = 5352`. A `withItem` accept after the Peerless Eye (Twilight Disciples and Thugs drop the book) and the last step of the section, Gerrig in Ironforge. | Item-started, so both steps stay hidden unless you have the book or the quest. |
 | 2078 Gyromast's Revenge | Right after 2098 at Gelkak. The robot is at 55.8, 18.3. | Same spot as its prerequisite. |
 | 97926 Making Do (Forever) | Race-limited (Human, Dwarf, Gnome, Skyborne): Baros in Stormwind before the ship, Thundris at the first Auberdine stop. | The section already starts with the Stormwind ship. Night Elves arrive from Teldrassil and never pass Baros. |
-| 2178 Easy Strider Living, 1141 The Family and the Fishing Pole | Marked `optional` (Settings > Show optional quests). Strider meat near the bear trap (46, 33), grouper from the Auberdine pier. | Cooking 10 and Fishing gate these. RXP marks them as auction-house or skill steps. |
+| 2178 Easy Strider Living, 1141 The Family and the Fishing Pole | Marked `optional` (Settings > Show optional quests). Strider meat near the bear trap (46, 33), grouper from the Auberdine pier. | Cooking 10 and Fishing gate these. Reference A marks them as auction-house or skill steps. |
 
 ### Ashenvale early (`ashenvale-early`, 18-24)
 
@@ -33,7 +33,7 @@ Sections touched: QuestData.lua `ds` (Darkshore) and `wet` (Wetlands), QuestAlte
 
 ### Ashenvale late (`ashenvale-late`, 24-30)
 
-The last circuit is reworked into one sweep, following RXP 29-30.
+The last circuit is reworked into one sweep, following reference A 29-30.
 
 1. Fallen Sky Lake (1035) is taken from Pelturas at the Astranaar stop before the level 28 check.
 2. After that check: the Shrine of Aessina (1022 hand-in moved here, plus Velinde Starsong 1037 and Vile Satyr! 1021 from Illiyana), then Maestra's Post (1140 from Delgren).
@@ -85,21 +85,21 @@ The last circuit is reworked into one sweep, following RXP 29-30.
 | Quest | Reason |
 | --- | --- |
 | 994 Escape Through Force | Exclusive with 995 Escape Through Stealth, which `ds` already routes. The 995 step tells players who chose Force to skip. |
-| 730 Trouble In Darkshore? | A Darnassus breadcrumb to 729, which RXP gives to Night Elf Druids only. It belongs to the Teldrassil and Darnassus flow. `ds` takes 729 straight from Hollee. |
+| 730 Trouble In Darkshore? | A Darnassus breadcrumb to 729, which reference A gives to Night Elf Druids only. It belongs to the Teldrassil and Darnassus flow. `ds` takes 729 straight from Hollee. |
 | 952 Grove of the Ancients | A Night Elf breadcrumb from Fandral in Darnassus (requires 940) to Onu. The Darkshore section never visits Darnassus before the grove, and a hand-in without its pickup in the same path fails the audit. Belongs to the Teldrassil route if wanted. |
 | 97914 Expanding Horizons | Night Elf letter from Thundris to Baros in Stormwind. The Darkshore section's exits are Ashenvale and Menethil, not Stormwind. Better placed where the Teldrassil route takes the Auberdine ship to Stormwind. |
 | 1073 and 1074 Ineptitude + Chemicals = Fun | Needs 4 Minor Mana Potions and 2 Elixirs of Minor Fortitude (alchemy or the auction house), then a trip back to Stonetalon. The 1072 hand-in mentions it. |
 | 1076 Devils in Westfall, 1078 Retrieval for Mauren | Follow from 1075 at Collin Mauren. 1076 needs Dust Devil Debris from Westfall Dust Devils (18-19, for example 44, 46 and 36, 65). It belongs to the Westfall owner but needs 1075 from Stonetalon first, so it would be grey by then. 1078 has no prerequisite and is taken from Mauren in Stormwind. Its Crystalized Scales come from Stonetalon basilisks (Blackened 23-24 around 36, 48 and 45, 44; Singed and Scorched 25-28 in the Charred Vale). It fits a Stormwind stop before the `stonetalon` chapter. |
 | 1059 Reclaiming the Charred Vale (follow-up) | Sends you to Falfindel on the Feralas and Thousand Needles border, outside this route. |
-| 1094 Further Instructions | Ziz Fizziks to Sputtervalve in Ratchet. RXP uses it only for Warlocks already going to the Barrens. |
+| 1094 Further Instructions | Ziz Fizziks to Sputtervalve in Ratchet. Reference A uses it only for Warlocks already going to the Barrens. |
 | 1032 Satyr Slaying! | Level 32. It needs a second trip to Xavian after 1031 is handed in at the Shrine. Leave it for 30 and up. |
-| 1039 The Barrens Port, 1081 Reception from Tyrande | Ratchet, and an RXP skip. |
+| 1039 The Barrens Port, 1081 Reception from Tyrande | Ratchet, and an reference A skip. |
 | 1167 The Tower of Althalaxx (after 1140) | Goes back to Balthule in Darkshore at 28+ and continues past 30. |
 | 463 The Greenwarden | Breadcrumb from Fitzsimmons to Rethiel. Both Wetlands chapters reach Rethiel before Menethil, so it would only add a trip. |
-| 469 Daily Delivery | RXP marks it skip and Zygor omits it. It may be unavailable in Forever. The Excavation Site checklist already points to Einar if Halloran has no offer. |
-| 98216 Understanding Our Present | Level 31. The Goaz Warder fight is a group fight (RXP: skip without a group). |
+| 469 Daily Delivery | Reference A marks it skip and reference B omits it. It may be unavailable in Forever. The Excavation Site checklist already points to Einar if Halloran has no offer. |
+| 98216 Understanding Our Present | Level 31. The Goaz Warder fight is a group fight (Reference A: skip without a group). |
 | 98283 Carnage | Carnage is a level 30 elite you summon in the Raptor Ridge cave (4300 HP, calls for help). Group quest. |
-| 465 Nek'rosh's Gambit, 474 Defeat Nek'rosh, 98223 Old Habits | 465 opens only after 464 is handed in on the last Menethil visit, so it would need a third eastern trip. Nek'rosh is level 32 and RXP routes him for Hunters, Warlocks and Mages only. The spellbook for 98223 sits in his camp. |
+| 465 Nek'rosh's Gambit, 474 Defeat Nek'rosh, 98223 Old Habits | 465 opens only after 464 is handed in on the last Menethil visit, so it would need a third eastern trip. Nek'rosh is level 32 and reference A routes him for Hunters, Warlocks and Mages only. The spellbook for 98223 sits in his camp. |
 | 304 A Grim Task, 88756 Bring Back a Bang, 87318, 88757 and 88758 (Villard chain) | Levels 32-34. Dun Modr's Dark Iron camps and the elite saboteurs in the span. |
 | 634 Plea To The Alliance | Leads to Refuge Pointe in Arathi. The 633 hand-in step says to leave it. |
 | 647 MacKreel's Moonshine | Picked up in Arathi by the span and handed in at Southshore. `southshore` is a separate path, so the hand-in can't go there (the audit requires the pickup in the same path). Taking it in `wet` would leave a quest with no route. |
@@ -108,9 +108,9 @@ The last circuit is reworked into one sweep, following RXP 29-30.
 
 ## Facts that disagree between sources
 
-- Apprentice's Duties (471): QuestieDB Forever lists 484 as its prerequisite, and Zygor takes 471 without 484. The route does 484 first. That costs little: the skins are next to town.
-- The Powers Below (968): RXP shows it as an accept step for Shamans only. The quest data says an item drop (Book: The Powers Below from Twilight Disciples and Thugs) for all races. It is routed as item-started.
-- Fall of Dun Modr (472): requires level 25 and has quest level 25. RXP and Zygor both turn it in at the start of the Dun Modr trip, so it sits with the Thandol Span (min 28) at the end of the eastern sweep.
+- Apprentice's Duties (471): QuestieDB Forever lists 484 as its prerequisite, and reference B takes 471 without 484. The route does 484 first. That costs little: the skins are next to town.
+- The Powers Below (968): Reference A shows it as an accept step for Shamans only. The quest data says an item drop (Book: The Powers Below from Twilight Disciples and Thugs) for all races. It is routed as item-started.
+- Fall of Dun Modr (472): requires level 25 and has quest level 25. Both references turn it in at the start of the Dun Modr trip, so it sits with the Thandol Span (min 28) at the end of the eastern sweep.
 - Velinde Starsong (1037): Melyria is at the Shrine of Aessina in the Forever spawn data. Classic placed her at Forest Song. Illiyana is also at the shrine (21.7, 53.3), not in Forest Song.
 
 ## Check in game

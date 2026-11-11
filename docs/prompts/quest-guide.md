@@ -4,7 +4,7 @@ Paste everything below the line into a new Claude Code session opened in this re
 
 ---
 
-Build a step-by-step questing guide into Leveling Codex: a Zygor-style route that tells an Alliance player
+Build a step-by-step questing guide into Leveling Codex: a route that tells an Alliance player
 exactly what to do next (accept, kill, loot, turn in, travel, fly, hearth, train) so they level 1-60 the
 efficient way without missing quests. Read `CLAUDE.md` first and follow every rule in it (Lua 5.1, ASCII
 runtime text, guarded APIs, `pcall` RegisterEvent, no globals, both .toc identical, harness before every
@@ -28,7 +28,7 @@ summary, test results and an in-game checklist.
    (the solo pickups and lead-in chains), so a player who decides to run the dungeon already has its quests.
    The run itself, the in-dungeon objectives and the turn-ins that only exist because of the dungeon are
    optional steps that a Settings switch shows or hides. The main route never depends on a dungeon.
-5. **Zygor-style UI:** a small always-on step window, a direction arrow, and a Quests tab in `/codex`.
+5. **Guide UI:** a small always-on step window, a direction arrow, and a Quests tab in `/codex`.
 
 ## What's already researched (don't redo it)
 
@@ -73,9 +73,9 @@ downloads tables from there):
 - **Sources for the facts:** wowhead.com/classic quest pages and warcraft.wiki.gg for quest ID, giver, turn-in
   NPC, coordinates, level, required level, prerequisites, chains, and which race/class can take it.
 - Facts (IDs, NPC names, coordinates, levels) are fine to use. **Write every step's text yourself**; never
-  paste a guide's prose. Never use paid guides (Zygor, RestedXP), and that includes the Zygor copy under
+  paste a guide's prose. Never use paid guides, and that includes the reference copy under
   `C:\Dev\Starbreak\reference\`: don't open it. Never ship or bulk-import another addon's database (Questie is
-  GPL, ForeverQuest and RXP have their own terms); looking up the facts for the quests in our route is fine.
+  GPL, ForeverQuest and other guide add-ons have their own terms); looking up the facts for the quests in our route is fine.
 - Write down the sources for each section in `tools/audits/<date>-quests.md`, like the profession audits.
 - Classic facts may be stale where Forever changed a zone (all starting zones, Wetlands). Mark those
   sections `verified = false` until I've played them with the recorder, and show "unverified" in the UI.

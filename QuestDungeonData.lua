@@ -375,7 +375,7 @@ do
   q(389, "Bazil Thredd", 22, 16, 373)
   q(391, "The Stockade Riots", 29, 16, 389)
   q(387, "Quell The Uprising", 26, 22)
-  -- After the riots: the Stormwind chain that unmasks Lescovar (RestedXP runs it straight after the Stockade).
+  -- After the riots: the Stormwind chain that unmasks Lescovar (a reference guide runs it straight after the Stockade).
   local shaw = at("Master Mathias Shaw", 78.31, 70.74, m.stormwind)
   local elling = at("Elling Trias", 66.03, 74.1, m.stormwind)
   local tyrion = at("Tyrion", 73.23, 35.58, m.stormwind)
