@@ -701,7 +701,8 @@ end
 -- Each Horde race starts in its own zone at level 1 and never sees the Alliance route.
 for name, start in pairs({ Orc = { "Valley of Trials", "Your Place In The World" },
     Troll = { "Valley of Trials", "Your Place In The World" },
-    Tauren = { "Camp Narache", "Camp Narache" } }) do
+    Tauren = { "Camp Narache", "Camp Narache" },
+    Scourge = { "Deathknell", "Deathknell" } }) do
   S["questStartHorde" .. name] = function()
     MOCK.faction, MOCK.race, MOCK.level = "Horde", name, 1
     S.login()
