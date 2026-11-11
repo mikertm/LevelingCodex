@@ -195,7 +195,9 @@ function Q.setPlanned(id, on)
 end
 
 -- Optional steps: dungeon pickups follow the plan, the rest (profession intros, errands) a setting.
+-- `logOnly` steps (work on a quest picked up elsewhere) show only while it is in the log.
 local function included(step)
+  if step.logOnly then return step.quest ~= nil and log[step.quest] ~= nil end
   if not step.optional or (step.quest and log[step.quest]) then return true end
   if step.dungeon then return Q.planned(step.dungeon) end
   return ns.db().questOptional == true

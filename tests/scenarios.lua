@@ -1670,6 +1670,42 @@ function S.questLoginWetlandsLocal()
   check(questText(win(), "The Greenwarden"), "an optional breadcrumb in your log shows its turn-in")
 end
 
+-- Warriors with Fire Hardened Mail collect its Scorched Spider Fangs from the same Thelgen Rock
+-- stalkers as Alchemical Hazards' gland; nobody else sees the step.
+local function thelgenRoute(log)
+  MOCK.race, MOCK.level, MOCK.questLog = "Human", 22, log
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 52.6, 62.9
+  S.login()
+  slash("quests")
+  click(win(), "Show all steps")
+end
+
+function S.questWarriorFangs()
+  thelgenRoute({
+    { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" }, { text = "Charred Horn: 0/12" },
+      { text = "Galvanized Horn: 0/1" }, { text = "Vial of Phlogiston: 0/1" } } },
+  })
+  check(questText(win(), "Complete - Alchemical Hazards") and questText(win(), "Complete - Fire Hardened Mail"),
+    "a Warrior with Fire Hardened Mail collects the fangs at Thelgen Rock")
+end
+
+function S.questWarriorFangsOtherClass() -- run as a Mage
+  thelgenRoute({
+    { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" } } },
+  })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+    "other classes never get the Warrior's fang step")
+end
+
+function S.questWarriorFangsNotTaken()
+  LevelingCodexDB = { questOptional = true } -- even with optional quests shown
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+    "without Fire Hardened Mail in the log there is no fang step")
+end
+
 -- Outleveled pickups leave the route and guides show progress by level band.
 function S.questGrey()
   local sections = LevelingCodexQuests.ALLIANCE.sections

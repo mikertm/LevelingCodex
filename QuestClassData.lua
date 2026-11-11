@@ -228,6 +228,19 @@ do
       accept(1782, furen),
       finish(1782, furen, "Collect the Fire Hardened Hauberk from Furen."),
     } })
+  -- Thelgen Rock's Leech and Cave Stalkers drop the hauberk's Scorched Spider Fangs (QuestieDB:
+  -- item 6838 from Leech Stalkers around 54, 64 and 47, 62) as well as Alchemical Hazards' gland,
+  -- so a Warrior carrying Fire Hardened Mail fills the fangs right after the gland. `logOnly`:
+  -- the step shows only while the quest is in the log, so Warriors without it never see it.
+  local function thelgenFangs(x, y)
+    local step = B.objectiveAt(1701, at(nil, x, y, m.wetlands),
+      "Warriors with Fire Hardened Mail: the Leech and Cave Stalkers in Thelgen Rock also drop Scorched Spider Fangs. Stay until you have all 50.",
+      "50 Scorched Spider Fangs")
+    step.objectiveIndex, step.logOnly = 1, true
+    return step
+  end
+  inline("wetlands-early", "complete", 98282, { thelgenFangs(52.6, 62.9) })
+  inline("wetlands", "complete", 98282, { thelgenFangs(48.7, 62.4) })
 
   local humanGnome = { human, gnome }
   local grimand = at("Grimand Elmore", 59.73, 33.78, m.stormwind)
