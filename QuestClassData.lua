@@ -1729,5 +1729,157 @@ do
     } })
 end
 
-linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone", "hunter-green-drake", "priest-blood-of-morphaz", "rogue-azure-key", "mage-destroy-morphaz" })
+-- Warlock: the felsteed at 40 on the route, the Orb of Orahil, and Impsy's chains in Felwood.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, note, optional, withItem = B.accept, B.finish, B.objectiveAt, B.note, B.optional, B.withItem
+  local warlock = "WARLOCK"
+  local qdb = "QuestieDB Forever 0f7d8ad"
+  local strahad = at("Strahad Farsan", 62.63, 35.5, m.barrens)
+  local menara = at("Menara Voidrender", 62.51, 35.45, m.barrens)
+  local demisette = at("Demisette Cloyce", 39.24, 84.96, m.stormwind)
+  local tabetha = at("Tabetha", 46.06, 57.09, m.dustwallow)
+
+  -- Briarthorn (Ironforge) and Demisette (Stormwind) give the same letter for Strahad.
+  q(4487, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  q(4488, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  q(4490, "Summon Felsteed", 40, 40, nil, nil, warlock)
+  B.breadcrumb(4487, 4490)
+  B.breadcrumb(4488, 4490)
+  inline("badlands-41", "accept", 687, {
+    accept(4487, at("Briarthorn", 50.35, 5.66, m.ironforge),
+      "Warlocks: from level 40, Briarthorn, the warlock trainer in the same cavern, has your felsteed letter for Strahad in Ratchet."),
+  })
+  inline("stv-41", nil, nil, {
+    optional(finish(4488, strahad, "Give Demisette's letter to Strahad Farsan, uphill behind Ratchet.")),
+    finish(4487, strahad, "Warlocks: climb the hill behind Ratchet to Strahad Farsan."),
+    accept(4490, strahad),
+    finish(4490, strahad, "Speak with Strahad again to learn Summon Felsteed."),
+  })
+
+  q(4965, "Knowledge of the Orb of Orahil", 35, 35, nil, nil, warlock)
+  q(4968, "Knowledge of the Orb of Orahil", 35, 35, nil, nil, warlock)
+  q(1799, "Fragments of the Orb of Orahil", 40, 35, nil, nil, warlock)
+  q(4962, "Shard of a Felhound", 40, 35, nil, nil, warlock)
+  q(4961, "Cleansing of the Orb of Orahil", 40, 35, 1799, nil, warlock)
+  q(4976, "Returning the Cleansed Orb", 40, 35, 4961, nil, warlock)
+  q(4964, "The Completed Orb of Dar'Orahil", 40, 35, 4976, nil, warlock)
+  B.breadcrumb(4965, 1799)
+  B.breadcrumb(4968, 1799)
+  side({ id = "warlock-orb-of-orahil", title = "Warlock: The Orb of Orahil", zone = m.barrens,
+    levels = { 38, 41 }, class = warlock,
+    sources = { qdb, "https://www.wowhead.com/forever/quest=1799", "https://www.wowhead.com/forever/quest=4964" },
+    steps = {
+      accept(4968, demisette,
+        "From level 35, Demisette Cloyce below the Slaughtered Lamb has Knowledge of the Orb of Orahil. Briarthorn in Ironforge gives the same referral."),
+      optional(finish(4965, menara, "Give Briarthorn's referral to Menara Voidrender above Ratchet.")),
+      finish(4968, menara, "Take the Booty Bay boat to Ratchet. Menara Voidrender stands beside Strahad, uphill behind the town."),
+      accept(1799, menara),
+      note(accept(4962, at("Acolyte Wytula", 62.64, 35.3, m.barrens),
+        "Speak with Menara's acolytes. This guide takes Acolyte Wytula's felhound path; Acolyte Magaz offers an infernal one instead."),
+        "Check which orb each acolyte's path leads to."),
+      withItem(12647, goal(4962, at(nil, 56.0, 75.0, m.desolace),
+        "In Desolace, use the Felhas Ruby on a felhound (Mage Hunters and Mana Eaters) at Mannoroc Coven.",
+        "Imprisoned Felhound Spirit")),
+      goal(1799, at(nil, 53.0, 78.0, m.desolace), "Kill Burning Blade Summoners at Mannoroc Coven until an Infernal Orb drops.",
+        "Infernal Orb"),
+      finish(1799, tabetha, "Fly to Theramore and follow the road west to Tabetha's hut."),
+      accept(4961, tabetha, "Heal up first: Tabetha calls out the Demon of the Orb, a level 40 elite."),
+      goal(4961, tabetha, "Kill the Demon of the Orb beside Tabetha's hut, then speak with her.", "Demon of the Orb slain"),
+      finish(4961, tabetha),
+      accept(4976, tabetha),
+      finish(4962, menara, "Take the cleansed orb, the ruby and the spirit back to Menara above Ratchet."),
+      finish(4976, menara),
+      accept(4964, menara),
+      finish(4964, menara, "Wait while Menara completes the orb, then speak with her again for the Orb of Dar'Orahil."),
+    } })
+
+  local impsy = at("Impsy", 41.36, 45.02, m.felwood)
+  local niby = at("Niby the Almighty", 41.38, 44.85, m.felwood)
+  q(8419, "An Imp's Request", 52, 50, nil, nil, warlock)
+  q(8420, "Hot and Itchy", 52, 50, nil, nil, warlock)
+  -- Either An Imp's Request or Impsy's own Hot and Itchy opens The Wrong Stuff.
+  q(8421, "The Wrong Stuff", 52, 50, nil, nil, warlock)
+  q(8422, "Trolls of a Feather", 52, 50, 8421, nil, warlock)
+  side({ id = "warlock-trolls-of-a-feather", title = "Warlock: Trolls of a Feather", zone = m.felwood,
+    levels = { 52, 54 }, class = warlock, links = { "dungeon-sunken-temple" },
+    sources = { qdb, "https://www.wowhead.com/forever/quest=8422" },
+    steps = {
+      accept(8419, demisette,
+        "From level 50, Demisette Cloyce below the Slaughtered Lamb has An Imp's Request. If you are already in Felwood, use Next and take Hot and Itchy from Impsy: same task, same follow-up."),
+      goal(8419, nil,
+        "Get a piece of Felcloth: Legashi satyrs in north-east Azshara and the Felguard Sentries by the Dark Portal drop it, or buy one.", "Felcloth"),
+      finish(8419, impsy, "Impsy floats beside Niby the Almighty, west of the road through Felwood."),
+      optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy.")),
+      accept(8421, impsy),
+      goal(8421, at(nil, 49.8, 23.2, m.felwood),
+        "Kill Irontree Stompers in the Irontree Woods of northern Felwood for Rotting Wood. Tainted Oozes along the Bloodvenom river near Jaedenar (40, 52) drop the essence.",
+        "10 Rotting Wood", "4 Bloodvenom Essence"),
+      finish(8421, impsy),
+      accept(8422, impsy, "Trolls of a Feather needs a Sunken Temple group."),
+      goal(8422, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Inside the Sunken Temple, kill the six troll minibosses on the upper ring for two Amber, two Blue and two Green feathers.",
+        "2 Amber Voodoo Feather", "2 Blue Voodoo Feather", "2 Green Voodoo Feather"),
+      finish(8422, impsy, "Bring the feathers back to Impsy in Felwood."),
+    } })
+
+  q(7601, "What Niby Commands", 50, 50, nil, nil, warlock)
+  q(7602, "Flawless Fel Essence", 55, 50, 7601, nil, warlock)
+  q(7603, "Kroshius' Infernal Core", 55, 50, 7602, nil, warlock)
+  side({ id = "warlock-kroshius", title = "Warlock: Kroshius' Infernal Core", zone = m.felwood,
+    levels = { 54, 56 }, class = warlock,
+    sources = { qdb, "https://www.wowhead.com/forever/quest=7603" },
+    steps = {
+      accept(7601, niby, "Niby the Almighty and his imp Impsy stand west of the road through central Felwood."),
+      finish(7601, impsy),
+      accept(7602, impsy),
+      goal(7602, at(nil, 37.6, 50.2, m.felwood),
+        "Collect three Flawless Fel Essences: from Jaedenar Legionnaires in Felwood, Legashi satyrs in north-east Azshara (61, 21) and Felguard Sentries by the Dark Portal in the Blasted Lands (58, 51).",
+        "Flawless Fel Essence (Jaedenar)", "Flawless Fel Essence (Azshara)", "Flawless Fel Essence (Dark Portal)"),
+      finish(7602, impsy),
+      accept(7603, impsy, "Kroshius is a level 55 elite infernal. Bring help if you need it."),
+      withItem(18626, goal(7603, at("Kroshius' Remains", 45.7, 34.76, m.felwood),
+        "Go to Shatter Scar Vale and use the Fel Fire beside Kroshius' remains. Kill Kroshius when he wakes and take his core.",
+        "Kroshius' Infernal Core")),
+      finish(7603, niby, "Bring the core back to Niby the Almighty."),
+    } })
+end
+
+-- Druid: Torwa Pathfinder's poison in Un'Goro, ending at the bottom of the Sunken Temple.
+do
+  local m, at, q = B.maps, B.at, B.q
+  local accept, finish, goal, withItem = B.accept, B.finish, B.objectiveAt, B.withItem
+  local druid = "DRUID"
+  local torwa = at("Torwa Pathfinder", 71.64, 75.96, m.ungoro)
+  q(9063, "Torwa Pathfinder", 52, 50, nil, nil, druid)
+  q(9052, "Bloodpetal Poison", 52, 50, 9063, nil, druid)
+  q(9051, "Toxic Test", 52, 50, 9052, nil, druid)
+  q(9053, "A Better Ingredient", 52, 50, 9051, nil, druid)
+  side({ id = "druid-better-ingredient", title = "Druid: A Better Ingredient", zone = m.ungoro,
+    levels = { 52, 54 }, class = druid, links = { "dungeon-sunken-temple" },
+    sources = { "QuestieDB Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=9053" },
+    steps = {
+      accept(9063, at("Mathrengyl Bearwalker", 35.37, 8.4, m.darnassus),
+        "From level 50, Mathrengyl upstairs in the Cenarion Enclave sends you to Torwa. Sheldras Moontree in Stormwind and Loganaar in Moonglade give it too."),
+      finish(9063, torwa, "Torwa Pathfinder camps just inside Un'Goro Crater's south-east entrance from Tanaris."),
+      accept(9052, torwa),
+      goal(9052, at(nil, 49.0, 80.0, m.ungoro),
+        "Kill Gorishi wasps at the hive in southern Un'Goro for their stings. Pick Bloodcaps from the red Bloodpetal sprouts you pass across the crater.",
+        "8 Gorishi Sting", "8 Bloodcap"),
+      finish(9052, torwa),
+      accept(9051, torwa),
+      withItem(22432, goal(9051, at("Devilsaur", 41.0, 27.5, m.ungoro),
+        "Find a Devilsaur and use the Devilsaur Barb on it. Devilsaurs are elite: get clear once you have stabbed it.",
+        "Stab a Devilsaur")),
+      finish(9051, torwa),
+      accept(9053, torwa, "A Better Ingredient needs a Sunken Temple group."),
+      goal(9053, at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp),
+        "Kill Atal'alarion, the guardian at the bottom of the Sunken Temple, for the Putrid Vine.", "Putrid Vine"),
+      finish(9053, torwa, "Bring the vine back to Torwa in Un'Goro Crater."),
+    } })
+end
+
+linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightstone", "hunter-green-drake",
+  "priest-blood-of-morphaz", "rogue-azure-key", "mage-destroy-morphaz", "warlock-trolls-of-a-feather",
+  "druid-better-ingredient" })
 linkRun("dungeon-uldaman", { "mage-celestial-power" })
