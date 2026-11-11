@@ -1,5 +1,5 @@
 {
- "build": "1.60.1.70862",
+ "build": "1.60.1.70888",
  "product": "wowf",
  "source": "https://wago.tools",
  "classes": {
@@ -780,7 +780,7 @@
      "spell": 18562,
      "icon": "inv_relics_idolofrejuvenation",
      "ranks": [
-      "Instantly heals a target with your active Rejuvenation or Regrowth effect for an amount equal to the full duration of the periodic effect of the consumed spell."
+      "Instantly heals a target with your active Rejuvenation or Regrowth effect for an amount equal to the full duration of the periodic effect."
      ],
      "node": 104912,
      "prereq": []
@@ -3965,7 +3965,7 @@
       "stances": [
        "Tree of Life"
       ],
-      "desc": "Instantly heals a target with your active Rejuvenation or Regrowth effect for an amount equal to the full duration of the periodic effect of the consumed spell."
+      "desc": "Instantly heals a target with your active Rejuvenation or Regrowth effect for an amount equal to the full duration of the periodic effect."
      }
     ],
     "Swipe": [

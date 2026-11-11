@@ -40,6 +40,7 @@ local function start()
   ns.startTalentGuide()
   ns.startProfessions()
   ns.startCraftGuide()
+  ns.startTrainerGuide()
 end
 
 local events = CreateFrame("Frame")
@@ -159,6 +160,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet") ..
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..

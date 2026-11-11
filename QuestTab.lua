@@ -167,6 +167,35 @@ local function renderLibrarySection(rows, section, y)
   return y
 end
 
+-- Quest log cleanup: quests no guide uses and grey ones. Abandon takes two clicks; the second
+-- must come within 5 seconds.
+local confirmAbandon, confirmAt
+local function renderCleanup(y)
+  local unused = Q.unusedQuests()
+  if #unused == 0 then return y end
+  y = y + 6 + U.sectionTitle("Quest log cleanup", y + 6)
+  y = y + U.T("Quests no guide of yours uses, and grey quests that give little XP. Abandoning one frees log space.",
+    0, y, W, "small", C.dim) + 6
+  local buttonWidth = math.floor(W * 0.46)
+  for _, quest in ipairs(unused) do
+    local name = Q.plain(quest.title)
+    U.T(name .. "\n" .. quest.reason, 0, y + 1, W - buttonWidth - 8, "small", C.light)
+    local armed = confirmAbandon == quest.id and GetTime() - (confirmAt or 0) < 5
+    U.btn(armed and "Click again to abandon" or ("Abandon " .. name), W - buttonWidth, y, buttonWidth, function()
+      if confirmAbandon == quest.id and GetTime() - (confirmAt or 0) < 5 then
+        confirmAbandon = nil
+        if Q.abandon(quest.id) then ns.say("abandoned " .. name .. ".")
+        else ns.say("this client can't abandon quests from the Codex. Use the quest log.") end
+      else
+        confirmAbandon, confirmAt = quest.id, GetTime()
+      end
+      U.refresh()
+    end, armed, "Abandon this quest. Click twice to confirm.")
+    y = y + 32
+  end
+  return y
+end
+
 local function renderActive(y)
   local active, pinned = {}, {}
   for id in pairs(Q.logEntries()) do active[#active + 1] = id end
@@ -195,7 +224,7 @@ local function renderActive(y)
     end
     y = y + 28
   end
-  return y
+  return renderCleanup(y)
 end
 
 local function renderLibrary(rows, sections, y)
@@ -324,7 +353,7 @@ local function render()
     y = y + 36
   end
 
-  -- Guides by level band (as Zygor's guide menu): progress, a status tag, the suggested ones in gold.
+  -- Guides by level band: progress, a status tag, the suggested ones in gold.
   local column = (W - 12) / 2
   local suggestedSet = {}
   for _, section in ipairs(choices) do suggestedSet[section] = true end

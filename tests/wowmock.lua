@@ -47,16 +47,17 @@ MOCK.knownEvents = {
   -- optional: the minimal client doesn't know these (MOCK.setup removes them)
   PLAYER_ALIVE = true, PLAYER_UNGHOST = true, MINIMAP_UPDATE_TRACKING = true, LEARNED_SPELL_IN_TAB = true,
   SPELLS_CHANGED = true, SKILL_LINES_CHANGED = true, CHAT_MSG_SKILL = true, TRADE_SKILL_SHOW = true,
-  TRADE_SKILL_UPDATE = true, TRADE_SKILL_CLOSE = true, TRAINER_SHOW = true, TRAINER_CLOSED = true,
+  TRADE_SKILL_UPDATE = true, TRADE_SKILL_CLOSE = true, TRAINER_SHOW = true, TRAINER_CLOSED = true, TRAINER_UPDATE = true,
   GAME_PAD_ACTIVE_CHANGED = true,
 }
 MOCK.optionalEvents = { "GAME_PAD_ACTIVE_CHANGED", "PLAYER_ALIVE", "PLAYER_UNGHOST", "MINIMAP_UPDATE_TRACKING", "LEARNED_SPELL_IN_TAB", "SPELLS_CHANGED",
   "SKILL_LINES_CHANGED", "CHAT_MSG_SKILL", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE", "TRAINER_SHOW",
-  "TRAINER_CLOSED" }
+  "TRAINER_CLOSED", "TRAINER_UPDATE" }
 for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
   "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED", "NEW_TAXI_PATH",
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
-  "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED" }) do
+  "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
+  "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -70,6 +71,10 @@ C_QuestLog = {
     for _, q in ipairs(MOCK.questLog) do if q.questID == id then return q.objectives end end
   end,
   IsQuestFlaggedCompleted = function(id) return MOCK.questDone[id] or false end,
+  -- Abandoning: the selected quest goes when AbandonQuest runs after SetAbandonQuest (MOCK.abandoned).
+  SetSelectedQuest = function(id) MOCK.selectedQuest = id end,
+  SetAbandonQuest = function() MOCK.abandoning = MOCK.selectedQuest end,
+  AbandonQuest = function() MOCK.abandoned, MOCK.abandoning = MOCK.abandoning, nil end,
 }
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
@@ -81,16 +86,39 @@ C_Map = {
   GetPlayerMapPosition = function()
     return { GetXY = function() return MOCK.questX / 100, MOCK.questY / 100 end }
   end,
+  -- The map waypoint: MOCK.userWaypoint = { uiMapID, position = { x, y } } (0-1), MOCK.noWaypointMaps[map].
+  SetUserWaypoint = function(point) MOCK.userWaypoint = point end,
+  GetUserWaypoint = function() return MOCK.userWaypoint end,
+  ClearUserWaypoint = function() MOCK.userWaypoint = nil end,
+  CanSetUserWaypointOnMap = function(map) return not (MOCK.noWaypointMaps and MOCK.noWaypointMaps[map]) end,
 }
+C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
 function GetInstanceInfo()
   return MOCK.instanceName, MOCK.instanceName and "party" or "none", nil, nil, nil, nil, nil, MOCK.instanceID
 end
 function UnitOnTaxi() return MOCK.onTaxi or false end
+-- XP: MOCK.xp / MOCK.xpMax / MOCK.rested; MOCK.rewardXP[questID] for GetQuestLogRewardXP.
+function UnitXP() return MOCK.xp or 0 end
+function UnitXPMax() return MOCK.xpMax or 0 end
+function GetXPExhaustion() return MOCK.rested end
+function GetQuestLogRewardXP(id) return MOCK.rewardXP and MOCK.rewardXP[id] or 0 end
+-- Death: MOCK.ghost = released, MOCK.corpse = { map, x, y } (percent) for C_DeathInfo.
+function UnitIsGhost() return MOCK.ghost or false end
+C_DeathInfo = {
+  GetCorpseMapPosition = function(map)
+    local c = MOCK.corpse
+    if c and c[1] == map then return { GetXY = function() return c[2] / 100, c[3] / 100 end } end
+  end,
+}
 function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
 function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
 function TaxiNodeGetType(i) return MOCK.taxiNodes[i][2] end
+function TakeTaxiNode(i) MOCK.tookTaxi = i end
+-- The bind confirmation (CONFIRM_BINDER's popup): MOCK.binderConfirmed, MOCK.popupHidden.
+function ConfirmBinder() MOCK.binderConfirmed = true end
+function StaticPopup_Hide(which) MOCK.popupHidden = which end
 -- Quest log usable items, by log index: MOCK.questItems[i] = { link, icon }.
 MOCK.questItems = {}
 function GetQuestLogSpecialItemInfo(i)
@@ -105,6 +133,9 @@ C_GossipInfo = {
   GetActiveQuests = function() return MOCK.gossipActive end,
   SelectAvailableQuest = function(id) MOCK.gossipPicked = id end,
   SelectActiveQuest = function(id) MOCK.gossipPicked = id end,
+  -- MOCK.gossipOptions = { { gossipOptionID, name, icon } }; SelectOption records MOCK.gossipOption.
+  GetOptions = function() return MOCK.gossipOptions or {} end,
+  SelectOption = function(id) MOCK.gossipOption = id end,
 }
 function GetNumAvailableQuests() return #MOCK.greetingAvailable end
 function GetAvailableTitle(i) return MOCK.greetingAvailable[i] and MOCK.greetingAvailable[i].title end
@@ -118,6 +149,15 @@ function GetQuestID() return MOCK.interactionQuest end
 function GetNumQuestChoices() return MOCK.questChoices or 0 end
 function AcceptQuest() MOCK.questAccepted = MOCK.interactionQuest end
 function GetQuestReward() MOCK.questRewarded = MOCK.interactionQuest end
+-- Reward choices: MOCK.rewardChoices[i] = { name, count, sellPrice (nil = not cached yet) }.
+function GetQuestItemInfo(kind, i)
+  local r = kind == "choice" and MOCK.rewardChoices and MOCK.rewardChoices[i]
+  if r then return r[1], 134400, r[2] or 1, 2, true end
+end
+function GetQuestItemLink(kind, i)
+  local r = kind == "choice" and MOCK.rewardChoices and MOCK.rewardChoices[i]
+  if r then return "|cff1eff00|Hitem:" .. (70000 + i) .. "::::::::|h[" .. r[1] .. "]|h|r" end
+end
 
 ----------------------------------------------------------------------------
 -- Widgets
@@ -793,13 +833,20 @@ function SelectTradeSkill(i)
 end
 function GetTradeSkillSelectionIndex() return MOCK.trade and MOCK.trade.selected or 0 end
 
--- A trainer window: MOCK.trainer[i] = { name, skillName, skillLevel }.
+-- A trainer window: MOCK.trainer[i] = { name, skillName, skillLevel, rank =, category =, cost = }
+-- (category defaults to "available"); MOCK.tradeskillTrainer = a profession trainer; MOCK.money.
 MOCK.trainer = {}
 function GetNumTrainerServices() return #MOCK.trainer end
 function GetTrainerServiceInfo(i)
   local t = MOCK.trainer[i]
-  if t then return t[1], "", "available" end
+  if t then return t[1], t.rank or "", t.category or "available" end
 end
+function GetTrainerServiceCost(i)
+  local t = MOCK.trainer[i]
+  if t then return t.cost or 0 end
+end
+function IsTradeskillTrainer() return MOCK.tradeskillTrainer or false end
+function GetMoney() return MOCK.money or 0 end
 function GetTrainerServiceSkillReq(i)
   local t = MOCK.trainer[i]
   if t then return t[2], t[3], true end
@@ -824,6 +871,12 @@ C_Container = {
 }
 function GetItemInfo(link)
   local name = type(link) == "string" and link:match("%[(.-)%]")
+  for _, r in ipairs(MOCK.rewardChoices or {}) do
+    if r[1] == name then
+      if r[3] == nil then return nil end
+      return r[1], link, 2, 20, 15, "Armor", "Mail", 1, "INVTYPE_CHEST", 134400, r[3], 4
+    end
+  end
   for _, it in ipairs(MOCK.bagItems) do
     if it.name == name then
       if it.loaded == false then return nil end
@@ -1104,7 +1157,9 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
   "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",
-  "SmartNavigation_ClearIgnoreStatus" }
+  "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
+  "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
+  "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -1149,6 +1204,8 @@ local ALLOWED_GLOBALS = {
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
+for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
+ALLOWED_GLOBALS.ClassTrainerFrame = true
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}
   for k in pairs(_G) do MOCK.globals0[k] = true end

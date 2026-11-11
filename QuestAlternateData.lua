@@ -369,48 +369,101 @@ local helbrek = wet("Innkeeper Helbrek", 10.7, 61)
 local karl = wet("Karl Boran", 8.32, 58.57)
 local halloran = wet("James Halloran", 8.55, 55.74)
 local valstag = wet("Valstag Ironjaw", 10.1, 56.9)
+local stoutfist = wet("Captain Stoutfist", 9.86, 57.49)
+local fitz = wet("First Mate Fitzsimmons", 10.9, 59.64)
+local caitlin = wet("Caitlin Grassman", 11.88, 58.82)
+local sida = wet("Sida", 11.8, 57.99)
+local tarrel = wet("Tarrel Rockweaver", 11.5, 52.17)
 local damagedCrate = wet("Damaged Crate", 13.52, 41.38)
 local sealedBarrel = wet("Sealed Barrel", 13.6, 38.22)
 local buriedBarrel = wet("Half-buried Barrel", 13.94, 34.81)
 local flagongut = wet("Archaeologist Flagongut", 10.84, 60.43)
 local ormer = wet("Ormer Ironbraid", 38.18, 50.89)
+local merrin = wet("Merrin Rockweaver", 38.91, 52.34)
+local menethilHearth = { bind = "Menethil Harbor" }
 
+-- The Greenwarden is optional in the 26-30 route (it starts in Menethil, which that route reaches
+-- late). Here every loop starts in Menethil, so the breadcrumb is a normal step.
+local function always(step)
+  step.optional = nil
+  return step
+end
+
+-- The target button's creatures for a Forever drop the quest data doesn't list.
+local function targets(step, ...)
+  step.mobs = { ... }
+  return step
+end
+
+-- Menethil first: the Darkshore chapter's ship lands there, and the town gives every pickup for
+-- both coast loops and the one eastern trip. Notes: tools/audits/2026-11-11-wetlands-early.md.
 chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 25, {
   "https://bindonforever.com/zones/wetlands",
+  "https://games.gg/world-of-warcraft/guides/wow-forever-wetlands-leveling-guide/",
   "https://www.wowhead.com/forever/quest=484/young-crocolisk-skins",
 }, { "duskwood", "redridge-late", "ashenvale-late", "wetlands", "duskwood-late" }, {
-  action("goto", rethiel, "From Thelsamar, follow the road north through Dun Algaz, then head east into the Green Belt. From Menethil, follow the road east through the marsh."),
-  accept(463, wet("First Mate Fitzsimmons", 10.9, 59.64), "Only if you came by ship: First Mate Fitzsimmons on the Menethil docks sends you to Rethiel."),
-  finish(463, rethiel),
-  accept(276, rethiel),
-  objective(276, wet(nil, 63, 66.1), "Start with the Mosshide camps near the southern road. Focus on the lower-level Gnolls and Mongrels.", "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
-  finish(276, rethiel), accept(277, rethiel),
-  objective(277, wet(nil, 62.8, 57.1), "Pick off Fenrunners southeast of the Greenwarden for their flint.", "9 Crude Flint"),
-  finish(277, rethiel),
-  taxi("getfp", menethil, menethilFlight, "Follow the road west to Menethil Harbor and learn the flight path."),
-  action("sethearth", helbrek, "Bind at the Deepwater Tavern for the coastal trips.", { bind = "Menethil Harbor" }),
-  accept(279, karl), accept(98197, valstag),
-  check(accept(484, halloran, "Ask Halloran for the skin hunt. Use Next if he does not offer it."),
+  -- Menethil Harbor: flight path, bind and the pickups, in walking order.
+  taxi("getfp", menethil, menethilFlight,
+    "Start in Menethil Harbor: the Auberdine ship docks here. Walking from Loch Modan, follow the road from Dun Algaz west past the Green Belt; you come back east later. Learn the flight path."),
+  action("sethearth", helbrek, "Bind at the Deepwater Tavern. Every loop in this chapter ends back here.", menethilHearth),
+  accept(943, flagongut, "If you brought Remtravel's fossil, Flagongut upstairs in the tavern wants two finds from the Whelgar dig. Otherwise use Next."),
+  always(accept(463, fitz, "First Mate Fitzsimmons, outside the tavern, sends you to Rethiel in the Green Belt. You go there on the eastern trip.")),
+  accept(98282, caitlin, "Caitlin Grassman wants a gland from the stalkers in Thelgen Rock, on the eastern trip."),
+  accept(470, sida, "Sida's bag is inside one of the oozes at Ironbeard's Tomb, also on the eastern trip."),
+  accept(98197, valstag, "Valstag Ironjaw is in Menethil Keep."),
+  accept(279, karl, "Karl Boran is on the docks."),
+  check(accept(484, halloran, "Ask Halloran, by the north gate, for the skin hunt. Use Next if he does not offer it."),
     "Check whether Halloran offers this on a first visit to Menethil."),
-  accept(943, flagongut, "If you brought Remtravel's fossil from Darnassus, Flagongut by the docks wants two finds from the Whelgar dig. Otherwise use Next."),
-  objective(98197, wet(nil, 12.1, 52.5), "Gather sunken timber and iron near the harbor mouth. Surface for air between dives.", "6 Khaz Modan Timber", "30 Khaz Modan Iron"),
-  finish(98197, valstag),
-  along(objective(279, wet(nil, 15, 39.2), "Follow the coast north for Bluegill Murlocs. Look for Gobbler around 18, 40 and clear the guards before pulling him.", "12 Bluegill Murlocs", "Gobbler's Head"), 484),
-  objective(484, wet(nil, 19.15, 47.12), "On the way back south, check the marsh channels east of the beach for Young Wetlands Crocolisks. A few spawn just outside town.", "6 Young Crocolisk Skins"),
-  finish(484, halloran), finish(279, karl), accept(281, karl),
-  finish(281, damagedCrate), accept(284, damagedCrate),
+  finish(98461, tarrel, "Give Hollee's note to Tarrel Rockweaver on the north bridge."),
+  accept(305, tarrel, "Tarrel wants news of his sister Merrin at the Whelgar dig. You pass her on the way back west."),
+
+  -- First coast loop: the harbor, the murlocs and the young crocolisks.
+  objective(98197, wet(nil, 12.1, 52.5), "Gather the sunken timber and iron in the harbor water beside Tarrel's bridge. Surface for air between dives.",
+    "6 Khaz Modan Timber", "30 Khaz Modan Iron"),
+  along(objective(279, wet(nil, 15, 39.2), "Follow the coast north for Bluegill Murlocs. Gobbler walks with them near 18, 40: clear his guards before pulling him.",
+    "12 Bluegill Murlocs", "Gobbler's Head"), 484),
+  objective(484, wet(nil, 19.15, 47.12), "On the way back south, kill Young Wetlands Crocolisks in the marsh channels east of the beach. More sit just outside town near 15, 54.",
+    "6 Young Crocolisk Skins"),
+  finish(484, halloran, "Back at the north gate, give Halloran the skins. His next order is for the later Wetlands chapter."),
+  finish(98197, valstag), finish(279, karl), accept(281, karl),
+
+  -- Second coast loop: Karl's statuette from the murloc huts, then the captain.
+  finish(281, damagedCrate, "Go back up the coast to the Damaged Crate in the murloc camp."), accept(284, damagedCrate),
   finish(284, sealedBarrel), accept(285, sealedBarrel),
   finish(285, buriedBarrel), accept(286, buriedBarrel),
-  finish(286, karl, "Return south to Menethil with the statuette."),
-  -- The Whelgar dig: Ormer's first raptor hunt shares its raptors with Flagongut's stone.
-  action("goto", ormer, "Follow the main road east out of Menethil to Whelgar's Excavation Site."),
-  accept(294, ormer, "Ormer Ironbraid wants the raptors west of the dig thinned out."),
-  part(objective(943, wet("Flagongut's Fossil", 38.9, 52.2), "Pick up Flagongut's Fossil inside the dig site before heading back west.", "Flagongut's Fossil"), 2),
-  along(objective(294, wet(nil, 26.3, 46.1), "Kill Mottled Raptors and Screechers in the fields west of the dig.", "10 Mottled Raptors", "10 Mottled Screechers"), 943),
+  finish(286, karl, "Return south to Karl in Menethil with the statuette."),
+  accept(98189, karl),
+  finish(98189, stoutfist, "Captain Stoutfist is upstairs in Menethil Keep. His errand to Stormwind belongs to the later Wetlands chapter."),
+
+  -- The eastern trip: the Green Belt, Thelgen Rock and the Mosshide camps, then the dig on the way back.
+  action("goto", rethiel, "Take the road east out of Menethil, past the Whelgar dig. Keep to the road past the Dragonmaw at Angerfang, then find Rethiel among the trees east of the crossroads."),
+  always(finish(463, rethiel)), accept(276, rethiel),
+  targets(objective(98282, wet(nil, 52.6, 62.9),
+    "Follow the road south toward Dun Algaz to Thelgen Rock, the cave beside the road. Kill Leech and Cave Stalkers inside until one drops the gland.",
+    "Unruptured Stalker Gland"), "Leech Stalker", "Cave Stalker"),
+  objective(276, wet(nil, 63, 66.1), "Cross east to the Mosshide camps. Kill Gnolls and Mongrels; more camps lie south near 62, 72.",
+    "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
+  finish(276, rethiel, "Go back north to Rethiel."), accept(277, rethiel),
+  objective(277, wet(nil, 44.3, 34.0), "Head north-west, north of Angerfang, to the Mosshide camp by the stream. Fenrunners, Trappers and Mistweavers drop the flint.",
+    "9 Crude Flint"),
+  objective(470, wet(nil, 44.9, 26.1), "Continue north to Ironbeard's Tomb. Kill oozes until one drops Sida's Bag; the Black Oozes are the easiest.", "Sida's Bag"),
+  finish(277, rethiel, "Return south-east to Rethiel. His next quest, Blisters on the Land, is for the later Wetlands chapter."),
+  accept(294, ormer, "Follow the road west, past Angerfang, to Ormer Ironbraid at the Whelgar Excavation Site."),
+  finish(305, merrin, "Merrin Rockweaver is in the dig's cave."), accept(306, merrin),
+  part(objective(943, wet("Flagongut's Fossil", 38.9, 52.2), "Pick up Flagongut's Fossil in the same cave.", "Flagongut's Fossil"), 2),
+  along(objective(294, wet(nil, 26.3, 46.1), "Go west to the raptor fields. Kill Mottled Raptors and the tougher Screechers.", "10 Mottled Raptors", "10 Mottled Screechers"), 943),
   along(part(objective(943, wet(nil, 26.3, 46.1), "Mottled raptors of any kind can drop the Stone of Relu. Keep hunting until it drops.", "Stone of Relu"), 1), 294),
-  finish(294, ormer, "Return to Ormer at the dig site. His next hunt is part of the later Wetlands chapter."),
-  action("hearth", helbrek, "Return to Menethil Harbor.", { bind = "Menethil Harbor" }),
+  action("grind", wet(nil, 26.3, 46.1), "Fitzsimmons' quest in Menethil needs level 22. If you are below it, keep hunting raptors here.", { level = 22 }),
+  finish(294, ormer, "Return to Ormer. His next hunt is for the later Wetlands chapter."),
+
+  -- Back in Menethil: the turn-ins and the captain's mead.
+  action("hearth", helbrek, "Hearth to Menethil Harbor, or follow the road west.", menethilHearth),
   finish(943, flagongut),
+  accept(288, fitz, "From level 22: First Mate Fitzsimmons wants a drink."),
+  objective(288, helbrek, "Buy a Flagon of Dwarven Honeymead from Innkeeper Helbrek.", "Flagon of Dwarven Honeymead"),
+  finish(288, fitz, "Bring the mead to Fitzsimmons. His next quest, The Cursed Crew, is for the later Wetlands chapter."),
+  finish(98282, caitlin), finish(470, sida),
+  finish(306, tarrel, "Tell Tarrel on the north bridge that you found Merrin."),
   action("grind", menethil, "If you are under level 23, finish an open route before the tougher Wetlands fights.",
     { level = 23, suggest = { "duskwood", "ashenvale-early", "stonetalon", "lakeshire" } }),
 })
