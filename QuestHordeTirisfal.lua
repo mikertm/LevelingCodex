@@ -536,9 +536,7 @@ local sepulcher = (function()
     objectiveAt(1899, uc(nil, 55.43, 76.87), "Pick up Andron's Ledger from the table next to him.", "Andron's Ledger"),
     finish(1899, town.mennet), accept(1978, town.mennet),
     finish(1978, town.varimathras, "Take the ledger to Varimathras in the Royal Quarter."),
-    forDungeon(accept(5725, town.varimathras, "Ragefire Chasm: Varimathras in the Royal Quarter wants two books recovered from the chasm."),
-      "dungeon-ragefire-chasm"),
-    -- CARRY: turnin 5725 The Power to Destroy... at Varimathras (after Ragefire Chasm, dungeon file).
+    -- The Power to Destroy... (5725, Varimathras) is in the Ragefire Chasm checklist's prepare phase.
     action("goto", town.ucGate, "Ride the elevator up and leave the Undercity. Follow the road north to Brill."),
     finish(440, town.sevren, "Give Deliah's Ring to Magistrate Sevren in Brill."),
     action("train", nil, "Train spells for level", { level = 14 }),

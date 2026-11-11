@@ -82,11 +82,10 @@ q(846, "Revenge of Gann", 26, 17, 843)
 q(849, "Revenge of Gann", 26, 17, 846)
 q(98093, "Field to Clear", 23, nil, nil, true)
 q(893, "Weapons of Choice", 24, 17)
-q(1153, "A New Ore Sample", 29, 25, 893)
 q(1130, "Melor Sends Word", 30, 20)
 q(1131, "Steelsnap", 30, 20, 1130)
 -- Weapons of Choice needs three Razormane drops from the northern Barrens: optional, with its follow-up.
-quest[893].optional, quest[1153].optional = true, true
+quest[893].optional = true
 
 q(1087, "Cenarius' Legacy", 25, 20)
 q(1088, "Ordanus", 29, 20, 1087)
@@ -159,7 +158,8 @@ carriedQ(6462, "Troll Charm", 24, 19)
 
 -- CARRY chains: these prerequisites are turned in by the 12-22 files (or by CARRY lines that
 -- stay commented until integration). Delete this loop once the CARRY lines are live.
-for _, id in ipairs({ 441, 1066, 879, 6381, 6563 }) do quest[id].chain = nil end
+-- Raleigh and the Undercity follows The Engraved Ring, which only the Undead route takes.
+quest[441].race, quest[530].race = "SCOURGE", "SCOURGE"
 
 -- Thunder Bluff and Undercity trainers (QuestieDB spawns; RestedXP for the two it lacks).
 local tb = function(name, x, y) return at(name, x, y, M.thunderBluff) end
@@ -209,24 +209,16 @@ local sepulcher = (function()
   local stone = sp("Offering Stone", 58.12, 69.77)
   return {
     action("boat", zeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower north-east of the city. Take the zeppelin to Tirisfal Glades."),
-    -- CARRY: turnin 440 The Engraved Ring at Magistrate Sevren (accepted from Hadrec at the Sepulcher before 22)
-    --> finish(440, sevren, "Walk north-east from the zeppelin tower to Brill and give Deliah's ring to Magistrate Sevren in the town hall."),
-    accept(441, sevren, "If you carry Deliah's ring from the Sepulcher, Magistrate Sevren in Brill's town hall sends it on to the Undercity. Otherwise use Next."),
+    accept(441, sevren, "If you carry Deliah's ring from the Sepulcher, Magistrate Sevren in Brill's town hall sends it on to the Undercity."),
     finish(441, raleigh, "Enter the Undercity through the ruined city south of Brill. Raleigh stands in the Trade Quarter."),
     accept(530, raleigh),
-    forDungeon(accept(1013, at("Keeper Bel'dugur", 53.74, 54.46, M.undercity),
-      "Keeper Bel'dugur in the Apothecarium wants the Book of Ur from Shadowfang Keep."), "dungeon-shadowfang-keep"),
     taxi("getfp", garrett, "Undercity, Tirisfal", "Learn the Undercity flight path from Michael Garrett, the bat handler east of the Trade Quarter."),
     action("goto", karos, "Fly to the Sepulcher if you know the route. Otherwise leave the Undercity, follow the road west then south into Silverpine Forest and up to the Sepulcher."),
     taxi("getfp", karos, "The Sepulcher, Silverpine Forest", "Learn the Sepulcher flight path from Karos Razok."),
     accept(516, allister), accept(95981, allister),
     accept(493, sp("Apothecary Renferrel", 42.8, 40.86)),
-    -- CARRY: turnin 3301 Mura Runetotem at Mura Runetotem (accepted from Tonga at the Crossroads before 22)
-    --> finish(3301, sp("Mura Runetotem", 42.91, 41.99)),
-    -- CARRY: turnin 264 Until Death Do Us Part at Yuriv's Tombstone (accepted from Clarice Foster in Thunder Bluff before 22)
-    --> finish(264, sp("Yuriv's Tombstone", 44.19, 42.67), "Place Clarice's pendant on Yuriv's tombstone in the graveyard behind the Sepulcher."),
-    -- CARRY: turnin 92401 A Frightened Request at Tabitha Heartweaver (accepted in the Undercity before 22)
-    --> finish(92401, sp("Tabitha Heartweaver", 44.52, 43.02)),
+    finish(3301, sp("Mura Runetotem", 42.91, 41.99)),
+    finish(264, sp("Yuriv's Tombstone", 44.19, 42.67), "Place Clarice's pendant on Yuriv's tombstone in the graveyard behind the Sepulcher."),
     objectiveAt(530, sp("Valdred Moray", 44.6, 84.7), "Follow the road south past Pyrewood Village to the Greymane Wall. Kill Valdred Moray, a level 21 human camped beside the wall.",
       "Valdred Moray slain"),
     along(withItem(271343, accept(95884, sp(nil, 58.3, 71.3),
@@ -258,9 +250,8 @@ local hillsbrad = (function()
     accept(494, hb("Deathstalker Lesh", 20.79, 47.4), "Take the road east out of Silverpine into Hillsbrad. Deathstalker Lesh waits beside the road just past the border."),
     taxi("getfp", zarise, "Tarren Mill, Hillsbrad", "Follow the road north-east to Tarren Mill and learn the flight path from Zarise."),
     finish(493, lydon),
-    -- CARRY: turnin 1065 Journey to Tarren Mill at Apothecary Lydon (accepted from Zamah in Thunder Bluff before 22)
-    --> finish(1065, lydon),
-    accept(1066, lydon, "If you brought Zamah's note, Lydon now wants blood from the Syndicate mages. Otherwise use Next."),
+    finish(1065, lydon),
+    accept(1066, lydon, "If you brought Zamah's note, Lydon now wants blood from the Syndicate mages."),
     accept(496, lydon), accept(501, lydon),
     finish(494, darthalia), accept(527, darthalia),
     accept(549, hb("WANTED", 62.63, 20.75), "Read the WANTED poster outside the town hall."),
@@ -332,9 +323,7 @@ local barrensSouth = (function()
     taxi("fly", tbPlaces.tal, "Camp Taurajo, The Barrens", "Fly from Thunder Bluff to Camp Taurajo."),
     accept(879, mangletooth, "Mangletooth, the caged quilboar, wants three Razorfen leaders dead. If he does not offer it, use Next."),
     accept(97250, logmar),
-    withItem(5102, accept(884, ba("Owatanka", 46.4, 61.9), "If you kill Owatanka, a rare thunderhawk south-east of camp, use the tailspike he drops.")),
-    -- CARRY: complete 868 Egg Hunt at the Field of Giants (accepted from Korran at the Crossroads before 22)
-    --> objectiveAt(868, ba(nil, 42.91, 69.86), "Loot Silithid Eggs from the mounds in the Field of Giants south of camp. Kill a Silithid Harvester for the Digging Claw.", "12 Silithid Eggs", "Digging Claw"),
+    objectiveAt(868, ba(nil, 42.91, 69.86), "Loot Silithid Eggs from the mounds in the Field of Giants south of camp. Kill a Silithid Harvester for the Digging Claw.", "12 Silithid Eggs", "Digging Claw"),
     withItem(5138, accept(897, ba("Silithid Harvester", 43.1, 70.1), "If the Silithid Harvester drops its head in the Field of Giants, use it.")),
     accept(843, gann, "Follow the road south to Gann Stonespire's camp above Bael Modan."),
     accept(98093, sulhasa, "Sulhasa is stuck up the tree beside the road. She wants the lizards and hyenas cleared."),
@@ -355,18 +344,17 @@ local barrensSouth = (function()
     finish(98093, sulhasa),
     objectiveAt(97250, ba(nil, 49.08, 76.97), "Ride east toward the Dustwallow Marsh border and kill the Alliance soldiers and pillagers camped there.", "Encroaching Soldiers", "Outraged Pillagers"),
     action("goto", jorn, "Ride north back to Camp Taurajo."),
-    finish(884, jorn), finish(885, jorn), finish(897, jorn),
+    finish(885, jorn), finish(897, jorn),
     finish(97250, logmar),
     finish(879, mangletooth), accept(906, mangletooth),
     accept(6382, jorn, "Jorn Skyseer sends hunters to Senani Thunderheart in Ashenvale. Take it for the Ashenvale hunt quests."),
     accept(1130, jorn, "Jorn also has word for Melor Stonehoof in Thunder Bluff. Keep it for your next visit there."),
     accept(893, tatternack, "Tatternack wants three Razormane weapons. If you kept them from the northern Barrens, hand them in now."),
     objectiveAt(893, tatternack, "Hand Tatternack the Razormane Backstabber, the Charred Razormane Wand and the Razormane War Shield."),
-    finish(893, tatternack), accept(1153, tatternack, "Tatternack's next job is in Thousand Needles. Take it now."),
+    finish(893, tatternack),
     taxi("fly", ba("Omusa Thunderhorn", 44.45, 59.16), "Crossroads, The Barrens", "Fly to the Crossroads."),
     finish(906, ba("Thork", 51.5, 30.87)),
-    -- CARRY: turnin 868 Egg Hunt at Korran (accepted at the Crossroads before 22)
-    --> finish(868, ba("Korran", 51.07, 29.63)),
+    finish(868, ba("Korran", 51.07, 29.63)),
   }
 end)()
 
@@ -387,28 +375,20 @@ local stonetalon = (function()
     taxi("getfp", tharm, "Sun Rock Retreat, Stonetalon Mountains", "Learn the Sun Rock flight path from Tharm if you do not have it."),
     accept(1087, braelyn),
     accept(6282, maggran), accept(86576, maggran),
-    accept(6284, st("Wanted Poster: Besseleth", 59.06, 75.71), "Ride south-east on the road to the Webwinder Path and read the wanted poster for Besseleth."),
-    objectiveAt(6284, st("Besseleth", 53.1, 72.5), "Kill Besseleth, a level 21 spider in the webbed hollow to the west, and take her fang.", "Besseleth's Fang"),
-    -- CARRY: turnin 1092 Gerenzo's Orders at Ziz Fizziks (accepted from Piznik before 22)
-    --> finish(1092, ziz, "Ride north-east to Ziz Fizziks on the road below Windshear Crag."),
-    -- CARRY: complete 1068 Shredding Machines (XT:9), accepted from Seereth before 22
-    --> objectivePart(1068, 2, st("XT:9", 64.1, 56.6), "Kill the shredder XT:9 patrolling the logging road south of the crag.", "XT:9 slain"),
+    accept(6393, tsunaman, "Tsunaman stands by the entrance of Sun Rock Retreat."),
+    finish(1092, ziz, "Ride north-east to Ziz Fizziks on the road below Windshear Crag."),
+    accept(1096, ziz),
     withItem(5638, objectiveAt(1086, st(nil, 66.47, 45.45), "Climb into Windshear Crag to the Venture Co. sky port. Use the Toxic Fogger under or on top of the platform.")),
-    -- CARRY: complete 1068 Shredding Machines (XT:4)
-    --> objectivePart(1068, 1, st("XT:4", 64.1, 46.4), "Kill XT:4, which patrols the north side of the river.", "XT:4 slain"),
-    -- CARRY: complete 1096 Gerenzo Wrenchwhistle (accepted from Ziz before 22)
-    --> objectiveAt(1096, st("Gerenzo Wrenchwhistle", 64.5, 40.2), "Climb to the top of the tower at the north end of the crag and kill Gerenzo for his mechanical arm.", "Gerenzo's Mechanical Arm"),
-    -- CARRY: turnin 1096 Gerenzo Wrenchwhistle at Ziz Fizziks
-    --> finish(1096, ziz),
-    finish(6284, maggran, "Ride back west to Sun Rock Retreat."),
+    objectivePart(1068, 1, st("XT:4", 64.1, 46.4), "Kill XT:4, which patrols the north side of the river.", "XT:4 slain"),
+    objectiveAt(1096, st("Gerenzo Wrenchwhistle", 64.5, 40.2), "Climb to the top of the tower at the north end of the crag and kill Gerenzo for his mechanical arm.", "Gerenzo's Mechanical Arm"),
+    finish(1096, ziz),
+    action("goto", maggran, "Ride back west to Sun Rock Retreat."),
     objectiveAt(97538, st(nil, 47.27, 38.32), "Follow the road north to Mirkfallon Lake and loot Dried Mirkweed from the water.", "30 Mirkweed Pods"),
-    -- CARRY: complete 6301 Cycle of Rebirth (accepted from Tammra before 22)
-    --> objectiveAt(6301, st(nil, 45.95, 40.72), "Loot Gaea Seeds on the ground around the lake.", "10 Gaea Seeds"),
-    -- CARRY: complete 1058 Jin'Zil's Forest Magic (accepted from Jin'Zil before 22), four parts on Stonetalon Peak
-    --> objectivePart(1058, 3, st(nil, 44.51, 20.92), "Kill Antlered Coursers on the way north for their eyes.", "30 Courser Eyes"),
-    --> objectivePart(1058, 1, st(nil, 35.3, 16.7), "Kill Sap Beasts in the woods below the peak.", "5 Stonetalon Sap"),
-    --> objectivePart(1058, 2, st(nil, 32.24, 10.76), "Kill Twilight Runners near the top of the peak.", "5 Twilight Whiskers"),
-    --> objectivePart(1058, 4, st(nil, 33.96, 11.82), "Kill Fey Dragons and Wily Fey Dragons until one drops a scale.", "Fey Dragon Scale"),
+    objectiveAt(6301, st(nil, 45.95, 40.72), "Loot Gaea Seeds on the ground around the lake.", "10 Gaea Seeds"),
+    objectivePart(1058, 3, st(nil, 44.51, 20.92), "Kill Antlered Coursers on the way north for their eyes.", "30 Courser Eyes"),
+    objectivePart(1058, 1, st(nil, 35.3, 16.7), "Kill Sap Beasts in the woods below the peak.", "5 Stonetalon Sap"),
+    objectivePart(1058, 2, st(nil, 32.24, 10.76), "Kill Twilight Runners near the top of the peak.", "5 Twilight Whiskers"),
+    objectivePart(1058, 4, st(nil, 33.96, 11.82), "Kill Fey Dragons and Wily Fey Dragons until one drops a scale.", "Fey Dragon Scale"),
     objectiveAt(1087, st(nil, 36.5, 12.6), "Climb Stonetalon Peak. Kill Sons and Daughters of Cenarius and Cenarion Botanists among the trees at the top.",
       "4 Sons of Cenarius", "4 Daughters of Cenarius", "4 Cenarion Botanists"),
     action("goto", st(nil, 32.7, 63.3), "Ride back south past Sun Rock Retreat and west into the Charred Vale."),
@@ -418,22 +398,18 @@ local stonetalon = (function()
     action("goto", braelyn, "Ride east back to Sun Rock Retreat."),
     finish(1087, braelyn), accept(1088, braelyn),
     finish(6282, maggran), accept(6283, maggran),
-    -- CARRY: turnin 6301 Cycle of Rebirth at Tammra Windfield
-    --> finish(6301, tammra),
+    finish(6301, tammra),
     accept(6381, tammra, "Tammra wants the enchanted seeds planted in the Charred Vale. If you skipped her seed quest, use Next."),
     objectiveAt(6283, st("Bloodfury Ripper", 30.8, 61.9), "Return to the Charred Vale and kill Bloodfury Ripper on the harpy ridge.", "Bloodfury Ripper's Remains"),
     objectiveAt(6381, st(nil, 31.9, 64.25), "Plant the seeds in the Gaea Dirt Mounds across the burned valley floor.", "Gaea seed planted"),
-    -- CARRY: complete 6393 Elemental War (accepted from Tsunaman before 22)
-    --> objectiveAt(6393, st(nil, 28.8, 65.1), "Kill Burning Ravagers and fire spirits in the vale for Incendrites.", "10 Incendrites"),
+    objectiveAt(6393, st(nil, 28.8, 65.1), "Kill Burning Ravagers and fire spirits in the vale for Incendrites.", "10 Incendrites"),
     finish(86576, st("Mor'rogal", 47.22, 64.04), "Return to Sun Rock and give the sunstones to Mor'rogal."),
-    -- CARRY: turnin 6393 Elemental War at Tsunaman
-    --> finish(6393, tsunaman),
+    finish(6393, tsunaman),
     finish(6283, maggran), accept(5881, maggran),
     finish(6381, tammra),
-    -- CARRY: turnin 1058 Jin'Zil's Forest Magic at Witch Doctor Jin'Zil in Malaka'jin
-    --> finish(1058, jinzil, "Ride south-east down the road to Malaka'jin and bring Jin'Zil his reagents."),
-    -- CARRY: turnin 1068 Shredding Machines at Seereth Stonebreak on the Barrens border
-    --> finish(1068, seereth),
+    action("goto", jinzil, "Ride south-east down the road through Windshear Crag to Malaka'jin."),
+    finish(1058, jinzil, "Bring Jin'Zil his reagents."),
+    finish(1068, seereth),
   }
 end)()
 
@@ -467,12 +443,9 @@ local ashenvale = (function()
     withItem(16408, accept(1918, av("Tideress", 45.9, 70.6), "Kill Tideress, the elemental at the west end of the lake, and use the Befouled Water Globe she drops.")),
     withItem(16303, accept(23, av("Ursangous", 43.78, 68.86), "Find Ursangous, a level 25 bear roaming west of the lake. Use his paw to start the quest.")),
     action("goto", av("Ruul Snowhoof", 41.53, 34.49), "Ride north to Thistlefur Village and the cave of Thistlefur Hold. Give Astranaar, the Alliance town at 36, 50, a wide berth."),
-    -- CARRY: complete 6462 Troll Charm (accepted at Zoram'gar before 22)
-    --> objectiveAt(6462, av(nil, 40.39, 33.22), "Loot Troll Chests on the floor of Thistlefur Hold for Troll Charms.", "8 Troll Charms"),
     accept(6482, av("Ruul Snowhoof", 41.53, 34.49), "Talk to Ruul Snowhoof, caged at the back of the cave. This starts an escort."),
     objectiveAt(6482, av(nil, 38.73, 36.86), "Escort Ruul out of the hold and through the village. Kill the furbolgs that attack him."),
-    -- CARRY: complete 216 Between a Rock and a Thistlefur (accepted at Zoram'gar before 22)
-    --> objectiveAt(216, av(nil, 36.2, 36.0), "Kill Thistlefur Avengers and Shamans in the village outside the hold.", "8 Thistlefur Avengers", "8 Thistlefur Shaman"),
+    objectiveAt(216, av(nil, 36.2, 36.0), "Kill Thistlefur Avengers and Shamans in the village outside the hold.", "8 Thistlefur Avengers", "8 Thistlefur Shaman"),
     action("goto", av(nil, 57.5, 56.0), "Ride east along the main road toward Raynewood Retreat."),
     withItem(16304, accept(24, av("Shadumbra", 57.5, 56.0), "Find Shadumbra, a level 28 panther near Raynewood, and use her head to start the quest.")),
     objectiveAt(1088, av("Keeper Ordanus", 62.0, 51.4), "Climb the Raynewood Retreat building to the top and kill Keeper Ordanus. Two vindicators guard him and can summon treants.",
@@ -486,12 +459,8 @@ local ashenvale = (function()
     finish(23, senani), finish(24, senani), finish(2, senani),
     accept(247, senani), finish(247, senani),
     taxi("fly", vhulgra, "Zoram'gar Outpost, Ashenvale", "Fly to Zoram'gar Outpost on the west coast."),
-    -- CARRY: turnin 216 Between a Rock and a Thistlefur at Karang Amakkar
-    --> finish(216, karang),
-    -- CARRY: turnin 6462 Troll Charm at Mitsuwa
-    --> finish(6462, mitsuwa),
+    finish(216, karang),
     finish(824, jeneu),
-    forDungeon(accept(6563, jeneu, "Je'neu wants Sapphires of Aku'Mai from the caves of Blackfathom Deeps."), "dungeon-blackfathom-deeps"),
     forDungeon(accept(6921, jeneu, "Je'neu also wants a Fathom Core from inside Blackfathom Deeps."), "dungeon-blackfathom-deeps"),
     taxi("fly", av("Andruk", 12.24, 33.8), "Sun Rock Retreat, Stonetalon Mountains", "Fly to Sun Rock Retreat."),
     finish(1088, at("Braelyn Firehand", 45.94, 60.42, M.stonetalon)),
@@ -541,8 +510,7 @@ local needles = (function()
     accept(1149, dorn, "Leave Freewind and ride north-east to Dorn Plainstalker on his wooden platform."),
     objectiveAt(1149, tn(nil, 26.6, 34.2), "Wait for Dorn to send you to the planks on a needle. Jump from the very end of the plank: it teleports you down safely."),
     finish(1149, dorn), accept(1150, dorn),
-    along(objectiveAt(4821, tn(nil, 56.36, 50.39), "Search the canyon east of Freewind for the Alien Egg.", "Alien Egg"), 1153),
-    objectiveAt(1153, tn(nil, 60.3, 57.7), "Kill Gravelsnout Diggers and Surveyors at the kobold camp to the south-east until one drops the ore sample.", "Unrefined Ore Sample"),
+    objectiveAt(4821, tn(nil, 56.36, 50.39), "Search the canyon east of Freewind for the Alien Egg.", "Alien Egg"),
     along(objectiveAt(4841, tn(nil, 43.12, 36.86), "Kill Galak centaur in the camps north-west of Freewind.", "12 Galak Scouts", "10 Galak Wranglers", "6 Galak Windchasers"), 1197),
     objectiveAt(1197, tn(nil, 42.0, 31.8), "Kill Galak Flame Guards at Splithoof Hold until one drops the Cloven Hoof.", "Cloven Hoof"),
     finish(4841, longhorn, "Return to Freewind Post."), accept(5064, longhorn),
@@ -571,8 +539,6 @@ local needles = (function()
     action("train", nil, "Visit your class trainer in Thunder Bluff. Train spells for level", { level = 30 }),
   }
   local pinnacle = {
-    only(taxi("fly", tbPlaces.tal, "Camp Taurajo, The Barrens", "If you carry Tatternack's ore sample, fly to Camp Taurajo."), { optional = true }),
-    finish(1153, tatternack),
     taxi("fly", tbPlaces.tal, "Freewind Post, Thousand Needles", "Fly to Freewind Post."),
     finish(4767, elu),
     finish(98069, jandia), finish(98070, jandia),
@@ -639,7 +605,7 @@ local sources = {
 for _, section in ipairs({
   { id = "sepulcher", title = "Silverpine: The Sepulcher", zone = M.silverpine, levels = { 22, 23 }, steps = sepulcher },
   { id = "hillsbrad", title = "Hillsbrad Foothills", zone = M.hillsbrad, levels = { 23, 25 }, steps = hillsbrad },
-  { id = "barrens-south", title = "Southern Barrens", zone = M.barrens, levels = { 25, 26 }, steps = barrensSouth },
+  { id = "camp-taurajo", title = "Camp Taurajo", zone = M.barrens, levels = { 25, 26 }, steps = barrensSouth },
   { id = "stonetalon-sunrock", title = "Stonetalon: Sun Rock", zone = M.stonetalon, levels = { 25, 27 }, steps = stonetalon },
   { id = "ashenvale-splintertree", title = "Ashenvale: Splintertree", zone = M.ashenvale, levels = { 26, 28 }, steps = ashenvale },
   { id = "thousand-needles", title = "Thousand Needles", zone = M.needles, levels = { 28, 30 }, steps = needles,

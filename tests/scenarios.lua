@@ -715,6 +715,17 @@ for name, start in pairs({ Orc = { "Valley of Trials", "Your Place In The World"
   end
 end
 
+-- All Horde starts join the Barrens; each race only sees its own arrival quests.
+function S.questHordeBarrens()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 13, 1413
+  S.login()
+  check(questText(questViewer(), "The Crossroads"), "a level 13 Tauren in the Barrens is on the Crossroads guide")
+  slash("quests")
+  check(routeHas("Journey to the Crossroads") and not routeHas("Crossroads Conscription"),
+    "Tauren turn in their own arrival quest, not the Durotar one")
+  MOCK.faction = nil
+end
+
 local function classSideFixture()
   local function step(kind, id, name)
     return { type = kind, quest = id, name = name, text = "Test class chain.", min = 10, level = 10,

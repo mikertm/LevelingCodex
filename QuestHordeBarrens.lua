@@ -466,8 +466,8 @@ local sunrock = (function()
     finish(888, p.gazlowe),
     finish(1094, p.sputtervalve), accept(1095, p.sputtervalve),
     finish(865, p.mebok), finish(1069, p.mebok),
-    dungeon(accept(1491, p.mebok, "For Wailing Caverns, Mebok has a follow-up on his drinks."), "wailing-caverns"),
-    dungeon(accept(959, p.bigglefuzz, "For Wailing Caverns, the crane operator on the docks wants his port back."), "wailing-caverns"),
+    -- Smart Drinks (1491) and Trouble at the Docks (959) are in the Wailing Caverns checklist's prepare
+    -- phase; carrying them here would overfill the quest log through 22-30.
     finish(821, p.drohn),
     accept(92706, p.poster, "If you have a group, take Bruuz's poster. He is an elite shark in the water off the docks."),
     objectiveAt(92706, ba("Bruuz", 65.09, 39.09), "Swim out east of the docks with your group and kill Bruuz.", "Bruuz slain"),
@@ -476,7 +476,6 @@ local sunrock = (function()
     finish(875, p.darsok), accept(876, p.darsok, "Leave Serena for the trip back from Thunder Bluff."),
     finish(899, p.mankrik), finish(95774, p.mankrik),
     finish(880, p.tonga), accept(1489, p.tonga), accept(3301, p.tonga),
-    dungeon(accept(97003, p.gurak, "Gur'ak by the inn wants Chol'aruk, a group target for a Wailing Caverns run."), "wailing-caverns"),
     -- CARRY: turnin 3301 Mura Runetotem at Mura Runetotem, Silverpine Forest (22-30 file)
     accept(868, p.korran, "Korran's Egg Hunt is in the southern Barrens; keep it for later."),
     -- CARRY: complete and turnin 868 Egg Hunt at Korran (22-30 file, southern Barrens)
@@ -513,7 +512,8 @@ local sunrock = (function()
     objectiveAt(876, ba("Serena Bloodfeather", 39.16, 12.16),
       "Ride north-west to the far Witchwing roost. Serena Bloodfeather is at the top with her guards; pull them one by one.",
       "Serena's Head"),
-    finish(876, p.darsok, "Ride back south-east to Darsok at the Crossroads."), accept(1060, p.darsok),
+    action("goto", p.darsok, "Ride back south-east to the Crossroads."),
+    finish(876, p.darsok, "Hand Serena's head to Darsok."), accept(1060, p.darsok),
   }
 end)()
 

@@ -308,8 +308,7 @@ do
     accept(776, cairne), finish(99082, cairne), finish(98430, cairne),
     finish(5926, tb("Turak Runetotem", 76.48, 27.22), "Druids: Turak Runetotem is on Elder Rise. Your next druid quests are in the class guides."),
     only(accept(886, tb("Arch Druid Hamuul Runetotem", 78.62, 28.56), "Druids: Hamuul next to Turak sends you to the Crossroads."), { class = "DRUID" }),
-    forDungeon(accept(5723, rahauro, "If you plan to run Ragefire Chasm, Rahauro on Elder Rise has two quests for it."), "dungeon-ragefire-chasm"),
-    forDungeon(accept(5722, rahauro), "dungeon-ragefire-chasm"),
+    -- Rahauro's Ragefire Chasm quests (5722, 5723) are in that checklist's prepare phase.
     action("goto", liftTop, "Ride the lift down to Mulgore."),
     along(objective(744, 32.22, 29.44, "Go north along the cliffs to the Windfury harpies. Sorceresses drop Azure Feathers, Matriarchs drop Bronze Feathers. Pick up Windfury Cones under the trees as you go.",
       "6 Azure Feathers", "6 Bronze Feathers"), 76160),
