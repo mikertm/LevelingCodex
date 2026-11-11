@@ -100,6 +100,8 @@ local function makeViewer()
   viewer:SetFrameStrata("MEDIUM")
   viewer:SetMovable(true)
   viewer:SetClampedToScreen(true)
+  -- Keep the arrow (70 px tall, 6 px above the window) on screen too, e.g. beside a tracker at the top.
+  try(viewer.SetClampRectInsets, viewer, 0, 0, 76, 0)
   viewer:EnableMouse(true)
   viewer:RegisterForDrag("LeftButton")
   viewer:SetScript("OnDragStart", function(self)

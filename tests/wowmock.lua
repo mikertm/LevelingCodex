@@ -438,7 +438,8 @@ function Frame:SetBackdrop(b)
 end
 function Frame:SetBackdropColor(r, g, b) if not self._backdrop then error("SetBackdropColor without a backdrop", 2) end end
 function Frame:SetBackdropBorderColor(r, g, b) if not self._backdrop then error("SetBackdropBorderColor without a backdrop", 2) end end
-function Frame:SetClampRectInsets() end
+function Frame:SetClampRectInsets(l, r, t, b) self._clampInsets = { l or 0, r or 0, t or 0, b or 0 } end
+function Frame:GetClampRectInsets() return unpack(self._clampInsets or { 0, 0, 0, 0 }) end
 function Frame:SetParent(p)
   local old = self._parent
   if old and old._children then
