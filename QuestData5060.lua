@@ -88,7 +88,7 @@ local function build()
           if not finished[pre] and (dropped[pre] or gone[pre] or alternate or not mine[pre]) then keep = false end
         end
         if not keep then gone[id] = true end
-      elseif id and gone[id] then
+      elseif id and (gone[id] or dropped[id]) then
         keep = false
       end
       if keep then
@@ -345,7 +345,6 @@ do
   local parcel = wpl("Janice's Parcel", 38.73, 55.24)
 
   q(5090, "A Call to Arms: The Plaguelands!", 50, 50)
-  q(4512, "A Little Slime Goes a Long Way", 52, 48)
   q(3201, "At Last!", 48, 40, 3182)
   q(3448, "Passing the Burden", 52, 45)
   q(3449, "Arcane Runes", 52, 45, 3448)
@@ -363,14 +362,12 @@ do
   q(5216, "Target: Felstone Field", 53, 50, 5215)
   q(5217, "Return to Chillwind Camp", 53, 50, 5216)
   q(5021, "Better Late Than Never", 52, 50)
-  q(5022, "Better Late Than Never", 52, 50, 5021)
 
   chapter("wpl-51", "Western Plaguelands: Chillwind Camp", M.wpl, 51, 52, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
   }, {
     accept(5090, ironforge("Courier Hammerfall", 55.9, 81.4), "Courier Hammerfall rides a circuit through Ironforge. Stop him when he passes to take his call to arms."),
-    accept(4512, ironforge("Laris Geardawdle", 75.8, 23.4), "Laris Geardawdle, in the Hall of Explorers, wants ooze samples from Felwood."),
     finish(3182, thorius, "Curator Thorius stands in the Hall of Explorers."), accept(3201, thorius),
     finish(3368, thorius),
     accept(3448, ironforge("Historian Karnik", 77.5, 11.8)),
@@ -379,6 +376,8 @@ do
     optional(accept(7802, mistina, "If you carry spare cloth, Mistina Steelshield in the Great Forge takes donations for reputation and experience.")),
     optional(finish(7802, mistina)), optional(accept(7803, mistina)), optional(finish(7803, mistina)),
     optional(accept(7804, mistina)), optional(finish(7804, mistina)),
+    action("buy", ironforge("Auctioneer Buckler", 23.8, 71.8),
+      "Buy a Mithril Casing at the auction house, or make one if you are an engineer. A-Me 01 in Un'Goro needs it."),
     finish(3450, xiggs, "Xiggs Fuselighter waits in Tinker Town."), accept(3451, xiggs),
     finish(3451, xiggs, "Ask Xiggs for the flare gun you will use in Azshara."),
     taxi("fly", ironforge("Gryth Thurden", 55.5, 47.7), THELSAMAR, "Fly to Thelsamar for Pebblebitty."),
@@ -401,8 +400,7 @@ do
     objective(5216, cauldron, "Go north to Felstone Field. Kill Cauldron Lord Bilemaw beside the cauldron for its key.", "Felstone Field Cauldron Key"),
     finish(5216, cauldron, "Use the key on the cauldron."), accept(5217, cauldron),
     accept(5021, wpl("Janice Felstone", 38.4, 54.0), "Janice Felstone's ghost lingers in the farmhouse next to the field."),
-    finish(5021, parcel, "Her parcel sits in the barn beside her horse."), accept(5022, parcel,
-      "Keep the parcel: the census office in Stormwind's City Hall knows where Emma lives. Hand it in on a later Stormwind visit."),
+    finish(5021, parcel, "Her parcel sits in the barn beside her horse."),
     finish(5217, macdonnell, "Take the filled bottle back to MacDonnell at Chillwind Camp."),
   })
 end
@@ -430,8 +428,6 @@ do
   q(162, "Rise of the Silithid", 49, 39, 113)
   q(4267, "Rise of the Silithid", 46, 40, 4266)
   q(4493, "March of the Silithid", 53, 50, 162)
-  q(3763, "Assisting Arch Druid Staghelm", 50, 47)
-  q(3764, "Un'Goro Soil", 50, 47)
   q(2972, "Doling Justice", 47, 38, 2970)
   q(5535, "Spiritual Unrest", 47, 45)
   q(5536, "A Land Filled with Hatred", 47, 45)
@@ -447,6 +443,7 @@ do
   quest[939].startItem = 11668
   q(3908, "It's a Secret to Everybody", 52, 47, 3845)
   q(3909, "The Videre Elixir", 52, 47, 3908)
+  q(6603, "Trouble in Winterspring!", 56, 52)
   q(5158, "Seeking Spiritual Aid", 52, 48, 5157)
   q(4441, "Felbound Ancients", 54, 49, 939)
   q(7065, "Corruption of Earth and Seed", 51, 45)
@@ -471,10 +468,6 @@ do
     carried(finish(4267, dar("Gracina Spiritmight", 41.83, 85.62))),
     accept(4493, dar("Gracina Spiritmight", 41.83, 85.62), "Gracina sends you on to the alchemist in Gadgetzan. Keep it for your Tanaris trip."),
     carried(finish(2972, dar("Tyrande Whisperwind", 39.1, 81.59), "Give Jer'kai's ring to Tyrande on the temple's upper floor.")),
-    optional(accept(3763, dar("Innkeeper Saelienne", 67.4, 15.7), "Innkeeper Saelienne has a note for Fandral Staghelm.")),
-    optional(finish(3763, dar("Arch Druid Fandral Staghelm", 34.81, 9.26))),
-    optional(accept(3764, dar("Arch Druid Fandral Staghelm", 34.81, 9.26), "Hand in Un'Goro Soil here if you have 20 samples. If not, collect them in Un'Goro later.")),
-    optional(finish(3764, dar("Jenal", 31.49, 8.23))),
     action("goto", dar(nil, 29.5, 41.4), "Take the portal back down to Rut'theran Village."),
     taxi("fly", tel("Vesprystus", 58.4, 94.0), TALRENDIS,
       "Fly to Talrendis Point. If you have not learned it, fly to Astranaar and follow the east road into Azshara."),
@@ -490,14 +483,10 @@ do
       "6 Deadwood Warriors", "6 Deadwood Pathfinders", "6 Deadwood Gardeners"),
     finish(8460, grazle), accept(8462, grazle),
     accept(5155, greta), accept(5156, taronn), accept(4421, eridan),
-    along(objective(4421, fw(nil, 32.2, 67.1), "Go west to the Jadefire satyr camps at Shadow Hold. Xavathras commands the camp.",
-      "11 Jadefire Felsworns", "9 Jadefire Shadowstalkers", "9 Jadefire Rogues", "Xavathras"), 4512),
-    along(withItem(11914, B.objectivePart(4512, 1, fw(nil, 40.8, 66.9),
-      "Kill Cursed Oozes in the pools south of Jaedenar and use a Cursed Ooze Jar on each corpse.", "6 Filled Cursed Ooze Jar")), 5155),
-    along(objective(5155, fw(nil, 36.5, 61.4), "Fight into Jaedenar for hounds, guardsmen, adepts and cultists.",
-      "4 Jaedenar Hounds", "4 Jaedenar Guardsmen", "6 Jaedenar Adepts", "6 Jaedenar Cultists"), 4512),
-    along(withItem(11948, B.objectivePart(4512, 2, fw(nil, 40.0, 54.8),
-      "Tainted Oozes live in the pools north of Jaedenar. Use a Tainted Ooze Jar on each corpse.", "6 Filled Tainted Ooze Jar")), 5155),
+    objective(4421, fw(nil, 32.2, 67.1), "Go west to the Jadefire satyr camps at Shadow Hold. Xavathras commands the camp.",
+      "11 Jadefire Felsworns", "9 Jadefire Shadowstalkers", "9 Jadefire Rogues", "Xavathras"),
+    objective(5155, fw(nil, 36.5, 61.4), "Fight into Jaedenar for hounds, guardsmen, adepts and cultists.",
+      "4 Jaedenar Hounds", "4 Jaedenar Guardsmen", "6 Jaedenar Adepts", "6 Jaedenar Cultists"),
     finish(5155, greta), accept(5157, greta),
     finish(4421, eridan), accept(4906, eridan),
     withItem(12922, objective(5157, fw(nil, 35.2, 59.8), "Fill the Empty Canteen at the moonwell in the middle of Jaedenar.", "Corrupt Moonwell Water")),
@@ -515,6 +504,7 @@ do
     accept(3909, on.winterspring("Donova Snowden", 31.27, 45.16), "Donova asks about the Videre Elixir. Gregan in Feralas can help."),
     objective(978, on.winterspring(nil, 60.6, 33.7), "Moontouched Owlbeasts roam north of Everlook. Each one can drop a feather.", "10 Moontouched Feather"),
     taxi("getfp", on.winterspring("Maethrya", 62.3, 36.6), EVERLOOK, "Learn the Everlook flight path."),
+    accept(6603, on.winterspring("Meggi Peppinrocker", 60.66, 38.17), "Meggi Peppinrocker in Everlook sends you to Donova. You will see her on your next Winterspring visit."),
     taxi("fly", on.winterspring("Maethrya", 62.3, 36.6), TALONBRANCH, "Fly back to Talonbranch Glade, then ride south to the sanctuary."),
     finish(4101, arathandris), finish(5157, greta), accept(5158, greta, "Greta wants the water taken to Islen Waterseer in the Barrens."),
     finish(4906, eridan), finish(939, eridan), accept(4441, eridan, "Take Eridan's vial to the Temple of the Moon on a later Darnassus visit."),
@@ -528,6 +518,399 @@ do
     forDungeon(accept(7041, on.desolace("Talendria", 68.5, 8.88), "Talendria's Maraudon task is also a dungeon quest."), "dungeon-maraudon"),
     forDungeon(accept(7028, on.desolace("Willow", 62.2, 39.63), "Willow camps in the middle of Desolace. Her crystal carvings drop inside Maraudon."), "dungeon-maraudon"),
     taxi("fly", on.desolace("Baritanas Skyriver", 64.7, 10.5), FEATHERMOON, "Fly to Feathermoon Stronghold."),
+  })
+end
+
+-- 52-53: Feathermoon, the Forgotten Coast, Shay and the Maraudon pickups in Desolace.
+do
+  local fe = on.feralas
+  local troyas = fe("Troyas Moonbreeze", 31.78, 45.5)
+  local pratt = fe("Pratt McGrubben", 30.63, 42.71)
+  local zorbin = fe("Zorbin Fandazzle", 44.81, 43.42)
+  local gregan = fe("Gregan Brewspewer", 45.12, 25.57)
+  local rockbiter = fe("Rockbiter", 42.39, 22.0)
+  local shay = fe("Shay Leafrunner", 38.22, 10.3)
+  local monolith = fe("Equinex Monolith", 38.83, 13.17)
+  local nijel = { bind = "Nijel's Point" }
+
+  q(7733, "Improved Quality", 48, 40, 2821)
+  q(2879, "The Stave of Equinex", 50, 42, 2943)
+  q(7003, "Zapped Giants", 48, 45)
+  q(7721, "Fuel for the Zapping", 48, 45)
+  q(4142, "A Visit to Gregan", 52, 47, 4141)
+  q(2844, "The Giant Guardian", 49, 44)
+  q(2845, "Wandering Shay", 49, 44, 2844)
+  q(2942, "The Morrow Stone", 50, 42, 2879)
+  q(7067, "The Pariah's Instructions", 48, 39)
+  q(7044, "Legends of Maraudon", 49, 41)
+
+  chapter("feralas-52", "Feralas: Feathermoon and the Forgotten Coast", M.feralas, 52, 53, {
+    "https://www.wowhead.com/forever/zone=357/feralas",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    accept(7733, pratt, "Pratt McGrubben, by the Feathermoon inn, has a better job now that you brought his first hides."),
+    finish(2943, troyas, "Troyas Moonbreeze is in the building on the north side of the stronghold."), accept(2879, troyas),
+    action("boat", fe(nil, 31.0, 39.8), "Take the ferry from Feathermoon's east dock to the mainland. Use Next when you land.",
+      { name = "Feathermoon - Feralas" }),
+    accept(7003, zorbin, "Zorbin Fandazzle stands on the dock where the ferry lands."), accept(7721, zorbin),
+    along(withItem(18904, objective(7003, fe(nil, 46.0, 53.0), "Use Zorbin's Ultra-Shrinker on the giants wading south along the coast, then kill and loot them.",
+      "15 Miniaturization Residue")), 7721),
+    along(objective(7721, fe(nil, 46.0, 53.0), "Sea Elementals and Sea Sprays share the same beaches.", "10 Water Elemental Core"), 7003),
+    finish(7003, zorbin), finish(7721, zorbin),
+    objective(7733, fe(nil, 54.8, 32.8), "Ride north-east to the Rage Scar yeti caves and loot their hides.", "10 Rage Scar Yeti Hide"),
+    carried(finish(4142, gregan, "Gregan Brewspewer camps north of the yetis. Hand him the Bloodpetal if you carry it.")),
+    objective(3909, gregan, "Ask Gregan about the Videre Elixir. Buy the bait he asks for if he offers it.", "Videre Elixir"),
+    accept(2844, rockbiter, "Rockbiter, a gentle giant, sits at the edge of the Ruins of Ravenwind."),
+    finish(2844, shay, "Shay Leafrunner wanders far to the north-west, near the Equinex Monolith."), accept(2845, shay),
+    objective(2879, monolith, "Energize Troyas' stave at the nearby monolith.", "Stave of Equinex"),
+    finish(2879, monolith), accept(2942, monolith),
+    objective(2845, rockbiter, "Ring Shay's Bell whenever she wanders off, and walk her back to Rockbiter.", "Shay's Bell"),
+    finish(2845, rockbiter),
+    action("goto", on.desolace(nil, 50.4, 86.7), "Follow the road north out of Feralas into southern Desolace."),
+    forDungeon(accept(7067, on.desolace("Centaur Pariah", 50.42, 86.65), "The Centaur Pariah wanders south of the Kolkar camps. His amulet quest is done inside Maraudon."),
+      "dungeon-maraudon"),
+    forDungeon(accept(7044, on.desolace("Cavindra", 32.1, 64.0), "Cavindra waits at the Maraudon entrance. Take her quest before going in."),
+      "dungeon-maraudon"),
+    withGuide("dungeon-maraudon", action("note", on.desolace(nil, 29.1, 62.6),
+      "Maraudon is open for a group around this level. Plan it from the Quests tab, or skip it and continue.", { name = "Maraudon" })),
+    forDungeon(finish(7067, on.desolace("Centaur Pariah", 50.42, 86.65), "After the run, bring the Amulet of Union back to the Pariah."), "dungeon-maraudon"),
+    forDungeon(finish(7028, on.desolace("Willow", 62.2, 39.63), "Give Willow the crystal carvings on your way north."), "dungeon-maraudon"),
+    action("hearth", on.desolace("Innkeeper Lyshaerya", 66.3, 6.5), "Hearth to Nijel's Point, or ride north from Willow's camp.", nijel),
+    forDungeon(finish(7065, on.desolace("Keeper Marandis", 63.83, 10.67), "Hand in Theradras if your group killed her."), "dungeon-maraudon"),
+    forDungeon(finish(7041, on.desolace("Talendria", 68.5, 8.88)), "dungeon-maraudon"),
+    taxi("fly", on.desolace("Baritanas Skyriver", 64.7, 10.5), FEATHERMOON, "Fly to Feathermoon Stronghold."),
+    finish(2942, troyas), finish(7733, pratt),
+  })
+end
+
+-- 53: Ratchet, Kim'jael in Azshara and the rune rubbings.
+do
+  local az = on.azshara
+  local kimjael = az("Kim'jael", 53.45, 21.82)
+  local wiley = at("Innkeeper Wiley", 62.0, 39.4, M.barrens)
+  local ratchet = { bind = "Ratchet" }
+
+  q(3601, "Kim'jael Indeed!", 53, 47)
+  q(5534, "Kim'jael's \"Missing\" Equipment", 53, 47, 3601)
+  q(5159, "Cleansed Water Returns to Felwood", 54, 48, 5158)
+  q(4502, "Volcanic Activity", 55, 49)
+  q(3444, "The Stone Circle", 51, 46, 3445)
+
+  chapter("azshara-53", "Azshara: Kim'jael and the Runes", M.azshara, 53, 53, {
+    "https://www.wowhead.com/forever/zone=16/azshara",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    taxi("fly", on.feralas("Fyldren Moonfeather", 30.2, 43.2), RATCHET, "Fly to Ratchet."),
+    action("sethearth", wiley, "Bind at the Ratchet inn.", ratchet),
+    taxi("fly", at("Bragok", 63.1, 37.2, M.barrens), TALRENDIS, "Fly to Talrendis Point."),
+    accept(3601, kimjael, "Kim'jael, a goblin, stands on the cliff above the Thalassian camp in northern Azshara."),
+    objective(3601, az(nil, 56.6, 28.4), "Search the Thalassian Base Camp below him for his four lost items. The naga guards hit hard in pairs.",
+      "Kim'Jael's Compass", "Kim'Jael's Scope", "Kim'Jael's Stuffed Chicken", "Kim'Jael's Wizzlegoober"),
+    finish(3601, kimjael), accept(5534, kimjael),
+    withItem(10445, objective(3449, az(nil, 42.3, 64.1), "Ride south to the Ruins of Eldarath. Use Tymor's Drawing Kit at each of the four rune stones.",
+      "Rubbing: Rune of Beth'Amara", "Rubbing: Rune of Jin'yael", "Rubbing: Rune of Markri", "Rubbing: Rune of Sael'hai")),
+    objective(5534, az(nil, 46.0, 52.8), "Spitelash Myrmidons and Sirens in the same ruins carry Some Rune.", "Some Rune"),
+    finish(5534, kimjael),
+    action("grind", az(nil, 56.6, 28.4), "Kill naga and satyrs on the way back if you are short of level 54.", { level = 54 }),
+    finish(3449, az("Pilot Xiggs Fuselighter", 77.8, 91.3), "Go to the small island off the south-east peninsula and fire the flare gun. Xiggs lands to pick you up."),
+    action("hearth", wiley, "Hearth to Ratchet.", ratchet),
+    finish(5158, at("Islen Waterseer", 65.83, 43.78, M.barrens), "Islen Waterseer stands outside Ratchet to the south-east."),
+    accept(5159, at("Islen Waterseer", 65.83, 43.78, M.barrens), "Take the purified water back to Greta in Felwood."),
+    accept(4502, at("Liv Rizzlefix", 62.45, 38.73, M.barrens), "Liv Rizzlefix in Ratchet wants ash from Un'Goro's fire elementals."),
+    carried(finish(3444, at("Marvon Rivetseeker", 52.71, 45.92, M.tanaris), "Hand in the Stone Circle on your way through Tanaris if you carry it.")),
+  })
+end
+
+-- 53-54: Gadgetzan, Marshal's Refuge and the whole crater, then Darnassus.
+do
+  local ug = on.ungoro
+  local tan = on.tanaris
+  local williden = ug("Williden Marshal", 43.95, 7.14)
+  local holanyee = ug("Hol'anyee Marshal", 43.89, 7.24)
+  local collie = ug("J.D. Collie", 41.92, 2.7)
+  local spark = ug("Spark Nilminer", 43.5, 7.42)
+  local spraggle = ug("Spraggle Frock", 43.62, 8.5)
+  local shizzle = ug("Shizzle", 44.23, 11.59)
+  local torwa = ug("Torwa Pathfinder", 71.64, 75.96)
+  local krakle = ug("Krakle", 30.93, 50.44)
+  local karna = ug("Karna Remtravel", 46.38, 13.44)
+  local ame = ug("A-Me 01", 67.66, 16.76)
+  local pestlezugg = tan("Alchemist Pestlezugg", 50.89, 26.96)
+  local dar = function(name, x, y) return at(name, x, y, M.darnassus) end
+  local fandral = dar("Arch Druid Fandral Staghelm", 34.81, 9.26)
+  local mathrengyl = dar("Mathrengyl Bearwalker", 35.37, 8.4)
+  local erelas = at("Erelas Ambersky", 55.5, 92.05, M.teldrassil)
+
+  q(2661, "Delivery for Marin", 49, 44, 2641)
+  q(2662, "Noggenfogger Elixir", 49, 44, 2661)
+  q(4496, "Bungle in the Jungle", 53, 50, 4493)
+  q(3881, "Expedition Salvation", 53, 48)
+  q(3883, "Alien Ecology", 52, 48)
+  q(4284, "Crystals of Power", 53, 47)
+  q(4285, "The Northern Pylon", 53, 47, 4284)
+  q(4287, "The Eastern Pylon", 53, 47, 4284)
+  q(4288, "The Western Pylon", 53, 47, 4284)
+  q(4321, "Making Sense of It", 53, 47, { 4285, 4287, 4288 })
+  q(3882, "Roll the Bones", 51, 49)
+  q(4501, "Beware of Pterrordax", 55, 49)
+  q(4492, "Lost!", 55, 50)
+  q(4491, "A Little Help From My Friends", 55, 50, 4492)
+  q(4503, "Shizzle's Flyer", 51, 49)
+  q(4289, "The Apes of Un'Goro", 55, 47)
+  q(4291, "The Scent of Lar'korwi", 53, 48, 4290)
+  q(4301, "The Mighty U'cha", 55, 50, 4289)
+  q(4292, "The Bait for Lar'korwi", 56, 48, 4291)
+  q(974, "Finding the Source", 55, 51)
+  q(980, "The New Springs", 55, 51, 974)
+  q(3884, "Williden's Journal", 50, 48)
+  quest[3884].startItem = 11116
+  q(4243, "Chasing A-Me 01", 53, 48)
+  q(4244, "Chasing A-Me 01", 53, 48, 4243)
+  q(4245, "Chasing A-Me 01", 53, 48, 4244)
+  q(3763, "Assisting Arch Druid Staghelm", 50, 47)
+  q(3764, "Un'Goro Soil", 50, 47)
+  q(3781, "Morrowgrain Research", 50, 47, 3764)
+  q(1047, "The New Frontier", 55, 54)
+  q(6761, "The New Frontier", 55, 54, 1047)
+  q(6762, "Rabine Saturna", 55, 54, 6761)
+  q(979, "Find Ranshalla", 57, 52, 978)
+  q(5250, "Starfall", 56, 53)
+
+  chapter("ungoro-53", "Un'Goro Crater: Marshal's Refuge", M.ungoro, 53, 54, {
+    "https://www.wowhead.com/forever/zone=490/ungoro-crater",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    taxi("fly", at("Bragok", 63.1, 37.2, M.barrens), GADGETZAN, "Fly to Gadgetzan."),
+    carried(finish(2641, tan("Sprinkle", 51.06, 26.87), "Give Sprinkle the Violet Tragan if you picked one in the Hinterlands.")),
+    accept(2661, tan("Sprinkle", 51.06, 26.87)),
+    finish(4493, pestlezugg, "Alchemist Pestlezugg works on the north side of Gadgetzan."), accept(4496, pestlezugg),
+    finish(2661, tan("Marin Noggenfogger", 51.81, 28.66)), accept(2662, tan("Marin Noggenfogger", 51.81, 28.66)),
+    finish(2662, tan("Marin Noggenfogger", 51.81, 28.66), "Wait for Marin to brew the elixir, then speak to him again."),
+    taxi("fly", tan("Bera Stonehammer", 51.0, 29.3), MARSHAL,
+      "Fly to Marshal's Refuge. Without that flight path, ride west from Gadgetzan and down the ramp into Un'Goro."),
+    taxi("getfp", ug("Gryfe", 45.2, 5.8), MARSHAL, "Learn the Marshal's Refuge flight path."),
+    accept(3881, williden), accept(3883, holanyee),
+    accept(4284, collie, "J.D. Collie wants seven Power Crystals of each colour. Pick them up all over the crater as you go."),
+    finish(4284, collie, "Hand in the crystals if you already have them. If not, use Next and come back after the crater loop."),
+    accept(4285, collie), accept(4287, collie), accept(4288, collie),
+    accept(3882, spark), accept(4501, spraggle), accept(4492, spraggle), accept(4503, shizzle),
+    action("note", ug(nil, 50, 30), "Diemetradons drop bones and scales, pterrordaxes drop scales. Kill them whenever they are on your way.",
+      { name = "Un'Goro dinosaurs" }),
+    objective(4285, ug("Northern Crystal Pylon", 56.5, 12.5), "Climb to the Northern Pylon on the ridge east of the refuge.", "Northern Crystal Pylon"),
+    accept(4243, karna, "On the way, Karna Remtravel asks you to find her robot."),
+    carried(objective(4289, ug(nil, 65.5, 16.5), "If Torwa gave you the ape pelts quest, kill the gorillas in the north-east for their pelts.",
+      "2 Un'Goro Gorilla Pelt", "2 Un'Goro Stomper Pelt", "2 Un'Goro Thunderer Pelt")),
+    finish(4243, ame, "A-Me 01 waits beside the gorilla caves."), accept(4244, ame),
+    finish(4244, ame, "Give A-Me 01 the Mithril Casing you bought."), accept(4245, ame),
+    objective(4245, karna, "Walk A-Me 01 back to Karna. Let the robot pull, and help it fight.", "Escort A-Me 01"),
+    finish(4245, karna),
+    along(objective(3881, ug(nil, 68.5, 36.5), "Search the camp of crates east of the refuge for the Crate of Foodstuffs.", "Crate of Foodstuffs"), 3882),
+    objective(4287, ug("Eastern Crystal Pylon", 77.2, 50.0), "Find the Eastern Pylon on the crater's east rim.", "Eastern Crystal Pylon"),
+    carried(objective(4292, ug("Lar'korwi", 79.9, 49.9), "If you have Torwa's pouch, open it near the nest to call Lar'korwi.", "Lar'korwi's Head")),
+    carried(finish(4289, torwa, "Torwa Pathfinder stands at the crater's south-east entrance.")), accept(4301, torwa),
+    carried(finish(4292, torwa)),
+    along(objective(4501, ug(nil, 44.3, 90.4), "Kill Pterrordaxes on the southern plains.", "10 Pterrordax", "15 Frenzied Pterrordax"), 4503, 3882),
+    withItem(11132, objective(3883, ug(nil, 48.7, 85.3), "Enter the Gorishi hive in the south. Use the Scraping Vial on a hive wall in a hatchery chamber.", "Hive Wall Sample")),
+    objective(4496, ug(nil, 48.8, 85.3), "Gorishi silithids drop the scent gland. Loot Un'Goro Soil from the dirt mounds nearby.",
+      "Gorishi Scent Gland", "5 Un'Goro Soil"),
+    objective(3881, ug(nil, 38.5, 66.1), "The Research Equipment crate lies in the south-west.", "Research Equipment"),
+    accept(974, krakle, "Krakle has a thermometer for the volcano."),
+    objective(4288, ug("Western Crystal Pylon", 23.8, 59.2), "Find the Western Pylon on the west rim.", "Western Crystal Pylon"),
+    along(objective(4503, ug(nil, 31.0, 77.7), "Finish the diemetradon bones and scales in the south-west.",
+      "8 Webbed Diemetradon Scale", "8 Webbed Pterrordax Scale"), 3882, 4501),
+    objective(3882, ug(nil, 31.0, 77.7), "Diemetradons drop the Dinosaur Bones.", "8 Dinosaur Bone"),
+    objective(974, ug(nil, 49.6, 45.7), "Climb Fire Plume Ridge and use the thermometer at the hottest spot near the top.", "Krakle's Thermometer"),
+    finish(974, krakle), accept(980, krakle, "Krakle sends you to Donova in Winterspring."),
+    objective(4502, ug(nil, 49.8, 53.4), "Kill Scorching Elementals and Living Blazes on Fire Plume Ridge for the ash.", "9 Un'Goro Ash"),
+    finish(4492, ug("Ringo", 51.9, 49.85), "Ringo sleeps on the ridge's east side."), accept(4491, ug("Ringo", 51.9, 49.85)),
+    withItem("Spraggle's Canteen", objective(4491, spraggle, "Walk Ringo back to Marshal's Refuge. When he faints, use Spraggle's Canteen on him.", "Ringo led to Spraggle")),
+    finish(4491, spraggle), finish(4501, spraggle), finish(3882, spark),
+    finish(3883, holanyee), finish(3881, williden),
+    withItem(11116, accept(3884, williden, "Williden's journal can drop anywhere in the crater. Use it from your bags if you have it.")),
+    finish(3884, williden),
+    finish(4285, collie), finish(4287, collie), finish(4288, collie),
+    accept(4321, collie), finish(4321, collie, "Wait a moment, then speak to Collie again."),
+    finish(4503, shizzle),
+    objective(4301, ug("U'cha", 68.1, 12.6), "U'cha lives at the back of the gorilla cave in the north-east. Clear the way in first.", "U'cha's Pelt"),
+    finish(4301, torwa, "Ride back to Torwa at the south-east entrance, then leave the crater toward Gadgetzan."),
+    finish(4496, pestlezugg),
+    action("hearth", at("Innkeeper Wiley", 62.0, 39.4, M.barrens), "Hearth to Ratchet.", { bind = "Ratchet" }),
+    finish(4502, at("Liv Rizzlefix", 62.45, 38.73, M.barrens)),
+    taxi("fly", at("Bragok", 63.1, 37.2, M.barrens), RUTTHERAN, "Fly to Rut'theran Village."),
+    action("goto", at(nil, 55.9, 89.5, M.teldrassil), "Take the portal up to Darnassus."),
+    withItem(11682, objective(4441, dar(nil, 39.3, 84.7), "Fill Eridan's vial at the fountain inside the Temple of the Moon.", "Vial of Blessed Water")),
+    accept(3763, dar("Innkeeper Saelienne", 67.4, 15.7), "Innkeeper Saelienne has a note for the Arch Druid."),
+    accept(1047, dar("Darnassus notice", 61.6, 40.6), "Take the Cenarion notice near the bank."),
+    finish(3763, fandral, "Fandral Staghelm stands at the top of the Cenarion Enclave."), accept(3764, fandral),
+    finish(1047, fandral), accept(6761, fandral),
+    finish(3764, dar("Jenal", 31.49, 8.23), "Give Jenal 20 Un'Goro Soil. Use Next if you didn't keep enough."),
+    accept(3781, fandral), finish(3781, mathrengyl), finish(6761, mathrengyl),
+    accept(6762, mathrengyl, "Mathrengyl sends you to Rabine Saturna in Moonglade."),
+    action("goto", dar(nil, 29.5, 41.4), "Take the portal down to Rut'theran Village."),
+    accept(979, erelas, "Erelas asks you to find Ranshalla in Winterspring."),
+    accept(5250, at("Daryn Lightwind", 55.41, 92.23, M.teldrassil), "Daryn Lightwind has a Starfall errand in Winterspring."),
+  })
+end
+
+-- 54-55: Felwood's Shadow Hold, Timbermaw, Donova's Winterfall chain and Linken's sword.
+do
+  local fw, ws = on.felwood, on.winterspring
+  local eridan = fw("Eridan Bluewind", 51.35, 81.51)
+  local greta = fw("Greta Mosshoof", 51.21, 82.11)
+  local jessir = fw("Jessir Moonbow", 51.35, 82.01)
+  local donova = ws("Donova Snowden", 31.27, 45.16)
+  local wynd = ws("Wynd Nightchaser", 51.97, 30.39)
+  local jaron = ws("Jaron Stoneshaper", 52.14, 30.43)
+  local nafien = fw("Nafien", 64.77, 8.13)
+  local remains = fw("Remains of Trey Lightforge", 38.5, 50.41)
+  local collie = on.ungoro("J.D. Collie", 41.92, 2.7)
+  local ratchet = { bind = "Ratchet" }
+
+  q(4442, "Purified!", 54, 49, 4441)
+  q(5165, "Dousing the Flames of Protection", 55, 48, 5159)
+  q(5202, "A Strange Red Key", 55, 49)
+  quest[5202].startItem = 13140
+  q(5203, "Rescue From Jaedenar", 55, 49, 5202)
+  q(4261, "Ancient Spirit", 56, 49, 4442)
+  q(8461, "Deadwood of the North", 55, 45)
+  q(8465, "Speak to Salfa", 55, 45, 8461)
+  q(8470, "Deadwood Ritual Totem", 55, 45)
+  quest[8470].startItem = 20741
+  q(6031, "Runecloth", 55, 50)
+  q(3912, "Meet at the Grave", 52, 47, 3909)
+  q(4842, "Strange Sources", 56, 51, 980)
+  q(3913, "A Grave Situation", 52, 47, 3912)
+  q(3914, "Linken's Sword", 52, 47, 3913)
+  q(3941, "A Gnome's Assistance", 52, 47, 3914)
+  q(3942, "Linken's Memory", 54, 47, 3941)
+  q(5082, "Threat of the Winterfall", 56, 52, 6603)
+  q(5083, "Winterfall Firewater", 56, 52)
+  quest[5083].startItem = 12771
+  q(5084, "Falling to Corruption", 56, 52, 5083)
+  q(5085, "Mystery Goo", 56, 52, 5084)
+  q(5086, "Toxic Horrors", 56, 52, 5085)
+  q(5087, "Winterfall Runners", 57, 52, 5086)
+  q(5242, "A Final Blow", 58, 48, 5165)
+  q(5204, "Retribution of the Light", 57, 49, 5203)
+  q(5385, "The Remains of Trey Lightforge", 57, 49, 5204)
+  q(5244, "The Ruins of Kel'Theril", 56, 53, 5250)
+  q(5245, "Troubled Spirits of Kel'Theril", 56, 53, 5244)
+  q(4861, "Enraged Wildkin", 59, 53)
+
+  chapter("winterspring-54", "Felwood and Winterspring: Shadow Hold and the Winterfall", M.felwood, 54, 55, {
+    "https://www.wowhead.com/forever/zone=618/winterspring",
+    "https://www.wowhead.com/forever/zone=361/felwood",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    taxi("fly", at("Vesprystus", 58.4, 94.0, M.teldrassil), ASTRANAAR, "Fly to Astranaar."),
+    action("goto", fw(nil, 51.2, 82.0), "Ride north out of Astranaar into Felwood. The Emerald Sanctuary is beside the road."),
+    finish(4441, eridan, "Give Eridan the blessed water."), accept(4442, eridan),
+    finish(4442, eridan, "Wait for the ritual, then speak to Eridan again."),
+    finish(5159, greta), accept(5165, greta, "Greta gives you purified water for the braziers in Shadow Hold."),
+    withItem(13140, accept(5202, nil, "Jaedenar's demons can drop a Blood Red Key. Use it from your bags if you find one.")),
+    finish(5202, fw("Captured Arko'narin", 36.21, 55.47), "Arko'narin is chained in the first cave of Shadow Hold."),
+    accept(5203, fw("Captured Arko'narin", 36.21, 55.47)),
+    withItem(12906, objective(5165, fw(nil, 37.7, 52.7), "Inside Shadow Hold, douse the four braziers with the purified water as you go.",
+      "Brazier of Pain", "Brazier of Malice", "Brazier of Suffering", "Brazier of Hatred")),
+    objective(5203, fw(nil, 35.4, 59.0), "Let Arko'narin collect her gear, then guard her as she fights her way out. Trey Lightforge's spirit attacks near the exit.",
+      "Arko'narin escorted"),
+    withItem(11445, accept(4261, fw("Arei", 49.6, 30.4), "Ride north to the Irontree Woods. The ancient spirit Arei asks for help.")),
+    objective(4261, fw(nil, 49.6, 30.4), "Escort Arei out of the woods. Corrupted treants attack along the way.", "Arei escorted"),
+    accept(8461, nafien, "Follow the road north to Nafien at Timbermaw Hold."),
+    objective(8461, fw(nil, 62.6, 10.1), "Clear the Deadwood furbolg camp next to the tunnel.",
+      "6 Deadwood Den Watchers", "6 Deadwood Avengers", "6 Deadwood Shamans"),
+    finish(8461, nafien), accept(8465, nafien),
+    withItem(20741, accept(8470, fw("Kernda", 65.5, 3.52), "If the furbolgs dropped a Deadwood Ritual Totem, use it and hand it to Kernda inside Timbermaw Hold.")),
+    finish(8470, fw("Kernda", 65.5, 3.52)),
+    optional(accept(6031, fw("Meilosh", 65.69, 2.81), "Meilosh takes 30 Runecloth for Timbermaw reputation. Skip it unless you have the cloth.")),
+    optional(finish(6031, fw("Meilosh", 65.69, 2.81))),
+    finish(8465, ws("Salfa", 27.73, 34.5), "Salfa stands outside the Winterspring end of the tunnel."),
+    carried(finish(3909, donova, "Tell Donova what Gregan said about the elixir.")),
+    accept(3912, donova, "Donova sends you to a grave outside Gadgetzan."),
+    finish(980, donova, "Report the volcano's hot springs to Donova."),
+    accept(4842, donova, "Donova wants a hot spring in the far south tested. You will pass it later."),
+    finish(6603, donova), accept(5082, donova),
+    objective(5082, ws(nil, 41.6, 42.8), "The Winterfall furbolgs camp east of the springs.",
+      "8 Winterfall Pathfinders", "8 Winterfall Den Watchers", "8 Winterfall Totemics"),
+    withItem(12771, accept(5083, nil, "Winterfall furbolgs drop an Empty Firewater Flask. Use it from your bags.")),
+    finish(5082, donova), finish(5083, donova), accept(5084, donova),
+    finish(5250, wynd, "Ride east to Starfall Village. Wynd Nightchaser stands in the lodge."),
+    accept(5244, wynd), finish(5244, jaron), accept(5245, jaron, "Keep Jaron's pick for the ruins of Kel'Theril and the relics."),
+    accept(4861, jaron, "Jaron's supply wagon was lost in the south. Look for it on your next pass."),
+    finish(5084, fw("Deadwood Cauldron", 60.2, 5.84), "Go back through Timbermaw Hold. Search the cauldron in the Deadwood camp at the Felwood end."),
+    accept(5085, fw("Deadwood Cauldron", 60.2, 5.84)),
+    finish(5085, donova, "Take the goo back to Donova."), accept(5086, donova, "Toxic Horrors live in Felwood. You will pass them again."),
+    action("hearth", at("Innkeeper Wiley", 62.0, 39.4, M.barrens), "Hearth to Ratchet.", ratchet),
+    taxi("fly", at("Bragok", 63.1, 37.2, M.barrens), GADGETZAN, "Fly to Gadgetzan."),
+    withItem(11243, objective(3912, on.tanaris(nil, 54.0, 28.6), "Drink the Videre Elixir in the graveyard outside town. You die and appear as a ghost.",
+      "Videre Elixir used")),
+    finish(3912, on.tanaris("Gaeriyan", 53.92, 23.33), "As a ghost, find Gaeriyan to the north."), accept(3913, on.tanaris("Gaeriyan", 53.92, 23.33)),
+    finish(3913, on.tanaris("A Conspicuous Gravestone", 53.81, 29.06), "Resurrect, then search the gravestone Gaeriyan described."),
+    accept(3914, on.tanaris("A Conspicuous Gravestone", 53.81, 29.06)),
+    taxi("fly", on.tanaris("Bera Stonehammer", 51.0, 29.3), MARSHAL, "Fly to Marshal's Refuge."),
+    finish(3914, on.ungoro("Linken", 44.66, 8.1), "Linken sits at the back of the refuge."), accept(3941, on.ungoro("Linken", 44.66, 8.1)),
+    finish(3941, collie), accept(3942, collie),
+    taxi("fly", on.ungoro("Gryfe", 45.2, 5.8), TALRENDIS, "Fly to Talrendis Point."),
+    finish(4261, at("Kayneth Stillwind", 85.24, 44.71, M.ashenvale), "Ride west into Ashenvale. Kayneth Stillwind waits at Forest Song."),
+    action("goto", fw(nil, 51.2, 82.0), "Ride west through Ashenvale and north into Felwood to the Emerald Sanctuary."),
+    finish(5165, greta), accept(5242, greta),
+    finish(5203, jessir), accept(5204, jessir),
+    finish(3942, eridan),
+    objective(5204, fw("Rakaiah", 38.3, 50.5), "Return to Shadow Hold and kill the succubus Rakaiah.", "Rakaiah"),
+    finish(5204, remains, "Search Trey Lightforge's remains beside her."), accept(5385, remains),
+    objective(5242, fw("Shadow Lord Fel'dan", 38.8, 46.8), "Go deeper into Shadow Hold for Moora, Salia and Shadow Lord Fel'dan. Pull them one at a time.",
+      "Moora", "Salia", "Shadow Lord Fel'dan's Head"),
+    finish(5242, greta), finish(5385, jessir),
+    objective(5086, fw(nil, 49.6, 26.6), "Toxic Horrors roam the poisoned pools near Irontree Woods.", "3 Toxic Horror Droplet"),
+    action("goto", ws(nil, 27.8, 34.6), "Go through Timbermaw Hold into Winterspring."),
+    finish(5086, donova), accept(5087, donova),
+  })
+end
+
+-- 55-56: Everlook, Jaron's wagon, Ranshalla and the Frostmaul giants.
+do
+  local ws = on.winterspring
+  local vizzie = ws("Innkeeper Vizzie", 61.4, 38.8)
+  local gregor = ws("Gregor Greystone", 61.4, 39.0)
+  local mauari = ws("Witch Doctor Mau'ari", 61.92, 38.3)
+  local jaron = ws("Jaron Stoneshaper", 52.14, 30.43)
+  local donova = ws("Donova Snowden", 31.27, 45.16)
+  local everlook = { bind = "Everlook" }
+
+  q(6028, "The Everlook Report", 52, 50)
+  q(6030, "Duke Nicholas Zverenhoff", 52, 50)
+  q(969, "Luck Be With You", 60, 55)
+  q(4863, "Enraged Wildkin", 59, 53, 4861)
+  q(4864, "Enraged Wildkin", 59, 53, 4863)
+  q(5121, "High Chief Winterfall", 59, 52, 5087)
+  q(8464, "Winterfall Activity", 58, 45)
+
+  chapter("winterspring-55", "Winterspring: Everlook and the Southern Valleys", M.winterspring, 55, 56, {
+    "https://www.wowhead.com/forever/zone=618/winterspring",
+    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  }, {
+    action("sethearth", vizzie, "Ride east to Everlook and bind at the inn.", everlook),
+    accept(6028, gregor, "Gregor Greystone, by the inn, has two deliveries for the Plaguelands."), accept(6030, gregor),
+    accept(969, mauari, "Witch Doctor Mau'ari wants shards from the Frostmaul giants."),
+    along(objective(5087, ws(nil, 60.0, 50.0), "Winterfall Runners carry crates along the roads south of Everlook. Kill them when you see them.", "Winterfall Crate"), 4861),
+    finish(4861, ws("Damaged Crate", 58.99, 59.79), "Follow the road south to Jaron's wrecked camp."),
+    accept(4863, ws("Damaged Crate", 58.99, 59.79)),
+    finish(4863, ws("Jaron's Wagon", 61.44, 60.68)), accept(4864, ws("Jaron's Wagon", 61.44, 60.68)),
+    objective(4864, ws(nil, 61.4, 60.7), "Pick up Jaron's supplies from the snow around the wagon.", "Jaron's Supplies"),
+    finish(979, ws("Ranshalla", 63.07, 59.48), "Ranshalla camps in the hills east of the wagon."),
+    objective(4864, ws(nil, 65.5, 60.3), "Kill the owlbeasts in the valley until one drops the Blue-feathered Amulet.", "Blue-feathered Amulet"),
+    objective(969, ws(nil, 59.1, 68.3), "Frostmaul giants and shredders in Frostwhisper Gorge drop the shards.", "4 Frostmaul Shards"),
+    objective(4842, ws(nil, 59.9, 74.0), "Test the hot spring at the south end of the gorge for Donova.", "Strange Sources"),
+    action("hearth", vizzie, "Hearth to Everlook.", everlook),
+    finish(969, mauari),
+    finish(4864, jaron, "Take Jaron his supplies and amulet at Starfall Village."),
+    finish(4842, donova), finish(5087, donova),
+    accept(5121, donova, "High Chief Winterfall waits in Winterfall Village, east of Everlook. Save him for a group or a later visit."),
+    accept(8464, ws("Salfa", 27.73, 34.5), "Salfa wants more Winterfall killed. You can do it with the High Chief later."),
+    taxi("fly", ws("Maethrya", 62.3, 36.6), AUBERDINE, "Fly to Auberdine."),
+    action("boat", at(nil, 32.4, 43.8, M.darkshore), "Take the Menethil ship from Auberdine's west pier. Use Next in Menethil Harbor.",
+      { name = "Auberdine - Menethil Harbor" }),
+    taxi("fly", at("Shellei Brondir", 9.5, 59.7, M.wetlands), IF_FLIGHT, "Fly to Ironforge."),
   })
 end
 
