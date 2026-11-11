@@ -435,13 +435,347 @@ do
   })
 end
 
+-- Maraudon. Theramore and Desolace pickups; Theradras's Seed of Life ends in Moonglade.
+do
+  local name = "Maraudon"
+  local ds = on.desolace
+  local tervosh = on.dustwallow("Archmage Tervosh", 66.42, 49.26)
+  local marandis = ds("Keeper Marandis", 63.83, 10.67)
+  local talendria = ds("Talendria", 68.5, 8.88)
+  local willow = ds("Willow", 62.2, 39.63)
+  local pariah = ds("Centaur Pariah", 50.42, 86.65)
+  local cavindra = ds("Cavindra", 32.1, 63.96)
+  need(7070, "Shadowshard Fragments", 42, 38)
+  need(7065, "Corruption of Earth and Seed", 51, 45)
+  need(7041, "Vyletongue Corruption", 47, 41)
+  need(7028, "Twisted Evils", 47, 41)
+  need(7067, "The Pariah's Instructions", 48, 39)
+  need(7044, "Legends of Maraudon", 49, 41)
+  need(7046, "The Scepter of Celebras", 49, 41, 7044)
+  need(7066, "Seed of Life", 51, 45)
+  add({ id = "dungeon-maraudon", title = name, zone = M.desolace, levels = { 44, 52 }, instanceID = 349, instance = name,
+    bosses = {
+      { name = "Noxxion", npc = 13282,
+        tip = "Orange side. He splits into small spawns and becomes immune; kill the spawns with area damage. Drops the Celebrian Rod." },
+      { name = "Razorlash", npc = 12258,
+        tip = "Orange side, patrols. Face his cleave away from the group." },
+      { name = "Lord Vyletongue", npc = 12236,
+        tip = "Purple side. Kill his satyr guards, then chase him when he blinks. Drops the Celebrian Diamond." },
+      { name = "Celebras the Cursed", npc = 12225,
+        tip = "Clear the grove around him. He roots and calls a corrupted forest spirit; kill the add and avoid his Wrath. Speak to his redeemed spirit after." },
+      { name = "Landslide", npc = 12203,
+        tip = "Tank him in place: his knockback throws the tank, and he calls rock adds at low health." },
+      { name = "Tinkerer Gizlock", npc = 13601,
+        tip = "Clear the goblins first. He shoots bombs and his Goblin Dragon Gun burns melee; stay at his side." },
+      { name = "Rotgrip", npc = 13596,
+        tip = "A crocolisk in the water. Her bite poisons the tank; cleanse it and kill her quickly." },
+      { name = "Princess Theradras", npc = 12201,
+        tip = "Her dust field and knockback break the group apart. Tank her with your back to a wall and spread ranged. Her death frees Zaetar's spirit." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=2100", qdb } }, {
+    accept(7070, tervosh, "Archmage Tervosh in Theramore's tower wants shadowshard fragments."),
+    accept(7065, marandis, "Keeper Marandis at Nijel's Point wants Princess Theradras slain."),
+    accept(7041, talendria, "Talendria, also at Nijel's Point, gives you a vial for the Vylestem vines."),
+    accept(7028, willow, "Willow camps in the middle of Desolace. She wants crystal carvings from the constructs."),
+    accept(7067, pariah, "Missable: the Centaur Pariah wanders south of the Kolkar camps. Read his instructions; the quest cannot be started inside."),
+    accept(7044, cavindra, "Cavindra waits in the outer cave by the purple and orange paths."),
+    enter(name, at("Maraudon outer cave", 29.1, 62.6, M.desolace),
+      "Enter the cave in the Valley of Spears. Purple (left) leads to Vyletongue, orange (right) to Noxxion; both join the inner falls."),
+  }, {
+    objective(7070, nil, "Shadowshard smashers and rumblers on both outer sides drop the fragments.", "10 Shadowshard Fragments"),
+    objective(7067, nil, "Kill the Kolkar khan spirits along the outer paths and loot their amulet pieces, then combine them.", "Amulet of Union"),
+    withItem(17693, objective(7041, nil, "Fill the vial at the orange crystal pool, then use it on the Vylestem vines and kill the scions that emerge.",
+      "8 plants healed")),
+    objective(7044, nil, "Take the Celebrian Rod from Noxxion and the Celebrian Diamond from Lord Vyletongue.", "Celebrian Rod", "Celebrian Diamond"),
+    finish(7044, nil, "Kill Celebras the Cursed, then speak to Celebras the Redeemed."),
+    accept(7046, nil, "Watch Celebras make the scepter."), objective(7046, nil, "Stay until the ritual ends.", "Scepter of Celebras"),
+    finish(7046, nil, "Speak to Celebras again for the scepter."),
+    objective(7028, nil, "Constructs throughout the inner halls drop the carvings.", "15 Theradric Crystal Carvings"),
+    objective(7065, nil, "Use the scepter's portal to Theradras's chamber or walk the falls, then kill Princess Theradras.", "Princess Theradras"),
+    accept(7066, nil, "Missable: speak to Zaetar's Spirit right after Theradras dies for the Seed of Life."),
+  }, {
+    finish(7067, pariah), finish(7028, willow), finish(7065, marandis), finish(7041, talendria),
+    finish(7070, tervosh),
+    finish(7066, on.moonglade("Keeper Remulos", 36.18, 41.79), "Keeper Remulos is at the shrine in Moonglade."),
+  })
+end
+
+-- The Temple of Atal'Hakkar. The long Stormwind chain, the Stone Circle and the Un'Goro haze.
+do
+  local name = "Sunken Temple"
+  local brohann = on.stormwind("Brohann Caskbelly", 69.45, 40.4)
+  local rhapsody = on.hinterlands("Rhapsody Shindigger", 26.94, 48.59)
+  local exile = on.hinterlands("Atal'ai Exile", 33.75, 75.21)
+  local marvon = on.tanaris("Marvon Rivetseeker", 52.71, 45.92)
+  local gregan = on.feralas("Gregan Brewspewer", 45.12, 25.57)
+  local muigin = on.ungoro("Muigin", 42.94, 9.64)
+  need(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
+  need(1469, "Rhapsody's Tale", 43, 38, 1452)
+  need(1475, "Into The Temple of Atal'Hakkar", 50, 41, 1469)
+  need(3446, "Into the Depths", 51, 46, 3444)
+  need(3447, "Secret of the Circle", 51, 46, 3444)
+  need(1446, "Jammal'an the Prophet", 53, 38)
+  need(4143, "Haze of Evil", 52, 47, 4142)
+  fromItem(3373, 10454, "The Essence of Eranikus", 55, 48)
+  local prep = join(copy("swamp-38", { 1448, 1449 }), copy("arathi-39", { 1449, 1450, 1451 }), {
+    accept(1452, rhapsody, "Rhapsody wants Roc gizzards from Tanaris and Groddoc and Ironfur livers from Feralas."),
+  }, copy("tanaris-43", { 1452 }), copy("feralas-44", { 1452, 3445 }), copy("hinterlands-48", { 1452 }), {
+    accept(1469, rhapsody, "Rhapsody hands you a tablet fragment for Brohann."),
+  }, copy("hinterlands-48", { 1469 }), {
+    accept(1475, brohann, "Missable: Brohann only offers this after Rhapsody's Tale. Take it before you leave Stormwind."),
+    accept(1446, exile, "The Atal'ai Exile hides in the troll ruins of the southern Hinterlands."),
+  }, copy("ungoro-49", { 3445, 4141, 4142 }), {
+    accept(3444, marvon, "Marvon left his Stone Circle in a chest at his Ratchet workshop."),
+    objective(3444, at("Marvon's Chest", 62.5, 38.5, M.barrens), "Open the chest in Marvon's Ratchet workshop.", "Stone Circle"),
+    finish(3444, marvon), accept(3446, marvon), accept(3447, marvon),
+  }, copy("feralas-52", { 4142 }), {
+    accept(4143, gregan, "Gregan wants Atal'ai Haze from the temple's lurkers and worms."),
+    enter(name, at("Temple of Atal'Hakkar", 69.7, 53.5, M.swamp),
+      "Swim to the sunken temple in the Pool of Tears. Take the stairs down from the ring of broken walls to the portal."),
+  })
+  add({ id = "dungeon-sunken-temple", title = name, zone = M.swamp, levels = { 47, 54 }, instanceID = 109,
+    instance = "Sunken Temple", links = { "dungeon-zul-farrak" },
+    bosses = {
+      { name = "Atal'alarion (statue event)", npc = 8580,
+        tip = "Activate the six statues in the circle in the right order to call him. He knocks people back and hits hard; tank him away from the walls." },
+      { name = "Troll minibosses (six balconies)", npc = 5716,
+        tip = "Kill all six troll guardians on the balconies to open the way to Jammal'an. Each fights alone with a few adds." },
+      { name = "Jammal'an the Prophet and Ogom the Wretched", npc = 5710,
+        tip = "Kill Jammal'an first and interrupt his heals. His Hex of Jammal'an turns a player against the group; crowd control them." },
+      { name = "Dreamscythe and Weaver", npc = 5721,
+        tip = "Two green dragons. Tank them facing away from the group and avoid the breath; kill one at a time." },
+      { name = "Morphaz and Hazzas", npc = 5719,
+        tip = "Two more dragons in the next room. Same rules: face them away and spread the ranged." },
+      { name = "Avatar of Hakkar (optional, needs Hakkari Blood)", npc = 8443,
+        tip = "Summoned with the blood for The God Hakkar. Put out the four flames when Hakkar's servants appear." },
+      { name = "Shade of Eranikus", npc = 5709,
+        tip = "Clear his room carefully. His War Stomp and Deep Slumber hit the group; dispel the sleep on the healer. Loot the Essence of Eranikus." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=1477", qdb } }, prep, {
+    finish(3447, nil, "Use the statues in the circle of the lower ring in order, then touch the Idol of Hakkar."),
+    objective(1475, nil, "Loot Atal'ai Tablets from the plinths around the temple.", "10 Atal'ai Tablets"),
+    objective(4143, nil, "Deep Lurkers, Murk Worms and Oozes in the flooded halls drop the haze.", "5 Atal'ai Haze"),
+    finish(3446, nil, "Find the Altar of Hakkar in the central chamber after the trolls."),
+    objective(1446, nil, "Kill Jammal'an the Prophet and loot his head.", "Head of Jammal'an"),
+    withItem(10454, accept(3373, nil, "Use the Essence of Eranikus from the Shade.")),
+    finish(3373, nil, "Place the essence in the Essence Font in Eranikus's lair."),
+  }, {
+    finish(1475, brohann), finish(1446, exile), finish(4143, muigin),
+  })
+end
+
+-- Blackrock Depths. Ironforge's Thaurissan chain, Kharanos, Morgan's Vigil and Flame Crest.
+do
+  local name = "Blackrock Depths"
+  local ifg, bs = on.ironforge, on.steppes
+  local magni = ifg("King Magni Bronzebeard", 39.09, 56.2)
+  local enohar = on.blasted("Enohar Thunderbrew", 63.63, 20.63)
+  local ragnar = on.dunMorogh("Ragnar Thunderbrew", 46.83, 52.36)
+  local oralius = bs("Oralius", 84.56, 68.68)
+  local jalinda = bs("Jalinda Sprig", 85.41, 70.06)
+  local maxwort = bs("Maxwort Uberglint", 65.15, 23.91)
+  local yuka = bs("Yuka Screwspigot", 66.06, 21.95)
+  local yorba = on.tanaris("Yorba Screwspigot", 67.04, 24.01)
+  need(4341, "Kharan Mighthammer", 59, 50, 3701)
+  need(4342, "Kharan's Tale", 59, 50, 4341)
+  need(4361, "The Bearer of Bad News", 59, 50, 4342)
+  need(4362, "The Fate of the Kingdom", 59, 50, 4361)
+  need(4363, "The Princess's Surprise", 59, 50, 4362)
+  need(4128, "Ragnar Thunderbrew", 55, 50)
+  need(4126, "Hurley Blackbreath", 55, 50, 4128)
+  need(4286, "The Good Stuff", 56, 50)
+  need(4262, "Overmaster Pyron", 52, 48)
+  need(4263, "Incendius!", 56, 48, 4262)
+  need(4123, "The Heart of the Mountain", 55, 50)
+  need(4324, "Yuka Screwspigot", 53, 48)
+  need(4136, "Ribbly Screwspigot", 53, 48, 4324)
+  local prep = join(copy("steppes-56", { 3702, 3701 }), {
+    accept(4341, magni, "King Magni wants news of Kharan Mighthammer, held in the Depths."),
+    accept(4324, yorba, "If you pass Steamwheedle Port, Yorba Screwspigot sends you to her brother Yuka."),
+    accept(4128, enohar, "Enohar Thunderbrew at Nethergarde Keep sends you to his brother in Kharanos."),
+    finish(4128, ragnar, "Ragnar Thunderbrew is in the Kharanos brewery."), accept(4126, ragnar),
+    accept(4286, oralius, "Oralius at Morgan's Vigil wants Dark Iron fanny packs."),
+    accept(4262, jalinda, "Jalinda Sprig wants Overmaster Pyron dead."),
+    finish(4324, yuka, "Yuka Screwspigot is at Flame Crest."), accept(4136, yuka),
+    accept(4123, maxwort, "Maxwort Uberglint, also at Flame Crest, wants the Heart of the Mountain."),
+    action("goto", brm, "Enter Blackrock Mountain from the Searing Gorge or the Burning Steppes and take the chain down to the Depths' door."),
+    uncertain(objective(4262, nil, "Overmaster Pyron guards the quarry by the Depths' entrance. Kill him before the run.", "Overmaster Pyron"),
+      "Some guides place Pyron just inside the instance."),
+    finish(4262, jalinda, "Take Pyron's death back to Jalinda at Morgan's Vigil."), accept(4263, jalinda),
+    enter(name, brm, "In Blackrock Mountain, cross the chains to the Depths' portal at the bottom."),
+  })
+  add({ id = "dungeon-blackrock-depths", title = name, zone = M.searing, levels = { 50, 58 }, instanceID = 230, instance = name,
+    links = { "dungeon-lower-blackrock-spire" },
+    bosses = {
+      { name = "Lord Roccor", npc = 9025,
+        tip = "A rock elemental near the start. Cure his poison and step out of his Ground Tremor." },
+      { name = "High Interrogator Gerstahn", npc = 9018,
+        tip = "In the Detention Block. Dispel her Shadow Word: Pain and interrupt her Mind Blast." },
+      { name = "Ring of Law", npc = 9027,
+        tip = "Jumping into the arena starts waves and a random boss. Fight in the middle and save cooldowns for the boss." },
+      { name = "Pyromancer Loregrain", npc = 9024,
+        tip = "Kill his searing totems and interrupt his Flame Shock." },
+      { name = "Lord Incendius", npc = 9017,
+        tip = "At the Black Anvil. His knockback and Fire Storm spread the group; tank him against a wall." },
+      { name = "Fineous Darkvire", npc = 9056,
+        tip = "Cleanse his poison and stun his heal. He carries Ironfel." },
+      { name = "Bael'Gar", npc = 9016,
+        tip = "A fire giant who calls fire elementals. Kill the adds and keep the tank healed." },
+      { name = "General Angerforge", npc = 9033,
+        tip = "At low health he calls a large add wave. Push him low together and burn the last part fast." },
+      { name = "Golem Lord Argelmach", npc = 8983,
+        tip = "Clear his golems first: he wakes the ones nearby. Interrupt his Chain Lightning." },
+      { name = "Hurley Blackbreath", npc = 9537,
+        tip = "In the Grim Guzzler, after the ale kegs are broken. Fight him away from the bar crowd." },
+      { name = "Ribbly Screwspigot", npc = 9543,
+        tip = "In the Grim Guzzler. Pulling him angers his bodyguards; take them one at a time." },
+      { name = "Ambassador Flamelash", npc = 9156,
+        tip = "Fire elementals walk to him from the runes. Stop them reaching him or he grows stronger." },
+      { name = "The Seven", npc = 9039,
+        tip = "Doom'rel starts seven fights in a row. Kill each dwarf before the next joins." },
+      { name = "Magmus", npc = 9938,
+        tip = "A giant in the throne room approach; the fire jets on the floor hurt, so stay off them." },
+      { name = "Emperor Dagran Thaurissan", npc = 9019,
+        tip = "Princess Moira heals him. Do not kill her if you want Moira's quest; burn the Emperor through her heals." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=1584", qdb } }, prep, {
+    finish(4341, nil, "Kharan Mighthammer sits in a cell of the Detention Block."),
+    accept(4342, nil, "Listen to Kharan's story."), objective(4342, nil, "Hear him out.", "Kharan's Tale"), finish(4342, nil, "Speak to Kharan again."),
+    accept(4361, nil, "Take Kharan's news back to Magni."),
+    objective(4286, nil, "Loot Dark Iron fanny packs from the dwarves throughout the Depths.", "20 Dark Iron Fanny Packs"),
+    objective(4263, nil, "Kill Lord Incendius at the Black Anvil.", "Lord Incendius"),
+    uncertain(objective(4123, nil, "Open the safe in the Vault after the four watchers fall for the Heart of the Mountain.", "Heart of the Mountain"),
+      "Check the Vault's lock in game."),
+    objective(4126, nil, "In the Grim Guzzler, break the ale kegs and kill Hurley Blackbreath for the recipe.", "Lost Thunderbrew Recipe"),
+    objective(4136, nil, "Kill Ribbly Screwspigot in the Grim Guzzler and loot his head.", "Ribbly's Head"),
+  }, {
+    finish(4286, oralius), finish(4263, jalinda), finish(4123, maxwort), finish(4136, yuka),
+    finish(4126, ragnar),
+    finish(4361, magni), accept(4362, magni, "Magni sends you back for Princess Moira."),
+    objective(4362, nil, "On your next full run, kill Emperor Thaurissan in the throne room without killing Moira.", "Emperor Dagran Thaurissan"),
+    finish(4362, nil, "Speak to Princess Moira after the Emperor dies."),
+    accept(4363, nil, "Take Moira's message to her father."),
+    finish(4363, magni),
+  })
+end
+
+-- Lower Blackrock Spire. Morgan's Vigil and Flame Crest pickups; Drakkisath's orders lead upstairs.
+do
+  local name = "Lower Blackrock Spire"
+  local bs = on.steppes
+  local helendis = bs("Helendis Riverhorn", 85.82, 68.95)
+  local kibler = bs("Kibler", 65.89, 21.92)
+  local john = bs("Ragged John", 65.01, 23.76)
+  local maxwell = bs("Marshal Maxwell", 84.74, 69.02)
+  need(4701, "Put Her Down", 59, 55)
+  need(4862, "En-Ay-Es-Tee-Why", 59, 55)
+  need(4729, "Kibler's Exotic Pets", 59, 55)
+  need(4866, "Mother's Milk", 60, 55)
+  need(4867, "Urok Doomhowl", 60, 55)
+  need(5001, "Bijou's Belongings", 59, 55)
+  need(5002, "Message to Maxwell", 59, 55, 5001)
+  need(5081, "Maxwell's Mission", 60, 55, 5002)
+  add({ id = "dungeon-lower-blackrock-spire", title = name, zone = M.searing, levels = { 55, 60 }, instanceID = 229,
+    instance = "Blackrock Spire", links = { "dungeon-upper-blackrock-spire", "dungeon-blackrock-depths" },
+    bosses = {
+      { name = "Highlord Omokk", npc = 9196,
+        tip = "Clear the ogres on the platform first. He knocks people off the edge, so tank him with your back to the wall." },
+      { name = "Shadow Hunter Vosh'gajin", npc = 9236,
+        tip = "Dispel her curse and hex, and kill her totems." },
+      { name = "War Master Voone", npc = 9237,
+        tip = "He throws axes and cleaves. Ranged stay spread; melee stay behind him." },
+      { name = "Mother Smolderweb", npc = 10596,
+        tip = "Spiders and webs. Her poison stacks on the tank; the Mother's Milk player lets her poison them on purpose." },
+      { name = "Urok Doomhowl (event)", npc = 10584,
+        tip = "Summoned with Warosh's challenge. Ogre waves come before him; kill them and keep the healer safe." },
+      { name = "Quartermaster Zigris", npc = 9736,
+        tip = "He drinks potions and shoots. Interrupt or stun his heal." },
+      { name = "Halycon and Gizrul the Slavener", npc = 10220,
+        tip = "Halycon the worg first; Gizrul comes after and frenzies, so keep a tranquilize or cooldown ready." },
+      { name = "Overlord Wyrmthalak", npc = 9568,
+        tip = "At low health he calls two dragonkin. Save cooldowns for the end. Loot General Drakkisath's Command." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=1583", qdb } }, {
+    accept(4701, helendis, "Helendis Riverhorn at Morgan's Vigil wants the worg Halycon put down."),
+    accept(4862, kibler, "Kibler at Flame Crest wants spider eggs."),
+    accept(4729, kibler, "He also gives you a cage for a worg pup."),
+    accept(4866, john, "Ragged John, nearby, wants you poisoned by Mother Smolderweb."),
+    enter(name, brm, "In Blackrock Mountain take the upper path and climb to the Spire's portal."),
+  }, {
+    accept(4867, nil, "Warosh, a troll near the start, gives you his scroll."),
+    objective(4867, nil, "Find the spear and the challenge at Urok's platform and summon Urok Doomhowl for Warosh's mojo.", "Warosh's Mojo"),
+    finish(4867, nil, "Return to Warosh."),
+    accept(5001, nil, "Bijou, a gnome near the spider halls, lost her belongings."),
+    objective(5001, nil, "Her belongings are on a crate near Mother Smolderweb.", "Bijou's Belongings"),
+    finish(5001, nil, "Bring Bijou her belongings."), accept(5002, nil, "Take Bijou's information to Marshal Maxwell."),
+    objective(4862, nil, "Loot spider eggs in the spider halls.", "15 Spire Spider Eggs"),
+    objective(4866, nil, "Let Mother Smolderweb poison you, then go straight back to Ragged John.", "Poisoned by Mother Smolderweb"),
+    withItem(12262, objective(4729, nil, "Use the cage on Bloodaxe Worg Pups near Halycon.", "Caged Worg Pup")),
+    objective(4701, nil, "Kill Halycon in the worg kennels.", "Halycon"),
+    tip("Drakkisath's orders", "Wyrmthalak drops General Drakkisath's Command. Keep it; the Upper Blackrock Spire guide picks it up."),
+  }, {
+    finish(4866, john, "Ragged John cures you; go to him while still poisoned."),
+    finish(4862, kibler), finish(4729, kibler), finish(4701, helendis),
+    finish(5002, maxwell), accept(5081, maxwell, "Maxwell's own mission is another Lower Spire run: Voone, Omokk and Wyrmthalak."),
+    objective(5081, nil, "On your next run, kill War Master Voone, Highlord Omokk and Overlord Wyrmthalak.", "War Master Voone", "Highlord Omokk", "Overlord Wyrmthalak"),
+    finish(5081, maxwell),
+  })
+end
+
+-- Upper Blackrock Spire. Needs the Seal of Ascension; Ridgewell's clasp and Drakkisath's demise.
+do
+  local name = "Upper Blackrock Spire"
+  local bs = on.steppes
+  local ridgewell = on.stormwind("Count Remington Ridgewell", 76.94, 47.83)
+  local mayara = bs("Mayara Brightwing", 84.84, 69.12)
+  local maxwell = bs("Marshal Maxwell", 84.74, 69.02)
+  local haleh = on.winterspring("Haleh", 54.55, 51.2)
+  local malyfous = on.winterspring("Malyfous Darkhammer", 60.99, 38.78)
+  need(4766, "Mayara Brightwing", 60, 57)
+  need(4764, "Doomrigger's Clasp", 60, 57, 4766)
+  need(4765, "Delivery to Ridgewell", 60, 57, 4764)
+  fromItem(5089, 12780, "General Drakkisath's Command", 60, 55)
+  need(5102, "General Drakkisath's Demise", 60, 55, 5089)
+  fromItem(5160, 12923, "The Matron Protectorate", 60, 57)
+  fromItem(5047, 12710, "Finkle Einhorn, At Your Service!", 60, 55)
+  add({ id = "dungeon-upper-blackrock-spire", title = name, zone = M.searing, levels = { 58, 60 }, instanceID = 229,
+    instance = "Blackrock Spire", links = { "dungeon-lower-blackrock-spire" },
+    bosses = {
+      { name = "Pyroguard Emberseer", npc = 9816,
+        tip = "Clear the room's orcs, then use the seven altars together to wake him. He grows hotter over time; burn him." },
+      { name = "Solakar Flamewreath", npc = 10264,
+        tip = "Touching the egg wakes waves of whelps and handlers before him. Hold them on the tank and use area damage." },
+      { name = "Goraluk Anvilcrack", npc = 10899,
+        tip = "A plain hard-hitting ogre. Keep the tank healed." },
+      { name = "Warchief Rend Blackhand and Gyth", npc = 10429,
+        tip = "The event sends many waves before Gyth lands with Rend. Fight near the door so the waves come in a line; kill Gyth, then Rend." },
+      { name = "The Beast", npc = 10430,
+        tip = "Fireballs, fear and a knockback. Tank him in the corridor so nobody is feared into packs. Finkle Einhorn comes out after." },
+      { name = "General Drakkisath", npc = 10363,
+        tip = "Pull his two guards away first. Tank him facing away; his Flamestrike and Conflagration need spread ranged." },
+    },
+    sources = { "https://www.wowhead.com/forever/zone=1583", qdb } }, {
+    tip("Seal of Ascension", "Upper Spire needs a Seal of Ascension from Vaelan in Lower Blackrock Spire. One group member with the seal opens the door."),
+    accept(4766, ridgewell, "Count Remington Ridgewell in Stormwind Keep sends you to Mayara."),
+    finish(4766, mayara, "Mayara Brightwing is at Morgan's Vigil."), accept(4764, mayara),
+    withItem(12780, accept(5089, nil, "Use General Drakkisath's Command if you looted it in Lower Blackrock Spire.")),
+    finish(5089, maxwell), accept(5102, maxwell, "Maxwell wants General Drakkisath dead."),
+    enter(name, brm, "Climb to the Spire's portal in Blackrock Mountain. The Upper Spire door is at the start, past the first ramps."),
+  }, {
+    objective(4764, nil, "Doomrigger's Clasp sits in a chest along the way to Rend.", "Doomrigger's Clasp"),
+    withItem(12923, accept(5160, nil, "Use Awbee's scale if it drops for you.")),
+    withItem(12710, accept(5047, nil, "Speak to Finkle Einhorn after The Beast dies.")),
+    objective(5102, nil, "Kill General Drakkisath in his hall.", "General Drakkisath"),
+  }, {
+    finish(4764, mayara), accept(4765, mayara), finish(4765, ridgewell),
+    finish(5102, maxwell),
+    finish(5160, haleh, "Haleh lives at Mazthoril in Winterspring."),
+    finish(5047, malyfous, "Malyfous Darkhammer is at the Everlook forge."),
+  })
+end
+
 -- Guides not filled in yet: entrance stubs, so the route's forDungeon tags have a target.
 for _, s in ipairs({
-  { "dungeon-maraudon", "Maraudon", M.desolace, 44, 52, 349, "Maraudon", at("Maraudon outer cave", 29.1, 62.6, M.desolace) },
-  { "dungeon-sunken-temple", "Sunken Temple", M.swamp, 47, 54, 109, "Sunken Temple", at("Temple of Atal'Hakkar", 69.7, 53.5, M.swamp) },
-  { "dungeon-blackrock-depths", "Blackrock Depths", M.searing, 50, 58, 230, "Blackrock Depths", brm },
-  { "dungeon-lower-blackrock-spire", "Lower Blackrock Spire", M.searing, 55, 60, 229, "Blackrock Spire", brm },
-  { "dungeon-upper-blackrock-spire", "Upper Blackrock Spire", M.searing, 58, 60, 229, "Blackrock Spire", brm },
   { "dungeon-dire-maul-east", "Dire Maul: East", M.feralas, 55, 60, 429, "Dire Maul", dmDoor },
   { "dungeon-dire-maul-west", "Dire Maul: West", M.feralas, 57, 60, 429, "Dire Maul", dmDoor },
   { "dungeon-dire-maul-north", "Dire Maul: North", M.feralas, 57, 60, 429, "Dire Maul", dmDoor },
