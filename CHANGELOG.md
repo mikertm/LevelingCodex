@@ -1,6 +1,6 @@
 # Leveling Codex
 
-## Unreleased
+## v0.17.0
 
 ### Alliance quest guide
 
