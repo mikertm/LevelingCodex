@@ -232,3 +232,154 @@ do
     },
   })
 end
+
+-- 50-60 attunements and keys. Sources: tools/audits/2026-11-10-attunements.md.
+do
+  local steppes, searing, wpl, tanaris, ungoro = B.maps.steppes, B.maps.searing, B.maps.wpl, B.maps.tanaris, B.maps.ungoro
+  local winterspring, dustwallow = B.maps.winterspring, B.maps.dustwallow
+  local blackrock = at("Blackrock Mountain", 34.8, 85.3, searing)
+
+  -- Copies of leveling-route steps for the given quests, in route order (a guide is checked on its own).
+  local function fromRoute(sectionId, ids)
+    local wanted, result = {}, {}
+    for _, id in ipairs(ids) do wanted[id] = true end
+    for _, section in ipairs(route.sections) do
+      if section.id == sectionId then
+        for _, step in ipairs(section.steps) do
+          if step.quest and wanted[step.quest] then
+            local copy = {}
+            for key, value in pairs(step) do copy[key] = value end
+            copy.optional, copy.dungeon, copy.also = nil, nil, nil
+            result[#result + 1] = copy
+          end
+        end
+        return result
+      end
+    end
+    error("special guide: no route section " .. sectionId)
+  end
+
+  local function join(...)
+    local result = {}
+    for _, part in ipairs({ ... }) do
+      for _, step in ipairs(part) do result[#result + 1] = step end
+    end
+    return result
+  end
+
+  local maxwell = at("Marshal Maxwell", 84.74, 69.02, steppes)
+  local bolvar = at("Highlord Bolvar Fordragon", 80.21, 38.35, m.stormwind)
+  local haleh = at("Haleh", 54.55, 51.2, winterspring)
+  B.q(4241, "Marshal Windsor", 54, 48, 4224)
+  B.q(4242, "Abandoned Hope", 54, 48, 4241)
+  B.q(4264, "A Crumpled Up Note", 58, 50, 4242)
+  B.quest[4264].startItem = 11446
+  B.q(4282, "A Shred of Hope", 58, 50, 4264)
+  B.q(4322, "Jail Break!", 58, 50, 4282)
+  B.q(6402, "Stormwind Rendezvous", 60, 50, 4322)
+  B.q(6403, "The Great Masquerade", 60, 50, 6402)
+  B.q(6501, "The Dragon's Eye", 60, 50, 6403)
+  B.q(6502, "Drakefire Amulet", 60, 50, 6501)
+  special({ id = "onyxia-attunement", title = "Drakefire Amulet (Onyxia's Lair)", zone = steppes, levels = { 54, 60 },
+    links = { "dungeon-blackrock-depths", "dungeon-upper-blackrock-spire" },
+    sources = { "https://www.wowhead.com/forever/quest=6502/drakefire-amulet",
+      "https://warcraft.wiki.gg/wiki/Drakefire_Amulet",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+    steps = join(fromRoute("steppes-56", { 4182, 4183, 4184, 4185, 4186, 4223, 4224 }), {
+      accept(4241, maxwell, "Marshal Maxwell asks what became of Marshal Windsor. He is a prisoner in Blackrock Depths: plan a run."),
+      finish(4241, nil, "Find Marshal Windsor in a cell in Blackrock Depths' Detention Block, past the first bridge."),
+      accept(4242, nil, "Take Windsor's bad news back to Maxwell."),
+      finish(4242, maxwell),
+      B.withItem(11446, accept(4264, nil, "Anvilrage guards in Blackrock Depths can drop A Crumpled Up Note. Read it on a later run.")),
+      finish(4264, nil, "Bring the note to Marshal Windsor in his cell."),
+      accept(4282, nil, "Windsor's lost papers are with General Angerforge and Golem Lord Argelmach, deeper in Blackrock Depths."),
+      goal(4282, nil, "Kill General Angerforge and Golem Lord Argelmach for Windsor's papers.", "Marshal Windsor's Lost Information"),
+      finish(4282, nil, "Bring the papers back to Windsor."), accept(4322, nil, "Free Marshal Windsor and escort him out. Clear the cell block first: the escort walks into several packs."),
+      goal(4322, nil, "Keep Windsor alive while he collects his gear and frees his friends.", "Marshal Windsor freed"),
+      finish(4322, maxwell, "Report to Marshal Maxwell at Morgan's Vigil."), accept(6402, maxwell),
+      finish(6402, at("Squire Rowe", 74.17, 90.33, m.stormwind),
+        "At Stormwind's main gate, talk to Squire Rowe and wait for Reginald Windsor to ride up."),
+      accept(6403, nil, "Speak to Reginald Windsor when he arrives, and follow him to the keep."),
+      uncertain(goal(6403, nil, "Escort Reginald Windsor through Stormwind to the throne room. Fight off the dragonkin when Lady Prestor is unmasked.",
+        "Reginald Windsor escorted"), "A group is needed for the throne room fight; check the Forever version."),
+      finish(6403, bolvar), accept(6501, bolvar),
+      finish(6501, haleh, "Haleh waits at the top of Mazthoril in Winterspring. Take the cave path up from the Mazthoril entrance."),
+      accept(6502, haleh, "Bring the blood of General Drakkisath from Upper Blackrock Spire."),
+      goal(6502, nil, "Defeat General Drakkisath in Upper Blackrock Spire and take his blood.", "Blood of the Black Dragon Champion"),
+      finish(6502, haleh, "Return to Haleh for the Drakefire Amulet: it opens Onyxia's Lair in Dustwallow Marsh."),
+    }),
+  })
+
+  B.q(4742, "Seal of Ascension", 60, 57)
+  B.q(4743, "Seal of Ascension", 60, 57, 4742)
+  special({ id = "ubrs-seal", title = "Seal of Ascension (Upper Blackrock Spire)", zone = searing, levels = { 57, 60 },
+    links = { "dungeon-lower-blackrock-spire", "dungeon-upper-blackrock-spire" },
+    sources = { "https://www.wowhead.com/forever/quest=4742/seal-of-ascension",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+    steps = {
+      action("goto", blackrock, "Meet your group at Blackrock Mountain and enter Lower Blackrock Spire."),
+      accept(4742, nil, "Vaelan, a captured dragon in disguise, stands near the start of Lower Blackrock Spire."),
+      goal(4742, nil, "Kill Highlord Omokk, War Master Voone and Overlord Wyrmthalak for their gemstones, and loot an Unadorned Seal of Ascension from the Scarshield orcs.",
+        "Gemstone of Spirestone", "Gemstone of Smolderthorn", "Gemstone of Bloodaxe", "Unadorned Seal of Ascension"),
+      finish(4742, nil, "Bring everything back to Vaelan."), accept(4743, nil, "Vaelan sends you to break a black drake with the unforged seal."),
+      uncertain(goal(4743, at("Emberstrife", 56.66, 87.72, dustwallow),
+        "Fly to Theramore and ride to the Wyrmbog. Beat Emberstrife, a level 61 elite drake, down to low health and use the Unforged Seal on him. Bring a group.",
+        "Forged Seal of Ascension"), "Emberstrife's guards and level; check in game."),
+      finish(4743, nil, "Return to Vaelan in Lower Blackrock Spire. The Seal of Ascension opens Upper Blackrock Spire."),
+    },
+  })
+
+  B.q(7848, "Attunement to the Core", 60, 55)
+  special({ id = "molten-core-attunement", title = "Attunement to the Core", zone = searing, levels = { 55, 60 },
+    links = { "dungeon-blackrock-depths" },
+    sources = { "https://www.wowhead.com/forever/quest=7848/attunement-to-the-core",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+    steps = {
+      accept(7848, nil, "Lothos Riftwaker waits on the ledge inside Blackrock Mountain, just past the chain down to Blackrock Depths."),
+      goal(7848, nil, "In Blackrock Depths, go past Lord Incendius to the Molten Core portal and take a Core Fragment from the rock beside it.",
+        "Core Fragment"),
+      finish(7848, nil, "Return to Lothos. Once attuned he can teleport you straight to Molten Core."),
+    },
+  })
+
+  B.q(5538, "Mold Rhymes With...", 57, 55, 5537)
+  B.q(5801, "Fire Plume Forged", 57, 55, 5538)
+  B.q(5803, "Araj's Scarab", 60, 55, 5801)
+  B.q(5505, "The Key to Scholomance", 60, 55, 5803)
+  local arbington = at("Alchemist Arbington", 42.66, 83.77, wpl)
+  special({ id = "scholomance-key", title = "The Key to Scholomance", zone = wpl, levels = { 55, 60 },
+    links = { "dungeon-scholomance" },
+    sources = { "https://www.wowhead.com/forever/quest=5505/the-key-to-scholomance",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+    steps = join(fromRoute("wpl-51", { 5090, 5092 }), fromRoute("plaguelands-57", { 5097, 5533, 5537 }), {
+      accept(5538, arbington, "Arbington needs the fragments shaped by a smith. Take them and 15 gold to Krinkle Goodsteel."),
+      finish(5538, at("Krinkle Goodsteel", 51.46, 28.81, tanaris), "Krinkle Goodsteel is the smith in Gadgetzan."),
+      accept(5801, at("Krinkle Goodsteel", 51.46, 28.81, tanaris),
+        "Krinkle gives you the Skeleton Key Mold. You also need 2 Thorium Bars: smelt them or buy them on the Auction House."),
+      action("buy", nil, "Get 2 Thorium Bars before you go to Un'Goro: a miner can smelt them, or check the Auction House."),
+      goal(5801, at("Fire Plume Ridge", 50.5, 49.5, ungoro), "Climb Fire Plume Ridge in the middle of Un'Goro and use the mold beside the lava lake.",
+        "Unfinished Skeleton Key"),
+      finish(5801, arbington, "Take the unfinished key back to Arbington at Chillwind Camp."), accept(5803, arbington),
+      uncertain(goal(5803, at("Araj the Summoner", 45.27, 69.21, wpl), "Araj the Summoner stands in the middle of Andorhal with his guards. Bring a group, kill him and loot his scarab.",
+        "Araj's Scarab"), "Araj is a level 61 elite; group size needed is not confirmed for Forever."),
+      finish(5803, arbington), accept(5505, arbington),
+      finish(5505, arbington, "Arbington finishes the Skeleton Key. It opens Scholomance on Caer Darrow."),
+    }),
+  })
+
+  B.q(3801, "Dark Iron Legacy", 52, 48)
+  B.q(3802, "Dark Iron Legacy", 52, 48, 3801)
+  special({ id = "shadowforge-key", title = "Dark Iron Legacy (Shadowforge Key)", zone = searing, levels = { 52, 60 },
+    links = { "dungeon-blackrock-depths" },
+    sources = { "https://www.wowhead.com/forever/quest=3802/dark-iron-legacy",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+    steps = {
+      uncertain(accept(3801, blackrock, "Franclorn Forgewright's ghost lies on the stone ledge in the middle of Blackrock Mountain. You only see him as a spirit: die nearby and talk to him before you resurrect."),
+        "Check that Forever keeps the ghost-only rule."),
+      finish(3801, nil, "Listen to Franclorn's story."), accept(3802, nil, "Franclorn asks you to return his hammer to his statue."),
+      goal(3802, nil, "In Blackrock Depths, kill Fineous Darkvire for the hammer Ironfel and place it on Franclorn's statue in the Shrine of Thaurissan.",
+        "Ironfel placed"),
+      finish(3802, nil, "Take the Shadowforge Key from the statue. It opens the doors deeper in Blackrock Depths."),
+    },
+  })
+end
