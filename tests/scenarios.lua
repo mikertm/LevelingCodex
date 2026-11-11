@@ -557,6 +557,118 @@ function S.questQuestieMinimal()
   check(chatHas("Questie: loaded") and chatHas("QuestieDB: contract 4"), "the Questie block works on a minimal client")
 end
 
+-- The last-mile arrow: Kobold Camp Cleanup's camp is at (48.8, 36.4) in Elwynn.
+local function koboldCamp(objectives, x, y)
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = objectives } }
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1429, x, y
+  S.login()
+end
+
+local function moveTo(x, y)
+  MOCK.questX, MOCK.questY = x, y
+  MOCK.advance(0.25)
+end
+
+function S.questQuestieNearest()
+  koboldDB()
+  local vermin = { text = "Kobold Vermin 4/10", finished = false }
+  koboldCamp({ vermin }, 48.8, 50.0)
+  local arrow = LevelingCodexQuestArrow
+  local art = arrow:GetRegions()
+  check(questText(arrow, "315 yd") and not questText(arrow, "Kobold Vermin"), "outside the camp the arrow leads to the camp")
+  moveTo(48.8, 44.0)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "inside the camp: the nearest unphased spawn on this map")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("arrow: inside the camp, 2 spawns, nearest Kobold Vermin"), "debug reports the candidates")
+  moveTo(48.8, 48.0)
+  check(questText(arrow, "Kobold Vermin - 235 yd"), "still inside before CAMP_LEAVE; spawns past SPAWN_RANGE ignored")
+  moveTo(48.8, 50.0)
+  check(questText(arrow, "315 yd"), "leaving the camp returns to the camp point")
+  moveTo(48.8, 48.0)
+  check(questText(arrow, "268 yd"), "no re-entry before CAMP_ENTER")
+  moveTo(50.0, 38.5)
+  check(questText(arrow, "Kobold Vermin nearby") and not art:IsShown(), "next to a spawn: nearby, no arrow art")
+  moveTo(48.8, 44.0)
+  LevelingCodexDB.noNearestSpawn = true
+  MOCK.advance(0.25)
+  check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "the setting turns it off")
+  LevelingCodexDB.noNearestSpawn = nil
+  local worker = { text = "Kobold Worker 0/5", finished = false }
+  MOCK.questLog = { { questID = 7, objectives = { vermin, worker } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  moveTo(48.8, 44.0)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "two objectives: the nearest of both")
+  vermin.text, vermin.finished = "Kobold Vermin 10/10", true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Kobold Worker - 242 yd"), "a finished objective drops its spawns")
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Gnoll Pelt 0/5", finished = false } } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "no name match: every objective counts, spawnless ones skipped")
+  MOCK.questDone[7], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 7)
+  MOCK.advance(0.25)
+  check(not questText(arrow, "Kobold Vermin"), "a new step drops the old nearest target")
+end
+
+function S.questQuestieNearestItem()
+  koboldDB({
+    objectives = { [3] = { { 1001, nil, 0 } } },
+    items = { [1001] = { name = "Large Candle", npcDrops = { 6 }, objectDrops = { 50 } } },
+    objects = { [50] = { name = "Candle Box", spawns = { [12] = { { 47.5, 42.0 } } } } },
+  })
+  koboldCamp({ { text = "Large Candle: 2/8", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Candle Box - 65 yd"), "item objectives lead to whatever drops them")
+  moveTo(47.5, 42.5)
+  check(questText(arrow, "Candle Box nearby"), "nearby an item source")
+end
+
+function S.questQuestieNearestPart()
+  MOCK.makeQuestieDB({
+    quests = { [92745] = { objectives = { [1] = { { 1101, nil, 0 }, { 1102, nil, 0 } } } } },
+    npcs = {
+      [1101] = { name = "Kobold Digger", spawns = { [40] = { { 46.5, 22.0 } } } },
+      [1102] = { name = "Riverpaw Miner", spawns = { [40] = { { 45.3, 22.5 } } } },
+    },
+  })
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 15, 1436, 45.3, 22.0
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "westfall" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 92745 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 92745, objectives = {
+    { text = "Kobold Diggers 0/4", finished = false }, { text = "Riverpaw Miners 0/6", finished = false } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  MOCK.advance(0.25)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Kobold Digger - 42 yd") and not questText(arrow, "Riverpaw"),
+    "an objective-part step only uses its own objective")
+end
+
+function S.questQuestieNearestError()
+  koboldDB()
+  MOCK.questieDBError = true
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "a read error keeps today's arrow")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(read failed"), "debug names the read error")
+  MOCK.questieDBError = false
+  MOCK.advance(0.25)
+  check(questText(arrow, "176 yd"), "no retry in the same session")
+end
+
 function S.questFlights()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
   LevelingCodexCharDB = { questFlights = { ["Darkshire, Duskwood"] = true } }

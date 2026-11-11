@@ -193,9 +193,16 @@ local function paintArrow()
   arrow:Show()
   local map, x, y = Q.position()
   local step, travel = Q.destination(goal, map)
-  local bearing, yards = Q.vector(step, map, x, y)
+  local spawn, spawnName
+  if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
+  local bearing, yards = Q.vector(spawn or step, map, x, y)
   arrowArt:Hide()
-  if yards and yards <= Q.arrived() then
+  if spawn and yards and yards <= Q.arrived() then
+    arrowText:SetText(spawnName .. " nearby")
+  elseif spawn and bearing then
+    arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
+    turnArrow()
+  elseif yards and yards <= Q.arrived() then
     arrowText:SetText(travel or "Arrived")
   elseif bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, travel or (yards and (math.floor(yards + 0.5) .. " yd") or ""), false
