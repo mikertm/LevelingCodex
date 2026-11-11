@@ -1080,6 +1080,8 @@ do
   q(554, "Stormpike's Deciphering", 40, 28, 551)
   q(1450, "Gryphon Master Talonaxe", 43, 38, 1449)
   q(1451, "Rhapsody Shindigger", 43, 38, 1450)
+  q(1053, "In the Name of the Light", 40, 34, 1052)
+  q(1050, "Mythology of the Titans", 38, 28)
 
   section("arathi-39", "Arathi Highlands, Alterac and Aerie Peak", M.arathi, 39, 40, {
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
@@ -1134,6 +1136,8 @@ do
     action("goto", hb(nil, 82.4, 39.6), "Ride west through Thoradin's Wall into Hillsbrad and on to Southshore."),
     finish(661, hb("Phin Odelic", 50.35, 59.05)),
     finish(1052, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh the Devout stands near the inn."),
+    forDungeon(accept(1053, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh's next task is in the Scarlet Monastery: its four leaders."),
+      "dungeon-scarlet-monastery-cathedral"),
     finish(525, maleb), accept(537, maleb), accept(512, maleb),
     accept(500, redpath), accept(540, dibbs),
     action("sethearth", anderson, "Bind at the Southshore inn.", southshore),
@@ -1157,6 +1161,8 @@ do
     finish(551, dibbs), accept(554, dibbs), finish(540, dibbs), accept(542, dibbs),
     taxi("fly", hb("Darla Harris", 49.34, 52.27), "Ironforge, Dun Morogh", "Fly to Ironforge."),
     finish(554, ifg("Prospector Stormpike", 74.64, 11.74)),
+    forDungeon(accept(1050, ifg("Librarian Mae Paledust", 74.97, 12.48), "Librarian Mae Paledust, beside Stormpike, wants a book from the Scarlet Monastery library."),
+      "dungeon-scarlet-monastery-library"),
     finish(653, ifg("Gerrig Bonegrip", 50.83, 5.62), "Gerrig Bonegrip is in the Forlorn Cavern."),
     action("goto", nil, "Take the Deeprun Tram to Stormwind. Use Next when you arrive."),
     finish(543, at("Count Remington Ridgewell", 76.94, 47.83, M.stormwind)),
