@@ -28,6 +28,7 @@ QuestHordeClassHunterRogue.lua
 QuestHordeClassCasters.lua
 QuestHordeClassDruidShaman.lua
 QuestClassData.lua
+QuestMobData.lua
 Theme.lua
 Art.lua
 Guide.lua
@@ -46,4 +47,5 @@ Minimap.lua
 Tracking.lua
 TalentGuide.lua
 ProfessionGuide.lua
+TrainerGuide.lua
 Init.lua

@@ -141,6 +141,17 @@ function ns.padText(s)
   return s
 end
 
+-- Copper as "1g 20s 5c" (ASCII, no coin icons).
+function ns.money(copper)
+  copper = math.max(0, math.floor(tonumber(copper) or 0))
+  local parts = {}
+  local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+  if g > 0 then parts[#parts + 1] = g .. "g" end
+  if s > 0 then parts[#parts + 1] = s .. "s" end
+  if c > 0 or #parts == 0 then parts[#parts + 1] = c .. "c" end
+  return table.concat(parts, " ")
+end
+
 function ns.say(msg)
   local line = ns.GOLD .. "Leveling Codex:|r " .. msg
   if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then DEFAULT_CHAT_FRAME:AddMessage(line)

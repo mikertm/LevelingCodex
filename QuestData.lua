@@ -1654,8 +1654,10 @@ zi.shendar = {
   finish(96101, zi.raan), accept(96646, zi.raan),
   accept(97970, zi.raan, "If you picked Mining at Dalia, ask Raan for the mining lesson too."),
   accept(97971, zi.raan, "If you picked Skinning at Dalia, ask Raan for the skinning lesson too."),
-  accept(97968, zi.raan, "If you picked Herbalism at Dalia, ask Raan for the herbalism lesson too. You finish it in Valanaar."),
+  accept(97968, zi.raan, "If you picked Herbalism at Dalia, ask Raan for the herbalism lesson too."),
   finish(97971, zi.at("Mendalass Tattermend", 43.3, 43.4), "Talk to Mendalass Tattermend in the village."),
+  -- Blizzard's Nov 10 hotfix moved this turn-in from Syriel Nightrain (Valanaar) to Shen'dar.
+  finish(97968, zi.at("Halassa Fernbreeze", 43.05, 43.52), "Talk to Halassa Fernbreeze, the herbalism trainer in the village."),
   finish(97970, zi.at("Messana Crestwind", 44.8, 44.6), "Talk to Messana Crestwind in the village."),
   action("train", nil, "Train at your class trainer in Shen'dar Village for level", { level = 6 }),
   finish(93461, zi.aonda), accept(92517, zi.aonda),
@@ -1702,7 +1704,6 @@ zi.shendar = {
 -- Valanaar: the orchard, the Shriekling Den, the eastern watchtower, Shadowgale Forest, the Shrine.
 zi.valanaar = {
   accept(93317, zi.nyalah),
-  finish(97968, zi.at("Syriel Nightrain", 57.9, 75.5), "Talk to Syriel Nightrain on the west side of Valanaar."),
   action("sethearth", zi.donaal, "Bind your hearthstone with Donaal Downbreeze at the Valanaar inn.", zi.hearth),
   accept(92679, zi.alvarion, "Alvarion is upstairs in the house. Listen to his story."),
   accept(94484, zi.lotheluum),
@@ -2470,7 +2471,6 @@ local lm = (function()
     "https://polestar.guide/guides/alliance/03-loch-modan",
     "https://warcraft.blizzplanet.com/world-of-warcraft-forever-loch-modan-quests/",
     "https://senseos.gg/wiki/wow-forever/interactive-map/loch-modan/",
-    "https://zygorguides.com/blog/important-tips-and-info-for-zygors-classic-guides/",
   } }
 end)()
 
@@ -2816,7 +2816,6 @@ local ds = (function()
       "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf",
       "https://www.wowhead.com/forever/quests/kalimdor/darkshore",
       "https://bindonforever.com/zones/darkshore",
-      "https://zygorguides.com/blog/new-smart-injection-system-quest-catchup-feature-for-classic/",
     },
   }
 end)()

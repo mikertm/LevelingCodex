@@ -1121,6 +1121,11 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
+  head("CLASS TRAINER")
+  tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
+    "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
+  y = y + 12
+
   head("PROFESSIONS")
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
     "When you open Blacksmithing, Smelting, Tailoring, Enchanting or Leatherworking, the Codex outlines the recipe to make for your skill and shows how many more to make.")
@@ -1159,7 +1164,7 @@ renderers.settings = function()
   tick("Show the quest item button", not db.noQuestItem, function() db.noQuestItem = not db.noQuestItem; ns.questRefresh() end,
     "A button beside the step window that uses the current step's quest item. Changes wait until you leave combat.")
   tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
-    "A button below the item button that targets the current step's quest giver. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
+    "A button below the item button that targets the current step's quest giver, or the creatures its objectives need. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
   if ns.questie.usable() then
     tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
@@ -1167,6 +1172,8 @@ renderers.settings = function()
       ns.questRefresh()
     end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need. The spawns come from your QuestieDB addon.")
   end
+  tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
+    "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
@@ -1179,6 +1186,10 @@ renderers.settings = function()
   tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
     "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
   questieNote(ns.questie.autoComplete(), "Questie's auto-complete is on, so Questie turns quests in.")
+  tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
+    "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+  tick("Take the guide's flights and binds", db.questAutoTravel, function() db.questAutoTravel = not db.questAutoTravel end,
+    "Off by default. On: at a flight master during a Fly step the Codex takes the step's flight, and at the step's innkeeper during a bind step it sets your hearthstone there. Hold Alt to stop it.")
   y = y + 12
 
   head("MINIMAP BUTTON")

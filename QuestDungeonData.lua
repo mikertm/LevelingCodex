@@ -369,7 +369,7 @@ do
   q(389, "Bazil Thredd", 22, 16, 373)
   q(391, "The Stockade Riots", 29, 16, 389)
   q(387, "Quell The Uprising", 26, 22)
-  -- After the riots: the Stormwind chain that unmasks Lescovar (RestedXP runs it straight after the Stockade).
+  -- After the riots: the Stormwind chain that unmasks Lescovar, run straight after the Stockade.
   local shaw = at("Master Mathias Shaw", 78.31, 70.74, m.stormwind)
   local elling = at("Elling Trias", 66.03, 74.1, m.stormwind)
   local tyrion = at("Tyrion", 73.23, 35.58, m.stormwind)
@@ -739,7 +739,7 @@ do
       accept(1221, mebok, "Take the tuber quest in Ratchet before travelling south."),
       note("Snufflenose supplies", "Take the Crate With Holes, Snufflenose Owner's Manual and Command Stick beside Mebok before leaving Ratchet."),
       action("goto", journal, "For the Crone chain, follow the Barrens road south. Look for Henrig's body near the Great Lift at the north end of Thousand Needles. Check your way down for Horde guards."),
-      withItem(5791, accept(1100, journal, "Loot and read Henrig Lonebrow's Journal.")),
+      withItem(5791, accept(1100, journal, "Loot and read Henrig Lonebrow's Journal. Blizzard moved it a little down the road on November 9: if it isn't here, look for a similar skeleton nearby.")),
       finish(1100, falfindel, "Take the journal to Falfindel at Thalanaar on the Feralas border."),
       accept(1101, falfindel),
       enter(name, at("Razorfen Kraul approach", 42.9, 90.2, barrens),
