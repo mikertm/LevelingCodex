@@ -20,7 +20,17 @@ STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
-ROUTES = [ROUTE, ROOT / "QuestAlternateData.lua", ROOT / "QuestDungeonData.lua", ROOT / "QuestSpecialData.lua", CLASS_ROUTE]
+
+
+def route_files():
+    """The quest data files in .toc order: QuestData.lua through QuestClassData.lua."""
+    names = [line.strip() for line in (ROOT / "LevelingCodex.toc").read_text(encoding="utf-8").splitlines()
+             if line.strip() and not line.startswith("#")]
+    first, last = names.index(ROUTE.name), names.index(CLASS_ROUTE.name)
+    return [ROOT / name for name in names[first:last + 1]]
+
+
+ROUTES = route_files()
 
 
 def matches(value, token):
@@ -48,7 +58,10 @@ def audit(data, ref, cap=20):
         return [("QUESTS", "error", "client reference is missing quest data")]
     ids, maps, flights = set(game["ids"]), game["maps"], set(game["flights"])
     for faction, route in data.items():
-        sections = route["sections"]
+        # Empty Lua tables load as lists: read them as empty maps.
+        route = {key: ({} if value == [] else value) for key, value in route.items()}
+        route.setdefault("starts", {})
+        sections = route.get("sections") or []
         route_quests = {step.get("quest") for section in sections for step in section["steps"] if step.get("quest")}
         known_sections = {section["id"] for section in sections}
         route_sections = {section["id"] for section in sections if not section.get("side")}

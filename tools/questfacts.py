@@ -27,6 +27,11 @@ ZONES = {
     "Dun Morogh": (1, 1426), "Loch Modan": (38, 1432), "Wetlands": (11, 1437),
     "Darkshore": (148, 1439), "Teldrassil": (141, 1438), "Zephras Isle": (16593, 2521),
     "Ironforge": (1537, 1455), "Darnassus": (1657, 1457),
+    "Durotar": (14, 1411), "Mulgore": (215, 1412), "Barrens": (17, 1413), "Tirisfal": (85, 1420),
+    "Silverpine": (130, 1421), "Orgrimmar": (1637, 1454), "Thunder Bluff": (1638, 1456),
+    "Undercity": (1497, 1458), "Stonetalon": (406, 1442), "Ashenvale": (331, 1440),
+    "Hillsbrad": (267, 1424), "Thousand Needles": (400, 1441), "Alterac": (36, 1416),
+    "Arathi": (45, 1417), "Desolace": (405, 1443), "Dustwallow": (15, 1445),
 }
 
 
@@ -156,6 +161,8 @@ def main():
     parser.add_argument("command", choices=("quest", "zone", "npc", "object", "item"))
     parser.add_argument("value")
     parser.add_argument("--flavor", choices=("classic", "forever"), default="forever")
+    parser.add_argument("--faction", choices=("alliance", "horde"), default="alliance",
+                        help="zone listings: keep quests this faction's races can take")
     args = parser.parse_args()
     lu, read = lua_reader()
     quests, npcs, objects = (entity(lu, read, args.flavor, kind) for kind in ("quest", "npc", "object"))
@@ -188,10 +195,10 @@ def main():
         if traces is not None:
             ids.update(traces.keys())
         result = []
-        alliance = 0x10000004D
+        races = 0x10000004D if args.faction == "alliance" else 0x2000000B2
         for id_ in ids:
             q = record(quests, id_)
-            if q.get("requiredRaces") and not q["requiredRaces"] & alliance:
+            if q.get("requiredRaces") and not q["requiredRaces"] & races:
                 continue
             start = endpoints(q.get("startedBy", {}), npcs, objects)
             if q.get("zoneOrSort") == area or any(

@@ -15,6 +15,12 @@ QuestData.lua
 QuestAlternateData.lua
 QuestDungeonData.lua
 QuestSpecialData.lua
+QuestHordeData.lua
+QuestHordeMulgore.lua
+QuestHordeTirisfal.lua
+QuestHordeBarrens.lua
+QuestHorde22to30.lua
+QuestHordeDungeons.lua
 QuestClassData.lua
 Theme.lua
 Art.lua
