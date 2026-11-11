@@ -612,6 +612,303 @@ function S.questGossip()
   PlaySound = original
 end
 
+-- Questie side by side: its auto-questing and hold-back key take precedence over the Codex's.
+function S.questQuestieAuto()
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - A Threat Within"), "fresh route starts with an accept")
+  LevelingCodexDB.questAutoAccept = true
+  MOCK.gossipAvailable = { { questID = 783, title = "A Threat Within" } }
+  Questie = {} -- loaded, settings not built yet
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == 783, "Questie without settings leaves auto-accept to the Codex")
+  MOCK.gossipPicked = nil
+  MOCK.makeQuestie({ autoAccept = true })
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "Questie's auto-accept handles gossip lists")
+  MOCK.interactionQuest = 783
+  MOCK.event("QUEST_DETAIL")
+  check(not MOCK.questAccepted, "Questie's auto-accept handles the quest window")
+  MOCK.makeQuestie({ legacyAccept = true })
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipPicked == nil, "an older Questie's autoaccept counts too")
+  slash("quests")
+  click(win(), "Settings")
+  check(questText(win(), "Questie's auto-accept is on, so Questie accepts quests."), "the tickbox says Questie handles it")
+
+  MOCK.makeQuestie({}) -- auto-accept off, key Shift
+  click(win(), "Settings")
+  local box = findButton(win(), function(l) return l == "Auto-accept the current guide quest" end)
+  MOCK.fire(box, "OnEnter")
+  check(table.concat(GameTooltip._lines or {}, " "):find("Hold Alt or Shift to stop it.", 1, true),
+    "the tooltip names Questie's key")
+  MOCK.shift = true
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("QUEST_DETAIL")
+  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "Questie's key holds the Codex back")
+  MOCK.shift, MOCK.alt = false, true
+  MOCK.event("QUEST_DETAIL")
+  check(not MOCK.questAccepted, "Alt holds back the quest window too")
+  MOCK.alt = false
+  MOCK.event("QUEST_DETAIL")
+  check(MOCK.questAccepted == 783, "the Codex accepts when Questie's auto-accept is off and no key is held")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
+    "debug reports Questie's settings")
+
+  local objective = { text = "Speak to McBride 1/1", numFulfilled = 1, numRequired = 1, finished = true }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within", objectives = { objective } } }
+  MOCK.event("QUEST_ACCEPTED", 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  LevelingCodexDB.questAutoTurnin, MOCK.questChoices = true, 0
+  MOCK.makeQuestie({ autocomplete = true })
+  MOCK.event("QUEST_COMPLETE")
+  check(not MOCK.questRewarded, "Questie's auto-complete handles turn-ins")
+  click(win(), "Settings")
+  check(questText(win(), "Questie's auto-complete is on, so Questie turns quests in."), "the turn-in tickbox says so")
+  MOCK.makeQuestie({})
+  MOCK.event("QUEST_COMPLETE")
+  check(MOCK.questRewarded == 783, "the Codex turns in when Questie's auto-complete is off")
+end
+
+-- Questie side by side: the step window sits beside Questie's tracker until you move it.
+function S.questQuestieTracker()
+  S.login()
+  local viewer = questViewer()
+  local p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without Questie")
+  MOCK.makeQuestie({ cx = 1700 }) -- Questie builds its tracker after login
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "TOPRIGHT" and rel == Questie_BaseFrame and rp == "TOPLEFT" and x == -12 and y == -40,
+    "beside a right-hand tracker, on its left")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: beside Questie's tracker"), "debug names the placement")
+  Questie_BaseFrame._cx = 200
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "TOPLEFT" and rel == Questie_BaseFrame and rp == "TOPRIGHT" and x == 58 and y == -40,
+    "beside a left-hand tracker, on its right, clear of the item and target buttons")
+  Questie_BaseFrame.GetCenter = function() return nil end
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(select(2, viewer:GetPoint()) == UIParent, "a tracker without a position yet is ignored")
+  Questie_BaseFrame.GetCenter = nil
+  Questie_BaseFrame:Hide()
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "a hidden tracker restores the default spot")
+  MOCK.drag(viewer, -30, 0)
+  Questie_BaseFrame:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  p, rel, rp, x, y = viewer:GetPoint()
+  check(rel == UIParent and x == -78, "a dragged position wins over Questie's tracker")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: saved position"), "debug names the saved position")
+end
+
+-- Questie's tracker changing without a quest event, in combat, and an anchor the client refuses.
+function S.questQuestieTrackerLive()
+  S.login()
+  local viewer = questViewer()
+  MOCK.makeQuestie({ cx = 1700 })
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "a tracker shown without a quest event is noticed on the next tick")
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  Questie_BaseFrame:Hide()
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "the window stays put in combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.25)
+  local p, rel, _, x, y = viewer:GetPoint()
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "after combat it moves to the default spot")
+  Questie_BaseFrame:ClearAllPoints()
+  Questie_BaseFrame:SetPoint("TOP", viewer, "BOTTOM") -- anchoring to it would now be a loop
+  Questie_BaseFrame:Show()
+  MOCK.advance(0.25)
+  check(select(2, viewer:GetPoint()) == UIParent, "an anchor the client refuses leaves the window in its default spot")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Step window: default spot"), "debug says where the window is")
+end
+
+-- QuestieDB fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
+local function koboldDB(opts)
+  opts = opts or {}
+  MOCK.makeQuestieDB({
+    contract = opts.contract, noZones = opts.noZones,
+    quests = { [7] = { objectives = opts.objectives or { [1] = { { 6, nil, 0 }, { 257, nil, 0 }, { 999, nil, 0 } } } } },
+    npcs = {
+      [6] = { name = "Kobold Vermin", spawns = {
+        [12] = { { 50.0, 38.0 }, { 47.0, 34.0 }, { 48.9, 40.6, 5 }, { 48.8, 54.0 } },
+        [40] = { { 48.8, 44.0 } } } },
+      [257] = { name = "Kobold Worker", spawns = { [12] = { { 44.0, 36.4 } } } },
+      [999] = { name = "Ghost" },
+    },
+    objects = opts.objects, items = opts.items,
+  })
+end
+
+function S.questQuestieDB()
+  S.login()
+  slash("quests")
+  click(win(), "Settings")
+  check(not questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "no setting without QuestieDB")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: not loaded") and chatHas("QuestieDB: not installed"), "debug names what is missing")
+  koboldDB({ contract = 0 })
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(contract check failed%)"), "an incompatible QuestieDB is refused")
+  koboldDB({ noZones = true })
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(no zone table%)"), "QuestieDB without its zone table is refused")
+  koboldDB()
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable QuestieDB is reported")
+  click(win(), "Settings")
+  check(questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "the setting shows with QuestieDB")
+end
+
+function S.questQuestieMinimal()
+  MOCK.makeQuestie({ autoAccept = true })
+  koboldDB()
+  S.login()
+  slash("quests")
+  click(win(), "Settings")
+  MOCK.event("GOSSIP_SHOW")
+  MOCK.event("QUEST_DETAIL")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Questie: loaded") and chatHas("QuestieDB: contract 4"), "the Questie block works on a minimal client")
+end
+
+-- The last-mile arrow: Kobold Camp Cleanup's camp is at (48.8, 36.4) in Elwynn.
+local function koboldCamp(objectives, x, y)
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = objectives } }
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1429, x, y
+  S.login()
+end
+
+local function moveTo(x, y)
+  MOCK.questX, MOCK.questY = x, y
+  MOCK.advance(0.25)
+end
+
+function S.questQuestieNearest()
+  koboldDB()
+  local vermin = { text = "Kobold Vermin 4/10", finished = false }
+  koboldCamp({ vermin }, 48.8, 50.0)
+  local arrow = LevelingCodexQuestArrow
+  local art = arrow:GetRegions()
+  check(questText(arrow, "315 yd") and not questText(arrow, "Kobold Vermin"), "outside the camp the arrow leads to the camp")
+  moveTo(48.8, 44.0)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "inside the camp: the nearest unphased spawn on this map")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("arrow: inside the camp, 2 spawns, nearest Kobold Vermin"), "debug reports the candidates")
+  moveTo(48.8, 48.0)
+  check(questText(arrow, "Kobold Vermin - 235 yd"), "still inside before CAMP_LEAVE; spawns past SPAWN_RANGE ignored")
+  moveTo(48.8, 50.0)
+  check(questText(arrow, "315 yd"), "leaving the camp returns to the camp point")
+  moveTo(48.8, 48.0)
+  check(questText(arrow, "268 yd"), "no re-entry before CAMP_ENTER")
+  moveTo(50.0, 38.5)
+  check(questText(arrow, "Kobold Vermin nearby") and not art:IsShown(), "next to a spawn: nearby, no arrow art")
+  moveTo(48.8, 44.0)
+  LevelingCodexDB.noNearestSpawn = true
+  MOCK.advance(0.25)
+  check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "the setting turns it off")
+  LevelingCodexDB.noNearestSpawn = nil
+  local worker = { text = "Kobold Worker 0/5", finished = false }
+  MOCK.questLog = { { questID = 7, objectives = { vermin, worker } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  moveTo(48.8, 44.0)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "two objectives: the nearest of both")
+  vermin.text, vermin.finished = "Kobold Vermin 10/10", true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Kobold Worker - 242 yd"), "a finished objective drops its spawns")
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Gnoll Pelt 0/5", finished = false } } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "no name match: every objective counts, spawnless ones skipped")
+  MOCK.questDone[7], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 7)
+  MOCK.advance(0.25)
+  check(not questText(arrow, "Kobold Vermin"), "a new step drops the old nearest target")
+end
+
+function S.questQuestieNearestFallback()
+  koboldDB()
+  koboldCamp({ { text = "Kobold Vermin 10/10", finished = true }, { text = "Gnoll Pelt 0/5", finished = false } }, 48.8, 44.0)
+  check(questText(LevelingCodexQuestArrow, "Kobold Worker - 242 yd"), "the wide fallback leaves out finished objectives")
+end
+
+function S.questQuestieNearestItem()
+  koboldDB({
+    objectives = { [3] = { { 1001, nil, 0 } } },
+    items = { [1001] = { name = "Large Candle", npcDrops = { 6 }, objectDrops = { 50 } } },
+    objects = { [50] = { name = "Candle Box", spawns = { [12] = { { 47.5, 42.0 } } } } },
+  })
+  koboldCamp({ { text = "Large Candle: 2/8", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Candle Box - 65 yd"), "item objectives lead to whatever drops them")
+  moveTo(47.5, 42.5)
+  check(questText(arrow, "Candle Box nearby"), "nearby an item source")
+end
+
+function S.questQuestieNearestPart()
+  MOCK.makeQuestieDB({
+    quests = { [92745] = { objectives = { [1] = { { 1101, nil, 0 }, { 1102, nil, 0 } } } } },
+    npcs = {
+      [1101] = { name = "Kobold Digger", spawns = { [40] = { { 46.5, 22.0 } } } },
+      [1102] = { name = "Riverpaw Miner", spawns = { [40] = { { 45.3, 22.5 } } } },
+    },
+  })
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 15, 1436, 45.3, 22.0
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "westfall" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 92745 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 92745, objectives = {
+    { text = "Kobold Diggers 0/4", finished = false }, { text = "Riverpaw Miners 0/6", finished = false } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  MOCK.advance(0.25)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "Kobold Digger - 42 yd") and not questText(arrow, "Riverpaw"),
+    "an objective-part step only uses its own objective")
+end
+
+function S.questQuestieNearestError()
+  koboldDB()
+  MOCK.questieDBError = true
+  koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "a read error keeps today's arrow")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("QuestieDB: off %(read failed"), "debug names the read error")
+  MOCK.questieDBError = false
+  MOCK.advance(0.25)
+  check(questText(arrow, "176 yd"), "no retry in the same session")
+end
+
 function S.questFlights()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 18, 1433
   LevelingCodexCharDB = { questFlights = { ["Darkshire, Duskwood"] = true } }

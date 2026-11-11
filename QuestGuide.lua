@@ -27,12 +27,37 @@ local function turnArrow()
   arrowText:SetText(rotated and arrowCaption or (compass .. (arrowCaption ~= "" and " - " .. arrowCaption or "")))
 end
 
+-- A saved position wins; without one the window sits beside Questie's tracker (built some
+-- seconds after login, so the refresh and the ticker both check) or in its default spot. It
+-- only re-anchors when the answer changes. On the tracker's right it keeps 58 px clear: the
+-- item and target buttons hang up to 46 px off the window's left edge.
+local placedBy, refused -- refused: a tracker the client wouldn't let us anchor to (not retried)
+local PLACED = { saved = "saved position", left = "beside Questie's tracker", right = "beside Questie's tracker",
+  default = "default spot" }
+
 local function place()
-  viewer:ClearAllPoints()
   local p = ns.db().questPosition
+  local tracker, side
+  if not p then tracker, side = ns.questie.trackerSide() end
+  if tracker and tracker == refused then tracker, side = nil, nil end
+  local key = (p and "saved") or side or "default"
+  if key == placedBy then return end
+  -- A placed window stays put in combat: the secure buttons beside it can't follow until after.
+  if placedBy and try(InCombatLockdown) then return end
+  viewer:ClearAllPoints()
+  local ok = true
   if p then viewer:SetPoint(p[1], UIParent, p[2], p[3], p[4])
-  else viewer:SetPoint("RIGHT", UIParent, "RIGHT", -48, 80) end
+  elseif side == "left" then ok = pcall(viewer.SetPoint, viewer, "TOPRIGHT", tracker, "TOPLEFT", -12, -40)
+  elseif side == "right" then ok = pcall(viewer.SetPoint, viewer, "TOPLEFT", tracker, "TOPRIGHT", 58, -40) end
+  if not ok then refused, key = tracker, "default" end
+  if key == "default" then
+    viewer:ClearAllPoints()
+    viewer:SetPoint("RIGHT", UIParent, "RIGHT", -48, 80)
+  end
+  placedBy = key
 end
+
+function ns.questViewerPlacement() return PLACED[placedBy or "default"] end
 
 local function font(parent, y, width, template)
   local fs = parent:CreateFontString(nil, "OVERLAY", template or "GameFontHighlightSmall")
@@ -84,6 +109,7 @@ local function makeViewer()
     self:StopMovingOrSizing()
     local point, _, relative, x, y = self:GetPoint()
     if point then ns.db().questPosition = { point, relative, x, y } end
+    placedBy = nil -- the next refresh anchors the saved spot to UIParent
     updateItemButton()
   end)
   viewer:HookScript("OnHide", function()
@@ -197,9 +223,16 @@ local function paintArrow()
   arrow:Show()
   local map, x, y = Q.position()
   local step, travel = Q.destination(goal, map)
-  local bearing, yards = Q.vector(step, map, x, y)
+  local spawn, spawnName
+  if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
+  local bearing, yards = Q.vector(spawn or step, map, x, y)
   arrowArt:Hide()
-  if yards and yards <= Q.arrived() then
+  if spawn and yards and yards <= Q.arrived() then
+    arrowText:SetText(spawnName .. " nearby")
+  elseif spawn and bearing then
+    arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
+    turnArrow()
+  elseif yards and yards <= Q.arrived() then
     arrowText:SetText(travel or "Arrived")
   elseif bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, travel or (yards and (math.floor(yards + 0.5) .. " yd") or ""), false
@@ -587,6 +620,7 @@ function ns.questRefresh()
   if not dismissed and sec then
     painting = true
     if not viewer then makeViewer() end
+    place()
     if theme ~= ns.themeVersion then
       local backdrop = A.backdrop(viewer, "dialog", C.parch, C.edge)
       flatBackground:SetColorTexture(ns.rgba(C.parch))
@@ -748,17 +782,27 @@ function ns.questRecord(command)
   ns.say(recorder and "quest recorder on. Use /codex record copy to export." or "quest recorder off.")
 end
 
+-- Alt, or Questie's own hold-back key, stops the Codex's automation.
+local function heldBack()
+  if try(IsAltKeyDown) then return true end
+  return ns.questie.modifierHeld()
+end
+
+-- Questie's own auto-accept / auto-complete handles the quest when it is on.
+local function autoAccepting(db) return db.questAutoAccept and not ns.questie.autoAccept() end
+local function autoTurningIn(db) return db.questAutoTurnin and not ns.questie.autoComplete() end
+
 local function interact(event)
   local id = try(GetQuestID)
   if event == "QUEST_DETAIL" then
     observation("detail", id, { name = Q.plain(try(GetTitleText)), text = Q.plain(try(GetObjectiveText)) })
   end
   local s = Q.autoStep()
-  if not id or not s or s.quest ~= id or try(InCombatLockdown) ~= false then return end
+  if not id or not s or s.quest ~= id or try(InCombatLockdown) ~= false or heldBack() then return end
   local db = ns.db()
-  if event == "QUEST_DETAIL" and s.type == "accept" and db.questAutoAccept then
+  if event == "QUEST_DETAIL" and s.type == "accept" and autoAccepting(db) then
     try(AcceptQuest)
-  elseif s.type == "turnin" and db.questAutoTurnin then
+  elseif s.type == "turnin" and autoTurningIn(db) then
     if event == "QUEST_PROGRESS" and try(IsQuestCompletable) == true then
       try(CompleteQuest)
     elseif event == "QUEST_COMPLETE" and try(GetNumQuestChoices) == 0 and (try(GetQuestMoneyToGet) or 0) == 0 then
@@ -818,13 +862,13 @@ local function sameTitle(a, b)
 end
 
 -- Many NPCs open a gossip or greeting list before the quest window. With auto-accept or
--- auto-turn-in on, pick the guide's current quest there (never another; Alt holds it back).
+-- auto-turn-in on, pick the guide's current quest there (never another; Alt or Questie's key holds it back).
 local function pickFromList(event)
   local s = Q.autoStep()
-  if not s or not s.quest or try(InCombatLockdown) ~= false or try(IsAltKeyDown) then return end
+  if not s or not s.quest or try(InCombatLockdown) ~= false or heldBack() then return end
   local db = ns.db()
-  local accept = s.type == "accept" and db.questAutoAccept
-  local turnin = s.type == "turnin" and db.questAutoTurnin
+  local accept = s.type == "accept" and autoAccepting(db)
+  local turnin = s.type == "turnin" and autoTurningIn(db)
   if not accept and not turnin then return end
   if event == "GOSSIP_SHOW" then
     local G = C_GossipInfo
@@ -1025,6 +1069,20 @@ local function handle(event, a, b)
   ns.questRefresh()
 end
 
+-- Questie's tracker can appear, hide or move without a quest event: check every tick, and
+-- move the item and target buttons (placed by screen position) when the window moved with it.
+local followLeft, followTop
+local function followTracker()
+  if not viewer or not viewer:IsShown() then return end
+  place()
+  if placedBy ~= "left" and placedBy ~= "right" then return end
+  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
+  if left ~= followLeft or top ~= followTop then
+    followLeft, followTop = left, top
+    updateItemButton()
+  end
+end
+
 function ns.startQuestGuide()
   for _, ev in ipairs({ "PLAYER_LEVEL_UP", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "QUEST_LOG_UPDATE",
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
@@ -1045,6 +1103,7 @@ function ns.startQuestGuide()
   end
   ns.every(0.25, function()
     recordFlight()
+    followTracker()
     if Q.checkPosition() then ns.questRefresh() else paintArrow() end
   end)
 end

@@ -22,6 +22,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 
   The Quests tab lists the route options for your level.
 - **The arrow** shows the distance on your map and knows the way across zones: flight paths, boats, zeppelins and roads. It pauses during flights and picks up when you land.
+- **Works with Questie.** Questie's auto-accept and hold-back key take precedence, and the step window sits beside Questie's tracker. With QuestieDB installed, the arrow leads to the nearest mob or object you still need once you reach a camp.
 - **Quest item and target buttons** for the current step, both key-bindable: use the quest item, or target the NPC you're looking for.
 - **Catch-up built in.**
   - Missed pickups move to Missed quests.

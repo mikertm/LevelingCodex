@@ -675,8 +675,61 @@ SOUNDKIT = { LEVEL_UP = 888 }
 function ReloadUI() error("ReloadUI is protected in Forever", 2) end
 function CreateColor(r, g, b, a) return { r = r, g = g, b = b, a = a } end
 function GetMinimapShape() return MOCK.minimapShape or "ROUND" end
-function IsShiftKeyDown() return false end
-function IsControlKeyDown() return false end
+function IsShiftKeyDown() return MOCK.shift or false end
+function IsControlKeyDown() return MOCK.ctrl or false end
+
+-- Questie (opt-in, made by scenarios): its settings and its tracker frame.
+-- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx }
+function MOCK.makeQuestie(opts)
+  opts = opts or {}
+  local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
+  if opts.legacyAccept then profile.autoaccept = true else profile.autoAccept = { enabled = opts.autoAccept == true } end
+  Questie = { db = { profile = profile } }
+  local tracker = _G.Questie_BaseFrame
+  if opts.tracker == false then
+    if tracker then tracker:Hide() end
+    return
+  end
+  if not tracker then
+    tracker = CreateFrame("Frame", "Questie_BaseFrame", UIParent)
+    tracker:SetSize(280, 400)
+  end
+  tracker._cx, tracker._cy = opts.cx or 1700, 700
+  tracker:Show()
+end
+
+-- QuestieDB's LibQuestieDB (opt-in, made by scenarios), a new table on every call.
+-- MOCK.makeQuestieDB{ contract = 4, quests = { [id] = { objectives } }, npcs/objects = { [id] = { name, spawns } },
+--   items = { [id] = { name, npcDrops, objectDrops } }, zones = "return {...}", noZones }
+-- Entity getters raise while MOCK.questieDBError is set.
+function MOCK.makeQuestieDB(opts)
+  opts = opts or {}
+  local contract = opts.contract or 4
+  local function getter(source, field)
+    return function(id)
+      if MOCK.questieDBError then error("mock read error", 2) end
+      local row = source and source[id]
+      return row and row[field]
+    end
+  end
+  local npcs, objects, items = opts.npcs or {}, opts.objects or {}, opts.items or {}
+  local zoneDB = not opts.noZones and { private = {
+    areaIdToUiMapId = opts.zones or "return { [12] = 1429, [40] = 1436 }",
+    areaIdToUiMapIdOverride = "return { [0] = 0 }",
+  } } or nil
+  LibQuestieDB = {
+    contractVersion = contract, minSupportedContract = 1, readMode = "baked",
+    RequireContract = function(n)
+      if type(n) == "number" and n >= 1 and n <= contract then return true end
+      return false, "QuestieDB contract " .. contract .. " does not support " .. tostring(n)
+    end,
+    Quest = { objectives = getter(opts.quests or {}, "objectives") },
+    Npc = { name = getter(npcs, "name"), spawns = getter(npcs, "spawns") },
+    Object = { name = getter(objects, "name"), spawns = getter(objects, "spawns") },
+    Item = { name = getter(items, "name"), npcDrops = getter(items, "npcDrops"), objectDrops = getter(items, "objectDrops") },
+    Support = { Get = function(name) if name == "ZoneDB" then return zoneDB end end },
+  }
+end
 
 function MOCK.fileID(path)
   local k = path:lower()
@@ -1202,6 +1255,7 @@ local ALLOWED_GLOBALS = {
   TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
   GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
+  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
