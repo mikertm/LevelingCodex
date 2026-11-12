@@ -49,8 +49,9 @@ local function receive(prefix, text, channel, sender)
 end
 
 -- The party's steps for the step window, as "Name: step (N ahead)" lines.
-function ns.partyText()
-  if ns.db().noPartySteps or not inParty() then return "" end
+-- One line per party member: "Name: step (N ahead)". Empty out of a party or with the setting off.
+function ns.partyLines()
+  if ns.db().noPartySteps or not inParty() then return {} end
   local row = Q.current()
   local lines = {}
   for name, m in pairs(members) do
@@ -67,7 +68,13 @@ function ns.partyText()
     end
   end
   table.sort(lines)
-  return #lines > 0 and Q.plain("Party\n" .. table.concat(lines, "\n")) or ""
+  for n, line in ipairs(lines) do lines[n] = Q.plain(line) end
+  return lines
+end
+
+function ns.partyText()
+  local lines = ns.partyLines()
+  return #lines > 0 and ("Party\n" .. table.concat(lines, "\n")) or ""
 end
 
 -- Settings > Share guide quests with my party: offer a quest of your route to the party.
