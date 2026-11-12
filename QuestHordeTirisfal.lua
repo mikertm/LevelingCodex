@@ -132,7 +132,9 @@ do
   q(430, "Return to Quinn", 11, 10, 429)
   q(91920, "Wild Eyes", 11, 10, 430, true)
   q(91921, "Return to Quinn (Again)", 11, 10, 91920, true)
-  q(425, "Ivar the Foul", 12, 10, 430)
+  -- Forever puts Wild Eyes and Return to Quinn (Again) between Return to Quinn and Ivar: QuestieDB's
+  -- Forever fixes give 91921 as Ivar's prerequisite (its base record still says 430).
+  q(425, "Ivar the Foul", 12, 10, 91921)
   q(97891, "Prompt Potion Runner", 16, 10, nil, true)
   q(5725, "The Power to Destroy...", 16, 9)
   q(840, "Conscript of the Horde", 12, 10)
@@ -494,11 +496,23 @@ local sepulcher = (function()
   local boat = sp("Corpse Laden Boat", 58.44, 34.9)
   local crate = sp("Dalaran Crate", 49.89, 60.33)
   local andron = uc("Andron Gant", 54.81, 76.33)
+  -- Spots the arrow visits in turn, for mobs spread over two camps.
+  local function tour(step, ...)
+    step.points = { ... }
+    return step
+  end
+  -- The target button's creatures, nearest camps first.
+  local function hunt(step, ...)
+    step.mobs = { ... }
+    return step
+  end
   local steps = {
     action("goto", ti(nil, 53.2, 75.8), "Leave the Undercity and follow the road southwest out of Tirisfal into Silverpine Forest."),
     accept(435, erland, "Deathstalker Erland stands just south of the border on the road."),
     objectiveAt(435, rane, "Escort Erland south along the road to Rane Yorick. Worgs attack on the way.", "Erland must reach Rane Yorick"),
     finish(435, rane), accept(429, rane), accept(449, rane),
+    hunt(objective(429, 56.6, 13.4, "Hunt Mottled Worgs in the woods east of the Yoricks until you have 6 Discolored Worg Hearts. Gorefang, a rare worg, prowls the north end.",
+      "6 Discolored Worg Hearts"), "Mottled Worg", "Worg", "Gorefang"),
     objective(1886, 49.7, 32.2, "Rogues: Astor Hadren patrols the road between Brill and the Sepulcher. Talk to him, then kill him for the letter.",
       "Astor's Letter of Introduction"),
     B.taxi("getfp", town.karos, "The Sepulcher, Silverpine Forest", "Follow the road south to the Sepulcher. Learn the flight path from Karos Razok."),
@@ -511,6 +525,8 @@ local sepulcher = (function()
     finish(421, dalar), accept(422, dalar),
     objective(422, 52.8, 28.6, "Find the Remedy of Arugal in the abandoned house east of the road, north of the Sepulcher.", "Remedy of Arugal"),
     finish(430, quinn, "Follow the road north to Quinn Yorick at the Ivar Patch."), accept(91920, quinn),
+    hunt(tour(objective(91920, 58.7, 18.2, "Go east to the lake shore and kill Vile Fin murlocs until you have 3 Murloc Eyes. Their camps run north-east from here toward 64, 13.",
+      "3 Murloc Eyes"), { 58.7, 18.2 }, { 63.4, 13.3 }), "Vile Fin Shredder", "Vile Fin Tidehunter"),
     along(objective(437, 45.4, 21.0, "Go west into the Dead Fields. Kill Nightlash, the ghost that rises there, for its essence.",
       "Enter the Dead Fields", "Essence of Nightlash"), 447),
     objectivePart(447, 2, sp(nil, 36.3, 14.2), "Kill Moss Stalkers near the shore northwest of the Dead Fields for Skittering Blood.",
@@ -520,19 +536,20 @@ local sepulcher = (function()
     finish(422, dalar, "Return to the Sepulcher."), accept(423, dalar),
     finish(437, hadrec), accept(438, hadrec),
     finish(91920, renferrel), accept(91921, renferrel),
-    objective(423, 43.8, 31.0, "Kill Moonrage Gluttons and Darksouls in the woods north of the Sepulcher for their shackles.",
-      "6 Glutton Shackles", "3 Darksoul Shackles"),
+    -- All the shackles here, so Grimson's quest is in hand before the lake shore (he stands where
+    -- the second shackle camp was).
+    tour(objective(423, 43.8, 31.0, "Kill Moonrage Gluttons and Darksouls in the woods north-west of the Sepulcher until you have all the shackles. More of them roam west toward 38, 25.",
+      "6 Glutton Shackles", "3 Darksoul Shackles"), { 43.8, 31.0 }, { 43.6, 27.2 }, { 39.1, 25.5 }),
+    finish(423, dalar, "Return to the Sepulcher."), accept(424, dalar),
     finish(91921, quinn, "Take the potion north to Quinn Yorick."),
     accept(425, rane),
-    objective(425, 51.5, 13.9, "Kill Ivar the Foul in the barn north of the Yoricks and take his head.", "Ivar's Head"),
+    objective(425, 51.5, 13.9, "Kill Ivar the Foul in the barn north of the Yoricks and take his head. Two Ravenclaw Slaves are with him: clear the yard and pull the one that walks about on its own first.", "Ivar's Head"),
     finish(425, rane),
     finish(438, boat, "Go southeast to the Corpse Laden Boat on the shore of the Lordamere Lake."), accept(439, boat),
-    objective(423, 56.5, 46.1, "Finish the shackles from the Moonrage worgen along the lake shore.", "6 Glutton Shackles", "3 Darksoul Shackles"),
-    finish(423, dalar, "Return to the Sepulcher."), accept(424, dalar),
-    finish(439, hadrec), accept(440, hadrec),
-    objective(424, 58.6, 44.9, "Kill Grimson the Pale on the lake shore east of the Sepulcher and take his head.", "Head of Grimson"),
-    finish(477, crate, "Go south along the road and find the Dalaran Crate near the Dalaran camp."), accept(478, crate),
+    objective(424, 58.6, 44.9, "Follow the lake shore south to the Deep Elem Mine. Grimson the Pale is inside, with Moonrage Darksouls around the entrance; take his head.", "Head of Grimson"),
+    finish(477, crate, "Go south-west to the road and find the Dalaran Crate near the Dalaran camp."), accept(478, crate),
     finish(478, allister, "Return to the Sepulcher."), accept(481, allister),
+    finish(439, hadrec), accept(440, hadrec),
     finish(424, dalar), finish(481, dalar), accept(482, dalar), finish(482, allister),
     finish(6321, town.karos), accept(6323, town.karos),
     action("hearth", town.norman, "Hearth to the Undercity, or buy a bat ride from Karos Razok.", { bind = town.ucBind }),
