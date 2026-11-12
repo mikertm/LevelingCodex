@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 dist/
 tools/.cache/
+RELEASE_NOTES.html
