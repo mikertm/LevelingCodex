@@ -11,6 +11,7 @@ for all 9 classes plus an unsupported one, with the full API and with optional A
 and runs tests/scenarios.lua. Fails on any Lua error, failed assertion, non-ASCII runtime text,
 or macro over the client's limits.
 """
+import glob
 import multiprocessing
 import os
 import re
@@ -250,8 +251,86 @@ def data_checks():
                                         % (step, at, m.lo, at - 1))
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
-    return (errors + prof_errors + game_errors + quest_mob_checks(),
+    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_danger_checks() + quest_flight_checks(),
             warnings + prof_warnings + game_warnings)
+
+
+def quest_flight_checks():
+    """QuestFlightData.lua (tools/questflights.py): matches the game reference; every flight point stands on a
+    map with a world position, links to known flight points and names a faction; the route's flight names exist."""
+    path = os.path.join(ROOT, "QuestFlightData.lua")
+    if not os.path.exists(path):
+        return ["quest flights: QuestFlightData.lua missing"]
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import questflights
+    errors = []
+    if open(path, encoding="utf-8").read().replace("\r\n", "\n") != questflights.build():
+        errors.append("quest flights: QuestFlightData.lua is out of date: run tools/questflights.py")
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    lua.execute("local f = ...; f('LevelingCodex', select(2, ...))",
+                lua.eval("loadstring")(open(path, encoding="utf-8").read()), ns)
+    nodes, world = ns["questFlightNodes"], ns["questWorld"]
+    if lupa.lua_type(nodes) != "table" or lupa.lua_type(world) != "table":
+        return errors + ["quest flights: QuestFlightData.lua sets no ns.questFlightNodes / ns.questWorld"]
+    names = set()
+    for node, d in nodes.items():
+        where = "quest flights %s" % node
+        name = d[1]
+        if not isinstance(name, str) or any(ord(c) > 127 for c in name):
+            errors.append(where + ": bad name")
+        names.add(name)
+        if d[2] not in ("A", "H", "AH"):
+            errors.append(where + ": bad faction %r" % (d[2],))
+        if world[d[3]] is None:
+            errors.append(where + ": map %s has no world position" % d[3])
+        if not all(isinstance(v, (int, float)) and 0 <= v <= 100 for v in (d[4], d[5])):
+            errors.append(where + ": position outside the map")
+        for link in d[6].values():
+            if nodes[link] is None:
+                errors.append(where + ": links to unknown flight point %s" % link)
+    # The route's flight steps name flight points as the flight map shows them.
+    for path in sorted(glob.glob(os.path.join(ROOT, "Quest*Data.lua")) + glob.glob(os.path.join(ROOT, "QuestHorde*.lua"))):
+        text = open(path, encoding="utf-8").read()
+        for m in re.finditer(r'taxi\("(?:getfp|fly)", [^,]+, "([^"]+)"', text):
+            if m.group(1) not in names:
+                errors.append("quest flights: %s names flight point %r, which the game doesn't have"
+                              % (os.path.basename(path), m.group(1)))
+    return errors
+
+
+def quest_danger_checks():
+    """QuestDangerData.lua (tools/questdanger.py): map -> { name, low, high, kind, friendly, spots = { x, y, ... } }."""
+    errors = []
+    path = os.path.join(ROOT, "QuestDangerData.lua")
+    if not os.path.exists(path):
+        return ["quest danger: QuestDangerData.lua missing"]
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    lua.execute("local f = ...; f('LevelingCodex', select(2, ...))",
+                lua.eval("loadstring")(open(path, encoding="utf-8").read()), ns)
+    danger = ns["questDanger"]
+    if lupa.lua_type(danger) != "table":
+        return ["quest danger: QuestDangerData.lua sets no ns.questDanger"]
+    for map_id, entries in danger.items():
+        if not isinstance(map_id, int) or lupa.lua_type(entries) != "table":
+            errors.append("quest danger %s: expected [mapID] = { creatures }" % map_id)
+            continue
+        for d in entries.values():
+            where = "quest danger %s %s" % (map_id, d[1])
+            name, low, high, kind, friendly, spots = d[1], d[2], d[3], d[4], d[5], d["spots"]
+            if not isinstance(name, str) or not name.strip() or any(ord(c) > 127 for c in name):
+                errors.append(where + ": bad name")
+            if not (isinstance(low, int) and isinstance(high, int) and 1 <= low <= high <= 60):
+                errors.append(where + ": bad levels")
+            if kind not in ("elite", "rareelite", "boss", "rare"):
+                errors.append(where + ": bad kind %r" % (kind,))
+            if not isinstance(friendly, str) or set(friendly) - set("AH"):
+                errors.append(where + ": bad faction letters")
+            values = list(spots.values()) if lupa.lua_type(spots) == "table" else []
+            if not values or len(values) % 2 or any(not isinstance(v, (int, float)) or not 0 <= v <= 100 for v in values):
+                errors.append(where + ": spots must be x, y pairs in 0-100")
+    return errors
 
 
 def quest_mob_checks():
@@ -626,7 +705,11 @@ def main():
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questWarriorFangs", "questWarriorFangsNotTaken",
-                             "questCarriedTurninNotTaken", "questCarriedTurninCarried"):
+                             "questCarriedTurninNotTaken", "questCarriedTurninCarried",
+                             "questStepTypes", "questWaypoints", "questWindowExtras",
+                             "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
+                             "questFlightPlan", "questFlightLearn", "questDungeonChoice",
+                             "questBossSteps", "questEntrancePath"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
                                   ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman"), ("MAGE", "questWarriorFangsOtherClass"), ("DRUID", "questClassAlongDruid"), ("DRUID", "questClassAlongDruidNotTaken"), ("SHAMAN", "questClassAlongShaman"), ("SHAMAN", "questClassAlongShamanNotTaken")):
@@ -654,6 +737,7 @@ def main():
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("WARRIOR/%s/class-trainer" % variant, "WARRIOR", minimal, ["login", "classTrainer"]))
+        runs.append(("WARRIOR/%s/pace" % variant, "WARRIOR", minimal, ["paceCard"]))
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))

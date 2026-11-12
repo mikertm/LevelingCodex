@@ -148,7 +148,9 @@ local function makeViewer()
   button("Hide", 266, 72, ns.hideQuestViewer)
   suggestionButton = button("", 16, 318, function()
     local row = Q.current()
-    if row and row.section.side then
+    if row and row.step.type == "plan" then
+      ns.planQuestRun(row.step.dungeon, true)
+    elseif row and row.section.side then
       Q.returnToRoute()
       quiet = true
       ns.questRefresh()
@@ -160,7 +162,9 @@ local function makeViewer()
         Q.jump(run)
         quiet = true
         ns.questRefresh()
-      elseif related then ns.openQuestGuide(related) else ns.followSuggestedQuestSection(suggestion) end
+      elseif related then ns.openQuestGuide(related)
+      elseif suggestion then ns.followSuggestedQuestSection(suggestion)
+      elseif ns.questSetupDue() then ns.openQuestSetup() end
     end
   end, 35)
 
@@ -180,6 +184,62 @@ local function makeViewer()
   try(arrowText.SetShadowColor, arrowText, 0, 0, 0, 1)
   try(arrowText.SetShadowOffset, arrowText, 1, -1)
   arrow:SetScript("OnUpdate", turnArrow)
+end
+
+-- The flight timer: where you're flying (the node TakeTaxiNode took), how long you've flown and,
+-- once a flight between the same two points has been timed, about how long is left.
+local flight = {}
+local function clock(seconds)
+  seconds = math.max(0, math.floor(seconds + 0.5))
+  return math.floor(seconds / 60) .. ":" .. string.format("%02d", seconds % 60)
+end
+
+local function flightTimes()
+  local db = ns.db()
+  if type(db.flightTimes) ~= "table" then db.flightTimes = {} end
+  return db.flightTimes
+end
+
+local function flightText()
+  local now = GetTime()
+  flight.start = flight.start or now
+  local elapsed = now - flight.start
+  local text = "In flight" .. (flight.to and (" to " .. flight.to:match("^[^,]+")) or "") .. " - " .. clock(elapsed)
+  local known = flight.from and flight.to and flightTimes()[flight.from .. ">" .. flight.to]
+  if type(known) == "number" and known > elapsed then text = text .. "\nabout " .. clock(known - elapsed) .. " left" end
+  return text
+end
+
+-- The timed length of the flight just taken, when one between the same two points was timed.
+function ns.questFlightEstimate()
+  local known = flight.from and flight.to and flightTimes()[flight.from .. ">" .. flight.to]
+  return type(known) == "number" and known or nil
+end
+
+-- Every tick: a landing stores the flight's time.
+local function tickFlight()
+  if Q.inFlight() then
+    flight.start = flight.start or GetTime()
+  elseif flight.start then
+    if flight.from and flight.to then flightTimes()[flight.from .. ">" .. flight.to] = GetTime() - flight.start end
+    flight = {}
+  end
+end
+
+-- Arrival time: your speed over the last moments gives "120 yd - 0:24" while you move toward the spot.
+local pace = {}
+local function eta(yards)
+  local map, x, y = Q.position()
+  local now = GetTime()
+  if pace.at and now - pace.at >= 0.2 then
+    local moved = pace.map == map and select(2, Q.vector({ map = map, x = pace.x, y = pace.y }, map, x, y))
+    local speed = moved and moved / (now - pace.at)
+    if speed then pace.speed = pace.speed and (pace.speed * 0.6 + speed * 0.4) or speed end
+    pace.at = nil
+  end
+  if not pace.at then pace.map, pace.x, pace.y, pace.at = map, x, y, now end
+  if yards and pace.speed and pace.speed > 2 then return " - " .. clock(yards / pace.speed) end
+  return ""
 end
 
 -- As a ghost the arrow leads back to your corpse instead of the step.
@@ -215,19 +275,26 @@ local function paintArrow()
   if Q.inFlight() then
     arrow:Show()
     arrowArt:Hide()
-    arrowText:SetText("In flight")
+    arrowText:SetText(flightText())
     return
   end
-  if not goal.map or not goal.x then
+  if not goal.map or not (goal.x or goal.points) then
     arrow:Hide()
     return
   end
   arrow:Show()
   local map, x, y = Q.position()
-  local step, travel = Q.destination(goal, map)
+  local spot, point, count, kind = Q.waypoint(goal)
+  local step, travel = Q.destination(spot, map)
+  -- QuestieDB's nearest spawn leads the last mile of a kill or collect step (QuestieSupport.lua).
   local spawn, spawnName
   if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
   local bearing, yards = Q.vector(spawn or step, map, x, y)
+  -- A flight master or flight path on the way can be across a zone border.
+  if not bearing and not spawn and step and (step.leg or step.world or Q.continentMap(map)) then
+    bearing, yards = Q.worldVector(step, map, x, y)
+  end
+  local which = point and not travel and (" (" .. kind .. " " .. point .. " of " .. count .. ")") or ""
   arrowArt:Hide()
   if spawn and yards and yards <= Q.arrived() then
     arrowText:SetText(spawnName .. " nearby")
@@ -235,9 +302,15 @@ local function paintArrow()
     arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   elseif yards and yards <= Q.arrived() then
-    arrowText:SetText(travel or "Arrived")
+    arrowText:SetText(travel or ("Arrived" .. which))
   elseif bearing then
-    arrowBearing, arrowCaption, arrowFacing = bearing, travel or (yards and (math.floor(yards + 0.5) .. " yd") or ""), false
+    arrowBearing, arrowFacing = bearing, false
+    local distance = yards and (math.floor(yards + 0.5) .. " yd" .. eta(yards)) or ""
+    if travel and step.leg then
+      arrowCaption = travel .. "\n" .. distance
+    else
+      arrowCaption = travel or (distance .. which)
+    end
     turnArrow()
   else
     arrowText:SetText(travel or (x and "Map scale unavailable" or "Position unavailable"))
@@ -246,7 +319,8 @@ end
 
 local ACTION = { accept = "Accept", complete = "Complete", turnin = "Turn in", ["goto"] = "Travel",
   fly = "Fly", getfp = "Flight path", sethearth = "Bind hearthstone", hearth = "Hearth",
-  boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note" }
+  boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note",
+  abandon = "Abandon", collect = "Collect", plan = "Dungeon ahead", boss = "Boss" }
 
 function Q.label(step)
   if step.type == "hearth" and step.bind then return "Return to " .. step.bind end
@@ -312,7 +386,65 @@ local function grindLines(step, level)
   return "\n" .. table.concat(lines, "\n")
 end
 
-function Q.detail(step, requiredFor)
+-- Collect and buy steps: what your bags hold of what the step wants.
+local function itemProgress(step)
+  if not ((step.type == "collect" or step.type == "buy") and step.item) then return end
+  return "You have " .. Q.itemCount(step.item) .. "/" .. (step.count or 1) .. "."
+end
+
+-- Sticky goals the route has passed: one line each, with their progress.
+local function stickyText()
+  local lines = {}
+  for _, row in ipairs(Q.stickies()) do
+    local step = row.step
+    local progress = itemProgress(step)
+    if not progress and step.type == "complete" then
+      local goals = objectiveLines(Q.log(step.quest), true, step.objectiveIndex)
+      if #goals == 0 then goals = step.objectives or {} end
+      progress = table.concat(goals, "  /  ")
+    end
+    lines[#lines + 1] = Q.label(step) .. ((progress and progress ~= "") and (": " .. progress) or "")
+  end
+  return #lines > 0 and ("\nOn the way\n" .. table.concat(lines, "\n")) or ""
+end
+
+-- Elites and rares near the current step (QuestDangerData.lua; Settings > Warn about elites and
+-- rares): hostile to you, within 90 yd of the step's spot, and not outleveled (elites, rare elites
+-- and bosses until 3 levels past their top level, rares until 1).
+local DANGER_YARDS = 90
+local KIND_LABEL = { elite = "Elite", rareelite = "Rare elite", boss = "Boss", rare = "Rare" }
+
+local function dangerText(step)
+  if ns.db().noDangerWarnings or type(ns.questDanger) ~= "table" then return "" end
+  local spot = Q.waypoint(step)
+  local list = spot and spot.map and spot.x and ns.questDanger[spot.map]
+  if not list then return "" end
+  local _, _, _, level = Q.rows()
+  local faction = tostring(try(UnitFactionGroup, "player") or ""):sub(1, 1)
+  local found = {}
+  for _, d in ipairs(list) do
+    local name, low, high, kind, friendly = d[1], d[2], d[3], d[4], d[5] or ""
+    local mine = faction ~= "" and friendly:find(faction, 1, true)
+    if not mine and level <= high + (kind == "rare" and 1 or 3) then
+      for k = 1, #d.spots - 1, 2 do
+        local _, yards = Q.vector({ map = spot.map, x = d.spots[k], y = d.spots[k + 1] }, spot.map, spot.x, spot.y)
+        if yards and yards <= DANGER_YARDS then
+          found[#found + 1] = (KIND_LABEL[kind] or "Elite") .. " " .. name .. " ("
+            .. (low == high and low or (low .. "-" .. high)) .. ")"
+          break
+        end
+      end
+    end
+  end
+  if #found == 0 then return "" end
+  local more = #found > 3 and (" and " .. (#found - 3) .. " more") or ""
+  while #found > 3 do table.remove(found) end
+  return "\nWatch out here: " .. table.concat(found, ", ") .. more .. "."
+end
+
+-- withStickies: the current step, which also lists the sticky goals still open.
+function Q.detail(step, requiredFor, withStickies)
+  if step.type == "plan" then return Q.plain(Q.planText(step)) end
   local _, _, _, level = Q.rows()
   local text = Q.text(step)
   if step.min and level < step.min then text = "Requires level " .. step.min .. ". " .. text end
@@ -321,7 +453,10 @@ function Q.detail(step, requiredFor)
     if #lines == 0 then lines = step.objectives or {} end
     if #lines > 0 then text = text .. "\n" .. table.concat(lines, "  /  ") end
   end
+  local progress = itemProgress(step)
+  if progress then text = text .. "\n" .. progress end
   if step.type == "grind" and step.level then text = text .. grindLines(step, level) end
+  if withStickies then text = text .. stickyText() .. dangerText(step) end
   local also = {}
   for _, id in ipairs(step.also or {}) do
     local entry = Q.incomplete(id)
@@ -363,6 +498,13 @@ end
 local HEARTHSTONE = 6948
 local function stepItem(step)
   if not step then return end
+  if step.type == "boss" then
+    for _, row in ipairs(Q.stickies()) do
+      local id, icon = stepItem(row.step)
+      if id then return id, icon end
+    end
+    return
+  end
   if step.type == "hearth" then
     if not step.bind or Q.boundTo(step.bind) then return HEARTHSTONE end
     return
@@ -413,7 +555,7 @@ end
 -- step's quest giver, or on an objective step the creatures it needs (QuestMobData.lua, or the
 -- step's own `mobs`). Same combat rules as the item button.
 local targetButton -- false = the client can't make one
-local TARGET_TYPES = { accept = true, turnin = true }
+local TARGET_TYPES = { accept = true, turnin = true, buy = true }
 local MACRO_LIMIT = 255
 
 local function targetName(value)
@@ -425,6 +567,10 @@ local function stepTargets(step)
   if not step then return end
   if TARGET_TYPES[step.type] then
     local name = not step.item and not step.startItem and targetName(step.npc)
+    return name and { name }
+  end
+  if step.type == "boss" then
+    local name = targetName((step.name:gsub(" %(.*$", "")))
     return name and { name }
   end
   if step.type ~= "complete" or not step.quest then return end
@@ -560,7 +706,7 @@ local function updateMapPin()
   local M = C_Map
   if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
   local row = viewer and viewer:IsShown() and Q.current()
-  local step = row and row.step
+  local step = row and Q.waypoint(row.step)
   local want = not ns.db().noQuestMapPin and step and step.map and step.x and step.y
   local map, x, y = userWaypoint()
   local ours = pinned and map and samePoint(pinned, map, x, y)
@@ -586,8 +732,60 @@ local function updateMapPin()
   try(C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint, true)
 end
 
+-- The quest tracker (Settings > Track the step's quest): the current step's quest goes on Blizzard's
+-- objective tracker. Only a watch the Codex added is ever taken off again.
+local watched
+local function isWatched(id, index)
+  if try(C_QuestLog and C_QuestLog.GetQuestWatchType, id) ~= nil then return true end
+  local classic = index and try(IsQuestWatched, index)
+  return classic == true or classic == 1
+end
+
+local function setWatch(id, index, on)
+  local L = C_QuestLog
+  if L and type(L.AddQuestWatch) == "function" then
+    try(on and L.AddQuestWatch or L.RemoveQuestWatch, id)
+  elseif index then
+    try(on and AddQuestWatch or RemoveQuestWatch, index)
+  end
+end
+
+local function updateQuestWatch()
+  local row = viewer and viewer:IsShown() and Q.current()
+  local step = row and row.step
+  local entry = step and step.quest and not ns.db().noQuestWatch and Q.log(step.quest)
+  local want = entry and step.quest or nil
+  if watched and watched ~= want then
+    local old = Q.log(watched)
+    if old then setWatch(watched, old.index, false) end
+    watched = nil
+  end
+  if want and not watched and not isWatched(want, entry.index) then
+    setWatch(want, entry.index, true)
+    watched = want
+  end
+end
+
+-- Quests tab > Show on map: the world map at the current step's spot.
+function ns.showQuestStepOnMap()
+  local row = Q.current()
+  local spot = row and Q.waypoint(row.step)
+  local map = spot and spot.map
+  if not map then ns.say("this step has no place on the map."); return end
+  if type(OpenWorldMap) == "function" then
+    try(OpenWorldMap, map)
+  elseif type(WorldMapFrame) == "table" then
+    if not WorldMapFrame:IsShown() then try(ToggleWorldMap) end
+    try(WorldMapFrame.SetMapID, WorldMapFrame, map)
+  else
+    ns.say("this client has no world map to open.")
+  end
+end
+
+-- The steps after this one (Settings > Steps shown ahead, 0-5, default 2).
 local function previewText(row, i)
-  local upcoming = Q.upcoming(i)
+  local count = math.max(0, math.min(5, tonumber(ns.db().questPreview) or 2))
+  local upcoming = Q.upcoming(i, math.max(1, count))
   local nextRow = upcoming[1]
   if not nextRow then
     if not row.section.side and Q.autoStep() == row.step then
@@ -595,10 +793,13 @@ local function previewText(row, i)
     end
     return ""
   end
+  if count == 0 then return "" end
   local heading = nextRow.section == row.section and "Next: " or ("Next section: " .. nextRow.section.title .. "\n")
   local text = heading .. Q.label(nextRow.step)
-  local second = upcoming[2]
-  if second and second.section == nextRow.section then text = text .. "\n" .. Q.label(second.step) end
+  for n = 2, #upcoming do
+    if upcoming[n].section ~= nextRow.section then break end
+    text = text .. "\n" .. Q.label(upcoming[n].step)
+  end
   return text
 end
 
@@ -636,9 +837,13 @@ function ns.questRefresh()
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
     levels:SetText("Levels " .. sec.levels[1] .. "-" .. sec.levels[2])
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
+    local run, runCount = Q.readyRun()
     if row then
       title:SetText(Q.label(row.step))
-      detail:SetText(Q.detail(row.step, row.requiredFor))
+      -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
+      local ready = run and ("|cffffd100Find a group for " .. run.title .. ": " .. runCount
+        .. " of its quests are in your log. Then press Run " .. run.title .. ".|r\n") or ""
+      detail:SetText(ready .. Q.detail(row.step, row.requiredFor, true))
     else
       title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
       detail:SetText(suggestion and "Try the suggested section below, or open Quests to choose another."
@@ -649,26 +854,31 @@ function ns.questRefresh()
     detail:ClearAllPoints()
     detail:SetPoint("TOPLEFT", 16, -detailY)
     local previewLines = row and previewText(row, i) or ""
-    local tracked = pinnedText()
-    if tracked ~= "" then previewLines = previewLines ~= "" and (previewLines .. "\n\n" .. tracked) or tracked end
+    for _, extra in ipairs({ pinnedText(), ns.partyText() }) do
+      if extra ~= "" then previewLines = previewLines ~= "" and (previewLines .. "\n\n" .. extra) or extra end
+    end
     preview:SetText(previewLines)
     local previewY = detailY + detail:GetStringHeight() + 8
     preview:ClearAllPoints()
     preview:SetPoint("TOPLEFT", 16, -previewY)
     nextButton:SetShown(row ~= nil)
+    local choosing = row and row.step.type == "plan"
+    nextButton.codexLabel = choosing and "Skip" or "Next"
+    nextButton:SetLabel(nextButton.codexLabel)
     local returnToRoute = sec.side
-    local run, runCount = Q.readyRun()
     if run and not announced[run.id] then
       announced[run.id] = true
       ns.say(Q.plain(run.title .. ": " .. runCount .. " of its quests are in your log. Find a group, then use Run "
         .. run.title .. " in the step window for the checklist."))
     end
     local related = Q.relatedGuide()
-    local offer = returnToRoute or run or suggestion or related
+    local setup = ns.questSetupDue()
+    local offer = choosing or returnToRoute or run or suggestion or related or setup
     suggestionButton:SetShown(offer ~= nil and offer ~= false)
     if offer then
-      suggestionButton.codexLabel = returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
-        or (suggestion and "Try " .. suggestion.title or "Plan " .. related.title)
+      suggestionButton.codexLabel = choosing and ("Plan " .. row.step.name)
+        or returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
+        or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
     viewer:SetHeight(math.max(140, previewY + preview:GetStringHeight() + (offer and 64 or 38)))
@@ -682,7 +892,52 @@ function ns.questRefresh()
   end
   updateItemButton()
   updateMapPin()
+  updateQuestWatch()
+  ns.partyStepChanged()
   ns.refreshQuestTab()
+end
+
+-- Quests tab > Report this step: what the guide sees, in the copy box, for a bug report.
+function ns.reportQuestStep()
+  local row, i = Q.current()
+  local lines = {}
+  local function add(key, value) lines[#lines + 1] = key .. ": " .. Q.plain(tostring(value)) end
+  local version = try(C_AddOns and C_AddOns.GetAddOnMetadata, "LevelingCodex", "Version")
+    or try(GetAddOnMetadata, "LevelingCodex", "Version")
+  add("Leveling Codex", version or "unknown version")
+  local _, race = try(UnitRace, "player")
+  local _, class = UnitClass("player")
+  add("Character", tostring(race) .. " " .. tostring(class) .. ", level " .. tostring(UnitLevel("player")))
+  local map, x, y = Q.position()
+  add("Position", map and (map .. (x and string.format(" at %.2f, %.2f", x, y) or ", no coordinates")) or "unknown")
+  add("Hearthstone", Q.bindLocation() or "unknown")
+  add("In flight", Q.inFlight() and "yes" or "no")
+  if row then
+    local s = row.step
+    add("Guide", row.section.id .. " (" .. row.section.title .. ")")
+    add("Step", "#" .. i .. " " .. row.key .. ", " .. tostring(row.state))
+    add("Step place", s.map and (s.map .. " at " .. tostring(s.x) .. ", " .. tostring(s.y)) or "none")
+    add("Step text", s.text or "")
+    if s.quest then
+      local entry = Q.log(s.quest)
+      add("Quest", s.quest .. " " .. (entry and (entry.ready and "ready to turn in" or "in log") or "not in log"))
+    end
+  else
+    add("Step", "none")
+  end
+  local quests = {}
+  for id, entry in pairs(Q.logEntries()) do
+    local done, total = 0, 0
+    for _, obj in ipairs(entry.objectives or {}) do
+      total = total + 1
+      if obj.finished == true or obj.finished == 1 then done = done + 1 end
+    end
+    quests[#quests + 1] = id .. (entry.ready and " ready" or (" " .. done .. "/" .. total))
+  end
+  table.sort(quests)
+  add("Quest log", #quests > 0 and table.concat(quests, ", ") or "empty")
+  ns.showMacroCopy({ name = "step report", body = table.concat(lines, "\n"), recording = true,
+    copyTitle = "Copy this step report" })
 end
 
 function ns.followSuggestedQuestSection(section)
@@ -706,6 +961,18 @@ end
 function ns.updateQuestSettings()
   Q.update()
   ns.questRefresh()
+end
+
+-- Dungeon ahead: Plan <dungeon> (its quests join the route) or Skip.
+function ns.planQuestRun(id, on)
+  local run = Q.section(id)
+  Q.setPlanned(id, on)
+  Q.leaveReview()
+  if run then
+    ns.say(Q.plain(run.title .. (on and " is planned: the run joins your route, and the guide says when to find a group."
+      or " is skipped: Quests > Guide library > Dungeons can plan it later.")))
+  end
+  ns.updateQuestSettings()
 end
 
 local function observation(kind, id, fields)
@@ -952,17 +1219,20 @@ end
 local function travelGossip()
   if not travelAllowed() then return end
   local s = Q.autoStep()
-  if Q.flightStep() or (s and s.type == "getfp") then
+  if Q.flightStep() or (s and s.type == "getfp") or Q.atPlannedFlightMaster() then
     pickGossip("taxi")
   elseif s and s.type == "sethearth" and nearStep(s) then
     pickGossip("binder")
   end
 end
 
-local function takeFlight()
-  local fly = travelAllowed() and Q.flightStep()
-  if not fly then return end
-  local want = Q.plain(fly.flight):lower()
+-- The flight map: mark the guide's flight (a Fly step's, else the travel plan's from here) and,
+-- with travel automation on, take it.
+local function takeFlight(nodes)
+  local target = Q.flightTarget(nodes)
+  ns.markTaxi(target)
+  if not (target and travelAllowed()) then return end
+  local want = Q.plain(target):lower()
   for i = 1, tonumber(try(NumTaxiNodes)) or 0 do
     local name = try(TaxiNodeName, i)
     if type(name) == "string" and Q.plain(name):lower() == want then
@@ -990,7 +1260,27 @@ local function confirmBind(area)
   try(StaticPopup_Hide, "CONFIRM_BINDER")
 end
 
-local function handle(event, a, b)
+-- A boss died: ENCOUNTER_END (encounterID, name, difficulty, size, success), BOSS_KILL (encounterID,
+-- name) or the combat log's UNIT_DIED (only listened to inside a dungeon).
+local function bossEvent(event, a, b, e)
+  if event == "ENCOUNTER_END" then
+    if e == 1 or e == true then return Q.bossDown(tonumber(a), b) end
+  elseif event == "BOSS_KILL" then
+    return Q.bossDown(tonumber(a), b)
+  elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+    local info = { try(CombatLogGetCurrentEventInfo) }
+    if info[2] ~= "UNIT_DIED" then return end
+    local guid, name = info[8], info[9]
+    local npc = type(guid) == "string" and tonumber(guid:match("^Creature%-%d+%-%d+%-%d+%-%d+%-(%d+)%-"))
+    return Q.bossDown(nil, name, npc)
+  end
+end
+
+local function handle(event, a, b, c, d, e)
+  if event == "ENCOUNTER_END" or event == "BOSS_KILL" or event == "COMBAT_LOG_EVENT_UNFILTERED" then
+    if bossEvent(event, a, b, e) then ns.questRefresh() end
+    return
+  end
   if event == "QUEST_DETAIL" or event == "QUEST_PROGRESS" or event == "QUEST_COMPLETE" or event == "QUEST_FINISHED" then
     if rewardMark then rewardMark:Hide() end
     if event == "QUEST_FINISHED" then return end
@@ -1033,8 +1323,11 @@ local function handle(event, a, b)
   Q.update(event, id, event == "PLAYER_LEVEL_UP" and id or nil)
   local nodes = event == "TAXIMAP_OPENED" and taxiSnapshot()
   if nodes then
+    for name, kind in pairs(nodes) do
+      if kind == "CURRENT" then flight.origin = Q.plain(name) end
+    end
     Q.learnFlights(nodes)
-    takeFlight()
+    takeFlight(nodes)
   end
   if event == "HEARTHSTONE_BOUND" or event == "PLAYER_BIND_CHANGED" then
     Q.acknowledge("sethearth", function(step)
@@ -1042,7 +1335,12 @@ local function handle(event, a, b)
       return distance and distance <= Q.arrived()
     end)
   end
-  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then Q.checkPosition() end
+  if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
+    Q.checkPosition()
+    -- The combat log only matters inside a dungeon (boss deaths).
+    if Q.inDungeonInstance() then pcall(events.RegisterEvent, events, "COMBAT_LOG_EVENT_UNFILTERED")
+    else pcall(events.UnregisterEvent, events, "COMBAT_LOG_EVENT_UNFILTERED") end
+  end
   if recorder then
     if event == "QUEST_ACCEPTED" or event == "QUEST_TURNED_IN" then
       local entry = (id and Q.log(id)) or old
@@ -1091,7 +1389,7 @@ function ns.startQuestGuide()
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED", "CONFIRM_BINDER",
-    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED" }) do
+    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)
@@ -1100,13 +1398,16 @@ function ns.startQuestGuide()
   ns.questRefresh()
   if type(TakeTaxiNode) == "function" then
     try(hooksecurefunc, "TakeTaxiNode", function(node)
+      flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin }
       if recorder then flightTarget = Q.plain(try(TaxiNodeName, node)) end
     end)
   end
+  ns.startQuestParty()
   ns.every(0.25, function()
+    tickFlight()
     recordFlight()
     followTracker()
-    if Q.checkPosition() then ns.questRefresh() else paintArrow() end
+    if Q.checkPosition() then ns.questRefresh() else paintArrow(); updateMapPin() end
   end)
 end
 
@@ -1125,6 +1426,8 @@ function ns.questDebugLines()
     { "XP", _G, "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP" },
     { "Rewards", _G, "GetQuestItemInfo", "GetQuestItemLink", "GetItemInfo" },
     { "C_DeathInfo", C_DeathInfo, "GetCorpseMapPosition" },
+    { "Tracker", C_QuestLog, "AddQuestWatch", "RemoveQuestWatch", "GetQuestWatchType" },
+    { "Classic tracker and map", _G, "AddQuestWatch", "RemoveQuestWatch", "IsQuestWatched", "OpenWorldMap", "ToggleWorldMap" },
     { "Flights and binds", _G, "UnitOnTaxi", "GetBindLocation", "NumTaxiNodes", "TaxiNodeGetType" },
     { "C_TaxiMap", C_TaxiMap, "GetTaxiNodesForMap", "GetAllTaxiNodes" },
     { "Gossip", C_GossipInfo, "GetAvailableQuests", "GetActiveQuests", "SelectAvailableQuest", "SelectActiveQuest",

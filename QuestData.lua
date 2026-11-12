@@ -614,6 +614,12 @@ local function taxi(kind, place, name, text)
 end
 
 -- A pickup for a dungeon detour: shown when that dungeon is planned (Quests tab or Settings).
+-- A step reached through tunnels or caves: the arrow follows `path` ({ {x, y}, ... }) in order first.
+local function withPath(step, path)
+  step.path = path
+  return step
+end
+
 local function forDungeon(step, id)
   step.optional, step.dungeon = true, id
   return step
@@ -714,8 +720,9 @@ local west = {
   accept(166, gryan), accept(214, riell),
   forDungeon(action("dungeon", wf(nil, 42.5, 71.7), "With a group, enter the mine through the large Moonbrook building. Use Next at the mine entrance.",
     { name = "The Deadmines" }), "dungeon-deadmines"),
-  forDungeon(objectiveAt(168, nil, "Loot Miners' Union Cards from undead in the tunnels before the instance portal.", "4 Miners' Union Cards"), "dungeon-deadmines"),
-  forDungeon(objectiveAt(167, nil, "Find Foreman Thistlenettle in the tunnels and loot his badge.", "Explorers' League Badge"), "dungeon-deadmines"),
+  forDungeon(withPath(objectiveAt(168, wf(nil, 41.2, 81.9), "Loot Miners' Union Cards from undead in the tunnels before the instance portal.", "4 Miners' Union Cards"),
+    { { 43.2, 79.7 } }), "dungeon-deadmines"),
+  forDungeon(objectiveAt(167, wf("Foreman Thistlenettle", 42.2, 82.6), "Find Foreman Thistlenettle in the tunnels and loot his badge.", "Explorers' League Badge"), "dungeon-deadmines"),
   forDungeon(objectiveAt(214, nil, "Loot Red Silk Bandanas from Defias in the mines and the dungeon.", "10 Red Silk Bandanas"), "dungeon-deadmines"),
   forDungeon(objectiveAt(2040, nil, "Defeat Sneed's Shredder inside the instance and loot the sprocket.", "Gnoam Sprecklesprocket"), "dungeon-deadmines"),
   forDungeon(withItem("Extra-Destructive Explosives", objectiveAt(92753, nil, "Use the Extra-Destructive Explosives near the forge inside the Deadmines.", "Explosives planted")), "dungeon-deadmines"),

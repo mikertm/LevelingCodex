@@ -13,10 +13,11 @@ from pathlib import Path
 
 QUEST_TYPES = {"accept", "complete", "turnin"}
 TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
-STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note"}
+STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note", "abandon", "collect"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide", "xp", "mobs", "logOnly"}
+               "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "skipOn", "maxLevel",
+               "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -116,8 +117,28 @@ def audit(data, ref, cap=20):
                 warn(label, "no sources listed")
             if "bosses" in section and (category != "dungeon" or not isinstance(section["bosses"], list) or any(
                     not isinstance(boss, dict) or not ascii_text(boss.get("name")) or not ascii_text(boss.get("tip"))
-                    or set(boss) - {"name", "tip", "npc"} for boss in section["bosses"])):
+                    or set(boss) - {"name", "tip", "npc", "encounter"} for boss in section["bosses"])):
                 fail(label, "bosses must be a dungeon guide's list of { name, tip } in printable ASCII")
+            # The instance and its boss encounters, from the client (GetInstanceInfo, ENCOUNTER_END).
+            instances = game.get("instances") or {}
+            dungeon = instances.get(str(section.get("instanceID")))
+            if "instanceID" in section and instances and not dungeon:
+                fail(label, f"instance {section['instanceID']} is not a dungeon in the client")
+            elif category == "dungeon" and not section.get("instanceID") and instances:
+                warn(label, "no instanceID: entering the dungeon can't open its guide or count its bosses")
+            if dungeon and isinstance(section.get("bosses"), list):
+                encounters = {id_: name for id_, name in dungeon["encounters"]}
+                used = set()
+                for boss in section["bosses"]:
+                    enc = boss.get("encounter") if isinstance(boss, dict) else None
+                    if enc is None:
+                        continue
+                    if enc not in encounters:
+                        fail(label, f"boss {boss.get('name')}: encounter {enc} is not one of {dungeon['name']}'s")
+                    used.add(enc)
+                missing = [name for id_, name in dungeon["encounters"] if id_ not in used]
+                if missing:
+                    warn(label, "the game's encounters not in the boss list: " + ", ".join(missing))
             previous = None
             level = start
             # On a leveling route, a step on another map between two steps on the same map, with no
@@ -188,6 +209,35 @@ def audit(data, ref, cap=20):
                     index = step["objectiveIndex"]
                     if kind != "complete" or type(index) is not int or index < 1:
                         fail(where, "objectiveIndex must be a positive quest log objective index on a complete step")
+                if kind == "abandon" and not quest:
+                    fail(where, "an abandon step needs its quest")
+                if kind in ("collect", "buy") and "count" in step and (type(step["count"]) is not int or step["count"] < 1):
+                    fail(where, "count must be a positive integer")
+                if kind == "collect" and not item:
+                    fail(where, "a collect step needs its item")
+                for key in ("maxLevel", "skill"):
+                    if key in step and (type(step[key]) is not int or not 1 <= step[key] <= 300):
+                        fail(where, f"{key} must be a positive integer")
+                if "profession" in step and not ascii_text(step["profession"]):
+                    fail(where, "profession must be a profession key such as MINING")
+                for key in ("ifOnQuest", "ifDone", "unlessDone"):
+                    if key in step and (type(step[key]) is not int or step[key] not in ids):
+                        fail(where, f"{key} must be a known quest ID")
+                skip_on = step.get("skipOn")
+                if skip_on is not None and not all(str(m) in maps for m in (skip_on if isinstance(skip_on, list) else [skip_on])):
+                    fail(where, "skipOn must be a known map ID or a list of them")
+                for key in ("sticky", "nearest"):
+                    if key in step and type(step[key]) is not bool:
+                        fail(where, f"{key} must be a boolean")
+                path = step.get("path")
+                if path is not None and not (step.get("map") and isinstance(path, list) and path and all(
+                        isinstance(p, list) and len(p) in (2, 3) and coord(p[0]) and coord(p[1])
+                        and (len(p) == 2 or str(p[2]) in maps) for p in path)):
+                    fail(where, "path must be {x, y} (or {x, y, map}) points leading to the step's own spot")
+                if "points" in step and not (step.get("map") and isinstance(step["points"], list) and len(step["points"]) >= 2
+                                             and all(isinstance(p, list) and len(p) == 2 and coord(p[0]) and coord(p[1])
+                                                     for p in step["points"])):
+                    fail(where, "points must be two or more {x, y} pairs on the step's map")
                 chain = step.get("chain", [])
                 if not isinstance(chain, list) or any(type(q) is not int or q not in ids for q in chain):
                     fail(where, "chain has an unknown prerequisite")

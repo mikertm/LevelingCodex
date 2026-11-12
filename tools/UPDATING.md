@@ -73,7 +73,10 @@ test harness checks `Data.lua` against it without going online.
 6. **Check in game.** `python tools/install.py`, then `/reload` in game: open `/codex`, browse the
    changed levels, open the talent window with a point to spend, run Set up macros.
 
-7. **Commit** `Data.lua`, `tools/reference/forever.json` and `CHANGELOG.md` together. Releasing
+7. **Flight points.** Run `python tools/questflights.py`: it rebuilds `QuestFlightData.lua` from the
+   new reference's flight points and zone positions (the harness fails while it's stale).
+
+8. **Commit** `Data.lua`, `tools/reference/forever.json`, `QuestFlightData.lua` and `CHANGELOG.md` together. Releasing
    (pushing a `v*` tag) waits for the owner's go-ahead.
 
 ## What the client data can't tell

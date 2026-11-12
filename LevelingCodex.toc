@@ -29,11 +29,14 @@ QuestHordeClassCasters.lua
 QuestHordeClassDruidShaman.lua
 QuestClassData.lua
 QuestMobData.lua
+QuestDangerData.lua
+QuestFlightData.lua
 Theme.lua
 Art.lua
 Guide.lua
 Quests.lua
 QuestieSupport.lua
+QuestTravel.lua
 Professions.lua
 Disenchant.lua
 Macros.lua
@@ -42,6 +45,8 @@ Window.lua
 ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua
+QuestParty.lua
+Pace.lua
 QuestTab.lua
 Minimap.lua
 Tracking.lua
