@@ -21,7 +21,8 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - Horde: Tirisfal and Silverpine for Kalimdor races at 12-15, and the Shimmering Flats.
 
   The Quests tab lists the route options for your level.
-- **The arrow** shows the distance on your map and knows the way across zones: flight paths, boats, zeppelins and roads. It pauses during flights and picks up when you land. As a ghost it leads back to your corpse.
+- **The arrow** shows the distance on your map and about how long until you get there, and knows the way across zones: flight paths, boats, zeppelins and roads. It pauses during flights with a flight timer and picks up when you land. As a ghost it leads back to your corpse.
+- **Flight master trips.** For a long trip the arrow leads to a flight master when flying is quicker ("Fly to Lakeshire from Sentinel Hill"), and the flight map marks the flight to take. A flight path you don't have close to the way is picked up on the way, and Quests > **Nearest flight master** points at the closest one.
 - **Map pin.** The current step gets the game's own map waypoint, so it shows on your world map and minimap. A waypoint you place yourself is never replaced.
 - **Works with Questie.** Questie's auto-accept and hold-back key take precedence, and the step window sits beside Questie's tracker. With QuestieDB installed, the arrow leads to the nearest mob or object you still need once you reach a camp.
 - **Quest item and target buttons** for the current step, both key-bindable: use the quest item (or your Hearthstone on a hearth step), and target the NPC you're looking for or the creatures the quest needs.
@@ -33,15 +34,20 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - *Also on this loop* shows the other quests you can work on during the same trip.
   - Steps show a quest's place in its chain ("Chain: part 2 of 5").
   - A pickup warns you when your quest log is full, and Quest log cleanup lists quests no guide uses and grey quests worth little XP.
-- **Dungeon plans.** Plan the runs you want: Ragefire Chasm, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps, the Deadmines, the Stockade, Razorfen Kraul, Gnomeregan, and Forever's Ruins of Lordaeron, Hall of Thanes and Excavation Site.
-  - A planned run's pickups join your route.
-  - When you're ready, the step window offers **Run <dungeon>**.
-  - Each run has a before / inside / after checklist with the bosses in order and a tip for each.
+- **Dungeons along the way.** Ragefire Chasm, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps, the Deadmines, the Stockade, Razorfen Kraul, Gnomeregan, Scarlet Monastery, and Forever's Ruins of Lordaeron, Hall of Thanes, Excavation Site and City of Dalaran.
+  - **Dungeon ahead:** before a run's first quest, the route asks whether to plan it. Planned runs' pickups join your route.
+  - When you're ready, the step text says to find a group and the step window offers **Run <dungeon>**.
+  - **Boss by boss:** inside, the step window walks the bosses in order with a tip for each fight, ticks them off as they die, and keeps your quests for the run beside them. It opens by itself when you zone in.
+  - The arrow leads through the Deadmines tunnels, the Wailing Caverns cave and the way down to the Hall of Thanes.
 - **Class quests** for every class: stances, forms, totems, pets, Voidwalkers and Succubi, Redemption, poisons and class gear. Short ones sit on your route. Longer chains are class guides in the Quests tab, and you return to leveling when you're done.
 - **Special chains** (Alliance) such as the Cozy Sleeping Bag, The Legend of Stalvan and The Missing Diplomat are offered when you pass their start.
 - **Auto-accept and auto-turn-in** for the guide's quest, off by default. Hold Alt (or Questie's key) to do it yourself. Reward choices always stay yours; a coin marks the one that sells for the most.
-- **Flights and binds for you (optional):** on a Fly step the Codex takes the step's flight, and at the step's inn it sets your hearthstone.
-- **Your settings:** show optional quests, plan every dungeon run, show class quests, keep grey quests in the route, skip hearthstone binding steps, play a sound when a step completes, pin the step on the map, and hide the arrow or buttons.
+- **Flights and binds for you (optional):** the Codex takes the flight the guide marks, and at the step's inn it sets your hearthstone.
+- **Guide setup.** A new character gets a quick setup: fastest or every quest, recommended dungeons or none, and the auto-accept, auto turn-in and flight helpers.
+- **More in the step window:** elites and rares near your step until you outlevel them, up to 5 steps ahead, the step's quest on the objective tracker, **Show on map** and **Report this step**, and on hover why a step was skipped.
+- **Party play.** Party members who use the Codex see each other's current step. Sharing guide quests and saying your flights in party chat are optional.
+- **Your pace.** The This Level tab shows your XP per hour, about how long the next level takes, where this level's XP came from, and your last levels' times.
+- **Your settings:** show optional quests, plan every dungeon run, show class quests, keep grey quests in the route, skip hearthstone binding steps, play a sound when a step completes, pin the step on the map, flight master trips, opening a dungeon's guide when you enter it, and hide the arrow or buttons.
 
 ### Talent window guide
 Whenever you have a talent point to spend, open your talent window and the Codex **traces the talent to take for your level**. It draws a glowing outline in the theme colour that follows the talent's shape (round, square or choice), with sparks running around it and a *Codex pick 2/3* tag. A card above the window (or below it, near the top of the screen) shows that talent and your next two picks. With several points to spend it starts with the earliest, and it goes away once they're spent.
