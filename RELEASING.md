@@ -2,15 +2,21 @@
 
 Releases are hands-free: push a version tag and GitHub builds the zip and uploads it to CurseForge.
 
+Before tagging, `CHANGELOG.md` needs a section for the version (`## v0.9.0`): that section is the
+release's notes. Preview them with `python tools/release_notes.py v0.9.0`.
+
 ```
 git tag v0.9.0
 git push origin v0.9.0
 ```
 
-The workflow in `.github/workflows/release.yml` runs the BigWigsMods packager, which:
+The workflow in `.github/workflows/release.yml` first writes `RELEASE_NOTES.html` from the tag's
+`CHANGELOG.md` section (`tools/release_notes.py`; the job fails if there is no section), then runs
+the BigWigsMods packager, which:
 - fills `@project-version@` in the .toc files with the tag (e.g. `v0.9.0`),
 - zips the addon as `LevelingCodex/` (leaving out README, media and these docs),
-- uploads it to the CurseForge project in `## X-Curse-Project-ID` with the notes from `CHANGELOG.md`,
+- uploads it to the CurseForge project in `## X-Curse-Project-ID` with those notes (HTML: only this
+  version's section, so CurseForge doesn't show the whole changelog run together),
 - creates a GitHub release with the same zip.
 
 ## One-time setup

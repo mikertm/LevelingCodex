@@ -251,8 +251,15 @@ def data_checks():
                                         % (step, at, m.lo, at - 1))
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
-    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_danger_checks() + quest_flight_checks(),
-            warnings + prof_warnings + game_warnings)
+    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_danger_checks() + quest_flight_checks()
+            + release_notes_checks(), warnings + prof_warnings + game_warnings)
+
+
+def release_notes_checks():
+    """Every CHANGELOG.md version section converts to clean release notes (tools/release_notes.py)."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import release_notes
+    return ["release notes: " + p for p in release_notes.check()]
 
 
 def quest_flight_checks():
