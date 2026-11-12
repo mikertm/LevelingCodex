@@ -78,6 +78,62 @@ events:SetScript("OnEvent", function(_, event, arg1)
   end
 end)
 
+-- The game blocked a Codex call ("LevelingCodex has been blocked from an action only available to
+-- the Blizzard UI"). ADDON_ACTION_FORBIDDEN / ADDON_ACTION_BLOCKED name the function: say it once per
+-- function a session and keep the last 10 with what was going on (LevelingCodexDB.blocked, /codex debug).
+local blockedSaid = {}
+
+-- The events are synchronous: the call stack still holds the blocked call. Below the first [C]
+-- frame (the blocked function itself) are the Codex lines that made it.
+local function blockedStack()
+  local ok, stack = ns.try(debugstack, 2, 30, 0)
+  if not ok or type(stack) ~= "string" then return nil, nil end
+  local lines, below, sawC = {}, {}, false
+  for line in stack:gmatch("[^\n]+") do
+    line = ns.plain(line)
+    if #lines < 16 then lines[#lines + 1] = line end
+    if sawC then
+      local file, num = line:match("LevelingCodex[/\\]([%w_]+%.lua)[^:]*:(%d+)")
+      if file and #below < 6 then below[#below + 1] = file .. ":" .. num end
+    elseif line:find("^%s*%[C%]") then
+      sawC = true
+    end
+  end
+  return table.concat(lines, "\n"), #below > 0 and table.concat(below, " < ") or nil
+end
+
+local function noteBlocked(event, addon, func)
+  if addon ~= "LevelingCodex" then return end
+  func = ns.plain(tostring(func or "?"))
+  local stack, where = blockedStack()
+  local function yes(fn, ...)
+    local ok, v = ns.try(fn, ...)
+    return ok and (v == true or v == 1)
+  end
+  local okTime, stamp = ns.try(date, "%H:%M:%S")
+  local track = ns.trackingDebugLines and ns.trackingDebugLines()[1] or ""
+  local entry = { event = event, func = func, at = okTime and stamp or "?",
+    taxi = yes(UnitOnTaxi, "player"), ghost = yes(UnitIsDeadOrGhost, "player"), combat = yes(InCombatLockdown),
+    tracking = ns.plain(track:match("last: (.*)$") or ""), where = where, stack = stack }
+  local db = ns.db()
+  local list = type(db.blocked) == "table" and db.blocked or {}
+  table.insert(list, 1, entry)
+  while #list > 10 do table.remove(list) end
+  db.blocked = list
+  local key = func .. (where or "")
+  if not blockedSaid[key] then
+    blockedSaid[key] = true
+    ns.say("the game blocked the Codex from " .. func .. (where and (" at " .. where) or "") ..
+      ". Please report it (/codex debug lists it).")
+  end
+end
+
+local blockedEvents = CreateFrame("Frame")
+for _, ev in ipairs({ "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED" }) do
+  pcall(blockedEvents.RegisterEvent, blockedEvents, ev)
+end
+blockedEvents:SetScript("OnEvent", function(_, event, addon, func) noteBlocked(event, addon, func) end)
+
 local function testBanner(level)
   ns.showToast(level, true, true)
   if PlaySound then pcall(PlaySound, 888) end
@@ -166,6 +222,11 @@ function ns.debugLines()
   for _, line in ipairs(ns.questieDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.partyDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.travelDebugLines()) do out[#out + 1] = line end
+  for _, b in ipairs(type(ns.db().blocked) == "table" and ns.db().blocked or {}) do
+    out[#out + 1] = "blocked by the game: " .. tostring(b.func) .. " (" .. tostring(b.event) .. ") at " .. tostring(b.at) ..
+      (b.taxi and ", in flight" or "") .. (b.ghost and ", dead or ghost" or "") .. (b.combat and ", in combat" or "") ..
+      ", tracking: " .. tostring(b.tracking) .. (b.where and (", from " .. b.where) or "")
+  end
   out[#out + 1] = "game level-up display: " .. (ns.builtInLevelUp or "not seen yet") ..
     (ns.builtInSpotY and (", top at y " .. ns.builtInSpotY) or "") ..
     ", banner: " .. (ns.db().toastPos and "moved by you" or (ns.builtInSpotY and "in its spot" or "default spot"))

@@ -1247,24 +1247,20 @@ local function takeFlight(nodes)
   end
 end
 
--- A boss died: ENCOUNTER_END (encounterID, name, difficulty, size, success), BOSS_KILL (encounterID,
--- name) or the combat log's UNIT_DIED (only listened to inside a dungeon).
+-- A boss died: ENCOUNTER_END (encounterID, name, difficulty, size, success) or BOSS_KILL
+-- (encounterID, name). A rare without an encounter is passed with Next. Never the combat log:
+-- Forever blocks addons from registering or unregistering COMBAT_LOG_EVENT_UNFILTERED ("blocked
+-- from an action only available to the Blizzard UI", reported as UNKNOWN()).
 local function bossEvent(event, a, b, e)
   if event == "ENCOUNTER_END" then
     if e == 1 or e == true then return Q.bossDown(tonumber(a), b) end
   elseif event == "BOSS_KILL" then
     return Q.bossDown(tonumber(a), b)
-  elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-    local info = { try(CombatLogGetCurrentEventInfo) }
-    if info[2] ~= "UNIT_DIED" then return end
-    local guid, name = info[8], info[9]
-    local npc = type(guid) == "string" and tonumber(guid:match("^Creature%-%d+%-%d+%-%d+%-%d+%-(%d+)%-"))
-    return Q.bossDown(nil, name, npc)
   end
 end
 
 local function handle(event, a, b, c, d, e)
-  if event == "ENCOUNTER_END" or event == "BOSS_KILL" or event == "COMBAT_LOG_EVENT_UNFILTERED" then
+  if event == "ENCOUNTER_END" or event == "BOSS_KILL" then
     if bossEvent(event, a, b, e) then ns.questRefresh() end
     return
   end
@@ -1320,9 +1316,6 @@ local function handle(event, a, b, c, d, e)
   end
   if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
     Q.checkPosition()
-    -- The combat log only matters inside a dungeon (boss deaths).
-    if Q.inDungeonInstance() then pcall(events.RegisterEvent, events, "COMBAT_LOG_EVENT_UNFILTERED")
-    else pcall(events.UnregisterEvent, events, "COMBAT_LOG_EVENT_UNFILTERED") end
   end
   if recorder then
     if event == "QUEST_ACCEPTED" or event == "QUEST_TURNED_IN" then

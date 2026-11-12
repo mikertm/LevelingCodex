@@ -718,6 +718,7 @@ def main():
                              "questFlightPlan", "questFlightLearn", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
+            runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
                                   ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman"), ("MAGE", "questWarriorFangsOtherClass"), ("DRUID", "questClassAlongDruid"), ("DRUID", "questClassAlongDruidNotTaken"), ("SHAMAN", "questClassAlongShaman"), ("SHAMAN", "questClassAlongShamanNotTaken")):
                 runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))

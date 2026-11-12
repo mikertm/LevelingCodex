@@ -2,9 +2,16 @@
 
 ## v0.20.1
 
+### Quest guide
+
+- **The flight map lights up the guide's flight master.** When you open a flight map, the flight point to fly to turns yellow inside a pulsing gold ring, instead of having the Codex badge beside it, and the line at the top still names it. Click it as usual.
+
 ### Fixes
 
-- **No more "LevelingCodex has been blocked from an action only available to the Blizzard UI".** With Settings > Take the guide's flights and binds on, the Codex accepted and closed the "make this inn your home" popup itself. The game doesn't allow that: it showed the blocked message, and later blocked the Spirit Healer's Accept too. The Codex still picks the innkeeper's bind option on a bind step, and now you accept the bind yourself.
+- **No more "LevelingCodex has been blocked from an action only available to the Blizzard UI".** For the dungeon boss steps the Codex switched the combat log on or off at every loading screen and zone change: logging in, a /reload, flying over a zone border, being sent to a graveyard. WoW: Forever doesn't let addons touch the combat log, so the game blocked it every time. Bosses now tick off from the game's encounter events only, and a rare without one is passed with Next.
+- **Binds are yours to accept.** With Settings > Take the guide's flights and binds on, the Codex still picks the innkeeper's bind option, and you accept the game's popup. Accepting or closing a game popup from an addon risks the same block.
+- **Flight trips in flight.** The trip planner read your speed, which WoW: Forever hides from addons in flight, and failed every moment you flew (a Lua error in the background). It now plans at walking speed when your speed is hidden.
+- **If the game ever blocks the Codex again**, the Codex says in chat which part of it was blocked, and /codex debug lists it, so it can be fixed quickly.
 
 ## v0.20.0
 

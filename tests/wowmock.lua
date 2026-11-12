@@ -58,7 +58,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
-  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED" }) do
+  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -119,11 +119,6 @@ C_Map = {
 C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
--- The combat log: MOCK.combatLog = { subevent, destGUID, destName } for the event being fired.
-function CombatLogGetCurrentEventInfo()
-  local c = MOCK.combatLog or {}
-  return 0, c[1], false, "", "", 0, 0, c[2], c[3], 0, 0
-end
 function GetInstanceInfo()
   return MOCK.instanceName, MOCK.instanceName and "party" or "none", nil, nil, nil, nil, nil, MOCK.instanceID
 end
@@ -154,6 +149,37 @@ local function blizzardOnly(name)
     MOCK.forbidden = name
     problem("forbidden", name .. "(" .. tostring(which) .. ") from addon code: only the Blizzard UI may call it")
   end
+end
+-- Secret values (Forever hides some numbers from addon code, e.g. your speed in flight): MOCK.SECRET
+-- stands for one. Arithmetic on it fails like the client's "numeric conversion on a secret value".
+MOCK.SECRET = setmetatable({}, { __tostring = function() return "<secret>" end })
+function issecretvalue(v) return v == MOCK.SECRET end
+local rawTonumber = tonumber
+function tonumber(v, ...)
+  if v == MOCK.SECRET then error("attempt to perform numeric conversion on a secret number value", 2) end
+  return rawTonumber(v, ...)
+end
+-- GetUnitSpeed: current, run, flight, swim (MOCK.runSpeed, default 7).
+function GetUnitSpeed(unit)
+  local run = MOCK.runSpeed or 7
+  return run == MOCK.SECRET and run or 0, run, run, run
+end
+-- The client's call stack (WoW's debugstack: start 1 = the function that calls it, then the top
+-- `top` levels; Lua's own traceback drops the middle of deep stacks).
+function debugstack(start, top)
+  local lines, level = {}, (start or 1) + 1
+  while #lines < (top or 12) do
+    local info = debug.getinfo(level, "Sln")
+    if not info then break end
+    if info.what == "C" then
+      lines[#lines + 1] = "[C]: in function '" .. tostring(info.name or "?") .. "'"
+    else
+      local src = info.source:sub(1, 1) == "@" and info.source:sub(2) or info.short_src
+      lines[#lines + 1] = src .. ":" .. tostring(info.currentline) .. ": in function " .. tostring(info.name or "?")
+    end
+    level = level + 1
+  end
+  return table.concat(lines, "\n")
 end
 ConfirmBinder = blizzardOnly("ConfirmBinder")
 StaticPopup_Hide = blizzardOnly("StaticPopup_Hide")
@@ -430,12 +456,25 @@ function Frame:HookScript(name, fn)
   local old = self._scripts[name]
   self:SetScript(name, function(...) if old then old(...) end; fn(...) end)
 end
+-- Forever keeps the combat log from addons: registering or unregistering COMBAT_LOG_EVENT_UNFILTERED
+-- is blocked ("blocked from an action only available to the Blizzard UI", UNKNOWN()), even in pcall.
+local BLIZZARD_ONLY_EVENTS = { COMBAT_LOG_EVENT_UNFILTERED = true }
+local function eventForbidden(ev, how)
+  if not BLIZZARD_ONLY_EVENTS[ev] then return false end
+  MOCK.forbidden = how .. " " .. ev
+  problem("forbidden", how .. "(" .. ev .. ") from addon code: only the Blizzard UI may do it")
+  return true
+end
 function Frame:RegisterEvent(ev)
   if not MOCK.knownEvents[ev] then error('Attempt to register unknown event "' .. tostring(ev) .. '"', 2) end
+  if eventForbidden(ev, "RegisterEvent") then return end
   MOCK.events[ev] = MOCK.events[ev] or {}
   MOCK.events[ev][self] = true
 end
-function Frame:UnregisterEvent(ev) if MOCK.events[ev] then MOCK.events[ev][self] = nil end end
+function Frame:UnregisterEvent(ev)
+  if eventForbidden(ev, "UnregisterEvent") then return end
+  if MOCK.events[ev] then MOCK.events[ev][self] = nil end
+end
 function Frame:UnregisterAllEvents() for _, set in pairs(MOCK.events) do set[self] = nil end end
 function Frame:IsEventRegistered(ev) return MOCK.events[ev] and MOCK.events[ev][self] or false end
 function Frame:SetFrameStrata(s) self._strata = s end
@@ -446,7 +485,12 @@ function Frame:SetToplevel() end
 function Frame:Raise() end
 function Frame:SetMovable(on) self._movable = on end
 function Frame:IsMovable() return self._movable end
-function Frame:EnableMouse() end
+-- Buttons take the mouse by default, other frames don't (like the client).
+function Frame:EnableMouse(on) self._mouse = on and true or false end
+function Frame:IsMouseEnabled()
+  if self._mouse ~= nil then return self._mouse end
+  return self._type == "Button" or self._type == "CheckButton"
+end
 function Frame:EnableMouseWheel() end
 function Frame:EnableKeyboard() end
 function Frame:SetPropagateKeyboardInput() end
@@ -1263,7 +1307,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
-  "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest" }
+  "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
+  "debugstack" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
