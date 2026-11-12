@@ -1232,7 +1232,7 @@ renderers.settings = function()
   tick("Lead me to flight paths I don't have", not db.noFlightLearn, function() db.noFlightLearn = not db.noFlightLearn; ns.questRefresh() end,
     "When a flight master you haven't talked to is close to the way, the arrow stops there first so you learn the flight path. Works once the game has listed your flight paths, or you opened a flight map this session.")
   tick("Take the guide's flights and binds", db.questAutoTravel, function() db.questAutoTravel = not db.questAutoTravel end,
-    "Off by default. On: at a flight master the Codex takes the flight the guide marks (a Fly step's, or the trip's), and at the step's innkeeper during a bind step it sets your hearthstone there. Hold Alt to stop it.")
+    "Off by default. On: at a flight master the Codex takes the flight the guide marks (a Fly step's, or the trip's), and at the step's innkeeper during a bind step it picks the bind option (accept the game's popup yourself: addons may not). Hold Alt to stop it.")
   y = y + 12
 
   head("MINIMAP BUTTON")

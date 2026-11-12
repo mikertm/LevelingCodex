@@ -1162,8 +1162,10 @@ local function pickFromList(event)
 end
 
 -- Travel automation (Settings > Take the guide's flights and binds, off by default): the
--- flight master's and innkeeper's gossip options, the step's flight and the bind confirmation.
--- Alt holds it back, and nothing happens in combat.
+-- flight master's and innkeeper's gossip options and the step's flight. Alt holds it back, and
+-- nothing happens in combat. The bind's own popup is the player's: accepting or hiding a Blizzard
+-- popup from addon code is blocked ("blocked from an action only available to the Blizzard UI")
+-- and taints the popups, so the next protected one (the Spirit Healer's Accept) is blocked too.
 local function travelAllowed()
   return ns.db().questAutoTravel and try(InCombatLockdown) == false and not try(IsAltKeyDown)
 end
@@ -1245,21 +1247,6 @@ local function takeFlight(nodes)
   end
 end
 
-local function confirmBind(area)
-  local s = Q.autoStep()
-  if not travelAllowed() or not s or s.type ~= "sethearth" or not nearStep(s) then return end
-  if type(area) == "string" and area ~= "" and s.bind and Q.plain(area):lower() ~= s.bind:lower() then return end
-  if type(ConfirmBinder) == "function" then
-    try(ConfirmBinder)
-  else
-    local manager, kinds = C_PlayerInteractionManager, Enum and Enum.PlayerInteractionType
-    if not (manager and kinds and kinds.Binder) then return end
-    try(manager.ConfirmationInteraction, kinds.Binder)
-    try(manager.ClearInteraction, kinds.Binder)
-  end
-  try(StaticPopup_Hide, "CONFIRM_BINDER")
-end
-
 -- A boss died: ENCOUNTER_END (encounterID, name, difficulty, size, success), BOSS_KILL (encounterID,
 -- name) or the combat log's UNIT_DIED (only listened to inside a dungeon).
 local function bossEvent(event, a, b, e)
@@ -1290,10 +1277,6 @@ local function handle(event, a, b, c, d, e)
   end
   if event == "GOSSIP_SHOW" or event == "QUEST_GREETING" then
     if not pickFromList(event) and event == "GOSSIP_SHOW" then travelGossip() end
-    return
-  end
-  if event == "CONFIRM_BINDER" then
-    confirmBind(a)
     return
   end
   if event == "CHAT_MSG_COMBAT_XP_GAIN" then
@@ -1388,7 +1371,7 @@ function ns.startQuestGuide()
     "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "NEW_TAXI_PATH",
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
-    "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED", "CONFIRM_BINDER",
+    "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED",
     "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL" }) do
     pcall(events.RegisterEvent, events, ev)
   end
@@ -1432,8 +1415,7 @@ function ns.questDebugLines()
     { "C_TaxiMap", C_TaxiMap, "GetTaxiNodesForMap", "GetAllTaxiNodes" },
     { "Gossip", C_GossipInfo, "GetAvailableQuests", "GetActiveQuests", "SelectAvailableQuest", "SelectActiveQuest",
       "GetOptions", "SelectOption" },
-    { "Travel", _G, "TakeTaxiNode", "GetGossipOptions", "SelectGossipOption", "ConfirmBinder", "StaticPopup_Hide" },
-    { "C_PlayerInteractionManager", C_PlayerInteractionManager, "ConfirmationInteraction", "ClearInteraction" },
+    { "Travel", _G, "TakeTaxiNode", "GetGossipOptions", "SelectGossipOption" },
     { "Greeting", _G, "GetNumAvailableQuests", "GetNumActiveQuests", "SelectAvailableQuest", "SelectActiveQuest" },
   }
   local lines = { "Quest guide APIs (+: present, -: absent)" }

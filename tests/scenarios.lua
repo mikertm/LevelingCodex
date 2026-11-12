@@ -435,15 +435,15 @@ function S.questTravelBind()
   click(frame, "Next")
   check(questText(frame, "Bind hearthstone"), "the bind step follows")
   MOCK.event("GOSSIP_SHOW")
-  MOCK.event("CONFIRM_BINDER", "Lakeshire")
-  check(MOCK.gossipOption == nil and not MOCK.binderConfirmed, "no binding away from the step's inn")
+  check(MOCK.gossipOption == nil, "no bind option picked away from the step's inn")
   MOCK.questX, MOCK.questY = 22.1, 44.6
   MOCK.event("GOSSIP_SHOW")
   check(MOCK.gossipOption == 3, "the innkeeper's bind option is picked at the step's inn")
-  MOCK.event("CONFIRM_BINDER", "Goldshire")
-  check(not MOCK.binderConfirmed, "a different town's bind is never confirmed")
+  -- Reported from the game: confirming the bind and hiding its popup from addon code made Forever
+  -- show "LevelingCodex has been blocked from an action only available to the Blizzard UI", later
+  -- at the Spirit Healer too. The bind popup is the player's: the Codex never accepts or hides it.
   MOCK.event("CONFIRM_BINDER", "Lakeshire")
-  check(MOCK.binderConfirmed and MOCK.popupHidden == "CONFIRM_BINDER", "the bind is confirmed and its popup closed")
+  check(MOCK.forbidden == nil, "the bind popup is left to the player (no Blizzard-only call)")
 end
 
 function S.questGrind()

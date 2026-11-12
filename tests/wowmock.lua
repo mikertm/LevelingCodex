@@ -145,9 +145,23 @@ function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
 function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
 function TaxiNodeGetType(i) return MOCK.taxiNodes[i][2] end
 function TakeTaxiNode(i) MOCK.tookTaxi = i end
--- The bind confirmation (CONFIRM_BINDER's popup): MOCK.binderConfirmed, MOCK.popupHidden.
-function ConfirmBinder() MOCK.binderConfirmed = true end
-function StaticPopup_Hide(which) MOCK.popupHidden = which end
+-- Blizzard's popups belong to the Blizzard UI. Confirming an NPC interaction from addon code is
+-- blocked (Forever's ADDON_ACTION_FORBIDDEN dialog), and StaticPopup_Hide from addon code taints the
+-- popup system, so the next protected popup button (the Spirit Healer's Accept) is blocked and
+-- blamed on the addon. Every call here comes from the addon, so each one is a problem.
+local function blizzardOnly(name)
+  return function(which)
+    MOCK.forbidden = name
+    problem("forbidden", name .. "(" .. tostring(which) .. ") from addon code: only the Blizzard UI may call it")
+  end
+end
+ConfirmBinder = blizzardOnly("ConfirmBinder")
+StaticPopup_Hide = blizzardOnly("StaticPopup_Hide")
+C_PlayerInteractionManager = {
+  ConfirmationInteraction = blizzardOnly("C_PlayerInteractionManager.ConfirmationInteraction"),
+  ClearInteraction = blizzardOnly("C_PlayerInteractionManager.ClearInteraction"),
+}
+Enum = { PlayerInteractionType = { Binder = 5, SpiritHealer = 7 } }
 -- Quest log usable items, by log index: MOCK.questItems[i] = { link, icon }.
 MOCK.questItems = {}
 function GetQuestLogSpecialItemInfo(i)
