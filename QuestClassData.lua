@@ -228,6 +228,17 @@ do
       accept(1782, furen),
       finish(1782, furen, "Collect the Fire Hardened Hauberk from Furen."),
     } })
+  -- Thelgen Rock's Leech and Cave Stalkers drop the hauberk's Scorched Spider Fangs (QuestieDB:
+  -- item 6838 from Leech Stalkers around 54, 64 and 47, 62) as well as Alchemical Hazards' gland,
+  -- so a Warrior carrying Fire Hardened Mail fills the fangs right after the gland. `logOnly`:
+  -- the step shows only while the quest is in the log, so Warriors without it never see it.
+  local function thelgenFangs(x, y)
+    return B.logOnlyPart(1701, 1, at(nil, x, y, m.wetlands),
+      "Warriors with Fire Hardened Mail: the Leech and Cave Stalkers in Thelgen Rock also drop Scorched Spider Fangs. Stay until you have all 50.",
+      "50 Scorched Spider Fangs")
+  end
+  inline("wetlands-early", "complete", 98282, { thelgenFangs(52.6, 62.9) })
+  inline("wetlands", "complete", 98282, { thelgenFangs(48.7, 62.4) })
 
   local humanGnome = { human, gnome }
   local grimand = at("Grimand Elmore", 59.73, 33.78, m.stormwind)
@@ -1426,5 +1437,146 @@ do
       finish(94789, at("Veyric Thunderhame", 59.84, 27.57, 1417),
         "Take the northern road through the Wetlands and cross the Thandol Span. Follow the road into Arathi Highlands, then head into the northern hills to meet Veyric for your Air Totem."),
     },
+  })
+end
+
+-- Class objectives the route passes anyway (both factions), from the class quest audit
+-- (tools/audits/2026-11-11-class-quest-audit.md: RestedXP and Zygor pairings checked against
+-- QuestieDB and our route). Every step is `logOnly`: only that class, only while the quest is in
+-- the log. Sources per pairing: tools/audits/2026-11-11-class-pairings.md.
+do
+  local m, at, part, stop, withItem = B.maps, B.at, B.logOnlyPart, B.logOnlyGoto, B.withItem
+  local function handIn(id, npc, text)
+    local step = B.finish(id, npc, text)
+    step.logOnly = true
+    return step
+  end
+
+  -- Alliance, Eastern Kingdoms
+  inline("coldridge", "complete", 218, {
+    part(94373, 1, at(nil, 27.5, 80.9, m.dunMorogh),
+      "Shamans with Call of Earth: the Frostmane Troll Whelps and Novices in this cave also drop Iceclaw Bear Pendants. Collect two on your way back out to Grelin.",
+      "2 Iceclaw Bear Pendants"),
+  })
+  inline("loch-modan", "turnin", 267, {
+    handIn(94465, at("Braldir Ashmantle", 32.17, 65.97, m.lochModan),
+      "Shamans with Call of Fire: Braldir waits up the stone-marked trail north-east of this tower. Give him the torch and take Call of Fire before you go north."),
+  })
+  inline("loch-modan", "complete", 307, {
+    part(94466, 1, at(nil, 35.8, 23.8, m.lochModan),
+      "Shamans with Call of Fire: the Tunnel Rat Geomancers in this mine drop Fire Tar. Kill them until you have one.",
+      "Fire Tar"),
+  })
+  inline("loch-modan", "complete", 237, {
+    part(94466, 2, at(nil, 34.7, 85.3, m.lochModan),
+      "Shamans with Call of Fire: the Stonesplinter Seers you hunt here also drop the Reagent Pouch. Keep at them until one drops.",
+      "Reagent Pouch"),
+  })
+  inline("westfall", "accept", 65, {
+    part(1688, 1, at(nil, 71.0, 80.8, m.elwynn),
+      "Warlocks with Surena Caledon: the walk east to Redridge passes Brackwell Pumpkin Patch, just south of the road before the Eastvale bridge. Defeat Surena among the Defias there and loot her choker.",
+      "Surena's Choker"),
+  })
+  inline("redridge-late", "complete", 169, {
+    withItem(265747, part(94499, 1, at(nil, 73.7, 61.6, m.redridge),
+      "Shamans with Call of Water: Stonewatch Falls is a short way east of the keep. Use the Unfilled Red Waterskin in the water by the Nightcrawler Murlocs.",
+      "Full Red Waterskin")),
+  })
+  local function altherBox()
+    return part(2282, 1, at("Lucius's Lockbox", 46.95, 44.69, m.redridge),
+      "Rogues with Alther's Mill: Lucius's Lockbox and the practice lockboxes are at this mill. Pick the practice boxes until your Lockpicking reaches 25, then open Lucius's Lockbox for the token.",
+      "Token of Thievery")
+  end
+  inline("lakeshire", "accept", 127, {
+    handIn(2281, at("Lucius", 22.97, 52.04, m.redridge),
+      "Rogues with Redridge Rendezvous: Lucius waits on the dock just west of the bridge. Hand in Renzik's orders and take Alther's Mill."),
+  })
+  inline("lakeshire", "complete", 98386, { altherBox() })
+  inline("redridge-late", "complete", 150, { altherBox() })
+  inline("duskwood", "accept", 268, {
+    handIn(2360, at("Agent Kearnen", 68.49, 70.08, m.westfall),
+      "Rogues with Mathias and the Defias: follow the road south-west out of Raven Hill into Westfall, where Agent Kearnen waits in Stealth by a tree south of the road. Hand in Shaw's orders and take Klaven's Tower."),
+    part(2359, nil, at(nil, 70.41, 73.93, m.westfall),
+      "Rogues with Klaven's Tower: the Defias tower stands just past Kearnen. Pick Pocket the Malformed Defias Drone outside for the key, then pick the lock on the Duskwood Chest upstairs for Klaven's journal.",
+      "Klaven Mortwake's Journal"),
+  })
+
+  -- Alliance, Kalimdor (and the Westfall coast for Druids)
+  inline("darkshore", "complete", 87760, {
+    stop(272, at("Strange Lockbox", 48.87, 11.32, m.darkshore),
+      "Druids with Trial of the Sea Lion: swim on past the rock spire to the Strange Lockbox between the rock pillars to the north for the Half Pendant of Aquatic Agility."),
+  })
+  inline("westfall", "turnin", 104, {
+    stop(272, at("Strange Lockbox", 17.94, 33.18, m.westfall),
+      "Druids with Trial of the Sea Lion: before you head back to Sentinel Hill, follow the coast north past Gold Coast Quarry and dive to the Strange Lockbox offshore for the Half Pendant of Aquatic Endurance."),
+  })
+  inline("darkshore", "complete", 947, {
+    withItem(15844, part(6122, 1, at(nil, 54.92, 33.31, m.darkshore),
+      "Druids with The Principal Source: use the Empty Cliffspring Falls Sampler at the mouth of this same cave to draw the water sample for Alanndarian.",
+      "Filled Cliffspring Falls Sampler")),
+  })
+  inline("darkshore", "accept", 4740, {
+    part(6123, 2, at(nil, 44.4, 51.5, m.darkshore),
+      "Druids with Gathering the Cure: on the way south, stop at the moonkin caves east of the road (44.4, 51.5 and 44.5, 46.9) and pick 12 Lunar Fungus from the fungal blooms.",
+      "12 Lunar Fungus"),
+  })
+  local function lunaclaw(text)
+    return withItem(15208, part(6001, nil, at("Moonkin Stone", 43.5, 45.97, m.darkshore), text,
+      "Speak with Lunaclaw's spirit"))
+  end
+  inline("teldrassil", "accept", 6343, { lunaclaw(
+    "Druids with Body and Heart: the Moonkin Stone is in the moonkin cave a short run east of Auberdine. Use the Cenarion Moondust there, defeat Lunaclaw and speak to his spirit before you fly back.") })
+  inline("darkshore", "complete", 4811, { lunaclaw(
+    "Druids with Body and Heart: the Moonkin Stone is in the moonkin cave just west of the red crystal. Use the Cenarion Moondust there, defeat Lunaclaw and speak to his spirit.") })
+  inline("teldrassil", "accept", 940, {
+    part(2242, 1, at("Sethir the Ancient", 37.1, 22.8, m.teldrassil),
+      "Rogues with Destiny Calls: Sethir the Ancient is just north of the Oracle Glade, a short detour on the way to Wellspring Lake. Approach in Stealth and pickpocket Sethir's Journal.",
+      "Sethir's Journal"),
+  })
+  inline("ashenvale-early", "complete", 970, {
+    part(1738, 1, at("Heartswood", 31.53, 31.52, 1440),
+      "Warlocks with Heartswood: the Heartswood lies at the roots of the tree in these same ruins, among the Dark Strand Excavators. Loot it before you move on to Bathran's Haunt.",
+      "Heartswood"),
+  })
+
+  -- Horde
+  B.hordeInline("northern-durotar", "complete", 835, {
+    part(1525, 2, at(nil, 52.4, 25.5, m.durotar),
+      "Shamans with Call of Fire: the Burning Blade Cultists in Dustwind Cave, just south-west of these harpies, drop the Reagent Pouch. Kill them until one drops.",
+      "Reagent Pouch"),
+  })
+  B.hordeInline("crossroads", "complete", 871, {
+    part(1525, 1, at(nil, 54.9, 26.1, m.barrens),
+      "Shamans with Call of Fire: the Razormane Water Seekers and Thornweavers here also drop Fire Tar. Keep killing them until one drops.",
+      "Fire Tar"),
+  })
+  B.hordeInline("northern-durotar", "complete", 97282, {
+    part(1498, 1, at(nil, 39.6, 27.8, m.durotar),
+      "Warriors with Path of Defense: the Lightning Hides here and the Thunder Lizards just south of them also drop Singed Scales. Stay until you have all 5.",
+      "5 Singed Scales"),
+  })
+  B.hordeInline("camp-taurajo", "complete", 97250, {
+    part(1824, 1, at(nil, 45.1, 70.8, m.barrens),
+      "Warriors with Trial at the Field of Giants: on the ride north, stop at the Egg Hunt mounds and kill Silithid Creepers, Grubs and Swarmers for antennae. They decay after 15 minutes, so hand them to Ruga Ragetotem in Camp Taurajo right away.",
+      "5 Twitching Antennae"),
+  })
+  B.hordeInline("barrens-south", "accept", 1069, {
+    withItem(7970, part(2381, 1, at("The Jewel of the Southsea", 64.95, 45.44, m.barrens),
+      "Rogues with Plundering the Plunderers: the Tide Razor is moored off the pirate camps ahead. Below deck, pick the Buccaneer's Strongboxes for Lockpicking, then open The Jewel of the Southsea, use the E.C.A.C. on Polly and kill her for the treasure.",
+      "Southsea Treasure")),
+  })
+  B.hordeInline("hillsbrad", "accept", 501, {
+    withItem(7768, part(1536, 1, at(nil, 62.17, 20.82, m.hillsbrad),
+      "Shamans with Call of Water: use the Empty Red Waterskin at the town well, a few steps from Lydon.",
+      "Filled Red Waterskin")),
+  })
+  B.hordeInline("ashenvale-splintertree", "accept", 23, {
+    withItem(7767, part(1534, 1, at(nil, 33.5, 67.5, m.ashenvale),
+      "Shamans with Call of Water: from Ursangous, ride west to the Ruins of Stardust south of Astranaar and use the Empty Blue Waterskin in the pool among the ruins. Watch for Alliance guards.",
+      "Filled Blue Waterskin")),
+  })
+  B.hordeInline("sepulcher", "turnin", 264, {
+    stop(30, at("Strange Lockbox", 29.6, 29.2, m.silverpine),
+      "Druids with Trial of the Sea Lion: before heading south, go north-west from the graveyard to the coast and swim out to the bubbling fissure. Loot the Half Pendant of Aquatic Endurance from the Strange Lockbox beside it."),
   })
 end

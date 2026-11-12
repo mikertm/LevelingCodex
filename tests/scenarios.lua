@@ -1670,6 +1670,90 @@ function S.questLoginWetlandsLocal()
   check(questText(win(), "The Greenwarden"), "an optional breadcrumb in your log shows its turn-in")
 end
 
+-- Warriors with Fire Hardened Mail collect its Scorched Spider Fangs from the same Thelgen Rock
+-- stalkers as Alchemical Hazards' gland; nobody else sees the step.
+local function thelgenRoute(log)
+  MOCK.race, MOCK.level, MOCK.questLog = "Human", 22, log
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 52.6, 62.9
+  S.login()
+  slash("quests")
+  click(win(), "Show all steps")
+end
+
+function S.questWarriorFangs()
+  thelgenRoute({
+    { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" }, { text = "Charred Horn: 0/12" },
+      { text = "Galvanized Horn: 0/1" }, { text = "Vial of Phlogiston: 0/1" } } },
+  })
+  check(questText(win(), "Complete - Alchemical Hazards") and questText(win(), "Complete - Fire Hardened Mail"),
+    "a Warrior with Fire Hardened Mail collects the fangs at Thelgen Rock")
+end
+
+function S.questWarriorFangsOtherClass() -- run as a Mage
+  thelgenRoute({
+    { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" } } },
+  })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+    "other classes never get the Warrior's fang step")
+end
+
+function S.questWarriorFangsNotTaken()
+  LevelingCodexDB = { questOptional = true } -- even with optional quests shown
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+    "without Fire Hardened Mail in the log there is no fang step")
+end
+
+-- Class objectives the route passes (from the class quest audit): shown only to the class, only
+-- while the quest is in the log. One check per faction, run as that class.
+local function routeAt(race, level, map, x, y, log)
+  MOCK.race, MOCK.level, MOCK.questLog = race, level, log
+  MOCK.questMap, MOCK.questX, MOCK.questY = map, x, y
+  S.login()
+  slash("quests")
+  click(win(), "Show all steps")
+end
+
+function S.questClassAlongDruid() -- run as a Druid
+  routeAt("NightElf", 16, 1439, 47.0, 14.0, { { questID = 272, objectives = { { text = "Pendant of the Sea Lion: 0/1" } } } })
+  check(questText(win(), "Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
+end
+
+function S.questClassAlongDruidNotTaken() -- run as a Druid
+  routeAt("NightElf", 16, 1439, 47.0, 14.0, {})
+  check(questText(win(), "Darkshore") and not questText(win(), "Trial of the Sea Lion"), "no lockbox stop without the quest")
+end
+
+function S.questClassAlongShaman() -- run as a Shaman
+  MOCK.faction = "Horde"
+  routeAt("Orc", 13, 1413, 52.0, 30.0, { { questID = 1525, objectives = { { text = "Fire Tar: 0/1" }, { text = "Reagent Pouch: 0/1" } } } })
+  check(questText(win(), "Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
+end
+
+function S.questClassAlongShamanNotTaken() -- run as a Shaman
+  MOCK.faction = "Horde"
+  routeAt("Orc", 13, 1413, 52.0, 30.0, {})
+  check(questText(win(), "Crossroads") and not questText(win(), "Complete - Call of Fire"), "no Fire Tar step without the quest")
+end
+
+-- Reported in game: with Show optional quests on, the step window said "Turn in - Unrequited Love"
+-- (Hollee's note, carried from Darkshore) to a player who never took it.
+function S.questCarriedTurninNotTaken()
+  LevelingCodexDB = { questOptional = true }
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
+  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Turn in - Unrequited Love"),
+    "no turn-in for an optional quest you don't have, even with optional quests shown")
+end
+
+function S.questCarriedTurninCarried()
+  LevelingCodexDB = { questOptional = true }
+  thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
+    { questID = 98461, isComplete = true } })
+  check(questText(win(), "Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
+end
+
 -- Outleveled pickups leave the route and guides show progress by level band.
 function S.questGrey()
   local sections = LevelingCodexQuests.ALLIANCE.sections

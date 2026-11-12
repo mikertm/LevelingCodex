@@ -625,10 +625,11 @@ def main():
                              "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
-                             "questMapPin"):
+                             "questMapPin", "questWarriorFangs", "questWarriorFangsNotTaken",
+                             "questCarriedTurninNotTaken", "questCarriedTurninCarried"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
-                                  ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman")):
+                                  ("HUNTER", "questHordeHunter"), ("SHAMAN", "questHordeShaman"), ("MAGE", "questWarriorFangsOtherClass"), ("DRUID", "questClassAlongDruid"), ("DRUID", "questClassAlongDruidNotTaken"), ("SHAMAN", "questClassAlongShaman"), ("SHAMAN", "questClassAlongShamanNotTaken")):
                 runs.append((cls + "/full/quests-" + scenario, cls, False, [scenario]))
         for cls in CLASSES + [UNSUPPORTED]:
             runs.append(("%s/%s/main" % (cls, variant), cls, minimal, MAIN))

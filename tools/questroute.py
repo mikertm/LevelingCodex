@@ -16,7 +16,7 @@ TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide", "xp", "mobs"}
+               "phase", "uncertain", "guide", "xp", "mobs", "logOnly"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -169,9 +169,14 @@ def audit(data, ref, cap=20):
                 for key in ("level", "min"):
                     if key in step and (type(step[key]) is not int or not 1 <= step[key] <= 60):
                         fail(where, f"{key} must be an integer from 1 to 60")
-                for key in ("optional", "forever"):
+                for key in ("optional", "forever", "logOnly"):
                     if key in step and type(step[key]) is not bool:
                         fail(where, f"{key} must be a boolean")
+                # A logOnly step is a class objective the route passes: it must be one class's quest work,
+                # or it would show for every class that happens to have the quest.
+                if step.get("logOnly") and not (step["type"] in {"complete", "turnin", "goto"} and step.get("quest")
+                                                and step.get("class")):
+                    fail(where, "a logOnly step must be a class quest's objective, hand-in or stop (complete, turnin or goto; quest; class)")
                 for key in ("class", "race"):
                     value = step.get(key)
                     if value is not None and not (ascii_text(value) or isinstance(value, list) and all(map(ascii_text, value))):
@@ -239,8 +244,9 @@ def audit(data, ref, cap=20):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
                     active, finished = set(), set()
-                    # An optional turn-in for a quest picked up in another guide (a carried breadcrumb):
-                    # the guide shows it only while the quest is in your log, so it needs no accept here.
+                    # An optional turn-in for a quest picked up in another guide (a carried breadcrumb), and
+                    # a logOnly step (work on a quest from another guide): the guide shows them only while
+                    # the quest is in your log, so they need no accept here.
                     picked = {s.get("quest") for sec, s, _ in path if s["type"] == "accept"
                               and matches(sec.get("start"), race) and matches(s.get("race"), race)
                               and matches(sec.get("class"), class_) and matches(s.get("class"), class_)}
@@ -249,7 +255,7 @@ def audit(data, ref, cap=20):
                                 and matches(section.get("class"), class_) and matches(step.get("class"), class_)) or (
                                 step.get("optional") and not dungeons and section.get("category") != "dungeon") or (
                                 step.get("optional") and step["type"] in {"complete", "turnin"}
-                                and step.get("quest") not in picked):
+                                and step.get("quest") not in picked) or step.get("logOnly"):
                             continue
                         kind, quest = step["type"], step.get("quest")
                         if kind == "accept":

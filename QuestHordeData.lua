@@ -26,6 +26,22 @@ function B.objectivePart(id, index, place, text, label)
   return step
 end
 
+-- A class objective the route passes anyway (both factions): shown only to the quest's class and
+-- only while the quest is in the log (`logOnly`). `index` nil = every objective is done there.
+function B.logOnlyPart(id, index, place, text, label)
+  local step = B.objectivePart(id, index, place, text, label)
+  step.logOnly = true
+  return step
+end
+
+-- A class stop the quest log can't track (an item that isn't a log objective, such as a pendant
+-- half): a travel step that completes on arrival, with the same class and log gating.
+function B.logOnlyGoto(id, place, text)
+  local step = B.action("goto", place, text, B.quest[id])
+  step.logOnly = true
+  return step
+end
+
 -- Horde class quests (the QuestHordeClass*.lua files): `B.hordeInline` puts short class quests
 -- into a Horde section after the step matching type and quest (or at its end); `B.hordeSide` adds
 -- a side section (`side = true`, `class = TOKEN`) for a longer chain.
