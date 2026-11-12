@@ -73,9 +73,12 @@ function Q.worldVector(spot, map, x, y)
   return math.atan2(east, north), math.sqrt(north * north + east * east)
 end
 
+-- Your run speed, else walking speed. Forever sometimes hides it from addons (a secret value, e.g.
+-- in flight): any math on it is blocked, so check with issecretvalue first.
 local function walkSpeed()
   local _, run = try(GetUnitSpeed, "player")
-  return math.max(WALK, tonumber(run) or 0)
+  if run == nil or (issecretvalue and issecretvalue(run)) or type(run) ~= "number" then return WALK end
+  return math.max(WALK, run)
 end
 
 -- A flight's length: the time you took last time, else the distance at flight speed.
@@ -241,21 +244,51 @@ function Q.flightTarget(seen)
   return best and best.name
 end
 
--- The flight map: a Codex badge on the guide's destination and a line naming it.
+-- The flight map: the guide's destination lights up (its node turns yellow inside a pulsing gold
+-- ring) and a line names it. Drawn on the Codex's own frames over the map, never on the game's
+-- buttons, and without the mouse, so the node still takes the click.
 local mark
+local NODE_ART = "Interface\\TaxiFrame\\UI-Taxi-Icon-Yellow"
+local RING_ART = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
+
+local function makeMark(frame)
+  mark = CreateFrame("Frame", "LevelingCodexTaxiMark", frame)
+  mark:SetSize(10, 10)
+  mark.text = mark:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  local glow = CreateFrame("Frame", "LevelingCodexTaxiGlow", mark)
+  glow:SetSize(16, 16)
+  glow.ring = glow:CreateTexture(nil, "ARTWORK")
+  glow.ring:SetSize(44, 44)
+  glow.ring:SetPoint("CENTER")
+  glow.node = glow:CreateTexture(nil, "OVERLAY")
+  glow.node:SetAllPoints()
+  local A = ns.art
+  if A.hasFile(RING_ART) then
+    glow.ring:SetTexture(RING_ART)
+    glow.ring:SetBlendMode("ADD")
+    glow.ring:SetVertexColor(1, 0.82, 0.25)
+  else
+    glow.ring:Hide()
+  end
+  if A.hasFile(NODE_ART) then glow.node:SetTexture(NODE_ART) else glow.node:Hide() end
+  glow.pulse = glow.ring:CreateAnimationGroup()
+  local fade = glow.pulse:CreateAnimation("Alpha")
+  fade:SetFromAlpha(0.35)
+  fade:SetToAlpha(1)
+  fade:SetDuration(0.6)
+  glow.pulse:SetLooping("BOUNCE")
+  mark.glow = glow
+end
+
 function ns.markTaxi(want, again)
   pointing = nil
-  if mark then mark:Hide() end
+  if mark then
+    mark.glow.pulse:Stop()
+    mark:Hide()
+  end
   local frame = _G.TaxiFrame or _G.FlightMapFrame
   if not want or type(frame) ~= "table" or type(frame.IsShown) ~= "function" then return end
-  if not mark then
-    mark = CreateFrame("Frame", "LevelingCodexTaxiMark", frame)
-    mark:SetSize(10, 10)
-    mark.badge = mark:CreateTexture(nil, "OVERLAY")
-    mark.badge:SetSize(22, 22)
-    ns.setIcon(mark.badge, ns.ADDON_ICON)
-    mark.text = mark:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  end
+  if not mark then makeMark(frame) end
   mark:SetParent(frame)
   mark:ClearAllPoints()
   mark:SetPoint("TOP", frame, "TOP", 0, -48)
@@ -268,12 +301,14 @@ function ns.markTaxi(want, again)
     local name = try(TaxiNodeName, i)
     if type(name) == "string" and Q.plain(name):lower() == Q.plain(want):lower() then button = _G["TaxiButton" .. i] end
   end
-  mark.badge:ClearAllPoints()
+  local glow = mark.glow
+  glow:ClearAllPoints()
   if type(button) == "table" and type(button.GetObjectType) == "function" then
-    mark.badge:SetPoint("BOTTOMLEFT", button, "TOPRIGHT", -6, -6)
-    mark.badge:Show()
+    glow:SetPoint("CENTER", button, "CENTER", 0, 0)
+    glow:Show()
+    glow.pulse:Play()
   else
-    mark.badge:Hide()
+    glow:Hide()
     if not again then ns.after(0.3, function() if frame:IsShown() then ns.markTaxi(want, true) end end) end
   end
   mark:Show()

@@ -483,6 +483,42 @@ function S.questGrind()
   check(not questText(frame, "Reach level 15"), "reaching the share finishes the grind step")
 end
 
+-- Reported from the game: "LevelingCodex has been blocked from an action only available to the
+-- Blizzard UI" kept coming back and taint.log stayed empty. The game's ADDON_ACTION_FORBIDDEN names
+-- the function: the Codex says it once in chat and keeps it for /codex debug.
+function S.blockedReport()
+  S.login()
+  MOCK.event("ADDON_ACTION_FORBIDDEN", "SomeOtherAddon", "CastSpellByName()")
+  check(not (LevelingCodexDB.blocked and LevelingCodexDB.blocked[1]) and not chatHas("blocked the Codex"),
+    "another addon's block is left alone")
+  MOCK.event("ADDON_ACTION_FORBIDDEN", "LevelingCodex", "C_Minimap.SetTracking()")
+  check(chatHas("the game blocked the Codex from C_Minimap%.SetTracking%(%)"), "a block of the Codex is named in chat")
+  local b = LevelingCodexDB.blocked and LevelingCodexDB.blocked[1]
+  check(b and b.func == "C_Minimap.SetTracking()" and b.event == "ADDON_ACTION_FORBIDDEN",
+    "the block is kept in the saved settings")
+  local said = #MOCK.chat
+  MOCK.event("ADDON_ACTION_FORBIDDEN", "LevelingCodex", "C_Minimap.SetTracking()")
+  check(#MOCK.chat == said and #LevelingCodexDB.blocked == 2, "the same block is said once a session, but every one is kept")
+  for i = 1, 12 do MOCK.event("ADDON_ACTION_BLOCKED", "LevelingCodex", "TakeTaxiNode()") end
+  check(#LevelingCodexDB.blocked == 10 and LevelingCodexDB.blocked[1].func == "TakeTaxiNode()", "the last 10 are kept")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("blocked by the game: TakeTaxiNode%(%) %(ADDON_ACTION_BLOCKED%)"), "/codex debug lists the blocks")
+  -- The events are synchronous: a blocked call made by the Codex is traced to the Codex line.
+  local setWaypoint = C_Map.SetUserWaypoint
+  C_Map.SetUserWaypoint = function(point)
+    pcall(MOCK.event, "ADDON_ACTION_FORBIDDEN", "LevelingCodex", "UNKNOWN()") -- the client's C side
+    return setWaypoint(point)
+  end
+  MOCK.userWaypoint = nil
+  click(questViewer(), "Next")
+  C_Map.SetUserWaypoint = setWaypoint
+  b = LevelingCodexDB.blocked[1]
+  check(b.func == "UNKNOWN()" and b.where and b.where:find("^Theme%.lua:%d+ < Quests%.lua:%d+ < QuestGuide%.lua:%d+"),
+    "a blocked call names the Codex lines right above it (try helpers, then the caller): " .. tostring(b.where))
+  check(chatHas("blocked the Codex from UNKNOWN%(%) at .*QuestGuide%.lua:%d+"), "chat names that line")
+end
+
 function S.questCleanup()
   MOCK.level = 20
   MOCK.questLog = { { questID = 783, title = "A Threat Within", level = 1 },
@@ -859,11 +895,22 @@ function S.questFlightPlan()
     { "Lakeshire, Redridge", "REACHABLE" } })
   local mark = _G.LevelingCodexTaxiMark
   check(mark and mark:IsShown() and questText(mark, "fly to Lakeshire"), "the flight map names the guide's flight")
+  local glow = _G.LevelingCodexTaxiGlow
+  check(glow, "the flight map has the Codex's light")
+  local _, onto = glow:GetPoint(1)
+  check(glow:IsShown() and onto == _G.TaxiButton3, "the guide's flight master lights up on the map")
+  check(not glow:IsMouseEnabled(), "the light lets the click through to the flight master")
   check(MOCK.tookTaxi == nil, "the flight is only marked while travel automation is off")
   TaxiFrame:Hide()
   walkTo(1436, 56.0, 50.0)
   check(arrowSays("Fly to Lakeshire from Sentinel Hill") and arrowSays(" yd"),
     "a long trip leads to the flight master with its distance: " .. arrowCaption())
+  -- Reported from the game: Forever hides your speed from addons at times (a secret value), and
+  -- math on it was blocked 374 times. The trip is planned at walking speed then.
+  MOCK.runSpeed = MOCK.SECRET
+  walkTo(1436, 55.0, 49.0)
+  check(arrowSays("Fly to Lakeshire from Sentinel Hill"), "a secret run speed still plans the trip: " .. arrowCaption())
+  MOCK.runSpeed = nil
   walkTo(1436, 56.6, 52.7)
   check(arrowSays("Fly to Lakeshire: talk to the flight master"), "at the flight master the arrow says where to fly")
 
@@ -981,8 +1028,9 @@ function S.questDungeonChoice()
 end
 
 -- Inside a dungeon: zoning in opens its guide (Settings > Open a dungeon's guide when you enter
--- it), each boss is a step with its tip, ticked off by ENCOUNTER_END, BOSS_KILL or the combat log
--- (or Next), the quest objectives show as On the way, and leaving goes back to the route.
+-- it), each boss is a step with its tip, ticked off by ENCOUNTER_END or BOSS_KILL (or Next; never
+-- the combat log, which Forever keeps from addons), the quest objectives show as On the way, and
+-- leaving goes back to the route.
 function S.questBossSteps()
   MOCK.race, MOCK.level, MOCK.questMap = "Human", 20, nil
   MOCK.instanceName, MOCK.instanceID = "Deadmines", 36
@@ -1009,13 +1057,11 @@ function S.questBossSteps()
   check(questText(frame, "Boss - Miner Johnson"), "ENCOUNTER_END ticks the boss off")
   click(frame, "Next")
   check(questText(frame, "Boss - Sneed's Shredder"), "Next passes a rare that isn't there")
-  MOCK.combatLog = { "UNIT_DIED", "Creature-0-4469-36-12345-642-0000ABCDEF", "Sneed's Shredder" }
-  MOCK.event("COMBAT_LOG_EVENT_UNFILTERED")
-  check(questText(frame, "Boss - Gilnid"), "the combat log's UNIT_DIED ticks a boss off by its NPC ID")
+  MOCK.event("ENCOUNTER_END", 2742, "Sneed's Shredder", 1, 5, 1)
+  check(questText(frame, "Boss - Gilnid"), "ENCOUNTER_END ticks the next boss off")
   MOCK.event("BOSS_KILL", 2743, "Gilnid")
   check(questText(frame, "Boss - Mr. Smite"), "BOSS_KILL ticks a boss off")
-  MOCK.combatLog = { "UNIT_DIED", "Creature-0-4469-36-12345-647-0000ABCDEF", "Captain Greenskin" }
-  MOCK.event("COMBAT_LOG_EVENT_UNFILTERED")
+  MOCK.event("BOSS_KILL", 2744, "Captain Greenskin")
   check(questText(frame, "Boss - Mr. Smite"), "a boss killed out of order is ticked off, the current one stays")
   MOCK.event("ENCOUNTER_END", 2745, "Mr. Smite", 1, 5, 1)
   check(questText(frame, "Boss - Edwin VanCleef"), "the next boss skips one already down")

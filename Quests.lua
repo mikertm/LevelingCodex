@@ -1015,10 +1015,8 @@ function Q.enteredDungeon()
   end
 end
 
-function Q.inDungeonInstance() return inInstance ~= nil end
-
--- A boss died: ENCOUNTER_END / BOSS_KILL (encounter ID, name) or the combat log (creature name,
--- NPC ID). Marks the matching boss of the dungeon you're in.
+-- A boss died: ENCOUNTER_END / BOSS_KILL (encounter ID, name; an NPC ID matches too). Marks the
+-- matching boss of the dungeon you're in.
 function Q.bossDown(encounter, name, npc)
   local hit = false
   local wanted = type(name) == "string" and Q.plain(name):lower()
