@@ -1026,7 +1026,7 @@ do
   local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
   local chromie = wpl("Chromie", 39.46, 66.76)
   local bibilfaz = wpl("Bibilfaz Featherwhistle", 42.9, 85.1)
-  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local tirion = epl("Tirion Fordring", 5.2, 35.6)
   local pamela = epl("Pamela Redpath", 31.15, 77.98)
   local carlin = epl("Carlin Redpath", 71.7, 50.04)
   local alen = epl("Caretaker Alen", 69.93, 53.72)
@@ -1093,7 +1093,7 @@ do
     objective(5222, wpl(nil, 53.0, 66.1), "Kill the Cauldron Lord at the Writhing Haunt.", "Writhing Haunt Cauldron Key"),
     finish(5222, wpl("Scourge Cauldron", 53.02, 65.61)), accept(5223, wpl("Scourge Cauldron", 53.02, 65.61)),
     finish(4984, mulgris),
-    action("goto", epl(nil, 7.5, 43.6), "Follow the road east into the Eastern Plaguelands. Tirion Fordring's hut is on the hill north of the road."),
+    action("goto", epl(nil, 5.2, 35.6), "Follow the road east into the Eastern Plaguelands. Tirion Fordring's hut is on the hill north of the road."),
     accept(5542, tirion), accept(5543, tirion), accept(5544, tirion),
     B.objectivePart(6185, 2, epl(nil, 22.9, 63.7), "Search the dead SI:7 agents around the Undercroft area for their insignias.", "SI:7 Insignia (Fredo)"),
     B.objectivePart(6185, 3, epl(nil, 24.3, 63.6), "The second agent lies nearby.", "SI:7 Insignia (Turyen)"),
@@ -1138,7 +1138,7 @@ do
   local wpl, epl = on.wpl, on.epl
   local carlin = epl("Carlin Redpath", 71.7, 50.04)
   local alen = epl("Caretaker Alen", 69.93, 53.72)
-  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local tirion = epl("Tirion Fordring", 5.2, 35.6)
   local kirsta = wpl("Kirsta Deepshadow", 51.92, 28.06)
   local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
   local macdonnell = wpl("High Priestess MacDonnell", 42.97, 84.5)
@@ -1168,7 +1168,7 @@ do
     finish(5210, carlin), accept(5181, carlin), accept(5168, carlin),
     finish(6021, alen),
     forDungeon(accept(5281, alen, "Alen's Stratholme task: find Egan by the city gate."), "dungeon-stratholme"),
-    objective(5845, epl(nil, 71.3, 34.0), "Ride north to Northdale and search the ruined house for the Symbol of Lost Honor.", "Symbol of Lost Honor"),
+    objective(5845, epl(nil, 62.5, 26.8), "Ride north to Northdale and search the ruined house for the Symbol of Lost Honor.", "Symbol of Lost Honor"),
     objective(6024, epl("Infiltrator Hameya", 62.0, 11.1), "Infiltrator Hameya roams the far north. Kill him for his key.", "Hameya's Key"),
     B.objectivePart(5211, 1, epl(nil, 57.7, 31.5), "Kill ghouls and flayers across the zone and free the Darrowshire spirits that rise from them.", "15 Darrowshire Spirits"),
     B.objectivePart(5181, 1, epl(nil, 44.3, 41.2), "Horgus's skull lies at the Infectis Scar.", "Skull of Horgus"),

@@ -977,7 +977,7 @@ do
   local smokey = epl("Smokey LaRue", 70.88, 48.43)
   local leonid = epl("Leonid Barthalomew the Revered", 71.89, 48.29)
   local tyrosus = epl("Lord Maxwell Tyrosus", 71.9, 48.41)
-  local tirion = epl("Tirion Fordring", 7.5, 43.6)
+  local tirion = epl("Tirion Fordring", 5.2, 35.6)
   local renfray = on.wpl("Artist Renfray", 65.77, 75.37)
   need(5281, "The Restless Souls", 60, 55)
   need(5282, "The Restless Souls", 60, 55, 5281)
@@ -999,7 +999,7 @@ do
     accept(5214, smokey, "Smokey LaRue wants Fras Siabi's tobacco."),
     accept(5243, leonid, "Leonid wants Stratholme's holy water."),
     finish(5281, egan, "Egan waits outside Stratholme's gate."), accept(5282, egan, "He gives you a blaster for the restless souls."),
-    enter(name, at("Stratholme gate", 31.2, 15.6, M.epl),
+    enter(name, at("Stratholme gate", 26.5, 10.4, M.epl),
       "The main gate leads to the living side (Scarlet Bastion). The service gate on the east side leads to the dead side and Baron Rivendare."),
   })
   add({ id = "dungeon-stratholme", title = name, zone = M.epl, levels = { 57, 60 }, instanceID = 329, instance = name,
