@@ -1,10 +1,12 @@
 <Bindings>
-  <!-- Esc > Options > Keybindings > AddOns: bind a key or controller button to open/close the Codex. -->
+  <!-- Esc > Options > Keybindings > AddOns: bind a key or controller button to open/close the Codex.
+       The header is declared once, here: the bindings below fall under it. Declaring it again logs
+       "Binding header LEVELINGCODEX was attempted to be loaded more than once" at every load. -->
   <Binding name="LEVELINGCODEX_TOGGLE" header="LEVELINGCODEX" category="ADDONS">
     LevelingCodex_Toggle()
   </Binding>
   <!-- Uses the quest item shown beside the quest step window. -->
-  <Binding name="CLICK LevelingCodexQuestItem:LeftButton" header="LEVELINGCODEX" category="ADDONS"/>
+  <Binding name="CLICK LevelingCodexQuestItem:LeftButton" category="ADDONS"/>
   <!-- Targets the current step's quest giver (the button below the item button). -->
-  <Binding name="CLICK LevelingCodexQuestTarget:LeftButton" header="LEVELINGCODEX" category="ADDONS"/>
+  <Binding name="CLICK LevelingCodexQuestTarget:LeftButton" category="ADDONS"/>
 </Bindings>

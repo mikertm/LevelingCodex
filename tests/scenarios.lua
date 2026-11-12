@@ -400,7 +400,7 @@ function S.questTravelFlight()
   check(MOCK.gossipOption == nil and MOCK.tookTaxi == nil, "travel automation is off by default")
   slash("quests")
   click(win(), "Settings")
-  click(win(), "Take the guide's flights and binds")
+  click(win(), "Auto-fly: take the guide's flights and binds")
   check(LevelingCodexDB.questAutoTravel, "the travel setting is saved")
   MOCK.alt = true
   MOCK.event("GOSSIP_SHOW")
@@ -960,6 +960,50 @@ function S.questFlightLearn()
   check(not arrowSays("Learn") and arrowSays(" yd"), "once learned the arrow goes on to the step: " .. arrowCaption())
   slash("debug")
   check(chatHas("travel: %d+ flight points for your faction"), "the debug output reports travel planning")
+end
+
+-- Reported from the game: at the Ironforge flight master the arrow said "Fly to Menethil Harbor"
+-- (the Wetlands' flight hub), but the flight map marked nothing and travel automation didn't fly.
+-- The trip planner measured the walk to Ironbeard's Tomb as a straight line over the mountains and
+-- chose walking, and the flight map only asked the planner.
+function S.questFlightHub()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Dwarf", 24, 1455, 55.6, 47.9
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 470 then break end
+        if step.type == "accept" then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 470, objectives = { { text = "Sida's Bag: 0/1" } } } }
+  S.login()
+  local nodes = { { "Ironforge, Dun Morogh", "CURRENT" }, { "Menethil Harbor, Wetlands", "REACHABLE" },
+    { "Thelsamar, Loch Modan", "REACHABLE" } }
+  taxiMap(nodes)
+  TaxiFrame:Hide()
+  slash("quests")
+  click(win(), "Resume active quest")
+  MOCK.advance(0.3)
+  check(questText(questViewer(), "Digging Through the Ooze"), "following the ooze in the Wetlands")
+  check(arrowSays("Fly to Menethil Harbor"), "the arrow sends you to Menethil Harbor: " .. arrowCaption())
+  taxiMap(nodes)
+  local mark, glow = _G.LevelingCodexTaxiMark, _G.LevelingCodexTaxiGlow
+  check(mark and mark:IsShown() and questText(mark, "fly to Menethil Harbor"),
+    "the flight map names the flight the arrow asked for")
+  check(glow, "the flight map has the Codex's light")
+  local _, onto = glow:GetPoint(1)
+  check(glow:IsShown() and onto == _G.TaxiButton2, "Menethil Harbor lights up on the flight map")
+  check(MOCK.tookTaxi == nil, "the flight is only marked while travel automation is off")
+  TaxiFrame:Hide()
+  LevelingCodexDB.questAutoTravel = true
+  MOCK.gossipOptions = { { gossipOptionID = 7, name = "I want to browse your goods." },
+    { gossipOptionID = 8, name = "Show me where I can fly." } }
+  MOCK.event("GOSSIP_SHOW")
+  check(MOCK.gossipOption == 8, "travel automation opens the flight map at the hub's flight master")
+  taxiMap(nodes)
+  check(MOCK.tookTaxi == 2 and chatHas("flying to Menethil Harbor"), "travel automation takes the hub's flight")
+  TaxiFrame:Hide()
 end
 
 local function allText(root)

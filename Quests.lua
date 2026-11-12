@@ -1443,6 +1443,21 @@ function Q.waypoint(step)
   return target, n, #step.points, "spot"
 end
 
+-- The zones' flight hubs (a route's flight-path steps): from your map's hub to the step map's hub,
+-- both known and on one network. Returns the hub to walk to and the flight to take there. The arrow
+-- uses it when no trip through flight masters is planned (QuestTravel.lua), and so does the flight map.
+function Q.hubFlight(step, map)
+  if not (route and step and step.map and map) or step.map == map then return end
+  local network = route.flightNetwork
+  local origin, target = flightHubs[map], flightHubs[step.map]
+  local links = origin and flightLinks[origin.flight]
+  if origin and target and network and network[map] and network[map] == network[step.map]
+      and (not links or links[target.flight] == "REACHABLE")
+      and knownFlights[origin.flight] and knownFlights[target.flight] then
+    return origin, target.flight
+  end
+end
+
 function Q.destination(step, map)
   if not (step and step.map and map) then return step end
   if step.map ~= map and step.type == "hearth" and boundTo(step.bind) and (Q.hearthCooldown() or 0) < 60 then
@@ -1458,14 +1473,8 @@ function Q.destination(step, map)
     if leg then return leg, label end
   end
   if step.map == map then return step end
-  local network = route.flightNetwork
-  local origin, target = flightHubs[map], flightHubs[step.map]
-  local links = origin and flightLinks[origin.flight]
-  if origin and target and network and network[map] and network[map] == network[step.map]
-      and (not links or links[target.flight] == "REACHABLE")
-      and knownFlights[origin.flight] and knownFlights[target.flight] then
-    return origin, "Fly to " .. target.flight:match("^[^,]+")
-  end
+  local origin, flight = Q.hubFlight(step, map)
+  if origin then return origin, "Fly to " .. flight:match("^[^,]+") end
   local roads = route.roadTo and route.roadTo[step.map]
   local road = roads and roads[map]
   if road then return road.waypoint, road.label end

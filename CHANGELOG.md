@@ -5,12 +5,15 @@
 ### Quest guide
 
 - **The flight map lights up the guide's flight master.** When you open a flight map, the flight point to fly to turns yellow inside a pulsing gold ring, instead of having the Codex badge beside it, and the line at the top still names it. Click it as usual.
+- **Auto-fly is easier to find.** The travel automation setting is now Settings > **Auto-fly: take the guide's flights and binds** (the guide setup's **Auto-fly and bind**). It is still off by default.
 
 ### Fixes
 
+- **The flight map marks the flight the arrow names.** When the arrow said "Fly to" a zone's flight hub, such as Menethil Harbor from Ironforge for Ironbeard's Tomb, the flight map marked nothing and auto-fly didn't fly: the trip planner measures walks as a straight line, over mountains too, and only its own trips were marked. The hub's flight now lights up, and auto-fly takes it.
 - **No more "LevelingCodex has been blocked from an action only available to the Blizzard UI".** For the dungeon boss steps the Codex switched the combat log on or off at every loading screen and zone change: logging in, a /reload, flying over a zone border, being sent to a graveyard. WoW: Forever doesn't let addons touch the combat log, so the game blocked it every time. Bosses now tick off from the game's encounter events only, and a rare without one is passed with Next.
-- **Binds are yours to accept.** With Settings > Take the guide's flights and binds on, the Codex still picks the innkeeper's bind option, and you accept the game's popup. Accepting or closing a game popup from an addon risks the same block.
+- **Binds are yours to accept.** With Settings > Auto-fly: take the guide's flights and binds on, the Codex still picks the innkeeper's bind option, and you accept the game's popup. Accepting or closing a game popup from an addon risks the same block.
 - **Flight trips in flight.** The trip planner read your speed, which WoW: Forever hides from addons in flight, and failed every moment you flew (a Lua error in the background). It now plans at walking speed when your speed is hidden.
+- The key bindings no longer log "Binding header LEVELINGCODEX was attempted to be loaded more than once" at every login and /reload.
 - **If the game ever blocks the Codex again**, the Codex says in chat which part of it was blocked, and /codex debug lists it, so it can be fixed quickly.
 
 ## v0.20.0

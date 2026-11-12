@@ -118,6 +118,27 @@ def toc_files():
     return files, problems
 
 
+def bindings_checks():
+    """Bindings.xml: a header is declared once, on its first binding (the bindings after it fall
+    under it); a second declaration logs "Binding header X was attempted to be loaded more than
+    once" at every load. Binding names are unique."""
+    import xml.etree.ElementTree as ET
+    problems = []
+    root = ET.parse(os.path.join(ROOT, "Bindings.xml")).getroot()
+    headers, names = set(), set()
+    for b in root.iter("Binding"):
+        header, name = b.get("header"), b.get("name")
+        if header:
+            if header in headers:
+                problems.append("Bindings.xml: header %s declared again on %s (declare it on the first binding only)"
+                                % (header, name))
+            headers.add(header)
+        if name in names:
+            problems.append("Bindings.xml: binding %s listed twice" % name)
+        names.add(name)
+    return problems
+
+
 def binding_bodies():
     """The Lua each key binding in Bindings.xml runs (the client loads the file by itself)."""
     import xml.etree.ElementTree as ET
@@ -672,6 +693,7 @@ def main():
     only = args[args.index("-k") + 1] if "-k" in args else None
     t0 = time.time()
     files, problems = toc_files()
+    problems += bindings_checks()
     # "Interface\Icons" in Lua source is "InterfaceIcons" at runtime: paths need doubled backslashes
     for f in files:
         for n, line in enumerate(open(f, encoding="utf-8").read().splitlines(), 1):
@@ -715,7 +737,7 @@ def main():
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
-                             "questFlightPlan", "questFlightLearn", "questDungeonChoice",
+                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
