@@ -8,6 +8,34 @@
 - **Class quests on the way.** Where the route already passes a class objective, your class now gets a step for it while the quest is in your log: Shaman reagents and waterskins (Dwarf and Horde), Druid pendant halves, Cliffspring sample, Lunar Fungus and Lunaclaw, Rogue lockboxes, Klaven's Tower, Sethir and the Southsea treasure, Warlock Surena and the Heartswood, and Horde Warrior scales and antennae. Other classes, and players without the quest, don't see them.
 - Fixed: with Settings > Show optional quests on, the step window could ask you to turn in a quest you never took, such as Unrequited Love (Hollee's note from Darkshore) in Menethil. Optional turn-ins and objectives now show only while the quest is in your log.
 
+### Quest guide: flights and dungeons
+
+- **Trips through flight masters.** For a long trip the arrow now leads to a flight master when flying is quicker, for example "Fly to Lakeshire from Sentinel Hill" with the distance to the flight master, and "talk to the flight master" once you're there. It only uses flight paths you have, and it works inside one zone too, such as Crossroads to Ratchet.
+- **The flight map marks the guide's flight.** When you open a flight map, the Codex badge sits on the flight to take and a line names it. With Settings > Take the guide's flights and binds on, the Codex takes that flight for you (Alt holds it back), not only on Fly steps.
+- **Flight paths you don't have.** If the flight master closest to you is one you haven't talked to, the arrow says to learn that flight path and fly on. A flight master you don't have close to the way is visited first so you pick up the flight path (Settings > Lead me to flight paths I don't have). This starts once the game has listed your flight paths, or after you open a flight map.
+- **Nearest flight master.** Quests > **Nearest flight master** points the arrow at the closest one, until you open a flight map or press **Back to the step**.
+- **Dungeon ahead.** Dungeon quests no longer hide behind a setting. Before the first quest of a dungeon run, the route stops at a Dungeon ahead step: the run's levels, how many quests on your route need it, and whether it's recommended for you. **Plan <dungeon>** adds the run and its quests to your route; **Skip** leaves the run out. Back returns to the choice, and Quests > Guide library > Dungeons can still change it. The Quests tab has both buttons for controllers.
+- **Find a group.** When a planned run is ready, the step text starts with "Find a group for <dungeon>" until you go.
+- **Boss by boss inside a dungeon.** Inside a dungeon the step window now walks its bosses in order, one step each with the tip for the fight, and the target button targets the boss. A boss ticks off when it dies (the game's encounter events, or the combat log for rares), and Next passes a rare that isn't there. Your quests for the run show under the boss as "On the way", and the item button still offers their quest items.
+- **The guide opens when you zone in.** Entering a dungeon the Codex has a guide for switches the step window to it, even if you didn't press Run. Dying and running back in keeps the bosses already down (Settings > Open a dungeon's guide when you enter it).
+- **The way in.** The arrow now leads through the Deadmines tunnels, the Wailing Caverns cave and the passage down to the Hall of Thanes, point by point, to the portal. The Deadmines tunnel quests point to their undead and to Foreman Thistlenettle.
+- Boss lists now match the game's encounters: Lorgus Jett joins Blackfathom Deeps, the Horde's Ruins of Lordaeron adds the rare Lordaeron Captain, and City of Dalaran and Scarlet Monastery are now recognised when you enter them.
+- New settings: Plan trips through flight masters, Lead me to flight paths I don't have, and Open a dungeon's guide when you enter it (all on).
+
+### Quest guide, tier 2
+
+- **Guide setup.** A new character gets a quick setup in the Quests tab: Fastest or Every quest, recommended dungeons or none, and the auto-accept, auto turn-in and flight helpers. The step window offers "Set up the guide" until you press Done, and Quests > **Guide setup** opens it any time.
+- **Watch out here.** The step window names hostile elites and rares close to the current step, such as the Defias elites around the Moonbrook mine, until you outlevel them (Settings > Warn about elites and rares near the step).
+- **Party play.** Party members who use the Codex see each other's current step in the step window, with how far ahead or behind they are. Two options, off by default: share guide quests with your party when you accept them, and say your flights in party chat.
+- **Your pace.** The This Level tab shows your XP per hour this session, about how long the next level takes at that pace, and this level's XP from quests and kills, with quests, kills and deaths. Finished levels are listed with their times.
+- **Arrival time and flight timer.** The arrow shows about how long until you reach the step while you're moving. In flight it shows where you're going and how long you've flown, and once a flight has been timed, about how long is left.
+- **Show on map, report a step.** Quests > **Show on map** opens the world map where the step is. **Report this step** copies what the guide sees (your position, the step and your quest log) for a bug report.
+- **Steps shown ahead.** Settings > Steps shown ahead lists 0 to 5 of the next steps in the step window (2 by default).
+- **Quest tracker.** The current step's quest goes on the game's objective tracker. Quests you track yourself are left alone (Settings > Track the step's quest in the quest tracker).
+- **Why a step was skipped.** Hovering a step in the route list says why it isn't the current one: turned in, passed with Next, grey for your level, the follow-up already started, or needed for a later quest.
+- **Hearthstone cooldown.** A hearth step says when your hearthstone will be ready, and the arrow leads you by road or flight while it's on cooldown.
+- **More kinds of steps** for the guides: collecting or buying items (done when your bags hold them), abandoning a quest, goals to pick up on the way, waypoints that loop through a spread-out area or lead to the nearest of several spots, and steps that only apply below a level, with a profession, or depending on another quest.
+
 ## v0.19.0
 
 ### Questie compatibility

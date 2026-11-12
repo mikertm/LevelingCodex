@@ -124400,242 +124400,484 @@
    "1411": {
     "name": "Durotar",
     "width": 5287.5,
-    "height": 3525.0
+    "height": 3525.0,
+    "world": [
+     1,
+     1808.33,
+     -1962.5
+    ]
    },
    "1412": {
     "name": "Mulgore",
     "width": 6154.167,
-    "height": 4102.082
+    "height": 4102.082,
+    "world": [
+     1,
+     266.67,
+     2479.17
+    ]
    },
    "1413": {
     "name": "The Barrens",
     "width": 10133.333,
-    "height": 6756.25
+    "height": 6756.25,
+    "world": [
+     1,
+     1612.5,
+     2622.92
+    ]
    },
    "1414": {
     "name": "Kalimdor",
     "width": 36799.811,
-    "height": 24533.2
+    "height": 24533.2,
+    "world": [
+     1,
+     12799.9,
+     17066.6,
+     "continent"
+    ]
    },
    "1415": {
     "name": "Eastern Kingdoms",
     "width": 35199.9,
-    "height": 23466.6
+    "height": 23466.6,
+    "world": [
+     0,
+     7466.6,
+     16000.0,
+     "continent"
+    ]
    },
    "1416": {
     "name": "Alterac Mountains",
     "width": 2800.0,
-    "height": 1866.667
+    "height": 1866.667,
+    "world": [
+     0,
+     1500.0,
+     783.33
+    ]
    },
    "1417": {
     "name": "Arathi Highlands",
     "width": 3600.0,
-    "height": 2400.0
+    "height": 2400.0,
+    "world": [
+     0,
+     -133.33,
+     -866.67
+    ]
    },
    "1418": {
     "name": "Badlands",
     "width": 2487.5,
-    "height": 1658.333
+    "height": 1658.333,
+    "world": [
+     0,
+     -5889.58,
+     -2079.17
+    ]
    },
    "1419": {
     "name": "Blasted Lands",
     "width": 3350.0,
-    "height": 2233.334
+    "height": 2233.334,
+    "world": [
+     0,
+     -10566.67,
+     -1241.67
+    ]
    },
    "1420": {
     "name": "Tirisfal Glades",
     "width": 4518.75,
-    "height": 3012.5
+    "height": 3012.5,
+    "world": [
+     0,
+     3837.5,
+     3033.33
+    ]
    },
    "1421": {
     "name": "Silverpine Forest",
     "width": 4200.0,
-    "height": 2800.0
+    "height": 2800.0,
+    "world": [
+     0,
+     1666.67,
+     3450.0
+    ]
    },
    "1422": {
     "name": "Western Plaguelands",
     "width": 4300.0,
-    "height": 2866.667
+    "height": 2866.667,
+    "world": [
+     0,
+     3366.67,
+     416.67
+    ]
    },
    "1423": {
     "name": "Eastern Plaguelands",
     "width": 4302.084,
-    "height": 2866.667
+    "height": 2866.667,
+    "world": [
+     0,
+     3691.67,
+     -2256.25
+    ]
    },
    "1424": {
     "name": "Hillsbrad Foothills",
     "width": 3200.0,
-    "height": 2133.333
+    "height": 2133.333,
+    "world": [
+     0,
+     400.0,
+     1066.67
+    ]
    },
    "1425": {
     "name": "The Hinterlands",
     "width": 3850.0,
-    "height": 2566.667
+    "height": 2566.667,
+    "world": [
+     0,
+     1466.67,
+     -1575.0
+    ]
    },
    "1426": {
     "name": "Dun Morogh",
     "width": 4925.0,
-    "height": 3283.333
+    "height": 3283.333,
+    "world": [
+     0,
+     -3877.08,
+     1802.08
+    ]
    },
    "1427": {
     "name": "Searing Gorge",
     "width": 2231.25,
-    "height": 1487.5
+    "height": 1487.5,
+    "world": [
+     0,
+     -6100.0,
+     -322.92
+    ]
    },
    "1428": {
     "name": "Burning Steppes",
     "width": 2929.167,
-    "height": 1952.083
+    "height": 1952.083,
+    "world": [
+     0,
+     -7031.25,
+     -266.67
+    ]
    },
    "1429": {
     "name": "Elwynn Forest",
     "width": 3470.833,
-    "height": 2314.583
+    "height": 2314.583,
+    "world": [
+     0,
+     -7939.58,
+     1535.42
+    ]
    },
    "1430": {
     "name": "Deadwind Pass",
     "width": 2500.0,
-    "height": 1666.667
+    "height": 1666.667,
+    "world": [
+     0,
+     -9866.67,
+     -833.33
+    ]
    },
    "1431": {
     "name": "Duskwood",
     "width": 2700.0,
-    "height": 1800.0
+    "height": 1800.0,
+    "world": [
+     0,
+     -9716.67,
+     833.33
+    ]
    },
    "1432": {
     "name": "Loch Modan",
     "width": 2758.333,
-    "height": 1839.583
+    "height": 1839.583,
+    "world": [
+     0,
+     -4487.5,
+     -1993.75
+    ]
    },
    "1433": {
     "name": "Redridge Mountains",
     "width": 2170.834,
-    "height": 1447.916
+    "height": 1447.916,
+    "world": [
+     0,
+     -8575.0,
+     -1681.25
+    ]
    },
    "1434": {
     "name": "Stranglethorn Vale",
     "width": 6381.25,
-    "height": 4254.166
+    "height": 4254.166,
+    "world": [
+     0,
+     -11168.75,
+     2220.83
+    ]
    },
    "1435": {
     "name": "Swamp of Sorrows",
     "width": 2293.75,
-    "height": 1529.167
+    "height": 1529.167,
+    "world": [
+     0,
+     -9620.83,
+     -2222.92
+    ]
    },
    "1436": {
     "name": "Westfall",
     "width": 3500.0,
-    "height": 2333.333
+    "height": 2333.333,
+    "world": [
+     0,
+     -9400.0,
+     3016.67
+    ]
    },
    "1437": {
     "name": "Wetlands",
     "width": 4135.417,
-    "height": 2756.25
+    "height": 2756.25,
+    "world": [
+     0,
+     -2147.92,
+     -389.58
+    ]
    },
    "1438": {
     "name": "Teldrassil",
     "width": 5091.667,
-    "height": 3393.75
+    "height": 3393.75,
+    "world": [
+     1,
+     11831.25,
+     3814.58
+    ]
    },
    "1439": {
     "name": "Darkshore",
     "width": 6550.0,
-    "height": 4366.667
+    "height": 4366.667,
+    "world": [
+     1,
+     8333.33,
+     2941.67
+    ]
    },
    "1440": {
     "name": "Ashenvale",
     "width": 5766.666,
-    "height": 3843.75
+    "height": 3843.75,
+    "world": [
+     1,
+     4672.92,
+     1700.0
+    ]
    },
    "1441": {
     "name": "Thousand Needles",
     "width": 4400.0,
-    "height": 2933.333
+    "height": 2933.333,
+    "world": [
+     1,
+     -3966.67,
+     -433.33
+    ]
    },
    "1442": {
     "name": "Stonetalon Mountains",
     "width": 4883.333,
-    "height": 3256.25
+    "height": 3256.25,
+    "world": [
+     1,
+     2916.67,
+     3245.83
+    ]
    },
    "1443": {
     "name": "Desolace",
     "width": 4495.833,
-    "height": 2997.917
+    "height": 2997.917,
+    "world": [
+     1,
+     452.08,
+     4233.33
+    ]
    },
    "1444": {
     "name": "Feralas",
     "width": 6950.0,
-    "height": 4633.333
+    "height": 4633.333,
+    "world": [
+     1,
+     -2366.67,
+     5441.67
+    ]
    },
    "1445": {
     "name": "Dustwallow Marsh",
     "width": 5250.0,
-    "height": 3500.0
+    "height": 3500.0,
+    "world": [
+     1,
+     -2033.33,
+     -975.0
+    ]
    },
    "1446": {
     "name": "Tanaris",
     "width": 6900.0,
-    "height": 4600.0
+    "height": 4600.0,
+    "world": [
+     1,
+     -5875.0,
+     -218.75
+    ]
    },
    "1447": {
     "name": "Azshara",
     "width": 5070.833,
-    "height": 3381.25
+    "height": 3381.25,
+    "world": [
+     1,
+     5341.67,
+     -3277.08
+    ]
    },
    "1448": {
     "name": "Felwood",
     "width": 5750.0,
-    "height": 3833.333
+    "height": 3833.333,
+    "world": [
+     1,
+     7133.33,
+     1641.67
+    ]
    },
    "1449": {
     "name": "Un'Goro Crater",
     "width": 3700.0,
-    "height": 2466.667
+    "height": 2466.667,
+    "world": [
+     1,
+     -5966.67,
+     533.33
+    ]
    },
    "1450": {
     "name": "Moonglade",
     "width": 2308.333,
-    "height": 1539.583
+    "height": 1539.583,
+    "world": [
+     1,
+     8491.67,
+     -1381.25
+    ]
    },
    "1451": {
     "name": "Silithus",
     "width": 3483.334,
-    "height": 2322.916
+    "height": 2322.916,
+    "world": [
+     1,
+     -5958.33,
+     2537.5
+    ]
    },
    "1452": {
     "name": "Winterspring",
     "width": 7100.0,
-    "height": 4733.333
+    "height": 4733.333,
+    "world": [
+     1,
+     8533.33,
+     -316.67
+    ]
    },
    "1453": {
     "name": "Stormwind City",
     "width": 1737.504,
-    "height": 1158.34
+    "height": 1158.34,
+    "world": [
+     0,
+     -7995.83,
+     1722.92
+    ]
    },
    "1454": {
     "name": "Orgrimmar",
     "width": 1402.604,
-    "height": 935.417
+    "height": 935.417,
+    "world": [
+     1,
+     2273.88,
+     -3680.6
+    ]
    },
    "1455": {
     "name": "Ironforge",
     "width": 790.625,
-    "height": 527.604
+    "height": 527.604,
+    "world": [
+     0,
+     -4569.24,
+     -713.59
+    ]
    },
    "1456": {
     "name": "Thunder Bluff",
     "width": 1043.75,
-    "height": 695.833
+    "height": 695.833,
+    "world": [
+     1,
+     -850.0,
+     516.67
+    ]
    },
    "1457": {
     "name": "Darnassus",
     "width": 1058.333,
-    "height": 705.729
+    "height": 705.729,
+    "world": [
+     1,
+     10238.32,
+     2938.36
+    ]
    },
    "1458": {
     "name": "Undercity",
     "width": 959.375,
-    "height": 640.104
+    "height": 640.104,
+    "world": [
+     0,
+     1877.95,
+     873.19
+    ]
    },
    "1459": {
     "name": "Alterac Valley",
@@ -124655,22 +124897,44 @@
    "1463": {
     "name": "Eastern Kingdoms",
     "width": 21797.0,
-    "height": 21797.0
+    "height": 21797.0,
+    "world": [
+     0,
+     5817.0,
+     9917.0,
+     "continent"
+    ]
    },
    "1464": {
     "name": "Kalimdor",
     "width": 24340.0,
-    "height": 24340.0
+    "height": 24340.0,
+    "world": [
+     1,
+     12470.0,
+     10970.0,
+     "continent"
+    ]
    },
    "2482": {
     "name": "Mount Hyjal",
     "width": 3472.918,
-    "height": 2314.583
+    "height": 2314.583,
+    "world": [
+     1,
+     6304.17,
+     -922.92
+    ]
    },
    "2521": {
     "name": "Zephras Isle",
     "width": 5562.5,
-    "height": 3708.333
+    "height": 3708.333,
+    "world": [
+     2991,
+     4956.25,
+     4231.25
+    ]
    },
    "2524": {
     "name": "Darkspear Islands",
@@ -124680,17 +124944,32 @@
    "2548": {
     "name": "Riverglades",
     "width": 4850.0,
-    "height": 3233.334
+    "height": 3233.334,
+    "world": [
+     0,
+     -6466.67,
+     -1891.67
+    ]
    },
    "2652": {
     "name": "Shen'dralas",
     "width": 2050.0,
-    "height": 1366.666
+    "height": 1366.666,
+    "world": [
+     1,
+     -1900.0,
+     2025.0
+    ]
    },
    "2665": {
     "name": "Zephras Isle",
     "width": 5562.5,
-    "height": 3708.33
+    "height": 3708.33,
+    "world": [
+     2991,
+     4956.25,
+     4231.25
+    ]
    }
   },
   "flights": [
@@ -124786,6 +125065,2244 @@
    "zzOLDPowderfuse Port, Riverglades",
    "zzOLDRiverglades, Farholde Keep"
   ],
+  "taxi": {
+   "2": {
+    "name": "Stormwind, Elwynn",
+    "faction": "A",
+    "continent": 0,
+    "map": 1453,
+    "x": 71.6,
+    "y": 72.3,
+    "links": [
+     4,
+     5,
+     6,
+     12,
+     19,
+     45,
+     71
+    ]
+   },
+   "4": {
+    "name": "Sentinel Hill, Westfall",
+    "faction": "A",
+    "continent": 0,
+    "map": 1436,
+    "x": 56.6,
+    "y": 52.7,
+    "links": [
+     2,
+     5,
+     12,
+     19
+    ]
+   },
+   "5": {
+    "name": "Lakeshire, Redridge",
+    "faction": "A",
+    "continent": 0,
+    "map": 1433,
+    "x": 25.3,
+    "y": 59.0,
+    "links": [
+     2,
+     4,
+     12,
+     71,
+     3276
+    ]
+   },
+   "6": {
+    "name": "Ironforge, Dun Morogh",
+    "faction": "A",
+    "continent": 0,
+    "map": 1455,
+    "x": 55.9,
+    "y": 47.9,
+    "links": [
+     2,
+     7,
+     8,
+     14,
+     16,
+     43,
+     66,
+     67,
+     74
+    ]
+   },
+   "7": {
+    "name": "Menethil Harbor, Wetlands",
+    "faction": "A",
+    "continent": 0,
+    "map": 1437,
+    "x": 9.5,
+    "y": 59.7,
+    "links": [
+     6,
+     8,
+     14,
+     16
+    ]
+   },
+   "8": {
+    "name": "Thelsamar, Loch Modan",
+    "faction": "A",
+    "continent": 0,
+    "map": 1432,
+    "x": 33.9,
+    "y": 50.8,
+    "links": [
+     6,
+     7,
+     16,
+     3276
+    ]
+   },
+   "10": {
+    "name": "The Sepulcher, Silverpine Forest",
+    "faction": "H",
+    "continent": 0,
+    "map": 1421,
+    "x": 45.6,
+    "y": 42.4,
+    "links": [
+     11,
+     13
+    ]
+   },
+   "11": {
+    "name": "Undercity, Tirisfal",
+    "faction": "H",
+    "continent": 0,
+    "map": 1458,
+    "x": 63.1,
+    "y": 48.3,
+    "links": [
+     10,
+     13,
+     17,
+     21,
+     68,
+     76
+    ]
+   },
+   "12": {
+    "name": "Darkshire, Duskwood",
+    "faction": "A",
+    "continent": 0,
+    "map": 1431,
+    "x": 77.6,
+    "y": 44.4,
+    "links": [
+     2,
+     4,
+     5,
+     19,
+     45
+    ]
+   },
+   "13": {
+    "name": "Tarren Mill, Hillsbrad",
+    "faction": "H",
+    "continent": 0,
+    "map": 1424,
+    "x": 60.2,
+    "y": 18.8,
+    "links": [
+     10,
+     11,
+     17,
+     76
+    ]
+   },
+   "14": {
+    "name": "Southshore, Hillsbrad",
+    "faction": "A",
+    "continent": 0,
+    "map": 1424,
+    "x": 49.4,
+    "y": 52.1,
+    "links": [
+     6,
+     7,
+     16,
+     43,
+     66
+    ]
+   },
+   "16": {
+    "name": "Refuge Pointe, Arathi",
+    "faction": "A",
+    "continent": 0,
+    "map": 1417,
+    "x": 45.8,
+    "y": 46.1,
+    "links": [
+     6,
+     7,
+     8,
+     14,
+     43
+    ]
+   },
+   "17": {
+    "name": "Hammerfall, Arathi",
+    "faction": "H",
+    "continent": 0,
+    "map": 1417,
+    "x": 73.1,
+    "y": 32.6,
+    "links": [
+     11,
+     13,
+     21,
+     76,
+     3203
+    ]
+   },
+   "18": {
+    "name": "Booty Bay, Stranglethorn",
+    "faction": "H",
+    "continent": 0,
+    "map": 1434,
+    "x": 26.8,
+    "y": 77.0,
+    "links": [
+     20,
+     21,
+     56
+    ]
+   },
+   "19": {
+    "name": "Booty Bay, Stranglethorn",
+    "faction": "A",
+    "continent": 0,
+    "map": 1434,
+    "x": 27.5,
+    "y": 77.7,
+    "links": [
+     2,
+     4,
+     12
+    ]
+   },
+   "20": {
+    "name": "Grom'gol, Stranglethorn",
+    "faction": "H",
+    "continent": 0,
+    "map": 1434,
+    "x": 32.5,
+    "y": 29.3,
+    "links": [
+     18,
+     21,
+     56
+    ]
+   },
+   "21": {
+    "name": "Kargath, Badlands",
+    "faction": "H",
+    "continent": 0,
+    "map": 1418,
+    "x": 4.1,
+    "y": 44.9,
+    "links": [
+     11,
+     17,
+     18,
+     20,
+     56,
+     70,
+     75,
+     3203
+    ]
+   },
+   "22": {
+    "name": "Thunder Bluff, Mulgore",
+    "faction": "H",
+    "continent": 1,
+    "map": 1456,
+    "x": 46.7,
+    "y": 49.9,
+    "links": [
+     23,
+     25,
+     29,
+     30,
+     38,
+     40,
+     42,
+     44,
+     55,
+     77
+    ]
+   },
+   "23": {
+    "name": "Orgrimmar, Durotar",
+    "faction": "H",
+    "continent": 1,
+    "map": 1454,
+    "x": 45.3,
+    "y": 63.7,
+    "links": [
+     22,
+     25,
+     40,
+     44,
+     48,
+     53,
+     55,
+     61
+    ]
+   },
+   "25": {
+    "name": "Crossroads, The Barrens",
+    "faction": "H",
+    "continent": 1,
+    "map": 1413,
+    "x": 51.5,
+    "y": 30.4,
+    "links": [
+     22,
+     23,
+     29,
+     30,
+     40,
+     42,
+     44,
+     48,
+     55,
+     58,
+     61,
+     77,
+     80
+    ]
+   },
+   "26": {
+    "name": "Auberdine, Darkshore",
+    "faction": "A",
+    "continent": 1,
+    "map": 1439,
+    "x": 36.4,
+    "y": 45.6,
+    "links": [
+     27,
+     28,
+     32,
+     33,
+     37,
+     41,
+     49,
+     64,
+     65
+    ]
+   },
+   "27": {
+    "name": "Rut'theran Village, Teldrassil",
+    "faction": "A",
+    "continent": 1,
+    "map": 1438,
+    "x": 58.4,
+    "y": 93.9,
+    "links": [
+     26
+    ]
+   },
+   "28": {
+    "name": "Astranaar, Ashenvale",
+    "faction": "A",
+    "continent": 1,
+    "map": 1440,
+    "x": 34.5,
+    "y": 48.0,
+    "links": [
+     26,
+     33,
+     64
+    ]
+   },
+   "29": {
+    "name": "Sun Rock Retreat, Stonetalon Mountains",
+    "faction": "H",
+    "continent": 1,
+    "map": 1442,
+    "x": 45.2,
+    "y": 59.9,
+    "links": [
+     22,
+     25,
+     38
+    ]
+   },
+   "30": {
+    "name": "Freewind Post, Thousand Needles",
+    "faction": "H",
+    "continent": 1,
+    "map": 1441,
+    "x": 45.0,
+    "y": 49.1,
+    "links": [
+     22,
+     25,
+     40,
+     42,
+     77
+    ]
+   },
+   "31": {
+    "name": "Thalanaar, Feralas",
+    "faction": "A",
+    "continent": 1,
+    "map": 1444,
+    "x": 89.5,
+    "y": 45.9,
+    "links": [
+     32,
+     39,
+     41
+    ]
+   },
+   "32": {
+    "name": "Theramore, Dustwallow Marsh",
+    "faction": "A",
+    "continent": 1,
+    "map": 1445,
+    "x": 67.5,
+    "y": 51.2,
+    "links": [
+     26,
+     31,
+     37,
+     39,
+     64,
+     80
+    ]
+   },
+   "33": {
+    "name": "Stonetalon Peak, Stonetalon Mountains",
+    "faction": "A",
+    "continent": 1,
+    "map": 1442,
+    "x": 36.5,
+    "y": 7.2,
+    "links": [
+     26,
+     28,
+     37
+    ]
+   },
+   "37": {
+    "name": "Nijel's Point, Desolace",
+    "faction": "A",
+    "continent": 1,
+    "map": 1443,
+    "x": 64.7,
+    "y": 10.4,
+    "links": [
+     26,
+     32,
+     33,
+     41
+    ]
+   },
+   "38": {
+    "name": "Shadowprey Village, Desolace",
+    "faction": "H",
+    "continent": 1,
+    "map": 1443,
+    "x": 21.6,
+    "y": 74.0,
+    "links": [
+     22,
+     29,
+     42
+    ]
+   },
+   "39": {
+    "name": "Gadgetzan, Tanaris",
+    "faction": "A",
+    "continent": 1,
+    "map": 1446,
+    "x": 51.0,
+    "y": 29.3,
+    "links": [
+     31,
+     32,
+     73,
+     79
+    ]
+   },
+   "40": {
+    "name": "Gadgetzan, Tanaris",
+    "faction": "H",
+    "continent": 1,
+    "map": 1446,
+    "x": 51.6,
+    "y": 25.5,
+    "links": [
+     22,
+     23,
+     25,
+     30,
+     42,
+     55,
+     72,
+     79
+    ]
+   },
+   "41": {
+    "name": "Feathermoon, Feralas",
+    "faction": "A",
+    "continent": 1,
+    "map": 1444,
+    "x": 30.3,
+    "y": 43.3,
+    "links": [
+     26,
+     31,
+     37,
+     73
+    ]
+   },
+   "42": {
+    "name": "Camp Mojache, Feralas",
+    "faction": "H",
+    "continent": 1,
+    "map": 1444,
+    "x": 75.4,
+    "y": 44.3,
+    "links": [
+     22,
+     25,
+     30,
+     38,
+     40,
+     72
+    ]
+   },
+   "43": {
+    "name": "Aerie Peak, The Hinterlands",
+    "faction": "A",
+    "continent": 0,
+    "map": 1425,
+    "x": 11.1,
+    "y": 46.1,
+    "links": [
+     6,
+     14,
+     16,
+     66,
+     67
+    ]
+   },
+   "44": {
+    "name": "Valormok, Azshara",
+    "faction": "H",
+    "continent": 1,
+    "map": 1447,
+    "x": 22.0,
+    "y": 49.7,
+    "links": [
+     22,
+     23,
+     25,
+     48,
+     53,
+     61
+    ]
+   },
+   "45": {
+    "name": "Nethergarde Keep, Blasted Lands",
+    "faction": "A",
+    "continent": 0,
+    "map": 1419,
+    "x": 65.5,
+    "y": 24.4,
+    "links": [
+     2,
+     12,
+     71
+    ]
+   },
+   "48": {
+    "name": "Bloodvenom Post, Felwood",
+    "faction": "H",
+    "continent": 1,
+    "map": 1448,
+    "x": 34.4,
+    "y": 53.9,
+    "links": [
+     23,
+     25,
+     44,
+     53,
+     69
+    ]
+   },
+   "49": {
+    "name": "Moonglade",
+    "faction": "A",
+    "continent": 1,
+    "map": 1450,
+    "x": 47.9,
+    "y": 67.1,
+    "links": [
+     26,
+     52,
+     65
+    ]
+   },
+   "52": {
+    "name": "Everlook, Winterspring",
+    "faction": "A",
+    "continent": 1,
+    "map": 1452,
+    "x": 62.3,
+    "y": 36.6,
+    "links": [
+     49,
+     64,
+     65,
+     3242
+    ]
+   },
+   "53": {
+    "name": "Everlook, Winterspring",
+    "faction": "H",
+    "continent": 1,
+    "map": 1452,
+    "x": 60.5,
+    "y": 36.3,
+    "links": [
+     23,
+     44,
+     48,
+     69,
+     3242
+    ]
+   },
+   "55": {
+    "name": "Brackenwall Village, Dustwallow Marsh",
+    "faction": "H",
+    "continent": 1,
+    "map": 1445,
+    "x": 35.6,
+    "y": 31.8,
+    "links": [
+     22,
+     23,
+     25,
+     40
+    ]
+   },
+   "56": {
+    "name": "Stonard, Swamp of Sorrows",
+    "faction": "H",
+    "continent": 0,
+    "map": 1435,
+    "x": 46.1,
+    "y": 54.7,
+    "links": [
+     18,
+     20,
+     21,
+     70,
+     3203
+    ]
+   },
+   "58": {
+    "name": "Zoram'gar Outpost, Ashenvale",
+    "faction": "H",
+    "continent": 1,
+    "map": 1440,
+    "x": 12.2,
+    "y": 33.8,
+    "links": [
+     25,
+     61
+    ]
+   },
+   "61": {
+    "name": "Splintertree Post, Ashenvale",
+    "faction": "H",
+    "continent": 1,
+    "map": 1440,
+    "x": 73.3,
+    "y": 61.7,
+    "links": [
+     23,
+     25,
+     44,
+     58
+    ]
+   },
+   "62": {
+    "name": "Nighthaven, Moonglade",
+    "faction": "A",
+    "continent": 1,
+    "map": 1450,
+    "x": 44.3,
+    "y": 45.3,
+    "links": [
+     27
+    ]
+   },
+   "63": {
+    "name": "Nighthaven, Moonglade",
+    "faction": "H",
+    "continent": 1,
+    "map": 1450,
+    "x": 44.3,
+    "y": 45.7,
+    "links": [
+     22
+    ]
+   },
+   "64": {
+    "name": "Talrendis Point, Azshara",
+    "faction": "A",
+    "continent": 1,
+    "map": 1447,
+    "x": 11.9,
+    "y": 77.5,
+    "links": [
+     26,
+     28,
+     32,
+     52,
+     65,
+     80
+    ]
+   },
+   "65": {
+    "name": "Talonbranch Glade, Felwood",
+    "faction": "A",
+    "continent": 1,
+    "map": 1448,
+    "x": 62.5,
+    "y": 24.2,
+    "links": [
+     26,
+     49,
+     52,
+     64
+    ]
+   },
+   "66": {
+    "name": "Chillwind Camp, Western Plaguelands",
+    "faction": "A",
+    "continent": 0,
+    "map": 1422,
+    "x": 42.9,
+    "y": 85.0,
+    "links": [
+     6,
+     14,
+     43,
+     67
+    ]
+   },
+   "67": {
+    "name": "Light's Hope Chapel, Eastern Plaguelands",
+    "faction": "A",
+    "continent": 0,
+    "map": 1423,
+    "x": 71.7,
+    "y": 49.6,
+    "links": [
+     6,
+     43,
+     66
+    ]
+   },
+   "68": {
+    "name": "Light's Hope Chapel, Eastern Plaguelands",
+    "faction": "H",
+    "continent": 0,
+    "map": 1423,
+    "x": 70.4,
+    "y": 47.6,
+    "links": [
+     11,
+     76
+    ]
+   },
+   "69": {
+    "name": "Moonglade",
+    "faction": "H",
+    "continent": 1,
+    "map": 1450,
+    "x": 32.2,
+    "y": 66.3,
+    "links": [
+     48,
+     53
+    ]
+   },
+   "70": {
+    "name": "Flame Crest, Burning Steppes",
+    "faction": "H",
+    "continent": 0,
+    "map": 1428,
+    "x": 65.6,
+    "y": 24.2,
+    "links": [
+     21,
+     56,
+     75,
+     3203
+    ]
+   },
+   "71": {
+    "name": "Morgan's Vigil, Burning Steppes",
+    "faction": "A",
+    "continent": 0,
+    "map": 1428,
+    "x": 84.4,
+    "y": 68.3,
+    "links": [
+     2,
+     5,
+     45,
+     74,
+     3276
+    ]
+   },
+   "72": {
+    "name": "Cenarion Hold, Silithus",
+    "faction": "H",
+    "continent": 1,
+    "map": 1451,
+    "x": 48.8,
+    "y": 36.7,
+    "links": [
+     40,
+     42,
+     79
+    ]
+   },
+   "73": {
+    "name": "Cenarion Hold, Silithus",
+    "faction": "A",
+    "continent": 1,
+    "map": 1451,
+    "x": 50.7,
+    "y": 34.6,
+    "links": [
+     39,
+     41,
+     79
+    ]
+   },
+   "74": {
+    "name": "Thorium Point, Searing Gorge",
+    "faction": "A",
+    "continent": 0,
+    "map": 1427,
+    "x": 37.9,
+    "y": 30.4,
+    "links": [
+     6,
+     71
+    ]
+   },
+   "75": {
+    "name": "Thorium Point, Searing Gorge",
+    "faction": "H",
+    "continent": 0,
+    "map": 1427,
+    "x": 34.8,
+    "y": 30.6,
+    "links": [
+     21,
+     70
+    ]
+   },
+   "76": {
+    "name": "Revantusk Village, The Hinterlands",
+    "faction": "H",
+    "continent": 0,
+    "map": 1425,
+    "x": 81.7,
+    "y": 81.9,
+    "links": [
+     11,
+     13,
+     17,
+     68
+    ]
+   },
+   "77": {
+    "name": "Camp Taurajo, The Barrens",
+    "faction": "H",
+    "continent": 1,
+    "map": 1413,
+    "x": 44.5,
+    "y": 59.1,
+    "links": [
+     22,
+     25,
+     30
+    ]
+   },
+   "79": {
+    "name": "Marshal's Refuge, Un'Goro Crater",
+    "faction": "AH",
+    "continent": 1,
+    "map": 1449,
+    "x": 45.3,
+    "y": 6.0,
+    "links": [
+     39,
+     40,
+     72,
+     73
+    ]
+   },
+   "80": {
+    "name": "Ratchet, The Barrens",
+    "faction": "AH",
+    "continent": 1,
+    "map": 1413,
+    "x": 63.1,
+    "y": 37.1,
+    "links": [
+     25,
+     32,
+     64
+    ]
+   },
+   "559": {
+    "name": "Summit of Eternity, Mount Hyjal",
+    "faction": "AH",
+    "continent": 1,
+    "map": 2482,
+    "x": 68.6,
+    "y": 44.1,
+    "links": [
+     3242
+    ]
+   },
+   "3203": {
+    "name": "Rog'mar, Riverglades",
+    "faction": "H",
+    "continent": 0,
+    "map": 2548,
+    "x": 59.6,
+    "y": 45.1,
+    "links": [
+     17,
+     21,
+     56,
+     70
+    ]
+   },
+   "3205": {
+    "name": "Tidegear Coast, Dun Morogh",
+    "faction": "A",
+    "continent": 0,
+    "map": 1426,
+    "x": 19.0,
+    "y": 15.2,
+    "links": []
+   },
+   "3242": {
+    "name": "Tainted Foothills, Mount Hyjal",
+    "faction": "AH",
+    "continent": 1,
+    "map": 2482,
+    "x": 55.1,
+    "y": 82.5,
+    "links": [
+     52,
+     53,
+     559
+    ]
+   },
+   "3274": {
+    "name": "Powderfuse Port, Riverglades",
+    "faction": "H",
+    "continent": 0,
+    "map": 2548,
+    "x": 79.0,
+    "y": 52.3,
+    "links": []
+   },
+   "3275": {
+    "name": "Powderfuse Port, Riverglades",
+    "faction": "A",
+    "continent": 0,
+    "map": 2548,
+    "x": 76.8,
+    "y": 53.0,
+    "links": []
+   },
+   "3276": {
+    "name": "Farholde Keep, Riverglades",
+    "faction": "A",
+    "continent": 0,
+    "map": 2548,
+    "x": 60.6,
+    "y": 81.6,
+    "links": [
+     5,
+     8,
+     71
+    ]
+   }
+  },
+  "instances": {
+   "13": {
+    "name": "Test Dungeon",
+    "encounters": [
+     [
+      3078,
+      "Rahuz"
+     ]
+    ]
+   },
+   "29": {
+    "name": "CashTest",
+    "encounters": []
+   },
+   "33": {
+    "name": "Shadowfang Keep",
+    "encounters": [
+     [
+      2748,
+      "Rethilgore"
+     ],
+     [
+      2749,
+      "Razorclaw the Butcher"
+     ],
+     [
+      2750,
+      "Baron Silverlaine"
+     ],
+     [
+      2751,
+      "Commander Springvale"
+     ],
+     [
+      2752,
+      "Odo the Blindwatcher"
+     ],
+     [
+      2753,
+      "Fenrus the Devourer"
+     ],
+     [
+      2754,
+      "Wolf Master Nandos"
+     ],
+     [
+      2755,
+      "Archmage Arugal"
+     ]
+    ]
+   },
+   "34": {
+    "name": "Stormwind Stockade",
+    "encounters": [
+     [
+      2756,
+      "Targorr the Dread"
+     ],
+     [
+      2757,
+      "Kam Deepfury"
+     ],
+     [
+      2758,
+      "Hamhock"
+     ],
+     [
+      2759,
+      "Dextren Ward"
+     ],
+     [
+      2760,
+      "Bazil Thredd"
+     ]
+    ]
+   },
+   "36": {
+    "name": "Deadmines",
+    "encounters": [
+     [
+      2741,
+      "Rhahk'Zor"
+     ],
+     [
+      2742,
+      "Sneed"
+     ],
+     [
+      3676,
+      "Miner Johnson"
+     ],
+     [
+      2743,
+      "Gilnid"
+     ],
+     [
+      2744,
+      "Captain Greenskin"
+     ],
+     [
+      2745,
+      "Mr. Smite"
+     ],
+     [
+      2746,
+      "Cookie"
+     ],
+     [
+      2747,
+      "Edwin VanCleef"
+     ]
+    ]
+   },
+   "43": {
+    "name": "Wailing Caverns",
+    "encounters": [
+     [
+      585,
+      "Lady Anacondra"
+     ],
+     [
+      586,
+      "Lord Cobrahn"
+     ],
+     [
+      587,
+      "Kresh"
+     ],
+     [
+      588,
+      "Lord Pythas"
+     ],
+     [
+      589,
+      "Skum"
+     ],
+     [
+      590,
+      "Lord Serpentis"
+     ],
+     [
+      591,
+      "Verdan the Everliving"
+     ],
+     [
+      592,
+      "Mutanus the Devourer"
+     ]
+    ]
+   },
+   "44": {
+    "name": "<unused> Monastery",
+    "encounters": []
+   },
+   "47": {
+    "name": "Razorfen Kraul",
+    "encounters": [
+     [
+      2773,
+      "Roogug"
+     ],
+     [
+      2774,
+      "Aggem Thorncurse"
+     ],
+     [
+      2775,
+      "Death Speaker Jargba"
+     ],
+     [
+      2776,
+      "Overlord Ramtusk"
+     ],
+     [
+      2777,
+      "Agathelos the Raging"
+     ],
+     [
+      2778,
+      "Charlga Razorflank"
+     ]
+    ]
+   },
+   "48": {
+    "name": "Blackfathom Deeps",
+    "encounters": [
+     [
+      2916,
+      "Ghamoo-ra"
+     ],
+     [
+      2915,
+      "Lady Sarevess"
+     ],
+     [
+      2914,
+      "Geilhast"
+     ],
+     [
+      2913,
+      "Lorgus Jett"
+     ],
+     [
+      2912,
+      "Old Serra'kis"
+     ],
+     [
+      2911,
+      "Twilight Lord Kelris"
+     ],
+     [
+      2910,
+      "Aku'mai"
+     ]
+    ]
+   },
+   "70": {
+    "name": "Uldaman",
+    "encounters": [
+     [
+      547,
+      "Revelosh"
+     ],
+     [
+      548,
+      "The Lost Dwarves"
+     ],
+     [
+      549,
+      "Ironaya"
+     ],
+     [
+      1887,
+      "Obsidian Sentinel"
+     ],
+     [
+      551,
+      "Ancient Stone Keeper"
+     ],
+     [
+      552,
+      "Galgann Firehammer"
+     ],
+     [
+      553,
+      "Grimlok"
+     ],
+     [
+      554,
+      "Archaedas"
+     ]
+    ]
+   },
+   "90": {
+    "name": "Gnomeregan",
+    "encounters": [
+     [
+      2768,
+      "Grubbis"
+     ],
+     [
+      2769,
+      "Viscous Fallout"
+     ],
+     [
+      2770,
+      "Electrocutioner 6000"
+     ],
+     [
+      2771,
+      "Crowd Pummeler 9-60"
+     ],
+     [
+      2772,
+      "Mekgineer Thermaplugg"
+     ]
+    ]
+   },
+   "109": {
+    "name": "Sunken Temple",
+    "encounters": [
+     [
+      3582,
+      "Atal'alarion"
+     ],
+     [
+      3583,
+      "Avatar of Hakkar"
+     ],
+     [
+      3584,
+      "Shade of Eranikus"
+     ],
+     [
+      3585,
+      "Hazzas"
+     ],
+     [
+      3586,
+      "Morphaz"
+     ],
+     [
+      3587,
+      "Weaver"
+     ],
+     [
+      3588,
+      "Dreamscythe"
+     ],
+     [
+      3589,
+      "Jammal'an the Prophet"
+     ]
+    ]
+   },
+   "129": {
+    "name": "Razorfen Downs",
+    "encounters": [
+     [
+      2780,
+      "Tuten'kash"
+     ],
+     [
+      2781,
+      "Plaguemaw the Rotting"
+     ],
+     [
+      2782,
+      "Mordresh Fire Eye"
+     ],
+     [
+      2783,
+      "Ragglesnout"
+     ],
+     [
+      2784,
+      "Glutton"
+     ],
+     [
+      2785,
+      "Amnennar the Coldbringer"
+     ]
+    ]
+   },
+   "189": {
+    "name": "Scarlet Monastery",
+    "encounters": [
+     [
+      444,
+      "Interrogator Vishas"
+     ],
+     [
+      2779,
+      "Bloodmage Thalnos"
+     ],
+     [
+      446,
+      "Houndmaster Loksey"
+     ],
+     [
+      447,
+      "Arcanist Doan"
+     ],
+     [
+      448,
+      "Herod"
+     ],
+     [
+      449,
+      "High Inquisitor Fairbanks"
+     ],
+     [
+      450,
+      "High Inquisitor Whitemane"
+     ]
+    ]
+   },
+   "209": {
+    "name": "Zul'Farrak",
+    "encounters": [
+     [
+      593,
+      "Hydromancer Velratha"
+     ],
+     [
+      594,
+      "Gahz'rilla"
+     ],
+     [
+      595,
+      "Antu'sul"
+     ],
+     [
+      596,
+      "Theka the Martyr"
+     ],
+     [
+      597,
+      "Witch Doctor Zum'rah"
+     ],
+     [
+      598,
+      "Nekrum Gutchewer"
+     ],
+     [
+      599,
+      "Shadowpriest Sezz'ziz"
+     ],
+     [
+      600,
+      "Chief Ukorz Sandscalp"
+     ]
+    ]
+   },
+   "229": {
+    "name": "Blackrock Spire",
+    "encounters": [
+     [
+      267,
+      "Highlord Omokk"
+     ],
+     [
+      268,
+      "Shadow Hunter Vosh'gajin"
+     ],
+     [
+      269,
+      "War Master Voone"
+     ],
+     [
+      270,
+      "Mother Smolderweb"
+     ],
+     [
+      271,
+      "Urok Doomhowl"
+     ],
+     [
+      272,
+      "Quartermaster Zigris"
+     ],
+     [
+      274,
+      "Halycon"
+     ],
+     [
+      273,
+      "Gizrul the Slavener"
+     ],
+     [
+      275,
+      "Overlord Wyrmthalak"
+     ],
+     [
+      3062,
+      "Pyroguard Emberseer"
+     ],
+     [
+      3063,
+      "Warchief Rend Blackhand"
+     ],
+     [
+      3068,
+      "The Beast"
+     ],
+     [
+      3069,
+      "General Drakkisath"
+     ],
+     [
+      3070,
+      "Lord Valthalak"
+     ]
+    ]
+   },
+   "230": {
+    "name": "Blackrock Depths",
+    "encounters": [
+     [
+      227,
+      "High Interrogator Gerstahn"
+     ],
+     [
+      228,
+      "Lord Roccor"
+     ],
+     [
+      229,
+      "Houndmaster Grebmar"
+     ],
+     [
+      230,
+      "Ring of Law"
+     ],
+     [
+      231,
+      "Pyromancer Loregrain"
+     ],
+     [
+      232,
+      "Lord Incendius"
+     ],
+     [
+      233,
+      "Warder Stilgiss"
+     ],
+     [
+      234,
+      "Fineous Darkvire"
+     ],
+     [
+      235,
+      "Bael'Gar"
+     ],
+     [
+      236,
+      "General Angerforge"
+     ],
+     [
+      237,
+      "Golem Lord Argelmach"
+     ],
+     [
+      238,
+      "Hurley Blackbreath"
+     ],
+     [
+      239,
+      "Phalanx"
+     ],
+     [
+      240,
+      "Ribbly Screwspigot"
+     ],
+     [
+      241,
+      "Plugger Spazzring"
+     ],
+     [
+      2791,
+      "The Vault"
+     ],
+     [
+      242,
+      "Ambassador Flamelash"
+     ],
+     [
+      243,
+      "The Seven"
+     ],
+     [
+      244,
+      "Magmus"
+     ],
+     [
+      2789,
+      "Princess Moira Bronzebeard"
+     ],
+     [
+      2790,
+      "Emperor Dagran Thaurissan"
+     ]
+    ]
+   },
+   "269": {
+    "name": "Caverns of Time",
+    "encounters": []
+   },
+   "289": {
+    "name": "Scholomance",
+    "encounters": [
+     [
+      2805,
+      "Kirtonos"
+     ],
+     [
+      2804,
+      "Jandice Barov"
+     ],
+     [
+      2811,
+      "Rattlegore"
+     ],
+     [
+      2809,
+      "Marduk Blackpool"
+     ],
+     [
+      2813,
+      "Vectus"
+     ],
+     [
+      3055,
+      "Kormok"
+     ],
+     [
+      2810,
+      "Ras Frostwhisperer"
+     ],
+     [
+      2803,
+      "Instructor Malicia"
+     ],
+     [
+      2802,
+      "Doctor Theolen Krastinov"
+     ],
+     [
+      2808,
+      "Lorekeeper Polkelt"
+     ],
+     [
+      2812,
+      "The Ravenian"
+     ],
+     [
+      2807,
+      "Lord Alexei Barov"
+     ],
+     [
+      2806,
+      "Lady Illucia Barov"
+     ],
+     [
+      2801,
+      "Darkmaster Gandling"
+     ]
+    ]
+   },
+   "329": {
+    "name": "Stratholme",
+    "encounters": [
+     [
+      473,
+      "Hearthsinger Forresten"
+     ],
+     [
+      474,
+      "Timmy the Cruel"
+     ],
+     [
+      476,
+      "Malor the Zealous"
+     ],
+     [
+      475,
+      "Cannon Master Willey"
+     ],
+     [
+      477,
+      "Archivist Galford"
+     ],
+     [
+      478,
+      "Balnazzar"
+     ],
+     [
+      472,
+      "The Unforgiven"
+     ],
+     [
+      479,
+      "Baroness Anastari"
+     ],
+     [
+      480,
+      "Nerub'enkan"
+     ],
+     [
+      481,
+      "Maleki the Pallid"
+     ],
+     [
+      482,
+      "Magistrate Barthilas"
+     ],
+     [
+      483,
+      "Ramstein the Gorger"
+     ],
+     [
+      484,
+      "Baron Rivendare"
+     ],
+     [
+      2795,
+      "Black Guard Swordsmith"
+     ],
+     [
+      2796,
+      "Crimson Hammersmith"
+     ],
+     [
+      2797,
+      "Ezra Grimm"
+     ],
+     [
+      2798,
+      "Postmaster Malown"
+     ],
+     [
+      2799,
+      "Skul"
+     ],
+     [
+      2800,
+      "Stonespine"
+     ]
+    ]
+   },
+   "349": {
+    "name": "Maraudon",
+    "encounters": [
+     [
+      422,
+      "Noxxion"
+     ],
+     [
+      423,
+      "Razorlash"
+     ],
+     [
+      427,
+      "Tinkerer Gizlock"
+     ],
+     [
+      424,
+      "Lord Vyletongue"
+     ],
+     [
+      425,
+      "Celebras the Cursed"
+     ],
+     [
+      426,
+      "Landslide"
+     ],
+     [
+      428,
+      "Rotgrip"
+     ],
+     [
+      429,
+      "Princess Theradras"
+     ]
+    ]
+   },
+   "389": {
+    "name": "Ragefire Chasm",
+    "encounters": [
+     [
+      2732,
+      "Oggleflint"
+     ],
+     [
+      2733,
+      "Taragaman the Hungerer"
+     ],
+     [
+      2734,
+      "Jergosh the Invoker"
+     ],
+     [
+      2735,
+      "Bazzalan"
+     ]
+    ]
+   },
+   "429": {
+    "name": "Dire Maul",
+    "encounters": [
+     [
+      343,
+      "Zevrim Thornhoof"
+     ],
+     [
+      344,
+      "Hydrospawn"
+     ],
+     [
+      345,
+      "Lethtendris"
+     ],
+     [
+      2792,
+      "Pusillin"
+     ],
+     [
+      346,
+      "Alzzin the Wildshaper"
+     ],
+     [
+      350,
+      "Tendris Warpwood"
+     ],
+     [
+      347,
+      "Illyanna Ravenoak"
+     ],
+     [
+      348,
+      "Magister Kalendris"
+     ],
+     [
+      349,
+      "Immol'thar"
+     ],
+     [
+      361,
+      "Prince Tortheldrin"
+     ],
+     [
+      362,
+      "Guard Mol'dar"
+     ],
+     [
+      363,
+      "Stomper Kreeg"
+     ],
+     [
+      364,
+      "Guard Fengus"
+     ],
+     [
+      365,
+      "Guard Slip'kik"
+     ],
+     [
+      366,
+      "Captain Kromcrush"
+     ],
+     [
+      367,
+      "Cho'Rush the Observer"
+     ],
+     [
+      368,
+      "King Gordok"
+     ],
+     [
+      2793,
+      "Lord Hel'nurath"
+     ],
+     [
+      2794,
+      "Tsu'zee"
+     ]
+    ]
+   },
+   "2720": {
+    "name": "The Searing Basin",
+    "encounters": [
+     [
+      3025,
+      "Testwerk"
+     ]
+    ]
+   },
+   "2784": {
+    "name": "Demon Fall Canyon",
+    "encounters": [
+     [
+      3023,
+      "Grimroot"
+     ],
+     [
+      3028,
+      "Destructor's Wraith"
+     ],
+     [
+      3029,
+      "Zilbagob"
+     ],
+     [
+      3030,
+      "Pyranis"
+     ],
+     [
+      3024,
+      "Diathorus the Seeker"
+     ],
+     [
+      3031,
+      "Hellscream's Phantom"
+     ],
+     [
+      3080,
+      "Azgaloth"
+     ]
+    ]
+   },
+   "2806": {
+    "name": "Shadow Hold",
+    "encounters": []
+   },
+   "2807": {
+    "name": "Burning of Andorhal",
+    "encounters": []
+   },
+   "2817": {
+    "name": "Starfall Barrow Den",
+    "encounters": []
+   },
+   "2853": {
+    "name": "Deadwind Pass",
+    "encounters": []
+   },
+   "2875": {
+    "name": "Karazhan Crypts",
+    "encounters": [
+     [
+      3141,
+      "Harbinger of Sin"
+     ],
+     [
+      3146,
+      "Creeping Malison"
+     ],
+     [
+      3144,
+      "Three Little Wolves"
+     ],
+     [
+      3145,
+      "Dark Rider"
+     ],
+     [
+      3143,
+      "Kharon"
+     ],
+     [
+      3152,
+      "Unk'omon"
+     ],
+     [
+      3168,
+      "Hans and Greta"
+     ],
+     [
+      3169,
+      "The Ugly Goblin"
+     ],
+     [
+      3170,
+      "Kaigy Maryla"
+     ],
+     [
+      3171,
+      "Sairuh Maryla"
+     ],
+     [
+      3172,
+      "Barian Maryla"
+     ]
+    ]
+   },
+   "2902": {
+    "name": "The Scarab Dais",
+    "encounters": []
+   },
+   "2921": {
+    "name": "Naxxramas",
+    "encounters": [
+     [
+      3296,
+      "Spirit of Mograine"
+     ]
+    ]
+   },
+   "2959": {
+    "name": "City of Dalaran",
+    "encounters": [
+     [
+      3298,
+      "Arcane Anomaly"
+     ],
+     [
+      3299,
+      "Fel Ancient"
+     ],
+     [
+      3300,
+      "Mana Devourer"
+     ],
+     [
+      3301,
+      "Mana Elemental"
+     ],
+     [
+      3302,
+      "Unstable Sentinel"
+     ],
+     [
+      3310,
+      "Lyn the Ignored"
+     ],
+     [
+      3311,
+      "Atrexis the Grave Knight"
+     ],
+     [
+      3312,
+      "Mana Wraith"
+     ],
+     [
+      3303,
+      "Shade of the Archmage"
+     ]
+    ]
+   },
+   "2970": {
+    "name": "The Drowned City",
+    "encounters": [
+     [
+      3474,
+      "Zul'Alai"
+     ],
+     [
+      3475,
+      "Var'Taka"
+     ],
+     [
+      3476,
+      "Captain Dreadrise"
+     ],
+     [
+      3478,
+      "Deathless Guardians"
+     ],
+     [
+      3511,
+      "Primeval Elemental"
+     ],
+     [
+      3479,
+      "Min'loth the Serpent"
+     ]
+    ]
+   },
+   "2974": {
+    "name": "Blackmaw Hold",
+    "encounters": [
+     [
+      3315,
+      "Withermaw"
+     ],
+     [
+      3316,
+      "Impaan the Imprisoner"
+     ],
+     [
+      3327,
+      "Elder Shaman Bloodmane"
+     ],
+     [
+      3322,
+      "Bonesnout the Unbroken"
+     ],
+     [
+      3334,
+      "Varrox Bleakhoof"
+     ],
+     [
+      3323,
+      "Blackmaw Behemoth"
+     ],
+     [
+      3336,
+      "Unbound Spirit"
+     ]
+    ]
+   },
+   "2994": {
+    "name": "Alcaz Prison",
+    "encounters": [
+     [
+      3403,
+      "Overseer Wrex"
+     ],
+     [
+      3410,
+      "Tidemistress Ca'zass"
+     ],
+     [
+      3418,
+      "Katerina the Cleaner"
+     ],
+     [
+      3415,
+      "The Questioner"
+     ],
+     [
+      3409,
+      "Blazeroar"
+     ]
+    ]
+   },
+   "2998": {
+    "name": "Excavation Site: Wetlands",
+    "encounters": [
+     [
+      3480,
+      "Saltspine"
+     ],
+     [
+      3481,
+      "Shadetooth"
+     ],
+     [
+      3644,
+      "Highland Horror"
+     ],
+     [
+      3482,
+      "Relic Guardian"
+     ]
+    ]
+   },
+   "2999": {
+    "name": "Ruins of Lordaeron",
+    "encounters": [
+     [
+      3353,
+      "Witherfang"
+     ],
+     [
+      3357,
+      "The Abandoned"
+     ],
+     [
+      3355,
+      "The Butcher"
+     ],
+     [
+      3408,
+      "Lordaeron Captain"
+     ],
+     [
+      3411,
+      "Viktor the Vile"
+     ],
+     [
+      3412,
+      "Bjork"
+     ],
+     [
+      3354,
+      "Rath'mael"
+     ]
+    ]
+   },
+   "3001": {
+    "name": "The Shaper's Terrace",
+    "encounters": [
+     [
+      3498,
+      "Titanosaur"
+     ],
+     [
+      3499,
+      "Ravasaur Hunters"
+     ],
+     [
+      3500,
+      "Thunderhoof"
+     ],
+     [
+      3501,
+      "Venomridge"
+     ],
+     [
+      3507,
+      "Direhorn Matriarch"
+     ],
+     [
+      3503,
+      "Cinder"
+     ],
+     [
+      3504,
+      "King Op"
+     ],
+     [
+      3597,
+      "Snowtalon"
+     ],
+     [
+      3505,
+      "Bolt"
+     ],
+     [
+      3600,
+      "Vitrix"
+     ],
+     [
+      3502,
+      "Nanaya"
+     ]
+    ]
+   },
+   "3039": {
+    "name": "Krol'dok Stronghold",
+    "encounters": [
+     [
+      3450,
+      "Slavecrusher Grox"
+     ],
+     [
+      3452,
+      "Twilight Commander Zarmok"
+     ],
+     [
+      3453,
+      "Handler Ashka"
+     ],
+     [
+      3449,
+      "Nar'gurk"
+     ],
+     [
+      3451,
+      "Overseer Mugg"
+     ]
+    ]
+   },
+   "3065": {
+    "name": "The Hall of Thanes",
+    "encounters": [
+     [
+      3493,
+      "Faldrim Anvilmar"
+     ],
+     [
+      3495,
+      "Infurnus"
+     ],
+     [
+      3494,
+      "Plunder"
+     ],
+     [
+      3496,
+      "Durgen Dirgehammer"
+     ]
+    ]
+   },
+   "3109": {
+    "name": "Manor Mistmantle",
+    "encounters": []
+   }
+  },
   "lines": {
    "5963": {
     "name": "To Have Loved and Lost",

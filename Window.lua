@@ -720,6 +720,22 @@ renderers.level = function(V)
   if #list == 0 then y = y + T("No macros yet at this level.", 16, y, W - 32, "body", C.dim) + 6 end
   y = y + 4
   box(0, top, W, y - top, C.panel, C.edge)
+
+  -- Pace card: how fast you're levelling (Pace.lua), about your own level whichever level is shown
+  local pace = ns.paceRows()
+  if #pace > 0 then
+    y = y + 14
+    top = y
+    y = y + 12
+    T("YOUR PACE", 16, y, 300, "label", C.gold)
+    y = y + 22
+    for _, r in ipairs(pace) do
+      local h = math.max((T(r[1], 16, y, 150, "body", C.light)), (T(r[2], 172, y, W - 188, "body", C.light)))
+      y = y + h + 4
+    end
+    y = y + 6
+    box(0, top, W, y - top, C.panel, C.edge)
+  end
   return y + 10
 end
 
@@ -1172,6 +1188,27 @@ renderers.settings = function()
       ns.questRefresh()
     end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need. The spawns come from your QuestieDB addon.")
   end
+  tick("Track the step's quest in the quest tracker", not db.noQuestWatch, function() db.noQuestWatch = not db.noQuestWatch; ns.questRefresh() end,
+    "Adds the current step's quest to the game's objective tracker. Quests you track yourself are left alone.")
+  tick("Warn about elites and rares near the step", not db.noDangerWarnings, function() db.noDangerWarnings = not db.noDangerWarnings; ns.questRefresh() end,
+    "The step window names hostile elites and rares close to the current step until you outlevel them.")
+  y = y + 6
+  head("PARTY")
+  tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
+    "Party members who use the Codex see each other's current step in the step window, and how far ahead or behind they are.")
+  tick("Share guide quests with my party", db.questShareParty, function() db.questShareParty = not db.questShareParty end,
+    "Off by default. When you accept a quest from your guide, the Codex offers it to your party.")
+  tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
+    "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
+  T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
+  row("-", 150, 28, false, function()
+    db.questPreview = math.max(0, (tonumber(db.questPreview) or 2) - 1); ns.questRefresh()
+  end)
+  T(tostring(tonumber(db.questPreview) or 2), 182, y + 4, 30, "body", C.gold, "CENTER")
+  row("+", 216, 28, false, function()
+    db.questPreview = math.min(5, (tonumber(db.questPreview) or 2) + 1); ns.questRefresh()
+  end, "How many of the next steps the step window lists under the current one (0-5).")
+  y = y + 36
   tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
@@ -1188,8 +1225,14 @@ renderers.settings = function()
   questieNote(ns.questie.autoComplete(), "Questie's auto-complete is on, so Questie turns quests in.")
   tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
     "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+  tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
+    "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
+  tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
+    "For a long trip the arrow leads to a flight master when flying is quicker, and the flight map marks the flight to take. It only uses flight paths you have.")
+  tick("Lead me to flight paths I don't have", not db.noFlightLearn, function() db.noFlightLearn = not db.noFlightLearn; ns.questRefresh() end,
+    "When a flight master you haven't talked to is close to the way, the arrow stops there first so you learn the flight path. Works once the game has listed your flight paths, or you opened a flight map this session.")
   tick("Take the guide's flights and binds", db.questAutoTravel, function() db.questAutoTravel = not db.questAutoTravel end,
-    "Off by default. On: at a flight master during a Fly step the Codex takes the step's flight, and at the step's innkeeper during a bind step it sets your hearthstone there. Hold Alt to stop it.")
+    "Off by default. On: at a flight master the Codex takes the flight the guide marks (a Fly step's, or the trip's), and at the step's innkeeper during a bind step it sets your hearthstone there. Hold Alt to stop it.")
   y = y + 12
 
   head("MINIMAP BUTTON")
@@ -1607,7 +1650,7 @@ function ns.showMacroCopy(m, list, step)
   local cur = copy.list and copy.list[copy.index]
   if not cur then return end
   local many = #copy.list > 1
-  copy.title:SetText(cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro"))
+  copy.title:SetText(cur.copyTitle or (cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro")))
   copy.help:SetText(cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp)
   copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)

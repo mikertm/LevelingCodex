@@ -57,7 +57,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED", "NEW_TAXI_PATH",
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
-  "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED" }) do
+  "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
+  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -75,7 +76,30 @@ C_QuestLog = {
   SetSelectedQuest = function(id) MOCK.selectedQuest = id end,
   SetAbandonQuest = function() MOCK.abandoning = MOCK.selectedQuest end,
   AbandonQuest = function() MOCK.abandoned, MOCK.abandoning = MOCK.abandoning, nil end,
+  -- The objective tracker: MOCK.watches[questID] = true while watched.
+  AddQuestWatch = function(id) MOCK.watches = MOCK.watches or {}; MOCK.watches[id] = true end,
+  RemoveQuestWatch = function(id) if MOCK.watches then MOCK.watches[id] = nil end end,
+  GetQuestWatchType = function(id) return MOCK.watches and MOCK.watches[id] and 0 or nil end,
+  IsPushableQuest = function() return true end,
 }
+-- Parties: MOCK.party = in a party; addon messages go to MOCK.addonSent, chat to MOCK.said,
+-- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed).
+function IsInGroup() return MOCK.party or false end
+function IsInRaid() return false end
+C_ChatInfo = {
+  RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefix = prefix; return true end,
+  SendAddonMessage = function(prefix, text, channel)
+    MOCK.addonSent = MOCK.addonSent or {}
+    table.insert(MOCK.addonSent, { prefix = prefix, text = text, channel = channel })
+  end,
+}
+function SendChatMessage(text, channel)
+  MOCK.said = MOCK.said or {}
+  table.insert(MOCK.said, { text = text, channel = channel })
+end
+function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
+-- The world map: OpenWorldMap records the map it opened.
+function OpenWorldMap(map) MOCK.openedMap = map end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
   GetMapInfo = function(id) return id == 1433 and { name = "Redridge Mountains" } or nil end,
@@ -95,6 +119,11 @@ C_Map = {
 C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
+-- The combat log: MOCK.combatLog = { subevent, destGUID, destName } for the event being fired.
+function CombatLogGetCurrentEventInfo()
+  local c = MOCK.combatLog or {}
+  return 0, c[1], false, "", "", 0, 0, c[2], c[3], 0, 0
+end
 function GetInstanceInfo()
   return MOCK.instanceName, MOCK.instanceName and "party" or "none", nil, nil, nil, nil, nil, MOCK.instanceID
 end
@@ -912,6 +941,12 @@ function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
+-- Item cooldowns: MOCK.cooldowns[itemID] = { start, duration } (GetTime seconds).
+function GetItemCooldown(id)
+  local c = MOCK.cooldowns and MOCK.cooldowns[id]
+  if c then return c[1], c[2], 1 end
+  return 0, 0, 1
+end
 
 -- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), itemLevel, class
 -- = "Armor"|"Weapon"|"Trade Goods", loaded (false = GetItemInfo not cached yet) } } in bag 0.
@@ -1213,7 +1248,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
-  "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack" }
+  "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
+  "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -1261,6 +1297,8 @@ local ALLOWED_GLOBALS = {
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
 ALLOWED_GLOBALS.ClassTrainerFrame = true
+ALLOWED_GLOBALS.TaxiFrame = true
+for i = 1, 4 do ALLOWED_GLOBALS["TaxiButton" .. i] = true end
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}
   for k in pairs(_G) do MOCK.globals0[k] = true end

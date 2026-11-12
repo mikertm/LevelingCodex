@@ -35,7 +35,7 @@ local function stepCard(row, y)
   local section = U.T(row.section.title, 148, y, W - 164, "small", C.inkSoft, "RIGHT")
   y = y + math.max(heading, section) + 6
   y = y + U.T(Q.label(row.step), 16, y, W - 32, "head", C.ink) + 4
-  y = y + U.T(Q.detail(row.step, row.requiredFor), 16, y, W - 32, "body", C.ink) + 14
+  y = y + U.T(Q.detail(row.step, row.requiredFor, row == Q.current()), 16, y, W - 32, "body", C.ink) + 14
   U.box(0, top, W, y - top, C.parch, C.edge)
   return y + 12
 end
@@ -90,8 +90,9 @@ local function renderRoute(rows, selected, current, y)
     if row.section == selected and row.state ~= "filtered" and
         (allSteps or row == current or row.state == "pending") then
       local active = row == current
+      local why = Q.reason(row)
       y = drawRow(row, y, Q.label(row.step), active and "Current" or row.grey and "Grey" or STATUS[row.state],
-        row.step.forever and "Forever" or nil, 62, active)
+        row.step.forever and "Forever" or nil, 62, active, why and (why .. "\n" .. Q.plain(row.step.text or "")) or nil)
       visible = true
     end
   end
@@ -286,6 +287,58 @@ local function renderLibrary(rows, sections, y)
   return y
 end
 
+-- The guide setup card: pace, dungeons and helpers in one place. It shows by itself for a new
+-- character (level 5 or lower) until Done; Guide setup opens it any time.
+local setupOpen = false
+
+function ns.questSetupDue()
+  return not ns.db().questSetupDone and (UnitLevel("player") or 1) <= 5
+end
+
+function ns.openQuestSetup()
+  setupOpen, view = true, "route"
+  ns.openTab("quests")
+  U.refreshTop()
+end
+
+local function renderSetup(y)
+  local db = ns.db()
+  local top = y
+  y = y + 12
+  y = y + U.T("SET UP YOUR GUIDE", 16, y, W - 32, "label", C.inkSoft) + 4
+  y = y + U.T("Pick how the guide plays. Settings has every option, and you can change these any time.",
+    16, y, W - 32, "small", C.ink) + 8
+  local half = math.floor((W - 40) / 2)
+  local function pace(keep) db.questKeepGrey, db.questOptional = keep, keep; ns.updateQuestSettings() end
+  U.btn("Fastest", 16, y, half, function() pace(false) end, not db.questKeepGrey and not db.questOptional,
+    "Grey pickups leave the route and side errands stay hidden.")
+  U.btn("Every quest", 24 + half, y, half, function() pace(true) end, db.questKeepGrey and db.questOptional,
+    "Keep grey pickups and show side errands such as Camping 101.")
+  y = y + 30
+  U.btn("Plan recommended dungeons", 16, y, half, function() setPlans(Q.recommendedRuns(), true) end, false,
+    "Runs near your route or tied to your class quests: their pickups join your route.")
+  U.btn("No dungeons", 24 + half, y, half, function() setPlans(nil) end, false,
+    "Leave dungeon pickups out. Quests > Guide library > Dungeons plans runs one by one.")
+  y = y + 30
+  local third = math.floor((W - 48) / 3)
+  local function toggle(key) return function() db[key] = not db[key]; U.refresh() end end
+  U.btn("Auto-accept", 16, y, third, toggle("questAutoAccept"), db.questAutoAccept,
+    "Accept the guide's current quest by itself. Hold Alt to stop it.")
+  U.btn("Auto turn-in", 24 + third, y, third, toggle("questAutoTurnin"), db.questAutoTurnin,
+    "Turn in the guide's current quest by itself when there's no reward to choose. Hold Alt to stop it.")
+  U.btn("Flights and binds", 32 + 2 * third, y, third, toggle("questAutoTravel"), db.questAutoTravel,
+    "Take the step's flight and set your hearthstone at the step's inn. Hold Alt to stop it.")
+  y = y + 30
+  U.btn("Done", 16, y, W - 32, function()
+    db.questSetupDone, setupOpen = true, false
+    ns.questRefresh()
+    U.refresh()
+  end, true)
+  y = y + 34
+  U.box(0, top, W, y - top, C.parch, C.edge)
+  return y + 12
+end
+
 local function render()
   local rows, sections, missed, level, selected, ready = Q.rows()
   local current = Q.current()
@@ -293,6 +346,7 @@ local function render()
   if #sections == 0 then
     return y + U.T("Your character has no published route yet.", 0, y, W, "body", C.dim) + 16
   end
+  if setupOpen or ns.questSetupDue() then y = renderSetup(y) end
 
   if current then
     y = stepCard(current, y)
@@ -323,6 +377,28 @@ local function render()
   U.btn("Next step", stepWidth + 8, y, stepWidth, function() ns.moveQuestStep(false) end)
   U.btn("Hide step window", W - stepWidth, y, stepWidth, ns.hideQuestViewer)
   y = y + 32
+  if current then
+    U.btn("Show on map", 0, y, stepWidth, ns.showQuestStepOnMap, false, "Open the world map where the current step is.")
+    U.btn("Report this step", stepWidth + 8, y, stepWidth, ns.reportQuestStep, false,
+      "Copy what the guide sees about this step (your position, quest log and the step) to send with a bug report.")
+  end
+  U.btn("Guide setup", W - stepWidth, y, stepWidth, function()
+    setupOpen = not setupOpen
+    U.refresh()
+  end, setupOpen, "Pace, dungeons and helpers in one place.")
+  y = y + 32
+  local pointing = ns.pointingToFlightMaster()
+  U.btn(pointing and "Back to the step" or "Nearest flight master", 0, y, W, ns.pointToFlightMaster, pointing,
+    "Point the arrow at the closest flight master on your continent, until you open a flight map or press this again.")
+  y = y + 32
+  if current and current.step.type == "plan" then
+    local half = (W - 8) / 2
+    U.btn("Plan " .. current.step.name, 0, y, half, function() ns.planQuestRun(current.step.dungeon, true) end, true,
+      "The run and its quests join your route, and the guide says when to find a group.")
+    U.btn("Skip this run", half + 8, y, half, function() ns.planQuestRun(current.step.dungeon, false) end, false,
+      "The run stays out of your route. Guide library > Dungeons can plan it later.")
+    y = y + 32
+  end
 
   local run = Q.readyRun()
   if run then

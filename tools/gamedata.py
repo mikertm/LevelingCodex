@@ -49,7 +49,9 @@ TABLES = [
     # Engineering and Cooking use crafting stations.
     "SpellCastingRequirements", "SpellFocusObject",
     # Quest IDs, navigation and the small subset of quests with client POIs.
-    "QuestV2", "UiMap", "UiMapAssignment", "TaxiNodes", "QuestLine", "QuestLineXQuest",
+    "QuestV2", "UiMap", "UiMapAssignment", "TaxiNodes", "TaxiPath", "QuestLine", "QuestLineXQuest",
+    # Dungeons: instance IDs (GetInstanceInfo) and their boss encounters in order (ENCOUNTER_END).
+    "Map", "DungeonEncounter",
     "QuestPOIBlob", "QuestPOIPoint",
     "Lock", "AreaTable",
 ]
@@ -513,6 +515,10 @@ def build_quests(tables):
         if north > south and west > east:
             maps[map_id].update(width=round(west - east, 3), height=round(north - south, 3))
             extents[map_id] = (int(row["MapID"]), south, east, north, west)
+            if row_type(tables, map_id) in ("3", "5"):
+                maps[map_id]["world"] = [int(row["MapID"]), round(north, 2), round(west, 2)]
+            elif row_type(tables, map_id) == "2":  # a continent map (the client may report one in tunnels)
+                maps[map_id]["world"] = [int(row["MapID"]), round(north, 2), round(west, 2), "continent"]
 
     lines = {int(row["ID"]): {"name": row["Name_lang"], "ids": []} for row in tables.QuestLine}
     for row in sorted(tables.QuestLineXQuest, key=lambda row: int(row["OrderIndex"])):
@@ -538,9 +544,71 @@ def build_quests(tables):
         "ids": sorted(int(row["ID"]) for row in tables.QuestV2),
         "maps": maps,
         "flights": sorted({row["Name_lang"] for row in tables.TaxiNodes if row["Name_lang"]}),
+        "taxi": build_taxi(tables, extents),
+        "instances": build_instances(tables),
         "lines": lines,
         "pois": dict(pois),
     }
+
+
+_map_types = {}
+
+
+def build_instances(tables):
+    """Dungeons (Map InstanceType 1): the name GetInstanceInfo gives and the boss encounters ENCOUNTER_END
+    reports, normal difficulty (0 and 1; Season of Discovery's 198/201 left out), in the game's order."""
+    out = {}
+    for row in tables.Map:
+        if row["InstanceType"] == "1":
+            out[row["ID"]] = {"name": row["MapName_lang"], "encounters": []}
+    for row in sorted(tables.DungeonEncounter, key=lambda r: (float(r["OrderIndex"]), int(r["ID"]))):
+        dungeon = out.get(row["MapID"])
+        if dungeon is not None and row["DifficultyID"] in ("0", "1"):
+            dungeon["encounters"].append([int(row["ID"]), row["Name_lang"]])
+    return {k: v for k, v in sorted(out.items(), key=lambda kv: int(kv[0]))}
+
+
+def row_type(tables, map_id):
+    if not _map_types:
+        _map_types.update({int(row["ID"]): row["Type"] for row in tables.UiMap})
+    return _map_types.get(map_id)
+
+
+# Flight points the world map never shows a player: dev and test nodes, an unused second Booty Bay,
+# the Southshore ferry, the Eastern Plaguelands towers (world PvP) and Naxxramas.
+TAXI_SKIP = {1, 3, 9, 15, 46, 57, 78, 84, 85, 86, 87}
+
+
+def build_taxi(tables, extents):
+    """Flight points with the zone (zone or city UiMap) they stand on and their position there in percent,
+    which faction can use them (by mount: MountCreatureID_1 = Alliance, _0 = Horde) and their direct links."""
+    names = {int(row["ID"]): row["Name_lang"] for row in tables.UiMap}
+    nodes = {}
+    for row in tables.TaxiNodes:
+        node, name = int(row["ID"]), row["Name_lang"]
+        if node in TAXI_SKIP or name.startswith(("zz", "Quest Path", "Transport", "Generic")):
+            continue
+        x, y, continent = float(row["Pos_0"]), float(row["Pos_1"]), int(row["ContinentID"])
+        faction = ("A" if row["MountCreatureID_1"] != "0" else "") + ("H" if row["MountCreatureID_0"] != "0" else "")
+        here = sorted(((north - south) * (west - east), map_id) for map_id, (world, south, east, north, west)
+                      in extents.items() if world == continent and south <= x <= north and east <= y <= west
+                      and row_type(tables, map_id) in ("3", "5"))
+        if not here or not faction:
+            continue
+        # The map named by the node's town (a city), else by its zone suffix, else the smallest one around it.
+        town, _, zone = name.partition(", ")
+        pick = next((m for _, m in here if names[m].startswith(town)), None)             or next((m for _, m in here if zone and names[m].startswith(zone)), None) or here[0][1]
+        _, south, east, north, west = extents[pick]
+        nodes[node] = {"name": name, "faction": faction, "continent": continent, "map": pick,
+                       "x": round(100 * (west - y) / (west - east), 1), "y": round(100 * (north - x) / (north - south), 1),
+                       "links": []}
+    for row in tables.TaxiPath:
+        a, b = int(row["FromTaxiNode"]), int(row["ToTaxiNode"])
+        if a in nodes and b in nodes and b not in nodes[a]["links"]:
+            nodes[a]["links"].append(b)
+    for node in nodes.values():
+        node["links"].sort()
+    return {str(k): v for k, v in sorted(nodes.items())}
 
 
 def build_rods(T):
