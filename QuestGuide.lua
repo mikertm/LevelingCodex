@@ -1161,7 +1161,7 @@ local function pickFromList(event)
   end
 end
 
--- Travel automation (Settings > Take the guide's flights and binds, off by default): the
+-- Travel automation (Settings > Auto-fly: take the guide's flights and binds, off by default): the
 -- flight master's and innkeeper's gossip options and the step's flight. Alt holds it back, and
 -- nothing happens in combat. The bind's own popup is the player's: accepting or hiding a Blizzard
 -- popup from addon code is blocked ("blocked from an action only available to the Blizzard UI")

@@ -209,19 +209,28 @@ function Q.travelLeg(step, map)
   if cache.learn then return leg(cache.learn), "Learn the " .. short(cache.learn.name) .. " flight path on the way" end
 end
 
--- Standing at the flight master the travel plan starts from (travel automation picks its taxi option).
+-- The zone-hub flight the arrow names when no trip is planned ("Fly to Menethil Harbor": the trip
+-- planner measures the walk as a straight line, over mountains too): the hub and the flight.
+local function arrowHub()
+  local row = Q.current()
+  local spot = row and Q.waypoint(row.step)
+  local map = Q.position()
+  local origin, flight = Q.hubFlight(spot, map)
+  if origin and Q.destination(spot, map) == origin then return origin, flight end
+end
+
+-- Standing at the flight master the arrow leads to, the trip's or the zone hub's (travel automation
+-- picks its taxi option).
 function Q.atPlannedFlightMaster()
-  local trip = cache.plan
-  if not trip then return false end
-  local _, yards = Q.worldVector(trip.origin, Q.position())
+  local origin = cache.plan and cache.plan.origin or arrowHub()
+  if not origin then return false end
+  local _, yards = Q.worldVector(origin, Q.position())
   return yards ~= nil and yards <= Q.arrived() * 2
 end
 
--- The flight the guide wants from this flight map: the current Fly step's, else the best one for
--- the current step from the flight point you stand at (by `seen`, the open flight map's nodes).
-function Q.flightTarget(seen)
-  local fly = Q.flightStep()
-  if fly then return fly.flight end
+-- The best flight for the current step from the flight point you stand at (by `seen`, the open
+-- flight map's nodes), when it is quicker than walking.
+local function quickestFlight(seen)
   load()
   if not nodes or ns.db().noFlightPlans then return end
   local row = Q.current()
@@ -242,6 +251,20 @@ function Q.flightTarget(seen)
     end
   end
   return best and best.name
+end
+
+-- The flight the guide wants from this flight map, the one the arrow names: the current Fly step's,
+-- else the quickest from here, else the zone hub's when this map can reach it.
+function Q.flightTarget(seen)
+  local fly = Q.flightStep()
+  if fly then return fly.flight end
+  local quick = quickestFlight(seen)
+  if quick then return quick end
+  local _, flight = arrowHub()
+  if not flight then return end
+  for name, state in pairs(seen or {}) do
+    if state == "REACHABLE" and Q.plain(name) == flight then return flight end
+  end
 end
 
 -- The flight map: the guide's destination lights up (its node turns yellow inside a pulsing gold

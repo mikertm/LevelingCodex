@@ -326,7 +326,7 @@ local function renderSetup(y)
     "Accept the guide's current quest by itself. Hold Alt to stop it.")
   U.btn("Auto turn-in", 24 + third, y, third, toggle("questAutoTurnin"), db.questAutoTurnin,
     "Turn in the guide's current quest by itself when there's no reward to choose. Hold Alt to stop it.")
-  U.btn("Flights and binds", 32 + 2 * third, y, third, toggle("questAutoTravel"), db.questAutoTravel,
+  U.btn("Auto-fly and bind", 32 + 2 * third, y, third, toggle("questAutoTravel"), db.questAutoTravel,
     "Take the step's flight, and pick the bind option at the step's inn (you accept the bind). Hold Alt to stop it.")
   y = y + 30
   U.btn("Done", 16, y, W - 32, function()
