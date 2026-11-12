@@ -45,21 +45,26 @@ Every Alliance Wetlands quest from `questfacts.py zone Wetlands` with quest leve
 
 - `q(299, "Uncovering the Past", 28, 25)` becomes `q(299, "Uncovering the Past", 28, 24)`, with a comment: QuestieDB says 25, but the game offered it at 24. The 26-30 route is unaffected: it takes 299 at 26 or later.
 
-`QuestAlternateData.lua`, `wetlands-early`, at the dig after the raptor hunt:
+`QuestAlternateData.lua`, `wetlands-early`, at the dig. Steps in route order (new ones in bold):
 
-- The raptor-field grind check is now level 24 (was 22, for The Third Fleet). New text: Ormer's next hunt and the fragments are among level 25-27 raptors; below 24, keep hunting here first, or use Next and pull carefully. The Third Fleet's level 22 is still covered.
-- `finish(294, ormer)`: the text no longer says his next hunt is for later.
-- New steps:
-  1. `accept(295, ormer)`: the Scytheclaws (25-26) and Razormaws (26-27) are in the dig itself.
-  2. `accept(299, whelgar)`: Whelgar is beside Merrin in the cave. New local `whelgar` (38.81, 52.39).
-  3. `objective(299)` at 34.6, 47.5 with four tour `points` (34.6, 45.6; 34.7, 48.3; 34.2, 50.4; 35.2, 51.4), shown with 295's progress. The arrow visits the relic spots in turn. The text warns that Sarltooth (29) roams the south end near 33, 51. The Neru spot at 33.3, 51.4 is left off the tour because Sarltooth stands there.
-  4. `objective(295)` at 33.9, 47.5, shown with 299's progress.
-  5. `finish(299, whelgar)`: his next quest needs a group, so leave it.
-  6. `finish(295, ormer)`: his last hunt, Sarltooth, is for the later chapter.
+1. `accept(294, ormer)`, then `finish(305, merrin)` and `accept(306, merrin)` (unchanged).
+2. **`accept(299, whelgar)`**, on arrival: Whelgar stands beside Merrin in the cave, and the dig lies on the way west to the raptors. New local `whelgar` (38.81, 52.39).
+3. Flagongut's Fossil in the same cave (unchanged).
+4. Ormer's first hunt at the raptor fields now also shows 299's progress. The text says to loot any Ancient Relic or Loose Soil passed on the way through the dig, and that the rest wait for Ormer's next hunt.
+5. The raptor-field grind check is now level 24 (was 22, for The Third Fleet): Ormer's next hunt and the rest of the fragments are among level 25-27 raptors. The Third Fleet's level 22 is still covered.
+6. `finish(294, ormer)`: if Whelgar had no quest on the way in (299 needs level 24), take it from him now.
+7. **`accept(295, ormer)`**: the Scytheclaws (25-26) and Razormaws (26-27) are in the dig itself.
+8. **`objective(299)`** at 34.6, 47.5 for the fragments still needed, with four tour `points` (34.6, 45.6; 34.7, 48.3; 34.2, 50.4; 35.2, 51.4), shown with 295's progress. The arrow visits the relic spots in turn. The text warns that Sarltooth (29) roams the south end near 33, 51. The Neru spot at 33.3, 51.4 is left off the tour because Sarltooth stands there.
+9. **`objective(295)`** at 33.9, 47.5, shown with 299's progress.
+10. **`finish(295, ormer)`**: his last hunt, Sarltooth, is for the later chapter. Ormer is nearer the dig than the cave, so he comes first.
+11. **`finish(299, whelgar)`** in the cave: his next quest needs a group, so leave it. The hearth follows.
+
 - New helper `tour(step, ...)`: sets a step's `points`. This is the first route data to use `points`.
 - Unchanged: the chapter ID, title, levels (20-25), `suggest` list, the hearth leg and the final level 23 check.
 
-Cost: the dig round is about 810 yd of walking (Ormer, the four relic spots, the raptor centre, Whelgar, Ormer), plus about 20 kills of level 25-27 raptors. It adds two quests worth roughly 2,200 XP each at 24 (the screenshot shows 2,266 for 299), so a player who reaches the dig at 24 should leave it at about 25.
+**Order fix (same day, owner's report).** The first version took 299 only after Ormer's first hunt, so a player who had just stood beside Whelgar walked back to the cave for it, and crossed the dig twice without the quest. The pickup now comes on arrival, fragments passed on the way west count, and Ormer's turn-in comes before Whelgar's on the way out.
+
+Cost: the second dig round is about 760 yd of walking (Ormer, the four relic spots, the raptor centre, Ormer, Whelgar), plus about 20 kills of level 25-27 raptors, fewer if fragments came on the first pass. It adds two quests worth roughly 2,200 XP each at 24 (the screenshot shows 2,266 for 299), so a player who reaches the dig at 24 should leave it at about 25.
 
 ## Gaps noticed in the 26-30 route (not changed here)
 
@@ -75,7 +80,7 @@ Cost: the dig round is about 810 yd of walking (Ormer, the four relic spots, the
 
 ## Results
 
-- `tools/questroute.py audit`: passed (5,449 steps). No warnings in `wetlands-early`; the only Wetlands notes are the pre-existing `wetlands` step 8 and 9 distances.
+- `tools/questroute.py audit`: passed (5,449 steps). One new warning: `wetlands-early` step 42, "Uncovering the Past is more than 5 levels above the section's current target". The audit's target level starts at the chapter's 20 and rises only at grind steps, and there is none before the dig. Players reach the dig at 23-24 (the owner was 24), and 299 needs 24, so the warning stays rather than a forced grind before the pickup. The other Wetlands notes are the pre-existing `wetlands` step 8 and 9 distances.
 - `tools/questmobs.py --check`: up to date. 295's creatures come from the quest data.
 - `tests/run.py`: everything passed except `WARRIOR/full/blocked-report`, which also fails on the unchanged files in this worktree. It matches `LevelingCodex/<file>.lua` in the call stack, and a `.claude/worktrees/<name>` checkout has no `LevelingCodex/` folder.
-- New scenario `questWetlandsDig`: a level 24 at the dig with 294 done turns it in, then gets Accept Ormer's Revenge (295), then Accept Uncovering the Past, and the fragment step warns about Sarltooth. It fails on the old chapter.
+- New scenario `questWetlandsDig`, from the owner's screenshot (level 24, 294 and 306 just taken). It checks, in order: Accept Uncovering the Past; the raptor hunt showing the fragments; Turn in Ormer's Revenge; Accept Ormer's Revenge (295); the fragment step with the Sarltooth warning; and Ormer's turn-in before Whelgar's. It fails on the chapter before this pass.
