@@ -380,6 +380,7 @@ local buriedBarrel = wet("Half-buried Barrel", 13.94, 34.81)
 local flagongut = wet("Archaeologist Flagongut", 10.84, 60.43)
 local ormer = wet("Ormer Ironbraid", 38.18, 50.89)
 local merrin = wet("Merrin Rockweaver", 38.91, 52.34)
+local whelgar = wet("Prospector Whelgar", 38.81, 52.39)
 local menethilHearth = { bind = "Menethil Harbor" }
 
 -- The Greenwarden is optional in the 26-30 route (it starts in Menethil, which that route reaches
@@ -395,8 +396,15 @@ local function targets(step, ...)
   return step
 end
 
+-- Spots the arrow visits in turn, for objects scattered over one camp.
+local function tour(step, ...)
+  step.points = { ... }
+  return step
+end
+
 -- Menethil first: the Darkshore chapter's ship lands there, and the town gives every pickup for
--- both coast loops and the one eastern trip. Notes: tools/audits/2026-11-11-wetlands-early.md.
+-- both coast loops and the one eastern trip. Notes: tools/audits/2026-11-11-wetlands-early.md,
+-- tools/audits/2026-11-12-wetlands-early-dig.md (the dig's second round: Ormer and Whelgar).
 chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 25, {
   "https://bindonforever.com/zones/wetlands",
   "https://games.gg/world-of-warcraft/guides/wow-forever-wetlands-leveling-guide/",
@@ -453,8 +461,19 @@ chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 
   part(objective(943, wet("Flagongut's Fossil", 38.9, 52.2), "Pick up Flagongut's Fossil in the same cave.", "Flagongut's Fossil"), 2),
   along(objective(294, wet(nil, 26.3, 46.1), "Go west to the raptor fields. Kill Mottled Raptors and the tougher Screechers.", "10 Mottled Raptors", "10 Mottled Screechers"), 943),
   along(part(objective(943, wet(nil, 26.3, 46.1), "Mottled raptors of any kind can drop the Stone of Relu. Keep hunting until it drops.", "Stone of Relu"), 1), 294),
-  action("grind", wet(nil, 26.3, 46.1), "Fitzsimmons' quest in Menethil needs level 22. If you are below it, keep hunting raptors here.", { level = 22 }),
-  finish(294, ormer, "Return to Ormer. His next hunt is for the later Wetlands chapter."),
+  action("grind", wet(nil, 26.3, 46.1),
+    "Ormer's next hunt and Whelgar's fragments are among level 25-27 raptors in the dig. Below level 24, keep hunting raptors here first, or use Next and pull with care.",
+    { level = 24 }),
+  finish(294, ormer, "Return to Ormer."),
+  accept(295, ormer, "Ormer's next hunt is in the dig itself: Mottled Scytheclaws (25-26) and Razormaws (26-27)."),
+  accept(299, whelgar, "Prospector Whelgar, beside Merrin in the cave, wants four tablet fragments from the same dig."),
+  along(tour(objective(299, wet(nil, 34.6, 47.5),
+    "Search the dig west of the cave: three Ancient Relics and a patch of Loose Soil hold the fragments. Pull the raptors one at a time. Sarltooth, level 29, roams the south end near 33, 51: stay clear of him.",
+    "Ados Fragment", "Modr Fragment", "Golm Fragment", "Neru Fragment"), { 34.6, 45.6 }, { 34.7, 48.3 }, { 34.2, 50.4 }, { 35.2, 51.4 }), 295),
+  along(objective(295, wet(nil, 33.9, 47.5), "Finish the Scytheclaws and Razormaws in the dig. Avoid Sarltooth at the south end.",
+    "10 Mottled Scytheclaws", "10 Mottled Razormaws"), 299),
+  finish(299, whelgar, "Bring the fragments to Whelgar. His next quest needs a group for the Goaz Warder: leave it."),
+  finish(295, ormer, "Return to Ormer. His last hunt, Sarltooth, is for the later Wetlands chapter."),
 
   -- Back in Menethil: the turn-ins and the captain's mead.
   action("hearth", helbrek, "Hearth to Menethil Harbor, or follow the road west.", menethilHearth),
