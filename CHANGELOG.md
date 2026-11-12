@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.20.1
+
+### Fixes
+
+- **No more "LevelingCodex has been blocked from an action only available to the Blizzard UI".** With Settings > Take the guide's flights and binds on, the Codex accepted and closed the "make this inn your home" popup itself. The game doesn't allow that: it showed the blocked message, and later blocked the Spirit Healer's Accept too. The Codex still picks the innkeeper's bind option on a bind step, and now you accept the bind yourself.
+
 ## v0.20.0
 
 ### Quest guide: flights and dungeons
