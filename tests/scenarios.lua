@@ -1706,6 +1706,38 @@ function S.questWarriorFangsNotTaken()
     "without Fire Hardened Mail in the log there is no fang step")
 end
 
+-- Class objectives the route passes (from the class quest audit): shown only to the class, only
+-- while the quest is in the log. One check per faction, run as that class.
+local function routeAt(race, level, map, x, y, log)
+  MOCK.race, MOCK.level, MOCK.questLog = race, level, log
+  MOCK.questMap, MOCK.questX, MOCK.questY = map, x, y
+  S.login()
+  slash("quests")
+  click(win(), "Show all steps")
+end
+
+function S.questClassAlongDruid() -- run as a Druid
+  routeAt("NightElf", 16, 1439, 47.0, 14.0, { { questID = 272, objectives = { { text = "Pendant of the Sea Lion: 0/1" } } } })
+  check(questText(win(), "Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
+end
+
+function S.questClassAlongDruidNotTaken() -- run as a Druid
+  routeAt("NightElf", 16, 1439, 47.0, 14.0, {})
+  check(questText(win(), "Darkshore") and not questText(win(), "Trial of the Sea Lion"), "no lockbox stop without the quest")
+end
+
+function S.questClassAlongShaman() -- run as a Shaman
+  MOCK.faction = "Horde"
+  routeAt("Orc", 13, 1413, 52.0, 30.0, { { questID = 1525, objectives = { { text = "Fire Tar: 0/1" }, { text = "Reagent Pouch: 0/1" } } } })
+  check(questText(win(), "Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
+end
+
+function S.questClassAlongShamanNotTaken() -- run as a Shaman
+  MOCK.faction = "Horde"
+  routeAt("Orc", 13, 1413, 52.0, 30.0, {})
+  check(questText(win(), "Crossroads") and not questText(win(), "Complete - Call of Fire"), "no Fire Tar step without the quest")
+end
+
 -- Reported in game: with Show optional quests on, the step window said "Turn in - Unrequited Love"
 -- (Hollee's note, carried from Darkshore) to a player who never took it.
 function S.questCarriedTurninNotTaken()

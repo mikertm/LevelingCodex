@@ -79,6 +79,8 @@ From level 10 up, these class objectives live only in our class guides. The rout
 
 Each needs the same check as the fangs before it goes in: QuestieDB drops or spawns for the objective, and the route section that passes the spot.
 
+**Status:** the owner asked to add them. 19 steps went in and 5 were skipped; see `2026-11-11-class-pairings.md`.
+
 ## Errors in the other add-ons (don't copy)
 
 - **RestedXP:**

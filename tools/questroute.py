@@ -172,6 +172,11 @@ def audit(data, ref, cap=20):
                 for key in ("optional", "forever", "logOnly"):
                     if key in step and type(step[key]) is not bool:
                         fail(where, f"{key} must be a boolean")
+                # A logOnly step is a class objective the route passes: it must be one class's quest work,
+                # or it would show for every class that happens to have the quest.
+                if step.get("logOnly") and not (step["type"] in {"complete", "turnin", "goto"} and step.get("quest")
+                                                and step.get("class")):
+                    fail(where, "a logOnly step must be a class quest's objective, hand-in or stop (complete, turnin or goto; quest; class)")
                 for key in ("class", "race"):
                     value = step.get(key)
                     if value is not None and not (ascii_text(value) or isinstance(value, list) and all(map(ascii_text, value))):
