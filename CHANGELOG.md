@@ -1,12 +1,6 @@
 # Leveling Codex
 
-## Unreleased
-
-### Alliance quest guide
-
-- **Warriors: Fire Hardened Mail's fangs at Thelgen Rock.** The Leech and Cave Stalkers you kill for Alchemical Hazards' gland also drop the 50 Scorched Spider Fangs, so with Fire Hardened Mail in your log the Wetlands guides add a step to collect them there. Other classes, and Warriors without the quest, don't see it.
-- **Class quests on the way.** Where the route already passes a class objective, your class now gets a step for it while the quest is in your log: Shaman reagents and waterskins (Dwarf and Horde), Druid pendant halves, Cliffspring sample, Lunar Fungus and Lunaclaw, Rogue lockboxes, Klaven's Tower, Sethir and the Southsea treasure, Warlock Surena and the Heartswood, and Horde Warrior scales and antennae. Other classes, and players without the quest, don't see them.
-- Fixed: with Settings > Show optional quests on, the step window could ask you to turn in a quest you never took, such as Unrequited Love (Hollee's note from Darkshore) in Menethil. Optional turn-ins and objectives now show only while the quest is in your log.
+## v0.20.0
 
 ### Quest guide: flights and dungeons
 
@@ -35,6 +29,12 @@
 - **Why a step was skipped.** Hovering a step in the route list says why it isn't the current one: turned in, passed with Next, grey for your level, the follow-up already started, or needed for a later quest.
 - **Hearthstone cooldown.** A hearth step says when your hearthstone will be ready, and the arrow leads you by road or flight while it's on cooldown.
 - **More kinds of steps** for the guides: collecting or buying items (done when your bags hold them), abandoning a quest, goals to pick up on the way, waypoints that loop through a spread-out area or lead to the nearest of several spots, and steps that only apply below a level, with a profession, or depending on another quest.
+
+### Alliance quest guide
+
+- **Warriors: Fire Hardened Mail's fangs at Thelgen Rock.** The Leech and Cave Stalkers you kill for Alchemical Hazards' gland also drop the 50 Scorched Spider Fangs, so with Fire Hardened Mail in your log the Wetlands guides add a step to collect them there. Other classes, and Warriors without the quest, don't see it.
+- **Class quests on the way.** Where the route already passes a class objective, your class now gets a step for it while the quest is in your log: Shaman reagents and waterskins (Dwarf and Horde), Druid pendant halves, Cliffspring sample, Lunar Fungus and Lunaclaw, Rogue lockboxes, Klaven's Tower, Sethir and the Southsea treasure, Warlock Surena and the Heartswood, and Horde Warrior scales and antennae. Other classes, and players without the quest, don't see them.
+- Fixed: with Settings > Show optional quests on, the step window could ask you to turn in a quest you never took, such as Unrequited Love (Hollee's note from Darkshore) in Menethil. Optional turn-ins and objectives now show only while the quest is in your log.
 
 ## v0.19.0
 
