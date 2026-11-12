@@ -1891,6 +1891,31 @@ function S.questWetlandsEarly()
   check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
 end
 
+function S.questWetlandsDig()
+  -- In game (2026-11-12) Prospector Whelgar offered Uncovering the Past to a level 24 at the dig,
+  -- and the 20-25 chapter went straight from Ormer's first hunt to the hearth. Now Ormer's second
+  -- hunt and the fragments follow, and the fragment step tours the dig.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 24, 1437, 38.2, 50.9
+  for _, id in ipairs({ 463, 276, 277, 98282, 470, 98197, 279, 484, 281, 284, 285, 286, 98189, 305 }) do
+    MOCK.questDone[id] = true
+  end
+  MOCK.questLog = { { questID = 294, isComplete = true }, { questID = 306 } }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Levels 20-25") and questText(frame, "Turn in - Ormer's Revenge"),
+    "a level 24 at the dig with Ormer's raptors done turns them in: " .. allText(frame))
+  MOCK.questDone[294], MOCK.questLog = true, { { questID = 306 } }
+  MOCK.event("QUEST_TURNED_IN", 294)
+  check(questText(frame, "Accept - Ormer's Revenge"), "Ormer's second hunt follows the first: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 295 }
+  MOCK.event("QUEST_ACCEPTED", 2, 295)
+  check(questText(frame, "Accept - Uncovering the Past"), "Whelgar's fragments follow: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 299 }
+  MOCK.event("QUEST_ACCEPTED", 3, 299)
+  check(questText(frame, "Uncovering the Past") and questText(frame, "Sarltooth"),
+    "the fragment step warns about Sarltooth: " .. allText(frame))
+end
+
 function S.questWetlandsEnd()
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris after the Stormwind turn-ins.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
