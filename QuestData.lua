@@ -460,6 +460,10 @@ q(92819, "Destruction in Deadmines", 18, 9, 92753, true)
 q(92909, "Harvesting the Harvesters", 15, 9, nil, true)
 q(103, "Keeper of the Flame", 16, 10)
 q(104, "The Coastal Menace", 20, 15)
+-- Baros Alexston's compass (Stormwind, Alexston Farmstead, Stormwind): optional, like the library errand
+-- it is handed in beside (tools/audits/2026-11-12-alliance-westfall-redridge.md).
+q(399, "Humble Beginnings", 15, 10)
+quest[399].optional = true
 
 q(244, "Encroaching Gnolls", 16, 11)
 q(246, "Assessing the Threat", 17, 11, 244)
@@ -693,6 +697,8 @@ local west = {
   taxi("fly", dungar, "Stormwind, Elwynn", "Take Thor's gryphon to Stormwind. If the route is unavailable, walk through Goldshire to the city."),
   finish(6281, osric), accept(6261, osric),
   finish(135, shaw, "Find Shaw upstairs in the SI:7 building in Old Town."), accept(141, shaw),
+  accept(399, sw("Baros Alexston", 57.74, 47.86),
+    "Optional: Baros Alexston in Cathedral Square, on the way north to the Dwarven District, wants the compass he left at his Westfall farmstead."),
   finish(92748, sprite), accept(92749, sprite),
   objectiveAt(92749, sprite, "Bring Sprite 10 Coarse Dynamite from a crafter or the auction house. Use Next to pass this chain if you cannot get it.", "10 Coarse Dynamite"),
   finish(92749, sprite), accept(92750, sprite), finish(92750, jasper), accept(92751, jasper),
@@ -704,7 +710,7 @@ local west = {
   taxi("fly", thor, "Sentinel Hill, Westfall", "Fly back to Sentinel Hill or hearth there."),
   finish(6285, lewis), finish(141, gryan), accept(142, gryan),
   finish(92752, alba), accept(92753, alba),
-  objectiveAt(142, wf(nil, 44.5, 69.6), "Intercept the Defias Messenger along the road from Moonbrook to Jangolode Mine and loot his message.", "A Mysterious Message"),
+  objectiveAt(142, wf(nil, 44.5, 69.6), "Intercept the Defias Messenger along the road from Moonbrook to Jangolode Mine and loot his message. Short of the 5 Flasks of Oil for the lighthouse? The Harvest Golems just east of here drop them.", "A Mysterious Message"),
   action("goto", wf("Captain Grayson", 30.01, 86.02), "Follow the road south-west from Moonbrook to the Westfall Lighthouse on the coast."),
   accept(103, wf("Captain Grayson", 30.01, 86.02)), accept(104, wf("Captain Grayson", 30.01, 86.02)),
   objectiveAt(103, wf(nil, 46.9, 67.2), "If you kept 5 Flasks of Oil from the fields, this is already done. Otherwise kill Harvest Golems in the fields east of Moonbrook.",
@@ -712,6 +718,8 @@ local west = {
   objectiveAt(104, wf("Old Murk-Eye", 29.3, 76), "Old Murk-Eye, a large grey murloc, walks the beach north of the lighthouse. Pull him away from the other murlocs.",
     "Scale of Old Murk-Eye"),
   finish(103, wf("Captain Grayson", 30.01, 86.02)), finish(104, wf("Captain Grayson", 30.01, 86.02)),
+  objectiveAt(399, wf("Alexston's Chest", 36.2, 54.5), "On the way back to Sentinel Hill, search Alexston's Chest in the farmhouse at Alexston Farmstead for Baros's compass.",
+    "A Simple Compass"),
   action("goto", gryan, "Follow the road north-east back to Sentinel Hill."),
   finish(142, gryan), accept(155, traitor),
   objectiveAt(155, traitor, "Stay with the Defias Traitor from the tower to Moonbrook. Protect him until the escort gets credit.", "Defias hideout found"),
@@ -742,17 +750,20 @@ local west = {
 
 local lakeshire = {
   taxi("getfp", ariena, "Lakeshire, Redridge", "Talk to Ariena on the south side of the bridge to learn the Lakeshire flight path."),
+  accept(98407, feldon, "Deputy Feldon stands beside the gryphon master. His Thrashers camp by the west road you take to Guard Parker later."),
   action("sethearth", rr("Innkeeper Brianna", 22.0, 44.5), "Bind your hearthstone with Innkeeper Brianna in Lakeshire.", { bind = "Lakeshire" }),
   accept(129, darcy), accept(92, breanna), accept(127, baren),
+  accept(120, solomon), accept(118, verner), accept(125, oslow),
   accept(3741, rr("Shawn", 24.23, 53.64)),
-  accept(125, oslow), accept(118, verner), accept(120, solomon),
+  along(objectiveAt(98407, rr(nil, 10.5, 64.6),
+    "Cross the bridge and follow the west road. Loot Spiked Collars from the Redridge Thrashers in the gnoll camp just north of the road, and spider meat from any tarantulas you pass.",
+    "5 Spiked Collars"), 92),
   finish(129, parker), accept(130, parker), accept(244, parker),
-  finish(244, feldon), accept(246, feldon), accept(98407, feldon),
-  along(objectiveAt(246, rr(nil, 10.7, 63.2), "Clear the southwest gnoll camps for Mongrels and Poachers. Loot collars from Thrashers in the same camps.",
-    "10 Redridge Mongrels", "6 Redridge Poachers"), 98407),
-  along(objectiveAt(98407, rr(nil, 10.7, 63.2), "Loot any remaining Spiked Collars from Thrashers in the same camps.",
-    "5 Spiked Collars"), 246),
-  finish(246, feldon), finish(98407, feldon),
+  finish(244, feldon), finish(98407, feldon), accept(246, feldon),
+  along(objectiveAt(246, rr(nil, 26.5, 82.5),
+    "Head south from Feldon into the hills. Kill Mongrels and Poachers at the gnoll camp there; a few more stand to the east around 37.6, 72. Loot Great Goretusk snouts on the way.",
+    "10 Redridge Mongrels", "6 Redridge Poachers"), 92),
+  finish(246, feldon),
   finish(130, martie), accept(131, martie), finish(131, darcy),
   along(objectiveAt(3741, rr(nil, 33, 54.5), "Check Glinting Mud for Hilary's necklace. Look for the toolbox farther east and loot fish from murlocs you pass.",
     "Hilary's Necklace"), 125, 127),
@@ -760,12 +771,14 @@ local lakeshire = {
     "Oslow's Toolbox"), 3741, 127),
   along(objectiveAt(127, rr(nil, 42, 53.8), "Loot any remaining Spotted Sunfish from the Lake Everstill murlocs.",
     "10 Spotted Sunfish"), 3741, 125),
-  finish(3741, rr("Hilary", 24.15, 53.63)), finish(125, oslow), accept(89, oslow), finish(127, baren),
-  action("goto", argus, "Follow the west road to Goldshire. Stop at the smithy on the way to Stormwind."),
+  finish(125, oslow), accept(89, oslow), finish(127, baren),
+  finish(3741, rr("Hilary", 24.15, 53.63), "Turn in to Hilary by the bridge, on your way out of town."),
+  action("goto", argus, "Cross the bridge and follow the west road to Goldshire. Stop at the smithy on the way to Stormwind."),
   finish(118, argus), accept(119, argus),
   action("goto", marcus, "Continue to Stormwind's front gate and find General Marcus Jonathan."),
   finish(120, marcus), accept(121, marcus),
   accept(97234, sw("Roy Lewells", 38.84, 62.35), "Optional city errand: Roy Lewells in the Cathedral park has a parcel of reading material for the library."),
+  finish(399, sw("Baros Alexston", 57.74, 47.86), "Bring the compass to Baros Alexston in Cathedral Square, on the way to the library."),
   finish(97234, sw("Donyal Tovald", 75.05, 30.12), "Take the parcel to Donyal Tovald in the library north of the Dwarven District."),
   accept(97237, sw("Donyal Tovald", 75.05, 30.12)),
   objectiveAt(97237, sw(nil, 76.0, 30.5), "Pick the four books off the shelves around the library rooms.",
