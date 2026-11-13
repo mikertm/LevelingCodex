@@ -484,7 +484,14 @@ local function paintCorpse(corpse)
   end
 end
 
+-- What the arrow leads to, for the minimap (QuestMap.lua): { spot, step, kind = "step" / "spawn" /
+-- "leg" / "corpse", caption, key }, or nil (no step, in flight, the window hidden). Kept up to date
+-- with the arrow turned off too.
+local arrowGoal
+function ns.questArrowGoal() return arrowGoal end
+
 local function paintArrow()
+  arrowGoal = nil
   if not viewer or not viewer:IsShown() then
     if arrow then arrow:Hide() end
     return
@@ -492,18 +499,26 @@ local function paintArrow()
   local row = Q.current()
   local goal = row and row.step
   arrowBearing = nil
-  local corpse = not ns.db().noQuestArrow and Q.corpse()
+  local off = ns.db().noQuestArrow
+  local corpse = Q.corpse()
   if corpse then
-    paintCorpse(corpse)
+    arrowGoal = { spot = corpse, step = CORPSE, kind = "corpse", caption = "Your corpse", key = "corpse" }
+    if off then
+      leave()
+      arrow:Hide()
+    else
+      paintCorpse(corpse)
+    end
     return
   end
-  if ns.db().noQuestArrow or not goal then
+  if not goal then
     leave()
     arrow:Hide()
     return
   end
   if Q.inFlight() then
     leave()
+    if off then arrow:Hide(); return end
     arrow:Show()
     arrowArt:Hide()
     arrowText:SetText(flightText())
@@ -514,13 +529,23 @@ local function paintArrow()
     arrow:Hide()
     return
   end
-  arrow:Show()
   local map, x, y = Q.position()
   local spot, point, count, kind = Q.waypoint(goal)
   local step, travel = Q.destination(spot, map)
   -- QuestieDB's nearest spawn leads the last mile of a kill or collect step (QuestieSupport.lua).
   local spawn, spawnName
   if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
+  local key = row.key .. ":" .. tostring(point or "")
+  if spawn or step then
+    arrowGoal = { spot = spawn or step, step = goal, kind = spawn and "spawn" or travel and "leg" or "step",
+      caption = spawnName or travel, key = spawn and (key .. ":" .. spawnName) or key }
+  end
+  if off then
+    leave()
+    arrow:Hide()
+    return
+  end
+  arrow:Show()
   local bearing, yards = Q.vector(spawn or step, map, x, y)
   -- A flight master or flight path on the way can be across a zone border.
   if not bearing and not spawn and step and (step.leg or step.world or Q.continentMap(map)) then
@@ -528,7 +553,6 @@ local function paintArrow()
   end
   local which = point and not travel and (" (" .. kind .. " " .. point .. " of " .. count .. ")") or ""
   arrowArt:Hide()
-  local key = row.key .. ":" .. tostring(point or "")
   if spawn and yards and yards <= Q.arrived() then
     arrive(key .. ":" .. spawnName, goal, spawnName .. " nearby")
     return

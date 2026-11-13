@@ -756,6 +756,15 @@ function S.minimapPins()
     return n
   end
   check(dots() > 0, "a dotted line leads to the step")
+  local pinSets, dotSets = pins.current._pointSets, pins.dots[1]._pointSets
+  MOCK.advance(1)
+  check(pins.current._pointSets == pinSets and pins.dots[1]._pointSets == dotSets,
+    "standing still, nothing on the minimap is moved again")
+  MOCK.questY = 47.5
+  MOCK.advance(0.2)
+  check(pins.current._pointSets > pinSets, "moving moves the pins")
+  MOCK.questY = 47.94
+  MOCK.advance(0.2)
   MOCK.cvars = { rotateMinimap = "1" }
   MOCK.facing = math.pi / 2 -- facing west: north is to the right
   MOCK.advance(0.2)
@@ -786,6 +795,81 @@ function S.minimapPins()
   check(not pins:IsShown(), "and the pins")
 end
 
+-- Minimap route: past the current step the dots go on, fainter, through the next steps; they fade
+-- toward the rim and stop on arrival, where the pin pulses; pins name their step on hover and let
+-- clicks through; next steps off the minimap wait on the rim; a ghost's line leads to the corpse.
+function S.minimapRoute()
+  S.login()
+  if MOCK.minimal then return end
+  local pins = _G.LevelingCodexMinimapPins
+  local function shown(list)
+    local out = {}
+    for _, d in ipairs(list or {}) do if d:IsShown() then out[#out + 1] = d end end
+    return out
+  end
+  local function brightest(list, from, to)
+    local a = 0
+    for i = from, to do if list[i] then a = math.max(a, list[i]:GetAlpha() or 0) end end
+    return a
+  end
+  local function tooltipHas(text)
+    for _, line in ipairs(GameTooltip._lines or {}) do
+      if type(line) == "string" and line:find(text, 1, true) then return true end
+    end
+    return false
+  end
+  -- 100 yd across half the minimap: Deputy Willem 46 yd north (32 px), then Marshal McBride
+  -- about 28 px further on, then Willem again.
+  MOCK.viewRadius = 100
+  MOCK.questX, MOCK.questY = 48.17, 44.94
+  MOCK.advance(0.3)
+  local line, ahead = shown(pins.dots), shown(pins.ahead)
+  check(#line > 0 and #ahead > 0, "the dots go on past the current step (" .. #line .. " then " .. #ahead .. ")")
+  check(brightest(ahead, 1, #ahead) < line[1]:GetAlpha() and brightest(ahead, 1, #ahead) < line[#line]:GetAlpha(),
+    "fainter past the current step")
+
+  -- Willem 116 yd north is off the minimap: the line runs to the rim and fades out there.
+  MOCK.questY = 47.94
+  MOCK.advance(0.3)
+  line = shown(pins.dots)
+  check(#line >= 5 and line[#line]:GetAlpha() < 0.6 * brightest(line, 1, #line - 2),
+    "the line fades out toward the rim")
+
+  -- At the step (30 yd out, inside the 35 yd arrival; 52 px at 40 yd across, room for a line):
+  -- no line, and the pin pulses its ring once.
+  MOCK.viewRadius, MOCK.questY = 40, 44.24
+  MOCK.advance(0.3)
+  check(#shown(pins.dots) == 0, "on arrival the line stops")
+  check(pins.current:IsShown() and pins.current.pulse and pins.current.pulse:IsPlaying(), "and the pin pulses")
+  MOCK.advance(1)
+  check(not pins.current.pulse:IsPlaying(), "once")
+
+  MOCK.fire(pins.current, "OnEnter")
+  check(tooltipHas("A Threat Within") and tooltipHas(" yd"), "hovering a pin names its step and how far it is")
+  MOCK.fire(pins.current, "OnLeave")
+  check(pins.current._mouseClick == false and pins.current._mouseMotion == true, "clicks go through to the minimap")
+
+  -- 20 yd across: Marshal McBride, 66 yd away, waits on the rim, faded.
+  MOCK.viewRadius = 20
+  MOCK.advance(0.3)
+  local n = pins.next[1]
+  local _, _, _, x, y = n:GetPoint()
+  check(n:IsShown() and math.abs(math.sqrt(x * x + y * y) - 66.5) < 0.6 and n:GetAlpha() < 0.6,
+    "a next step off the minimap waits on its rim, faded")
+  MOCK.fire(n, "OnEnter")
+  check(tooltipHas("Marshal McBride") or tooltipHas("A Threat Within"), "and names its step on hover")
+  MOCK.fire(n, "OnLeave")
+
+  -- A ghost: the pin and the line lead to the corpse, 46 yd east, with no route ahead.
+  MOCK.viewRadius = 100
+  MOCK.ghost, MOCK.corpse = true, { 1429, 49.5, 44.24 }
+  MOCK.advance(0.5)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(x > 20 and math.abs(y) < 1, "as a ghost the minimap leads to your corpse (" .. x .. ", " .. y .. ")")
+  check(#shown(pins.ahead) == 0, "with no route ahead")
+  MOCK.ghost = false
+end
+
 -- World map: numbered pins for the current and next steps on the map the world map shows.
 function S.worldMapPins()
   S.login()
@@ -797,6 +881,16 @@ function S.worldMapPins()
   local _, _, _, x, y = pins.current:GetPoint()
   check(math.abs(x - 482.66) < 1 and math.abs(y + 286.84) < 1, "at the step's spot on the map")
   check(pins.next[1]:IsShown(), "the next step gets a numbered pin")
+  -- Zoomed in, the canvas is drawn twice as large: the pins keep their size and stay on their spot.
+  MOCK.canvasScale = 2
+  MOCK.advance(0.1)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(pins.current:GetScale() - 0.5) < 0.001 and math.abs(x - 965.32) < 2 and math.abs(y + 573.68) < 2,
+    "zooming the map keeps the pins' size and spot (scale " .. tostring(pins.current:GetScale()) .. ", x " .. x .. ")")
+  MOCK.canvasScale = nil
+  MOCK.advance(0.1)
+  _, _, _, x = pins.current:GetPoint()
+  check(math.abs(pins.current:GetScale() - 1) < 0.001 and math.abs(x - 482.66) < 1, "zooming back out")
   MOCK.fire(pins.current, "OnEnter")
   check(GameTooltip._lines[1] and GameTooltip._lines[1]:find("A Threat Within", 1, true), "hovering names the step")
   MOCK.fire(pins.current, "OnLeave")
@@ -1204,6 +1298,9 @@ function S.questFlightPlan()
   walkTo(1436, 56.0, 50.0)
   check(arrowSays("Fly to Lakeshire from Sentinel Hill") and arrowSays(" yd"),
     "a long trip leads to the flight master with its distance: " .. arrowCaption())
+  local mini = _G.LevelingCodexMinimapPins
+  check(mini and mini:IsShown() and mini.current:IsShown() and mini.current.icon
+    and mini.current.icon._path == "Interface\\GossipFrame\\TaxiGossipIcon", "the minimap leads to the flight master too")
   -- Reported from the game: Forever hides your speed from addons at times (a secret value), and
   -- math on it was blocked 374 times. The trip is planned at walking speed then.
   MOCK.runSpeed = MOCK.SECRET

@@ -69,18 +69,27 @@ end
 M.paintIcon = paintIcon
 
 ----------------------------------------------------------------------------
--- Minimap: the current step's pin (an edge arrow when it's off the minimap), the next two steps'
--- small numbered pins, and gold dots drifting from you toward the current step. Positions are the
--- step's east/north yards from you times pixels per yard (half the minimap / its view radius),
--- turned with you when the minimap rotates.
+-- Minimap: where the arrow leads (the step, QuestieDB's nearest spawn, a flight master on a trip,
+-- your corpse) gets a pin, or an edge arrow on the rim while it's off the minimap; the next two
+-- steps get small numbered pins (faded on the rim while they're off it). Gold dots run from you to
+-- the pin and, fainter, on through the next steps; they fade toward the rim and stop once you're
+-- there, where the pin's ring pulses once. Hovering a pin names it; clicks go through to the
+-- minimap. Positions are east/north yards from you times pixels per yard (half the minimap / its
+-- view radius), turned with you when the minimap rotates. Nothing moves while you stand still: a
+-- soft glow runs along the dots toward the step instead.
 ----------------------------------------------------------------------------
 
 local OUTDOOR = { 466.67, 400, 333.33, 266.67, 200, 133.33 } -- view diameters in yards by zoom 0-5
 local INDOOR = { 300, 240, 180, 120, 80, 50 }
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
-local DOTS, DOT_GAP, DOT_START = 40, 10, 8
+local DOTS, AHEAD = 24, 48 -- dot pools: you to the pin, and on through the next steps
+local DOT_GAP, DOT_START, FADE = 10, 8, 20 -- px between dots, clear of you, fade-out before the rim
+local LINE_ALPHA, AHEAD_ALPHA, DIM = 0.85, 0.45, 0.6
+local FLIGHT, SPOT = { type = "fly" }, { type = "spot" } -- icons for a trip's flight master, a road
 local pins
-local targets = {} -- { step, n } : the current step first (n = nil), then the next ones (n = 1, 2)
+local nexts, nextsKey = {}, "" -- the next steps with a spot ({ step, spot, n }), from the last refresh
+local layoutKey, iconFor, pulsedKey, glowStep
+local lit = {} -- the shown dots in route order: { texture, alpha before the glow }
 local since = 0
 
 local function viewRadius()
@@ -110,12 +119,45 @@ local function screenOffset(angle, pixels)
   return math.sin(angle) * pixels, math.cos(angle) * pixels
 end
 
+-- How far out a spot is: to the rim of a round minimap, or the edge of a square one.
+local function reach(x, y, square)
+  return square and math.max(math.abs(x), math.abs(y)) or math.sqrt(x * x + y * y)
+end
+
 -- Pulled back onto the minimap's rim (a round one) or edge (a square one) when it's outside.
 local function clamp(x, y, half, square)
   local limit = half * 0.95
-  local reach = square and math.max(math.abs(x), math.abs(y)) or math.sqrt(x * x + y * y)
-  if reach > limit then return x * limit / reach, y * limit / reach, true end
+  local r = reach(x, y, square)
+  if r > limit then return x * limit / r, y * limit / r, true end
   return x, y, false
+end
+
+local function tip(self)
+  local info = self.info
+  if not (GameTooltip and info) then return end
+  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+  GameTooltip:SetText(info.title)
+  if info.sub then GameTooltip:AddLine(info.sub, 1, 1, 1, true) end
+  if info.yards then GameTooltip:AddLine(math.floor(info.yards + 0.5) .. " yd away", 0.8, 0.8, 0.8) end
+  GameTooltip:Show()
+end
+
+-- A pin: an icon that names its step on hover and lets clicks through to the minimap (where the
+-- client can't split the two, no tooltip: the pin must not eat the minimap's clicks).
+local function pinFrame(size, level)
+  local f = CreateFrame("Frame", nil, pins)
+  f:SetSize(size, size)
+  f:SetFrameLevel(pins:GetFrameLevel() + level)
+  f.icon = f:CreateTexture(nil, "OVERLAY")
+  f.icon:SetPoint("CENTER")
+  if type(f.SetMouseClickEnabled) == "function" and type(f.SetMouseMotionEnabled) == "function" then
+    f:SetMouseMotionEnabled(true)
+    f:SetMouseClickEnabled(false)
+    f:SetScript("OnEnter", tip)
+    f:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  end
+  f:Hide()
+  return f
 end
 
 local function makePins()
@@ -123,90 +165,203 @@ local function makePins()
   pins:SetAllPoints(Minimap)
   pins:SetFrameLevel((tonumber(Minimap:GetFrameLevel()) or 1) + 5)
   pins:Hide()
-  pins.dots = {}
-  for i = 1, DOTS do
-    local d = pins:CreateTexture(nil, "ARTWORK")
-    d:SetSize(3, 3)
-    d:SetColorTexture(1, 0.82, 0, 0.7)
-    d:Hide()
-    pins.dots[i] = d
+  local function pool(count, size)
+    local list = {}
+    for i = 1, count do
+      local d = pins:CreateTexture(nil, "ARTWORK")
+      d:SetSize(size, size)
+      d:SetColorTexture(1, 0.82, 0, 1)
+      d:Hide()
+      list[i] = d
+    end
+    return list
   end
+  pins.dots, pins.ahead = pool(DOTS, 3), pool(AHEAD, 2)
   pins.next = {}
   for i = 1, 2 do
-    local t = pins:CreateTexture(nil, "OVERLAY")
-    t:SetAlpha(0.6)
-    t:Hide()
-    t.label = pins:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    t.label:SetPoint("TOPLEFT", t, "BOTTOMRIGHT", -3, 4)
-    t.label:SetText(tostring(i))
-    t.label:Hide()
-    pins.next[i] = t
+    local f = pinFrame(10, 1)
+    f.label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.label:SetPoint("TOPLEFT", f, "BOTTOMRIGHT", -3, 4)
+    f.label:SetText(tostring(i))
+    pins.next[i] = f
   end
-  pins.current = pins:CreateTexture(nil, "OVERLAY", nil, 2)
-  pins.current:Hide()
-  pins.edge = pins:CreateTexture(nil, "OVERLAY", nil, 3)
-  pins.edge:SetSize(14, 14)
-  pins.edge:Hide()
+  local c = pinFrame(16, 3)
+  pins.current = c
+  -- arrival: the same gold ring as the arrow's, pulsing once
+  c.ring = c:CreateTexture(nil, "BACKGROUND")
+  c.ring:SetSize(32, 32)
+  c.ring:SetPoint("CENTER")
+  c.ring:Hide()
+  if ns.art.hasFile(ICONS.spot) and type(c.ring.CreateAnimationGroup) == "function" then
+    c.ring:SetTexture(ICONS.spot)
+    Q.try(c.ring.SetBlendMode, c.ring, "ADD")
+    c.ring:SetVertexColor(1, 0.82, 0.25)
+    c.pulse = c.ring:CreateAnimationGroup()
+    local grow = c.pulse:CreateAnimation("Scale")
+    if type(grow.SetScaleFrom) == "function" then
+      Q.try(grow.SetScaleFrom, grow, 0.6, 0.6)
+      Q.try(grow.SetScaleTo, grow, 1.6, 1.6)
+    else
+      Q.try(grow.SetScale, grow, 1.6, 1.6)
+    end
+    grow:SetDuration(0.6)
+    local fade = c.pulse:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.6)
+    c.pulse:SetScript("OnFinished", function() c.ring:Hide() end)
+  end
+  pins.edge = pinFrame(14, 3)
+  pins.edge.icon:SetSize(14, 14)
   pins.edgeArt = ns.art.hasFile(ARROW_TEXTURE)
-  if pins.edgeArt then pins.edge:SetTexture(ARROW_TEXTURE) else pins.edge:SetColorTexture(1, 0.82, 0, 1) end
+  if pins.edgeArt then pins.edge.icon:SetTexture(ARROW_TEXTURE) else pins.edge.icon:SetColorTexture(1, 0.82, 0, 1) end
 end
 
 local function hideAll()
   pins.current:Hide()
   pins.edge:Hide()
-  for _, t in ipairs(pins.next) do t:Hide(); t.label:Hide() end
+  for _, f in ipairs(pins.next) do f:Hide() end
   for _, d in ipairs(pins.dots) do d:Hide() end
+  for _, d in ipairs(pins.ahead) do d:Hide() end
+  lit = {}
 end
 
-local function place(tex, x, y)
-  tex:ClearAllPoints()
-  tex:SetPoint("CENTER", Minimap, "CENTER", x, y)
-  tex:Show()
+local function place(region, x, y)
+  region:ClearAllPoints()
+  region:SetPoint("CENTER", Minimap, "CENTER", x, y)
+  region:Show()
 end
 
-local function drawLine(x, y, reach)
-  local nx, ny = x / reach, y / reach
-  local phase = ((tonumber(GetTime()) or 0) * DOT_GAP) % DOT_GAP
-  local n = 0
-  local r = DOT_START + phase
-  while r < reach - 6 and n < DOTS do
-    n = n + 1
-    place(pins.dots[n], nx * r, ny * r)
+-- Dots from (x1, y1) to (x2, y2), `skip1` / `skip2` px clear of the ends, from `pool` after its
+-- first `used`; each fades out over the last FADE px before the rim. Returns how many are used.
+local function dotted(pool, used, x1, y1, x2, y2, skip1, skip2, alpha, limit, square)
+  local dx, dy = x2 - x1, y2 - y1
+  local len = math.sqrt(dx * dx + dy * dy)
+  local r = skip1
+  while r < len - skip2 and used < #pool do
+    local x, y = x1 + dx * r / len, y1 + dy * r / len
+    local f = math.min(1, (limit - reach(x, y, square)) / FADE)
+    if f > 0.05 then
+      used = used + 1
+      place(pool[used], x, y)
+      lit[#lit + 1] = { pool[used], alpha * f }
+    end
     r = r + DOT_GAP
+  end
+  return used
+end
+
+-- The glow: every fourth dot is bright, stepping toward the step six times a second. Only the
+-- dots' alpha changes, so standing still moves nothing.
+local function glow(force)
+  local step = math.floor((tonumber(GetTime()) or 0) * 6)
+  if step == glowStep and not force then return end
+  glowStep = step
+  for i, entry in ipairs(lit) do
+    entry[1]:SetAlpha(entry[2] * ((i - step) % 4 == 0 and 1 or DIM))
+  end
+end
+
+-- The icon for what the arrow leads to: the step's own, a flight master's on a flight trip.
+local function goalIcon(goal)
+  if goal.kind == "corpse" then return SPOT end
+  if goal.kind == "leg" then
+    local caption = type(goal.caption) == "string" and goal.caption or ""
+    return (caption:find("^Fly") or caption:find("^Learn")) and FLIGHT or SPOT
+  end
+  return goal.step
+end
+
+local function goalInfo(goal, yards)
+  local caption = type(goal.caption) == "string" and Q.plain(goal.caption):gsub("\n.*", "") or nil
+  if goal.kind == "corpse" then return { title = "Your corpse", yards = yards } end
+  local label = Q.plain(Q.label(goal.step))
+  if goal.kind == "step" or not caption then return { title = label, yards = yards } end
+  return { title = caption, sub = (goal.kind == "leg" and "For: " or "") .. label, yards = yards }
+end
+
+local function pulse(key)
+  if pulsedKey == key then return end
+  pulsedKey = key
+  local c = pins.current
+  if c.pulse then
+    c.pulse:Stop()
+    c.ring:SetAlpha(1)
+    c.ring:Show()
+    c.pulse:Play()
+  end
+end
+
+local function layout(map, x, y, half, radius, turn, square, goal)
+  hideAll()
+  local ppy, limit = half / radius, half * 0.95
+  local function screen(spot)
+    if not (spot and spot.map and spot.x) then return end
+    local bearing, yards = Q.vector(spot, map, x, y)
+    if not bearing then bearing, yards = Q.worldVector(spot, map, x, y) end
+    if not (bearing and yards) then return end
+    local px, py = screenOffset(bearing + turn, yards * ppy)
+    return px, py, yards, bearing
+  end
+  local lineOn = not ns.db().noMinimapLine
+  local gx, gy, yards, bearing = screen(goal.spot)
+  if not gx then return end
+  local cx, cy, out = clamp(gx, gy, half, square)
+  local here = goal.kind ~= "leg" and yards <= Q.arrived()
+  local icon = goalIcon(goal)
+  if iconFor ~= icon then
+    iconFor = icon
+    paintIcon(pins.current.icon, icon, 16, 8)
+  end
+  local pin = out and pins.edge or pins.current
+  pin.info = goalInfo(goal, yards)
+  place(pin, cx, cy)
+  if out and pins.edgeArt then Q.try(pins.edge.icon.SetRotation, pins.edge.icon, -(bearing + turn)) end
+  if here and not out then pulse(goal.key) elseif not here then pulsedKey = nil end
+  if lineOn and not here then dotted(pins.dots, 0, 0, 0, cx, cy, DOT_START, 8, LINE_ALPHA, limit, square) end
+  -- the route ahead: on through the next steps while the arrow leads to a step (not a trip or corpse)
+  local ahead, used = lineOn and (goal.kind == "step" or goal.kind == "spawn"), 0
+  local fromX, fromY = gx, gy
+  for _, t in ipairs(nexts) do
+    local nx, ny, nyards = screen(t.spot)
+    if not nx then break end -- another map: no pin and no line from here on
+    local rx, ry, nout = clamp(nx, ny, half, square)
+    local p = pins.next[t.n]
+    p.info = { title = (t.n == 1 and "Next: " or "Then: ") .. Q.plain(Q.label(t.step)), yards = nyards }
+    place(p, rx, ry)
+    p:SetAlpha(nout and 0.4 or 0.8)
+    if ahead then used = dotted(pins.ahead, used, fromX, fromY, nx, ny, 8, 6, AHEAD_ALPHA, limit, square) end
+    fromX, fromY = nx, ny
+  end
+  glow(true)
+  -- a tooltip open on a pin follows the new distance
+  for _, p in ipairs({ pins.current, pins.edge, pins.next[1], pins.next[2] }) do
+    if GameTooltip and type(GameTooltip.IsOwned) == "function" and GameTooltip:IsOwned(p) then
+      if p:IsShown() then tip(p) else GameTooltip:Hide() end
+    end
   end
 end
 
 local function update()
-  hideAll()
   local map, x, y = Q.position()
   local half = (tonumber(Minimap:GetWidth()) or 0) / 2
   local radius = viewRadius()
-  if not (map and x and half > 0 and radius) then return end
-  local ppy, turn = half / radius, rotation()
-  local square = Q.try(GetMinimapShape) == "SQUARE"
-  for _, target in ipairs(targets) do
-    local spot = target.n and target.spot or Q.waypoint(target.step)
-    if spot and spot.map and spot.x then
-      local bearing, yards = Q.vector(spot, map, x, y)
-      if not bearing then bearing, yards = Q.worldVector(spot, map, x, y) end
-      if bearing and yards then
-        local px, py = screenOffset(bearing + turn, yards * ppy)
-        local cx, cy, out = clamp(px, py, half, square)
-        if not target.n then
-          if out then
-            place(pins.edge, cx, cy)
-            if pins.edgeArt then Q.try(pins.edge.SetRotation, pins.edge, -(bearing + turn)) end
-          else
-            place(pins.current, px, py)
-          end
-          if not ns.db().noMinimapLine then drawLine(cx, cy, math.sqrt(cx * cx + cy * cy)) end
-        elseif not out then
-          local pin = pins.next[target.n]
-          place(pin, px, py)
-          pin.label:Show()
-        end
-      end
-    end
+  local goal = ns.questArrowGoal and ns.questArrowGoal()
+  local spot = goal and goal.spot
+  if not (map and x and half > 0 and radius and spot) then
+    if layoutKey ~= "" then layoutKey = ""; hideAll() end
+    return
+  end
+  local turn, square = rotation(), Q.try(GetMinimapShape) == "SQUARE"
+  -- lay out again only when something that places the pins changed
+  local key = table.concat({ map, x, y, half, radius, turn, tostring(square), goal.kind, tostring(goal.key),
+    tostring(goal.caption), tostring(spot.map), tostring(spot.x), tostring(spot.y), nextsKey,
+    tostring(ns.db().noMinimapLine) }, "|")
+  if key ~= layoutKey then
+    layoutKey = key
+    layout(map, x, y, half, radius, turn, square, goal)
+  else
+    glow()
   end
 end
 
@@ -238,7 +393,14 @@ end
 local function canvas()
   local frame = WorldMapFrame
   local scroll = type(frame) == "table" and frame.ScrollContainer
-  return frame, type(scroll) == "table" and scroll.Child or nil
+  return frame, type(scroll) == "table" and scroll.Child or nil, type(scroll) == "table" and scroll or nil
+end
+
+-- How much larger the map's zoom draws the canvas (1 = zoomed out).
+local function zoom()
+  local _, _, scroll = canvas()
+  local s = scroll and tonumber((Q.try(scroll.GetCanvasScale, scroll)))
+  return s and s > 0 and s or 1
 end
 
 function M.drawWorld()
@@ -248,6 +410,8 @@ function M.drawWorld()
     wpins = CreateFrame("Frame", "LevelingCodexWorldMapPins", child)
     wpins:SetAllPoints(child)
     wpins:SetFrameLevel((tonumber(child:GetFrameLevel()) or 1) + 20)
+    -- zooming scales the canvas: pins are drawn again at 1 / zoom so they keep their size
+    wpins:SetScript("OnUpdate", function() if zoom() ~= wpins.zoom then M.drawWorld() end end)
     wpins.current = worldPin(20)
     wpins.next = { worldPin(14), worldPin(14) }
     for n, pin in ipairs(wpins.next) do
@@ -266,13 +430,17 @@ function M.drawWorld()
   end
   local shown = Q.try(frame.GetMapID, frame)
   local w, h = tonumber(child:GetWidth()) or 0, tonumber(child:GetHeight()) or 0
+  local z = zoom()
+  wpins.zoom = z
   local function put(pin, step, size, dot)
     local spot = Q.waypoint(step)
     if not (spot and spot.map == shown and spot.x and spot.y) then return end
     pin.step = step
     paintIcon(pin.icon, step, size, dot)
+    -- a pin at 1 / zoom: its offsets are in its own units, so the canvas spot times the zoom
+    pin:SetScale(1 / z)
     pin:ClearAllPoints()
-    pin:SetPoint("CENTER", child, "TOPLEFT", spot.x / 100 * w, -spot.y / 100 * h)
+    pin:SetPoint("CENTER", child, "TOPLEFT", spot.x / 100 * w * z, -spot.y / 100 * h * z)
     pin:Show()
   end
   put(wpins.current, row.step, 20, 10)
@@ -305,20 +473,21 @@ function M.refresh()
   end
   local row, i = Q.current()
   local viewer = _G.LevelingCodexQuestViewer
-  targets = {}
+  nexts, nextsKey = {}, ""
   if not row or ns.db().noMinimapSteps or not (viewer and viewer:IsShown()) or not Q.position() then
     pins:Hide()
     return
   end
-  targets[1] = { step = row.step }
-  paintIcon(pins.current, row.step, 16, 8)
+  local parts = {}
   for n, nextRow in ipairs(Q.upcoming(i, 2)) do
     local spot = Q.waypoint(nextRow.step)
     if spot and spot.map and spot.x then
-      targets[#targets + 1] = { step = nextRow.step, spot = spot, n = n }
-      paintIcon(pins.next[n], nextRow.step, 10, 6)
+      nexts[#nexts + 1] = { step = nextRow.step, spot = spot, n = n }
+      paintIcon(pins.next[n].icon, nextRow.step, 10, 6)
+      parts[#parts + 1] = tostring(nextRow.key) .. "@" .. spot.map .. "," .. spot.x .. "," .. tostring(spot.y)
     end
   end
+  nextsKey = table.concat(parts, ";")
   pins:Show()
   update()
 end

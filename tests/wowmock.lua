@@ -277,6 +277,7 @@ function Region:SetPoint(point, rel, relPoint, x, y)
     if p[1] == point then table.remove(self._points, i); break end
   end
   self._points[#self._points + 1] = { point, rel or self._parent, relPoint, x or 0, y or 0 }
+  self._pointSets = (self._pointSets or 0) + 1 -- lets tests see whether something was moved
 end
 function Region:SetAllPoints(rel) self:ClearAllPoints(); self:SetPoint("TOPLEFT", rel or self._parent); self:SetPoint("BOTTOMRIGHT", rel or self._parent) end
 function Region:ClearAllPoints() self._points = {} end
@@ -753,6 +754,8 @@ WorldMapFrame:Hide()
 WorldMapFrame.ScrollContainer = CreateFrame("Frame", nil, WorldMapFrame)
 WorldMapFrame.ScrollContainer.Child = CreateFrame("Frame", nil, WorldMapFrame.ScrollContainer)
 WorldMapFrame.ScrollContainer.Child:SetSize(1002, 668)
+-- The map's zoom: the canvas (Child) is drawn this many times larger (MOCK.canvasScale).
+function WorldMapFrame.ScrollContainer:GetCanvasScale() return MOCK.canvasScale or 1 end
 function WorldMapFrame:GetMapID() return MOCK.worldMapID end
 function WorldMapFrame:OnMapChanged() end
 
