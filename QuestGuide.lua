@@ -710,7 +710,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
     local count, max = Q.logCapacity()
     if max and count >= max then
       add({ kind = "note", tone = "warn", text = "Your quest log is full (" .. count .. "/" .. max .. ")."
-        .. " Turn in or abandon a quest first: Quests > Guide library lists ones you can drop." })
+        .. " Turn in or abandon a quest first: Quests > Quest log lists ones you can drop." })
     end
   end
   if step.min and level < step.min then add({ kind = "note", tone = "warn", text = "Requires level " .. step.min .. "." }) end
@@ -1481,7 +1481,7 @@ function ns.planQuestRun(id, on)
   Q.leaveReview()
   if run then
     ns.say(Q.plain(run.title .. (on and " is planned: the run joins your route, and the guide says when to find a group."
-      or " is skipped: Quests > Guide library > Dungeons can plan it later.")))
+      or " is skipped: Quests > Guides > Dungeons can plan it later.")))
   end
   ns.updateQuestSettings()
 end

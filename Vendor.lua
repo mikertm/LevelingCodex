@@ -106,6 +106,31 @@ local function repair()
   ns.say("Repaired for " .. ns.money(cost) .. ".")
 end
 
+-- The junk money comes after a server round trip: when only that money makes the repair
+-- affordable, the repair waits for PLAYER_MONEY (or 3 s, then says what's short).
+local pendingRepair
+local function repairWhenPaid(total)
+  local cost = tonumber((try(GetRepairAllCost))) or 0
+  local money = tonumber(try(GetMoney)) or 0
+  if total <= 0 or cost <= money or cost > money + total then repair(); return end
+  local token = {}
+  pendingRepair = token
+  ns.after(3, function()
+    if pendingRepair ~= token then return end
+    pendingRepair = nil
+    if isOpen() then repair() end
+  end)
+end
+
+local function moneyArrived()
+  if not (pendingRepair and isOpen()) then return end
+  local cost = tonumber((try(GetRepairAllCost))) or 0
+  if (tonumber(try(GetMoney)) or 0) >= cost then
+    pendingRepair = nil
+    repair()
+  end
+end
+
 local function finish(stopped)
   local r = run
   if not r then return end
@@ -115,7 +140,7 @@ local function finish(stopped)
     ns.say("Sold " .. r.sold .. " grey item" .. (r.sold == 1 and "" or "s") .. " for " .. ns.money(r.total)
       .. (stopped and " (the vendor closed)" or "") .. ".")
   end
-  if not stopped then repair() end
+  if not stopped then repairWhenPaid(r.total) end
 end
 
 local function sellNext(r)
@@ -226,6 +251,8 @@ end
 
 local card, place = nil, {}
 local ROWS = 6
+local BUYING = 2 -- seconds a purchase waits for its items before the card offers Buy again
+local buying -- GetTime() of the last purchase, until its items reach your bags
 
 local function goods()
   local list, names = {}, {}
@@ -316,9 +343,8 @@ local function makeCard()
   end
   h.buy = A.button(h, 276, 22)
   h.buy:SetScript("OnClick", function() V.buy() end)
-  ns.gamepad.attach(h, { popup = true, focusables = function()
-    return { { frame = h.buy, x = 0, y = 0, fixed = true } }
-  end })
+  -- Never attached to the controller (ns.gamepad): the card shows up by itself at every vendor, and
+  -- as a controller popup it took the focus from the vendor window, so A bought its items.
   return h
 end
 
@@ -345,6 +371,7 @@ local function refreshCard()
   end
   local money = tonumber(try(GetMoney)) or 0
   local label = money >= total and ("Buy for " .. ns.money(total)) or ("Need " .. ns.money(total - money) .. " more")
+  if buying and GetTime() - buying < BUYING then label = "Buying..." end
   card.buy:SetLabel(label)
   card.buy.codexLabel = label
   card.buy:ClearAllPoints()
@@ -367,6 +394,8 @@ end
 -- Buy everything the card lists (only when you can pay for all of it).
 function V.buy()
   if not isOpen() then hideCard(); return end
+  -- the items arrive after a server round trip: until then another click must not buy them again
+  if buying and GetTime() - buying < BUYING then return end
   local rows, total = shopping()
   if #rows == 0 or (tonumber(try(GetMoney)) or 0) < total then refreshCard(); return end
   V.onBought(total)
@@ -385,6 +414,11 @@ function V.buy()
     end
     ns.say(Q.plain("Bought " .. row.n .. " " .. g.name .. " for " .. ns.money(row.cost) .. "."))
   end
+  local started = GetTime()
+  buying = started
+  ns.after(BUYING, function()
+    if buying == started then buying = nil; if isOpen() then refreshCard() end end
+  end)
   refreshCard()
 end
 
@@ -401,7 +435,7 @@ local function onShow()
 end
 
 local function onClose()
-  merchantOpen = false
+  merchantOpen, pendingRepair, buying = false, nil, nil
   finish(true)
   hideCard()
 end
@@ -409,7 +443,7 @@ end
 function ns.startVendor()
   if events then return end
   events = CreateFrame("Frame")
-  for _, ev in ipairs({ "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "BAG_UPDATE_DELAYED" }) do
+  for _, ev in ipairs({ "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "BAG_UPDATE_DELAYED", "PLAYER_MONEY" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, event)
@@ -420,7 +454,10 @@ function ns.startVendor()
       ns.after(0.3, function() if isOpen() then refreshCard() end end)
     elseif event == "MERCHANT_CLOSED" then
       onClose()
+    elseif event == "PLAYER_MONEY" then
+      moneyArrived()
     elseif merchantOpen then
+      if event == "BAG_UPDATE_DELAYED" then buying = nil end
       refreshCard()
     end
   end)

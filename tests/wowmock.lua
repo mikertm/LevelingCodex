@@ -1048,6 +1048,11 @@ function MOCK.setMoney(copper)
   MOCK.money = copper
   MOCK.event("PLAYER_MONEY")
 end
+-- MOCK.serverDelay = seconds: money and bought items arrive after a server round trip, like the
+-- real client (a sold item leaves the bag at once; its money comes later).
+local function fromServer(fn)
+  if MOCK.serverDelay then C_Timer.After(MOCK.serverDelay, fn) else fn() end
+end
 C_Container = {
   GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or 0 end,
   GetContainerItemInfo = function(bag, slot)
@@ -1061,7 +1066,7 @@ C_Container = {
     if not it or it.empty or not (MerchantFrame and MerchantFrame:IsShown()) then return end
     table.insert(MOCK.sold, { bagID(slot), it.count or 1 })
     MOCK.bagItems[slot] = { empty = true }
-    MOCK.setMoney((MOCK.money or 0) + (it.sell or 1) * (it.count or 1))
+    fromServer(function() MOCK.setMoney((MOCK.money or 0) + (it.sell or 1) * (it.count or 1)) end)
   end,
 }
 function GetItemInfo(link)
@@ -1101,8 +1106,11 @@ function BuyMerchantItem(i, n)
   n = n or per
   if m.stock and m.stock ~= -1 then n = math.min(n, m.stock); m.stock = m.stock - n end
   table.insert(MOCK.bought, { m.id, n })
-  MOCK.bags[m.id] = (MOCK.bags[m.id] or 0) + n
-  MOCK.setMoney((MOCK.money or 0) - math.ceil(n / per) * m.price)
+  fromServer(function()
+    MOCK.bags[m.id] = (MOCK.bags[m.id] or 0) + n
+    MOCK.setMoney((MOCK.money or 0) - math.ceil(n / per) * m.price)
+    if MOCK.serverDelay then MOCK.event("BAG_UPDATE_DELAYED") end
+  end)
 end
 function CanMerchantRepair() return MOCK.merchant and MOCK.merchant.canRepair or false end
 function GetRepairAllCost()
@@ -1113,7 +1121,7 @@ function RepairAllItems()
   local cost = MOCK.merchant and MOCK.merchant.repairCost or 0
   MOCK.repaired = cost
   MOCK.merchant.repairCost = 0
-  MOCK.setMoney((MOCK.money or 0) - cost)
+  fromServer(function() MOCK.setMoney((MOCK.money or 0) - cost) end)
 end
 function MOCK.openMerchant(m)
   MOCK.merchant = m

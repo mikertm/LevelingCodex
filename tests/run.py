@@ -825,6 +825,8 @@ def main():
         runs.append(("WARRIOR/%s/vendor-shopping" % variant, "WARRIOR", minimal, ["vendorShopping"]))
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
+            runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
+            runs.append(("WARRIOR/full/vendor-pad", "WARRIOR", False, ["vendorPad"]))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
         if minimal:
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))

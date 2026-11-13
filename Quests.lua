@@ -1574,7 +1574,7 @@ function Q.next()
     visited[row.key] = true
   elseif row.step.type == "plan" then
     Q.setPlanned(row.step.dungeon, false) -- Next on Dungeon ahead skips the run
-    ns.say(Q.plain(row.step.name .. " is skipped: Quests > Guide library > Dungeons can plan it later."))
+    ns.say(Q.plain(row.step.name .. " is skipped: Quests > Guides > Dungeons can plan it later."))
   elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth" then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key] = true
@@ -1718,7 +1718,7 @@ function Q.planText(step)
     .. (count > 0 and (" " .. count .. (count == 1 and " quest" or " quests") .. " on your route need it.") or "")
     .. (recommended and " Recommended for you: it's close to your route or a class quest needs it." or "")
     .. "\nPlan it: the run and its quests join your route, and the guide says when to find a group."
-    .. "\nSkip it: the run stays out of your route. Quests > Guide library > Dungeons can change this later."
+    .. "\nSkip it: the run stays out of your route. Quests > Guides > Dungeons can change this later."
 end
 
 function Q.text(step)

@@ -2911,6 +2911,7 @@ function S.questDungeonPlan()
   C_QuestLog.GetMaxNumQuestsCanAccept = function() return 3 end
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Your quest log is full (3/3)"), "a full log warns before a pickup")
+  check(questText(frame, "Quests > Quest log lists ones you can drop"), "it points to where the clean-up list is")
   C_QuestLog.GetMaxNumQuestsCanAccept = nil
   click(win(), "Quests")
   click(win(), "Guides")
@@ -6443,6 +6444,55 @@ function S.statsTabLost()
   slash("")
   click(win(), "Stats")
   check(questText(win(), "Counting since you logged in"), "without saved data the tab says what it counts")
+end
+
+-- Vendor with a server round trip (money and bought items arrive later): the repair waits for the
+-- junk money, and a second click on Buy doesn't buy the list again.
+function S.vendorServer()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  MOCK.serverDelay = 0.3
+  MOCK.money = 150
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(2)
+  check(MOCK.repaired == 210 and not chatHas("Not enough money to repair"),
+    "the repair waits for the junk money to arrive")
+  MOCK.closeMerchant()
+  MOCK.money, MOCK.bagItems = 1000, {}
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  card.buy:Click()
+  card.buy:Click()
+  MOCK.advance(1)
+  check(#MOCK.bought == 1, "a second click before the items arrive buys nothing more (" .. #MOCK.bought .. " buys)")
+  check(not card:IsShown(), "the card hides once the items are in your bags")
+end
+
+-- Vendor with a controller: the shopping card never takes the controller from the vendor window.
+function S.vendorPad()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.gamepad, MOCK.gamepadUI = true, true
+  S.login()
+  MOCK.money = 1000
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(1)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown(), "the card shows with a controller too")
+  check(GamepadMode.FrameControlsManager:GetActiveFrame() ~= card, "the card doesn't take the controller's focus")
+  check(not (LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown()), "and gets no highlight of its own")
+  check(#MOCK.bought == 0, "nothing is bought")
 end
 
 -- Vendor: a quest in your log that needs a vendor item, next to the step that buys it, counts once.

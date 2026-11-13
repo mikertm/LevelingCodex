@@ -1174,7 +1174,7 @@ renderers.settings = function()
 
   head("QUEST GUIDE")
   tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
-    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guide library > Dungeons plans runs one by one, which overrides this.")
+    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")
   tick("Keep grey quests in the route", db.questKeepGrey, function() db.questKeepGrey = not db.questKeepGrey; ns.updateQuestSettings() end,
     "Off: pickups that have gone grey for your level leave the route (unless a later quest needs them) and are listed under Quests > Missed quests > Outleveled.")
   tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
