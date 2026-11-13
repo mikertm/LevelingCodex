@@ -1166,6 +1166,8 @@ renderers.settings = function()
   head("VENDOR")
   tick("Sell grey items at vendors", not db.noAutoSell, function() db.noAutoSell = not db.noAutoSell end,
     "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
+  tick("Repair at vendors", not db.noAutoRepair, function() db.noAutoRepair = not db.noAutoRepair end,
+    "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
   y = y + 12
 
   head("QUEST GUIDE")

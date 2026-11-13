@@ -1,7 +1,7 @@
 -- Vendor.lua: at a vendor, the Codex sells your grey items (one every 0.15 s, keeping anything a
--- guide step names and the Hearthstone). Selling doesn't start in combat or while Alt is held when
--- the vendor opens (Settings > Vendor turns it off). Every call is guarded: a client without the
--- container or merchant calls just gets nothing.
+-- guide step names and the Hearthstone), then repairs your gear with your own money. Neither starts
+-- in combat or while Alt is held when the vendor opens (Settings > Vendor turns each off). Every call
+-- is guarded: a client without the container or merchant calls just gets nothing.
 local _, ns = ...
 local Q = ns.quests
 local function try(...) return Q.try(...) end
@@ -18,6 +18,7 @@ local events
 
 -- Hook points: Stats.lua files the money these announce (called just before it moves).
 function V.onSold() end
+function V.onRepaired() end
 
 local function numSlots(bag)
   local C = C_Container
@@ -85,6 +86,23 @@ local function isOpen()
   return not (type(frame) == "table" and type(frame.IsShown) == "function") or frame:IsShown() and true or false
 end
 
+-- After the junk money is in: repair everything, if this vendor repairs and you can pay for it.
+local function repair()
+  if ns.db().noAutoRepair then return end
+  local can = try(CanMerchantRepair)
+  if can ~= true and can ~= 1 then return end
+  local cost = tonumber((try(GetRepairAllCost))) or 0
+  if cost <= 0 then return end
+  local money = tonumber(try(GetMoney)) or 0
+  if money < cost then
+    ns.say("Not enough money to repair (" .. ns.money(cost) .. ").")
+    return
+  end
+  V.onRepaired(cost)
+  try(RepairAllItems)
+  ns.say("Repaired for " .. ns.money(cost) .. ".")
+end
+
 local function finish(stopped)
   local r = run
   if not r then return end
@@ -94,6 +112,7 @@ local function finish(stopped)
     ns.say("Sold " .. r.sold .. " grey item" .. (r.sold == 1 and "" or "s") .. " for " .. ns.money(r.total)
       .. (stopped and " (the vendor closed)" or "") .. ".")
   end
+  if not stopped then repair() end
 end
 
 local function sellNext(r)
@@ -117,9 +136,9 @@ local function onShow()
   seen.visits = seen.visits + 1
   if run then finish(true) end
   local held = try(InCombatLockdown) or try(IsAltKeyDown)
-  if held or ns.db().noAutoSell then return end
-  local r = { queue = scan(), sold = 0, total = 0 }
-  if #r.queue == 0 then return end
+  if held then return end
+  local r = { queue = ns.db().noAutoSell and {} or scan(), sold = 0, total = 0 }
+  if #r.queue == 0 then repair(); return end
   run, V.selling = r, true
   ns.after(STEP, function() sellNext(r) end)
 end

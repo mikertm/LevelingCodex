@@ -6027,6 +6027,33 @@ function S.vendorJunk()
   check(#MOCK.sold == 0, "Settings can turn selling off")
 end
 
+-- Vendor: repairs with your own money once the junk money is in, or says it's short.
+function S.vendorRepair()
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.money = 150
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(2)
+  check(MOCK.repaired == 210 and chatHas("Repaired for 2s 10c%."), "repairs after the junk money comes in")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.money, MOCK.bagItems = nil, 100, {}
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired and chatHas("Not enough money to repair %(2s 10c%)%."), "says when money is short")
+  MOCK.closeMerchant()
+  MOCK.money, MOCK.alt = 1000, true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired, "Alt holds repairing back")
+  MOCK.alt = false
+  MOCK.closeMerchant()
+  LevelingCodexDB.noAutoRepair = true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired, "Settings can turn repairing off")
+end
+
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.
 function S.trainerReqs()
   if not D() or MOCK.minimal then return end
