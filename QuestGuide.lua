@@ -131,6 +131,34 @@ local function makeViewer()
   levels = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   levels:SetPoint("TOPRIGHT", -16, -30)
   title = font(viewer, 28, 318, "GameFontNormal")
+  -- The step's icon before its title (QuestMap.lua's icons).
+  viewer.titleIcon = viewer:CreateTexture(nil, "OVERLAY")
+  viewer.titleIcon:SetSize(16, 16)
+  viewer.titleIcon:SetPoint("TOPLEFT", 16, -27)
+  viewer.titleIcon:Hide()
+  -- A step the game finishes: the window's edge glows once (gold lines inside the border, fading).
+  local glow = CreateFrame("Frame", nil, viewer)
+  glow:SetAllPoints()
+  glow:SetAlpha(0)
+  local function edge(a, b, w, h)
+    local t = glow:CreateTexture(nil, "OVERLAY")
+    t:SetColorTexture(1, 0.82, 0.25, 0.9)
+    try(t.SetBlendMode, t, "ADD")
+    t:SetPoint(a, 4 * (a:find("LEFT") and 1 or -1), 4 * (a:find("TOP") and -1 or 1))
+    t:SetPoint(b, 4 * (b:find("LEFT") and 1 or -1), 4 * (b:find("TOP") and -1 or 1))
+    if w then t:SetWidth(w) else t:SetHeight(h) end
+  end
+  edge("TOPLEFT", "TOPRIGHT", nil, 2)
+  edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, 2)
+  edge("TOPLEFT", "BOTTOMLEFT", 2, nil)
+  edge("TOPRIGHT", "BOTTOMRIGHT", 2, nil)
+  if type(glow.CreateAnimationGroup) == "function" then
+    viewer.glowAnim = glow:CreateAnimationGroup()
+    local fade = viewer.glowAnim:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.4)
+  end
 
   local function button(label, x, width, action, bottom)
     bottom = bottom or 9
@@ -724,6 +752,10 @@ end
 local function completionSound(row)
   local done = lastRow and row ~= lastRow and not quiet and lastRow.state == "done"
   lastRow, quiet = row, false
+  if done and viewer and viewer.glowAnim then
+    viewer.glowAnim:Stop()
+    viewer.glowAnim:Play()
+  end
   if done and not ns.db().questNoSound and type(PlaySound) == "function" then
     pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175)
   end
@@ -1111,6 +1143,20 @@ function makers.row(template)
   r.count = r:CreateFontString(nil, "OVERLAY", template)
   r.count:SetJustifyH("RIGHT")
   r.count:SetPoint("TOPRIGHT", 0, 0)
+  -- A rising count flashes the row gold for a moment.
+  r.flash = r:CreateTexture(nil, "BACKGROUND")
+  r.flash:SetPoint("TOPLEFT", -4, 2)
+  r.flash:SetPoint("BOTTOMRIGHT", 4, -2)
+  r.flash:SetColorTexture(1, 0.82, 0, 0.35)
+  r.flash:SetAlpha(0)
+  r.flash._isFlash = true
+  if type(r.flash.CreateAnimationGroup) == "function" then
+    r.flashAnim = r.flash:CreateAnimationGroup()
+    local fade = r.flashAnim:CreateAnimation("Alpha")
+    fade:SetFromAlpha(0.6)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.5)
+  end
   return r
 end
 
@@ -1165,6 +1211,9 @@ local function putHeading(text)
   cursor = cursor + 15
 end
 
+-- Goal counts drawn for the step on screen: a count that rose since the last draw flashes its row.
+local seenCounts, newCounts, countsRow = {}, {}, nil
+
 local function putGoal(b)
   local small, indent = b.small, b.indent or 0
   local r = take("row", small and "GameFontHighlightSmall" or "GameFontHighlight")
@@ -1201,6 +1250,15 @@ local function putGoal(b)
     r.tick:SetPoint("TOPLEFT", 4, top - 2)
     r.tick:SetSize(size - 4, size - 4)
     r.tick:SetColorTexture(ink("done"))
+  end
+  local have = type(b.count) == "string" and tonumber(b.count:match("^(%d+)"))
+  if have then
+    local before = seenCounts[b.text]
+    if before and have > before and r.flashAnim then
+      r.flashAnim:Stop()
+      r.flashAnim:Play()
+    end
+    newCounts[b.text] = have
   end
   local height = math.max(line, tonumber(r.name:GetStringHeight()) or line)
   r:SetHeight(height)
@@ -1280,6 +1338,14 @@ function ns.questRefresh()
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
+    local icon = row and ns.questIcon(row.step)
+    viewer.titleIcon:SetShown(icon ~= nil)
+    if icon then viewer.titleIcon:SetTexture(icon) end
+    title:ClearAllPoints()
+    title:SetPoint("TOPLEFT", icon and 36 or 16, -28)
+    title:SetWidth(318 - (icon and 20 or 0) - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
+    if row ~= countsRow then seenCounts, countsRow = {}, row end
+    newCounts = {}
     if row then
       title:SetText(Q.label(row.step))
       -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
@@ -1304,6 +1370,7 @@ function ns.questRefresh()
     cursor = cursor + 3
     if paintBar(row) then cursor = cursor + 12 end
     draw(blocks)
+    seenCounts = newCounts
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
     nextButton.codexLabel = choosing and "Skip" or "Next"

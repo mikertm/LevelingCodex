@@ -782,6 +782,29 @@ function S.stepProgress()
   check(not bar:IsShown(), "the bar can be turned off")
 end
 
+-- The step window: the step's icon before its title, a flash on a rising count, a glow on completion.
+function S.stepPolish()
+  -- The questProgress setup: Kobold Vermin (quest 7) in progress after the first Northshire quests.
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", numFulfilled = 4 } } } }
+  S.login()
+  local frame = questViewer()
+  check(frame.titleIcon and frame.titleIcon:IsShown() and frame.titleIcon._path == "Interface\\Cursor\\Attack",
+    "a kill step shows the sword before its title")
+  local function flashing()
+    for g in pairs(MOCK.anims) do if g._owner and g._owner._isFlash and g:IsPlaying() then return true end end
+    return false
+  end
+  check(not flashing(), "nothing flashes before progress")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin 5/10", numFulfilled = 5 }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(flashing(), "a rising count flashes its row")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin 10/10", numFulfilled = 10, finished = true }
+  MOCK.questLog[1].isComplete = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(frame.glowAnim and frame.glowAnim:IsPlaying(), "a step the game finished makes the window's edge glow")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
