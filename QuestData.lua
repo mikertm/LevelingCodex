@@ -215,10 +215,11 @@ local northshire = {
   accept(33, eagan),
   along(objective(7, 48.8, 36.4, "Kill vermin north of the abbey for the Nibbled-On Book. Loot wolves between kobold camps for Eagan.",
     "10 Kobold Vermin"), 33),
+  -- Taken while still among the vermin: the book drops from them (tools/audits/2026-11-12-alliance-1-12.md).
+  withItem("Nibbled-On Book", accept(91741, at(nil, 48.8, 36.4), "Use the Nibbled-On Book from your bags. If it has not dropped yet, kill a few more Kobold Vermin.")),
   along(objective(33, 49.7, 39.1, "Finish any wolf meat you still need around the abbey.", "8 Tough Wolf Meat"), 7),
   finish(33, eagan), finish(7, mcbride),
   accept(15, mcbride),
-  withItem("Nibbled-On Book", accept(91741, at(nil, 48.8, 36.4), "Use the Nibbled-On Book from your bags. If it has not dropped, loot more Kobold Vermin.")),
   finish(91741, paxton, "Bring the chewed book to Brother Paxton in the library."),
   accept(92124, paxton), finish(92124, daniel), accept(91743, paxton),
   accept(92479, mcbride), finish(92479, tordrin, "Read the letter and speak to Tordrin near the stable."),
@@ -321,8 +322,7 @@ local forest = {
   finish(91733, ormin),
   along(objective(83, 70.9, 80.1, "Loot Defias Bandits outside at Brackwell Pumpkin Patch on the way to Princess.", "6 Red Linen Bandanas"), 88),
   along(objective(88, 69.8, 79.4, "Clear Princess's guards before taking her collar. Loot any remaining bandanas on the way out.", "Brass Collar"), 83),
-  finish(83, azora.sara),
-  along(action("goto", at(nil, 61.7, 53.9), "Head west from Eastvale to Jasperlode Mine. Enter through the south opening."),
+  along(action("goto", at(nil, 61.7, 53.9), "Head north-west from Brackwell to Jasperlode Mine. Enter through the south opening. Keep the bandanas: Sara takes them on your next Eastvale visit."),
     76, 91723, 91732),
   along(objective(76, jasperlode.x, jasperlode.y, "Explore the middle tunnel. Fight Kobold Geomancers and pick up the mining tools as you go.",
     "Explore Jasperlode Mine"), 91723, 91732, 91777),
@@ -346,7 +346,7 @@ local forest = {
   objective(91725, 67.8, 43.5, "Look for the scattered enchanting supplies in the gnoll camps west of the lake. Elmpaw (level 12) roams north of the lake; its head starts a quest.",
     "5 Stolen Enchanting Supplies"),
   withItem(247862, accept(91746, at("Elmpaw", 74.4, 39.6), "Use Elmpaw's Head from your bags to start the quest.")),
-  finish(46, thomas), finish(59, azora.sara), finish(91732, azora.hagar),
+  finish(46, thomas), finish(59, azora.sara), finish(83, azora.sara), finish(91732, azora.hagar),
   finish(91724, azora.hamish, "Follow the road west to the Tower of Azora."), finish(91725, azora.blixie),
   action("hearth", farley, "Take the main road west to Goldshire if you're walking.", { bind = "Goldshire" }),
   action("train", nil, "Visit your class trainer and learn spells for level", { level = 10 }),
@@ -1161,7 +1161,9 @@ q(419, "The Lost Pilot", 10, 8)
 q(417, "A Pilot's Revenge", 11, 8, 419)
 q(96629, "Camping 101: Cooking", 6, 4, 96608, true)
 q(96056, "Camping 101: Skinning", 6, 4, 96608, true)
-quest[96056].optional = true
+q(96046, "Camping 101: Mining", 6, 4, 96608, true)
+q(96055, "Camping 101: Herbalism", 6, 4, 96608, true)
+for _, id in ipairs({ 96056, 96046, 96055 }) do quest[id].optional = true end
 q(314, "Protecting the Herd", 12, 6)
 -- Deeprun Tram errands; Loch Modan reuses 6661 for players arriving by tram.
 q(6661, "Deeprun Rat Roundup", 12, 10)
@@ -1286,6 +1288,8 @@ local dm = (function()
     objectiveAt(96608, eric, "Sit at Eric's campfire until you get Boosted Rest.", "Boosted Rest"),
     finish(96608, eric), accept(96629, eric),
     accept(96056, eric, "If you know Skinning, ask Eric for the skinning lesson too. It ends with Balthus Stoneflayer in Ironforge once your Skinning reaches 20."),
+    accept(96046, eric, "If you know Mining, ask Eric for the mining lesson too. Yarr Hammerstone by Steelgrill's Depot finishes it."),
+    accept(96055, eric, "If you know Herbalism, ask Eric for the herbalism lesson too. Reyna Stonebranch in Ironforge finishes it."),
     accept(98322, senir),
     finish(2160, tannok, "Tannok Frosthammer is inside the Thunderbrew Distillery."),
     action("sethearth", belm, "Bind your hearthstone with Innkeeper Belm in the Thunderbrew Distillery.", kharanosHearth),
@@ -1293,8 +1297,9 @@ local dm = (function()
     accept(384, ragnar), accept(99158, maxan), accept(98321, tognus),
     accept(400, tharek),
     action("train", nil, "Visit your class trainer in Kharanos. Train spells for level", { level = 6 }),
+    finish(96046, dm("Yarr Hammerstone", 50.01, 50.31), "Miners: talk to Yarr Hammerstone, the mining trainer just south-west of Steelgrill's Depot."),
     finish(400, beldin, "Bring the tools east to Steelgrill's Depot."),
-    accept(317, bellowfiz), accept(313, stonegear), accept(5541, loslor),
+    accept(5541, loslor), accept(313, stonegear), accept(317, bellowfiz),
     finish(98322, gretchen, "Head south-west to Mountaineer Gretchen."), accept(98319, gretchen),
     along(objectiveAt(5541, dm(nil, 44.1, 57.0), "Take the ammo from the crate at Gretchen's camp. Loot any boars and bears you pass on the road.", "Rumbleshot's Ammo"), 317, 384),
     along(objectiveAt(317, dm(nil, 45.0, 60.5), "Hunt Crag Boars for meat and ribs, and Young Black Bears for fur, south of Kharanos.",
@@ -1302,8 +1307,9 @@ local dm = (function()
     along(finish(5541, hegnar, "Follow the road south-west to Hegnar Rumbleshot's camp. Loot any Crag Boars you pass for ribs."), 384),
     objectiveAt(384, belm, "Loot ribs from Crag Boars on the way back north (45, 64), then buy a Rhapsody Malt from Innkeeper Belm.",
       "6 Crag Boar Ribs", "Rhapsody Malt"),
-    finish(384, ragnar), finish(317, bellowfiz), accept(318, bellowfiz),
-    accept(287, senir), accept(412, razzle),
+    finish(384, ragnar), accept(287, senir),
+    finish(317, bellowfiz, "Bring the meat and furs to Pilot Bellowfiz at Steelgrill's Depot."), accept(318, bellowfiz),
+    accept(412, razzle),
     action("train", nil, "Train spells for level", { level = 8 }),
 
     finish(318, rejold, "Follow the road west to Brewnall Village by the frozen lake."),
@@ -1329,7 +1335,9 @@ local dm = (function()
     finish(315, rejold), accept(413, rejold), finish(98326, gretta),
     finish(98319, gretchen, "Head back east to Mountaineer Gretchen."), accept(98323, gretchen),
     finish(98323, senir), finish(287, senir), accept(291, senir),
-    finish(313, stonegear), finish(320, bellowfiz), finish(98321, tognus), finish(412, razzle),
+    -- West side of Kharanos first, then the depot: one pass instead of depot, forge, depot.
+    finish(98321, tognus), finish(412, razzle),
+    finish(313, stonegear, "Go east to Steelgrill's Depot."), finish(320, bellowfiz),
     accept(96408, beldin),
     action("train", nil, "Train spells for level", { level = 10 }),
 
@@ -1380,6 +1388,7 @@ local dm = (function()
     action("hearth", belm, "Take the road west to Kharanos if you're walking.", kharanosHearth),
     action("train", nil, "Train spells for level", { level = 12 }),
     finish(291, at("Senator Barin Redstone", 39.55, 57.49, ironforge), "Follow the road north into Ironforge and find Senator Barin Redstone in the High Seat."),
+    finish(96055, at("Reyna Stonebranch", 55.9, 59.13, ironforge), "Herbalists: find Reyna Stonebranch, the Ironforge herbalism trainer, before the flight master."),
     taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
     finish(96056, at("Balthus Stoneflayer", 39.86, 32.5, ironforge), "With Skinning 20, see Balthus Stoneflayer, the Ironforge skinning trainer, for the camping recipe."),
     accept(6661, nil, "Enter the Deeprun Tram from Tinker Town. Monty stands on the Ironforge platform: take his Rat Catcher's Flute."),
@@ -1911,7 +1920,9 @@ q(488, "Zenn's Bidding", 5, 4)
 q(96606, "The Great Outdoors", 6, 4, nil, true)
 q(96634, "Camping 101: Cooking", 6, 4, 96606, true)
 q(97949, "Camping 101: Skinning", 6, 4, 96606, true)
-quest[97949].optional = true
+q(97944, "Camping 101: Herbalism", 6, 4, 96606, true)
+q(97948, "Camping 101: Mining", 6, 4, 96606, true)
+for _, id in ipairs({ 97949, 97944, 97948 }) do quest[id].optional = true end
 q(997, "Denalan's Earth", 5, 4)
 q(475, "A Troubling Breeze", 6, 4)
 q(476, "Gnarlpine Corruption", 6, 4, 475)
@@ -2098,9 +2109,13 @@ te.teldrassil = {
   objectiveAt(96606, te.lyreena, "Sit by Lyreena's campfire until you get Boosted Rest.", "Boosted Rest"),
   finish(96606, te.lyreena), accept(96634, te.lyreena),
   accept(97949, te.lyreena, "If you know Skinning, ask Lyreena for the skinning lesson too. Radnaal Maneweaver on the Darnassus road finishes it once your Skinning reaches 20."),
+  accept(97944, te.lyreena, "If you know Herbalism, ask Lyreena for the herbalism lesson too. Malorne Bladeleaf in Dolanaar finishes it."),
+  accept(97948, te.lyreena, "If you know Mining, ask Lyreena for the mining lesson too. Kurdram Stonehammer in Auberdine finishes it when you pass through."),
   finish(2159, te.keldamyr),
   action("sethearth", te.keldamyr, "Bind your hearthstone at the Dolanaar inn.", te.hearth),
+  accept(99046, te.kyra, "Sentinel Kyra Starsong stands just outside the inn. Keep her message until you take the road to the Oracle Glade."),
   finish(96634, te.zarrin, "Speak to Zarrin in the inn about Cooking."),
+  finish(97944, te.t("Malorne Bladeleaf", 57.72, 60.64), "Herbalists: Malorne Bladeleaf, the herbalism trainer, stands near Zarrin."),
   finish(928, te.corithras), accept(929, te.corithras),
   accept(997, te.syral), accept(475, te.athridas), accept(2438, te.tallonkai), accept(932, te.tallonkai),
   accept(87288, te.aldia),
@@ -2123,14 +2138,15 @@ te.teldrassil = {
   finish(2438, te.tallonkai), accept(2459, te.tallonkai),
   finish(87288, te.aldia), finish(5621, te.laurna),
   finish(929, te.corithras), accept(933, te.corithras),
-  accept(489, te.syral), accept(487, te.amara), accept(99046, te.kyra),
+  accept(489, te.syral), accept(487, te.amara),
   action("train", nil, "Train spells for level", { level = 8 }),
-  objectiveAt(932, te.t(nil, 51.8, 50.4), "Enter Fel Rock north-west of Dolanaar. Kill Lord Melenas at the back and take his head.", "Melenas' Head"),
+  -- Starbreeze first, then Fel Rock on the road west to the den: no second crossing of Dolanaar.
   along(objectiveAt(2459, te.t(nil, 68.9, 52.8), "Kill Mystics east of Starbreeze. Use Ferocitas's Gnarlpine Necklace to get the jewel, then look for Fel Cones on the way back.",
     "7 Gnarlpine Mystics", "Tallonkai's Jewel"), 489),
   objectiveAt(489, te.t(nil, 63.7, 63.6), "Collect Fel Cones under the trees on the way back west.", "3 Fel Cones"),
   finish(489, te.zenn),
-  finish(932, te.tallonkai), finish(2459, te.tallonkai),
+  finish(2459, te.tallonkai),
+  objectiveAt(932, te.t(nil, 51.8, 50.4), "On your way west, enter Fel Rock north-west of Dolanaar. Kill Lord Melenas at the back and take his head. Tallonkai takes it on your next Dolanaar visit.", "Melenas' Head"),
   accept(490, te.shayla, "Pick up the bounty from Shayla on patrol west of the den before fighting the ambushers."),
   along(objectiveAt(487, te.t(nil, 46.5, 53.3), "Kill Gnarlpine Ambushers on the road by the den and loot their fangs.", "6 Gnarlpine Ambushers"), 490),
   accept(2541, te.oben, "Find Oben Rageclaw inside the Ban'ethil Barrow Den."),
@@ -2145,7 +2161,7 @@ te.teldrassil = {
   withItem(5621, objectiveAt(933, te.t(nil, 42.41, 67.07), "Go south to the Pools of Arlithrien and fill the Tourmaline Phial.", "Filled Tourmaline Phial")),
   withItem(5189, accept(930, te.t("Strange Fruited Plant", 42.61, 76.19), "Take the Glowing Fruit from the plant further south.")),
   action("hearth", te.keldamyr, "Head back to the inn in Dolanaar.", te.hearth),
-  finish(487, te.amara), finish(483, te.athridas), finish(99053, te.kyra),
+  finish(487, te.amara), finish(483, te.athridas), finish(932, te.tallonkai), finish(99053, te.kyra),
   finish(933, te.corithras), accept(7383, te.corithras),
   action("grind", te.t(nil, 53.4, 57.5), "If still under level 10, clear nightsabers and owls around Dolanaar.", { level = 10 }),
   action("train", nil, "Train spells for level", { level = 10 }),
@@ -2170,6 +2186,7 @@ te.teldrassil = {
   finish(6103, te.d("Jocaste", 40.38, 8.55), "Find Jocaste in the Cenarion Enclave."),
   finish(98391, te.aquinne), accept(2519, te.aquinne),
   finish(2519, te.amoora, "Go south to the Temple of the Moon."), accept(2518, te.amoora),
+  accept(98067, te.dalia, "Accept from Sentinel Dalia Sunblade in the temple. Her Lunar Pendant goes to four places on your last city visit; use it sooner if you pass one."),
   finish(5629, te.d("Priestess Alathea", 39.52, 81.2), "Find Priestess Alathea in the temple."),
   finish(99046, te.eralya, "Leave the city and take the road north toward the Oracle Glade."),
   accept(99047, te.eralya),
@@ -2219,13 +2236,19 @@ te.teldrassil = {
   finish(490, te.shayla, "Find Shayla on the road west. Turn in if you have 15 Gnarlpine Fangs. Otherwise use Next."),
   finish(99073, te.eralya, "Take the road west, then north to Sentinel Eralya."),
   action("goto", te.gate, "Return to the Darnassus gate."),
-  finish(935, te.fandral), accept(98046, te.fandral),
-  finish(98046, te.lariia, "Bring the vessel to Lariia in the Temple of the Moon."), accept(98065, te.lariia),
-  finish(98065, te.tyrande), accept(98067, te.dalia),
-  withItem("Lunar Pendant", objectiveAt(98067, te.d(nil, 41.2, 43.5), "Use the Lunar Pendant at the bank, the Cenarion Hold depths, the Craftsmen's Terrace inn and the city gate.",
-    "Cenarion Hold depths", "Darnassus Bank", "Craftsmen's Terrace Inn", "City Gate")),
-  finish(98067, te.dalia),
+  -- One loop through the city: gate, Craftsmen's Terrace, Cenarion Enclave, bank, temple, portal.
+  -- The pendant spots are guide A's (tools/audits/2026-11-12-alliance-1-12.md).
+  withItem("Lunar Pendant", objectivePart(98067, 4, te.d(nil, 87.8, 35.7), "Use the Lunar Pendant at the city gate as you enter.", "City Gate")),
   accept(6344, te.mydrannul, "Find Mydrannul's general goods shop on the Craftsmen's Terrace."),
+  withItem("Lunar Pendant", objectivePart(98067, 3, te.d(nil, 66.0, 16.6), "Follow the Craftsmen's Terrace north to the inn and use the Lunar Pendant there.",
+    "Craftsmen's Terrace Inn")),
+  withItem("Lunar Pendant", objectivePart(98067, 1, te.d(nil, 33.9, 15.5), "Cross west to the Cenarion Enclave. Use the Lunar Pendant at the entrance to the Cenarion Hold depths.",
+    "Cenarion Hold depths")),
+  finish(935, te.fandral), accept(98046, te.fandral),
+  withItem("Lunar Pendant", objectivePart(98067, 2, te.d(nil, 41.4, 43.3), "Head south and use the Lunar Pendant at the bank.", "Darnassus Bank")),
+  finish(98067, te.dalia, "Return the pendant to Sentinel Dalia in the Temple of the Moon."),
+  finish(98046, te.lariia, "Bring the vessel to Lariia in the Temple of the Moon."), accept(98065, te.lariia),
+  finish(98065, te.tyrande),
   action("goto", nil, "Take the pink portal in the Temple Gardens west of the bank to Rut'theran Village. Use Next when you arrive."),
   finish(6344, te.nessa), accept(6341, te.nessa),
   finish(6341, te.vesprystus), accept(6342, te.vesprystus),
@@ -2233,6 +2256,7 @@ te.teldrassil = {
   taxi("fly", te.caylais, "Auberdine, Darkshore", "Speak to Vesprystus again for the hippogryph to Auberdine. If the flight is unavailable, take the ferry from the village pier."),
   finish(6342, te.laird, "Find Laird below the Auberdine flight platform."),
   accept(6343, te.laird, "Get Laird's Response for Nessa. If Laird has no follow-up, use Next."),
+  finish(97948, at("Kurdram Stonehammer", 38.25, 41.01, te.darkshore), "Miners: Kurdram Stonehammer is a short walk north-east of Laird."),
   taxi("getfp", te.caylais, "Auberdine, Darkshore", "Learn the Auberdine flight path from Caylais Moonfeather."),
   finish(6343, te.nessa, "Fly back to Rut'theran from Caylais, or take the ferry from Auberdine's north pier. Give Nessa the response."),
   taxi("fly", te.caylais, "Auberdine, Darkshore", "Return to Auberdine by hippogryph or ferry. If you are already there, use Next."),
