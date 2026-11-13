@@ -657,6 +657,22 @@ function S.arrowMove()
   local arrow, frame = _G.LevelingCodexQuestArrow, questViewer()
   check(arrow:GetParent() == UIParent and arrow:IsShown(), "the arrow lives on its own")
   check(math.abs(arrow:GetScale() - 2) < 0.001, "a saved scale out of bounds is held at 200%")
+  -- The wheel zooms the camera unless Ctrl is held over the arrow.
+  check(not arrow:IsMouseWheelEnabled(), "the arrow leaves the mouse wheel to the camera")
+  MOCK.fire(arrow, "OnEnter")
+  MOCK.advance(0.1)
+  check(not arrow:IsMouseWheelEnabled(), "hovering alone still leaves the wheel to the camera")
+  MOCK.ctrl = true
+  MOCK.advance(0.1)
+  check(arrow:IsMouseWheelEnabled(), "Ctrl held over the arrow takes the wheel to resize it")
+  MOCK.ctrl = false
+  MOCK.advance(0.1)
+  check(not arrow:IsMouseWheelEnabled(), "letting go of Ctrl gives it back")
+  MOCK.ctrl = true
+  MOCK.advance(0.1)
+  MOCK.fire(arrow, "OnLeave")
+  check(not arrow:IsMouseWheelEnabled(), "and so does moving off the arrow")
+  MOCK.ctrl = false
   slash("")
   click(win(), "Settings")
   click(win(), "Reset arrow")
@@ -669,9 +685,18 @@ function S.arrowMove()
   _, rel = arrow:GetPoint()
   check(p and rel == UIParent, "dragging puts it anywhere and saves the spot")
   check(select(3, frame:GetClampRectInsets()) == 0, "a moved arrow no longer pads the window")
+  -- where its centre is on screen: the anchor offset in the arrow's own (scaled) units times its scale
+  local function centre()
+    local point, _, _, x, y = arrow:GetPoint()
+    return point, x * arrow:GetScale(), y * arrow:GetScale()
+  end
+  local _, cx, cy = centre()
   MOCK.ctrl = true
   MOCK.fire(arrow, "OnMouseWheel", 1)
   check(math.abs(arrow:GetScale() - 1.1) < 0.001 and LevelingCodexDB.questArrowScale, "Ctrl+wheel resizes it")
+  local point, cx2, cy2 = centre()
+  check(point == "CENTER" and math.abs(cx2 - cx) < 0.01 and math.abs(cy2 - cy) < 0.01,
+    "resizing a moved arrow keeps its centre where it was")
   MOCK.fire(arrow, "OnMouseWheel", -1)
   MOCK.ctrl = false
   MOCK.fire(arrow, "OnMouseWheel", 1)
@@ -1324,6 +1349,9 @@ function S.questDungeonChoice()
     and findButton(frame, function(l) return l == "Skip" end), "the step window offers Plan and Skip")
   check(findButton(win(), function(l) return l == "Plan The Deadmines" end)
     and findButton(win(), function(l) return l == "Skip this run" end), "the Quests tab offers both for controllers")
+  check(findButton(win(), function(l) return l == "Skip run" end)
+    and not findButton(win(), function(l) return l == "Next step" end),
+    "the Quests tab's Next step says it skips the run, like the step window's")
 
   click(frame, "Skip")
   check(LevelingCodexDB.questDungeonPlan["dungeon-deadmines"] == false and chatHas("The Deadmines is skipped"),
@@ -6388,6 +6416,10 @@ function S.statsCounters()
   check(L().deaths == 1 and st.totals.deaths == 1, "a death")
   MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-1", 8690)
   check(st.totals.hearths == 1, "a hearthstone use")
+  check(not next(MOCK.events.UNIT_SPELLCAST_SUCCEEDED or {}),
+    "spell casts are watched for you only, not every unit around you")
+  check(MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party1", "cast-2", 8690) == 0 and st.totals.hearths == 1,
+    "a party member's hearthstone doesn't reach the Codex")
   MOCK.event("TIME_PLAYED_MSG", 3600, 600)
   check(st.played.total == 3600 and st.played.level == 600, "/played is remembered")
   local before = L().seconds
@@ -6403,6 +6435,41 @@ function S.statsCounters()
   MOCK.advance(1)
   MOCK.closeMerchant()
   check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+end
+
+-- Stats: a turn-in that levels you up keeps its gold with the level you turned it in at, whichever
+-- comes first, the reward's money or the level-up.
+function S.statsLevelUp()
+  MOCK.money = 1000 -- known at login: no early gain to move around
+  S.login()
+  if MOCK.minimal then return end
+  local st, lvl = LevelingCodexCharDB.stats, MOCK.level
+  local function gold(level, key)
+    local l = st.levels[level]
+    return l and l.goldIn[key] or 0
+  end
+  -- the turn-in, the level-up, then its money
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.level = lvl + 1
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 1)
+  MOCK.setMoney(1500)
+  check(gold(lvl, "quest") == 500 and gold(lvl + 1, "quest") == 0,
+    "the reward stays with the level it was earned at (" .. gold(lvl, "quest") .. " / " .. gold(lvl + 1, "quest") .. ")")
+  -- the money, the level-up, then the turn-in
+  MOCK.setMoney(1800)
+  MOCK.level = lvl + 2
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 2)
+  MOCK.event("QUEST_TURNED_IN", 33, 100, 300)
+  check(gold(lvl + 1, "quest") == 300 and gold(lvl + 1, "other") == 0 and gold(lvl + 2, "other") == 0
+    and gold(lvl + 2, "quest") == 0, "money that came first moves to quest rewards at its own level")
+  -- the level-up its XP caused, then the turn-in, then its money
+  MOCK.advance(3)
+  MOCK.level, MOCK.xp = lvl + 3, 40
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 3)
+  MOCK.event("QUEST_TURNED_IN", 18, 200, 700)
+  MOCK.setMoney(2500)
+  check(gold(lvl + 2, "quest") == 700 and gold(lvl + 3, "quest") == 0,
+    "a level-up just before its own turn-in still files the reward at the level it finished")
 end
 
 -- The Stats tab: this session, level splits, gold, activity and zones; two clicks reset.
@@ -6473,6 +6540,32 @@ function S.vendorServer()
   MOCK.advance(1)
   check(#MOCK.bought == 1, "a second click before the items arrive buys nothing more (" .. #MOCK.bought .. " buys)")
   check(not card:IsShown(), "the card hides once the items are in your bags")
+end
+
+-- Vendor: a purchase the game refuses (full bags) is never called bought; one that arrives late is.
+function S.vendorBuyFails()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  MOCK.serverDelay, MOCK.money, MOCK.buyFails = 0.3, 1000, true
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  card.buy:Click()
+  MOCK.advance(0.5)
+  check(not chatHas("Bought"), "nothing is called bought before it arrives")
+  MOCK.advance(5)
+  check(not chatHas("Bought") and chatHas("Couldn't buy 3 Soothing Spices"), "a purchase that never arrives says so")
+  check(card:IsShown() and findButton(card, function(l) return l == "Buy for 1s 50c" end), "and the card offers Buy again")
+  MOCK.buyFails = nil
+  card.buy:Click()
+  check(not chatHas("Bought"), "the items are on their way")
+  MOCK.advance(1)
+  check(chatHas("Bought 3 Soothing Spices for 1s 50c%."), "once they're in your bags, chat says what it bought")
 end
 
 -- Vendor with a controller: the shopping card never takes the controller from the vendor window.

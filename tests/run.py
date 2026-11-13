@@ -827,7 +827,9 @@ def main():
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
             runs.append(("WARRIOR/full/vendor-pad", "WARRIOR", False, ["vendorPad"]))
+            runs.append(("WARRIOR/full/vendor-buy-fails", "WARRIOR", False, ["vendorBuyFails"]))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
+        runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
         if minimal:
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))

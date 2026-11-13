@@ -558,7 +558,10 @@ local function render()
 
   local quarter = (W - 24) / 4
   U.btn("Previous step", 0, y, quarter, function() ns.moveQuestStep(true) end)
-  U.btn("Next step", quarter + 8, y, quarter, function() ns.moveQuestStep(false) end)
+  -- On a Dungeon ahead step, Next leaves the run out, so it says Skip (like the step window's).
+  local choosing = current and current.step.type == "plan"
+  U.btn(choosing and "Skip run" or "Next step", quarter + 8, y, quarter, function() ns.moveQuestStep(false) end,
+    false, choosing and "The run stays out of your route. Guides > Dungeons can plan it later." or nil)
   U.btn("Show on map", 2 * (quarter + 8), y, quarter, ns.showQuestStepOnMap, false,
     "Open the world map where the current step is.")
   local viewer = _G.LevelingCodexQuestViewer

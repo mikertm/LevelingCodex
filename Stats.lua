@@ -183,12 +183,14 @@ end
 ----------------------------------------------------------------------------
 
 local lastMoney, merchantOpen, trainerOpen, lootUntil, repairCost
-local pendingQuest = { copper = 0, at = 0 } -- a turn-in's money reward, waiting for its money
+-- A turn-in's money reward waiting for its money, with the level you turned it in at (a turn-in
+-- that levels you up still belongs to the level it finished).
+local pendingQuest = { copper = 0, at = 0 }
 local lastOther = { copper = 0, at = 0 } -- the last gain filed as other (a reward that came first)
 
-local function addGold(dir, key, amount)
+local function addGold(dir, key, amount, lvl)
   if amount <= 0 then return end
-  local lvl = level()
+  lvl = lvl or level()
   each(function(t)
     local l = levelOf(t, lvl)
     l[dir][key] = (l[dir][key] or 0) + amount
@@ -204,18 +206,20 @@ local function moneyChanged()
   if delta == 0 then return end
   local now = GetTime()
   local rest = math.abs(delta)
-  local function file(dir, key, amount)
+  local function file(dir, key, amount, lvl)
     amount = math.min(amount, rest)
-    if amount > 0 then addGold(dir, key, amount); rest = rest - amount end
+    if amount > 0 then addGold(dir, key, amount, lvl); rest = rest - amount end
     return amount
   end
   if delta > 0 then
-    if now - pendingQuest.at <= EXPIRE then pendingQuest.copper = pendingQuest.copper - file("goldIn", "quest", pendingQuest.copper) end
+    if now - pendingQuest.at <= EXPIRE then
+      pendingQuest.copper = pendingQuest.copper - file("goldIn", "quest", pendingQuest.copper, pendingQuest.level)
+    end
     if lootUntil and now <= lootUntil then file("goldIn", "loot", rest) end
     file("goldIn", "junk", take("junk", rest))
     if merchantOpen then file("goldIn", "sales", rest) end
     local other = file("goldIn", "other", rest)
-    if other > 0 then lastOther.copper, lastOther.at = other, now end
+    if other > 0 then lastOther.copper, lastOther.at, lastOther.level = other, now, level() end
   else
     file("goldOut", "repair", take("repair", rest))
     if merchantOpen and repairCost then
@@ -232,14 +236,26 @@ local function moneyChanged()
   end
 end
 
+-- The level a turn-in finished: yours, or the one before when its own XP just levelled you up (the
+-- level-up came within a second and you have no more XP into the new level than it gave).
+local levelUp
+local function turnInLevel(xp)
+  local lvl = level()
+  if levelUp and levelUp.to == lvl and GetTime() - levelUp.at <= 1 then
+    local into, gained = tonumber(try(UnitXP, "player")), tonumber(xp)
+    if into and gained and gained > 0 and into <= gained then return lvl - 1 end
+  end
+  return lvl
+end
+
 -- A turn-in's money reward: filed when its money arrives, or moved from "other" when it came first.
-local function questMoney(copper)
+local function questMoney(copper, xp)
   copper = tonumber(copper) or 0
   if copper <= 0 then return end
   local now = GetTime()
   local early = now - lastOther.at <= 2 and math.min(copper, lastOther.copper) or 0
   if early > 0 then
-    local lvl = level()
+    local lvl = lastOther.level or level() -- where that gain was filed, even across a level-up
     each(function(t)
       local l = levelOf(t, lvl)
       l.goldIn.other, l.goldIn.quest = l.goldIn.other - early, l.goldIn.quest + early
@@ -248,7 +264,7 @@ local function questMoney(copper)
     end)
     lastOther.copper = lastOther.copper - early
   end
-  pendingQuest.copper, pendingQuest.at = copper - early, now
+  pendingQuest.copper, pendingQuest.at, pendingQuest.level = copper - early, now, turnInLevel(xp)
 end
 
 ----------------------------------------------------------------------------
@@ -270,7 +286,10 @@ end
 
 local HANDLERS = {
   PLAYER_MONEY = moneyChanged,
-  QUEST_TURNED_IN = function(_, _, money) questMoney(money) end,
+  QUEST_TURNED_IN = function(_, xp, money) questMoney(money, xp) end,
+  PLAYER_LEVEL_UP = function(newLevel)
+    levelUp = { to = tonumber(newLevel) or level(), at = GetTime() }
+  end,
   LOOT_OPENED = function() lootUntil = math.huge end,
   LOOT_CLOSED = function() lootUntil = GetTime() + LOOT_GRACE end,
   MERCHANT_SHOW = function()
@@ -297,7 +316,12 @@ function ns.startStats()
   lastMoney = tonumber(try(GetMoney))
   lastRested = tonumber(try(GetXPExhaustion))
   events = CreateFrame("Frame")
-  for event in pairs(HANDLERS) do pcall(events.RegisterEvent, events, event) end
+  for event in pairs(HANDLERS) do
+    -- spell casts: yours only, not every unit's around you (RegisterEvent where the client lacks it)
+    local unitOnly = event == "UNIT_SPELLCAST_SUCCEEDED" and type(events.RegisterUnitEvent) == "function"
+      and pcall(events.RegisterUnitEvent, events, event, "player")
+    if not unitOnly then pcall(events.RegisterEvent, events, event) end
+  end
   events:SetScript("OnEvent", function(_, event, ...)
     local ok, err = pcall(HANDLERS[event], ...)
     if not ok and not S.errored then

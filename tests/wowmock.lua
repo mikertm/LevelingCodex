@@ -291,7 +291,12 @@ function Region:SetHeight(h) self._h = h end
 function Region:GetWidth() return self._w end
 function Region:GetHeight() return self._h end
 function Region:GetSize() return self._w, self._h end
-function Region:GetCenter() return self._cx or 500, self._cy or 500 end
+function Region:GetCenter()
+  -- a frame placed by its centre from the screen's bottom left is where it says (its own units)
+  local p = self._points[1]
+  if p and p[1] == "CENTER" and p[2] == UIParent and p[3] == "BOTTOMLEFT" then return p[4], p[5] end
+  return self._cx or 500, self._cy or 500
+end
 function Region:GetLeft() return 0 end
 function Region:GetTop() return self._top or 700 end
 function Region:GetBottom() return self._bottom or 100 end
@@ -478,12 +483,27 @@ function Frame:RegisterEvent(ev)
   MOCK.events[ev] = MOCK.events[ev] or {}
   MOCK.events[ev][self] = true
 end
+-- A unit event for the units named only: MOCK.unitEvents[ev][frame] = { units }.
+MOCK.unitEvents = {}
+function Frame:RegisterUnitEvent(ev, ...)
+  if not MOCK.knownEvents[ev] then error('Attempt to register unknown event "' .. tostring(ev) .. '"', 2) end
+  if eventForbidden(ev, "RegisterUnitEvent") then return end
+  if MOCK.events[ev] then MOCK.events[ev][self] = nil end
+  MOCK.unitEvents[ev] = MOCK.unitEvents[ev] or {}
+  MOCK.unitEvents[ev][self] = { ... }
+end
 function Frame:UnregisterEvent(ev)
   if eventForbidden(ev, "UnregisterEvent") then return end
   if MOCK.events[ev] then MOCK.events[ev][self] = nil end
+  if MOCK.unitEvents[ev] then MOCK.unitEvents[ev][self] = nil end
 end
-function Frame:UnregisterAllEvents() for _, set in pairs(MOCK.events) do set[self] = nil end end
-function Frame:IsEventRegistered(ev) return MOCK.events[ev] and MOCK.events[ev][self] or false end
+function Frame:UnregisterAllEvents()
+  for _, set in pairs(MOCK.events) do set[self] = nil end
+  for _, set in pairs(MOCK.unitEvents) do set[self] = nil end
+end
+function Frame:IsEventRegistered(ev)
+  return (MOCK.events[ev] and MOCK.events[ev][self]) or (MOCK.unitEvents[ev] and MOCK.unitEvents[ev][self] and true) or false
+end
 function Frame:SetFrameStrata(s) self._strata = s end
 function Frame:GetFrameStrata() return self._strata or "MEDIUM" end
 function Frame:SetFrameLevel(l) self._level = l end
@@ -498,7 +518,11 @@ function Frame:IsMouseEnabled()
   if self._mouse ~= nil then return self._mouse end
   return self._type == "Button" or self._type == "CheckButton"
 end
-function Frame:EnableMouseWheel() end
+function Frame:EnableMouseWheel(on) self._wheel = on and true or false end
+function Frame:IsMouseWheelEnabled() return self._wheel or false end
+-- Mouse motion (OnEnter/OnLeave) and clicks apart: a click-through frame still gets its tooltip.
+function Frame:SetMouseClickEnabled(on) self._mouseClick = on and true or false end
+function Frame:SetMouseMotionEnabled(on) self._mouseMotion = on and true or false end
 function Frame:EnableKeyboard() end
 function Frame:SetPropagateKeyboardInput() end
 function Frame:SetClampedToScreen() end
@@ -1099,9 +1123,10 @@ function GetMerchantItemInfo(i)
   if m then return m.name, 134400, m.price, m.per or 1, m.stock or -1, true, true, m.extended or false end
 end
 function GetMerchantItemMaxStack(i) local m = merchantItem(i); return m and (m.maxStack or 20) end
+-- MOCK.buyFails: the game refuses the purchase (full bags): nothing arrives, no money moves.
 function BuyMerchantItem(i, n)
   local m = merchantItem(i)
-  if not m then return end
+  if not m or MOCK.buyFails then return end
   local per = m.per or 1
   n = n or per
   if m.stock and m.stock ~= -1 then n = math.min(n, m.stock); m.stock = m.stock - n end
@@ -1284,10 +1309,14 @@ end
 ----------------------------------------------------------------------------
 
 function MOCK.event(name, ...)
-  local set = MOCK.events[name]
-  if not set then return 0 end
+  local set, units = MOCK.events[name], MOCK.unitEvents[name]
+  if not set and not units then return 0 end
   local list = {}
-  for f in pairs(set) do list[#list + 1] = f end
+  for f in pairs(set or {}) do list[#list + 1] = f end
+  local unit = ...
+  for f, names in pairs(units or {}) do
+    for _, u in ipairs(names) do if u == unit then list[#list + 1] = f; break end end
+  end
   for _, f in ipairs(list) do fire(f, "OnEvent", name, ...) end
   return #list
 end
@@ -1424,6 +1453,9 @@ function MOCK.setup(opts)
     Frame.EnableGamePadButton = nil
     Frame.SetPropagateGamePadInput = nil
     Frame.EnableGamePadStick = nil
+    Frame.RegisterUnitEvent = nil
+    Frame.SetMouseClickEnabled = nil
+    Frame.SetMouseMotionEnabled = nil
     -- an old-style client: no Blizzard button/check templates, no backdrops at all
     Frame.SetBackdrop = nil
     for _, t in ipairs({ "UIPanelButtonTemplate", "UICheckButtonTemplate", "BackdropTemplate" }) do

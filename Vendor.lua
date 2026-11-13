@@ -251,8 +251,10 @@ end
 
 local card, place = nil, {}
 local ROWS = 6
-local BUYING = 2 -- seconds a purchase waits for its items before the card offers Buy again
-local buying -- GetTime() of the last purchase, until its items reach your bags
+local CONFIRM = 5 -- seconds a purchase waits for its items before it's called failed
+-- The last purchase until its items reach your bags: { rows = { { id, name, n, cost, before } } }.
+-- Until then the card says Buying... and another click buys nothing.
+local buying
 
 local function goods()
   local list, names = {}, {}
@@ -272,7 +274,7 @@ local function goods()
     end
     price = tonumber(price)
     if id and type(name) == "string" and price and not extended and not list[id] then
-      list[id] = { index = i, name = name, icon = icon, price = price, per = math.max(1, tonumber(per) or 1),
+      list[id] = { id = id, index = i, name = name, icon = icon, price = price, per = math.max(1, tonumber(per) or 1),
         stock = tonumber(stock) or -1 }
       names[id] = name
     end
@@ -371,7 +373,7 @@ local function refreshCard()
   end
   local money = tonumber(try(GetMoney)) or 0
   local label = money >= total and ("Buy for " .. ns.money(total)) or ("Need " .. ns.money(total - money) .. " more")
-  if buying and GetTime() - buying < BUYING then label = "Buying..." end
+  if buying then label = "Buying..." end
   card.buy:SetLabel(label)
   card.buy.codexLabel = label
   card.buy:ClearAllPoints()
@@ -391,14 +393,46 @@ local function refreshCard()
   card:Show()
 end
 
+-- Whether the client can count your bags; without it a purchase is taken on trust.
+local function canCount()
+  return type(C_Item) == "table" and type(C_Item.GetItemCount) == "function" or type(GetItemCount) == "function"
+end
+
+-- Say what the last purchase brought once it's in your bags. `final` (the wait is over): what never
+-- came is called failed (the game says why: full bags, ...).
+local function settle(final)
+  if not buying then return end
+  local waiting = {}
+  for _, r in ipairs(buying.rows) do
+    local got = canCount() and Q.itemCount(r.id) - r.before or r.n
+    if got >= r.n then
+      ns.say(Q.plain("Bought " .. r.n .. " " .. r.name .. " for " .. ns.money(r.cost) .. "."))
+    elseif final and got > 0 then
+      ns.say(Q.plain("Bought " .. got .. " of " .. r.n .. " " .. r.name .. "."))
+    elseif final then
+      ns.say(Q.plain("Couldn't buy " .. r.n .. " " .. r.name .. "."))
+    else
+      waiting[#waiting + 1] = r
+    end
+  end
+  buying.rows = waiting
+  if final or #waiting == 0 then buying = nil end
+end
+
 -- Buy everything the card lists (only when you can pay for all of it).
 function V.buy()
   if not isOpen() then hideCard(); return end
   -- the items arrive after a server round trip: until then another click must not buy them again
-  if buying and GetTime() - buying < BUYING then return end
+  if buying then return end
   local rows, total = shopping()
   if #rows == 0 or (tonumber(try(GetMoney)) or 0) < total then refreshCard(); return end
   V.onBought(total)
+  local this = { rows = {} }
+  for _, row in ipairs(rows) do
+    local g = row.good
+    this.rows[#this.rows + 1] = { id = g.id, name = g.name, n = row.n, cost = row.cost, before = Q.itemCount(g.id) }
+  end
+  buying = this
   for _, row in ipairs(rows) do
     local g = row.good
     if g.per == 1 then
@@ -412,12 +446,10 @@ function V.buy()
     else
       for _ = 1, math.ceil(row.n / g.per) do try(BuyMerchantItem, g.index) end
     end
-    ns.say(Q.plain("Bought " .. row.n .. " " .. g.name .. " for " .. ns.money(row.cost) .. "."))
   end
-  local started = GetTime()
-  buying = started
-  ns.after(BUYING, function()
-    if buying == started then buying = nil; if isOpen() then refreshCard() end end
+  settle(false)
+  ns.after(CONFIRM, function()
+    if buying == this then settle(true); if isOpen() then refreshCard() end end
   end)
   refreshCard()
 end
@@ -434,8 +466,9 @@ local function onShow()
   ns.after(STEP, function() sellNext(r) end)
 end
 
+-- A purchase still on its way is kept: its items can arrive after the window closes.
 local function onClose()
-  merchantOpen, pendingRepair, buying = false, nil, nil
+  merchantOpen, pendingRepair = false, nil
   finish(true)
   hideCard()
 end
@@ -456,9 +489,9 @@ function ns.startVendor()
       onClose()
     elseif event == "PLAYER_MONEY" then
       moneyArrived()
-    elseif merchantOpen then
-      if event == "BAG_UPDATE_DELAYED" then buying = nil end
-      refreshCard()
+    else
+      if event == "BAG_UPDATE_DELAYED" then settle(false) end
+      if merchantOpen then refreshCard() end
     end
   end)
 end

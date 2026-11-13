@@ -236,7 +236,8 @@ local function makeViewer()
 
   -- No box: a rotating arrow over the world with the distance under it, like the game's own pointers.
   -- It has its own spot once dragged (db.questArrowPos); until then it sits above the step window.
-  -- Only the 48 px arrow takes the mouse, so the camera still turns around it.
+  -- Only the 48 px arrow takes the mouse, so the camera still turns around it, and it takes the
+  -- wheel only while Ctrl is held over it (to resize it): otherwise the wheel zooms the camera.
   arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", UIParent)
   arrow:SetSize(48, 48)
   arrow:SetFrameStrata("MEDIUM")
@@ -244,7 +245,7 @@ local function makeViewer()
   arrow:SetClampedToScreen(true)
   arrow:EnableMouse(true)
   arrow:RegisterForDrag("LeftButton")
-  try(arrow.EnableMouseWheel, arrow, true)
+  try(arrow.EnableMouseWheel, arrow, false)
   arrow:Hide()
   arrowArt = arrow:CreateTexture(nil, "ARTWORK")
   arrowArt:SetAllPoints()
@@ -293,32 +294,58 @@ local function makeViewer()
     fade:SetDuration(0.6)
     arrow.pulse:SetScript("OnFinished", function() arrow.ring:Hide() end)
   end
-  arrow:SetScript("OnUpdate", turnArrow)
+  -- The wheel is the arrow's only while Ctrl is held over it.
+  local wheel = false
+  arrow:SetScript("OnUpdate", function()
+    local want = arrow.hovered and try(IsControlKeyDown) and true or false
+    if want ~= wheel then
+      wheel = want
+      try(arrow.EnableMouseWheel, arrow, want)
+    end
+    turnArrow()
+  end)
   arrow:SetScript("OnDragStart", function(self)
     if not ns.db().questArrowLocked then self:StartMoving() end
   end)
   arrow:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
-    local point, _, relative, x, y = self:GetPoint()
-    if point and not ns.db().questArrowLocked then ns.db().questArrowPos = { point, relative or point, x or 0, y or 0 } end
+    if not ns.db().questArrowLocked then ns.saveQuestArrowSpot() end
     ns.placeQuestArrow()
   end)
   arrow:SetScript("OnMouseWheel", function(_, delta)
     if not try(IsControlKeyDown) then return end
     local db = ns.db()
+    -- a moved arrow grows and shrinks around its centre: keep that spot in screen units first
+    if type(db.questArrowPos) == "table" then ns.saveQuestArrowSpot() end
     local scale = (tonumber(db.questArrowScale) or 1) + ((tonumber(delta) or 0) > 0 and 0.1 or -0.1)
     db.questArrowScale = math.floor(math.max(0.6, math.min(2, scale)) * 10 + 0.5) / 10
     ns.placeQuestArrow()
   end)
   arrow:SetScript("OnEnter", function(self)
+    self.hovered = true
     if not GameTooltip then return end
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
     GameTooltip:SetText("Quest arrow")
     GameTooltip:AddLine("Drag to move it. Ctrl+mouse wheel changes its size.", 1, 1, 1)
     GameTooltip:Show()
   end)
-  arrow:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  arrow:SetScript("OnLeave", function(self)
+    self.hovered = false
+    wheel = false
+    try(self.EnableMouseWheel, self, false)
+    if GameTooltip then GameTooltip:Hide() end
+  end)
   ns.placeQuestArrow()
+end
+
+-- Save where the arrow's centre is, in UIParent units (its own units times its scale), so a later
+-- size change keeps that centre: { "CENTER", "BOTTOMLEFT", x, y, true }. An older save without the
+-- fifth field holds the anchor and offsets as dragged, in the arrow's own units.
+function ns.saveQuestArrowSpot()
+  if not arrow then return end
+  local x, y = arrow:GetCenter()
+  local scale = tonumber(arrow:GetScale()) or 1
+  if type(x) == "number" and type(y) == "number" then ns.db().questArrowPos = { "CENTER", "BOTTOMLEFT", x * scale, y * scale, true } end
 end
 
 -- The arrow's spot: the saved one (and then the step window no longer keeps room above itself for
@@ -327,15 +354,18 @@ function ns.placeQuestArrow()
   if not arrow then return end
   local db = ns.db()
   local p = db.questArrowPos
+  local scale = math.max(0.6, math.min(2, tonumber(db.questArrowScale) or 1))
   arrow:ClearAllPoints()
+  arrow:SetScale(scale)
   if type(p) == "table" and type(p[1]) == "string" then
-    arrow:SetPoint(p[1], UIParent, type(p[2]) == "string" and p[2] or p[1], tonumber(p[3]) or 0, tonumber(p[4]) or 0)
+    local x, y = tonumber(p[3]) or 0, tonumber(p[4]) or 0
+    if p[5] then x, y = x / scale, y / scale end
+    arrow:SetPoint(p[1], UIParent, type(p[2]) == "string" and p[2] or p[1], x, y)
     try(viewer.SetClampRectInsets, viewer, 0, 0, 0, 0)
   else
     arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 28)
     try(viewer.SetClampRectInsets, viewer, 0, 0, 76, 0)
   end
-  arrow:SetScale(math.max(0.6, math.min(2, tonumber(db.questArrowScale) or 1)))
 end
 
 -- The flight timer: where you're flying (the node TakeTaxiNode took), how long you've flown and,
