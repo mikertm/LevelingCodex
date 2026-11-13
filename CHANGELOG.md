@@ -2,12 +2,6 @@
 
 ## v0.21.1
 
-### Fixes
-
-- **No more "Check in game" notes.** Some steps showed a dim "Check in game" line with a note meant for the guide's authors, and the route list said "Check in game" for them. The step window and the Quests tab no longer show them.
-
-## v0.21.0
-
 ### Alliance quest guide, levels 30-60
 
 - **The route now runs to 60.** About 35 new leveling guides follow on from the Wetlands:
