@@ -293,7 +293,8 @@ local function pulse(key)
 end
 
 -- `chain`: the goal's spot, then the rest of a step's way in and the step (Q.pathRest).
-local function layout(map, x, y, half, radius, turn, square, goal, chain)
+-- `pinSpot`: the game's user waypoint the Codex set (ns.questMapPinSpot), or nil.
+local function layout(map, x, y, half, radius, turn, square, goal, chain, pinSpot)
   hideAll()
   local ppy, limit = half / radius, half * 0.95
   local function screen(spot)
@@ -315,9 +316,13 @@ local function layout(map, x, y, half, radius, turn, square, goal, chain)
     iconFor = icon
     paintIcon(pins.current.icon, icon, 16, 8)
   end
+  -- off the minimap at the Codex's own map pin, the game's waypoint arrow already sits on the rim
+  local s = goal.spot
+  local gameArrow = out and goal.kind == "step" and pinSpot and pinSpot.map == s.map
+    and math.abs(pinSpot.x - s.x / 100) <= 0.0001 and math.abs(pinSpot.y - s.y / 100) <= 0.0001
   local pin = out and pins.edge or pins.current
   pin.info = goalInfo(goal, yards)
-  place(pin, cx, cy)
+  if not gameArrow then place(pin, cx, cy) end
   if out and pins.edgeArt then Q.try(pins.edge.icon.SetRotation, pins.edge.icon, -(bearing + turn)) end
   if here and not out then pulse(goal.key) elseif not here then pulsedKey = nil end
   if lineOn and not here then
@@ -370,15 +375,17 @@ local function update()
   if goal.kind == "step" and spot.world and goal.step and goal.step.path then
     for _, p in ipairs(Q.pathRest(goal.step)) do chain[#chain + 1] = p end
   end
+  local pinSpot = ns.questMapPinSpot and ns.questMapPinSpot()
   -- lay out again only when something that places the pins changed
   local parts = { map, x, y, half, radius, turn, tostring(square), goal.kind, tostring(goal.key),
     tostring(goal.caption), tostring(spot.map), tostring(spot.x), tostring(spot.y), nextsKey,
-    tostring(ns.db().noMinimapLine) }
+    tostring(ns.db().noMinimapLine),
+    pinSpot and (pinSpot.map .. ":" .. pinSpot.x .. ":" .. pinSpot.y) or "-" }
   for i = 2, #chain do parts[#parts + 1] = tostring(chain[i].map) .. ":" .. tostring(chain[i].x) .. ":" .. tostring(chain[i].y) end
   local key = table.concat(parts, "|")
   if key ~= layoutKey then
     layoutKey = key
-    layout(map, x, y, half, radius, turn, square, goal, chain)
+    layout(map, x, y, half, radius, turn, square, goal, chain, pinSpot)
   else
     glow()
   end

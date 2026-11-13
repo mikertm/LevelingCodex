@@ -771,6 +771,14 @@ function S.minimapPins()
   _, _, _, x, y = pins.current:GetPoint()
   check(x > 0 and math.abs(y) < 0.5, "a rotating minimap turns the pins with you")
   MOCK.cvars, MOCK.facing = {}, 0
+  MOCK.questY = 60 -- 394 yd south of Willem: off the minimap, no trip
+  MOCK.advance(0.2)
+  check(not pins.edge:IsShown() and not pins.current:IsShown() and dots() > 0,
+    "the game's own waypoint arrow marks the rim, so ours stays off; the dots still run there")
+  LevelingCodexDB.noQuestMapPin = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.2)
+  check(pins.edge:IsShown(), "without the map pin, our edge arrow shows")
   MOCK.questY = 80
   MOCK.advance(0.2)
   check(not pins.current:IsShown() and pins.edge:IsShown(), "out of range the pin becomes an edge arrow")
@@ -780,6 +788,7 @@ function S.minimapPins()
   MOCK.advance(0.2)
   _, _, _, x, y = pins.edge:GetPoint()
   check(math.abs(math.max(math.abs(x), math.abs(y)) - 66.5) < 0.6, "on the edge of a square minimap")
+  LevelingCodexDB.noQuestMapPin = nil
   MOCK.minimapShape, MOCK.viewRadius = nil, 0
   MOCK.minimapZoom = 9 -- no zoom table entry either
   MOCK.advance(0.2)

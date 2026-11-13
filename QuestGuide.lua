@@ -1027,6 +1027,14 @@ local function userWaypoint()
   if type(x) == "number" and type(y) == "number" then return point.uiMapID, x, y end
 end
 
+-- The waypoint the Codex set ({ map, x, y } in 0-1), while it's still the game's user waypoint:
+-- the minimap leaves the rim to the game's own waypoint arrow there.
+function ns.questMapPinSpot()
+  if not pinned then return end
+  local map, x, y = userWaypoint()
+  if map and samePoint(pinned, map, x, y) then return { map = pinned.map, x = pinned.x, y = pinned.y } end
+end
+
 local function updateMapPin()
   local M = C_Map
   if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
