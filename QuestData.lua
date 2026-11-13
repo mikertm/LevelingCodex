@@ -530,6 +530,10 @@ q(79362, "Grant's Shield", 25, 18, nil, true)
 quest[79362].startItem = 281147
 q(337, "An Old History Book", 25, 20)
 quest[337].startItem = 2794
+-- Brother Kristoff stands between the Stormwind gryphons and the Cathedral; Milton takes it in the
+-- library. Optional (195 XP), like the other Stormwind library errand: only book holders go there anyway.
+q(343, "Speaking of Fortitude", 24, 20)
+quest[343].optional = true
 q(323, "Proving Your Worth", 28, 20, 268)
 q(269, "Seeking Wisdom", 29, 20, 323)
 -- After the Wetlands' Blessed Arm (322): Grimand Elmore in Stormwind sends Morbent's Bane to Sven.
@@ -595,6 +599,18 @@ q(98208, "Bloom of the Heavens", 29, nil, nil, true)
 q(98209, "Bloom of the Heavens", 29, nil, nil, true)
 q(98291, "Death to the Dragonmaw", 30, nil, nil, true)
 q(98293, "Forced Disarmament", 30, nil, nil, true)
+-- Route audit pass 2026-11-12 (tools/audits/2026-11-12-alliance-duskwood-wetlands.md).
+-- Einar Stonegrip stands by the road just north of Howin; the bundle goes to Halloran in Menethil.
+q(469, "Daily Delivery", 21, 18)
+-- Whelgar's follow-up: the Goaz Warder is a group fight, so the whole quest is optional.
+q(98216, "Understanding Our Present", 31, nil, 299, true)
+quest[98216].optional = true
+-- MacKreel stands by the Waterlogged Letter on the Arathi shore; the moonshine goes to Southshore.
+q(647, "MacKreel's Moonshine", 30, 28)
+quest[647].optional = true
+-- Sara Balloo's next errands, both in Ironforge (after Sully's letter, so only with the letter).
+q(683, "Sara Balloo's Plea", 30, 25, 637)
+q(686, "A King's Tribute", 30, 25, 683)
 q(95647, "Lost in the Thicket Things", 31, 24, nil, true)
 q(98815, "Highland Hides", 28, nil, nil, true)
 q(95646, "Horrors in the Highland", 31, 24, 275, true)
@@ -917,8 +933,9 @@ local dusk = {
   -- A hearth step (done on arrival at Felicia), so the Stormwind turn-ins after it don't mark it as passed.
   action("hearth", felicia, "Hearth or take the east road to return to Darkshire for the flight to Stormwind.", darkshireHearth),
   taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
+  accept(343, sw("Brother Kristoff", 55.04, 54.16),
+    "Brother Kristoff, on the way to the Cathedral, wants a book from the Royal Library. Take it if you are going to the library."),
   finish(269, sw("Bishop Farthing", 49.93, 45.99), "Bring Jitters' journal to Bishop Farthing in the Cathedral of Light."),
-  finish(337, sw("Milton Sheaf", 77.07, 30.21), "Return the history book to Milton Sheaf in the Royal Library of Stormwind Keep."),
 }
 
 local function wl(name, x, y) return at(name, x, y, wetlands) end
@@ -940,20 +957,31 @@ local menethilHearth = { bind = "Menethil Harbor" }
 
 -- Up to 30 in the Wetlands: the Green Belt and Raptor Ridge first, then Menethil Harbor's
 -- coast and both wrecks, then one sweep back east past the dig site, Angerfang, Dun Modr,
--- Thelgen Rock and Dragonmaw Retreat, and the south bay last. Ends with the Stormwind turn-ins
--- and the ship to Auberdine. Gap notes: tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md.
+-- Dragonmaw Retreat and Thelgen Rock, and the south bay last. Ends with the Ironforge and
+-- Stormwind turn-ins and the ship to Auberdine. Gap notes: tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md;
+-- loop and gap pass: tools/audits/2026-11-12-alliance-duskwood-wetlands.md.
 local wet = {
   taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
   accept(270, sw("Bishop Farthing", 49.95, 46.0),
     "If you brought Jitters' journal to Bishop Farthing, he has orders for Menethil Harbor. Find him in the Cathedral of Light, or use Next."),
+  -- The Keep after the Cathedral, not between two Cathedral visits: the tram is beside the Keep.
+  finish(343, sw("Milton Sheaf", 77.07, 30.21), "Bring Brother Kristoff's request to Milton Sheaf in the Royal Library of Stormwind Keep."),
+  finish(337, sw("Milton Sheaf", 77.07, 30.21), "Return the history book to Milton Sheaf in the Royal Library of Stormwind Keep."),
+  -- Only while A Friend of the Family is in the log (carried from the early Wetlands chapter). A note,
+  -- not a goto (later Wetlands steps the early chapter did would pass a goto) or a turn-in (the route
+  -- picks 98190 up later, so the audit would call it a turn-in before its accept). Passed once you are past the tram.
+  action("note", sw("Highlord Bolvar Fordragon", 80.21, 38.35),
+    "You carry Captain Stoutfist's statuette: Highlord Bolvar is in the throne room beside the library. Give it to him before the tram.",
+    { name = "A Friend of the Family", ifOnQuest = 98190, skipOn = { ironforge, 1426, lochModan, wetlands } }),
   action("goto", nil, "Take the Deeprun Tram from the Dwarven District to Ironforge. Use Next when you arrive."),
   taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
   taxi("getfp", at("Thorgrum Borrelson", 33.9, 51.0, lochModan), "Thelsamar, Loch Modan",
     "Leave Ironforge and follow the road east through Dun Morogh into Loch Modan. Learn the Thelsamar flight path."),
   accept(98245, howin, "Take the road north through Dun Algaz into the Wetlands. Howin Kindfeather camps beside the road."),
   accept(98246, howin),
-  accept(463, fitz, "Only if you came by ship: First Mate Fitzsimmons on the Menethil docks sends you to Rethiel."),
-  finish(463, rethiel, "Rethiel the Greenwarden stands among the trees east of Howin."),
+  accept(469, wl("Einar Stonegrip", 49.92, 39.37),
+    "Einar Stonegrip, a few steps north of Howin by the road, has a bundle of skins for the tanner in Menethil Harbor. Use Next if he has nothing for you."),
+  finish(463, rethiel, "If you took First Mate Fitzsimmons' note in Menethil, give it to Rethiel the Greenwarden among the trees east of Howin."),
   accept(276, rethiel, "Rethiel the Greenwarden stands among the trees east of Howin."),
   objectiveAt(276, wl(nil, 63, 66.1), "Kill Mosshide Gnolls and Mongrels at the camps to the south-east.", "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
   finish(276, rethiel), accept(277, rethiel),
@@ -964,29 +992,39 @@ local wet = {
   along(objectiveAt(98245, wl(nil, 67.4, 30.8), "Loot any remaining incisors from Razormaws. Check the ground for eggs between pulls.",
     "10 Razormaw Incisors"), 98246),
   finish(98245, howin), finish(98246, howin),
+  accept(98291, howin, "Howin also wants Dragonmaw Retreat, south-east of Rethiel, cleared. You go there at the end of your eastern loop."),
 
   accept(294, ormer, "Follow the road west to the Whelgar Excavation Site."), accept(299, whelgar),
   objectiveAt(294, wl(nil, 26.3, 46.1), "Kill Mottled Raptors and Screechers in the fields west of the site.", "10 Mottled Raptors", "10 Mottled Screechers"),
   objectiveAt(275, wl(nil, 25.3, 34.3), "Kill Fen Creepers in the marsh north of the raptors.", "Fen Creepers"),
+  -- Menethil Harbor, first visit: Fitzsimmons and the inn first (the mead is sold there), then the keep and the north gate.
   taxi("getfp", shellei, "Menethil Harbor, Wetlands", "Go west to Menethil Harbor and learn the flight path."),
+  accept(288, fitz, "First Mate Fitzsimmons, just east of the flight master, wants a drink from the inn."),
   action("sethearth", helbrek, "Bind your hearthstone at the Deepwater Tavern.", menethilHearth),
+  objectiveAt(288, helbrek, "Buy a Flagon of Dwarven Honeymead from Innkeeper Helbrek while you are here.", "Flagon of Dwarven Honeymead"),
   finish(270, wl("Glorin Steelbrow", 10.59, 60.59), "Glorin Steelbrow waits outside the Deepwater Tavern. Give him the bishop's orders."),
-  accept(279, karl), accept(288, fitz), accept(98282, caitlin), accept(470, sida),
-  accept(98197, valstag), accept(473, valstag),
-  finish(98461, tarrel, "Give Hollee's note to Tarrel Rockweaver."), accept(305, tarrel),
-  finish(473, stoutfist, "Captain Stoutfist is upstairs in Menethil Keep."), accept(464, stoutfist), accept(98221, stoutfist),
-  accept(484, wl("James Halloran", 8.51, 55.71), "James Halloran by the north gate wants young crocolisk skins. Done already if you ran the coast chapter."),
+  finish(288, fitz, "Bring the mead to Fitzsimmons."),
+  accept(289, fitz, "His next task is the cursed wreck on the coast north of the murloc camp."),
+  accept(98282, caitlin),
   forDungeon(accept(95647, caitlin, "Ask Caitlin about Ardin, lost in the Excavation Site."), "dungeon-excavation-site"),
-  objectiveAt(288, helbrek, "Buy a Flagon of Mead from Innkeeper Helbrek.", "Flagon of Mead"),
-  finish(288, fitz), accept(289, fitz),
-  objectiveAt(98197, wl(nil, 12.1, 52.5), "Gather timber and iron from the harbor floor north of town.", "6 Khaz Modan Timber", "30 Khaz Modan Iron"),
-  finish(98197, valstag),
-  objectiveAt(484, wl(nil, 19.15, 47.12), "Kill Young Wetlands Crocolisks in the marsh channels east of the beach.", "Young Crocolisk Skins"),
+  accept(470, sida),
+  accept(98197, valstag), accept(473, valstag),
+  finish(473, stoutfist, "Captain Stoutfist is upstairs in Menethil Keep."), accept(464, stoutfist), accept(98221, stoutfist),
+  accept(279, karl, "Karl Boran is on the docks west of the keep."),
+  finish(469, wl("James Halloran", 8.51, 55.71), "Give Einar's bundle to James Halloran, the tanner by the north gate."),
+  accept(484, wl("James Halloran", 8.51, 55.71), "James Halloran by the north gate wants young crocolisk skins. Done already if you ran the coast chapter."),
+  finish(98461, tarrel, "Give Hollee's note to Tarrel Rockweaver on the north bridge."), accept(305, tarrel),
+  -- First trip north: the harbor timber, the murlocs and the young crocolisks in one loop.
+  objectiveAt(98197, wl(nil, 12.1, 52.5), "Gather timber and iron from the harbor water beside Tarrel's bridge. Surface for air between dives.",
+    "6 Khaz Modan Timber", "30 Khaz Modan Iron"),
+  along(objectiveAt(279, wl(nil, 15, 39.2), "Follow the coast north for Bluegill Murlocs. Gobbler walks with them near 18, 40.",
+    "12 Bluegill Murlocs", "Gobbler's Head"), 484),
+  objectiveAt(484, wl(nil, 19.15, 47.12), "On the way back south, kill Young Wetlands Crocolisks in the marsh channels east of the beach.", "Young Crocolisk Skins"),
   finish(484, wl("James Halloran", 8.51, 55.71), "Bring the skins back to Halloran at the north gate."),
   accept(471, wl("James Halloran", 8.51, 55.71), "Take his next order. The big crocolisks live by the cursed wreck you visit next."),
-  objectiveAt(279, wl(nil, 15, 39.2), "Kill Bluegill Murlocs along the coast to the north. Gobbler walks with them near 18, 40.",
-    "12 Bluegill Murlocs", "Gobbler's Head"),
+  finish(98197, valstag),
   finish(279, karl), accept(281, karl),
+  -- Second trip north: Karl's crates in the murloc camp, then the cursed wreck.
   finish(281, wl("Damaged Crate", 13.52, 41.38), "Search the Damaged Crate in the murloc camp."), accept(284, wl("Damaged Crate", 13.52, 41.38)),
   finish(284, wl("Sealed Barrel", 13.6, 38.22), "Clear the murlocs around the Sealed Barrel before you open it."), accept(285, wl("Sealed Barrel", 13.6, 38.22)),
   finish(285, wl("Half-buried Barrel", 13.94, 34.81)), accept(286, wl("Half-buried Barrel", 13.94, 34.81)),
@@ -1014,9 +1052,15 @@ local wet = {
   along(objectiveAt(299, wl(nil, 34.5, 48), "Find any missing tablet fragments in the Ancient Relics and the patch of Loose Soil.",
     "Ados Fragment", "Modr Fragment", "Golm Fragment", "Neru Fragment"), 295),
   finish(299, whelgar),
+  accept(98216, whelgar,
+    "Group quest: Whelgar wants the Titanic Keystone from the Goaz Warder, a Titan construct beside Sarltooth. Take it only if you have a group."),
   finish(295, ormer), accept(296, ormer),
   objectiveAt(296, wl(nil, 33.3, 51.5), "Kill Sarltooth, the level 29 raptor just south of the site, and take his talon.", "Sarltooth's Talon"),
+  withItem(279996, objectiveAt(98216, wl("Goaz Warder", 35.0, 52.5),
+    "With your group, use the Goaz Stone at the Goaz Warder on the lower ledge behind Sarltooth's spot. Kill it and loot the Titanic Keystone.",
+    "Titanic Keystone")),
   finish(296, ormer),
+  finish(98216, whelgar),
   along(objectivePart(98221, 4, wl(nil, 38.46, 46.02), "Burn the Ironforge attack plan on the west side of the camp. Loot banners from the Dragonmaw as you go.",
     "Attack Plan: Ironforge"), 464),
   along(objectivePart(98221, 1, wl(nil, 45.59, 42.60), "Burn the Menethil Harbor attack plan in the north camp.", "Attack Plan: Menethil Harbor"), 464),
@@ -1024,7 +1068,6 @@ local wet = {
   along(objectivePart(98221, 2, wl(nil, 49.46, 46.81), "Burn the Thelsamar attack plan at the east end of the camp.", "Attack Plan: Thelsamar"), 464),
   along(objectiveAt(464, wl(nil, 45.3, 45.0), "Loot any remaining War Banners from Dragonmaw Raiders and Swamprunners around Angerfang.",
     "8 Dragonmaw War Banners"), 98221),
-  accept(98291, howin, "Stop at Howin by the road east of Angerfang. He wants Dragonmaw Retreat cleared at the end of this loop."),
   objectiveAt(470, wl(nil, 44.9, 26.1), "Kill the oozes at Ironbeard's Tomb to the north until one drops Sida's bag.", "Sida's Bag"),
   finish(472, wl("Longbraid the Grim", 49.8, 18.26), "Follow the road north to the dwarf camp outside Dun Modr and give Longbraid Harlo's message."),
   accept(631, wl("Rhag Garmason", 49.92, 18.21), "Rhag Garmason, in the same camp, wants news of Ol' Rustlocke on the Thandol Span."),
@@ -1033,13 +1076,14 @@ local wet = {
   accept(632, wl("Ebenezer Rustlocke's Corpse", 51.28, 7.95)),
   finish(632, wl("Rhag Garmason", 49.92, 18.21), "Take the parchment back to Rhag at the camp."),
   accept(633, wl("Rhag Garmason", 49.92, 18.21)),
+  accept(647, at("Foggy MacKreel", 43.24, 92.64, 1417),
+    "Foggy MacKreel waits on the Arathi shore below the bridge, beside the river. He wants his moonshine taken to Southshore: take it if you plan to go there next."),
   objectiveAt(633, at("Cache of Explosives", 48.8, 88.0, 1417),
     "Jump off the bridge into the river. Loot the Waterlogged Letter in the water near the Arathi shore, then climb the path east to the Dark Iron cache and destroy it.",
     "Cache of Explosives Destroyed"),
   withItem(4433, accept(637, at("Waterlogged Letter", 44.3, 92.9, 1417), "Open the Waterlogged Envelope from the river to start Sully Balloo's letter for Ironforge.")),
   finish(633, wl("Rhag Garmason", 49.92, 18.21), "Swim back under the bridge and return to Rhag. Plea To The Alliance, his next quest, goes into Arathi; leave it for later."),
-  objectiveAt(98282, wl(nil, 48.7, 62.4), "Collect an Unruptured Stalker Gland from the stalkers in Thelgen Rock, the cave south of the road."),
-  finish(275, rethiel),
+  finish(275, rethiel, "Follow the road back south to Rethiel in the Green Belt."),
   forDungeon(accept(95646, rethiel, "Take Rethiel's task for the Highland Horror inside the Excavation Site."), "dungeon-excavation-site"),
   accept(98293, wl("Dragonmaw Armaments", 58.8, 45.1), "Pick up the Dragonmaw Armaments lying at the west edge of Dragonmaw Retreat, south-east of Rethiel."),
   along(objectiveAt(98291, wl(nil, 64.5, 46.3), "Work east through Dragonmaw Retreat. Kill Reclaimers, Soulbinders and Infiltrators and pull them one at a time.",
@@ -1047,12 +1091,18 @@ local wet = {
   along(objectiveAt(98293, wl(nil, 63.5, 45.8), "Pick up the armaments lying around the camp between fights.", "30 Dragonmaw Armaments"), 98291, 98072),
   along(objectiveAt(98072, wl(nil, 63.0, 41.8), "Kill the red whelps on the slope north of the retreat for Pristine Crimson Scales.", "8 Pristine Crimson Scales"),
     98291, 98293),
-  finish(98291, howin, "Take the road west back to Howin."),
+  -- After the retreat, not before it: Thelgen Rock is on the road back north to Howin.
+  withPath(objectiveAt(98282, wl(nil, 48.7, 62.4),
+    "Head south-west to the road and enter Thelgen Rock by its mouth beside the road. Kill Leech and Cave Stalkers inside until one drops the gland.",
+    "Unruptured Stalker Gland"), { { 52.6, 62.9 } }),
+  finish(98291, howin, "Follow the road north from Thelgen Rock back to Howin."),
   action("hearth", helbrek, "The next turn-ins are in Menethil Harbor.", menethilHearth),
   finish(292, wl("Glorin Steelbrow", 10.59, 60.59), "Bring the Eye of Paleth to Glorin outside the tavern."),
   accept(293, wl("Glorin Steelbrow", 10.59, 60.59), "Take the Eye on to the Archbishop in Stormwind."),
   accept(321, wl("Glorin Steelbrow", 10.59, 60.59), "Glorin wants the wreck of the Flying Osprey searched."),
-  finish(306, tarrel), finish(464, stoutfist), finish(98221, stoutfist), finish(98293, stoutfist), finish(470, sida), finish(98282, caitlin),
+  finish(98282, caitlin), finish(470, sida),
+  finish(464, stoutfist), finish(98221, stoutfist), finish(98293, stoutfist),
+  finish(306, tarrel, "Tell Tarrel on the north bridge that you found Merrin."),
   finish(98072, wl("James Halloran", 8.51, 55.71)),
   accept(98208, wl("Sylessa Duskwhisper", 7.92, 55.82), "Sylessa Duskwhisper, by the west docks, lost something in the bay south of town."),
   finish(321, wl("Waterlogged Chest", 12.1, 64.17), "Wade out to the wreck of the Flying Osprey in the bay south of town and open the Waterlogged Chest."),
@@ -1064,9 +1114,14 @@ local wet = {
   finish(98208, wl("Sylessa Duskwhisper", 7.92, 55.82)),
   accept(98209, wl("Sylessa Duskwhisper", 7.92, 55.82), "Sylessa asks you to carry Nord'el to Thundris Windweaver in Auberdine. You take the ship there at the end."),
   taxi("fly", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Fly to Ironforge. If you have reached level 30, train your new spells here."),
-  finish(637, at("Sara Balloo", 63.48, 67.29, ironforge), "Give Sully's letter to Sara Balloo in the Mystic Ward."),
   forDungeon(accept(971, at("Gerrig Bonegrip", 50.83, 5.62, ironforge), "Gerrig Bonegrip in the Forlorn Cavern wants a manuscript from Blackfathom Deeps."),
     "dungeon-blackfathom-deeps"),
+  finish(637, at("Sara Balloo", 63.48, 67.29, ironforge), "Give Sully's letter to Sara Balloo in the Mystic Ward."),
+  accept(683, at("Sara Balloo", 63.48, 67.29, ironforge), "Sara asks you to take her plea to King Magni."),
+  finish(683, at("King Magni Bronzebeard", 39.09, 56.2, ironforge), "King Magni Bronzebeard holds court in the High Seat."),
+  accept(686, at("King Magni Bronzebeard", 39.09, 56.2, ironforge)),
+  finish(686, at("Grand Mason Marblesten", 39.04, 88.05, ironforge),
+    "Grand Mason Marblesten is south of the High Seat. His next task wants granite from the Alterac Mountains: leave it."),
   finish(322, sw("Grimand Elmore", 59.71, 33.74), "Take the Deeprun Tram to Stormwind and deliver the ingots to Grimand Elmore in the Dwarven District."),
   accept(325, sw("Grimand Elmore", 59.71, 33.74), "Take Morbent's Bane for Sven. Morbent Fel is level 32: keep it for after 30."),
   finish(98190, sw("Highlord Bolvar Fordragon", 80.21, 38.35), "Give the statuette to Highlord Bolvar in Stormwind Keep."),

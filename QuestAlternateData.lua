@@ -612,6 +612,10 @@ q(79363, "Silvia's Sword", 26, 18, nil, true)
 B.quest[79363].startItem = 281145
 q(96138, "Merrick's Bow", 30, 18, nil, true)
 B.quest[96138].startItem = 281142
+-- Two talk quests on the last Raven Hill pass (tools/audits/2026-11-12-alliance-duskwood-wetlands.md).
+-- Mor'Ladim (228), Althea's next, is a level 35 elite and stays out.
+q(225, "The Weathered Grave", 35, 28)
+q(227, "Morgan Ladimore", 35, 28, 225)
 
 local trelayne = dw("Innkeeper Trelayne", 73.87, 44.41)
 local althea = dw("Commander Althea Ebonlocke", 73.54, 46.82)
@@ -657,13 +661,17 @@ chapter("duskwood-late", "Darkshire: Worgen and the Night Watch", M.duskwood, 25
     "7 Defias Night Blades", "7 Defias Enchanters"),
   action("goto", dw(nil, 23.59, 34.89), "Go north to the main road, follow it west to Raven Hill, then enter the eastern side of the cemetery."),
   objective(58, dw(nil, 23.59, 34.89), "Look for Plague Spreaders around the eastern mausoleum. Stay near an exit if you need to go inside.", "20 Plague Spreaders"),
-  finish(134, abercrombie, "Bring the crate north to Abercrombie's shack."), accept(160, abercrombie),
+  accept(225, dw("A Weathered Grave", 17.73, 29.08),
+    "Cross to the weathered grave at the north-west corner of the cemetery and read it. Mor'Ladim, a level 35 elite, walks these graves: let him pass first."),
+  finish(134, abercrombie, "Bring the crate to Abercrombie's shack east of the cemetery."), accept(160, abercrombie),
   action("hearth", trelayne, "Return to Darkshire for the last turn-ins.", darkshireHearth),
   finish(58, althea), finish(222, calor), accept(223, calor), finish(223, dw("Jonathan Carevin", 75.32, 49.02)),
   finish(160, ello, "Lord Ello Ebonlocke is in the town hall."), accept(251, ello),
   finish(251, sirra), finish(79363, sirra), finish(96138, sirra),
+  finish(225, sirra, "Tell Sirra about the weathered grave."), accept(227, sirra),
   accept(401, sirra), finish(401, sirra, "Wait a moment while Sirra translates, then speak to her again."), accept(252, sirra),
   finish(252, ello),
+  finish(227, althea, "Commander Althea Ebonlocke is a few steps from Ello. Her next task, Mor'Ladim, is a level 35 elite: leave it."),
   finish(181, viktori),
 })
 
@@ -672,22 +680,47 @@ q(559, "Farren's Proof", 32, 25, 536)
 q(560, "Farren's Proof", 32, 25, 559)
 q(561, "Farren's Proof", 32, 25, 560)
 q(562, "Stormwind Ho!", 32, 25, 561)
+-- Forever's level 27 Southshore errands (Bind on Forever lists both as Alliance; no source gives
+-- their objective spots yet): tools/audits/2026-11-12-alliance-duskwood-wetlands.md.
+q(98059, "Hillsbrad's Hoard", 27, nil, nil, true)
+q(98071, "Brewer's Trade", 27, 23, nil, true)
 
 local darla = hill("Darla Harris", 49.34, 52.27)
 local farren = hill("Lieutenant Farren Orinelle", 51.46, 58.39)
 local redpath = hill("Marshal Redpath", 49.47, 58.73)
+local bilger = hill("Brewmeister Bilger", 52.13, 58.74)
 
 chapter("southshore", "Southshore: Coastal Patrols", hillsbrad, 27, 30, {
   "https://worldofwarcraft.blizzard.com/en-us/news/24304071/world-of-warcraft-forever-found-photos-panel-recap",
   "https://wowforever.gg/en/guides/travel-boats-zeppelins/",
   "https://bytetavern.com/wow-forever-flight-paths/",
   "https://bindonforever.com/zones/hillsbrad-foothills",
+  "https://www.wowhead.com/forever/quest=98071",
+  "https://www.wowhead.com/forever/quest=98059",
 }, { "wetlands", "duskwood-late", "ashenvale-late" }, {
   taxi("getfp", darla, "Southshore, Hillsbrad", "Take the ship from Menethil Harbor's northern pier or Auberdine's west pier. Stay aboard until Southshore, then walk north through town to Darla Harris."),
-  action("grind", darla, "The western murlocs are level 30 to 32. Try them around level 29 with a partner, or finish more quests before returning.",
+  -- Level 27 errands first: the coast quests below want level 29.
+  check(accept(98059, hill("Captain McManus", 46.43, 50.2),
+    "Captain McManus, a short walk north-west of the flight master, has a sealed request for the Hillsbrad council. Use Next if he has nothing for you."),
+    "A Forever quest: confirm Captain McManus offers it to the Alliance."),
+  check(objective(98059, hill(nil, 29.5, 41.5),
+    "Take the road west to Hillsbrad Fields. Place the Sealed Company Request on the bookkeeping table inside the town hall.",
+    "Sealed Company Request delivered"),
+    "The table's spot is the town hall's registry book from the quest data; confirm the table."),
+  finish(98059, hill("Captain McManus", 46.43, 50.2), "Return to Captain McManus in Southshore."),
+  finish(647, bilger, "Give MacKreel's moonshine to Brewmeister Bilger by the Southshore inn."),
+  check(accept(98071, bilger,
+    "Brewmeister Bilger, by the Southshore inn, wants a case of Fallrook Varietal taken to the dwarves of Dun Garok. Use Next if he has nothing for you."),
+    "A Forever quest: confirm Bilger offers it to the Alliance."),
+  check(objective(98071, hill(nil, 71.6, 80.0),
+    "Follow the road south-east to the dwarven fort of Dun Garok. Leave the case by the fireplace at the bottom of the fort and take the sack of hops.",
+    "Sack of Homebrew Hops"),
+    "The spot is the middle of the fort's guards; confirm where the fireplace is."),
+  finish(98071, bilger, "Bring the hops back to Bilger in Southshore."),
+  finish(98219, farren, "Lieutenant Farren Orinelle is on the Southshore dock road, beside Bilger. Report to him for Lord Grayson."),
+  accept(536, farren, "Lieutenant Farren Orinelle, on the dock road beside Bilger, wants the Torn Fin murlocs on the Western Strand thinned."),
+  action("grind", farren, "The western murlocs are level 30 to 32. Try them around level 29 with a partner, or finish more quests before returning.",
     { level = 29, suggest = { "wetlands", "duskwood-late", "ashenvale-late" }, guide = "dungeon-city-of-dalaran" }),
-  finish(98219, farren, "Lieutenant Farren Orinelle is on the Southshore dock road. Report to him for Lord Grayson."),
-  accept(536, farren),
   objective(536, hill(nil, 47.6, 64.6), "Work west from the docks along the Western Strand. Pull Tidehunters and Oracles to dry land and watch for adds from the surf.",
     "10 Torn Fin Tidehunters", "10 Torn Fin Oracles"),
   finish(536, farren), accept(559, farren),
