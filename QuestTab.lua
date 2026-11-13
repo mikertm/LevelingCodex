@@ -248,27 +248,48 @@ local function renderLibrarySection(rows, section, y)
   return y
 end
 
--- Leveling guides as two columns of buttons: progress, a status tag, the suggested ones in gold.
-local function guideButtons(y, list, suggestedSet)
-  local column = (W - 12) / 2
-  local rowHeight = 0
-  for count, section in ipairs(list) do
-    local x = (count - 1) % 2 * (column + 12)
+-- A guide as a quest-log row (36 px): a 3 px edge (gold current, teal suggested), the title on one
+-- line, its levels, a step progress bar under the title and one tag at the right.
+local TRACK = { 0.14, 0.21, 0.23, 1 }
+local function guideRow(y, section, status, done, total, tag, onClick, tip)
+  local current, suggested = status == "current", status == "suggested"
+  if current then U.rect(0, y, W, 36, { C.accent[1], C.accent[2], C.accent[3], 0.12 }) end
+  if current or suggested then U.rect(0, y, 3, 36, current and C.gold or C.accent) end
+  local faded = status == "done" or status == "outleveled" or status == "later"
+  local _, title = U.T(Q.plain(section.title), 12, y + 5, W - 200, "body",
+    current and C.gold or faded and C.dim or C.light)
+  if title.SetWordWrap then title:SetWordWrap(false) end
+  U.T("Levels " .. section.levels[1] .. "-" .. section.levels[2], W - 186, y + 7, 90, "small", C.dim, "RIGHT")
+  U.rect(12, y + 22, W - 212, 4, TRACK)
+  if total > 0 and done > 0 then U.rect(12, y + 22, math.max(1, (W - 212) * done / total), 4, C.accent) end
+  if tag then
+    U.plate(W - 90, y + 7, 84, 20, { 0, 0, 0, 0.35 }, { C.edge[1], C.edge[2], C.edge[3], 0.6 })
+    U.T(tag, W - 90, y + 11, 84, "small", current and C.gold or suggested and C.accent or faded and C.dim or C.light,
+      "CENTER")
+  end
+  U.hit(0, y, W, 36, Q.plain(section.title), tip, onClick, section.title)
+  return y + 38
+end
+
+-- A guide's tag: Current, Suggested, Side (an alternate route), Later, Done or Outleveled, with
+-- its percentage for Current, Side and Later once you've started it.
+local function guideTag(section, status, done, total)
+  local tag = GUIDE_TAG[status]
+  if section.alternate and (status == "open" or status == "later") then tag = "Side" end
+  local pct = total > 0 and math.floor(done * 100 / total) or 0
+  if pct > 0 and (tag == "Current" or tag == "Side" or tag == "Later") then tag = tag .. " " .. pct .. "%" end
+  return tag
+end
+
+-- Leveling guides (and class quests) as rows: clicking one follows it in the step window.
+local function guideRows(y, list, suggestedSet)
+  for _, section in ipairs(list) do
     local status, done, total = Q.sectionStatus(section, suggestedSet)
-    local parts = { "Levels " .. section.levels[1] .. "-" .. section.levels[2] }
-    if total > 0 then parts[#parts + 1] = math.floor(done * 100 / total) .. "% done" end
-    if GUIDE_TAG[status] then parts[#parts + 1] = GUIDE_TAG[status] end
-    if section.alternate then parts[#parts + 1] = "Alternate" end
-    U.btn(section.title, x, y, column, function()
+    y = guideRow(y, section, status, done, total, guideTag(section, status, done, total), function()
       sub = "route"
       Q.jump(section)
       ns.showQuestViewer()
-    end, status == "current" or status == "suggested", "Follow this section in the step window.")
-    local faded = status == "done" or status == "outleveled" or status == "later"
-    local h = U.T(table.concat(parts, "  |  "), x, y + 25, column, "small",
-      status == "suggested" and C.gold or faded and C.dim or C.light, "CENTER")
-    rowHeight = math.max(rowHeight, 25 + h + 9, 46)
-    if count % 2 == 0 or count == #list then y, rowHeight = y + rowHeight, 0 end
+    end, "Follow this section in the step window.")
   end
   return y
 end
@@ -335,22 +356,26 @@ local function renderGuides(rows, sections, y)
       for _, section in ipairs(list) do
         if Q.sectionStatus(section, suggestedSet) == "done" then done = done + 1 end
       end
-      -- "+" folded, "-" open, like the quest log's headers
-      local label = (open and "- " or "+ ") .. band[3]:match("^(LEVELS %d+%-%d+)") .. ": " .. #list
-        .. (#list == 1 and " guide" or " guides")
+      -- a fold row like the quest log's headers: plus folded, minus open; the label keeps
+      -- "+ LEVELS 20-30: 8 guides, 1 done" for controllers and the harness
+      local levels = band[3]:match("^(LEVELS %d+%-%d+)")
+      local count = #list .. (#list == 1 and " guide" or " guides")
         .. (done == #list and ", all done" or done > 0 and (", " .. done .. " done") or "")
-      U.btn(label, 0, y, W, function()
+      U.fold(open, 0, y + 4)
+      local _, head = U.T(levels, 22, y + 4, 140, "label", C.gold)
+      local headWidth = tonumber(head.GetStringWidth and head:GetStringWidth()) or 90
+      U.T(count, 22 + math.min(headWidth, 140) + 10, y + 6, 300, "small", C.dim)
+      U.hit(0, y, W, 24, levels, open and "Fold these guides." or "Show these guides.", function()
         openBands[band] = not open
         U.refresh()
-      end, open, open and "Fold these guides." or "Show these guides.")
-      y = y + 30
-      if open then y = guideButtons(y, list, suggestedSet) + 4 end
+      end, (open and "- " or "+ ") .. levels .. ": " .. count)
+      y = y + 28
+      if open then y = guideRows(y, list, suggestedSet) + 4 end
     end
   end
 
   for _, group in ipairs({ { "dungeon", "Dungeons" }, { "special", "Special quest chains" } }) do
     local count = 0
-    local col = math.floor((W - 12) / 2)
     for _, section in ipairs(sections) do
       if section.category == group[1] then
         if count == 0 then
@@ -358,28 +383,24 @@ local function renderGuides(rows, sections, y)
           if group[1] == "dungeon" then
             y = y + U.T("Plan the runs you mean to do: their pickups join your route, and the step window says when to find a group.",
               0, y, W, "small", C.dim) + 6
-            local third = math.floor((W - 16) / 3)
-            U.btn("Plan recommended", 0, y, third, function() setPlans(Q.recommendedRuns(), true) end, false,
-              "Runs near your route or tied to your class quests, still in reach of your level.")
-            U.btn("Plan all", third + 8, y, third, function() setPlans(Q.dungeons(), true) end)
-            U.btn("Plan none", W - third, y, third, function() setPlans(nil) end)
-            y = y + 34
+            y = y + dungeonChoices(0, y, W) + 10
           end
         end
-        local x = count % 2 * (col + 12)
-        local planned = section.category == "dungeon" and Q.planned(section.id)
-        U.btn(section.title, x, y, col, function() showGuide(section) end, planned, "View steps and quest readiness.")
-        U.T(section.category == "dungeon" and (sectionInfo(section) .. "\n" .. runInfo(section)) or sectionInfo(section),
-          x, y + 25, col, "small", C.dim, "CENTER")
+        local status, done, total = Q.sectionStatus(section, suggestedSet)
+        local tag, tip = guideTag(section, status, done, total), "View steps and quest readiness."
+        if section.category == "dungeon" then
+          local planned = Q.planned(section.id)
+          tag, tip = planned and "Planned" or "Not planned", runInfo(section) .. ". View steps and quest readiness."
+          if status ~= "current" then status = planned and "suggested" or "open" end
+        end
+        y = guideRow(y, section, status, done, total, tag, function() showGuide(section) end, tip)
         count = count + 1
-        if count % 2 == 0 then y = y + (group[1] == "dungeon" and 60 or 46) end
       end
     end
-    if count % 2 == 1 then y = y + (group[1] == "dungeon" and 60 or 46) end
   end
   if not ns.db().noClassQuests and #classes > 0 then
     y = y + 6 + U.sectionTitle("Class quests", y + 6)
-    y = guideButtons(y, classes, suggestedSet)
+    y = guideRows(y, classes, suggestedSet)
   end
   return y
 end

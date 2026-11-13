@@ -877,6 +877,24 @@ function S.minimapRoute()
   MOCK.ghost = false
 end
 
+-- A long guide title stays on one line inside its row.
+function S.guideRowsLong()
+  MOCK.race, MOCK.level = "Human", 32
+  S.login()
+  slash("quests")
+  local title = "Stranglethorn Early: Rebel Camp and Nesingwary"
+  local row = guideButton(title)
+  check(row and row._type == "Button" and not row.SetLook, "a guide is a row, not a panel button")
+  local function find(f)
+    for _, r in ipairs({ f:GetRegions() }) do if r._text == title and r:IsShown() then return r end end
+    for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c); if hit then return hit end end
+  end
+  local fs = find(win())
+  check(fs and fs:GetWidth() <= row:GetWidth() - 190, "the title keeps clear of the range and the tag")
+  check(findButton(win(), function(l) return l:find("^%- LEVELS 30%-40: %d+ guides") end),
+    "an open band keeps its label")
+end
+
 -- Minimap: the line bends through a step's way-in points to the step itself.
 function S.minimapPath()
   -- the questEntrancePath step: tunnel points (48, 43) and (50, 45), the cave at (52, 47)
@@ -958,7 +976,8 @@ function S.stepProgress()
   check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
     "clicking opens the route")
   click(win(), "Guides")
-  check(pct and questText(win(), pct .. "% done"), "the guide list shows the bar's percentage: " .. tostring(pct))
+  check(pct and (questText(win(), "Current " .. pct .. "%") or (pct == "0" and questText(win(), "Current"))),
+    "the guide list shows the bar's percentage: " .. tostring(pct))
   LevelingCodexDB.noStepBar = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(not bar:IsShown(), "the bar can be turned off")
@@ -1006,14 +1025,14 @@ function S.questTabViews()
   local function band30() -- guide buttons starting in the 30s (class quests can be among them)
     local n = 0
     for line in (MOCK.textUnder(win()) .. "\n"):gmatch("(.-)\n") do
-      if line:find("^Levels 3%d%-%d+  |") then n = n + 1 end
+      if line:find("^Levels 3%d%-%d+$") then n = n + 1 end
     end
     return n
   end
   local before = band30()
   folded:Click()
   check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
-  check(findButton(win(), function(l) return l == "Plan recommended" end), "dungeons live under Guides")
+  check(findButton(win(), function(l) return l == "Recommended" end), "dungeons live under Guides")
   click(win(), "Quest log")
   check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
   click(win(), "Step")
@@ -3031,9 +3050,10 @@ function S.questGrey()
   local frame = questViewer()
   check(questText(frame, "Accept - Grey Prerequisite"), "a grey pickup leaves the route unless a later quest needs it")
   click(win(), "Guides")
-  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end) and questText(win(), "0% done")
+  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end)
     and questText(win(), "Current"),
     "guides are grouped by level band with progress and status")
+  check(not questText(win(), "% done"), "guides are rows with a tag, not buttons with a % done line")
   questQueue("Missed quests")
   check(questText(win(), "Outleveled (grey)") and questText(win(), "Grey Errand"), "the grey pickup is listed as outleveled")
   click(win(), "Settings")
@@ -3078,7 +3098,7 @@ function S.questDungeonPlan()
   check(not questText(frame, "Plan Dungeon Pickup") and not questText(frame, "Plan Optional Errand"),
     "unplanned dungeon pickups and optional errands stay hidden")
   click(win(), "Guides")
-  check(findButton(win(), function(l) return l == "Plan recommended" end) and questText(win(), "Not planned"),
+  check(findButton(win(), function(l) return l == "Recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
   check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page lists boss tips")
@@ -3102,7 +3122,7 @@ function S.questDungeonPlan()
   C_QuestLog.GetMaxNumQuestsCanAccept = nil
   click(win(), "Quests")
   click(win(), "Guides")
-  click(win(), "Plan none")
+  click(win(), "None")
   check(not findButton(frame, function(l) return l == "Run Test Plan Dungeon" end), "dropping the plan removes the run prompt")
 end
 

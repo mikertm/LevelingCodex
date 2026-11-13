@@ -99,6 +99,7 @@ local function T(str, x, y, width, kind, color, justify, onTop)
   fs:SetTextColor(rgba(color or C.light))
   fs:SetWidth(width)
   fs:SetJustifyH(justify or "LEFT")
+  if fs.SetWordWrap then fs:SetWordWrap(true) end -- a pooled string may have been kept to one line
   fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   fs:SetText(str)
   return fs:GetStringHeight(), fs
@@ -1322,14 +1323,30 @@ function ns.addTab(key, label, renderer)
   table.insert(TABS, #TABS, { key, label })
 end
 
--- An invisible row button with a tooltip (route rows and the like).
-local function hit(x, y, w, h, tipTitle, tipText, onClick)
+-- An invisible row button with a tooltip (route rows and the like). `label` names it for the
+-- controller and the harness (codexLabel); nil leaves it unnamed.
+local function hit(x, y, w, h, tipTitle, tipText, onClick, label)
   local hb = take("hit", newHit)
   hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
   hb.tipTitle, hb.tipText = tipTitle, tipText
+  hb.codexLabel = label
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
   return hb
+end
+
+-- The quest log's fold button (plus folded, minus open), 16 px; "+" / "-" without the art.
+local function newFoldTex() return overlay:CreateTexture(nil, "ARTWORK") end
+local function fold(open, x, y)
+  local path = open and A.FILES.minusUp or A.FILES.plusUp
+  if A.hasFile(path) then
+    local t = take("fold", newFoldTex)
+    t:SetTexture(path)
+    t:SetSize(16, 16)
+    t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+    return
+  end
+  T(open and "-" or "+", x + 4, y, 12, "body", C.gold)
 end
 
 local function questSearch(x, y, w, value, onChange, onSubmit)
@@ -1350,7 +1367,7 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
-  segments = segments,
+  segments = segments, fold = fold,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 

@@ -788,7 +788,7 @@ def main():
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
-                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "worldMapPins", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
+                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "worldMapPins", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
@@ -832,6 +832,8 @@ def main():
         runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
         if minimal:
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))
+            runs.append(("WARRIOR/minimal/quests-setup", "WARRIOR", True, ["questSetup"]))
+            runs.append(("WARRIOR/minimal/guide-rows", "WARRIOR", True, ["guideRowsLong"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))

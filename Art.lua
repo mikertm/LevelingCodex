@@ -33,6 +33,8 @@ A.FILES = {
   circle      = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", -- a white disc
   parchment   = "Interface\\QuestFrame\\QuestBG",
   checkTick   = "Interface\\Buttons\\UI-CheckBox-Check",
+  plusUp      = "Interface\\Buttons\\UI-PlusButton-Up",
+  minusUp     = "Interface\\Buttons\\UI-MinusButton-Up",
 }
 
 -- Does the client have this file? (cached; probed on a hidden texture)
