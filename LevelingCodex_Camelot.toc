@@ -57,6 +57,7 @@ Window.lua
 ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua
+QuestMap.lua
 QuestParty.lua
 Pace.lua
 QuestTab.lua

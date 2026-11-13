@@ -12,6 +12,8 @@ local itemButton, itemPending, updateItemButton -- itemButton false = the client
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
 local events = CreateFrame("Frame")
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
+local RING_TEXTURE = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
+local ringArt -- the ring file exists (else the arrival shows the icon alone)
 local COMPASS = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 
 local function turnArrow()
@@ -189,6 +191,43 @@ local function makeViewer()
   arrowText:SetWordWrap(true)
   try(arrowText.SetShadowColor, arrowText, 0, 0, 0, 1)
   try(arrowText.SetShadowOffset, arrowText, 1, -1)
+  -- Arrival: the step's icon bobs over a gold ring that pulses once (Settings > Animate the arrow).
+  arrow.here = arrow:CreateTexture(nil, "ARTWORK")
+  arrow.here:SetSize(36, 36)
+  arrow.here:SetPoint("CENTER")
+  arrow.here:Hide()
+  arrow.ring = arrow:CreateTexture(nil, "BACKGROUND")
+  arrow.ring:SetSize(72, 72)
+  arrow.ring:SetPoint("CENTER")
+  arrow.ring:Hide()
+  ringArt = A.hasFile(RING_TEXTURE)
+  if ringArt then
+    arrow.ring:SetTexture(RING_TEXTURE)
+    try(arrow.ring.SetBlendMode, arrow.ring, "ADD")
+    arrow.ring:SetVertexColor(1, 0.82, 0.25)
+  end
+  if type(arrow.here.CreateAnimationGroup) == "function" then
+    arrow.bob = arrow.here:CreateAnimationGroup()
+    local up = arrow.bob:CreateAnimation("Translation")
+    up:SetOffset(0, 8)
+    up:SetDuration(0.4)
+    try(up.SetSmoothing, up, "IN_OUT")
+    arrow.bob:SetLooping("BOUNCE")
+    arrow.pulse = arrow.ring:CreateAnimationGroup()
+    local grow = arrow.pulse:CreateAnimation("Scale")
+    if type(grow.SetScaleFrom) == "function" then
+      try(grow.SetScaleFrom, grow, 0.6, 0.6)
+      try(grow.SetScaleTo, grow, 1.4, 1.4)
+    else
+      try(grow.SetScale, grow, 1.4, 1.4)
+    end
+    grow:SetDuration(0.6)
+    local fade = arrow.pulse:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.6)
+    arrow.pulse:SetScript("OnFinished", function() arrow.ring:Hide() end)
+  end
   arrow:SetScript("OnUpdate", turnArrow)
   arrow:SetScript("OnDragStart", function(self)
     if not ns.db().questArrowLocked then self:StartMoving() end
@@ -291,6 +330,46 @@ local function eta(yards)
   return ""
 end
 
+-- Arrival: the arrow becomes the step's icon (a gold dot when the client lacks its file), bobbing,
+-- and the ring pulses once. `key` tells a new arrival (another step or path point) from the same one.
+local arrivedKey
+local function arrive(key, step, caption)
+  arrowText:SetText(caption)
+  arrowBearing = nil
+  arrowArt:Hide()
+  if arrivedKey == key then return end
+  arrivedKey = key
+  local icon = ns.questIcon(step)
+  if icon then
+    arrow.here:SetTexture(icon)
+    arrow.here:SetSize(36, 36)
+  else
+    arrow.here:SetColorTexture(1, 0.82, 0, 1)
+    arrow.here:SetSize(12, 12)
+  end
+  arrow.here:Show()
+  if arrow.pulse and ringArt then
+    arrow.pulse:Stop()
+    arrow.ring:SetAlpha(1)
+    arrow.ring:Show()
+    arrow.pulse:Play()
+  end
+  if arrow.bob then
+    if ns.db().noArrowBounce then arrow.bob:Stop() else arrow.bob:Play() end
+  end
+end
+
+local function leave()
+  if not arrivedKey then return end
+  arrivedKey = nil
+  arrow.here:Hide()
+  arrow.ring:Hide()
+  if arrow.bob then arrow.bob:Stop() end
+  if arrow.pulse then arrow.pulse:Stop() end
+end
+
+local CORPSE = { type = "spot" }
+
 -- As a ghost the arrow leads back to your corpse instead of the step.
 local function paintCorpse(corpse)
   arrow:Show()
@@ -298,8 +377,11 @@ local function paintCorpse(corpse)
   local map, x, y = Q.position()
   local bearing, yards = Q.vector(corpse, map, x, y)
   if yards and yards <= Q.arrived() then
-    arrowText:SetText("Your corpse is here")
-  elseif bearing then
+    arrive("corpse", CORPSE, "Your corpse is here")
+    return
+  end
+  leave()
+  if bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, "Your corpse - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   else
@@ -321,16 +403,19 @@ local function paintArrow()
     return
   end
   if ns.db().noQuestArrow or not goal then
+    leave()
     arrow:Hide()
     return
   end
   if Q.inFlight() then
+    leave()
     arrow:Show()
     arrowArt:Hide()
     arrowText:SetText(flightText())
     return
   end
   if not goal.map or not (goal.x or goal.points) then
+    leave()
     arrow:Hide()
     return
   end
@@ -348,13 +433,21 @@ local function paintArrow()
   end
   local which = point and not travel and (" (" .. kind .. " " .. point .. " of " .. count .. ")") or ""
   arrowArt:Hide()
+  local key = row.key .. ":" .. tostring(point or "")
   if spawn and yards and yards <= Q.arrived() then
-    arrowText:SetText(spawnName .. " nearby")
-  elseif spawn and bearing then
+    arrive(key .. ":" .. spawnName, goal, spawnName .. " nearby")
+    return
+  elseif yards and yards <= Q.arrived() and not travel then
+    local npc = which == "" and type(goal.npc) == "string" and Q.plain(goal.npc) or nil
+    arrive(key, goal, (npc and (npc .. "\n") or "") .. "Arrived" .. which)
+    return
+  end
+  leave()
+  if spawn and bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   elseif yards and yards <= Q.arrived() then
-    arrowText:SetText(travel or ("Arrived" .. which))
+    arrowText:SetText(travel)
   elseif bearing then
     arrowBearing, arrowFacing = bearing, false
     local distance = yards and (math.floor(yards + 0.5) .. " yd" .. eta(yards)) or ""

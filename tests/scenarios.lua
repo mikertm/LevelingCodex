@@ -660,6 +660,30 @@ function S.arrowMove()
   check(not arrow:IsShown(), "it hides with the step window")
 end
 
+-- The arrow on arrival: the step's icon bobs over a gold ring that pulses once; leaving brings it back.
+function S.arrowArrival()
+  MOCK.questX, MOCK.questY = 60, 60 -- away from Deputy Willem (the default spot is next to him)
+  S.login()
+  local arrow = _G.LevelingCodexQuestArrow
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "away from the step the arrow points")
+  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step
+  MOCK.advance(0.5)
+  check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
+  check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
+  check(arrow.here._path == "Interface\\GossipFrame\\AvailableQuestIcon", "a pickup shows the yellow !")
+  check(arrow.bob:IsPlaying() and arrow.pulse:IsPlaying(), "the icon bobs and the ring pulses")
+  MOCK.advance(1)
+  check(not arrow.pulse:IsPlaying() and arrow.bob:IsPlaying(), "the ring pulses once, the bob goes on")
+  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.advance(0.5)
+  check(not arrow.here:IsShown() and not arrow.bob:IsPlaying() and arrow:GetRegions():IsShown(),
+    "leaving the spot brings the arrow back")
+  LevelingCodexDB.noArrowBounce = true
+  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.advance(0.5)
+  check(arrow.here:IsShown() and not arrow.bob:IsPlaying(), "with the animation off the icon stays still")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
