@@ -2290,6 +2290,9 @@ local lm = (function()
   q(297, "Gathering Idols", 18, 13)
   breadcrumb(436, 297)
   q(298, "Excavation Progress Report", 15, 10)
+  -- The game wants Excavation Progress Report (298) first, handed to Jern just before. No chain
+  -- here: catch-up would otherwise send a player who skipped Ironband back to the dig.
+  q(301, "Report to Ironforge", 15, 10)
   q(86613, "Excavation Tools", 18, 13, nil, true)
   quest[86613].startItem = 278049
   q(385, "Crocolisk Hunting", 15, 10)
@@ -2398,14 +2401,16 @@ local lm = (function()
     objectiveAt(237, loch(nil, 32.9, 85.0),
       "Hunt Skullthumpers and Seers on the approach to the Stonesplinter caves. Fight on cleared ground and stop fleeing mobs from reaching another pack.",
       "10 Stonesplinter Skullthumpers", "10 Stonesplinter Seers"),
+    -- Ylva stands beside the Seers: take her quest on this trip, plant the banner on the next one
+    -- (loop check, tools/audits/2026-11-12-alliance-kalimdor-loch-modan.md).
+    accept(86585, ylva, "Ylva waits in the small upper cave beside the Seers. Take her banner quest now and plant it on your next trip here. Use Next if the cave is unsafe."),
     finish(237, gravelgaw),
     accept(263, wallbang, "Take this part if you can handle level 15-16 troggs. Use Next to leave it for a later visit."),
     objectiveAt(263, loch(nil, 35.9, 91.7),
       "Hunt Shamans and Bonesnappers on the south-eastern slopes. Pull from the outside and stay clear of Grawmug's group and the deep cave.",
       "10 Stonesplinter Shaman", "10 Stonesplinter Bonesnappers"),
-    accept(86585, ylva, "If ready for waves of troggs, find Ylva in the small upper cave. Use Next if the cave is unsafe."),
     withItem(253247, objectiveAt(86585, ylva,
-      "Plant the Banner of Ironforge by Ylva. Clear the waves from both approaches, then defeat Headsplitter. Bring help or use Next if needed.",
+      "On the way back, plant the Banner of Ironforge by Ylva. Clear the waves from both approaches, then defeat Headsplitter. Bring help or use Next if needed.",
       "1 Headsplitter slain")),
     finish(263, wallbang), finish(86585, rugelfuss),
     accept(217, rugelfuss, "Take this only if you have help or can handle three linked troggs. Otherwise use Next."),
@@ -2469,6 +2474,12 @@ local lm = (function()
     accept(86614, toolbox, "If the Discarded Fishing Toolbox is visible in the loch and the water is clear, take the quest from it. The toolbox has several possible spots. Use Next if absent or unsafe."),
     finish(86614, khara, "Bring the hair clip to Khara on the west-shore dock."),
     finish(298, jern, "Follow the west-shore road south to Thelsamar and hand Ironband's report to Jern."),
+    -- Report to Ironforge: an errand on the way out through Ironforge (2026-11-12 audit).
+    accept(301, jern, "Jern sends the report on to Prospector Stormpike in Ironforge, on your way to the tram and the southern zones. Use Next if he has nothing for you."),
+    taxi("fly", gryth, "Ironforge, Dun Morogh",
+      "Fly to Ironforge from Thorgrum. Without that flight path, take the road west through South Gate Pass and Dun Morogh."),
+    finish(301, at("Prospector Stormpike", 74.64, 11.74, ironforge),
+      "Find Prospector Stormpike in the Hall of Explorers, north of the flight point. His follow-up goes back to Loch Modan: leave it unless you are staying there."),
     finish(1338, sw("Furen Longbeard", 64.6, 37.2),
       "If your next zone is south of Stormwind, take the tram back and give Stormpike's request to Furen Longbeard in the Dwarven District."),
   }
@@ -2606,16 +2617,19 @@ local ds = (function()
       "From Stormwind, board the Auberdine ship at the southernmost harbor dock. From Rut'theran Village, take the Auberdine ferry or fly if you know both flight paths. Use Next after you reach Auberdine.",
       { name = "Stormwind Harbor - Auberdine" }),
     taxi("getfp", te.caylais, "Auberdine, Darkshore", "Learn the Auberdine flight path from Caylais Moonfeather."),
+    -- One pass through town (2026-11-12 loop check): Gwennyth beside the flight point, the inn and
+    -- its poster, the sentinels east of the inn, then north to Gorbold and Thundris.
+    accept(3524, gwennyth, "Gwennyth Bly'Leggonde stands beside the flight point."),
     action("sethearth", inn, "Bind your hearthstone at the Auberdine inn. Laird is nearby if you need to sell.", hearth),
+    accept(983, wizbang),
+    accept(98025, board, "Read the wanted poster outside the inn for Jai'vhanel, a black owl near Ameth'Aran."),
+    accept(4811, glynda), accept(2118, tharnariun), accept(984, terenthis),
     finish(97894, gorbold, "Gorbold Steelhand stands outside the house north of the inn."),
+    errand(accept(2178, alanndarian, "With Cooking 10 or higher, take Alanndarian's request for strider meat.")),
+    makingDoDone, accept(954, thundris),
+    errand(accept(1141, gubber, "If you fish, take Gubber's request for Darkshore Grouper on your way south.")),
 
     -- South beach, the nearest Blackwood camp, then the low-level ruins.
-    accept(3524, gwennyth), accept(983, wizbang), accept(984, terenthis),
-    accept(98025, board, "Read the wanted poster outside the inn for Jai'vhanel, a black owl near Ameth'Aran."),
-    accept(4811, glynda), accept(2118, tharnariun),
-    makingDoDone, accept(954, thundris),
-    errand(accept(2178, alanndarian, "With Cooking 10 or higher, take Alanndarian's request for strider meat.")),
-    errand(accept(1141, gubber, "If you fish, take Gubber's request for Darkshore Grouper.")),
     objectiveAt(3524, shore("Beached Sea Creature", 36.37, 50.92),
       "Search the carcass on the beach south of Auberdine. Pull any nearby murlocs clear first.", "Sea Creature Bones"),
     objectiveAt(983, shore(nil, 35.5, 49.9),
@@ -2640,18 +2654,19 @@ local ds = (function()
     finish(2118, tharnariun), accept(2138, tharnariun),
     errand(finish(2178, alanndarian)),
     finish(4761, thundris), accept(4762, thundris), accept(958, thundris),
-    errand(objectiveAt(1141, shore(nil, 35.6, 45.3), "Fish from the end of the Auberdine pier until you have the grouper.", "6 Darkshore Grouper")),
-    errand(finish(1141, gubber)),
     finish(4811, glynda), accept(4812, glynda),
     withItem(14338, objectiveAt(4812, moonwell,
       "Use the Empty Water Tube at the moonwell before leaving town.", "Moonwell Water Tube")),
+    -- Barithras stands by the moonwell: take his quest here rather than walking back for it.
+    accept(947, barithras, "Barithras Moonshade, next to the moonwell, wants mushrooms from the Cliffspring Falls cave."),
     accept(963, cerellean),
+    errand(objectiveAt(1141, shore(nil, 35.6, 45.3), "Fish from the end of the Auberdine pier until you have the grouper.", "6 Darkshore Grouper")),
+    errand(finish(1141, gubber)),
     finish(3524, gwennyth), accept(4681, gwennyth),
     finish(983, buzz827), accept(1001, buzz827),
     objectiveAt(4681, shore("Skeletal Sea Turtle", 31.82, 46.31),
       "Swim west from Auberdine and search the skeletal turtle on the seabed. Surface before swimming back.", "Sea Turtle Remains"),
     finish(4681, gwennyth),
-    accept(947, barithras),
 
     -- Ameth'Aran and the south Blackwood camp.
     objectiveAt(985, shore(nil, 39.6, 54.5),
@@ -2674,11 +2689,13 @@ local ds = (function()
     accept(4722, shore("Beached Sea Turtle", 37.09, 62.18),
       "On the shore west of Ameth'Aran, search the turtle and take the quest. Watch the nearby murlocs."),
     action("goto", shore(nil, 38.8, 43.4), "Follow the road back to Auberdine."),
+    -- East to west, then north out of town toward the coast (2026-11-12 loop check).
     finish(985, terenthis), accept(986, terenthis),
-    finish(958, thundris), finish(963, cerellean), finish(4722, gwennyth),
-    finish(98025, glynda),
     accept(965, elissa),
+    finish(98025, glynda),
+    finish(4722, gwennyth), finish(963, cerellean),
     accept(982, gorbold, "Gorbold Steelhand, outside the house north of the inn, lost two lockboxes in the wrecks off the north coast."),
+    finish(958, thundris),
 
     -- North coast and Cliffspring, then back through Bashal'Aran and the crystal.
     objectiveAt(1001, shore(nil, 34.5, 35.4),
@@ -2712,13 +2729,17 @@ local ds = (function()
       "20 Rabid Thistle Bears"),
     finish(957, asterion),
     finish(4812, crystal), accept(4813, crystal),
-    finish(4813, glynda), finish(2138, tharnariun),
+    -- One pass through town (2026-11-12 loop check): the sentinels, Barithras and Hollee,
+    -- Gorbold and Thundris to the north, then the beach, Gubber and the poster on the way south.
+    finish(2138, tharnariun), finish(4813, glynda),
     finish(947, barithras), accept(948, barithras),
-    finish(4762, thundris), finish(982, gorbold),
+    accept(729, hollee, "At level 15 or higher, ask Archaeologist Hollee to check on Remtravel."),
+    finish(982, gorbold),
+    finish(4762, thundris),
+    accept(4763, thundris, "At level 15 or higher, Thundris has an Empty Cleansing Bowl for the Blackwood furbolgs. You fill it at the moonwell before the last northern trip."),
     finish(4723, gwennyth), finish(4725, gwennyth), finish(4727, gwennyth),
 
     -- The south coast, Grove of the Ancients, and Master's Glaive.
-    accept(729, hollee, "At level 15 or higher, ask Archaeologist Hollee to check on Remtravel."),
     accept(1138, gubber, "At level 15 or higher, pick up Fruit of the Sea for the southern shore."),
     accept(4740, board, "Take the Murkdeep poster outside the inn as well."),
     accept(4728, shore("Beached Sea Creature", 36.01, 70.88),
@@ -2756,7 +2777,7 @@ local ds = (function()
     finish(950, onu), accept(951, onu),
     action("hearth", inn, "Follow the road north to Auberdine if you're walking.", hearth),
     finish(986, terenthis), accept(993, terenthis), accept(2139, tharnariun),
-    finish(98042, thundris), accept(4763, thundris, "At level 15 or higher, get the Empty Cleansing Bowl."),
+    finish(98042, thundris),
     finish(731, hollee, "If you escorted Remtravel, bring his fossil news to Archaeologist Hollee."), accept(741, hollee),
     accept(98461, hollee, "Heading to the Wetlands later? Hollee has a note for Tarrel Rockweaver in Menethil Harbor."),
     finish(4740, glynda), finish(1138, gubber),
