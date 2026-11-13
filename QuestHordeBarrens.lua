@@ -13,6 +13,11 @@ local function objectivePart(id, index, place, text, label)
   return step
 end
 local function only(step, rules) return B.only(step, rules) end
+-- The target button's creatures for a step QuestMobData has none for.
+local function hunt(step, ...)
+  step.mobs = { ... }
+  return step
+end
 local function dungeon(step, id) return B.forDungeon(step, "dungeon-" .. id) end
 local function ba(name, x, y) return at(name, x, y, M.barrens) end
 local function og(name, x, y) return at(name, x, y, M.orgrimmar) end
@@ -186,6 +191,8 @@ for _, id in ipairs({ 6361, 6362, 6363, 6364 }) do quest[id].race = "TAUREN" end
 -- Dungeon pickups (shown when the run is planned).
 q(5761, "Slaying the Beast", 16, 9)
 q(97003, "Chol'aruk the Ravener", 21, nil, nil, true)
+-- Chol'aruk is an outdoor group quest on Thorn Hill: optional in the route, like Bruuz.
+quest[97003].optional = true
 q(959, "Trouble at the Docks", 18, 14)
 q(1491, "Smart Drinks", 18, 13, 865)
 q(962, "Serpentbloom", 18, 14)
@@ -239,7 +246,7 @@ local crossroads = (function()
 
     -- Thorn Hill, then the coast road.
     along(objectivePart(872, 3, ba(nil, 58.7, 27.1),
-      "Go east to Thorn Hill, the Razormane stronghold. Kreenig Snarlsnout wanders between the huts at its south end; kill him for his tusk.",
+      "Go east to Thorn Hill, the Razormane stronghold. Kreenig Snarlsnout wanders between the huts at its south end; kill him for his tusk. Keep out of the cave at the south-west end: Chol'aruk and his elite guards (18-20) live there.",
       "Kreenig Snarlsnout's Tusk"), 5041, 845),
     along(objectiveAt(872, ba(nil, 59.3, 24.7),
       "Work north through Thorn Hill, killing Geomancers and Defenders. Look for the supply crates as you go.",
@@ -485,6 +492,12 @@ local sunrock = (function()
     accept(868, p.korran, "Korran's Egg Hunt is in the southern Barrens; keep it for later."),
     -- CARRY: complete and turnin 868 Egg Hunt at Korran (22-30 file, southern Barrens)
     accept(853, p.helbrim),
+    -- Forever group quest (optional, like Bruuz): the Razormane den on Thorn Hill.
+    accept(97003, p.gurak, "If you have a group, Gur'ak on the north-east side of town wants Chol'aruk's head. Skip it alone."),
+    hunt(objectiveAt(97003, ba("Chol'aruk", 57.9, 26.8),
+      "Ride east to Thorn Hill with your group. Chol'aruk, a level 20 elite, waits in the cave at the south-west end of the hill with elite Razormane guards.",
+      "Chol'aruk's Head"), "Chol'aruk"),
+    finish(97003, p.gurak),
     taxi("fly", p.omusa, "Camp Taurajo, The Barrens", "Fly to Camp Taurajo."),
     finish(878, p.mangletooth), accept(5052, p.mangletooth),
     finish(5052, p.mangletooth, "Hand Mangletooth a Blood Shard from the quilboar you killed."),
