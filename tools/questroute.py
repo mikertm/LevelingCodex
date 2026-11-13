@@ -58,7 +58,11 @@ def audit(data, ref, cap=20):
     if not game:
         return [("QUESTS", "error", "client reference is missing quest data")]
     ids, maps, flights = set(game["ids"]), game["maps"], set(game["flights"])
-    nodes = {node["name"]: node for node in (game.get("taxi") or {}).values()}
+    # Neutral hubs (Gadgetzan, Everlook, Thorium Point...) have an Alliance and a Horde flight point
+    # under one name: keep both and pick the route's faction below.
+    nodes = {}
+    for node in (game.get("taxi") or {}).values():
+        nodes.setdefault(node["name"], []).append(node)
     for faction, route in data.items():
         # Empty Lua tables load as lists: read them as empty maps.
         route = {key: ({} if value == [] else value) for key, value in route.items()}
@@ -253,7 +257,9 @@ def audit(data, ref, cap=20):
                     fail(where, f"unknown flight path {step.get('flight')!r}")
                 # A Fly step sits at the destination's flight master (Q.flightStep keeps it current
                 # until you land there), and a getfp step at the flight master it teaches.
-                node = nodes.get(step.get("flight")) if kind in {"fly", "getfp"} else None
+                candidates = nodes.get(step.get("flight")) if kind in {"fly", "getfp"} else None
+                ours = [n for n in candidates or [] if faction[0] in n.get("faction", "AH")]
+                node = (ours or candidates or [None])[0]
                 if node and step.get("x") is not None:
                     extent = maps.get(str(node["map"]), {})
                     off = None

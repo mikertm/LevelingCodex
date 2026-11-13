@@ -608,9 +608,6 @@ quest[98216].optional = true
 -- MacKreel stands by the Waterlogged Letter on the Arathi shore; the moonshine goes to Southshore.
 q(647, "MacKreel's Moonshine", 30, 28)
 quest[647].optional = true
--- Sara Balloo's next errands, both in Ironforge (after Sully's letter, so only with the letter).
-q(683, "Sara Balloo's Plea", 30, 25, 637)
-q(686, "A King's Tribute", 30, 25, 683)
 q(95647, "Lost in the Thicket Things", 31, 24, nil, true)
 q(98815, "Highland Hides", 28, nil, nil, true)
 q(95646, "Horrors in the Highland", 31, 24, 275, true)
@@ -1117,11 +1114,6 @@ local wet = {
   forDungeon(accept(971, at("Gerrig Bonegrip", 50.83, 5.62, ironforge), "Gerrig Bonegrip in the Forlorn Cavern wants a manuscript from Blackfathom Deeps."),
     "dungeon-blackfathom-deeps"),
   finish(637, at("Sara Balloo", 63.48, 67.29, ironforge), "Give Sully's letter to Sara Balloo in the Mystic Ward."),
-  accept(683, at("Sara Balloo", 63.48, 67.29, ironforge), "Sara asks you to take her plea to King Magni."),
-  finish(683, at("King Magni Bronzebeard", 39.09, 56.2, ironforge), "King Magni Bronzebeard holds court in the High Seat."),
-  accept(686, at("King Magni Bronzebeard", 39.09, 56.2, ironforge)),
-  finish(686, at("Grand Mason Marblesten", 39.04, 88.05, ironforge),
-    "Grand Mason Marblesten is south of the High Seat. His next task wants granite from the Alterac Mountains: leave it."),
   finish(322, sw("Grimand Elmore", 59.71, 33.74), "Take the Deeprun Tram to Stormwind and deliver the ingots to Grimand Elmore in the Dwarven District."),
   accept(325, sw("Grimand Elmore", 59.71, 33.74), "Take Morbent's Bane for Sven. Morbent Fel is level 32: keep it for after 30."),
   finish(98190, sw("Highlord Bolvar Fordragon", 80.21, 38.35), "Give the statuette to Highlord Bolvar in Stormwind Keep."),
