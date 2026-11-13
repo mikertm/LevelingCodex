@@ -1896,6 +1896,29 @@ function S.questWetlandsEarly()
   check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
 end
 
+function S.questWetlandsAfterEarly()
+  -- The 26-30 Wetlands route after the 20-25 chapter (2026-11-12 audit): the early chapter turns in
+  -- many quests the 26-30 route also has. Those turn-ins say nothing about the 26-30 route's own
+  -- earlier pickups, so Howin's quests and the rest must not go to Missed quests.
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 27, "Menethil Harbor"
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "duskwood" or section.id == "wetlands-early" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not step.optional then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 49.4, 42.2
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - Razormaw Needling"), "standing at Howin, his pickup is the step: " .. allText(frame))
+  slash("quests")
+  questQueue("Missed quests")
+  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "Blisters on The Land", "War Banners", "Apprentice's Duties" }) do
+    check(not questText(win(), name), name .. " is still on the route, not missed: " .. allText(win()))
+  end
+end
+
 function S.questWetlandsDig()
   -- In game (2026-11-12) Prospector Whelgar, beside Merrin, offered Uncovering the Past to a level
   -- 24 who had just taken Ormer's first hunt and Merrin's letter. The pickup comes then, not after
