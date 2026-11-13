@@ -240,6 +240,25 @@ local function btn(label, x, y, w, onClick, on, tip)
   return b
 end
 
+-- A row of choices with one lit (A.segment): equal widths, 4 px apart, 24 px tall. `lit` is the
+-- chosen index (nil: none), `onPick(i)` runs on a click, `tips[i]` is that choice's tooltip.
+local function newSegment() return A.segment(overlay) end
+local function segments(x, y, w, labels, lit, onPick, tips)
+  local n = #labels
+  local each = math.floor((w - 4 * (n - 1)) / n)
+  for i, label in ipairs(labels) do
+    local b = take("segment", newSegment)
+    b:SetSize(each, 24)
+    b:SetPoint("TOPLEFT", content, "TOPLEFT", x + (i - 1) * (each + 4), -y)
+    b:SetLabel(label)
+    b.codexLabel, b.codexOn = label, i == lit
+    b:SetLook(i == lit)
+    b:SetScript("OnClick", function() onPick(i) end)
+    b.tipTitle, b.tipText = tips and tips[i] and label or nil, tips and tips[i] or nil
+  end
+  return 24
+end
+
 -- A check box with its label (for on/off settings).
 local function newCheck() return A.check(overlay) end
 local function check(label, x, y, on, onClick, tip)
@@ -1331,6 +1350,7 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+  segments = segments,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 

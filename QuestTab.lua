@@ -32,6 +32,42 @@ local function setPlans(list, on)
   ns.updateQuestSettings()
 end
 
+-- Which dungeon plan the setup lights: "all" (Plan every dungeon run, or every run planned),
+-- "none", "recommended" (exactly Q.recommendedRuns()) or "picks", with the planned count.
+local function dungeonState()
+  local all, planned, set = Q.dungeons(), 0, {}
+  for _, section in ipairs(all) do
+    if Q.planned(section.id) then planned, set[section.id] = planned + 1, true end
+  end
+  if ns.db().questDungeons or (planned > 0 and planned == #all) then return "all", planned end
+  if planned == 0 then return "none", 0 end
+  local recommended = Q.recommendedRuns()
+  local same = #recommended == planned
+  for _, section in ipairs(recommended) do if not set[section.id] then same = false end end
+  return same and "recommended" or "picks", planned
+end
+
+-- The dungeon choices: Recommended, All, None (the setup card and Guides > Dungeons).
+local DUNGEON_TIPS = { "Runs near your route or tied to your class quests: their pickups join your route.",
+  "Plan every dungeon run: all their pickups join your route.",
+  "Leave dungeon pickups out. Quests > Guides > Dungeons plans runs one by one." }
+local function pickDungeons(i)
+  local db = ns.db()
+  if i == 1 then db.questDungeons = false; setPlans(Q.recommendedRuns(), true)
+  elseif i == 2 then db.questDungeons = true; setPlans(Q.dungeons(), true)
+  elseif i == 3 then db.questDungeons = false; setPlans(nil)
+  else U.refresh() end
+end
+local function dungeonChoices(x, y, w)
+  local state, planned = dungeonState()
+  local labels, tips = { "Recommended", "All", "None" }, { DUNGEON_TIPS[1], DUNGEON_TIPS[2], DUNGEON_TIPS[3] }
+  local lit = ({ recommended = 1, all = 2, none = 3 })[state]
+  if state == "picks" then
+    labels[4], tips[4], lit = "Your picks (" .. planned .. ")", "The runs you planned one by one.", 4
+  end
+  return U.segments(x, y, w, labels, lit, pickDungeons, tips)
+end
+
 local function show(key)
   sub = key
   U.refreshTop()
@@ -501,27 +537,30 @@ local function renderSetup(y)
   y = y + U.T("SET UP YOUR GUIDE", 16, y, W - 32, "label", C.inkSoft) + 4
   y = y + U.T("Pick how the guide plays. Settings has every option, and you can change these any time.",
     16, y, W - 32, "small", C.ink) + 8
-  local half = math.floor((W - 40) / 2)
-  local function pace(keep) db.questKeepGrey, db.questOptional = keep, keep; ns.updateQuestSettings() end
-  U.btn("Fastest", 16, y, half, function() pace(false) end, not db.questKeepGrey and not db.questOptional,
-    "Grey pickups leave the route and side errands stay hidden.")
-  U.btn("Every quest", 24 + half, y, half, function() pace(true) end, db.questKeepGrey and db.questOptional,
-    "Keep grey pickups and show side errands such as Camping 101.")
-  y = y + 30
-  U.btn("Plan recommended dungeons", 16, y, half, function() setPlans(Q.recommendedRuns(), true) end, false,
-    "Runs near your route or tied to your class quests: their pickups join your route.")
-  U.btn("No dungeons", 24 + half, y, half, function() setPlans(nil) end, false,
-    "Leave dungeon pickups out. Quests > Guides > Dungeons plans runs one by one.")
-  y = y + 30
-  local third = math.floor((W - 48) / 3)
+  local x, w = 108, W - 16 - 108
+  local function label(text) U.T(text, 16, y + 5, 88, "body", C.ink) end
+  -- Pace: Fastest (no grey pickups, no side errands) or Every quest (both); a mix lights neither.
+  local fastest = not db.questKeepGrey and not db.questOptional
+  local every = db.questKeepGrey and db.questOptional
+  label("Pace")
+  y = y + U.segments(x, y, w, { "Fastest", "Every quest" }, fastest and 1 or every and 2 or nil, function(i)
+    db.questKeepGrey, db.questOptional = i == 2, i == 2
+    ns.updateQuestSettings()
+  end, { "Grey pickups leave the route and side errands stay hidden.",
+    "Keep grey pickups and show side errands such as Camping 101." }) + 4
+  if not (fastest or every) then y = y + U.T("Custom: see Settings", x, y, w, "small", C.dim) + 4 end
+  y = y + 6
+  label("Dungeons")
+  y = y + dungeonChoices(x, y, w) + 10
+  label("Helpers")
   local function toggle(key) return function() db[key] = not db[key]; U.refresh() end end
-  U.btn("Auto-accept", 16, y, third, toggle("questAutoAccept"), db.questAutoAccept,
+  U.check("Auto-accept", x, y - 1, db.questAutoAccept, toggle("questAutoAccept"),
     "Accept the guide's current quest by itself. Hold Alt to stop it.")
-  U.btn("Auto turn-in", 24 + third, y, third, toggle("questAutoTurnin"), db.questAutoTurnin,
+  U.check("Auto turn-in", x + 150, y - 1, db.questAutoTurnin, toggle("questAutoTurnin"),
     "Turn in the guide's current quest by itself when there's no reward to choose. Hold Alt to stop it.")
-  U.btn("Auto-fly and bind", 32 + 2 * third, y, third, toggle("questAutoTravel"), db.questAutoTravel,
+  U.check("Auto-fly and bind", x + 300, y - 1, db.questAutoTravel, toggle("questAutoTravel"),
     "Take the step's flight, and pick the bind option at the step's inn (you accept the bind). Hold Alt to stop it.")
-  y = y + 30
+  y = y + 34
   U.btn("Done", 16, y, W - 32, function()
     db.questSetupDone, setupOpen = true, false
     ns.questRefresh()

@@ -32,6 +32,7 @@ A.FILES = {
   classCircles = "Interface\\TargetingFrame\\UI-Classes-Circles",
   circle      = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", -- a white disc
   parchment   = "Interface\\QuestFrame\\QuestBG",
+  checkTick   = "Interface\\Buttons\\UI-CheckBox-Check",
 }
 
 -- Does the client have this file? (cached; probed on a hidden texture)
@@ -195,6 +196,45 @@ function A.button(parent, w, h)
   end
   b:SetSize(w or 100, h or 22)
   hoverTips(b)
+  return b
+end
+
+-- One choice in a row of segments (Window.lua's U.segments): the panel button. SetLook(true) keeps
+-- it lit with a 1 px gold inner edge, a gold label and the check box's tick at its left; unlit it
+-- is dimmed with a soft grey label.
+function A.segment(parent)
+  local b = A.button(parent, 100, 24)
+  local base = b.SetLook
+  b.goldEdges = {}
+  for i = 1, 4 do
+    local e = b:CreateTexture(nil, "OVERLAY")
+    e:SetColorTexture(1, 0.82, 0, 1)
+    e:Hide()
+    b.goldEdges[i] = e
+  end
+  local e = b.goldEdges
+  e[1]:SetPoint("TOPLEFT", 2, -2); e[1]:SetPoint("TOPRIGHT", -2, -2); e[1]:SetHeight(1)
+  e[2]:SetPoint("BOTTOMLEFT", 2, 2); e[2]:SetPoint("BOTTOMRIGHT", -2, 2); e[2]:SetHeight(1)
+  e[3]:SetPoint("TOPLEFT", 2, -2); e[3]:SetPoint("BOTTOMLEFT", 2, 2); e[3]:SetWidth(1)
+  e[4]:SetPoint("TOPRIGHT", -2, -2); e[4]:SetPoint("BOTTOMRIGHT", -2, 2); e[4]:SetWidth(1)
+  if A.hasFile(A.FILES.checkTick) then
+    b.tick = b:CreateTexture(nil, "OVERLAY")
+    b.tick:SetSize(14, 14)
+    b.tick:SetPoint("LEFT", 4, 0)
+    b.tick:SetTexture(A.FILES.checkTick)
+    b.tick:Hide()
+  end
+  b.SetLook = function(self, on)
+    base(self, on)
+    self:SetAlpha(on and 1 or 0.6)
+    local fs = self.label or (self.GetFontString and self:GetFontString())
+    if fs then
+      if on then fs:SetTextColor(1, 0.82, 0) else fs:SetTextColor(0.75, 0.75, 0.75) end
+    end
+    for _, edge in ipairs(self.goldEdges) do edge:SetShown(on and true or false) end
+    if self.tick then self.tick:SetShown(on and true or false) end
+  end
+  b:SetLook(false)
   return b
 end
 
