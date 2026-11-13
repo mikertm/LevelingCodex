@@ -408,10 +408,21 @@ local function grindLines(step, level)
   return lines
 end
 
--- Collect and buy steps: what your bags hold of what the step wants.
+-- Collect and buy steps: what your bags hold of what the step wants (with `items`, the first one
+-- still short).
 local function itemCounts(step)
-  if not ((step.type == "collect" or step.type == "buy") and step.item) then return end
-  return Q.itemCount(step.item), step.count or 1
+  if not (step.type == "collect" or step.type == "buy") then return end
+  if step.item then
+    local have, need = Q.itemCount(step.item), step.count or 1
+    if have < need or not step.items then return have, need end
+  end
+  local last
+  for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
+    local have, need = Q.itemCount(pair[1]), pair[2] or 1
+    if have < need then return have, need end
+    last = { have, need }
+  end
+  if last then return last[1], last[2] end
 end
 
 local function itemGoal(text, have, need, small, flat)

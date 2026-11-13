@@ -626,6 +626,24 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- A buy step that lists several items waits until the bags hold every one of them.
+function S.questBuyItems()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "buy", items = { { 2320, 1 }, { 3713, 2 } }, name = "Thread and spices",
+        text = "Buy Fine Thread and two Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.bags[2320] = 1
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Buy - Thread and spices"), "a buy step with two items waits for both")
+  check(questText(frame, "In your bags 0/2"), "it counts the item still missing")
+  MOCK.bags[3713] = 2
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(not questText(frame, "Buy - Thread and spices"), "it ticks off once the bags hold every item")
+end
+
 -- Step types and gates: collect/buy by bag count, abandon, skipOn, profession, maxLevel, sticky goals.
 function S.questStepTypes()
   local northshire

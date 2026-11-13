@@ -214,7 +214,7 @@ do
     accept(8554, P.sprogger, "Sprogger knows who took the captain's cutlass: the naga Negolash, out at the old lifeboat."),
     note(onQuest(action("buy", stv("Nixxrax Fillamug", 27.04, 77.17),
       "Buy 10 Barbecued Buzzard Wings and 5 Junglevine Wine from Nixxrax Fillamug at the inn. They are the bait for Negolash.",
-      { item = 4457, count = 10 }), 8554), "Vendor not confirmed in the quest data; check in game."),
+      { items = { { 4457, 10 }, { 4595, 5 } } }), 8554), "Vendor not confirmed in the quest data; check in game."),
     objective(8554, stv("Ruined Lifeboat", 32.48, 81.98),
       "Swim east to the ruined lifeboat on the shore. Set out the wings and wine to call Negolash, then kill him for Smotts' Cutlass.",
       "Smotts' Cutlass"),

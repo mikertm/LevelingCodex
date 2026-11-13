@@ -284,7 +284,12 @@ local function buildRoute()
           for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
             if type(pair) == "table" and pair[1] then routeItems[pair[1]] = true end
           end
-          if (step.type == "collect" or step.type == "buy") and step.item then collectItems[step.item] = -1 end
+          if step.type == "collect" or step.type == "buy" then
+            if step.item then collectItems[step.item] = -1 end
+            for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
+              if type(pair) == "table" and pair[1] then collectItems[pair[1]] = -1 end
+            end
+          end
           if step.type == "getfp" and step.map then flightHubs[step.map] = step end
           local action = step.type .. ":" .. (step.quest or n)
           occurrences[action] = (occurrences[action] or 0) + 1
@@ -450,9 +455,15 @@ local function gated(s)
   if s.unlessDone and turnedIn[s.unlessDone] then return "skipped" end
 end
 
--- Items a collect or buy step wants: done once your bags hold `count` (default 1).
+-- Items a collect or buy step wants: done once your bags hold `count` (default 1) of `item` and
+-- every `items` pair ({ itemID, count }).
 local function haveItems(s)
-  return s.item and Q.itemCount(s.item) >= (s.count or 1)
+  if not (s.item or s.items) then return false end
+  if s.item and Q.itemCount(s.item) < (s.count or 1) then return false end
+  for _, pair in ipairs(type(s.items) == "table" and s.items or {}) do
+    if Q.itemCount(pair[1]) < (pair[2] or 1) then return false end
+  end
+  return true
 end
 
 local function state(row, skips, blockedQuests, later, map, x, y)
@@ -479,7 +490,7 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   local gate = gated(s)
   if gate then return gate end
   if s.type == "abandon" and not (s.quest and log[s.quest]) then return "done" end
-  if (s.type == "collect" or s.type == "buy") and s.item then
+  if (s.type == "collect" or s.type == "buy") and (s.item or s.items) then
     if (s.quest and turnedIn[s.quest]) or haveItems(s) then
       visited[row.key] = true -- keep it done when the items get used up later
       return "done"

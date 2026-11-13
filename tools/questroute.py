@@ -16,7 +16,7 @@ TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note", "abandon", "collect"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "skipOn", "maxLevel",
+               "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "items", "skipOn", "maxLevel",
                "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
@@ -221,7 +221,12 @@ def audit(data, ref, cap=20):
                     fail(where, "an abandon step needs its quest")
                 if kind in ("collect", "buy") and "count" in step and (type(step["count"]) is not int or step["count"] < 1):
                     fail(where, "count must be a positive integer")
-                if kind == "collect" and not item:
+                items = step.get("items")
+                if items is not None and (kind not in ("collect", "buy") or not isinstance(items, list) or not items or any(
+                        not isinstance(pair, list) or len(pair) != 2 or type(pair[0]) is not int or pair[0] < 1
+                        or type(pair[1]) is not int or pair[1] < 1 for pair in items)):
+                    fail(where, "items must be a list of { itemID, count } pairs on a collect or buy step")
+                if kind == "collect" and not item and not items:
                     fail(where, "a collect step needs its item")
                 for key in ("maxLevel", "skill"):
                     if key in step and (type(step[key]) is not int or not 1 <= step[key] <= 300):
