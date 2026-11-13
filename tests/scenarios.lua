@@ -684,6 +684,59 @@ function S.arrowArrival()
   check(arrow.here:IsShown() and not arrow.bob:IsPlaying(), "with the animation off the icon stays still")
 end
 
+-- Minimap: pins for the current and next steps, an edge arrow out of range, a dotted line.
+function S.minimapPins()
+  S.login()
+  local pins = _G.LevelingCodexMinimapPins
+  if MOCK.minimal then
+    MOCK.advance(0.5)
+    check(not (pins and pins:IsShown()), "no map API: no pins, no error")
+    return
+  end
+  MOCK.viewRadius = 200
+  -- Five percent south of Deputy Willem: about 116 yd (Elwynn is 2314.6 yd tall), 40 px out.
+  MOCK.questX, MOCK.questY = 48.17, 47.94
+  MOCK.advance(0.2)
+  check(pins and pins:IsShown() and pins.current:IsShown(), "the current step gets a minimap pin")
+  local _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(x) < 0.5 and y > 0, "north is up")
+  check(#pins.next >= 1 and pins.next[1]:IsShown(), "the next steps get small pins")
+  local function dots()
+    local n = 0
+    for _, d in ipairs(pins.dots) do if d:IsShown() then n = n + 1 end end
+    return n
+  end
+  check(dots() > 0, "a dotted line leads to the step")
+  MOCK.cvars = { rotateMinimap = "1" }
+  MOCK.facing = math.pi / 2 -- facing west: north is to the right
+  MOCK.advance(0.2)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(x > 0 and math.abs(y) < 0.5, "a rotating minimap turns the pins with you")
+  MOCK.cvars, MOCK.facing = {}, 0
+  MOCK.questY = 80
+  MOCK.advance(0.2)
+  check(not pins.current:IsShown() and pins.edge:IsShown(), "out of range the pin becomes an edge arrow")
+  _, _, _, x, y = pins.edge:GetPoint()
+  check(math.abs(math.sqrt(x * x + y * y) - 66.5) < 0.6, "on the rim of a round minimap")
+  MOCK.minimapShape = "SQUARE"
+  MOCK.advance(0.2)
+  _, _, _, x, y = pins.edge:GetPoint()
+  check(math.abs(math.max(math.abs(x), math.abs(y)) - 66.5) < 0.6, "on the edge of a square minimap")
+  MOCK.minimapShape, MOCK.viewRadius = nil, 0
+  MOCK.minimapZoom = 9 -- no zoom table entry either
+  MOCK.advance(0.2)
+  check(not pins.current:IsShown() and not pins.edge:IsShown(), "no usable scale: no pins")
+  MOCK.viewRadius, MOCK.minimapZoom = 200, nil
+  LevelingCodexDB.noMinimapLine = true
+  MOCK.questY = 47.94
+  MOCK.advance(0.2)
+  check(pins.current:IsShown() and dots() == 0, "the line can be turned off")
+  LevelingCodexDB.noMinimapSteps = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.2)
+  check(not pins:IsShown(), "and the pins")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do

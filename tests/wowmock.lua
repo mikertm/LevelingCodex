@@ -717,6 +717,11 @@ WorldFrame = CreateFrame("Frame", "WorldFrame")
 Minimap = CreateFrame("Frame", "Minimap", UIParent)
 Minimap:SetSize(140, 140)
 Minimap._cx, Minimap._cy = 1780, 940
+-- Zoom level (MOCK.minimapZoom, 0-5), indoors (MOCK.indoors), console variables (MOCK.cvars).
+function Minimap:GetZoom() return MOCK.minimapZoom or 0 end
+function IsIndoors() return MOCK.indoors or false end
+MOCK.cvars = {}
+function GetCVar(name) return MOCK.cvars and MOCK.cvars[name] end
 
 -- The vendor window (MOCK.openMerchant shows it).
 MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
@@ -895,6 +900,8 @@ MOCK.tracking = {}
 MOCK.trackCalls = {}
 MOCK.dead = false
 C_Minimap = {
+  -- The minimap's view radius in yards (MOCK.viewRadius; nil = the client doesn't say).
+  GetViewRadius = function() return MOCK.viewRadius end,
   GetNumTrackingTypes = function() return #MOCK.tracking end,
   GetTrackingInfo = function(i)
     local t = MOCK.tracking[i]

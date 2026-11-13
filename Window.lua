@@ -1237,6 +1237,10 @@ renderers.settings = function()
   y = y + 36
   tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
+  tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
+    "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
+  tick("Dotted line to the step", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
+    "Gold dots on the minimap drift from you toward the current step.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."

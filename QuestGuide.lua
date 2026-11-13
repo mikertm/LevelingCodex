@@ -1265,6 +1265,7 @@ function ns.questRefresh()
   end
   updateItemButton()
   updateMapPin()
+  ns.questMap.refresh()
   updateQuestWatch()
   ns.partyStepChanged()
   ns.refreshQuestTab()

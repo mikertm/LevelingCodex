@@ -788,7 +788,7 @@ def main():
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
-                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "questWaypoints", "questWindowExtras",
+                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
@@ -826,6 +826,8 @@ def main():
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
+        if minimal:
+            runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))
