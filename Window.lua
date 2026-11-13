@@ -1163,6 +1163,11 @@ renderers.settings = function()
   end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
   y = y + 12
 
+  head("VENDOR")
+  tick("Sell grey items at vendors", not db.noAutoSell, function() db.noAutoSell = not db.noAutoSell end,
+    "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
+  y = y + 12
+
   head("QUEST GUIDE")
   tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
     "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guide library > Dungeons plans runs one by one, which overrides this.")

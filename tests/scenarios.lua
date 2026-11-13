@@ -5976,6 +5976,57 @@ function S.classTrainer()
   check(not card:IsShown(), "the setting turns the card off")
 end
 
+-- Vendor: greys sell one by one when a vendor opens, guide items and the Hearthstone are kept.
+function S.vendorJunk()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "collect", item = 3301, count = 1, name = "Kept Fang", text = "Keep it." })
+    end
+  end
+  S.login()
+  MOCK.money = 0
+  MOCK.bagItems = {
+    { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 12, count = 3 },
+    { name = "Linen Cloth", id = 2589, quality = 1, level = 1, sell = 13 },
+    { name = "Kept Fang", id = 3301, quality = 0, level = 1, sell = 5 },
+    { name = "Hearthstone", id = 6948, quality = 0, level = 1, sell = 5 },
+    { name = "Odd Rag", id = 3302, quality = 0, level = 1, sell = 4, loaded = false },
+    { name = "Torn Ear", id = 3303, quality = 0, level = 1, sell = 0 },
+    { name = "Chipped Claw", id = 3304, quality = 0, level = 1, sell = 7 },
+  }
+  MOCK.openMerchant({ items = {} })
+  if MOCK.minimal then
+    MOCK.advance(2)
+    check(#MOCK.sold == 0, "no selling without the container APIs")
+    return
+  end
+  MOCK.advance(0.2)
+  check(#MOCK.sold == 1 and MOCK.sold[1][1] == 3300, "the first grey sells right after the vendor opens")
+  MOCK.bagItems[7] = { name = "Silk Cloth", id = 4306, quality = 1, level = 1, sell = 150 }
+  MOCK.advance(2)
+  check(#MOCK.sold == 1, "a slot that changed since the scan is skipped (Silk Cloth stays)")
+  check(MOCK.money == 36 and chatHas("Sold 1 grey item for 36c%."), "one chat line with the total")
+  MOCK.closeMerchant()
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 12 },
+    { name = "Chipped Claw", id = 3304, quality = 0, level = 1, sell = 7 } }
+  MOCK.sold = {}
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(0.2)
+  MOCK.closeMerchant()
+  MOCK.advance(2)
+  check(#MOCK.sold == 1 and chatHas("the vendor closed"), "closing the vendor stops the run and says so")
+  MOCK.sold, MOCK.alt = {}, true
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(2)
+  check(#MOCK.sold == 0, "Alt holds selling back")
+  MOCK.alt = false
+  MOCK.closeMerchant()
+  LevelingCodexDB.noAutoSell = true
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(2)
+  check(#MOCK.sold == 0, "Settings can turn selling off")
+end
+
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.
 function S.trainerReqs()
   if not D() or MOCK.minimal then return end

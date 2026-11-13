@@ -27,6 +27,7 @@ local route, race, class
 local sections, sectionsById, steps, missed, ready = {}, {}, {}, {}, {}
 local startItems = {}
 local collectItems = {} -- item -> last count, for collect and buy steps
+local routeItems = {} -- every item a route step names (Q.routeItems: the vendor keeps them)
 local runOwn = {} -- run -> quests a route step ties to it (forDungeon): the ones that need the dungeon
 local killed = {} -- boss row key -> true: bosses down this dungeon visit
 local inInstance, lastInstance -- the dungeon you're in now (instance ID), and the last one you entered
@@ -249,6 +250,7 @@ local function buildRoute()
   race, class = (raceToken or ""):upper(), classToken
   route = LevelingCodexQuests and LevelingCodexQuests[(faction or ""):upper()]
   sections, sectionsById, steps, startItems, flightHubs, collectItems = {}, {}, {}, {}, {}, {}
+  routeItems = {}
   questNames, chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}, {}
   if not route then return end
   for _, section in ipairs(route.sections) do
@@ -277,7 +279,11 @@ local function buildRoute()
               questRun[step.quest] = questRun[step.quest] or run
             end
           end
-          if step.startItem then startItems[step.startItem] = false end
+          if step.startItem then startItems[step.startItem] = false; routeItems[step.startItem] = true end
+          if step.item then routeItems[step.item] = true end
+          for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
+            if type(pair) == "table" and pair[1] then routeItems[pair[1]] = true end
+          end
           if (step.type == "collect" or step.type == "buy") and step.item then collectItems[step.item] = -1 end
           if step.type == "getfp" and step.map then flightHubs[step.map] = step end
           local action = step.type .. ":" .. (step.quest or n)
@@ -1051,6 +1057,9 @@ function Q.current()
 end
 
 function Q.greyPickups() return greyRows end
+
+-- Items any step of your route names (`item`, `items`, `startItem`): the vendor never sells them.
+function Q.routeItems() return routeItems end
 
 -- A guide's progress and status for the Quests tab: quests turned in out of
 -- the quests it turns in, and "current", "done", "outleveled", "suggested", "later" or "open".

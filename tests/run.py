@@ -788,6 +788,7 @@ def main():
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("WARRIOR/%s/class-trainer" % variant, "WARRIOR", minimal, ["login", "classTrainer"]))
+        runs.append(("WARRIOR/%s/vendor-junk" % variant, "WARRIOR", minimal, ["vendorJunk"]))
         runs.append(("WARRIOR/%s/pace" % variant, "WARRIOR", minimal, ["paceCard"]))
         runs.append(("PALADIN/%s/prof-skilllines" % variant, "PALADIN", minimal, PROF_LINES))
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))

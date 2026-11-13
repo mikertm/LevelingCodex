@@ -64,4 +64,5 @@ Tracking.lua
 TalentGuide.lua
 ProfessionGuide.lua
 TrainerGuide.lua
+Vendor.lua
 Init.lua

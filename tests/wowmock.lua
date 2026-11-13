@@ -58,7 +58,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
-  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED" }) do
+  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
+  "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -711,6 +712,11 @@ Minimap = CreateFrame("Frame", "Minimap", UIParent)
 Minimap:SetSize(140, 140)
 Minimap._cx, Minimap._cy = 1780, 940
 
+-- The vendor window (MOCK.openMerchant shows it).
+MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
+MerchantFrame:SetSize(336, 447)
+MerchantFrame:Hide()
+
 GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
 GameTooltip:Hide()
 function GameTooltip:SetOwner(owner, anchor) self._owner = owner; self._lines = {} end
@@ -1006,14 +1012,34 @@ function GetItemCooldown(id)
   return 0, 0, 1
 end
 
--- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), itemLevel, class
--- = "Armor"|"Weapon"|"Trade Goods", loaded (false = GetItemInfo not cached yet) } } in bag 0.
+-- Bag contents for the disenchanting list and the vendor: MOCK.bagItems = { { name, id, quality, level (required),
+-- itemLevel, class = "Armor"|"Weapon"|"Trade Goods", sell (copper each, 0 = no value), count, locked, loaded (false =
+-- GetItemInfo not cached yet) } } in bag 0; { empty = true } is an empty slot (a sold item leaves one).
 MOCK.bagItems = {}
-local function bagLink(i) return "|cff1eff00|Hitem:" .. (90000 + i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
+local function bagID(i) return MOCK.bagItems[i].id or (90000 + i) end
+local function bagLink(i) return "|cff1eff00|Hitem:" .. bagID(i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
+-- A vendor (MOCK.openMerchant): MOCK.merchant = { items = { { id, name, price, per = 1, stock = -1, maxStack = 20 } },
+-- canRepair, repairCost }. Sales land in MOCK.sold ({ id, count }), purchases in MOCK.bought ({ id, n }),
+-- a repair in MOCK.repaired; money moves through MOCK.setMoney (PLAYER_MONEY).
+MOCK.sold, MOCK.bought = {}, {}
+function MOCK.setMoney(copper)
+  MOCK.money = copper
+  MOCK.event("PLAYER_MONEY")
+end
 C_Container = {
   GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or 0 end,
   GetContainerItemInfo = function(bag, slot)
-    if bag == 0 and MOCK.bagItems[slot] then return { itemID = 90000 + slot, hyperlink = bagLink(slot), stackCount = 1 } end
+    local it = bag == 0 and MOCK.bagItems[slot]
+    if not it or it.empty then return end
+    return { itemID = bagID(slot), hyperlink = bagLink(slot), stackCount = it.count or 1, quality = it.quality,
+      hasNoValue = it.sell == 0, isLocked = it.locked or false }
+  end,
+  UseContainerItem = function(bag, slot)
+    local it = bag == 0 and MOCK.bagItems[slot]
+    if not it or it.empty or not (MerchantFrame and MerchantFrame:IsShown()) then return end
+    table.insert(MOCK.sold, { bagID(slot), it.count or 1 })
+    MOCK.bagItems[slot] = { empty = true }
+    MOCK.setMoney((MOCK.money or 0) + (it.sell or 1) * (it.count or 1))
   end,
 }
 function GetItemInfo(link)
@@ -1025,12 +1051,56 @@ function GetItemInfo(link)
     end
   end
   for _, it in ipairs(MOCK.bagItems) do
-    if it.name == name then
+    if not it.empty and (it.name == name or (it.id and it.id == link)) then
       if it.loaded == false then return nil end
       local classID = ({ Armor = 4, Weapon = 2 })[it.class] or 7
-      return it.name, link, it.quality, it.itemLevel or it.level + 5, it.level, it.class, "", 1, "", 134400, 1, classID
+      return it.name, link, it.quality, it.itemLevel or it.level + 5, it.level, it.class, "", 1, "", 134400,
+        it.sell or 1, classID
     end
   end
+end
+
+local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
+function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end
+function GetMerchantItemID(i) local m = merchantItem(i); return m and m.id end
+function GetMerchantItemLink(i)
+  local m = merchantItem(i)
+  return m and ("|cffffffff|Hitem:" .. m.id .. "::::::::|h[" .. m.name .. "]|h|r")
+end
+function GetMerchantItemInfo(i)
+  local m = merchantItem(i)
+  if m then return m.name, 134400, m.price, m.per or 1, m.stock or -1, true, true, m.extended or false end
+end
+function GetMerchantItemMaxStack(i) local m = merchantItem(i); return m and (m.maxStack or 20) end
+function BuyMerchantItem(i, n)
+  local m = merchantItem(i)
+  if not m then return end
+  local per = m.per or 1
+  n = n or per
+  if m.stock and m.stock ~= -1 then n = math.min(n, m.stock); m.stock = m.stock - n end
+  table.insert(MOCK.bought, { m.id, n })
+  MOCK.bags[m.id] = (MOCK.bags[m.id] or 0) + n
+  MOCK.setMoney((MOCK.money or 0) - math.ceil(n / per) * m.price)
+end
+function CanMerchantRepair() return MOCK.merchant and MOCK.merchant.canRepair or false end
+function GetRepairAllCost()
+  local cost = MOCK.merchant and MOCK.merchant.repairCost or 0
+  return cost, cost > 0
+end
+function RepairAllItems()
+  local cost = MOCK.merchant and MOCK.merchant.repairCost or 0
+  MOCK.repaired = cost
+  MOCK.merchant.repairCost = 0
+  MOCK.setMoney((MOCK.money or 0) - cost)
+end
+function MOCK.openMerchant(m)
+  MOCK.merchant = m
+  if MerchantFrame then MerchantFrame:Show() end
+  MOCK.event("MERCHANT_SHOW")
+end
+function MOCK.closeMerchant()
+  if MerchantFrame then MerchantFrame:Hide() end
+  MOCK.event("MERCHANT_CLOSED")
 end
 
 -- Forever's controller UI (Blizzard_GamepadSharedUtility / Blizzard_GamepadSmartNavigation):
@@ -1308,7 +1378,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
-  "debugstack" }
+  "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
+  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
