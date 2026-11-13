@@ -19,9 +19,9 @@ local seen = { visits = 0, sold = 0, total = 0 } -- for /codex debug
 local events
 
 -- Hook points: Stats.lua files the money these announce (called just before it moves).
-function V.onSold() end
-function V.onRepaired() end
-function V.onBought() end
+function V.onSold(copper) if ns.stats then ns.stats.expect("junk", copper) end end
+function V.onRepaired(copper) if ns.stats then ns.stats.expect("repair", copper) end end
+function V.onBought(copper) if ns.stats then ns.stats.expect("buys", copper) end end
 
 local function numSlots(bag)
   local C = C_Container

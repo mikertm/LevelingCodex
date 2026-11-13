@@ -43,6 +43,7 @@ local function start()
   ns.startTrainerGuide()
   ns.startVendor()
   ns.startPace()
+  ns.startStats()
 end
 
 local events = CreateFrame("Frame")

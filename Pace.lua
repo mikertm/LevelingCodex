@@ -36,6 +36,7 @@ local function onXP()
     if gained and gained > 0 then
       session.xp = session.xp + gained
       level.xp = level.xp + gained
+      if ns.stats then ns.stats.xp("total", gained) end
     end
   end
   lastXP, lastMax, lastLevel = cur, max, lvl
@@ -111,11 +112,15 @@ function ns.startPace()
     elseif event == "QUEST_TURNED_IN" then
       level.quests = level.quests + 1
       level.quest = level.quest + (tonumber(b) or 0)
+      if ns.stats then ns.stats.xp("quest", tonumber(b) or 0); ns.stats.count("quests") end
     elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
       if type(a) == "string" and a:find("dies", 1, true) then
         local digits = a:match("(%d[%d,%.]*) experience")
         local n = digits and tonumber((digits:gsub("[,%.]", "")))
-        if n then level.mob, level.kills = level.mob + n, level.kills + 1 end
+        if n then
+          level.mob, level.kills = level.mob + n, level.kills + 1
+          if ns.stats then ns.stats.xp("kill", n); ns.stats.count("kills") end
+        end
       end
     elseif event == "PLAYER_DEAD" then
       level.deaths = level.deaths + 1

@@ -59,7 +59,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
   "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
-  "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY" }) do
+  "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -103,7 +104,12 @@ function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
 function OpenWorldMap(map) MOCK.openedMap = map end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
-  GetMapInfo = function(id) return id == 1433 and { name = "Redridge Mountains" } or nil end,
+  -- MOCK.mapInfo[id] = { name, mapType, parentMapID } (opt-in: other names change "Travel to" captions)
+  GetMapInfo = function(id)
+    local m = MOCK.mapInfo and MOCK.mapInfo[id]
+    if m then return m end
+    return id == 1433 and { name = "Redridge Mountains" } or nil
+  end,
   GetMapWorldSize = function(id)
     local size = MOCK.mapSizes and MOCK.mapSizes[id]
     if size then return size[1], size[2] end

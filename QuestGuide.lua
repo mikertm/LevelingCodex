@@ -220,6 +220,7 @@ local function tickFlight()
     flight.start = flight.start or GetTime()
   elseif flight.start then
     if flight.from and flight.to then flightTimes()[flight.from .. ">" .. flight.to] = GetTime() - flight.start end
+    if ns.stats then ns.stats.flightTime(GetTime() - flight.start) end
     flight = {}
   end
 end
@@ -1602,6 +1603,7 @@ function ns.startQuestGuide()
     try(hooksecurefunc, "TakeTaxiNode", function(node)
       flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin }
       if recorder then flightTarget = Q.plain(try(TaxiNodeName, node)) end
+      if ns.stats then ns.stats.count("flights") end
     end)
   end
   ns.startQuestParty()

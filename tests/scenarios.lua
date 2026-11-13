@@ -6121,6 +6121,52 @@ function S.vendorShopping()
   check(not card:IsShown(), "closing the vendor hides the card")
 end
 
+-- Stats: XP, gold by source, activity and zone time, counted per level and saved.
+local STATS_MAPS = { [1429] = { name = "Elwynn Forest", mapType = 3, parentMapID = 1415 },
+  [12] = { name = "Northshire", mapType = 5, parentMapID = 1429 } }
+
+function S.statsCounters()
+  MOCK.mapInfo = STATS_MAPS
+  LevelingCodexCharDB = { stats = "x" } -- a broken saved shape is replaced, not used
+  S.login()
+  if MOCK.minimal then MOCK.advance(2); return end
+  local lvl = MOCK.level
+  local st = LevelingCodexCharDB.stats
+  check(type(st) == "table" and st.version == 1, "broken saved stats start fresh")
+  local function L() return st.levels[lvl] end
+  MOCK.setMoney(1000)
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.setMoney(1500)
+  check(L().goldIn.quest == 500 and L().quests == 1 and L().questXP == 120, "a turn-in: quest gold, count and XP")
+  MOCK.event("LOOT_OPENED"); MOCK.setMoney(1600); MOCK.event("LOOT_CLOSED")
+  check(L().goldIn.loot == 100, "money while looting is loot")
+  MOCK.event("TRAINER_SHOW"); MOCK.setMoney(1400); MOCK.event("TRAINER_CLOSED")
+  check(L().goldOut.training == 200, "money spent at a trainer is training")
+  MOCK.setMoney(1350)
+  check(L().goldOut.other == 50, "anything else is other")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 45 experience.")
+  check(L().killXP == 45 and L().kills == 1, "a kill's XP and count")
+  MOCK.event("PLAYER_DEAD")
+  check(L().deaths == 1 and st.totals.deaths == 1, "a death")
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-1", 8690)
+  check(st.totals.hearths == 1, "a hearthstone use")
+  MOCK.event("TIME_PLAYED_MSG", 3600, 600)
+  check(st.played.total == 3600 and st.played.level == 600, "/played is remembered")
+  local before = L().seconds
+  MOCK.advance(3)
+  check(L().seconds >= before + 3 and st.zones[1429] and st.zones[1429].seconds >= 3, "time goes to the level and the zone")
+  MOCK.questMap = 12
+  local elwynn = st.zones[1429].seconds
+  MOCK.advance(2)
+  check(st.zones[1429].seconds >= elwynn + 2 and not st.zones[12], "a subzone map rolls up to its zone")
+  MOCK.questMap = 1429
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 40 } }
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(1)
+  MOCK.closeMerchant()
+  check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+end
+
 -- Vendor: a quest in your log that needs a vendor item, next to the step that buys it, counts once.
 function S.vendorShoppingQuest()
   routeAt("Human", 35, 1445, 66.4, 51.5, { { questID = 1218, title = "Soothing Spices",

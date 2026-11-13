@@ -60,6 +60,7 @@ QuestGuide.lua
 QuestParty.lua
 Pace.lua
 QuestTab.lua
+Stats.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua

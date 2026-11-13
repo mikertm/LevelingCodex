@@ -1028,7 +1028,10 @@ function Q.enteredDungeon()
   local here = (type(instanceID) == "number" and instanceID > 0) and instanceID or name
   if here == inInstance then return end
   inInstance = here
-  if here ~= lastInstance then killed = {} end
+  if here ~= lastInstance then
+    killed = {}
+    if ns.stats then ns.stats.count("dungeons") end
+  end
   lastInstance = here
   if ns.db().noDungeonOpen then return end
   for _, section in ipairs(sections) do
@@ -1058,7 +1061,10 @@ function Q.bossDown(encounter, name, npc)
       end
     end
   end
-  if hit then calculate() end
+  if hit then
+    calculate()
+    if ns.stats then ns.stats.count("bosses") end
+  end
   return hit
 end
 
