@@ -1332,7 +1332,6 @@ function Q.questStatus(row)
   if step.startItem and not startItems[step.startItem] then return "Starter item needed" end
   if step.type ~= "accept" then return "Pick up quest first" end
   if step.phase == "inside" then return "Starts inside" end
-  if step.uncertain then return "Check in game" end
   return "Available"
 end
 

@@ -514,7 +514,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   if part then
     add({ kind = "chain", text = "Chain: part " .. part .. " of " .. length .. (run and (", leads to " .. run.title) or "") .. "." })
   end
-  if step.uncertain then add({ kind = "note", tone = "dim", text = "Check in game: " .. step.uncertain }) end
+  -- step.uncertain (a verification note) stays in the data for us; players never see it.
   return out
 end
 

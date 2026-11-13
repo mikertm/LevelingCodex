@@ -1851,6 +1851,25 @@ function S.questBreadcrumb()
   check(questText(frame, "Accept - The Forgotten Heirloom"), "the route continues with the next pickup")
 end
 
+-- Verification notes (`uncertain`) are for us, not players: the owner doesn't want "Check in game"
+-- notes in the step window or the route list (2026-11-13), like the old Unverified label.
+function S.questNoCheckNotes()
+  MOCK.race, MOCK.level = "Human", 1
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      for _, step in ipairs(section.steps) do step.uncertain = "Confirm this NPC's spot." end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Northshire"), "the Northshire step is shown: " .. allText(frame))
+  check(not questText(frame, "Check in game") and not questText(frame, "Confirm this NPC's spot"),
+    "no verification note in the step window: " .. allText(frame))
+  slash("quests")
+  check(not questText(win(), "Check in game") and not questText(win(), "Confirm this NPC's spot"),
+    "no verification note on the Quests tab")
+end
+
 function S.questWetlands()
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1437
   S.login()
