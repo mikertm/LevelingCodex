@@ -168,8 +168,9 @@ probed once (`A.hasFile`); a missing one falls back to a gold dot drawn with a c
   `Q.arrived()`, or QuestieDB's nearest spawn is "nearby", or the corpse is here. The arrow art
   hides; the step icon (36 px) shows and loops a Translation animation (8 px up, 0.4 s, BOUNCE);
   the ring (`Interface\TaxiFrame\UI-Taxi-Icon-Highlight`, additive, gold) plays once: scale 0.6 to
-  1.4 and alpha 1 to 0 over 0.6 s. The text reads the NPC or mob name over "Arrived" (path stops:
-  "Arrived (way in 2 of 3)"). Entering the state starts the animations; leaving it stops them and
+  1.4 and alpha 1 to 0 over 0.6 s. The text reads the step's NPC over "Arrived" (path stops:
+  "Arrived (way in 2 of 3)"); QuestieDB's spawn keeps its "<mob> nearby" and the corpse its "Your
+  corpse is here". Entering the state starts the animations; leaving it stops them and
   shows the arrow again. Missing animation support: the icon shows without moving.
 - Settings: Lock the arrow, Arrow size -/+, Reset arrow (clears the position and scale), Animate the
   arrow on arrival.
@@ -225,8 +226,8 @@ probed once (`A.hasFile`); a missing one falls back to a gold dot drawn with a c
 ### Quests tab
 
 - Fixed top: "Quest Guide" and a small Setup button on the right (the setup card still opens by
-  itself for new characters); the step card with the completion bar; one row: < Back, Next >,
-  Show on map, Hide step window / Show step window.
+  itself for new characters); the step card with the completion bar; one row: Previous step,
+  Next step, Show on map, Hide step window / Show step window (today's labels).
 - Sub-tabs (selected-state buttons, remembered for the session):
   - Step: Plan/Skip run, Run <dungeon>, Plan <related guide>, route options for your level,
     Resume active quest or Return to leveling, Nearest flight master; a footer with Report this
@@ -258,7 +259,8 @@ probed once (`A.hasFile`); a missing one falls back to a gold dot drawn with a c
   `minimapPins` (offset for a known vector, rotation, edge clamp round and square, the line),
   `worldMapPins`, `stepProgress` (bar value and tween end), `questTabViews` (each sub-tab draws, the
   library opens in Guides). Each runs in the full, minimal and controller runs.
-- `tools/questshop.py --check` in `tool_checks()`, and the shape of `ns.questShop` in the harness.
+- The harness checks the shape of `ns.questShop` (like QuestMobData); `tools/questshop.py --check`
+  reports staleness when run by hand after route changes.
 - Each phase ends with `python tests/run.py`, `python tools/install.py` and a list of things to
   check in game.
 
