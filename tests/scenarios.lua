@@ -52,11 +52,26 @@ local function questViewer()
 end
 
 local function questText(root, value)
+  local texts = {}
   for _, child in ipairs({ root:GetRegions() }) do
     if child:IsShown() and child._text and child._text:find(value, 1, true) then return true end
+    if child:IsShown() and child._text and child._text ~= "" then texts[#texts + 1] = child._text end
   end
+  -- A checklist row in the step window shows its goal and its count apart: "Kobold Vermin" "4/10".
+  if #texts == 2 and (texts[1] .. " " .. texts[2]):find(value, 1, true) then return true end
   for _, child in ipairs({ root:GetChildren() }) do
     if child:IsShown() and questText(child, value) then return true end
+  end
+  return false
+end
+
+-- A piece of the step window whose text begins with this (UP NEXT lists the next step first).
+local function questTextStarts(root, value)
+  for _, child in ipairs({ root:GetRegions() }) do
+    if child:IsShown() and child._text and child._text:sub(1, #value) == value then return true end
+  end
+  for _, child in ipairs({ root:GetChildren() }) do
+    if child:IsShown() and questTextStarts(child, value) then return true end
   end
   return false
 end
@@ -264,14 +279,14 @@ function S.questRedridgeOverlap()
   preview("Blackrock Blockade")
   local frame = questViewer()
   check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
-  check(questText(frame, "Also on this loop") and questText(frame, "Battleworn Axe 3/10"),
+  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Battleworn Axe 3/10"),
     "the blockade step shows the overlapping axe objective")
   MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "Also on this loop") and questText(frame, "Blackrock Supplies 4/10"),
+  check(not questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Blackrock Supplies 4/10"),
     "completed axes leave the panel without changing the primary objective")
   preview("Redridge Goulash")
   check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
@@ -627,11 +642,11 @@ function S.questStepTypes()
   MOCK.questLog = { { questID = 999, title = "Old Errand" } }
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Collect - Linen Cloth") and questText(frame, "You have 2/5."), "a collect step counts your bags")
+  check(questText(frame, "Collect - Linen Cloth") and questText(frame, "In your bags 2/5"), "a collect step counts your bags")
   MOCK.bags[2589] = 5
   MOCK.event("BAG_UPDATE_DELAYED")
   check(questText(frame, "Abandon - Old Errand"), "enough items finish the collect step; the sticky goal is passed over")
-  check(questText(frame, "On the way") and questText(frame, "Collect - Glowing Stone: You have 0/1."),
+  check(questText(frame, "ON THE WAY") and questText(frame, "Collect - Glowing Stone 0/1"),
     "a passed sticky goal shows under the current step")
   MOCK.bags[2589] = 0
   MOCK.event("BAG_UPDATE_DELAYED")
@@ -642,7 +657,7 @@ function S.questStepTypes()
     .. "a profession you don't have filters its step, and gated quest steps wait")
   MOCK.bags["Glowing Stone"] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
-  check(not questText(frame, "On the way"), "a finished sticky goal leaves the window")
+  check(not questText(frame, "ON THE WAY"), "a finished sticky goal leaves the window")
   MOCK.level = 4
   MOCK.event("PLAYER_LEVEL_UP", 4)
   check(questText(frame, "Accept - A Threat Within"), "maxLevel skips a step once you're past it")
@@ -705,10 +720,10 @@ function S.questWindowExtras()
   check(report:find("Guide: lakeshire", 1, true) and report:find("Position: 1433", 1, true)
     and report:find("Hearthstone: Goldshire", 1, true), "the step report has the guide, position and hearth")
   copy:Hide()
-  check(questText(frame, "Next: "), "two steps ahead are listed by default")
+  check(questText(frame, "UP NEXT"), "two steps ahead are listed by default")
   LevelingCodexDB.questPreview = 0
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "Next: "), "the step count setting can hide the steps ahead")
+  check(not questText(frame, "UP NEXT"), "the step count setting can hide the steps ahead")
   LevelingCodexDB.questPreview = 2
 end
 
@@ -1090,7 +1105,7 @@ function S.questBossSteps()
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check(questText(frame, "Boss - Rhahk'Zor") and questText(frame, "Pull him back to the group")
     and chatHas("The Deadmines: the step window follows its guide"), "zoning in opens the guide at its first boss")
-  check(questText(frame, "On the way") and questText(frame, "Head of VanCleef: 0/1"),
+  check(questText(frame, "ON THE WAY") and questText(frame, "Head of VanCleef 0/1"),
     "the run's quest objectives show beside the bosses")
   local target = _G.LevelingCodexQuestTarget
   check(target and target:GetAttribute("macrotext") == "/targetexact Rhahk'Zor", "the target button targets the boss")
@@ -1891,6 +1906,41 @@ function S.questWetlandsEarly()
   check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
 end
 
+local TICK = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local function shownTexture(root, path)
+  for _, r in ipairs({ root:GetRegions() }) do
+    if r:IsShown() and r._path == path then return true end
+  end
+  for _, c in ipairs({ root:GetChildren() }) do
+    if c:IsShown() and shownTexture(c, path) then return true end
+  end
+  return false
+end
+
+-- The step window shows a step's objectives as a checklist: the goal, its count on the right and a
+-- tick once it's done, from either log style; the Quests tab keeps the log's own words.
+function S.questStepChecklist()
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "4/10 Kobold Vermin slain" } } } }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Kobold Vermin slain 4/10") and not questText(frame, "4/10 Kobold Vermin slain"),
+    "Forever's '4/10 goal' objective is a checklist row with the count on the right: " .. allText(frame))
+  check(not shownTexture(frame, TICK), "an unfinished goal has no tick")
+  MOCK.questLog[1].objectives = { { text = "Kobold Vermin slain: 10/10", finished = true },
+    { text = "Kobold Worker slain: 2/10" } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Kobold Vermin slain 10/10") and questText(frame, "Kobold Worker slain 2/10"),
+    "the classic 'goal: 2/10' style splits the same way: " .. allText(frame))
+  check(shownTexture(frame, TICK), "a finished goal is ticked")
+  click(frame, "Quests")
+  check(questText(win(), "Kobold Vermin slain: 10/10") and questText(win(), "Kobold Worker slain: 2/10"),
+    "the Quests tab's step card keeps the log's own words, one goal per line")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin slain: 9/10" }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not shownTexture(frame, TICK), "a pooled row loses its tick when it shows an unfinished goal")
+end
+
 function S.questWetlandsDig()
   -- In game (2026-11-12) Prospector Whelgar, beside Merrin, offered Uncovering the Past to a level
   -- 24 who had just taken Ormer's first hunt and Merrin's letter. The pickup comes then, not after
@@ -1922,7 +1972,7 @@ function S.questWetlandsDig()
     "the rest of the fragments share the dig with the hunt, with a Sarltooth warning: " .. allText(frame))
   for _, entry in ipairs(MOCK.questLog) do entry.isComplete = true end
   MOCK.event("QUEST_LOG_UPDATE")
-  check(questText(frame, "Next: Turn in - Uncovering the Past"),
+  check(questText(frame, "UP NEXT") and questTextStarts(frame, "Turn in - Uncovering the Past"),
     "Ormer, nearer the dig, comes before Whelgar: " .. allText(frame))
 end
 
@@ -2089,7 +2139,7 @@ function S.questDetourLibrary()
   check(questText(questViewer(), "Report to Gryan Stoutmantle"), "return restores the leveling step")
   click(win(), "Guide library")
   click(win(), "Track Dungeon Test Pickup")
-  check(questText(questViewer(), "Tracking") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
+  check(questText(questViewer(), "TRACKING") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
   local search = _G.LevelingCodexQuestSearch
   check(search and search:IsShown(), "search field is available")
   search:SetText("Dungeon Test Inside")
@@ -2097,7 +2147,7 @@ function S.questDetourLibrary()
   check(questText(win(), "Dungeon Test Inside"), "search finds a quest inside a detour")
   MOCK.questLog = {}
   MOCK.event("QUEST_TURNED_IN", 999011)
-  check(not questText(questViewer(), "Tracking"), "completed quests disappear from the pinned list")
+  check(not questText(questViewer(), "TRACKING"), "completed quests disappear from the pinned list")
 end
 
 function S.questDungeonContent()
@@ -2181,7 +2231,7 @@ function S.questLibraryResume()
   check(questText(questViewer(), "Complete - Local Active Quest"), "the local active quest takes precedence")
   click(win(), "Guide library")
   click(win(), "Show Earlier Active Quest")
-  check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets: 1/20"),
+  check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets 1/20"),
     "the library follows an unfinished objective from an earlier section")
 end
 
