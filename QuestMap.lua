@@ -72,8 +72,8 @@ M.paintIcon = paintIcon
 -- Minimap: where the arrow leads (the step, QuestieDB's nearest spawn, a flight master on a trip,
 -- your corpse) gets a pin, or an edge arrow on the rim while it's off the minimap; the next two
 -- steps get small numbered pins (faded on the rim while they're off it). Gold dots run from you to
--- the pin and, fainter, on through the next steps; they fade toward the rim and stop once you're
--- there, where the pin's ring pulses once. Hovering a pin names it; clicks go through to the
+-- the pin and, for a step's way in, on through its tunnel points (a bend dot at each) to the step;
+-- they fade toward the rim and stop once you're there, where the pin's ring pulses once. Hovering a pin names it; clicks go through to the
 -- minimap. Positions are east/north yards from you times pixels per yard (half the minimap / its
 -- view radius), turned with you when the minimap rotates. Nothing moves while you stand still: a
 -- soft glow runs along the dots toward the step instead.
@@ -82,9 +82,9 @@ M.paintIcon = paintIcon
 local OUTDOOR = { 466.67, 400, 333.33, 266.67, 200, 133.33 } -- view diameters in yards by zoom 0-5
 local INDOOR = { 300, 240, 180, 120, 80, 50 }
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
-local DOTS, AHEAD = 24, 48 -- dot pools: you to the pin, and on through the next steps
+local DOTS, BENDS = 48, 6 -- dot pool: you to the pin, then on through the way in; bend dots
 local DOT_GAP, DOT_START, FADE = 10, 8, 20 -- px between dots, clear of you, fade-out before the rim
-local LINE_ALPHA, AHEAD_ALPHA, DIM = 0.85, 0.45, 0.6
+local LINE_ALPHA, DIM = 0.85, 0.6
 local FLIGHT, SPOT = { type = "fly" }, { type = "spot" } -- icons for a trip's flight master, a road
 local pins
 local nexts, nextsKey = {}, "" -- the next steps with a spot ({ step, spot, n }), from the last refresh
@@ -165,10 +165,10 @@ local function makePins()
   pins:SetAllPoints(Minimap)
   pins:SetFrameLevel((tonumber(Minimap:GetFrameLevel()) or 1) + 5)
   pins:Hide()
-  local function pool(count, size)
+  local function pool(count, size, sub)
     local list = {}
     for i = 1, count do
-      local d = pins:CreateTexture(nil, "ARTWORK")
+      local d = pins:CreateTexture(nil, "ARTWORK", nil, sub)
       d:SetSize(size, size)
       d:SetColorTexture(1, 0.82, 0, 1)
       d:Hide()
@@ -176,7 +176,7 @@ local function makePins()
     end
     return list
   end
-  pins.dots, pins.ahead = pool(DOTS, 3), pool(AHEAD, 2)
+  pins.dots, pins.bends = pool(DOTS, 3, 0), pool(BENDS, 5, 1)
   pins.next = {}
   for i = 1, 2 do
     local f = pinFrame(10, 1)
@@ -222,7 +222,7 @@ local function hideAll()
   pins.edge:Hide()
   for _, f in ipairs(pins.next) do f:Hide() end
   for _, d in ipairs(pins.dots) do d:Hide() end
-  for _, d in ipairs(pins.ahead) do d:Hide() end
+  for _, d in ipairs(pins.bends) do d:Hide() end
   lit = {}
 end
 
@@ -292,7 +292,8 @@ local function pulse(key)
   end
 end
 
-local function layout(map, x, y, half, radius, turn, square, goal)
+-- `chain`: the goal's spot, then the rest of a step's way in and the step (Q.pathRest).
+local function layout(map, x, y, half, radius, turn, square, goal, chain)
   hideAll()
   local ppy, limit = half / radius, half * 0.95
   local function screen(spot)
@@ -307,7 +308,8 @@ local function layout(map, x, y, half, radius, turn, square, goal)
   local gx, gy, yards, bearing = screen(goal.spot)
   if not gx then return end
   local cx, cy, out = clamp(gx, gy, half, square)
-  local here = goal.kind ~= "leg" and yards <= Q.arrived()
+  -- arrived only at the chain's last spot: near a tunnel point the arrow moves on by itself
+  local here = #chain == 1 and goal.kind ~= "leg" and yards <= Q.arrived()
   local icon = goalIcon(goal)
   if iconFor ~= icon then
     iconFor = icon
@@ -318,10 +320,22 @@ local function layout(map, x, y, half, radius, turn, square, goal)
   place(pin, cx, cy)
   if out and pins.edgeArt then Q.try(pins.edge.icon.SetRotation, pins.edge.icon, -(bearing + turn)) end
   if here and not out then pulse(goal.key) elseif not here then pulsedKey = nil end
-  if lineOn and not here then dotted(pins.dots, 0, 0, 0, cx, cy, DOT_START, 8, LINE_ALPHA, limit, square) end
-  -- the route ahead: on through the next steps while the arrow leads to a step (not a trip or corpse)
-  local ahead, used = lineOn and (goal.kind == "step" or goal.kind == "spawn"), 0
-  local fromX, fromY = gx, gy
+  if lineOn and not here then
+    local used = dotted(pins.dots, 0, 0, 0, cx, cy, DOT_START, 8, LINE_ALPHA, limit, square)
+    -- on through the way in: a segment either end of which can't be placed draws nothing
+    local fromX, fromY, bends = gx, gy, 0
+    for i = 2, #chain do
+      local nx, ny = screen(chain[i])
+      if nx and fromX then
+        used = dotted(pins.dots, used, fromX, fromY, nx, ny, i == 2 and 8 or 4, 4, LINE_ALPHA, limit, square)
+      end
+      if nx and reach(nx, ny, square) <= limit and bends < #pins.bends then
+        bends = bends + 1
+        place(pins.bends[bends], nx, ny)
+      end
+      fromX, fromY = nx, ny
+    end
+  end
   for _, t in ipairs(nexts) do
     local nx, ny, nyards = screen(t.spot)
     if not nx then break end -- another map: no pin and no line from here on
@@ -330,8 +344,6 @@ local function layout(map, x, y, half, radius, turn, square, goal)
     p.info = { title = (t.n == 1 and "Next: " or "Then: ") .. Q.plain(Q.label(t.step)), yards = nyards }
     place(p, rx, ry)
     p:SetAlpha(nout and 0.4 or 0.8)
-    if ahead then used = dotted(pins.ahead, used, fromX, fromY, nx, ny, 8, 6, AHEAD_ALPHA, limit, square) end
-    fromX, fromY = nx, ny
   end
   glow(true)
   -- a tooltip open on a pin follows the new distance
@@ -353,13 +365,20 @@ local function update()
     return
   end
   local turn, square = rotation(), Q.try(GetMinimapShape) == "SQUARE"
+  -- a step's way in: from the tunnel point the arrow leads to, on through the rest to the step
+  local chain = { spot }
+  if goal.kind == "step" and spot.world and goal.step and goal.step.path then
+    for _, p in ipairs(Q.pathRest(goal.step)) do chain[#chain + 1] = p end
+  end
   -- lay out again only when something that places the pins changed
-  local key = table.concat({ map, x, y, half, radius, turn, tostring(square), goal.kind, tostring(goal.key),
+  local parts = { map, x, y, half, radius, turn, tostring(square), goal.kind, tostring(goal.key),
     tostring(goal.caption), tostring(spot.map), tostring(spot.x), tostring(spot.y), nextsKey,
-    tostring(ns.db().noMinimapLine) }, "|")
+    tostring(ns.db().noMinimapLine) }
+  for i = 2, #chain do parts[#parts + 1] = tostring(chain[i].map) .. ":" .. tostring(chain[i].x) .. ":" .. tostring(chain[i].y) end
+  local key = table.concat(parts, "|")
   if key ~= layoutKey then
     layoutKey = key
-    layout(map, x, y, half, radius, turn, square, goal)
+    layout(map, x, y, half, radius, turn, square, goal, chain)
   else
     glow()
   end

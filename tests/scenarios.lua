@@ -795,7 +795,7 @@ function S.minimapPins()
   check(not pins:IsShown(), "and the pins")
 end
 
--- Minimap route: past the current step the dots go on, fainter, through the next steps; they fade
+-- Minimap route: the dots run to the current step (no second line past it); they fade
 -- toward the rim and stop on arrival, where the pin pulses; pins name their step on hover and let
 -- clicks through; next steps off the minimap wait on the rim; a ghost's line leads to the corpse.
 function S.minimapRoute()
@@ -823,10 +823,9 @@ function S.minimapRoute()
   MOCK.viewRadius = 100
   MOCK.questX, MOCK.questY = 48.17, 44.94
   MOCK.advance(0.3)
-  local line, ahead = shown(pins.dots), shown(pins.ahead)
-  check(#line > 0 and #ahead > 0, "the dots go on past the current step (" .. #line .. " then " .. #ahead .. ")")
-  check(brightest(ahead, 1, #ahead) < line[1]:GetAlpha() and brightest(ahead, 1, #ahead) < line[#line]:GetAlpha(),
-    "fainter past the current step")
+  local line = shown(pins.dots)
+  check(pins.ahead == nil, "no second line")
+  check(#line > 0, "the dots run to the current step")
 
   -- Willem 116 yd north is off the minimap: the line runs to the rim and fades out there.
   MOCK.questY = 47.94
@@ -860,14 +859,40 @@ function S.minimapRoute()
   check(tooltipHas("Marshal McBride") or tooltipHas("A Threat Within"), "and names its step on hover")
   MOCK.fire(n, "OnLeave")
 
-  -- A ghost: the pin and the line lead to the corpse, 46 yd east, with no route ahead.
+  -- A ghost: the pin and the line lead to the corpse, 46 yd east.
   MOCK.viewRadius = 100
   MOCK.ghost, MOCK.corpse = true, { 1429, 49.5, 44.24 }
   MOCK.advance(0.5)
   _, _, _, x, y = pins.current:GetPoint()
   check(x > 20 and math.abs(y) < 1, "as a ghost the minimap leads to your corpse (" .. x .. ", " .. y .. ")")
-  check(#shown(pins.ahead) == 0, "with no route ahead")
   MOCK.ghost = false
+end
+
+-- Minimap: the line bends through a step's way-in points to the step itself.
+function S.minimapPath()
+  -- the questEntrancePath step: tunnel points (48, 43) and (50, 45), the cave at (52, 47)
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave.", map = 1429,
+    x = 52, y = 47, path = { { 48, 43 }, { 50, 45 } } })
+  MOCK.questX, MOCK.questY, MOCK.viewRadius = 44, 41, 400
+  S.login()
+  if MOCK.minimal then return end
+  local pins = _G.LevelingCodexMinimapPins
+  MOCK.advance(0.5)
+  local function shown(list) local n = 0; for _, t in ipairs(list) do if t:IsShown() then n = n + 1 end end; return n end
+  check(shown(pins.bends) == 2, "a bend dot at the second tunnel point and at the cave")
+  local _, _, _, px, py = pins.current:GetPoint()
+  local far = 0
+  for _, d in ipairs(pins.dots) do
+    if d:IsShown() then local _, _, _, x, y = d:GetPoint(); far = math.max(far, math.sqrt(x * x + y * y)) end
+  end
+  check(far > math.sqrt(px * px + py * py) + 5, "dots go on past the pin, through the tunnel")
+  MOCK.questX, MOCK.questY = 48, 43
+  MOCK.advance(0.5)
+  check(shown(pins.bends) == 1, "past the first point, one bend is left")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1415, 46.02, 70.09 -- on the continent map
+  MOCK.advance(0.5) -- an error in the minimap's OnUpdate fails the scenario here
 end
 
 -- World map: numbered pins for the current and next steps on the map the world map shows.

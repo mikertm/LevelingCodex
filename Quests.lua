@@ -1472,6 +1472,21 @@ local function pathWaypoint(step)
   return spot(n), n, count, "way in"
 end
 
+-- The rest of a step's way in after the point the arrow leads to now, then the step itself (the
+-- minimap's line bends through them); {} without a path or once you're past its points.
+function Q.pathRest(step)
+  if not (step and step.path and step.map and #step.path > 0) then return {} end
+  local n, count = pointAt[step], #step.path
+  if not n or n > count then return {} end
+  local out = {}
+  for i = n + 1, count do
+    local p = step.path[i]
+    out[#out + 1] = { map = p[3] or step.map, x = p[1], y = p[2], world = true }
+  end
+  out[#out + 1] = step
+  return out
+end
+
 function Q.waypoint(step)
   if step and step.path and step.map and #step.path > 0 then return pathWaypoint(step) end
   if not (step and step.points and step.map and #step.points > 0) then return step end
