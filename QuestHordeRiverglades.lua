@@ -583,3 +583,47 @@ do
     steps = steps,
   }
 end
+
+-- Links between the Horde 30-60 files (loaded last of the band files, so every section exists):
+-- where each band's last chapters lead on, and where the main route offers the Forever-zone
+-- alternates and they hand back.
+do
+  local byId = {}
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do byId[section.id] = section end
+  local function offer(id, ...)
+    local section = assert(byId[id], "Horde 30-60 links: no section " .. id)
+    section.suggest = section.suggest or {}
+    for _, other in ipairs({ ... }) do
+      assert(byId[other], "Horde 30-60 links: no section " .. other)
+      local seen = false
+      for _, have in ipairs(section.suggest) do seen = seen or have == other end
+      if not seen then section.suggest[#section.suggest + 1] = other end
+    end
+  end
+  -- 30-40 into 40-50, and the Riverglades from the late 30s.
+  offer("stv-35", "riverglades-rogmar")
+  offer("dustwallow-37", "riverglades-rogmar")
+  offer("arathi-38", "riverglades-rogmar")
+  offer("badlands-39", "stv-40", "dustwallow-40", "riverglades-rogmar")
+  offer("badlands-37", "stv-40")
+  -- 40-50: the later Riverglades and Shen'dralas.
+  offer("stv-40", "riverglades-bolderok")
+  offer("swamp-41", "riverglades-bolderok", "riverglades-eastsea")
+  offer("desolace-41", "shendralas-pylons")
+  offer("tanaris-41", "riverglades-eastsea", "shendralas-pylons")
+  offer("feralas-43", "shendralas-pylons")
+  offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41")
+  offer("riverglades-bolderok", "feralas-43", "stv-44", "swamp-45")
+  offer("riverglades-eastsea", "feralas-43", "stv-44", "swamp-45")
+  offer("shendralas-pylons", "feralas-43", "stv-44", "swamp-45")
+  -- 40-50 into 50-60.
+  offer("feralas-49", "blasted-50", "searing-alt", "ungoro-alt", "azshara-alt")
+  offer("searing-45", "blasted-50", "searing-alt")
+  offer("blasted-47", "blasted-50")
+  offer("ungoro-48", "blasted-50", "ungoro-alt")
+  -- Tan'jani's breadcrumb from Rog'mar is handed in at Camp Mojache (shown only while you carry it).
+  B.hordeInline("feralas-43", "accept", 3121, {
+    B.optional(B.finish(95033, B.on.feralas("Witch Doctor Uzer'i", 74.42, 43.36),
+      "If you carried Tan'jani's message from the Riverglades, give it to Witch Doctor Uzer'i.")),
+  })
+end

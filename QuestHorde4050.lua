@@ -278,10 +278,8 @@ do
     accept(2872, P.mackinley, "\"Sea Wolf\" MacKinley wants a debt collected in Tanaris."),
     finish(628, drizzlik),
     action("boat", P.bootyPier, "Take the boat from the Booty Bay pier to Ratchet. Use Next when you land.", { name = "Booty Bay - Ratchet" }),
-    finish(1270, mebok, "If you escorted Stinky out of Dustwallow, tell Mebok Mizzyrix in Ratchet."),
     taxi("fly", bragok, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
   }, train(bluffTrainers, 42), {
-    finish(1276, tb("Mosarn", 54.01, 80.77), "Show the black shield to Mosarn."),
     accept(1205, tb("Melor Stonehoof", 61.54, 80.92), "Melor Stonehoof wants Deadmire's tooth from Dustwallow Marsh."),
     finish(1049, tb("Sage Truthseeker", 34.4, 46.87), "Bring the Compendium from the Scarlet Monastery to Sage Truthseeker."),
   }))
@@ -314,8 +312,7 @@ do
     finish(1373, uthek, "Ride east to the Gelkis village and give Uthek the Wise Ongeku's shard."),
     accept(1374, uthek),
     accept(6134, hornizz, "Hornizz Brimbuzzle camps near the Kodo Graveyard. He lends you a crate of ghost magnets."),
-    accept(1484, maurin, "Maurin Bonesplitter, at Ghost Walker Post, sends you to Takata Steelblade."),
-    finish(1484, takata), accept(1488, takata),
+    accept(1488, takata, "Takata Steelblade, at Ghost Walker Post, wants the demon lords of Mannoroc Coven dead."),
     action("goto", ds(nil, 53.5, 76.0), "Ride south to Mannoroc Coven."),
     note(objective(5581, ds(nil, 53.5, 78.0), "Use Taiga's box at the demon portals around the coven and kill the guardian each one sends out.",
       "6 Demon Portal Guardian"), "The portals' spots are not in the quest data; look around the coven."),
@@ -815,6 +812,8 @@ do
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
     qdb,
   }, { "hinterlands-48", "searing-45", "blasted-47", "ungoro-48" }, cat({
+    action("note", nil, "Clean out your quest log. If you never ran the Scarlet Monastery or Razorfen Downs, abandon their quests now: both runs are grey at 46 and Tanaris fills the log.",
+      { name = "Quest log", drop = { 1048, 3341 } }),
     accept(3380, P.uzeri, "Before you leave Camp Mojache, Witch Doctor Uzer'i sends you to Marvon Rivetseeker in Tanaris."),
     taxi("fly", P.shyn, "Gadgetzan, Tanaris", "Fly from Camp Mojache to Gadgetzan."),
     action("goto", fl(nil, 77.5, 80.0), "Ride north out of Gadgetzan to the Mirage Raceway in the Shimmering Flats."),
@@ -973,7 +972,10 @@ do
   H.chapter("hinterlands-48", "The Hinterlands: Revantusk Village and Jintha'alor", M.hinterlands, 48, 49, {
     "https://www.wowhead.com/forever/zone=47/the-hinterlands",
     qdb,
-  }, { "feralas-49", "ungoro-48", "blasted-47" }, cat(train(orgrimmarTrainers, 48), {
+  }, { "feralas-49", "ungoro-48", "blasted-47" }, cat({
+    action("note", nil, "Clean out your quest log. If you never ran Uldaman, abandon Uldaman Reagent Run now: the run is nearly grey and the Hinterlands need every slot.",
+      { name = "Quest log", drop = { 2202 } }),
+  }, train(orgrimmarTrainers, 48), {
     finish(32, zilzibin, "Give Zilzibin Drumlore, in the Drag, the silithid report."),
     accept(649, dran, "Dran Droffers, in the Drag's salvage shop, has a delivery for you."),
     finish(649, malton), accept(650, malton, "Malton sends you to Gilveradin Sunchaser in the Hinterlands."),
@@ -1336,7 +1338,6 @@ do
   need(4503, "Shizzle's Flyer", 51, 49)
   need(4145, "Larion and Muigin", 52, 47)
   need(4243, "Chasing A-Me 01", 53, 48)
-  H.limit(4145, { race = { "ORC", "TAUREN", "TROLL", "SCOURGE", "SKYBORNE" } })
 
   H.alternate("ungoro-48", "Un'Goro Crater: Torwa and Marshal's Refuge", M.ungoro, 48, 50, {
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",

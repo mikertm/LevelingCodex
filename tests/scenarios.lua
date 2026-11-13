@@ -2016,6 +2016,44 @@ function S.questHordeBarrens()
   MOCK.faction = nil
 end
 
+-- Horde 30-60: a level 36 in Stranglethorn resumes its 35-37 chapter, the route ends at Karus in
+-- Orgrimmar at 60, and the Horde's own Zul'Farrak guide opens at the door.
+function S.questHordeStranglethorn()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Troll", 36, 1434, 32.0, 28.0
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"),
+    "a level 36 Troll at Grom'gol follows the Horde Stranglethorn chapter")
+  click(frame, "Next")
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"), "Next stays in the chapter")
+  MOCK.faction = nil
+end
+
+function S.questHordeRouteEnd()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 60, 1454
+  MOCK.questLog = { { questID = 4511, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Calm Before the Storm") and questText(frame, "Last step in this guide"),
+    "the Horde route's last step is the Calm Before the Storm hand-in")
+  MOCK.questDone[4511], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 4511)
+  check(questText(frame, "End of the leveling guide"), "the Horde guide shows its ending at 60")
+  MOCK.faction = nil
+end
+
+function S.questHordeDungeon()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 46, nil
+  MOCK.instanceName, MOCK.instanceID = "Zul'Farrak", 209
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Boss - Antu'sul") and chatHas("Zul'Farrak: the step window follows its guide"),
+    "zoning into Zul'Farrak opens the Horde guide at its first boss")
+  MOCK.faction, MOCK.instanceName, MOCK.instanceID = nil, nil, nil
+end
+
 local function classSideFixture()
   local function step(kind, id, name)
     return { type = kind, quest = id, name = name, text = "Test class chain.", min = 10, level = 10,

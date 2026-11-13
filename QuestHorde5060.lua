@@ -205,7 +205,7 @@ do
     finish(580, stv("Whiskey Slim", 27.14, 77.45), "Whiskey Slim sits upstairs in the inn. Give him his port if you found it."),
     finish(1122, stv("Crank Fizzlebub", 27.12, 77.21), "Report to Crank Fizzlebub if you still carry the Fool's Stout report."),
     finish(648, P.oglethorpe, "Oglethorpe Obnoticus has a hut on the pier past the bank. Report any robot you walked home."),
-    finish(836, P.oglethorpe), finish(2767, P.oglethorpe),
+    finish(836, P.oglethorpe),
     accept(3721, P.oglethorpe, "With all three robots safe, Oglethorpe gives you a mechanical chicken of your own."),
     finish(3721, P.oglethorpe),
     withItem(3985, accept(8552, stv(nil, 27.1, 83.1), "Bloodsail pirates on the beaches south of town can drop a Monogrammed Sash. Use it from your bags if you have one.")),

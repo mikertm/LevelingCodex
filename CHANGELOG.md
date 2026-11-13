@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Horde quest guide, levels 30-60
+
+- **The Horde route now runs to 60.** 27 new leveling guides follow on from Thousand Needles:
+  - **30-40:** Tarren Mill, Alterac and Hammerfall, the Shimmering Flats, Desolace, Grom'gol and Nesingwary, Brackenwall Village, Alterac and Arathi again, then Kargath.
+  - **40-50:** Grom'gol, Stonard, Desolace, Gadgetzan and Brackenwall, Camp Mojache, Booty Bay and the southern jungle, the Swamp of Sorrows, Lost Rigger Cove, Revantusk Village, then Feralas and Un'Goro.
+  - **50-60:** the Blasted Lands, the Searing Gorge and Burning Steppes, Azshara, Felwood, Un'Goro, Winterspring, the Plaguelands (the Bulwark, Tirion Fordring, Darrowshire and Northdale), then Moonglade and Silithus, ending with Calm Before the Storm in Orgrimmar.
+- **Alternate routes for every level.** Each level from 30 to 60 has at least three guides to choose from, the main route included. The alternates include early Stranglethorn, Desolace or Dustwallow, the Badlands before Arathi, the Searing Gorge, the Blasted Lands and Un'Goro in the late 40s, and other orders through the 50s. Forever's **Riverglades** has three Horde routes from **Rog'mar**: the Plains, Bolder'ok and the Twilight's Shroud, and the Eastsea pirates out of Powderfuse Port. There is also a route through **Shen'dralas**. Each guide suggests where to go next.
+- **Horde dungeon guides for 30-60.** Every dungeon from Gnomeregan to Stratholme has a Horde guide with Horde quests and travel, before, inside and after the run. That includes Forever's Excavation Site, City of Dalaran and Krol'dok Stronghold. Uldaman is two runs, because Jarkal hands out the gem quest in between. The Horde reaches Gnomeregan through Scooty's transporter in Booty Bay.
+- **Horde attunements.** New guides cover Onyxia (from Warlord's Command to Blood of the Black Dragon Champion), the Seal of Ascension, Attunement to the Core, the Shadowforge Key and the Key to Scholomance.
+- **Horde class quests 30-60.** These include the Whirlwind weapon, Celestial Power, the Felsteed, the Orb of Orahil and Kroshius, Forever's shaman weapon chain (The Tempest's Weapons), Da Voodoo, and every class's Sunken Temple chain. Where the route already passes a class objective, such as the Bloodscalp tusks, the Twisted Totems or the Azshara errands, your class gets a step for it while the quest is in your log.
+- **Quest log clean-up.** At 30, 46 and 48 the guide reminds you to drop grey dungeon quests you never ran.
+- The new guides are not yet tested in game. Steps that need a check carry a note.
+
+### Fixes
+
+- **Eastern Plaguelands positions.** Forever redrew the Eastern Plaguelands map. The arrow pointed at the old spots for Tirion Fordring's hut, the Symbol of Lost Honor in Northdale and the Stratholme gate.
+- **Krol'dok Stronghold.** Entering it now opens its guide, and each boss is checked off when it dies.
+- A level 28 entering a zone that has a later chapter (Duskwood at 30, Hillsbrad at 30) no longer jumps into that chapter past the route's own next guide.
+
 ### Alliance quest guide, levels 30-60
 
 - **The route now runs to 60.** About 35 new leveling guides follow on from the Wetlands:

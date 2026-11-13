@@ -655,3 +655,61 @@ linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers-horde", "hunter-gree
   "warlock-trolls-of-a-feather-horde", "druid-better-ingredient-horde", "shaman-da-voodoo-horde" })
 linkRun("dungeon-uldaman", { "mage-celestial-power-horde" })
 linkRun("dungeon-razorfen-kraul", { "shaman-tempests-weapons-horde" })
+
+-- Class objectives the Horde 30-60 route passes anyway: copies of the class guides' objective steps,
+-- shown only to that class and only while the quest is in the log (`logOnly`), placed after the
+-- closest step on the same map in that chapter. List: the end of the class audit file.
+do
+  local sections = {}
+  for _, s in ipairs(LevelingCodexQuests.HORDE.sections) do sections[s.id] = s end
+  local plural = { WARRIOR = "Warriors", HUNTER = "Hunters", ROGUE = "Rogues", PRIEST = "Priests",
+    SHAMAN = "Shamans", MAGE = "Mages", WARLOCK = "Warlocks", DRUID = "Druids", PALADIN = "Paladins" }
+  local function classStep(quest, index)
+    for _, s in ipairs(LevelingCodexQuests.HORDE.sections) do
+      if s.side and s.class then
+        for _, step in ipairs(s.steps) do
+          if step.type == "complete" and step.quest == quest and step.objectiveIndex == index and step.map then
+            return step
+          end
+        end
+      end
+    end
+    error("Horde class objectives: no class step for " .. quest .. " objective " .. tostring(index))
+  end
+  local function passing(routeId, quest, index)
+    local found = classStep(quest, index)
+    local route = assert(sections[routeId], "Horde class objectives: no section " .. routeId)
+    local best, bestD
+    for i, step in ipairs(route.steps) do
+      if step.map == found.map and step.x and not step.logOnly then
+        local d = (step.x - found.x) ^ 2 + (step.y - found.y) ^ 2
+        if not bestD or d < bestD then best, bestD = i, d end
+      end
+    end
+    assert(best, "Horde class objectives: " .. routeId .. " never visits that map")
+    local copy = {}
+    for k, v in pairs(found) do copy[k] = v end
+    copy.logOnly, copy.phase, copy.guide, copy.sticky = true, nil, nil, nil
+    local class = type(found.class) == "string" and found.class or nil
+    copy.text = (class and (plural[class] .. " with " .. found.name .. ": ") or "") .. found.text
+    table.insert(route.steps, best + 1, copy)
+  end
+  passing("stv-35", 1712, 2)          -- Warrior: Bloodscalp tusks for Cyclonian
+  passing("desolace-34", 79361, 4)    -- Shaman: Twisted Air Totems from the Maraudine
+  passing("dustwallow-37", 79361, 1)  -- Shaman: Twisted Water Totems from the Mirefin murlocs
+  passing("badlands-39", 79361, 3)    -- Shaman: Twisted Fire Totems from the Dustbelcher ogres
+  passing("swamp-41", 79361, 2)       -- Shaman: Twisted Earth Totems from the Lost Ones
+  passing("desolace-34", 1954, nil)   -- Mage: the Infernal Orb
+  passing("desolace-34", 1799, nil)   -- Warlock: Fragments of the Orb of Orahil
+  passing("desolace-41", 4962, nil)   -- Warlock: the Felhas Ruby at Mannoroc Coven
+  passing("blasted-50", 8423, nil)    -- Warrior: Helboars
+  passing("blasted-50", 8424, nil)    -- Warrior: the Shadowsworn
+  passing("azshara-52", 8153, nil)    -- Hunter: courser antlers
+  passing("azshara-52", 8231, nil)    -- Hunter: Wavethrasher scales
+  passing("azshara-52", 8255, nil)    -- Priest: courser glands
+  passing("azshara-52", 8251, nil)    -- Mage: blood elf dust
+  passing("azshara-52", 8252, nil)    -- Mage: siren coral
+  passing("azshara-52", 8234, nil)    -- Rogue: the Sealed Azure Bag
+  passing("azshara-52", 8235, nil)    -- Rogue: encoded fragments
+  passing("plaguelands-56", 8256, nil) -- Priest: Ichor of Undeath
+end

@@ -965,7 +965,8 @@ do
   local krinkle = on.tanaris("Krinkle Goodsteel", 51.46, 28.81)
   local wp = on.wpl
   need(5094, "A Call to Arms: The Plaguelands!", 50, 50)
-  need(5096, "Scarlet Diversions", 53, 50, 5094)
+  -- Any of the three race-town calls to arms (5093-5095) opens 5096; this guide takes the Undercity one.
+  B.q(5096, "Scarlet Diversions", 53, 50, 5094)
   need(5098, "All Along the Watchtowers", 56, 50, 5096)
   need(838, "Scholomance", 55, 55, 5098)
   need(964, "Skeletal Fragments", 57, 55, 838)
