@@ -591,8 +591,18 @@ end
 -- passed (Missed quests) once you have turned in a quest the route picks up after it in the
 -- same section, unless a quest still ahead of you needs it. Walking the route backwards sees
 -- what is still needed before reaching its prerequisites. Earlier setup can be reviewed too.
+-- A quest two leveling sections pick up counts as progress only for the lower-level one: the
+-- 20-25 Wetlands chapter turns in quests the 26-30 route also has, which says you walked the
+-- early chapter, not the 26-30 route's own earlier pickups.
 local function markPassed()
-  local progress, needs, passed = {}, {}, {}
+  local progress, needs, passed, owner = {}, {}, {}, {}
+  for _, row in ipairs(steps) do
+    local s, sec = row.step, row.section
+    if not sec.side and s.type == "accept" and s.quest then
+      local had = owner[s.quest]
+      if not had or (sec.levels and had.levels and sec.levels[1] < had.levels[1]) then owner[s.quest] = sec end
+    end
+  end
   for i = #steps, 1, -1 do
     local row = steps[i]
     local s, sec = row.step, row.section
@@ -610,7 +620,7 @@ local function markPassed()
         if not turnedIn[id] then needs[id] = true end
       end
     end
-    if s.type == "accept" and not s.optional and turnedIn[s.quest] then progress[sec] = true end
+    if s.type == "accept" and not s.optional and turnedIn[s.quest] and owner[s.quest] == sec then progress[sec] = true end
   end
   for _, row in ipairs(steps) do
     local s = row.step

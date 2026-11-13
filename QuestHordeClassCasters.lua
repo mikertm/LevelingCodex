@@ -54,7 +54,9 @@ do
   quest[5642].race = "TROLL"
   q(5644, "Dark Sacrifice", 20, 20, nil, nil, priest)
   quest[5644].race = "SCOURGE"
-  B.hordeInline("sun-rock", "turnin", 853, {
+  -- Right after training: Miles Welsh is the trainer, so the pickups come while you're with him
+  -- (2026-11-12 loop check: after Zamah's turn-in they were a walk back up the Spirit Rise).
+  B.hordeInline("sun-rock", "train", nil, {
     accept(5642, miles, "Priests: Miles Welsh, the priest trainer on the Spirit Rise, sends Trolls to Ur'kyo for Shadowguard."),
     accept(5644, miles, "Priests: Miles Welsh sends the Undead to Aelthalyste in the Undercity for Dark Sacrifice."),
   })

@@ -73,6 +73,8 @@ q(1054, "Culling the Threat", 25, 18)
 q(945, "Therylune's Escape", 18, 10)
 q(5321, "The Sleeper Has Awakened", 20, 17)
 q(1009, "Ruuzel", 25, 20, 1007)
+-- Gap fill: tools/audits/2026-11-12-alliance-kalimdor-loch-modan.md.
+q(5713, "One Shot. One Kill.", 15, 10)
 
 local balthule = at("Balthule Shadowstrike", 54.97, 24.89, M.darkshore)
 local delgren = ash("Delgren the Purifier", 26.2, 38.7)
@@ -107,16 +109,26 @@ chapter("ashenvale-early", "Ashenvale: Astranaar and the Coast", ashenvale, 18, 
     action("goto", therylune, "Take the south road from Auberdine past the Grove of the Ancients to the Twilight camp at the Master's Glaive."),
     accept(945, therylune, "Clear the cultists around Therylune, then speak to her."),
     objective(945, at(nil, 40.51, 87.09, M.darkshore), "Stay close while Therylune walks out of the camp and fight anything that attacks her.", "Therylune escorted"),
+    -- Aynasha's stand: south-east of the Glaive, turned in beside Liladris at Maestra's Post.
+    accept(5713, at("Sentinel Aynasha", 45.94, 90.29, M.darkshore),
+      "Head east from the Glaive to Sentinel Aynasha near the Ashenvale border. She is poisoned and needs cover while she brews a cure."),
+    objective(5713, at("Sentinel Aynasha", 45.94, 90.29, M.darkshore),
+      "Stay beside Aynasha and kill the Blackwood Trackers that come for her, then Marosh the Devious. Speak to her once the last wave falls.",
+      "Aynasha protected"),
     accept(5321, kerlonian, "Go back north to the grove. Open Kerlonian's chest beside him for the Horn of Awakening, then wake him."),
     objective(5321, liladris, "Lead Kerlonian south along the road into Ashenvale. Each time he falls asleep, use the Horn of Awakening near him.",
       "Kerlonian escorted to Maestra's Post"),
     finish(5321, liladris, "Liladris Moonriver waits at Maestra's Post."),
+    finish(5713, ash("Sentinel Onaeya", 26.6, 36.73), "Sentinel Onaeya stands beside Liladris. Tell her Aynasha is safe."),
     action("goto", maestra, "If you skipped the escorts, take the south road from Auberdine through the Grove of the Ancients into Ashenvale to Maestra's Post."),
     finish(967, delgren), accept(970, delgren),
     taxi("getfp", astranaar, astranaarFlight, "Follow the road southeast from Maestra's Post and learn the Astranaar flight path."),
-    action("sethearth", kimlya, "Bind at the Astranaar inn for the west-coast trips.", ashHearth),
+    -- Shindrell beside the flight point, then the inn and Raene on its east side (2026-11-12 loop check).
     accept(1008, shindrell),
-    findTeronis, reachTeronis, takeGemQuest, lootGem,
+    action("sethearth", kimlya, "Bind at the Astranaar inn for the west-coast trips.", ashHearth),
+    findTeronis,
+    accept(1054, raene, "Raene also wants Dal Bloodclaw, a level 25 furbolg in Thistlefur Village. Take it now: the hunt waits for the second circuit."),
+    reachTeronis, takeGemQuest, lootGem,
     finish(945, therysil, "Follow the lake shore south to the Shrine of Aessina and tell Therysil her sister is safe."),
     accept(1007, talen, "Go west around the hills to Talen's camp above the Zoram Strand. If below level 19, take his quest after you level."),
     along(objective(1007, ash("Ancient Statuette", 14.2, 20.64),
@@ -141,7 +153,6 @@ chapter("ashenvale-early", "Ashenvale: Astranaar and the Coast", ashenvale, 18, 
     finish(970, delgren), accept(973, delgren),
     action("goto", pelturas, "Return to Astranaar and find Pelturas inside the house on the east side of the island."),
     finish(1020, pelturas), accept(1033, pelturas, "Wait for Pelturas to finish speaking before checking for his next quest."),
-    accept(1054, raene, "Dal Bloodclaw is level 25. Save this hunt for when you can clear the furbolgs around him safely."),
     objective(1033, ash(nil, 46.24, 45.96), "Cross the east bridge and gather a tear from the grass above the lake.", "Elune's Tear"),
     objective(1054, ash(nil, 39.56, 36.31), "Look for Dal Bloodclaw on the paths in Thistlefur Village. Pull his neighbors separately or leave him for another visit.", "Dal Bloodclaw's Skull"),
     finish(1054, raene), finish(1033, pelturas), accept(1034, pelturas),
@@ -167,6 +178,9 @@ B.breadcrumb(1056, 1057)
 -- Gaxim's letters for the Eastern Kingdoms (gap fill, see the 2026-11-10 audit).
 q(1072, "An Old Colleague", 21, 17, 1071)
 q(1075, "A Scroll from Mauren", 21, 17, 1071)
+-- Piznik's ore for Ziz (both factions; tools/audits/2026-11-12-alliance-kalimdor-loch-modan.md).
+q(1090, "Gerenzo's Orders", 22, 17)
+q(1092, "Gerenzo's Orders", 22, 17, 1090)
 
 local kaela = stone("Kaela Shadowspear", 59.9, 66.85)
 local gaxim = stone("Gaxim Rustfizzle", 59.52, 67.15)
@@ -196,7 +210,13 @@ chapter("stonetalon", "Stonetalon Mountains", stonetalon, 22, 28, {
     "10 Venture Co. Loggers", "10 Venture Co. Deforesters"), 1093),
   along(objective(1093, stone(nil, 74.3, 54.7), "Loot the blueprints from Venture Co. Operators near the equipment. Finish any missing Venture Co. kills before returning.",
     "Super Reaper 6000 Blueprints"), 1071),
-  finish(1093, ziz), finish(1071, gaxim),
+  -- Piznik works a side tunnel of Windshear Mine, on the way back to Ziz.
+  accept(1090, stone("Piznik", 71.87, 60.0), "On the way back south, look for Piznik in a short side tunnel just inside Windshear Mine. He wants guarding while he mines an ore sample."),
+  objective(1090, stone("Piznik", 71.87, 60.0), "Stay beside Piznik and kill the kobolds that attack in waves until he finishes mining. It takes a few minutes.",
+    "Piznik guarded while he mines"),
+  finish(1090, stone("Piznik", 71.87, 60.0), "Take the ore sample from Piznik."),
+  accept(1092, stone("Piznik", 71.87, 60.0), "Piznik wants the ore taken to Ziz Fizziks."),
+  finish(1093, ziz), finish(1092, ziz, "Give Ziz the ore sample as well."), finish(1071, gaxim),
   accept(1072, gaxim, "Gaxim has a letter for Lomac Gearstrip in Ironforge. Carry it until you next cross to the Eastern Kingdoms."),
   accept(1075, gaxim, "Take his scroll for Collin Mauren in Stormwind as well."),
   action("goto", courier, "Take the main road north toward Mirkfallon Lake. Stay clear of Sun Rock Retreat, the Horde town to the west."),
@@ -270,9 +290,12 @@ end
 chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24, 30, ashSources,
   { "wetlands", "southshore", "duskwood-late", "redridge-late", "stonetalon" }, {
     taxi("getfp", astranaar, astranaarFlight, "Return to Astranaar. Fly from Stonetalon Peak or walk back through Talondeep Path."),
+    -- Shindrell stands beside the flight point: take Kayneth's letter before the inn and Raene
+    -- (2026-11-12 loop check).
+    accept(4581, shindrell, "Shindrell Swiftfire, beside the flight point, has a letter for Kayneth Stillwind in Forest Song from level 24."),
     action("sethearth", kimlya, "Bind at the Astranaar inn for the eastern circuits.", ashHearth),
     findTeronis, reachTeronis, takeGemQuest, lootGem, finish(1023, raene),
-    accept(1025, raene), accept(1024, raene), accept(4581, shindrell),
+    accept(1025, raene), accept(1024, raene),
     action("goto", velene, "Cross the east bridge and follow the south road to Silverwind Refuge, near Lake Mystral."),
     accept(1016, velene),
     B.withItem(5456, objective(1016, ash(nil, 48.17, 69.74),
@@ -298,15 +321,13 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     along(objective(1011, ash("Bottle of Disease", 75.29, 72.22), "Go south to Felfire Hill. Pick up the bottle and kill nearby slimes for Raene's chain while you are here.", "Bottle of Disease"), 1027),
     along(objective(1027, ash(nil, 73.8, 73.8), "Kill Rotting Slimes and look for a Rusty Chest left on the ground. Open it for the Iron Pommel.", "Iron Pommel"), 1011),
     action("goto", kayneth, "Return east by the road for the disease turn-in."), finish(1011, kayneth),
-    check(accept(98027, ash("Gleaming Crescent Pendant", 62.99, 71.55), "Look for the pendant in the water on the way west. Use Next if the object is missing."),
-      "Confirm the pendant appears at level 25."),
     action("goto", shael, "Return west to the Raynewood moonwell by the road and the hillside path."),
     finish(1027, shael), accept(1028, shael),
     action("goto", ash(nil, 56.04, 51.28), "Take the winding path up the mountain to the Hidden Shrine."),
     finish(1028, shrine), accept(1055, shrine),
     finish(1055, shael), accept(1029, shael),
     action("hearth", kimlya, "Return to Astranaar with the rod.", ashHearth),
-    finish(1029, raene), finish(98027, ash("Maliynn", 36.62, 49.98)),
+    finish(1029, raene),
     accept(1035, pelturas, "If you finished The Ruins of Stardust, Pelturas has one more task at Fallen Sky Lake. Otherwise use Next."),
     action("grind", kimlya, "Come back for Ran Bloodtooth around level 28 or with a partner. Finish an open route if you need more experience.",
       { level = 28, suggest = { "duskwood-late", "wetlands", "redridge-late", "southshore" } }),
@@ -326,6 +347,10 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     B.withItem(5462, accept(1046, krolg, "Take Krolg's final delivery while in furbolg form.")),
     objective(1035, ash("Shadethicket Oracle", 66.7, 82.2),
       "Follow the south road east to Fallen Sky Lake. Kill the Shadethicket Oracle, level 30, on the shore and loot the Fallen Moonstone.", "Fallen Moonstone"),
+    -- The pendant lies between Fallen Sky Lake and Night Run, so it waits for this circuit
+    -- instead of a detour south from Forest Song (2026-11-12 loop check).
+    check(accept(98027, ash("Gleaming Crescent Pendant", 62.99, 71.55), "On the way north to Night Run, look for the pendant in the water at 63.0, 71.6. Use Next if the object is missing."),
+      "Confirm the pendant appears at level 25."),
     along(part(objective(1140, ash("Circle of Imprisonment", 66.6, 57.0),
       "Go north to Night Run and use the Circle of Imprisonment. Watch for Felmusk satyrs in stealth.", "Free the Highborne soul in Night Run"), 1), 1021),
     action("goto", ash("Maseara Autumnmoon", 86.24, 45.86), "Follow the road east to Forest Song. Learn the flight path there if you can."),
@@ -343,7 +368,8 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
       "5 Xavian Rogues", "5 Xavian Felsworn", "5 Xavian Betrayers", "5 Xavian Hellcallers"),
     finish(98418, ash("Maseara Autumnmoon", 86.24, 45.86), "Return east to Maseara in Forest Song."),
     action("hearth", kimlya, "Return to Astranaar. On foot, take the main road west past Forest Song.", ashHearth),
-    finish(1046, raene), finish(1035, pelturas),
+    finish(1046, raene), finish(98027, ash("Maliynn", 36.62, 49.98), "Maliynn, next to Raene, takes the pendant."),
+    finish(1035, pelturas),
     action("goto", illiyana, "Ride west to the Shrine of Aessina."), finish(1031, illiyana),
     action("goto", maestra, "Follow the road north to Maestra's Post."), finish(1140, delgren),
     taxi("fly", at("Caylais Moonfeather", 36.34, 45.58, M.darkshore), "Auberdine, Darkshore",
@@ -444,7 +470,10 @@ chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 
   finish(98189, stoutfist, "Captain Stoutfist is upstairs in Menethil Keep. His errand to Stormwind belongs to the later Wetlands chapter."),
 
   -- The eastern trip: the Green Belt, Thelgen Rock and the Mosshide camps, then the dig on the way back.
-  action("goto", rethiel, "Take the road east out of Menethil, past the Whelgar dig. Keep to the road past the Dragonmaw at Angerfang, then find Rethiel among the trees east of the crossroads."),
+  action("goto", wet(nil, 49.6, 40.6), "Take the road east out of Menethil, past the Whelgar dig, and keep to it past the Dragonmaw at Angerfang to the crossroads."),
+  accept(469, wet("Einar Stonegrip", 49.92, 39.37),
+    "Einar Stonegrip, at the crossroads, has a bundle of skins for Halloran in Menethil. Use Next if he has nothing for you."),
+  action("goto", rethiel, "Find Rethiel among the trees east of the crossroads."),
   always(finish(463, rethiel)), accept(276, rethiel),
   targets(objective(98282, wet(nil, 52.6, 62.9),
     "Follow the road south toward Dun Algaz to Thelgen Rock, the cave beside the road. Kill Leech and Cave Stalkers inside until one drops the gland.",
@@ -484,6 +513,7 @@ chapter("wetlands-early", "Wetlands: The Green Belt and Coast", M.wetlands, 20, 
   objective(288, helbrek, "Buy a Flagon of Dwarven Honeymead from Innkeeper Helbrek.", "Flagon of Dwarven Honeymead"),
   finish(288, fitz, "Bring the mead to Fitzsimmons. His next quest, The Cursed Crew, is for the later Wetlands chapter."),
   finish(98282, caitlin), finish(470, sida),
+  finish(469, halloran, "Give Einar's bundle to James Halloran by the north gate."),
   finish(306, tarrel, "Tell Tarrel on the north bridge that you found Merrin."),
   action("grind", menethil, "If you are under level 23, finish an open route before the tougher Wetlands fights.",
     { level = 23, suggest = { "duskwood", "ashenvale-early", "stonetalon", "lakeshire" } }),
@@ -528,14 +558,15 @@ chapter("redridge-late", "Lakeshire: Shadowhide and Blackrock", M.redridge, 23, 
   accept(94, at("Theocritus", 65.22, 69.71, M.elwynn),
     "Riding in from Stormwind? Climb to the top of the Tower of Azora beside the Elwynn road and speak to Theocritus."),
   taxi("getfp", lakeshire, "Lakeshire, Redridge", "Learn the Lakeshire flight path. From Stormwind, take the east road through Elwynn to Lakeshire."),
-  action("sethearth", brianna, "Bind at Lakeshire for the two trips out of town.", lakeshireHearth),
-  accept(128, guardHowe), accept(91, conacher),
-  accept(180, rr("Wanted Poster", 21.66, 46.47)),
-  accept(169, rr("Wanted: Gath'Ilzogg", 24.53, 46.16), "Read the second wanted poster by the town hall."),
-  accept(95999, rr("Wanted: Incinerator Gar'im", 24.37, 46.27), "Read the third wanted poster beside it."),
-  accept(150, baren),
-  accept(19, marris, "Marshal Marris offers these two after Blackrock Menace. Use Next on any he doesn't have."), accept(115, marris),
+  accept(128, guardHowe, "Guard Howe stands a few steps from the gryphon master, south of the bridge."),
+  accept(19, marris, "Cross the bridge into town. Marshal Marris offers these two after Blackrock Menace. Use Next on any he doesn't have."), accept(115, marris),
   accept(126, verner, "Verner offers this after A Baying of Gnolls. Use Next if he doesn't have it."),
+  accept(169, rr("Wanted: Gath'Ilzogg", 24.53, 46.16), "Read the Gath'Ilzogg wanted poster by the town hall."),
+  accept(95999, rr("Wanted: Incinerator Gar'im", 24.37, 46.27), "Read the Incinerator Gar'im poster beside it."),
+  accept(91, conacher),
+  action("sethearth", brianna, "Bind at Lakeshire for the two trips out of town.", lakeshireHearth),
+  accept(180, rr("Wanted Poster", 21.66, 46.47), "Read the Fangore wanted poster a few steps south of the inn."),
+  accept(150, baren),
   accept(34, martie),
   objective(34, rr("Bellygrub", 10.6, 49.3),
     "Bellygrub is a tough boar near the road west of town. Pull it alone, bring a partner, or use Next.", "Bellygrub's Tusk"),
@@ -564,7 +595,8 @@ chapter("redridge-late", "Lakeshire: Shadowhide and Blackrock", M.redridge, 23, 
   objective(128, rr(nil, 28.12, 6.88), "Kill Champions outside or just inside the cave. Work near the exit if respawns are fast.", "15 Blackrock Champions"),
   accept(219, keeshan, "If you can keep the route clear, start Keeshan's escort inside the cave. Use Next if the cave is busy or the escort is unsafe."),
   objective(219, rr(nil, 28.32, 48.51), "Stay with Keeshan until he reaches Lakeshire. Let him take the lead so the escort updates.", "Corporal Keeshan escorted"),
-  finish(219, marris), finish(128, guardHowe), finish(126, verner),
+  finish(219, marris), finish(126, verner),
+  finish(128, guardHowe, "Turn in to Guard Howe by the gryphon master, south of the bridge."),
 })
 
 q(58, "The Night Watch", 30, 18, 57)
@@ -584,6 +616,10 @@ q(79363, "Silvia's Sword", 26, 18, nil, true)
 B.quest[79363].startItem = 281145
 q(96138, "Merrick's Bow", 30, 18, nil, true)
 B.quest[96138].startItem = 281142
+-- Two talk quests on the last Raven Hill pass (tools/audits/2026-11-12-alliance-duskwood-wetlands.md).
+-- Mor'Ladim (228), Althea's next, is a level 35 elite and stays out.
+q(225, "The Weathered Grave", 35, 28)
+q(227, "Morgan Ladimore", 35, 28, 225)
 
 local trelayne = dw("Innkeeper Trelayne", 73.87, 44.41)
 local althea = dw("Commander Althea Ebonlocke", 73.54, 46.82)
@@ -629,13 +665,17 @@ chapter("duskwood-late", "Darkshire: Worgen and the Night Watch", M.duskwood, 25
     "7 Defias Night Blades", "7 Defias Enchanters"),
   action("goto", dw(nil, 23.59, 34.89), "Go north to the main road, follow it west to Raven Hill, then enter the eastern side of the cemetery."),
   objective(58, dw(nil, 23.59, 34.89), "Look for Plague Spreaders around the eastern mausoleum. Stay near an exit if you need to go inside.", "20 Plague Spreaders"),
-  finish(134, abercrombie, "Bring the crate north to Abercrombie's shack."), accept(160, abercrombie),
+  accept(225, dw("A Weathered Grave", 17.73, 29.08),
+    "Cross to the weathered grave at the north-west corner of the cemetery and read it. Mor'Ladim, a level 35 elite, walks these graves: let him pass first."),
+  finish(134, abercrombie, "Bring the crate to Abercrombie's shack east of the cemetery."), accept(160, abercrombie),
   action("hearth", trelayne, "Return to Darkshire for the last turn-ins.", darkshireHearth),
   finish(58, althea), finish(222, calor), accept(223, calor), finish(223, dw("Jonathan Carevin", 75.32, 49.02)),
   finish(160, ello, "Lord Ello Ebonlocke is in the town hall."), accept(251, ello),
   finish(251, sirra), finish(79363, sirra), finish(96138, sirra),
+  finish(225, sirra, "Tell Sirra about the weathered grave."), accept(227, sirra),
   accept(401, sirra), finish(401, sirra, "Wait a moment while Sirra translates, then speak to her again."), accept(252, sirra),
   finish(252, ello),
+  finish(227, althea, "Commander Althea Ebonlocke is a few steps from Ello. Her next task, Mor'Ladim, is a level 35 elite: leave it."),
   finish(181, viktori),
 })
 
@@ -644,22 +684,47 @@ q(559, "Farren's Proof", 32, 25, 536)
 q(560, "Farren's Proof", 32, 25, 559)
 q(561, "Farren's Proof", 32, 25, 560)
 q(562, "Stormwind Ho!", 32, 25, 561)
+-- Forever's level 27 Southshore errands (Bind on Forever lists both as Alliance; no source gives
+-- their objective spots yet): tools/audits/2026-11-12-alliance-duskwood-wetlands.md.
+q(98059, "Hillsbrad's Hoard", 27, nil, nil, true)
+q(98071, "Brewer's Trade", 27, 23, nil, true)
 
 local darla = hill("Darla Harris", 49.34, 52.27)
 local farren = hill("Lieutenant Farren Orinelle", 51.46, 58.39)
 local redpath = hill("Marshal Redpath", 49.47, 58.73)
+local bilger = hill("Brewmeister Bilger", 52.13, 58.74)
 
 chapter("southshore", "Southshore: Coastal Patrols", hillsbrad, 27, 30, {
   "https://worldofwarcraft.blizzard.com/en-us/news/24304071/world-of-warcraft-forever-found-photos-panel-recap",
   "https://wowforever.gg/en/guides/travel-boats-zeppelins/",
   "https://bytetavern.com/wow-forever-flight-paths/",
   "https://bindonforever.com/zones/hillsbrad-foothills",
+  "https://www.wowhead.com/forever/quest=98071",
+  "https://www.wowhead.com/forever/quest=98059",
 }, { "wetlands", "duskwood-late", "ashenvale-late" }, {
   taxi("getfp", darla, "Southshore, Hillsbrad", "Take the ship from Menethil Harbor's northern pier or Auberdine's west pier. Stay aboard until Southshore, then walk north through town to Darla Harris."),
-  action("grind", darla, "The western murlocs are level 30 to 32. Try them around level 29 with a partner, or finish more quests before returning.",
+  -- Level 27 errands first: the coast quests below want level 29.
+  check(accept(98059, hill("Captain McManus", 46.43, 50.2),
+    "Captain McManus, a short walk north-west of the flight master, has a sealed request for the Hillsbrad council. Use Next if he has nothing for you."),
+    "A Forever quest: confirm Captain McManus offers it to the Alliance."),
+  check(objective(98059, hill(nil, 29.5, 41.5),
+    "Take the road west to Hillsbrad Fields. Place the Sealed Company Request on the bookkeeping table inside the town hall.",
+    "Sealed Company Request delivered"),
+    "The table's spot is the town hall's registry book from the quest data; confirm the table."),
+  finish(98059, hill("Captain McManus", 46.43, 50.2), "Return to Captain McManus in Southshore."),
+  finish(647, bilger, "Give MacKreel's moonshine to Brewmeister Bilger by the Southshore inn."),
+  check(accept(98071, bilger,
+    "Brewmeister Bilger, by the Southshore inn, wants a case of Fallrook Varietal taken to the dwarves of Dun Garok. Use Next if he has nothing for you."),
+    "A Forever quest: confirm Bilger offers it to the Alliance."),
+  check(objective(98071, hill(nil, 71.6, 80.0),
+    "Follow the road south-east to the dwarven fort of Dun Garok. Leave the case by the fireplace at the bottom of the fort and take the sack of hops.",
+    "Sack of Homebrew Hops"),
+    "The spot is the middle of the fort's guards; confirm where the fireplace is."),
+  finish(98071, bilger, "Bring the hops back to Bilger in Southshore."),
+  finish(98219, farren, "Lieutenant Farren Orinelle is on the Southshore dock road, beside Bilger. Report to him for Lord Grayson."),
+  accept(536, farren, "Lieutenant Farren Orinelle, on the dock road beside Bilger, wants the Torn Fin murlocs on the Western Strand thinned."),
+  action("grind", farren, "The western murlocs are level 30 to 32. Try them around level 29 with a partner, or finish more quests before returning.",
     { level = 29, suggest = { "wetlands", "duskwood-late", "ashenvale-late" }, guide = "dungeon-city-of-dalaran" }),
-  finish(98219, farren, "Lieutenant Farren Orinelle is on the Southshore dock road. Report to him for Lord Grayson."),
-  accept(536, farren),
   objective(536, hill(nil, 47.6, 64.6), "Work west from the docks along the Western Strand. Pull Tidehunters and Oracles to dry land and watch for adds from the surf.",
     "10 Torn Fin Tidehunters", "10 Torn Fin Oracles"),
   finish(536, farren), accept(559, farren),
