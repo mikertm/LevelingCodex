@@ -15,7 +15,6 @@
 - **Item notes.** Steps say what to buy and where: Soothing Spices, Elixir of Water Breathing, Thorium Bars and Fine Thread. They also say what to get from a crafter or the Auction House.
 - **Quest log clean-up.** At 30 and again in Booty Bay, the guide reminds you to drop grey dungeon quests you never ran.
 - The Quests tab now splits 30-60 into three level bands: 30-40, 40-50 and 50-60.
-- The new guides are not yet tested in game.
 
 ### Horde quest guide, levels 30-60
 
@@ -28,7 +27,6 @@
 - **Horde attunements.** New guides cover Onyxia (from Warlord's Command to Blood of the Black Dragon Champion), the Seal of Ascension, Attunement to the Core, the Shadowforge Key and the Key to Scholomance.
 - **Horde class quests 30-60.** These include the Whirlwind weapon, Celestial Power, the Felsteed, the Orb of Orahil and Kroshius, Forever's shaman weapon chain (The Tempest's Weapons), Da Voodoo, and every class's Sunken Temple chain. Where the route already passes a class objective, such as the Bloodscalp tusks, the Twisted Totems or the Azshara errands, your class gets a step for it while the quest is in your log.
 - **Quest log clean-up.** At 30, 46 and 48 the guide reminds you to drop grey dungeon quests you never ran.
-- The new guides are not yet tested in game.
 
 ### Leveling guides 1-30
 
