@@ -78,7 +78,7 @@ Per quest, that is about 1,030 yd before and 550 yd after by ship, or 930 yd bef
 | 98245 Razormaw Needling, 98246 Trying Times (Howin) | Guide A takes them from level 21, but Raptor Ridge's Highland (27-28) and Elder (29) Razormaws are 26-30 content. The 26-30 route does them. |
 | 275 Blisters on the Land | Level 26, against Fen Creepers (24-25). The 26-30 route takes it after 277. |
 | 471 Apprentice's Duties, 98815 Highland Hides, 98072 Crocs of the Sky | Levels 26-28 (Giant Crocolisks, Excavation Site, whelps). Halloran's step text says his next order is for the later chapter. |
-| 295, 296 Ormer's Revenge; 299 Uncovering the Past | Levels 27-29; 299 needs level 25. |
+| 295, 296 Ormer's Revenge; 299 Uncovering the Past | Levels 27-29; 299 needs level 25. **Superseded on 2026-11-12:** the game offered 299 at 24, so 295 and 299 now run at the dig (`2026-11-12-wetlands-early-dig.md`). 296 stays out. |
 | 289 The Cursed Crew | Level 29, the cursed wreck. Fitzsimmons offers it after 288. The later chapter takes it. |
 | 98190 A Friend of the Family | Ends with Bolvar in Stormwind. The 26-30 route takes it at Stoutfist and ends in Stormwind. |
 | 473 Report to Captain Stoutfist, 464 War Banners, 98221 From the Ashes | Minimum 23 and Angerfang (26-29). They are in the 26-30 route. |

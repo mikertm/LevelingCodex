@@ -1919,6 +1919,41 @@ function S.questStranglethornRoad()
   check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
 end
 
+function S.questWetlandsDig()
+  -- In game (2026-11-12) Prospector Whelgar, beside Merrin, offered Uncovering the Past to a level
+  -- 24 who had just taken Ormer's first hunt and Merrin's letter. The pickup comes then, not after
+  -- the raptors (that sent you back to the cave), the raptor step shows the fragments, Ormer's
+  -- second hunt and the rest of the fragments share the dig, and Ormer (nearer the dig) comes first.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 24, 1437, 38.8, 52.3
+  for _, id in ipairs({ 463, 276, 277, 98282, 470, 98197, 279, 484, 281, 284, 285, 286, 98189, 305 }) do
+    MOCK.questDone[id] = true
+  end
+  MOCK.questLog = { { questID = 294 }, { questID = 306 } }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Levels 20-25") and questText(frame, "Accept - Uncovering the Past"),
+    "Whelgar's pickup comes with Merrin's, before the raptors: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 299 }
+  MOCK.event("QUEST_ACCEPTED", 3, 299)
+  check(questText(frame, "Complete - Ormer's Revenge") and questText(frame, "Uncovering the Past"),
+    "the raptor hunt is next and shows the fragments on the way: " .. allText(frame))
+  MOCK.questLog[1].isComplete = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - Ormer's Revenge"), "then back to Ormer: " .. allText(frame))
+  MOCK.questDone[294] = true
+  table.remove(MOCK.questLog, 1)
+  MOCK.event("QUEST_TURNED_IN", 294)
+  check(questText(frame, "Accept - Ormer's Revenge"), "Ormer's second hunt follows the first: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 295 }
+  MOCK.event("QUEST_ACCEPTED", 3, 295)
+  check(questText(frame, "Complete - Uncovering the Past") and questText(frame, "Sarltooth"),
+    "the rest of the fragments share the dig with the hunt, with a Sarltooth warning: " .. allText(frame))
+  for _, entry in ipairs(MOCK.questLog) do entry.isComplete = true end
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Next: Turn in - Uncovering the Past"),
+    "Ormer, nearer the dig, comes before Whelgar: " .. allText(frame))
+end
+
 function S.questWetlandsEnd()
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
