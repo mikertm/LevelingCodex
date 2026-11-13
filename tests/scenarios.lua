@@ -915,11 +915,16 @@ function S.stepProgress()
   MOCK.advance(0.6)
   check(bar.fill:GetWidth() > mid and not questText(bar, "0%"), "skipped steps fill the bar, sliding")
   MOCK.fire(bar, "OnEnter")
-  check(GameTooltip._lines[1] and GameTooltip._lines[1]:find("steps", 1, true), "hovering gives the counts")
+  local l = GameTooltip._lines
+  check(l[1] and l[1]:find(" steps done (", 1, true) and l[2] and l[2]:find(" quests turned in", 1, true)
+    and l[3] == "Click to see the route.", "the tooltip counts steps, then turn-ins: " .. tostring(l[1]))
   MOCK.fire(bar, "OnLeave")
+  local pct = MOCK.textUnder(bar):match("(%d+)%%")
   bar:Click()
   check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
     "clicking opens the route")
+  click(win(), "Guides")
+  check(pct and questText(win(), pct .. "% done"), "the guide list shows the bar's percentage: " .. tostring(pct))
   LevelingCodexDB.noStepBar = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(not bar:IsShown(), "the bar can be turned off")

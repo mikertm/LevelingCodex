@@ -220,7 +220,7 @@ local function guideButtons(y, list, suggestedSet)
     local x = (count - 1) % 2 * (column + 12)
     local status, done, total = Q.sectionStatus(section, suggestedSet)
     local parts = { "Levels " .. section.levels[1] .. "-" .. section.levels[2] }
-    if total > 0 then parts[#parts + 1] = math.floor(done * 100 / total + 0.5) .. "% done" end
+    if total > 0 then parts[#parts + 1] = math.floor(done * 100 / total) .. "% done" end
     if GUIDE_TAG[status] then parts[#parts + 1] = GUIDE_TAG[status] end
     if section.alternate then parts[#parts + 1] = "Alternate" end
     U.btn(section.title, x, y, column, function()

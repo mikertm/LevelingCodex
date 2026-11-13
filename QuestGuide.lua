@@ -224,10 +224,11 @@ local function makeViewer()
     local row = Q.current()
     if not (GameTooltip and row) then return end
     local passed, total = Q.stepProgress(row.section)
-    local done, quests = Q.sectionProgress(row.section)
+    local done, quests = Q.turninProgress(row.section)
+    local pct = total > 0 and math.floor(passed * 100 / total) or 0
     GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-    GameTooltip:SetText(Q.plain(row.section.title .. ": " .. passed .. " of " .. total .. " steps, " .. done .. " of "
-      .. quests .. " quests turned in"))
+    GameTooltip:SetText(Q.plain(row.section.title .. ": " .. passed .. " of " .. total .. " steps done (" .. pct .. "%)"))
+    GameTooltip:AddLine(done .. " of " .. quests .. " quests turned in", 0.8, 0.8, 0.8)
     GameTooltip:AddLine("Click to see the route.", 1, 1, 1)
     GameTooltip:Show()
   end)

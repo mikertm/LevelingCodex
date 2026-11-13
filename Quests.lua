@@ -1078,9 +1078,8 @@ function Q.greyPickups() return greyRows end
 -- Items any step of your route names (`item`, `items`, `startItem`): the vendor never sells them.
 function Q.routeItems() return routeItems end
 
--- A guide's progress and status for the Quests tab: quests turned in out of
--- the quests it turns in, and "current", "done", "outleveled", "suggested", "later" or "open".
-function Q.sectionProgress(section)
+-- A guide's turn-ins: quests turned in out of the quests it turns in (the step bar's tooltip).
+function Q.turninProgress(section)
   local total, done, seen = 0, 0, {}
   for _, row in ipairs(steps) do
     local s = row.step
@@ -1106,8 +1105,12 @@ function Q.stepProgress(section)
   return passed, total
 end
 
+-- A guide's progress everywhere (the guide list, band headers, the step bar): its steps.
+function Q.sectionProgress(section) return Q.stepProgress(section) end
+
+-- "current", "done", "outleveled", "suggested", "later" or "open", with the step counts.
 function Q.sectionStatus(section, suggested)
-  local done, total = Q.sectionProgress(section)
+  local done, total = Q.stepProgress(section)
   local lvl = level or 1
   if section == (sideSection or selected) then return "current", done, total end
   if total > 0 and done == total then return "done", done, total end
