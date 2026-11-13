@@ -877,6 +877,56 @@ function S.minimapRoute()
   MOCK.ghost = false
 end
 
+-- Pace: kill XP lines with rested or group text and in the client's own words; the debug line.
+function S.paceKills()
+  S.login()
+  if MOCK.minimal then return end
+  local st, lvl = LevelingCodexCharDB.stats, MOCK.level
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 1,250 experience. (+625 exp Rested bonus)")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 40 experience. (+8 exp Group bonus)")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "You gain 300 experience.")
+  check(st.levels[lvl].killXP == 1290 and st.levels[lvl].kills == 2, "rested and group lines count, a plain gain doesn't")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas('pace: last XP line "You gain 300 experience." %-> not counted'), "debug names the last XP line")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 40 experience.")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas('pace: last XP line "Kobold Worker dies, you gain 40 experience." %-> kill 40 XP'),
+    "and what a kill line counted")
+end
+
+-- Pace: the kill line in another client language.
+function S.paceKillsLocale()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%s stirbt, Ihr bekommt %d Erfahrung."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold stirbt, Ihr bekommt 75 Erfahrung.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l.killXP == 75 and l.kills == 1, "the client's own wording counts")
+end
+
+-- Stats: a level first counted partway in remembers where counting began.
+function S.statsFromPct()
+  MOCK.level, MOCK.xp, MOCK.xpMax = 5, 400, 1000
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.advance(2)
+  local st = LevelingCodexCharDB.stats
+  check(st.levels[5].fromPct == 40, "level 5 counted from 40%")
+  MOCK.level, MOCK.xp = 6, 50
+  MOCK.event("PLAYER_LEVEL_UP", 6)
+  MOCK.advance(2)
+  check(st.levels[6] and st.levels[6].fromPct == nil, "a level reached by levelling up has no mark")
+  check(MOCK.ns.thousands(21400) == "21,400" and MOCK.ns.thousands(999) == "999"
+    and MOCK.ns.thousands(1234567) == "1,234,567", "thousands")
+  local earlier = MOCK.ns.stats.earlierLevels(6, 3)
+  check(#earlier == 1 and earlier[1].level == 5 and earlier[1].record == st.levels[5], "earlier levels, newest first")
+  check(MOCK.ns.stats.levelRecord(6) == st.levels[6] and MOCK.ns.stats.levelRecord(7) == nil
+    and st.levels[7] == nil, "a level's record, never made by asking")
+end
+
 -- A long guide title stays on one line inside its row.
 function S.guideRowsLong()
   MOCK.race, MOCK.level = "Human", 32

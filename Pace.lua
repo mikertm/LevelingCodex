@@ -9,11 +9,33 @@ local lastXP, lastMax, lastLevel
 local pendingLevel -- a level-up the client's UnitLevel hasn't caught up with yet
 local events
 local KEEP = 60 -- finished levels kept in charDB.paceLog
+local killPattern -- built from the client's own kill line at the first XP line
+local lastLine -- the last CHAT_MSG_COMBAT_XP_GAIN: { text, n = kill XP or nil }
 
 local function try(...) return ns.quests.try(...) end
 
 local function readXP()
   return tonumber(try(UnitXP, "player")), tonumber(try(UnitXPMax, "player"))
+end
+
+-- The kill line in the client's own words (COMBATLOG_XPGAIN_FIRSTPERSON, e.g. "%s dies, you gain
+-- %d experience."): its name and number become captures, not anchored at the end, so rested and
+-- group bonus text after it still matches. Without that string, the English line.
+local function buildKillPattern()
+  local fmt = COMBATLOG_XPGAIN_FIRSTPERSON
+  if type(fmt) ~= "string" or not fmt:find("%", 1, true) then
+    return "(.+) dies, you gain ([%d,%.]+) experience"
+  end
+  local p = fmt:gsub("%%%d+%$s", "\1"):gsub("%%s", "\1"):gsub("%%%d+%$d", "\2"):gsub("%%d", "\2")
+  p = p:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+  return (p:gsub("\1", "(.+)"):gsub("\2", "([%%d,%%.]+)"))
+end
+
+-- The XP a kill line gives, or nil when the line isn't a kill.
+local function killXP(text)
+  killPattern = killPattern or buildKillPattern()
+  local _, digits = text:match(killPattern)
+  return digits and tonumber((digits:gsub("[,%.]", ""))) or nil
 end
 
 local function startLevel(lvl, partial)
@@ -58,6 +80,20 @@ local function duration(seconds)
 end
 
 local function plural(n, word) return n .. " " .. word .. (n == 1 and "" or "s") end
+
+-- XP per hour this session, nil before any gain.
+function ns.paceRate()
+  if not session.start or session.xp <= 0 then return end
+  local hours = (GetTime() - session.start) / 3600
+  if hours > 0 then return session.xp / hours end
+end
+
+-- /codex debug: the last XP line and what it counted.
+function ns.paceDebugLines()
+  if not lastLine then return { "pace: no XP line yet" } end
+  return { 'pace: last XP line "' .. ns.plain(lastLine.text) .. '" -> '
+    .. (lastLine.n and ("kill " .. lastLine.n .. " XP") or "not counted") }
+end
 
 -- Rows { label, value } for the This Level tab's pace card.
 function ns.paceRows()
@@ -114,9 +150,9 @@ function ns.startPace()
       level.quest = level.quest + (tonumber(b) or 0)
       if ns.stats then ns.stats.xp("quest", tonumber(b) or 0); ns.stats.count("quests") end
     elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
-      if type(a) == "string" and a:find("dies", 1, true) then
-        local digits = a:match("(%d[%d,%.]*) experience")
-        local n = digits and tonumber((digits:gsub("[,%.]", "")))
+      if type(a) == "string" then
+        local n = killXP(a)
+        lastLine = { text = a, n = n }
         if n then
           level.mob, level.kills = level.mob + n, level.kills + 1
           if ns.stats then ns.stats.xp("kill", n); ns.stats.count("kills") end

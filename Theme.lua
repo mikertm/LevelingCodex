@@ -141,6 +141,15 @@ function ns.padText(s)
   return s
 end
 
+-- A whole number with thousands separators: 21400 -> "21,400".
+function ns.thousands(n)
+  n = math.floor((tonumber(n) or 0) + 0.5)
+  local digits = tostring(math.abs(n))
+  local out = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+  if out:sub(1, 1) == "," then out = out:sub(2) end
+  return (n < 0 and "-" or "") .. out
+end
+
 -- Copper as "1g 20s 5c" (ASCII, no coin icons).
 function ns.money(copper)
   copper = math.max(0, math.floor(tonumber(copper) or 0))

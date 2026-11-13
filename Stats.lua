@@ -56,17 +56,25 @@ local function each(fn)
   if st then fn(st) end
 end
 
+local function level() return tonumber(UnitLevel("player")) or 1 end
+local levelUp -- the last PLAYER_LEVEL_UP: { to, at }
+
+-- A level's record, made when first needed. One made while you're already into your current
+-- level (not just reached by levelling up) keeps fromPct: where counting began, in whole percent.
 local function levelOf(tree, lvl)
   local l = tree.levels[lvl]
   if type(l) ~= "table" then
     l = { seconds = 0, xp = 0, questXP = 0, killXP = 0, rested = 0, quests = 0, kills = 0, deaths = 0,
       goldIn = goldTable(S.GOLD_IN), goldOut = goldTable(S.GOLD_OUT) }
+    if lvl == level() and not (levelUp and levelUp.to == lvl) then
+      local cur, max = tonumber(try(UnitXP, "player")), tonumber(try(UnitXPMax, "player"))
+      local pct = cur and max and max > 0 and math.floor(cur / max * 100) or 0
+      if pct > 2 then l.fromPct = pct end
+    end
     tree.levels[lvl] = l
   end
   return l
 end
-
-local function level() return tonumber(UnitLevel("player")) or 1 end
 
 -- The zone-level map of a map: up through parents while the map is smaller than a zone.
 local zoneCache = {}
@@ -173,6 +181,24 @@ end
 
 function S.data() return session, saved() end
 
+-- A level's record (the saved one; this session's when saved settings didn't load), never made here.
+function S.levelRecord(lvl)
+  local tree = ns.settingsLost and session or saved() or session
+  local l = tree.levels[lvl]
+  return type(l) == "table" and l or nil
+end
+
+-- Up to n records of the levels below lvl, newest first: { { level, record }, ... }.
+function S.earlierLevels(lvl, n)
+  local out = {}
+  for l = lvl - 1, 1, -1 do
+    if #out >= n then break end
+    local r = S.levelRecord(l)
+    if r then out[#out + 1] = { level = l, record = r } end
+  end
+  return out
+end
+
 function S.reset()
   session = fresh()
   if type(LevelingCodexCharDB) == "table" then LevelingCodexCharDB.stats = fresh() end
@@ -238,7 +264,6 @@ end
 
 -- The level a turn-in finished: yours, or the one before when its own XP just levelled you up (the
 -- level-up came within a second and you have no more XP into the new level than it gave).
-local levelUp
 local function turnInLevel(xp)
   local lvl = level()
   if levelUp and levelUp.to == lvl and GetTime() - levelUp.at <= 1 then

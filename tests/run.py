@@ -830,6 +830,9 @@ def main():
             runs.append(("WARRIOR/full/vendor-buy-fails", "WARRIOR", False, ["vendorBuyFails"]))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
         runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
+        runs.append(("WARRIOR/%s/pace-kills" % variant, "WARRIOR", minimal, ["paceKills"]))
+        runs.append(("WARRIOR/%s/pace-kills-locale" % variant, "WARRIOR", minimal, ["paceKillsLocale"]))
+        runs.append(("WARRIOR/%s/stats-from-pct" % variant, "WARRIOR", minimal, ["statsFromPct"]))
         if minimal:
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))
             runs.append(("WARRIOR/minimal/quests-setup", "WARRIOR", True, ["questSetup"]))

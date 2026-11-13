@@ -221,6 +221,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questieDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.partyDebugLines()) do out[#out + 1] = line end
