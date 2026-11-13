@@ -1237,6 +1237,8 @@ renderers.settings = function()
   y = y + 36
   tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
+  tick("Show the completion bar", not db.noStepBar, function() db.noStepBar = not db.noStepBar; ns.questRefresh() end,
+    "A thin bar under the step's title fills as you get through the guide; hover it for the counts, click it for the route.")
   tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
     "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
   tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,

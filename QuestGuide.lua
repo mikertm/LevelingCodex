@@ -5,13 +5,15 @@ local try = Q.try
 local viewer, arrow, header, headerArt, title, arrowText, arrowArt, flatBackground, levels, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
-local nextButton, suggestionButton
+local nextButton, suggestionButton, bar
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local announced = {} -- dungeon runs whose "find a group" note was said this session
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
 local events = CreateFrame("Frame")
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
+local BAR_TEXTURE = "Interface\\TargetingFrame\\UI-StatusBar"
+local BAR_TRACK = 282 -- the bar's track width (the percent sits to its right)
 local RING_TEXTURE = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
 local ringArt -- the ring file exists (else the arrival shows the icon alone)
 local COMPASS = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
@@ -168,6 +170,41 @@ local function makeViewer()
       elseif ns.questSetupDue() then ns.openQuestSetup() end
     end
   end, 35)
+
+  -- The completion bar under the step's title: a thin track, the fill in the theme's accent and the
+  -- percent at its end. A new value slides in over 0.5 s (ease-out); hover for the counts, click
+  -- for the route.
+  bar = CreateFrame("Button", "LevelingCodexQuestBar", viewer)
+  bar:SetSize(318, 10)
+  bar.edge = bar:CreateTexture(nil, "BACKGROUND", nil, -1)
+  bar.edge:SetPoint("LEFT", 0, 0)
+  bar.edge:SetSize(BAR_TRACK + 2, 8)
+  bar.track = bar:CreateTexture(nil, "BACKGROUND")
+  bar.track:SetPoint("LEFT", 1, 0)
+  bar.track:SetSize(BAR_TRACK, 6)
+  bar.track:SetColorTexture(0, 0, 0, 0.6)
+  bar.fill = bar:CreateTexture(nil, "ARTWORK")
+  bar.fill:SetPoint("LEFT", bar.track, "LEFT", 0, 0)
+  bar.fill:SetSize(0.01, 6)
+  bar.fillArt = A.hasFile(BAR_TEXTURE)
+  if bar.fillArt then bar.fill:SetTexture(BAR_TEXTURE) end
+  bar.pct = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.pct:SetPoint("RIGHT", 0, 0)
+  bar.pct:SetJustifyH("RIGHT")
+  bar:SetScript("OnClick", function() ns.openQuestRoute() end)
+  bar:SetScript("OnEnter", function(self)
+    local row = Q.current()
+    if not (GameTooltip and row) then return end
+    local passed, total = Q.stepProgress(row.section)
+    local done, quests = Q.sectionProgress(row.section)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+    GameTooltip:SetText(Q.plain(row.section.title .. ": " .. passed .. " of " .. total .. " steps, " .. done .. " of "
+      .. quests .. " quests turned in"))
+    GameTooltip:AddLine("Click to see the route.", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  bar:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  bar:Hide()
 
   -- No box: a rotating arrow over the world with the distance under it, like the game's own pointers.
   -- It has its own spot once dragged (db.questArrowPos); until then it sits above the step window.
@@ -1187,6 +1224,38 @@ local function draw(blocks)
   end
 end
 
+-- The bar's fill slides from where it is to the new share over 0.5 s, easing out.
+local function slideBar(self)
+  local t = math.min(1, (GetTime() - self.t0) / 0.5)
+  self.width = self.from + (self.to - self.from) * (1 - (1 - t) ^ 3)
+  self.fill:SetWidth(math.max(0.01, self.width))
+  self.fill:SetShown(self.width >= 1)
+  if t >= 1 then self:SetScript("OnUpdate", nil) end
+end
+
+local function paintBar(row)
+  local passed, total = 0, 0
+  if row and not ns.db().noStepBar then passed, total = Q.stepProgress(row.section) end
+  if total == 0 then bar:Hide(); return false end
+  bar:ClearAllPoints()
+  bar:SetPoint("TOPLEFT", LEFT, -cursor)
+  bar.edge:SetColorTexture(ns.rgba(onDark and C.edge or C.inkSoft))
+  if bar.fillArt then bar.fill:SetVertexColor(ns.rgba(C.accent)) else bar.fill:SetColorTexture(ns.rgba(C.accent)) end
+  bar.pct:SetText(math.floor(passed * 100 / total) .. "%")
+  bar.pct:SetTextColor(ink("dim"))
+  local target = BAR_TRACK * passed / total
+  if bar.to == nil or not bar:IsShown() then
+    bar.from, bar.to, bar.width = target, target, target
+    bar.fill:SetWidth(math.max(0.01, target))
+    bar.fill:SetShown(target >= 1)
+  elseif math.abs(target - bar.to) >= 0.5 then
+    bar.from, bar.to, bar.t0 = bar.width or bar.to, target, GetTime()
+    bar:SetScript("OnUpdate", slideBar)
+  end
+  bar:Show()
+  return true
+end
+
 function ns.questRefresh()
   local row, i = Q.current()
   local suggestion = Q.suggestions()[1]
@@ -1233,6 +1302,7 @@ function ns.questRefresh()
       if b.kind == "chain" then putText(b.text, "dim") end
     end
     cursor = cursor + 3
+    if paintBar(row) then cursor = cursor + 12 end
     draw(blocks)
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"

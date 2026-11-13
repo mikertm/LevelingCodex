@@ -760,6 +760,28 @@ function S.worldMapPins()
   check(not pins:IsShown(), "the setting turns them off")
 end
 
+-- The step window's completion bar: steps you're past out of the guide's steps, sliding to its value.
+function S.stepProgress()
+  S.login()
+  local bar, frame = _G.LevelingCodexQuestBar, questViewer()
+  check(bar and bar:IsShown() and questText(bar, "0%"), "a fresh guide starts at 0%")
+  click(frame, "Next")
+  click(frame, "Next")
+  MOCK.advance(0.1)
+  local mid = bar.fill:GetWidth()
+  MOCK.advance(0.6)
+  check(bar.fill:GetWidth() > mid and not questText(bar, "0%"), "skipped steps fill the bar, sliding")
+  MOCK.fire(bar, "OnEnter")
+  check(GameTooltip._lines[1] and GameTooltip._lines[1]:find("steps", 1, true), "hovering gives the counts")
+  MOCK.fire(bar, "OnLeave")
+  bar:Click()
+  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
+    "clicking opens the route")
+  LevelingCodexDB.noStepBar = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not bar:IsShown(), "the bar can be turned off")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do

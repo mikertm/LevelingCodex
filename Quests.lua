@@ -1093,6 +1093,19 @@ function Q.sectionProgress(section)
   return done, total
 end
 
+-- The step window's completion bar: the section's steps you're past (done, skipped or missed) out
+-- of its steps that count for you (not filtered, outleveled or cut from a chain).
+function Q.stepProgress(section)
+  local passed, total = 0, 0
+  for _, row in ipairs(steps) do
+    if row.section == section and row.state ~= "filtered" and not row.grey and not row.cut then
+      total = total + 1
+      if row.state == "done" or row.state == "skipped" or row.state == "deferred" then passed = passed + 1 end
+    end
+  end
+  return passed, total
+end
+
 function Q.sectionStatus(section, suggested)
   local done, total = Q.sectionProgress(section)
   local lvl = level or 1

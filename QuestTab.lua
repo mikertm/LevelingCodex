@@ -500,6 +500,13 @@ end
 
 ns.addTab("quests", "Quests", render)
 
+-- The step window's completion bar opens the current guide's route.
+function ns.openQuestRoute()
+  view, librarySection, query, draft = "route", nil, "", ""
+  ns.openTab("quests")
+  U.refreshTop()
+end
+
 function ns.openQuestGuide(section)
   view, librarySection, query, draft = "library", section, "", ""
   ns.openTab("quests")
