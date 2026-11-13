@@ -1,5 +1,5 @@
 {
- "build": "1.60.1.70888",
+ "build": "1.60.1.70938",
  "product": "wowf",
  "source": "https://wago.tools",
  "classes": {
@@ -5362,7 +5362,7 @@
       "rank": 1,
       "level": 6,
       "line": "Marksmanship",
-      "cost": "25",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5376,7 +5376,7 @@
       "rank": 2,
       "level": 12,
       "line": "Marksmanship",
-      "cost": "35",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5390,7 +5390,7 @@
       "rank": 3,
       "level": 20,
       "line": "Marksmanship",
-      "cost": "50",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5404,7 +5404,7 @@
       "rank": 4,
       "level": 28,
       "line": "Marksmanship",
-      "cost": "80",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5418,7 +5418,7 @@
       "rank": 5,
       "level": 36,
       "line": "Marksmanship",
-      "cost": "105",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5432,7 +5432,7 @@
       "rank": 6,
       "level": 44,
       "line": "Marksmanship",
-      "cost": "135",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5446,7 +5446,7 @@
       "rank": 7,
       "level": 52,
       "line": "Marksmanship",
-      "cost": "160",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5460,7 +5460,7 @@
       "rank": 8,
       "level": 60,
       "line": "Marksmanship",
-      "cost": "190",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -6794,7 +6794,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 3."
+      "desc": "Stamina increased by 30."
      },
      {
       "id": 4196,
@@ -6802,7 +6802,7 @@
       "level": 12,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 5."
+      "desc": "Stamina increased by 50."
      },
      {
       "id": 4197,
@@ -6810,7 +6810,7 @@
       "level": 18,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 7."
+      "desc": "Stamina increased by 70."
      },
      {
       "id": 4198,
@@ -6818,7 +6818,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 10."
+      "desc": "Stamina increased by 100."
      },
      {
       "id": 4199,
@@ -6826,7 +6826,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 13."
+      "desc": "Stamina increased by 130."
      },
      {
       "id": 4200,
@@ -6834,7 +6834,7 @@
       "level": 36,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 17."
+      "desc": "Stamina increased by 170."
      },
      {
       "id": 4201,
@@ -6842,7 +6842,7 @@
       "level": 42,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 21."
+      "desc": "Stamina increased by 210."
      },
      {
       "id": 4202,
@@ -6850,7 +6850,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 26."
+      "desc": "Stamina increased by 260."
      },
      {
       "id": 5048,
@@ -6858,7 +6858,7 @@
       "level": 54,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 32."
+      "desc": "Stamina increased by 320."
      },
      {
       "id": 5049,
@@ -6866,7 +6866,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
-      "desc": "Stamina increased by 40."
+      "desc": "Stamina increased by 400."
      }
     ],
     "Growl": [
@@ -8399,7 +8399,7 @@
       "level": 25,
       "talent": true,
       "line": "Beast Mastery",
-      "cost": "80",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8413,7 +8413,7 @@
       "rank": 2,
       "level": 36,
       "line": "Beast Mastery",
-      "cost": "105",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8427,7 +8427,7 @@
       "rank": 3,
       "level": 48,
       "line": "Beast Mastery",
-      "cost": "135",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8441,7 +8441,7 @@
       "rank": 4,
       "level": 60,
       "line": "Beast Mastery",
-      "cost": "190",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -11068,70 +11068,70 @@
       "rank": 1,
       "level": 1,
       "pet": "Generic",
-      "desc": "Stamina increased by 3."
+      "desc": "Health increased by 30."
      },
      {
       "id": 4188,
       "rank": 2,
       "level": 12,
       "pet": "Generic",
-      "desc": "Stamina increased by 5."
+      "desc": "Health increased by 50."
      },
      {
       "id": 4189,
       "rank": 3,
       "level": 18,
       "pet": "Generic",
-      "desc": "Stamina increased by 7."
+      "desc": "Health increased by 70."
      },
      {
       "id": 4190,
       "rank": 4,
       "level": 24,
       "pet": "Generic",
-      "desc": "Stamina increased by 10."
+      "desc": "Health increased by 100."
      },
      {
       "id": 4191,
       "rank": 5,
       "level": 30,
       "pet": "Generic",
-      "desc": "Stamina increased by 13."
+      "desc": "Health increased by 130."
      },
      {
       "id": 4192,
       "rank": 6,
       "level": 36,
       "pet": "Generic",
-      "desc": "Stamina increased by 17."
+      "desc": "Health increased by 170."
      },
      {
       "id": 4193,
       "rank": 7,
       "level": 42,
       "pet": "Generic",
-      "desc": "Stamina increased by 21."
+      "desc": "Health increased by 210."
      },
      {
       "id": 4194,
       "rank": 8,
       "level": 48,
       "pet": "Generic",
-      "desc": "Stamina increased by 26."
+      "desc": "Health increased by 260."
      },
      {
       "id": 5041,
       "rank": 9,
       "level": 54,
       "pet": "Generic",
-      "desc": "Health increased by 32."
+      "desc": "Health increased by 320."
      },
      {
       "id": 5042,
       "rank": 10,
       "level": 60,
       "pet": "Generic",
-      "desc": "Health increased by 40."
+      "desc": "Health increased by 400."
      }
     ],
     "Growl": [
@@ -32214,9 +32214,9 @@
      "spell": 17804,
      "icon": "spell_shadow_lifedrain02",
      "ranks": [
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 4% per each of your other Affliction effects active on the target, up to a maximum increase of 12%.",
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 8% per each of your other Affliction effects active on the target, up to a maximum increase of 24%.",
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your other Affliction effects active on the target, up to a maximum increase of 36%."
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 4% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 12%.",
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 8% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 24%.",
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 36%."
      ],
      "node": 105911,
      "prereq": []
@@ -32266,7 +32266,7 @@
      "spell": 1316697,
      "icon": "ability_deathknight_hemorrhagicfever",
      "ranks": [
-      "Tears the target apart from within, inflicting 36 Shadow damage every 1 sec and increasing the damage they take from your other Shadow damage over time effects by 10% for 6 sec."
+      "Tears the target apart from within for 6 sec, inflicting 25.2 Shadow damage every 1 sec. While channeling, your Siphon Life, Corruption, and Bane of Agony effects on the target deal their periodic damage 100% faster."
      ],
      "node": 105909,
      "prereq": [
@@ -34614,7 +34614,7 @@
       "talent": true,
       "line": "Affliction",
       "icon": "spell_shadow_lifedrain02",
-      "desc": "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your other Affliction effects active on the target, up to a maximum increase of 36%."
+      "desc": "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 36%."
      }
     ],
     "Subjugate Demon": [
@@ -34753,7 +34753,7 @@
       "cost": "200",
       "power": "Mana",
       "icon": "ability_deathknight_hemorrhagicfever",
-      "desc": "Tears the target apart from within, inflicting 36 Shadow damage every 1 sec and increasing the damage they take from your other Shadow damage over time effects by 10% for 6 sec."
+      "desc": "Tears the target apart from within for 6 sec, inflicting 25.2 Shadow damage every 1 sec. While channeling, your Siphon Life, Corruption, and Bane of Agony effects on the target deal their periodic damage 100% faster."
      }
     ]
    },
@@ -34951,28 +34951,28 @@
       "rank": 1,
       "level": 1,
       "pet": "Imp",
-      "desc": "Deals 4.4 to 4.4 Fire damage to a target."
+      "desc": "Deals 6.6 to 6.6 Fire damage to a target."
      },
      {
       "id": 7799,
       "rank": 2,
       "level": 8,
       "pet": "Imp",
-      "desc": "Deals 7.7 to 7.7 Fire damage to a target."
+      "desc": "Deals 12.1 to 12.1 Fire damage to a target."
      },
      {
       "id": 7800,
       "rank": 3,
       "level": 18,
       "pet": "Imp",
-      "desc": "Deals 13.2 to 13.2 Fire damage to a target."
+      "desc": "Deals 16.5 to 16.5 Fire damage to a target."
      },
      {
       "id": 7801,
       "rank": 4,
       "level": 28,
       "pet": "Imp",
-      "desc": "Deals 18.7 to 18.7 Fire damage to a target."
+      "desc": "Deals 19.8 to 19.8 Fire damage to a target."
      },
      {
       "id": 7802,
@@ -39002,8 +39002,8 @@
     "Anvil": {
      "spell": 1263041,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Bronze Bar",
@@ -41093,8 +41093,8 @@
     "Coarse Grinding Stone": {
      "spell": 3326,
      "yellow": 50,
-     "green": 62,
-     "grey": 75,
+     "green": 70,
+     "grey": 90,
      "mats": [
       [
        "Coarse Stone",
@@ -51586,8 +51586,8 @@
     "Sharpening Wheel": {
      "spell": 1230171,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Rough Stone",
@@ -55027,8 +55027,8 @@
     "Lodestone": {
      "spell": 1230161,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Rough Stone",
@@ -55090,8 +55090,8 @@
     "Rock Garden": {
      "spell": 1262975,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Heavy Stone",
@@ -56430,7 +56430,7 @@
      "mats": [
       [
        "Bolt of Silk Cloth",
-       5
+       6
       ],
       [
        "Black Dye",
@@ -59235,8 +59235,8 @@
     "Faction Banner": {
      "spell": 1229504,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Bolt of Linen Cloth",
@@ -62646,7 +62646,7 @@
      "mats": [
       [
        "Bolt of Silk Cloth",
-       4
+       5
       ],
       [
        "Heavy Leather",
@@ -62736,7 +62736,7 @@
      "mats": [
       [
        "Bolt of Woolen Cloth",
-       4
+       5
       ],
       [
        "Green Dye",
@@ -66032,7 +66032,7 @@
      "mats": [
       [
        "Bolt of Mageweave",
-       4
+       5
       ],
       [
        "Red Dye",
@@ -66268,7 +66268,7 @@
      "mats": [
       [
        "Bolt of Woolen Cloth",
-       4
+       5
       ],
       [
        "Red Dye",
@@ -68674,8 +68674,8 @@
     "Spinning Wheel": {
      "spell": 1263032,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",
@@ -70713,8 +70713,8 @@
     "Arcane Salvager": {
      "spell": 1263056,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Vision Dust",
@@ -70731,7 +70731,7 @@
      ],
      "icon": "inv_eng_bottledelements",
      "category": "Camping",
-     "tool": "Runed Truesilver Rod",
+     "tool": "Runed Golden Rod",
      "plan": {
       "item": "Blueprint: Arcane Salvager",
       "skill": 140
@@ -75447,8 +75447,8 @@
     "Enchanted Lute": {
      "spell": 1230643,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Simple Wood",
@@ -77925,8 +77925,8 @@
     "Greenhouse": {
      "spell": 1262980,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",
@@ -77966,8 +77966,8 @@
     "Incense Candle": {
      "spell": 1229705,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Peacebloom",
@@ -78415,8 +78415,8 @@
     "Camp Chair": {
      "spell": 1229517,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Light Leather",
@@ -78437,8 +78437,8 @@
     "Field Guide": {
      "spell": 1262985,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Medium Leather",
@@ -80719,8 +80719,8 @@
     "Camp Tent": {
      "spell": 1229432,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Light Leather",
@@ -91991,7 +91991,7 @@
       "Spiritcaller Boots",
       1
      ],
-     "icon": "inv_misc_desecrated_mailboots",
+     "icon": "temp",
      "category": "Mail Boots",
      "plan": {
       "item": "Pattern: Spiritcaller Boots",
@@ -92093,7 +92093,7 @@
       "Spiritcaller Gloves",
       1
      ],
-     "icon": "inv_misc_desecrated_mailglove",
+     "icon": "temp",
      "category": "Mail Gauntlets",
      "plan": {
       "item": "Pattern: Spiritcaller Gloves",
@@ -92195,7 +92195,7 @@
       "Spiritcaller Kilt",
       1
      ],
-     "icon": "inv_misc_desecrated_mailpants",
+     "icon": "temp",
      "category": "Mail Legguards",
      "plan": {
       "item": "Pattern: Spiritcaller Kilt",
@@ -92263,7 +92263,7 @@
       "Spiritcaller Mantle",
       1
      ],
-     "icon": "inv_misc_desecrated_mailshoulder",
+     "icon": "temp",
      "category": "Mail Pauldrons",
      "plan": {
       "item": "Pattern: Spiritcaller Mantle",
@@ -93644,9 +93644,9 @@
     },
     "Tanning Rack": {
      "spell": 1263031,
-     "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "yellow": 125,
+     "green": 125,
+     "grey": 125,
      "mats": [
       [
        "Medium Leather",
@@ -93669,7 +93669,7 @@
      "category": "Camping",
      "plan": {
       "item": "Blueprint: Tanning Rack",
-      "skill": 140
+      "skill": 125
      }
     },
     "Thick Armor Kit": {
@@ -97270,10 +97270,10 @@
     "Small Lustrous Pearl": "inv_misc_gem_pearl_03",
     "Soul Dust": "inv_enchant_dustsoul",
     "Spider's Silk": "spell_nature_web",
-    "Spiritcaller Boots": "inv_misc_desecrated_mailboots",
-    "Spiritcaller Gloves": "inv_misc_desecrated_mailglove",
-    "Spiritcaller Kilt": "inv_misc_desecrated_mailpants",
-    "Spiritcaller Mantle": "inv_misc_desecrated_mailshoulder",
+    "Spiritcaller Boots": null,
+    "Spiritcaller Gloves": null,
+    "Spiritcaller Kilt": null,
+    "Spiritcaller Mantle": null,
     "Spitfire Bracers": "inv_bracer_05",
     "Spitfire Breastplate": "inv_chest_leather_02",
     "Spitfire Gauntlets": "inv_gauntlets_11",
@@ -98663,7 +98663,7 @@
      "icon": "inv_potion_62",
      "category": "Elixirs",
      "plan": {
-      "item": "Recipe: Elixir of Greater Firepower",
+      "item": "Recipe: Elixir of Holy Power",
       "skill": 250
      }
     },
@@ -99507,8 +99507,8 @@
     "Fermenter": {
      "spell": 1263005,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Leaded Vial",
@@ -101622,8 +101622,8 @@
     "Mana Well": {
      "spell": 1230564,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Peacebloom",
@@ -109573,8 +109573,8 @@
     "Reagent Bot": {
      "spell": 1230656,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Handful of Copper Bolts",
@@ -109647,8 +109647,8 @@
     "Repair Bot": {
      "spell": 1263034,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Whirring Bronze Gizmo",
@@ -113150,8 +113150,8 @@
     "First Aid Kit": {
      "spell": 1230117,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Linen Bandage",
@@ -113749,8 +113749,8 @@
     "Toxin Study": {
      "spell": 1262996,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Anti-Venom",
@@ -114452,8 +114452,8 @@
     "Cookie's Feast": {
      "spell": 1262978,
      "yellow": 145,
-     "green": 147,
-     "grey": 150,
+     "green": 145,
+     "grey": 145,
      "mats": [
       [
        "Mystery Meat",
@@ -114852,8 +114852,8 @@
     "Expert Campfire": {
      "spell": 1291341,
      "yellow": 205,
-     "green": 212,
-     "grey": 220,
+     "green": 205,
+     "grey": 205,
      "mats": [
       [
        "Thick Logs",
@@ -115414,8 +115414,8 @@
     "Journeyman Campfire": {
      "spell": 1283400,
      "yellow": 95,
-     "green": 100,
-     "grey": 105,
+     "green": 95,
+     "grey": 95,
      "mats": [
       [
        "Star Wood",
@@ -117694,8 +117694,8 @@
     "Fishing Rack": {
      "spell": 1262990,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",
