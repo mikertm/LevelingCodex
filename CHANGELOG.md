@@ -36,6 +36,12 @@
 - The Quests tab now splits 30-60 into three level bands: 30-40, 40-50 and 50-60.
 - The new guides are not yet tested in game. Steps that need a check carry a note.
 
+## v0.20.2
+
+### Quest guide
+
+- **A cleaner step window.** Quest objectives are now a checklist under the step's instructions, each on its own line with its count on the right ("Mottled Raptor slain ... 2/10"); the count turns gold once you've started and a finished goal gets a green tick. Quests you can work on during the same trip sit under **ALSO ON THIS LOOP**, goals the route passed under **ON THE WAY**, and the next steps under **UP NEXT**, each with its own heading. A quest's place in its chain sits under the step's name, and warnings (full quest log, level too low, elites nearby) stand out in their own colours. The Quests tab's step card lists one objective per line too.
+
 ## v0.20.1
 
 ### Quest guide

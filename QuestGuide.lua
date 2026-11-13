@@ -2,7 +2,7 @@
 local _, ns = ...
 local Q, A, C = ns.quests, ns.art, ns.C
 local try = Q.try
-local viewer, arrow, header, headerArt, title, detail, preview, arrowText, arrowArt, flatBackground, levels, arrowFile
+local viewer, arrow, header, headerArt, title, arrowText, arrowArt, flatBackground, levels, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
 local nextButton, suggestionButton
@@ -126,8 +126,6 @@ local function makeViewer()
   levels = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   levels:SetPoint("TOPRIGHT", -16, -30)
   title = font(viewer, 28, 318, "GameFontNormal")
-  detail = font(viewer, 47, 318)
-  preview = font(viewer, 126, 318)
 
   local function button(label, x, width, action, bottom)
     bottom = bottom or 9
@@ -329,15 +327,39 @@ function Q.label(step)
   return name and (verb .. " - " .. name) or verb
 end
 
-local function objectiveLines(entry, incompleteOnly, index)
-  local lines = {}
+-- One objective as a checklist row: the goal, its count and whether it's done. The log says
+-- "2/10 Mottled Raptor slain" (Forever), "Mottled Raptor slain: 2/10" (classic) or has no count.
+-- `flat` keeps the log's own words for Q.detail (the Quests tab and tooltips).
+local function goalBlock(obj, small, indent)
+  local text = type(obj) == "table" and obj.text or obj
+  if type(text) ~= "string" then return end
+  local raw = Q.plain(text)
+  local have, need, name = raw:match("^(%d+)%s*/%s*(%d+)%s+(.+)$")
+  if not have then name, have, need = raw:match("^(.-):?%s+(%d+)%s*/%s*(%d+)%.?$") end
+  local done = type(obj) == "table" and (obj.finished == true or obj.finished == 1) or false
+  have, need = tonumber(have), tonumber(need)
+  if have and need and have >= need then done = true end
+  return { kind = "goal", text = (name and name ~= "") and name or raw, count = have and (have .. "/" .. need),
+    started = (have or 0) > 0, done = done, small = small, indent = indent, flat = raw }
+end
+
+-- A quest's objectives from the log (all, or the unfinished ones; `index` = just that one), else
+-- the step's own `objectives`. Returns how many it added.
+local function addGoals(out, entry, index, fallback, incompleteOnly, small, indent)
+  local n = 0
   for i, obj in ipairs(entry and entry.objectives or {}) do
     if (not index or i == index) and type(obj.text) == "string" and
         (not incompleteOnly or (obj.finished ~= true and obj.finished ~= 1)) then
-      lines[#lines + 1] = Q.plain(obj.text)
+      local b = goalBlock(obj, small, indent)
+      if b then out[#out + 1] = b; n = n + 1 end
     end
   end
-  return lines
+  if n > 0 then return n end
+  for _, text in ipairs(fallback or {}) do
+    local b = goalBlock(text, small, indent)
+    if b then out[#out + 1] = b; n = n + 1 end
+  end
+  return n
 end
 
 -- XP for grind steps: the last five kills (CHAT_MSG_COMBAT_XP_GAIN) estimate the kills left.
@@ -363,7 +385,7 @@ end
 
 local function grindLines(step, level)
   local cur, max, rested = Q.xp()
-  if not cur then return "" end
+  if not cur then return {} end
   local lines = { "XP " .. cur .. " / " .. max .. " (" .. math.floor(cur * 100 / max) .. "%)" }
   local need, goal
   if step.xp and step.level == level then
@@ -383,29 +405,38 @@ local function grindLines(step, level)
   if rested > 0 then lines[#lines + 1] = "Rested: " .. rested .. " XP" end
   local waiting = readyQuestXP()
   if waiting > 0 then lines[#lines + 1] = "Ready turn-ins: about " .. waiting .. " XP" end
-  return "\n" .. table.concat(lines, "\n")
+  return lines
 end
 
 -- Collect and buy steps: what your bags hold of what the step wants.
-local function itemProgress(step)
+local function itemCounts(step)
   if not ((step.type == "collect" or step.type == "buy") and step.item) then return end
-  return "You have " .. Q.itemCount(step.item) .. "/" .. (step.count or 1) .. "."
+  return Q.itemCount(step.item), step.count or 1
 end
 
--- Sticky goals the route has passed: one line each, with their progress.
-local function stickyText()
-  local lines = {}
-  for _, row in ipairs(Q.stickies()) do
+local function itemGoal(text, have, need, small, flat)
+  return { kind = "goal", text = text, count = have .. "/" .. need, started = have > 0, done = have >= need,
+    small = small, flat = flat }
+end
+
+-- Sticky goals the route has passed: each with its progress, under ON THE WAY.
+local function addStickies(out)
+  local list = Q.stickies()
+  if #list == 0 then return end
+  out[#out + 1] = { kind = "heading", text = "On the way" }
+  for _, row in ipairs(list) do
     local step = row.step
-    local progress = itemProgress(step)
-    if not progress and step.type == "complete" then
-      local goals = objectiveLines(Q.log(step.quest), true, step.objectiveIndex)
-      if #goals == 0 then goals = step.objectives or {} end
-      progress = table.concat(goals, "  /  ")
+    local have, need = itemCounts(step)
+    if have then
+      out[#out + 1] = itemGoal(Q.label(step), have, need, true,
+        Q.label(step) .. ": You have " .. have .. "/" .. need .. ".")
+    else
+      out[#out + 1] = { kind = "quest", text = Q.label(step) }
+      if step.type == "complete" then
+        addGoals(out, Q.log(step.quest), step.objectiveIndex, step.objectives, true, true, 12)
+      end
     end
-    lines[#lines + 1] = Q.label(step) .. ((progress and progress ~= "") and (": " .. progress) or "")
   end
-  return #lines > 0 and ("\nOn the way\n" .. table.concat(lines, "\n")) or ""
 end
 
 -- Elites and rares near the current step (QuestDangerData.lua; Settings > Warn about elites and
@@ -415,10 +446,10 @@ local DANGER_YARDS = 90
 local KIND_LABEL = { elite = "Elite", rareelite = "Rare elite", boss = "Boss", rare = "Rare" }
 
 local function dangerText(step)
-  if ns.db().noDangerWarnings or type(ns.questDanger) ~= "table" then return "" end
+  if ns.db().noDangerWarnings or type(ns.questDanger) ~= "table" then return end
   local spot = Q.waypoint(step)
   local list = spot and spot.map and spot.x and ns.questDanger[spot.map]
-  if not list then return "" end
+  if not list then return end
   local _, _, _, level = Q.rows()
   local faction = tostring(try(UnitFactionGroup, "player") or ""):sub(1, 1)
   local found = {}
@@ -436,50 +467,62 @@ local function dangerText(step)
       end
     end
   end
-  if #found == 0 then return "" end
+  if #found == 0 then return end
   local more = #found > 3 and (" and " .. (#found - 3) .. " more") or ""
   while #found > 3 do table.remove(found) end
-  return "\nWatch out here: " .. table.concat(found, ", ") .. more .. "."
+  return "Watch out here: " .. table.concat(found, ", ") .. more .. "."
 end
 
--- withStickies: the current step, which also lists the sticky goals still open.
-function Q.detail(step, requiredFor, withStickies)
-  if step.type == "plan" then return Q.plain(Q.planText(step)) end
+-- The step's detail as pieces, top to bottom. Kinds: note (`tone` warn/gold/dim), text (the step's
+-- instruction), goal (`text`, `count` "2/10", `done`, `small`, `indent`), heading, quest (a quest's
+-- name above its goals), info, danger and chain (the step window shows it under the title).
+-- withStickies: the current step, which also lists the sticky goals still open and nearby elites.
+function Q.detailBlocks(step, requiredFor, withStickies)
+  local out = {}
+  local function add(block) out[#out + 1] = block end
+  if step.type == "plan" then add({ kind = "text", text = Q.planText(step) }); return out end
   local _, _, _, level = Q.rows()
-  local text = Q.text(step)
-  if step.min and level < step.min then text = "Requires level " .. step.min .. ". " .. text end
-  if step.type == "complete" then
-    local lines = objectiveLines(Q.log(step.quest), false, step.objectiveIndex)
-    if #lines == 0 then lines = step.objectives or {} end
-    if #lines > 0 then text = text .. "\n" .. table.concat(lines, "  /  ") end
-  end
-  local progress = itemProgress(step)
-  if progress then text = text .. "\n" .. progress end
-  if step.type == "grind" and step.level then text = text .. grindLines(step, level) end
-  if withStickies then text = text .. stickyText() .. dangerText(step) end
-  local also = {}
-  for _, id in ipairs(step.also or {}) do
-    local entry = Q.incomplete(id)
-    if entry and entry.title then
-      local lines = objectiveLines(entry, true)
-      also[#also + 1] = entry.title .. (#lines > 0 and (" - " .. table.concat(lines, "  /  ")) or "")
-    end
-  end
-  if #also > 0 then text = text .. "\nAlso on this loop\n" .. table.concat(also, "\n") end
-  local part, length, run = Q.chainInfo(step.quest)
-  if part then
-    text = text .. "\nChain: part " .. part .. " of " .. length .. (run and (", leads to " .. run.title) or "") .. "."
-  end
+  if requiredFor then add({ kind = "note", tone = "warn", text = "Required for " .. requiredFor.name .. "." }) end
   if step.type == "accept" and not Q.log(step.quest) then
     local count, max = Q.logCapacity()
     if max and count >= max then
-      text = "Your quest log is full (" .. count .. "/" .. max .. "). Turn in or abandon a quest first:"
-        .. " Quests > Guide library lists ones you can drop.\n" .. text
+      add({ kind = "note", tone = "warn", text = "Your quest log is full (" .. count .. "/" .. max .. ")."
+        .. " Turn in or abandon a quest first: Quests > Guide library lists ones you can drop." })
     end
   end
-  if requiredFor then text = "Required for " .. requiredFor.name .. ".\n" .. text end
-  if step.uncertain then text = text .. "\nCheck in game: " .. step.uncertain end
-  return Q.plain(text)
+  if step.min and level < step.min then add({ kind = "note", tone = "warn", text = "Requires level " .. step.min .. "." }) end
+  add({ kind = "text", text = Q.text(step) })
+  if step.type == "complete" then addGoals(out, Q.log(step.quest), step.objectiveIndex, step.objectives) end
+  local have, need = itemCounts(step)
+  if have then add(itemGoal("In your bags", have, need, false, "You have " .. have .. "/" .. need .. ".")) end
+  if step.type == "grind" and step.level then
+    for _, line in ipairs(grindLines(step, level)) do add({ kind = "info", text = line }) end
+  end
+  local danger = withStickies and dangerText(step)
+  if danger then add({ kind = "danger", text = danger }) end
+  local alsoShown
+  for _, id in ipairs(step.also or {}) do
+    local entry = Q.incomplete(id)
+    if entry and entry.title then
+      if not alsoShown then add({ kind = "heading", text = "Also on this loop" }); alsoShown = true end
+      add({ kind = "quest", text = entry.title })
+      addGoals(out, entry, nil, nil, true, true, 12)
+    end
+  end
+  if withStickies then addStickies(out) end
+  local part, length, run = Q.chainInfo(step.quest)
+  if part then
+    add({ kind = "chain", text = "Chain: part " .. part .. " of " .. length .. (run and (", leads to " .. run.title) or "") .. "." })
+  end
+  if step.uncertain then add({ kind = "note", tone = "dim", text = "Check in game: " .. step.uncertain }) end
+  return out
+end
+
+-- The same as plain lines, for the Quests tab's step card and route tooltips.
+function Q.detail(step, requiredFor, withStickies)
+  local lines = {}
+  for _, b in ipairs(Q.detailBlocks(step, requiredFor, withStickies)) do lines[#lines + 1] = b.flat or b.text end
+  return Q.plain(table.concat(lines, "\n"))
 end
 
 -- A step the game finished (not Next/Back or a jump) plays the map ping, like a quest objective.
@@ -782,36 +825,208 @@ function ns.showQuestStepOnMap()
   end
 end
 
--- The steps after this one (Settings > Steps shown ahead, 0-5, default 2).
-local function previewText(row, i)
+-- The steps after this one (Settings > Steps shown ahead, 0-5, default 2), as UP NEXT.
+local function addPreview(out, row, i)
   local count = math.max(0, math.min(5, tonumber(ns.db().questPreview) or 2))
   local upcoming = Q.upcoming(i, math.max(1, count))
   local nextRow = upcoming[1]
   if not nextRow then
     if not row.section.side and Q.autoStep() == row.step then
-      return row.section.alternate and "Last step in this alternate route." or "Last step in this guide."
+      out[#out + 1] = { kind = "note", tone = "dim", gap = 6, text = row.section.alternate
+        and "Last step in this alternate route." or "Last step in this guide." }
     end
-    return ""
+    return
   end
-  if count == 0 then return "" end
-  local heading = nextRow.section == row.section and "Next: " or ("Next section: " .. nextRow.section.title .. "\n")
-  local text = heading .. Q.label(nextRow.step)
+  if count == 0 then return end
+  out[#out + 1] = { kind = "heading", text = "Up next" }
+  if nextRow.section ~= row.section then
+    out[#out + 1] = { kind = "note", tone = "dim", text = "Next section: " .. nextRow.section.title }
+  end
+  local labels = { Q.label(nextRow.step) }
   for n = 2, #upcoming do
     if upcoming[n].section ~= nextRow.section then break end
-    text = text .. "\n" .. Q.label(upcoming[n].step)
+    labels[#labels + 1] = Q.label(upcoming[n].step)
   end
-  return text
+  out[#out + 1] = { kind = "next", text = table.concat(labels, "\n") }
 end
 
-local function pinnedText()
-  local lines = {}
+-- Quests pinned in the Quests tab, with their open goals, then the party's steps.
+local function addTracking(out)
+  local shown
   for _, id in ipairs(Q.pins()) do
     local entry = Q.incomplete(id)
-    local goals = objectiveLines(entry, true)
-    local name = entry.title or ("Quest " .. id)
-    lines[#lines + 1] = name .. (#goals > 0 and " - " .. table.concat(goals, " / ") or "")
+    if not shown then out[#out + 1] = { kind = "heading", text = "Tracking" }; shown = true end
+    out[#out + 1] = { kind = "quest", text = entry.title or ("Quest " .. id) }
+    addGoals(out, entry, nil, nil, true, true, 12)
   end
-  return #lines > 0 and Q.plain("Tracking\n" .. table.concat(lines, "\n")) or ""
+  local party = ns.partyLines()
+  if #party > 0 then
+    out[#out + 1] = { kind = "heading", text = "Party" }
+    out[#out + 1] = { kind = "note", tone = "dim", text = table.concat(party, "\n") }
+  end
+end
+
+-- The window's body: pooled pieces stacked from the top by their real heights, so long lines
+-- never overlap. Text pieces, headings (gold capitals with a rule to the right edge) and goal rows
+-- (a box that turns into a tick, the goal, and its count on the right). `onDark`: the dialog art is
+-- dark and needs light text; the flat parchment fallback needs ink.
+local LEFT, WIDTH = 16, 318
+local pool, live, makers = {}, {}, {}
+local onDark, cursor = true, 0
+local CHECK = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local INKS = {
+  gold = { { 1, 0.82, 0 }, { 0.5, 0.33, 0 } },
+  warn = { { 1, 0.6, 0.25 }, { 0.62, 0.27, 0.04 } },
+  danger = { { 1, 0.45, 0.38 }, { 0.66, 0.1, 0.08 } },
+  done = { { 0.5, 0.88, 0.42 }, { 0.12, 0.45, 0.12 } },
+}
+
+local function ink(name)
+  if INKS[name] then return ns.rgba(INKS[name][onDark and 1 or 2]) end
+  if name == "dim" then return ns.rgba(onDark and C.dim or C.inkSoft) end
+  if name == "head" then return ns.rgba(onDark and C.gold or C.ink) end
+  return ns.rgba(onDark and C.light or C.ink)
+end
+
+function makers.text(template)
+  local fs = viewer:CreateFontString(nil, "OVERLAY", template)
+  fs:SetJustifyH("LEFT")
+  fs:SetWordWrap(true)
+  return fs
+end
+
+function makers.head()
+  local fs = viewer:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  fs:SetJustifyH("LEFT")
+  return fs
+end
+
+function makers.rule() return viewer:CreateTexture(nil, "ARTWORK") end
+
+function makers.row(template)
+  local r = CreateFrame("Frame", nil, viewer)
+  r.edge = r:CreateTexture(nil, "ARTWORK")
+  r.fill = r:CreateTexture(nil, "OVERLAY")
+  r.tick = r:CreateTexture(nil, "OVERLAY")
+  if not (A.hasFile(CHECK) and r.tick:SetTexture(CHECK) ~= false) then r.flatTick = true end
+  r.name = r:CreateFontString(nil, "OVERLAY", template)
+  r.name:SetJustifyH("LEFT")
+  r.name:SetWordWrap(true)
+  r.name:SetPoint("TOPLEFT", 16, 0)
+  r.count = r:CreateFontString(nil, "OVERLAY", template)
+  r.count:SetJustifyH("RIGHT")
+  r.count:SetPoint("TOPRIGHT", 0, 0)
+  return r
+end
+
+local function take(kind, template)
+  local key = kind .. ":" .. (template or "")
+  pool[key] = pool[key] or {}
+  local piece = table.remove(pool[key])
+  if not piece then
+    piece = makers[kind](template)
+    piece.codexPool = key
+  end
+  live[#live + 1] = piece
+  piece:ClearAllPoints()
+  piece:Show()
+  return piece
+end
+
+local function releaseAll()
+  for n = #live, 1, -1 do
+    local piece = live[n]
+    piece:Hide()
+    table.insert(pool[piece.codexPool], piece)
+    live[n] = nil
+  end
+end
+
+local function putText(text, tone, template, indent, spacing)
+  indent = indent or 0
+  local fs = take("text", template or "GameFontHighlightSmall")
+  fs:SetWidth(WIDTH - indent)
+  fs:SetPoint("TOPLEFT", LEFT + indent, -cursor)
+  try(fs.SetSpacing, fs, spacing or 0)
+  fs:SetText(Q.plain(text))
+  fs:SetTextColor(ink(tone))
+  cursor = cursor + (tonumber(fs:GetStringHeight()) or 12) + 3
+end
+
+local function putHeading(text)
+  cursor = cursor + 6
+  local fs = take("head")
+  fs:SetPoint("TOPLEFT", LEFT, -cursor)
+  fs:SetText(Q.plain(text):upper())
+  fs:SetTextColor(ink("head"))
+  local width = math.ceil(tonumber(try(fs.GetStringWidth, fs)) or 80)
+  if width + 12 < WIDTH then
+    local rule = take("rule")
+    local r, g, b = ink("head")
+    rule:SetColorTexture(r, g, b, 0.35)
+    rule:SetPoint("TOPLEFT", LEFT + width + 6, -(cursor + 5))
+    rule:SetSize(WIDTH - width - 6, 1)
+  end
+  cursor = cursor + 15
+end
+
+local function putGoal(b)
+  local small, indent = b.small, b.indent or 0
+  local r = take("row", small and "GameFontHighlightSmall" or "GameFontHighlight")
+  local width, line = WIDTH - indent, small and 12 or 14
+  r:SetPoint("TOPLEFT", LEFT + indent, -cursor)
+  r:SetWidth(width)
+  r.count:SetText(b.count or "")
+  r.count:SetShown(b.count ~= nil)
+  local countWidth = b.count and math.ceil(tonumber(try(r.count.GetStringWidth, r.count)) or 30) + 8 or 0
+  r.name:SetWidth(width - 16 - countWidth)
+  r.name:SetText(Q.plain(b.text))
+  r.name:SetTextColor(ink(b.done and "done" or (small and "dim" or "text")))
+  r.count:SetTextColor(ink(b.done and "done" or (b.started and "gold" or "dim")))
+  -- The box: an edge with the window's colour inside. Done: the ready-check tick in its place,
+  -- or (no tick art) a green box with a green centre.
+  local size = small and 7 or 9
+  local top = -math.floor((line - size) / 2)
+  local ticked = b.done and not r.flatTick
+  r.edge:SetShown(not ticked)
+  r.fill:SetShown(not ticked)
+  r.edge:SetPoint("TOPLEFT", 2, top)
+  r.edge:SetSize(size, size)
+  r.edge:SetColorTexture(ink(b.done and "done" or "dim"))
+  r.fill:SetPoint("TOPLEFT", 3, top - 1)
+  r.fill:SetSize(size - 2, size - 2)
+  if onDark then r.fill:SetColorTexture(0, 0, 0, 0.75) else r.fill:SetColorTexture(ns.rgba(C.parch)) end
+  r.tick:SetShown(b.done)
+  if ticked then
+    local tick = size + 7
+    local shift = math.floor((tick - size) / 2)
+    r.tick:SetPoint("TOPLEFT", 2 - shift, top + shift)
+    r.tick:SetSize(tick, tick)
+  elseif b.done then
+    r.tick:SetPoint("TOPLEFT", 4, top - 2)
+    r.tick:SetSize(size - 4, size - 4)
+    r.tick:SetColorTexture(ink("done"))
+  end
+  local height = math.max(line, tonumber(r.name:GetStringHeight()) or line)
+  r:SetHeight(height)
+  cursor = cursor + height + (small and 1 or 2)
+end
+
+local function draw(blocks)
+  local last
+  for _, b in ipairs(blocks) do
+    if b.gap then cursor = cursor + b.gap end
+    if b.kind == "goal" and last and last ~= "goal" and last ~= "quest" then cursor = cursor + 3 end
+    if b.kind == "goal" then putGoal(b)
+    elseif b.kind == "heading" then putHeading(b.text)
+    elseif b.kind == "quest" then putText(b.text, "text", "GameFontHighlightSmall", 0)
+    elseif b.kind == "text" then putText(b.text, "text", nil, 0, 2)
+    elseif b.kind == "note" then putText(b.text, b.tone)
+    elseif b.kind == "danger" then cursor = cursor + 3; putText(b.text, "danger")
+    elseif b.kind == "next" then putText(b.text, "dim", nil, 0, 1)
+    elseif b.kind ~= "chain" then putText(b.text, "text") end
+    last = b.kind
+  end
 end
 
 function ns.questRefresh()
@@ -829,38 +1044,38 @@ function ns.questRefresh()
       flatBackground:SetColorTexture(ns.rgba(C.parch))
       flatBackground:SetShown(not backdrop)
       -- Ink only on the flat parchment; the dialog art is dark, so it needs light text.
+      onDark = backdrop and true or false
       title:SetTextColor(ns.rgba(C.gold))
-      detail:SetTextColor(ns.rgba(backdrop and C.light or C.ink))
-      preview:SetTextColor(ns.rgba(backdrop and C.dim or C.inkSoft))
       theme = ns.themeVersion
     end
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
     levels:SetText("Levels " .. sec.levels[1] .. "-" .. sec.levels[2])
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
+    local blocks = {}
     if row then
       title:SetText(Q.label(row.step))
       -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
-      local ready = run and ("|cffffd100Find a group for " .. run.title .. ": " .. runCount
-        .. " of its quests are in your log. Then press Run " .. run.title .. ".|r\n") or ""
-      detail:SetText(ready .. Q.detail(row.step, row.requiredFor, true))
+      if run then
+        blocks[1] = { kind = "note", tone = "gold", text = "Find a group for " .. run.title .. ": " .. runCount
+          .. " of its quests are in your log. Then press Run " .. run.title .. "." }
+      end
+      for _, b in ipairs(Q.detailBlocks(row.step, row.requiredFor, true)) do blocks[#blocks + 1] = b end
+      addPreview(blocks, row, i)
     else
       title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
-      detail:SetText(suggestion and "Try the suggested section below, or open Quests to choose another."
-        or "Open Quests to revisit a section or check for missed quests.")
+      blocks[1] = { kind = "text", text = suggestion and "Try the suggested section below, or open Quests to choose another."
+        or "Open Quests to revisit a section or check for missed quests." }
     end
-    -- Stack title, detail and preview by their real heights so long lines never overlap.
-    local detailY = 28 + math.max(14, title:GetStringHeight()) + 5
-    detail:ClearAllPoints()
-    detail:SetPoint("TOPLEFT", 16, -detailY)
-    local previewLines = row and previewText(row, i) or ""
-    for _, extra in ipairs({ pinnedText(), ns.partyText() }) do
-      if extra ~= "" then previewLines = previewLines ~= "" and (previewLines .. "\n\n" .. extra) or extra end
+    addTracking(blocks)
+    releaseAll()
+    cursor = 28 + math.max(14, title:GetStringHeight()) + 2
+    -- A story chain's place sits right under the step's name.
+    for _, b in ipairs(blocks) do
+      if b.kind == "chain" then putText(b.text, "dim") end
     end
-    preview:SetText(previewLines)
-    local previewY = detailY + detail:GetStringHeight() + 8
-    preview:ClearAllPoints()
-    preview:SetPoint("TOPLEFT", 16, -previewY)
+    cursor = cursor + 3
+    draw(blocks)
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
     nextButton.codexLabel = choosing and "Skip" or "Next"
@@ -881,7 +1096,7 @@ function ns.questRefresh()
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
-    viewer:SetHeight(math.max(140, previewY + preview:GetStringHeight() + (offer and 64 or 38)))
+    viewer:SetHeight(math.max(140, cursor + (offer and 64 or 38)))
     viewer:Show()
     painting = false
     paintArrow()
