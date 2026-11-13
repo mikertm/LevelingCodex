@@ -239,7 +239,7 @@ for _, step in ipairs({
   action("goto", bluffLift, "Follow the road south to Thunder Bluff and ride a lift up the mesa."),
   taxi("getfp", tal, "Thunder Bluff, Mulgore", "Learn the flight path from Tal on the central rise."),
   finish(94911, turak, "Druids: cross the bridges to Elder Rise and find Turak Runetotem."),
-  taxi("fly", tal, "Orgrimmar, Durotar", "Fly to Orgrimmar."),
+  taxi("fly", doras, "Orgrimmar, Durotar", "Fly to Orgrimmar."),
   taxi("getfp", doras, "Orgrimmar, Durotar", "Doras keeps the wind riders on the tower in the Valley of Strength."),
   finish(95350, thrall, "Cross the city west to Grommash Hold and speak to Thrall."),
   accept(98024, thrall),

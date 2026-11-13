@@ -58,6 +58,7 @@ def audit(data, ref, cap=20):
     if not game:
         return [("QUESTS", "error", "client reference is missing quest data")]
     ids, maps, flights = set(game["ids"]), game["maps"], set(game["flights"])
+    nodes = {node["name"]: node for node in (game.get("taxi") or {}).values()}
     for faction, route in data.items():
         # Empty Lua tables load as lists: read them as empty maps.
         route = {key: ({} if value == [] else value) for key, value in route.items()}
@@ -247,6 +248,19 @@ def audit(data, ref, cap=20):
                     continue
                 if kind in {"fly", "getfp"} and step.get("flight") not in flights:
                     fail(where, f"unknown flight path {step.get('flight')!r}")
+                # A Fly step sits at the destination's flight master (Q.flightStep keeps it current
+                # until you land there), and a getfp step at the flight master it teaches.
+                node = nodes.get(step.get("flight")) if kind in {"fly", "getfp"} else None
+                if node and step.get("x") is not None:
+                    extent = maps.get(str(node["map"]), {})
+                    off = None
+                    if step.get("map") == node["map"] and extent.get("width"):
+                        off = math.hypot((step["x"] - node["x"]) * extent["width"] / 100,
+                                         (step["y"] - node["y"]) * extent["height"] / 100)
+                    if step.get("map") != node["map"] or (off is not None and off > 60):
+                        fail(where, f"{kind} {step.get('flight')!r} must sit at that flight master "
+                                    f"(map {node['map']} {node['x']}, {node['y']}), not map {step.get('map')} "
+                                    f"{step.get('x')}, {step.get('y')}")
                 map_id = step.get("map")
                 if map_id is not None and str(map_id) not in maps:
                     fail(where, f"unknown map {map_id}")

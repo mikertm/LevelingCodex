@@ -675,7 +675,7 @@ do
     local wanted = step.quest and not skip[step.quest] and not step.class and not step.optional
       or (not step.quest and (step.type == "goto" or step.type == "getfp" and step.flight ~= "Undercity, Tirisfal"))
     if step.type == "hearth" then
-      steps[#steps + 1] = B.taxi("fly", town.karos, "Undercity, Tirisfal",
+      steps[#steps + 1] = B.taxi("fly", garrett, "Undercity, Tirisfal",
         "Fly to the Undercity from Karos Razok.")
     elseif wanted then
       if step.quest then kept[step.quest] = true end
