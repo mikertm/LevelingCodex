@@ -1551,6 +1551,13 @@ local function makeFrame()
     tabs[#tabs + 1] = b
     prev = b
   end
+  -- Too many tabs for the window's width: every tab shrinks by the same share (12 px overlap each).
+  local total, avail = -12 * (#tabs - 1), (tonumber(frame:GetWidth()) or 0) - 32
+  for _, b in ipairs(tabs) do total = total + (tonumber(b:GetWidth()) or 0) end
+  if avail > 0 and total > avail then
+    local share = (avail + 12 * (#tabs - 1)) / (total + 12 * (#tabs - 1))
+    for _, b in ipairs(tabs) do b:SetWidth(math.floor((tonumber(b:GetWidth()) or 0) * share)) end
+  end
 
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   -- after OnShow is set: the controller (Gamepad.lua) hooks it

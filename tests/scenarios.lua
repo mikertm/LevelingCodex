@@ -3164,7 +3164,7 @@ function S.bannerTest()
   end
 end
 
-local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Settings" }
+local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }
 
 local function openAt(level, tab)
   MOCK.level = level
@@ -6165,6 +6165,47 @@ function S.statsCounters()
   MOCK.advance(1)
   MOCK.closeMerchant()
   check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+end
+
+-- The Stats tab: this session, level splits, gold, activity and zones; two clicks reset.
+function S.statsTab()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 0)
+  MOCK.advance(2)
+  slash("")
+  click(win(), "Stats")
+  local text = MOCK.textUnder(win())
+  for _, head in ipairs({ "THIS SESSION", "LEVEL SPLITS", "GOLD", "ACTIVITY", "ZONES" }) do
+    check(text:find(head, 1, true), "the Stats tab has " .. head)
+  end
+  check(questText(win(), "Quests turned in"), "counts show")
+  check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
+  click(win(), "Reset stats")
+  click(win(), "Click again to reset")
+  check(LevelingCodexCharDB.stats.totals.quests == 0, "two clicks reset the saved stats")
+end
+
+-- Nine tabs fit along the bottom of the window (they shrink when the labels are too wide).
+function S.tabRowFits()
+  S.login()
+  slash("")
+  local frame, tabs, left, right = win(), {}, nil, nil
+  for _, b in ipairs({ frame:GetChildren() }) do
+    if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
+  end
+  check(#tabs == 9, "nine tabs (" .. #tabs .. ")")
+  local total = 0
+  for _, b in ipairs(tabs) do total = total + b:GetWidth() end
+  total = total - 12 * (#tabs - 1)
+  check(total <= frame:GetWidth() - 32 + 0.5, "the tab row fits under the window: " .. total .. " of " .. frame:GetWidth())
+end
+
+-- Without saved data the tab says it counts from login.
+function S.statsTabLost()
+  slash("")
+  click(win(), "Stats")
+  check(questText(win(), "Counting since you logged in"), "without saved data the tab says what it counts")
 end
 
 -- Vendor: a quest in your log that needs a vendor item, next to the step that buys it, counts once.
