@@ -40,6 +40,7 @@ QuestHordeClassDruidShaman.lua
 QuestHordeClass3060.lua
 QuestClassData.lua
 QuestMobData.lua
+QuestShopData.lua
 QuestDangerData.lua
 QuestFlightData.lua
 Theme.lua

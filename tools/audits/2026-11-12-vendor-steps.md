@@ -24,6 +24,23 @@ Auction House steps stay text only, because no vendor sells their items:
 Unchanged:
 - The Horde Soothing Spices steps (`QuestHorde3040.lua`, Xen'to in Orgrimmar and Tarban Hearthgrain at the Crossroads) already had `{ item = 3713, count = 3 }`.
 
+## Generated: vendor-only quest items (`QuestShopData.lua`)
+
+`tools/questshop.py` takes each route quest's QuestieDB item objectives and keeps the items that a vendor sells and nothing drops, with the count from the quest's objective text. A text with no number gives 1. The card then uses the quest log's count once the quest is accepted. First run, 10 quests:
+
+| Quest | Item | Count | Note |
+|---|---|---|---|
+| 90 Seasoned Wolf Kabobs | 2665 Stormwind Seasoning Herbs | 1 | |
+| 375 The Chill of Death | 2320 Coarse Thread | 1 | |
+| 384 Beer Basted Boar Ribs | 2894 Rhapsody Malt | 1 | |
+| 555 Soothing Turtle Bisque | 3713 Soothing Spices | 1 | the text says "some" |
+| 565 Bartolo's Yeti Fur Cloak | 2321 Fine Thread | 1 | |
+| 654 Tanaris Field Sampling | 8523 Field Testing Kit | 1 | QuestieDB lists a vendor; worth a look in game |
+| 1218 Soothing Spices | 3713 Soothing Spices | 3 | |
+| 2609 The Touch of Zanzil | 3421 Simple Wildflowers, 3372 Leaded Vial | 1, 1 | |
+| 5518 The Gordok Ogre Suit | 14341 Rune Thread | 2 | |
+| 99050 (Forever quest) | 3371 Crystal Vial | 1 | |
+
 ## For the guide pages
 
 Each step's text is unchanged, and the item data only feeds the add-on. No guide-page edits are needed unless the pages list item IDs.

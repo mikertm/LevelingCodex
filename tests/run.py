@@ -273,8 +273,8 @@ def data_checks():
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
-    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_danger_checks() + quest_flight_checks()
-            + choice_errors + release_notes_checks(), warnings + prof_warnings + game_warnings + choice_warnings)
+    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_shop_checks() + quest_danger_checks()
+            + quest_flight_checks() + choice_errors + release_notes_checks(), warnings + prof_warnings + game_warnings + choice_warnings)
 
 
 def quest_choice_checks():
@@ -406,6 +406,38 @@ def quest_mob_checks():
         for name in values:
             if not isinstance(name, str) or not name.strip() or any(ord(c) > 127 for c in name) or re.search(r"[\n/;]", name):
                 errors.append(where + ": bad creature name %r" % (name,))
+    return errors
+
+
+def quest_shop_checks():
+    """QuestShopData.lua (tools/questshop.py): quest ID -> 1-6 { itemID, count } vendor-only items."""
+    errors = []
+    path = os.path.join(ROOT, "QuestShopData.lua")
+    if not os.path.exists(path):
+        return ["quest shop: QuestShopData.lua missing"]
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    lua.execute("local f = ...; f('LevelingCodex', select(2, ...))",
+                lua.eval("loadstring")(open(path, encoding="utf-8").read()), ns)
+    shop = ns["questShop"]
+    if lupa.lua_type(shop) != "table":
+        return ["quest shop: QuestShopData.lua sets no ns.questShop"]
+    for quest, items in shop.items():
+        where = "quest shop %s" % quest
+        if not isinstance(quest, int) or lupa.lua_type(items) != "table":
+            errors.append(where + ": expected [questID] = { { itemID, count } }")
+            continue
+        pairs = list(items.values())
+        if not 1 <= len(pairs) <= 6:
+            errors.append(where + ": %d items (1-6 expected)" % len(pairs))
+        for pair in pairs:
+            values = list(pair.values()) if lupa.lua_type(pair) == "table" else []
+            if (len(values) != 2 or not isinstance(values[0], int) or values[0] < 1
+                    or not isinstance(values[1], int) or not 1 <= values[1] <= 100):
+                errors.append(where + ": bad item entry %r" % (values,))
+    spices = shop[1218]
+    if lupa.lua_type(spices) != "table" or [list(p.values()) for p in spices.values()] != [[3713, 3]]:
+        errors.append("quest shop: quest 1218 (Soothing Spices) should hold { 3713, 3 }")
     return errors
 
 
