@@ -210,8 +210,91 @@ local function update()
   end
 end
 
+----------------------------------------------------------------------------
+-- World map: the same pins (current 20 px, next ones 14 px with a number) on the map canvas, for
+-- the steps on the map it shows; hovering one shows the step. Redrawn when the map opens, changes
+-- map, and on every refresh while it's open. The game's own waypoint still marks the current step.
+----------------------------------------------------------------------------
+
+local wpins, hooked
+
+local function worldPin(size)
+  local b = CreateFrame("Button", nil, wpins)
+  b:SetSize(size, size)
+  b.icon = b:CreateTexture(nil, "ARTWORK")
+  b.icon:SetPoint("CENTER")
+  b:SetScript("OnEnter", function(self)
+    if not (GameTooltip and self.step) then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(Q.plain(Q.label(self.step)))
+    if type(self.step.text) == "string" then GameTooltip:AddLine(Q.plain(self.step.text), 1, 1, 1, true) end
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  b:Hide()
+  return b
+end
+
+local function canvas()
+  local frame = WorldMapFrame
+  local scroll = type(frame) == "table" and frame.ScrollContainer
+  return frame, type(scroll) == "table" and scroll.Child or nil
+end
+
+function M.drawWorld()
+  local frame, child = canvas()
+  if not child then return end
+  if not wpins then
+    wpins = CreateFrame("Frame", "LevelingCodexWorldMapPins", child)
+    wpins:SetAllPoints(child)
+    wpins:SetFrameLevel((tonumber(child:GetFrameLevel()) or 1) + 20)
+    wpins.current = worldPin(20)
+    wpins.next = { worldPin(14), worldPin(14) }
+    for n, pin in ipairs(wpins.next) do
+      pin.label = pin:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+      pin.label:SetPoint("TOPLEFT", pin, "BOTTOMRIGHT", -4, 4)
+      pin.label:SetText(tostring(n))
+    end
+  end
+  wpins.current:Hide()
+  for _, pin in ipairs(wpins.next) do pin:Hide() end
+  local viewer = _G.LevelingCodexQuestViewer
+  local row, i = Q.current()
+  if ns.db().noWorldMapSteps or not row or not frame:IsShown() or not (viewer and viewer:IsShown()) then
+    wpins:Hide()
+    return
+  end
+  local shown = Q.try(frame.GetMapID, frame)
+  local w, h = tonumber(child:GetWidth()) or 0, tonumber(child:GetHeight()) or 0
+  local function put(pin, step, size, dot)
+    local spot = Q.waypoint(step)
+    if not (spot and spot.map == shown and spot.x and spot.y) then return end
+    pin.step = step
+    paintIcon(pin.icon, step, size, dot)
+    pin:ClearAllPoints()
+    pin:SetPoint("CENTER", child, "TOPLEFT", spot.x / 100 * w, -spot.y / 100 * h)
+    pin:Show()
+  end
+  put(wpins.current, row.step, 20, 10)
+  for n, nextRow in ipairs(Q.upcoming(i, 2)) do put(wpins.next[n], nextRow.step, 14, 7) end
+  wpins:Show()
+end
+
+local function hookWorldMap()
+  local frame = canvas()
+  if hooked or type(frame) ~= "table" then return end
+  hooked = true
+  if type(frame.HookScript) == "function" then pcall(frame.HookScript, frame, "OnShow", function() M.drawWorld() end) end
+  if type(frame.OnMapChanged) == "function" and type(hooksecurefunc) == "function" then
+    pcall(hooksecurefunc, frame, "OnMapChanged", function() M.drawWorld() end)
+  end
+end
+
 -- Rebuild the pins for the current step (QuestGuide's refresh calls this).
 function M.refresh()
+  hookWorldMap()
+  local frame = canvas()
+  if type(frame) == "table" and frame:IsShown() then M.drawWorld() end
   if not Minimap then return end
   if not pins then
     makePins()

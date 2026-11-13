@@ -1239,6 +1239,8 @@ renderers.settings = function()
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
   tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
     "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
+  tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,
+    "Pins for the current step and the next two on your world map; hover one for its step.")
   tick("Dotted line to the step", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
     "Gold dots on the minimap drift from you toward the current step.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)

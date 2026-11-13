@@ -723,6 +723,15 @@ function IsIndoors() return MOCK.indoors or false end
 MOCK.cvars = {}
 function GetCVar(name) return MOCK.cvars and MOCK.cvars[name] end
 
+-- The world map: a canvas (ScrollContainer.Child, 1002 x 668) showing MOCK.worldMapID.
+WorldMapFrame = CreateFrame("Frame", "WorldMapFrame", UIParent)
+WorldMapFrame:Hide()
+WorldMapFrame.ScrollContainer = CreateFrame("Frame", nil, WorldMapFrame)
+WorldMapFrame.ScrollContainer.Child = CreateFrame("Frame", nil, WorldMapFrame.ScrollContainer)
+WorldMapFrame.ScrollContainer.Child:SetSize(1002, 668)
+function WorldMapFrame:GetMapID() return MOCK.worldMapID end
+function WorldMapFrame:OnMapChanged() end
+
 -- The vendor window (MOCK.openMerchant shows it).
 MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
 MerchantFrame:SetSize(336, 447)
@@ -1392,7 +1401,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
-  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame" }
+  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

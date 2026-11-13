@@ -737,6 +737,29 @@ function S.minimapPins()
   check(not pins:IsShown(), "and the pins")
 end
 
+-- World map: numbered pins for the current and next steps on the map the world map shows.
+function S.worldMapPins()
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.worldMapID = 1429
+  WorldMapFrame:Show()
+  local pins = _G.LevelingCodexWorldMapPins
+  check(pins and pins:IsShown() and pins.current:IsShown(), "the current step shows on the world map")
+  local _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(x - 482.66) < 1 and math.abs(y + 286.84) < 1, "at the step's spot on the map")
+  check(pins.next[1]:IsShown(), "the next step gets a numbered pin")
+  MOCK.fire(pins.current, "OnEnter")
+  check(GameTooltip._lines[1] and GameTooltip._lines[1]:find("A Threat Within", 1, true), "hovering names the step")
+  MOCK.fire(pins.current, "OnLeave")
+  MOCK.worldMapID = 1453
+  WorldMapFrame:OnMapChanged()
+  check(not pins.current:IsShown(), "another map hides the pins")
+  MOCK.worldMapID = 1429
+  LevelingCodexDB.noWorldMapSteps = true
+  WorldMapFrame:OnMapChanged()
+  check(not pins:IsShown(), "the setting turns them off")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
