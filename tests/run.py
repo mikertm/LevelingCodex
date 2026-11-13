@@ -272,8 +272,28 @@ def data_checks():
                                         % (step, at, m.lo, at - 1))
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
+    choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_danger_checks() + quest_flight_checks()
-            + release_notes_checks(), warnings + prof_warnings + game_warnings)
+            + choice_errors + release_notes_checks(), warnings + prof_warnings + game_warnings + choice_warnings)
+
+
+def quest_choice_checks():
+    """Each faction has a leveling guide for every level 30-60, and the owner asked for at least three
+    choices (main route plus alternates) at each of those levels: a gap fails, fewer than three warns."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    import questroute
+    data = gamedata.load_lua_global(questroute.ROUTES, "LevelingCodexQuests")
+    errors, warnings = [], []
+    for faction in ("ALLIANCE", "HORDE"):
+        sections = [s for s in data[faction]["sections"] if not s.get("side")]
+        for level in range(30, 61):
+            count = sum(1 for s in sections if s["levels"][0] <= level <= s["levels"][1])
+            if count == 0:
+                errors.append("quest route %s: no leveling guide covers level %d" % (faction, level))
+            elif count < 3:
+                warnings.append("quest route %s: only %d leveling guide(s) cover level %d" % (faction, count, level))
+    return errors, warnings
 
 
 def release_notes_checks():
@@ -318,7 +338,8 @@ def quest_flight_checks():
             if nodes[link] is None:
                 errors.append(where + ": links to unknown flight point %s" % link)
     # The route's flight steps name flight points as the flight map shows them.
-    for path in sorted(glob.glob(os.path.join(ROOT, "Quest*Data.lua")) + glob.glob(os.path.join(ROOT, "QuestHorde*.lua"))):
+    for path in sorted(set(glob.glob(os.path.join(ROOT, "Quest*Data.lua")) + glob.glob(os.path.join(ROOT, "QuestData*.lua"))
+                           + glob.glob(os.path.join(ROOT, "QuestDungeonData*.lua")) + glob.glob(os.path.join(ROOT, "QuestHorde*.lua")))):
         text = open(path, encoding="utf-8").read()
         for m in re.finditer(r'taxi\("(?:getfp|fly)", [^,]+, "([^"]+)"', text):
             if m.group(1) not in names:
@@ -718,9 +739,9 @@ def main():
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
-                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questWetlandsEarly", "questWetlandsDig", "questStepChecklist",
+                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questWetlandsEarly", "questRouteEnd", "questStranglethornRoad", "questWetlandsDig", "questStepChecklist",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
-                             "questStartHordeOrc", "questStartHordeTroll", "questStartHordeTauren", "questStartHordeScourge", "questStartHordeSkyborne", "questHordeSkyborne", "questHordeBarrens", "questHordeSilverpine",
+                             "questStartHordeOrc", "questStartHordeTroll", "questStartHordeTauren", "questStartHordeScourge", "questStartHordeSkyborne", "questHordeSkyborne", "questHordeBarrens", "questHordeSilverpine", "questHordeStranglethorn", "questHordeRouteEnd", "questHordeDungeon",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",

@@ -844,8 +844,10 @@ local function localSection(map)
     if not section.side and not section.manual and section.zone == map and level <= section.levels[2]
         and hasSectionWork(section, map) then
       if levelFits(section) then return section end
-      -- The first pickups can open before the section's recommended level.
-      early = early or section
+      -- The first pickups can open before the section's recommended level, but only a level
+      -- ahead: a zone visited twice (Duskwood at 24 and 30, Hillsbrad at 23 and 30) must not
+      -- pull a level 28 into its later chapter past the route's own next section.
+      if level + 1 >= section.levels[1] then early = early or section end
     end
   end
   return early

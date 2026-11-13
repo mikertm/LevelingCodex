@@ -611,9 +611,9 @@ for _, section in ipairs({
   { id = "stonetalon-sunrock", title = "Stonetalon: Sun Rock", zone = M.stonetalon, levels = { 25, 27 }, steps = stonetalon },
   { id = "ashenvale-splintertree", title = "Ashenvale: Splintertree", zone = M.ashenvale, levels = { 26, 28 }, steps = ashenvale },
   { id = "thousand-needles", title = "Thousand Needles", zone = M.needles, levels = { 28, 30 }, steps = needles,
-    suggest = { "shimmering-flats" } },
+    suggest = { "shimmering-flats", "stv-30", "desolace-31" } },
   { id = "shimmering-flats", title = "Shimmering Flats", zone = M.needles, levels = { 29, 31 }, steps = flats,
-    alternate = true },
+    alternate = true, suggest = { "hillsbrad-30", "stv-30", "desolace-31" } },
 }) do
   section.verified, section.sources = false, sources
   route.sections[#route.sections + 1] = section

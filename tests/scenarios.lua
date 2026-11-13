@@ -131,7 +131,7 @@ function S.questPastRoute()
   MOCK.level = 31
   S.login()
   slash("quests")
-  check(questText(win(), "No route covers level 31"), "level 31 is beyond milestone coverage")
+  check(questText(win(), "Darkshire: Mor'Ladim and the Worgen"), "level 31 lists the Darkshire chapter")
   click(win(), "Wetlands")
   check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
   click(win(), "Elwynn Forest")
@@ -1880,10 +1880,11 @@ function S.questWetlands()
 end
 
 function S.questWetlandsTravel()
-  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1431
+  -- Redridge, not Duskwood: at 28 Duskwood now offers the Darkshire chapter's first pickups.
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1433
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Duskwood the Wetlands section starts with the way there")
+  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Redridge the Wetlands section starts with the way there")
   click(frame, "Next")
   check(questText(frame, "The Doomed Fleet"), "Bishop Farthing's pickup in Stormwind follows the flight")
   click(frame, "Next")
@@ -1904,6 +1905,33 @@ function S.questWetlandsEarly()
   check(questText(frame, "Accept - The Absent Minded Prospector"), "the Menethil pickups follow the bind")
   click(frame, "Next")
   check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
+end
+
+function S.questStranglethornRoad()
+  -- A 30-60 map: the arrow knows its size, and from Duskwood it names the road south.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 38.5, 5.0
+  -- Everything the route picks up before this point is done.
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if not section.side and not section.alternate then
+      for _, step in ipairs(section.steps) do
+        if section.id == "stv-36" and step.quest == 203 then break end
+        if step.type == "accept" and step.quest then MOCK.questDone[step.quest] = true end
+      end
+      if section.id == "stv-36" then break end
+    end
+  end
+  MOCK.questLog = { { questID = 203, objectives = { { text = "Kurzen Jungle Fighters 3/15" } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 36-38"), "Stranglethorn resumes its 36-38 guide")
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, " yd"), "the Stranglethorn waypoint shows a distance")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 44.0, 80.0
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
 end
 
 local TICK = "Interface\\RaidFrame\\ReadyCheck-Ready"
@@ -1977,7 +2005,7 @@ function S.questWetlandsDig()
 end
 
 function S.questWetlandsEnd()
-  -- The Wetlands section ends in Auberdine: Nord'el for Thundris after the Stormwind turn-ins.
+  -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
   MOCK.questLog = { { questID = 98209, isComplete = true } }
   S.login()
@@ -1985,16 +2013,32 @@ function S.questWetlandsEnd()
   click(win(), "Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Bloom of the Heavens"), "resume at the final Wetlands turn-in")
-  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  check(not questText(frame, "Last step in this guide"), "the Wetlands turn-in is no longer the end of the route")
   MOCK.questDone[98209], MOCK.questLog = true, {}
   MOCK.event("QUEST_TURNED_IN", 98209)
+  check(frame:IsShown() and questText(frame, "Auberdine - Stormwind Harbor"), "the route continues with the ship to Stormwind")
+  check(questText(frame, "Darkshire"), "the next guide is the Darkshire chapter")
+end
+
+function S.questRouteEnd()
+  -- The leveling route ends in Moonglade at 60: Umber's last hand-in is the final step.
+  MOCK.level, MOCK.questMap = 60, 1450
+  MOCK.questLog = { { questID = 1185, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "resume at the last turn-in of the route")
+  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  MOCK.questDone[1185], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 1185)
   check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the guide shows its ending after the turn-in")
   check(not findButton(frame, function(label) return label == "Next" end), "the ending has no dead Next button")
   click(frame, "Hide")
   click(win(), "Show step window")
   check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the end card can be reopened")
   click(frame, "Back")
-  check(questText(frame, "Turn in - Bloom of the Heavens"), "Back can review the final step")
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "Back can review the final step")
 end
 
 
@@ -2055,6 +2099,44 @@ function S.questHordeBarrens()
   check(routeHas("Journey to the Crossroads") and not routeHas("Crossroads Conscription"),
     "Tauren turn in their own arrival quest, not the Durotar one")
   MOCK.faction = nil
+end
+
+-- Horde 30-60: a level 36 in Stranglethorn resumes its 35-37 chapter, the route ends at Karus in
+-- Orgrimmar at 60, and the Horde's own Zul'Farrak guide opens at the door.
+function S.questHordeStranglethorn()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Troll", 36, 1434, 32.0, 28.0
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"),
+    "a level 36 Troll at Grom'gol follows the Horde Stranglethorn chapter")
+  click(frame, "Next")
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"), "Next stays in the chapter")
+  MOCK.faction = nil
+end
+
+function S.questHordeRouteEnd()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 60, 1454
+  MOCK.questLog = { { questID = 4511, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Calm Before the Storm") and questText(frame, "Last step in this guide"),
+    "the Horde route's last step is the Calm Before the Storm hand-in")
+  MOCK.questDone[4511], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 4511)
+  check(questText(frame, "End of the leveling guide"), "the Horde guide shows its ending at 60")
+  MOCK.faction = nil
+end
+
+function S.questHordeDungeon()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 46, nil
+  MOCK.instanceName, MOCK.instanceID = "Zul'Farrak", 209
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Boss - Antu'sul") and chatHas("Zul'Farrak: the step window follows its guide"),
+    "zoning into Zul'Farrak opens the Horde guide at its first boss")
+  MOCK.faction, MOCK.instanceName, MOCK.instanceID = nil, nil, nil
 end
 
 local function classSideFixture()
