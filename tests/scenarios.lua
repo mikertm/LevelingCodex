@@ -626,6 +626,40 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- The quest arrow: drag it anywhere, Ctrl+wheel resizes it, lock and reset; it hides with the window.
+function S.arrowMove()
+  LevelingCodexDB = { questArrowScale = 9 }
+  S.login()
+  local arrow, frame = _G.LevelingCodexQuestArrow, questViewer()
+  check(arrow:GetParent() == UIParent and arrow:IsShown(), "the arrow lives on its own")
+  check(math.abs(arrow:GetScale() - 2) < 0.001, "a saved scale out of bounds is held at 200%")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Reset arrow")
+  win():Hide()
+  local _, rel = arrow:GetPoint()
+  check(rel == frame and math.abs(arrow:GetScale() - 1) < 0.001, "unmoved, it sits above the step window at 100%")
+  check(select(3, frame:GetClampRectInsets()) >= 76, "the window keeps room for it on screen")
+  MOCK.drag(arrow, 100, 50)
+  local p = LevelingCodexDB.questArrowPos
+  _, rel = arrow:GetPoint()
+  check(p and rel == UIParent, "dragging puts it anywhere and saves the spot")
+  check(select(3, frame:GetClampRectInsets()) == 0, "a moved arrow no longer pads the window")
+  MOCK.ctrl = true
+  MOCK.fire(arrow, "OnMouseWheel", 1)
+  check(math.abs(arrow:GetScale() - 1.1) < 0.001 and LevelingCodexDB.questArrowScale, "Ctrl+wheel resizes it")
+  MOCK.fire(arrow, "OnMouseWheel", -1)
+  MOCK.ctrl = false
+  MOCK.fire(arrow, "OnMouseWheel", 1)
+  check(math.abs(arrow:GetScale() - 1) < 0.001, "the wheel alone leaves the size")
+  LevelingCodexDB.questArrowLocked = true
+  local x = p[3]
+  MOCK.drag(arrow, 30, 30)
+  check(LevelingCodexDB.questArrowPos[3] == x, "a locked arrow stays put")
+  click(frame, "Hide")
+  check(not arrow:IsShown(), "it hides with the step window")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do

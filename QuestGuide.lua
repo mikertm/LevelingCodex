@@ -116,6 +116,7 @@ local function makeViewer()
   end)
   viewer:HookScript("OnHide", function()
     if not painting then dismissed = true end
+    if arrow then arrow:Hide() end
   end)
   viewer:Hide()
   place()
@@ -167,21 +168,70 @@ local function makeViewer()
   end, 35)
 
   -- No box: a rotating arrow over the world with the distance under it, like the game's own pointers.
-  arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", viewer)
-  arrow:SetSize(320, 70)
-  arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 6)
+  -- It has its own spot once dragged (db.questArrowPos); until then it sits above the step window.
+  -- Only the 48 px arrow takes the mouse, so the camera still turns around it.
+  arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", UIParent)
+  arrow:SetSize(48, 48)
+  arrow:SetFrameStrata("MEDIUM")
+  arrow:SetMovable(true)
+  arrow:SetClampedToScreen(true)
+  arrow:EnableMouse(true)
+  arrow:RegisterForDrag("LeftButton")
+  try(arrow.EnableMouseWheel, arrow, true)
+  arrow:Hide()
   arrowArt = arrow:CreateTexture(nil, "ARTWORK")
-  arrowArt:SetSize(48, 48)
-  arrowArt:SetPoint("TOP", 0, 0)
+  arrowArt:SetAllPoints()
   if A.hasFile(ARROW_TEXTURE) then arrowFile = ARROW_TEXTURE; arrowArt:SetTexture(arrowFile) end
   arrowText = arrow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  arrowText:SetPoint("BOTTOM", 0, 0)
+  arrowText:SetPoint("TOP", arrow, "BOTTOM", 0, -2)
   arrowText:SetWidth(320)
   arrowText:SetJustifyH("CENTER")
   arrowText:SetWordWrap(true)
   try(arrowText.SetShadowColor, arrowText, 0, 0, 0, 1)
   try(arrowText.SetShadowOffset, arrowText, 1, -1)
   arrow:SetScript("OnUpdate", turnArrow)
+  arrow:SetScript("OnDragStart", function(self)
+    if not ns.db().questArrowLocked then self:StartMoving() end
+  end)
+  arrow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local point, _, relative, x, y = self:GetPoint()
+    if point and not ns.db().questArrowLocked then ns.db().questArrowPos = { point, relative or point, x or 0, y or 0 } end
+    ns.placeQuestArrow()
+  end)
+  arrow:SetScript("OnMouseWheel", function(_, delta)
+    if not try(IsControlKeyDown) then return end
+    local db = ns.db()
+    local scale = (tonumber(db.questArrowScale) or 1) + ((tonumber(delta) or 0) > 0 and 0.1 or -0.1)
+    db.questArrowScale = math.floor(math.max(0.6, math.min(2, scale)) * 10 + 0.5) / 10
+    ns.placeQuestArrow()
+  end)
+  arrow:SetScript("OnEnter", function(self)
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Quest arrow")
+    GameTooltip:AddLine("Drag to move it. Ctrl+mouse wheel changes its size.", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  arrow:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  ns.placeQuestArrow()
+end
+
+-- The arrow's spot: the saved one (and then the step window no longer keeps room above itself for
+-- it), else above the step window; its size from db.questArrowScale (60-200%).
+function ns.placeQuestArrow()
+  if not arrow then return end
+  local db = ns.db()
+  local p = db.questArrowPos
+  arrow:ClearAllPoints()
+  if type(p) == "table" and type(p[1]) == "string" then
+    arrow:SetPoint(p[1], UIParent, type(p[2]) == "string" and p[2] or p[1], tonumber(p[3]) or 0, tonumber(p[4]) or 0)
+    try(viewer.SetClampRectInsets, viewer, 0, 0, 0, 0)
+  else
+    arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 28)
+    try(viewer.SetClampRectInsets, viewer, 0, 0, 76, 0)
+  end
+  arrow:SetScale(math.max(0.6, math.min(2, tonumber(db.questArrowScale) or 1)))
 end
 
 -- The flight timer: where you're flying (the node TakeTaxiNode took), how long you've flown and,
@@ -258,7 +308,10 @@ local function paintCorpse(corpse)
 end
 
 local function paintArrow()
-  if not viewer or not viewer:IsShown() then return end
+  if not viewer or not viewer:IsShown() then
+    if arrow then arrow:Hide() end
+    return
+  end
   local row = Q.current()
   local goal = row and row.step
   arrowBearing = nil

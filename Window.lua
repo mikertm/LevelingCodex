@@ -1191,6 +1191,21 @@ renderers.settings = function()
   tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
     "A button below the item button that targets the current step's quest giver, or the creatures its objectives need. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+  tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,
+    "Drag the arrow to put it anywhere on screen; Ctrl+mouse wheel over it changes its size. Locked, it stays where it is.")
+  T("Arrow size", 0, y + 4, 90, "body", C.light)
+  local function arrowSize(step)
+    db.questArrowScale = math.floor(math.max(0.6, math.min(2, (tonumber(db.questArrowScale) or 1) + step)) * 10 + 0.5) / 10
+    ns.placeQuestArrow()
+  end
+  row("-", 90, 28, false, function() arrowSize(-0.1) end)
+  T(math.floor((tonumber(db.questArrowScale) or 1) * 100 + 0.5) .. "%", 122, y + 4, 50, "body", C.gold, "CENTER")
+  row("+", 176, 28, false, function() arrowSize(0.1) end)
+  row("Reset arrow", 216, 120, false, function()
+    db.questArrowPos, db.questArrowScale = nil, nil
+    ns.placeQuestArrow()
+  end, "Puts the arrow back above the step window at its normal size.")
+  y = y + 36
   if ns.questie.usable() then
     tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
       db.noNearestSpawn = not db.noNearestSpawn
