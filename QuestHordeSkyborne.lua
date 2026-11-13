@@ -78,6 +78,7 @@ local aarnor = z("Aarnor Galestrike", 43.45, 44.87)
 local riaani = z("Riaani Nightwind", 59.06, 72.98)
 local ayessa = z("Ayessa Dawnsinger", 59.15, 79.77)
 local sessaria = z("Sessaria Skystride", 58.31, 78.51)
+local endaria = z("Endaria Mistgaze", 58.13, 78.32)
 local olariaan = z("Olariaan Swiftburn", 51.24, 86.19)
 local airship = z("Windshaper airship dock", 57.92, 80.78)
 local alaana = at("Alaana Stormwalker", 33.39, 22.51, M.mulgore)
@@ -101,6 +102,9 @@ q(92700, "The Grand Skyseer", 9, 6, 92579, true)
 q(93735, "The Broken Construct", 9, 6, 92700, true)
 q(93737, "The Broken Construct", 9, 6, 93735, true)
 q(93738, "The Broken Construct", 9, 6, 93737, true)
+-- Unwelcome Spirits: its essences come from the Wind Hollows the route already kills for the
+-- Strange Hermit (tools/audits/2026-11-12-alliance-1-12.md).
+q(93736, "Unwelcome Spirits", 9, 6, nil, true)
 q(97243, "Call of Fire", 10, 10, nil, true, "SHAMAN")
 q(97244, "Call of Fire", 10, 10, 97243, true, "SHAMAN")
 q(97245, "Call of Fire", 10, 10, 97244, true, "SHAMAN")
@@ -110,7 +114,7 @@ q(94911, "Child of Nature", 10, 10, nil, true, "DRUID")
 q(98024, "Journey to the Crossroads", 13, 7, 95350, true)
 -- Windshaper-only steps are for Horde Skyborne.
 for _, id in ipairs({ 92484, 92466, 92467, 92468, 92598, 92514, 92595, 94411, 92579, 92700, 93735, 93737,
-    93738, 97243, 97244, 97245, 97257, 95350, 94911, 98024 }) do
+    93738, 93736, 97243, 97244, 97245, 97257, 95350, 94911, 98024 }) do
   quest[id].race = "SKYBORNE"
 end
 
@@ -150,11 +154,13 @@ insert(shendar, "turnin", 92472, {
     "Illaya Amberwind", "Coriella Calmbreeze"),
 })
 insert(shendar, "accept", 92517, { finish(92514, zi.aonda) }, true)
-insert(shendar, "turnin", 93319, {
+-- The High Order camp lies between the village and the bandit cave: beat the apprentices on the
+-- way back from the cave, then hand in at Teeri, Zerril and Illaya in one pass.
+insert(shendar, "complete", 93319, {
   objective(94411, z(nil, 45.8, 39.3),
-    "Go north of the village to the High Order camp. Defeat six High Order Apprentices.", "6 High Order Apprentices"),
-  finish(94411, illaya),
+    "On the way back to the village, stop at the High Order camp. Defeat six High Order Apprentices.", "6 High Order Apprentices"),
 })
+insert(shendar, "turnin", 96646, { finish(94411, illaya) })
 insert(shendar, "accept", 93948, {
   accept(92579, zi.aonda, "Take Aonda's report for Valennia in Valanaar."),
 }, true)
@@ -168,6 +174,7 @@ insert(valanaar, "turnin", 93948, {
   finish(92579, zi.valennia), accept(92700, zi.valennia),
   finish(92700, ayessa, "Grand Skyseer Ayessa stands on the south side of town."),
   accept(93735, ayessa),
+  accept(93736, endaria, "Endaria Mistgaze stands a short walk north-west of Ayessa. Her essences come from the Wind Hollows in Shadowgale Forest, later on."),
   finish(93735, riaani, "Riaani Nightwind is on the west side of Valanaar."), accept(93737, riaani),
   part(93737, 1, riaani, "Listen to Riaani.", "Listen to Riaani Nightwind"),
   part(93737, 2, z(nil, 52.75, 64.73),
@@ -202,6 +209,18 @@ insert(valanaar, "complete", 93317, {
     "Follow the water north to Windsong Lake. Kill Windsong Crawlers until one gives up the Enchanted Gyrozephyr.",
     "Enchanted Gyrozephyr"),
 })
+local essences = along(objective(93736, z(nil, 58.2, 32.8), "Loot Wind Hollow Essences from the same Wind Hollows. Use Next if they drop too slowly.",
+  "10 Wind Hollow Essences"), 93172)
+essences.mobs = { "Wind Hollow" } -- QuestieDB has no drop data for the essence
+insert(valanaar, "complete", 93172, { essences })
+-- Shamans finish the orchard trip at the brazier in Valanaar (Call of Fire), so the hearth back
+-- from the orchard is for the other classes: a Shaman would spend the hearthstone needed after Shadowgale.
+for _, step in ipairs(valanaar) do
+  if step.type == "hearth" then
+    step.class = { "WARRIOR", "HUNTER", "ROGUE", "DRUID" }
+    break
+  end
+end
 -- Copied texts that mention Alliance-only quest items.
 for _, step in ipairs(valanaar) do
   if step.type == "complete" and step.quest == 94487 then
@@ -212,6 +231,7 @@ for _, step in ipairs(valanaar) do
 end
 for _, step in ipairs({
   finish(93737, riaani), accept(93738, riaani),
+  finish(93736, endaria, "Bring the essences to Endaria Mistgaze on your way to Ayessa."),
   finish(93738, ayessa),
   action("boat", airship, "Board the Windshaper airship at the dock below Ayessa. It lands in northern Mulgore."),
   accept(95350, alaana, "Alaana Stormwalker meets you where the airship lands."),
@@ -240,6 +260,8 @@ local sources = {
   "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
 }
 route.starts.SKYBORNE = "zephras"
+-- Zephras Isle's size in yards (as in the Alliance route): the arrow's yards and the loop check need it.
+route.extents[M.zephras] = { 5562.5, 3708.333 }
 for _, section in ipairs({
   { "zephras", "Thendal Grove", 1, 5, thendal, trainers(zi.thendalTrainers, { "SHAMAN", boro }) },
   { "shendar", "Shen'dar Village", 5, 9, shendar, trainers(zi.shendarTrainers, { "SHAMAN", aarnor }) },
