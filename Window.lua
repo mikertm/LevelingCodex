@@ -663,6 +663,92 @@ end
 
 local renderers = {}
 
+-- The pace card's pieces: durations, counts and the colours of the XP bar and the XP sources.
+local XP_FILL, RESTED_FILL, BAR_TRACK = { 0.58, 0.31, 0.75, 1 }, { 0.25, 0.4, 0.85, 1 }, { 0.05, 0.05, 0.08, 0.9 }
+local SOURCE_COLORS = { { 0.88, 0.7, 0.29, 1 }, { 0.77, 0.33, 0.29, 1 }, { 0.36, 0.45, 0.46, 1 } }
+local function duration(seconds)
+  local minutes = math.floor((tonumber(seconds) or 0) / 60 + 0.5)
+  if minutes < 60 then return minutes .. " min" end
+  return math.floor(minutes / 60) .. " h " .. (minutes % 60) .. " min"
+end
+local function plural(n, word) return n .. " " .. word .. (n == 1 and "" or "s") end
+
+-- YOUR PACE for level V: on your own level the XP bar (rested in blue) and the time to the next
+-- level at this session's rate; the time spent on V, its XP by source and the last three levels.
+local function paceCard(V, y)
+  local S, me = ns.stats, tonumber(UnitLevel("player")) or 1
+  local top = y
+  y = y + 12
+  T("YOUR PACE", 16, y, 300, "label", C.gold)
+  y = y + 22
+  if ns.settingsLost then y = y + T("Counting since you logged in.", 16, y, W - 32, "small", C.dim) + 4 end
+  local rate = ns.paceRate and ns.paceRate()
+  if V == me then
+    local cur, max = tonumber(ns.quests.try(UnitXP, "player")), tonumber(ns.quests.try(UnitXPMax, "player"))
+    if cur and max and max > 0 then
+      T("Level " .. V .. ": " .. ns.thousands(cur) .. " / " .. ns.thousands(max) .. " XP", 16, y, W / 2, "small", C.light)
+      if rate and rate > 0 and max > cur and V < 60 then
+        T("Level " .. (V + 1) .. " in about " .. duration((max - cur) / rate * 3600), W / 2, y, W / 2 - 16, "small",
+          C.light, "RIGHT")
+      end
+      y = y + 16
+      local bw = W - 32
+      local done = math.min(1, math.max(0, cur / max))
+      local rested = tonumber(ns.quests.try(GetXPExhaustion)) or 0
+      rect(16, y, bw, 12, BAR_TRACK)
+      local restedPart = math.min(1 - done, rested / max)
+      if restedPart * bw >= 1 then rect(16 + done * bw, y, restedPart * bw, 12, RESTED_FILL, nil, 1) end
+      if done * bw >= 1 then rect(16, y, done * bw, 12, XP_FILL, nil, 2) end
+      y = y + 20
+    end
+  end
+  local rec = S and S.levelRecord(V)
+  if not rec then
+    y = y + T("No stats for level " .. V .. " yet.", 16, y, W - 32, "body", C.dim) + 6
+  else
+    y = y + T(duration(rec.seconds) .. " on this level " .. (ns.settingsLost and "since you logged in" or "(all sessions)")
+      .. (rec.fromPct and (" (counted from " .. rec.fromPct .. "%)") or ""), 16, y, W - 32, "body", C.light) + 4
+    if V == me and rate then
+      y = y + T(ns.thousands(rate) .. " XP per hour this session"
+        .. ((rec.rested or 0) > 0 and (", " .. ns.thousands(rec.rested) .. " rested") or ""), 16, y, W - 32, "small",
+        C.light) + 6
+    end
+    local other = (rec.xp or 0) - (rec.questXP or 0) - (rec.killXP or 0)
+    local chips = { "Quests " .. ns.thousands(rec.questXP) .. " XP, " .. (rec.quests or 0) .. " turned in",
+      "Kills " .. ns.thousands(rec.killXP) .. " XP, " .. plural(rec.kills or 0, "kill") }
+    if other > 0 then chips[3] = "Other " .. ns.thousands(other) .. " XP" end
+    local cw = math.floor((W - 32) / 3)
+    for i, text in ipairs(chips) do
+      local x = 16 + (i - 1) * cw
+      rect(x, y + 3, 9, 9, SOURCE_COLORS[i])
+      T(text, x + 14, y, cw - 18, "small", C.light)
+    end
+    y = y + 20
+  end
+  local earlier = S and S.earlierLevels(V, 3) or {}
+  if #earlier > 0 then
+    y = y + 4
+    T("LAST LEVELS", 16, y, 300, "label", C.goldDim)
+    y = y + 20
+    local longest = 1
+    for _, e in ipairs(earlier) do longest = math.max(longest, tonumber(e.record.seconds) or 0) end
+    for _, e in ipairs(earlier) do
+      local r = e.record
+      T("Level " .. e.level, 16, y, 70, "small", C.light)
+      rect(90, y + 3, 140, 8, BAR_TRACK)
+      local bar = 140 * (tonumber(r.seconds) or 0) / longest
+      if bar >= 1 then rect(90, y + 3, bar, 8, C.accent, nil, 1) end
+      T(duration(r.seconds) .. ", " .. plural(r.quests or 0, "quest") .. ", " .. plural(r.kills or 0, "kill")
+        .. ((r.deaths or 0) > 0 and (", " .. plural(r.deaths, "death")) or "")
+        .. (r.fromPct and (" (counted from " .. r.fromPct .. "%)") or ""), 240, y, W - 256, "small", C.light)
+      y = y + 18
+    end
+  end
+  y = y + 8
+  box(0, top, W, y - top, C.panel, C.edge)
+  return y
+end
+
 renderers.level = function(V)
   local y = 0
   -- Talent card (parchment)
@@ -741,21 +827,9 @@ renderers.level = function(V)
   y = y + 4
   box(0, top, W, y - top, C.panel, C.edge)
 
-  -- Pace card: how fast you're levelling (Pace.lua), about your own level whichever level is shown
-  local pace = ns.paceRows()
-  if #pace > 0 then
-    y = y + 14
-    top = y
-    y = y + 12
-    T("YOUR PACE", 16, y, 300, "label", C.gold)
-    y = y + 22
-    for _, r in ipairs(pace) do
-      local h = math.max((T(r[1], 16, y, 150, "body", C.light)), (T(r[2], 172, y, W - 188, "body", C.light)))
-      y = y + h + 4
-    end
-    y = y + 6
-    box(0, top, W, y - top, C.panel, C.edge)
-  end
+  -- Pace card: the shown level's record from Stats.lua (all sessions), with your XP bar and this
+  -- session's rate on your own level, XP by source and the levels before it
+  y = paceCard(V, y + 14)
   return y + 10
 end
 

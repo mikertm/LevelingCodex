@@ -1674,30 +1674,36 @@ end
 
 -- The pace card: XP per hour, time to level, where this level's XP came from, finished levels.
 function S.paceCard()
-  MOCK.level, MOCK.xp, MOCK.xpMax = 5, 100, 1000
+  MOCK.level, MOCK.xp, MOCK.xpMax, MOCK.rested = 5, 400, 1000, 150
+  local function rec(seconds, xp, q, k, quests, kills)
+    return { seconds = seconds, xp = xp, questXP = q, killXP = k, rested = 0, quests = quests, kills = kills, deaths = 0,
+      goldIn = {}, goldOut = {} }
+  end
+  -- what an earlier session (or a /reload) saved
+  LevelingCodexCharDB = { stats = { version = 1, zones = {}, totals = { goldIn = {}, goldOut = {} },
+    levels = { [3] = rec(0, 0, 0, 0, 0, 0), [4] = rec(3900, 900, 600, 250, 4, 9), [5] = rec(1800, 300, 200, 100, 2, 3) } } }
   S.login()
-  MOCK.advance(60)
   MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 50 experience.")
-  MOCK.xp = 150
-  MOCK.event("PLAYER_XP_UPDATE", "player")
-  MOCK.event("QUEST_TURNED_IN", 783, 300, 0)
   MOCK.xp = 450
   MOCK.event("PLAYER_XP_UPDATE", "player")
-  MOCK.event("PLAYER_DEAD")
-  if not (win() and win():IsShown()) then slash("") end
+  slash("")
   click(win(), "This Level")
-  if MOCK.minimal then
-    check(not questText(win(), "XP per hour"), "no XP rate without the XP calls")
-    return
-  end
-  check(questText(win(), "YOUR PACE"), "the This Level tab has the pace card")
-  check(questText(win(), "300 XP, 1 quest") and questText(win(), "50 XP, 1 kill"), "quest and kill XP are split")
-  check(questText(win(), "(this session)") and questText(win(), "at this pace"), "XP per hour and the time to level")
-  MOCK.level, MOCK.xp = 6, 40
-  MOCK.event("PLAYER_LEVEL_UP", 6)
-  MOCK.event("PLAYER_XP_UPDATE", "player")
+  if MOCK.minimal then check(questText(win(), "YOUR PACE"), "the card shows without the XP calls"); return end
+  check(questText(win(), "Level 5: 450 / 1,000 XP") and questText(win(), "Level 6 in about"), "the XP bar's figures")
+  check(questText(win(), "30 min on this level (all sessions)"), "time on the level survives a reload")
+  check(questText(win(), "Quests 200 XP, 2 turned in") and questText(win(), "Kills 150 XP, 4 kills"), "XP by source")
+  check(questText(win(), "Level 4") and questText(win(), "1 h 5 min, 4 quests, 9 kills"), "the last levels")
+  click(win(), "<")
+  click(win(), "<")
+  check(questText(win(), "0 min on this level"), "an empty record draws without dividing by zero")
+  click(win(), "<")
+  check(questText(win(), "No stats for level 2 yet."), "a level without stats says so")
+end
+
+function S.paceCardLost()
+  slash("")
   click(win(), "This Level")
-  check(questText(win(), "1 min (part), 1 quest, 1 kill, 1 death"), "a finished level is listed with its counts")
+  check(questText(win(), "since you logged in"), "without saved data the card says what it counts")
 end
 
 function S.questCorpse()
