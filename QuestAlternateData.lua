@@ -73,6 +73,8 @@ q(1054, "Culling the Threat", 25, 18)
 q(945, "Therylune's Escape", 18, 10)
 q(5321, "The Sleeper Has Awakened", 20, 17)
 q(1009, "Ruuzel", 25, 20, 1007)
+-- Gap fill: tools/audits/2026-11-12-alliance-kalimdor-loch-modan.md.
+q(5713, "One Shot. One Kill.", 15, 10)
 
 local balthule = at("Balthule Shadowstrike", 54.97, 24.89, M.darkshore)
 local delgren = ash("Delgren the Purifier", 26.2, 38.7)
@@ -107,16 +109,26 @@ chapter("ashenvale-early", "Ashenvale: Astranaar and the Coast", ashenvale, 18, 
     action("goto", therylune, "Take the south road from Auberdine past the Grove of the Ancients to the Twilight camp at the Master's Glaive."),
     accept(945, therylune, "Clear the cultists around Therylune, then speak to her."),
     objective(945, at(nil, 40.51, 87.09, M.darkshore), "Stay close while Therylune walks out of the camp and fight anything that attacks her.", "Therylune escorted"),
+    -- Aynasha's stand: south-east of the Glaive, turned in beside Liladris at Maestra's Post.
+    accept(5713, at("Sentinel Aynasha", 45.94, 90.29, M.darkshore),
+      "Head east from the Glaive to Sentinel Aynasha near the Ashenvale border. She is poisoned and needs cover while she brews a cure."),
+    objective(5713, at("Sentinel Aynasha", 45.94, 90.29, M.darkshore),
+      "Stay beside Aynasha and kill the Blackwood Trackers that come for her, then Marosh the Devious. Speak to her once the last wave falls.",
+      "Aynasha protected"),
     accept(5321, kerlonian, "Go back north to the grove. Open Kerlonian's chest beside him for the Horn of Awakening, then wake him."),
     objective(5321, liladris, "Lead Kerlonian south along the road into Ashenvale. Each time he falls asleep, use the Horn of Awakening near him.",
       "Kerlonian escorted to Maestra's Post"),
     finish(5321, liladris, "Liladris Moonriver waits at Maestra's Post."),
+    finish(5713, ash("Sentinel Onaeya", 26.6, 36.73), "Sentinel Onaeya stands beside Liladris. Tell her Aynasha is safe."),
     action("goto", maestra, "If you skipped the escorts, take the south road from Auberdine through the Grove of the Ancients into Ashenvale to Maestra's Post."),
     finish(967, delgren), accept(970, delgren),
     taxi("getfp", astranaar, astranaarFlight, "Follow the road southeast from Maestra's Post and learn the Astranaar flight path."),
-    action("sethearth", kimlya, "Bind at the Astranaar inn for the west-coast trips.", ashHearth),
+    -- Shindrell beside the flight point, then the inn and Raene on its east side (2026-11-12 loop check).
     accept(1008, shindrell),
-    findTeronis, reachTeronis, takeGemQuest, lootGem,
+    action("sethearth", kimlya, "Bind at the Astranaar inn for the west-coast trips.", ashHearth),
+    findTeronis,
+    accept(1054, raene, "Raene also wants Dal Bloodclaw, a level 25 furbolg in Thistlefur Village. Take it now: the hunt waits for the second circuit."),
+    reachTeronis, takeGemQuest, lootGem,
     finish(945, therysil, "Follow the lake shore south to the Shrine of Aessina and tell Therysil her sister is safe."),
     accept(1007, talen, "Go west around the hills to Talen's camp above the Zoram Strand. If below level 19, take his quest after you level."),
     along(objective(1007, ash("Ancient Statuette", 14.2, 20.64),
@@ -141,7 +153,6 @@ chapter("ashenvale-early", "Ashenvale: Astranaar and the Coast", ashenvale, 18, 
     finish(970, delgren), accept(973, delgren),
     action("goto", pelturas, "Return to Astranaar and find Pelturas inside the house on the east side of the island."),
     finish(1020, pelturas), accept(1033, pelturas, "Wait for Pelturas to finish speaking before checking for his next quest."),
-    accept(1054, raene, "Dal Bloodclaw is level 25. Save this hunt for when you can clear the furbolgs around him safely."),
     objective(1033, ash(nil, 46.24, 45.96), "Cross the east bridge and gather a tear from the grass above the lake.", "Elune's Tear"),
     objective(1054, ash(nil, 39.56, 36.31), "Look for Dal Bloodclaw on the paths in Thistlefur Village. Pull his neighbors separately or leave him for another visit.", "Dal Bloodclaw's Skull"),
     finish(1054, raene), finish(1033, pelturas), accept(1034, pelturas),
@@ -167,6 +178,9 @@ B.breadcrumb(1056, 1057)
 -- Gaxim's letters for the Eastern Kingdoms (gap fill, see the 2026-11-10 audit).
 q(1072, "An Old Colleague", 21, 17, 1071)
 q(1075, "A Scroll from Mauren", 21, 17, 1071)
+-- Piznik's ore for Ziz (both factions; tools/audits/2026-11-12-alliance-kalimdor-loch-modan.md).
+q(1090, "Gerenzo's Orders", 22, 17)
+q(1092, "Gerenzo's Orders", 22, 17, 1090)
 
 local kaela = stone("Kaela Shadowspear", 59.9, 66.85)
 local gaxim = stone("Gaxim Rustfizzle", 59.52, 67.15)
@@ -196,7 +210,13 @@ chapter("stonetalon", "Stonetalon Mountains", stonetalon, 22, 28, {
     "10 Venture Co. Loggers", "10 Venture Co. Deforesters"), 1093),
   along(objective(1093, stone(nil, 74.3, 54.7), "Loot the blueprints from Venture Co. Operators near the equipment. Finish any missing Venture Co. kills before returning.",
     "Super Reaper 6000 Blueprints"), 1071),
-  finish(1093, ziz), finish(1071, gaxim),
+  -- Piznik works a side tunnel of Windshear Mine, on the way back to Ziz.
+  accept(1090, stone("Piznik", 71.87, 60.0), "On the way back south, look for Piznik in a short side tunnel just inside Windshear Mine. He wants guarding while he mines an ore sample."),
+  objective(1090, stone("Piznik", 71.87, 60.0), "Stay beside Piznik and kill the kobolds that attack in waves until he finishes mining. It takes a few minutes.",
+    "Piznik guarded while he mines"),
+  finish(1090, stone("Piznik", 71.87, 60.0), "Take the ore sample from Piznik."),
+  accept(1092, stone("Piznik", 71.87, 60.0), "Piznik wants the ore taken to Ziz Fizziks."),
+  finish(1093, ziz), finish(1092, ziz, "Give Ziz the ore sample as well."), finish(1071, gaxim),
   accept(1072, gaxim, "Gaxim has a letter for Lomac Gearstrip in Ironforge. Carry it until you next cross to the Eastern Kingdoms."),
   accept(1075, gaxim, "Take his scroll for Collin Mauren in Stormwind as well."),
   action("goto", courier, "Take the main road north toward Mirkfallon Lake. Stay clear of Sun Rock Retreat, the Horde town to the west."),
@@ -270,9 +290,12 @@ end
 chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24, 30, ashSources,
   { "wetlands", "southshore", "duskwood-late", "redridge-late", "stonetalon" }, {
     taxi("getfp", astranaar, astranaarFlight, "Return to Astranaar. Fly from Stonetalon Peak or walk back through Talondeep Path."),
+    -- Shindrell stands beside the flight point: take Kayneth's letter before the inn and Raene
+    -- (2026-11-12 loop check).
+    accept(4581, shindrell, "Shindrell Swiftfire, beside the flight point, has a letter for Kayneth Stillwind in Forest Song from level 24."),
     action("sethearth", kimlya, "Bind at the Astranaar inn for the eastern circuits.", ashHearth),
     findTeronis, reachTeronis, takeGemQuest, lootGem, finish(1023, raene),
-    accept(1025, raene), accept(1024, raene), accept(4581, shindrell),
+    accept(1025, raene), accept(1024, raene),
     action("goto", velene, "Cross the east bridge and follow the south road to Silverwind Refuge, near Lake Mystral."),
     accept(1016, velene),
     B.withItem(5456, objective(1016, ash(nil, 48.17, 69.74),
@@ -298,15 +321,13 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     along(objective(1011, ash("Bottle of Disease", 75.29, 72.22), "Go south to Felfire Hill. Pick up the bottle and kill nearby slimes for Raene's chain while you are here.", "Bottle of Disease"), 1027),
     along(objective(1027, ash(nil, 73.8, 73.8), "Kill Rotting Slimes and look for a Rusty Chest left on the ground. Open it for the Iron Pommel.", "Iron Pommel"), 1011),
     action("goto", kayneth, "Return east by the road for the disease turn-in."), finish(1011, kayneth),
-    check(accept(98027, ash("Gleaming Crescent Pendant", 62.99, 71.55), "Look for the pendant in the water on the way west. Use Next if the object is missing."),
-      "Confirm the pendant appears at level 25."),
     action("goto", shael, "Return west to the Raynewood moonwell by the road and the hillside path."),
     finish(1027, shael), accept(1028, shael),
     action("goto", ash(nil, 56.04, 51.28), "Take the winding path up the mountain to the Hidden Shrine."),
     finish(1028, shrine), accept(1055, shrine),
     finish(1055, shael), accept(1029, shael),
     action("hearth", kimlya, "Return to Astranaar with the rod.", ashHearth),
-    finish(1029, raene), finish(98027, ash("Maliynn", 36.62, 49.98)),
+    finish(1029, raene),
     accept(1035, pelturas, "If you finished The Ruins of Stardust, Pelturas has one more task at Fallen Sky Lake. Otherwise use Next."),
     action("grind", kimlya, "Come back for Ran Bloodtooth around level 28 or with a partner. Finish an open route if you need more experience.",
       { level = 28, suggest = { "duskwood-late", "wetlands", "redridge-late", "southshore" } }),
@@ -326,6 +347,10 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     B.withItem(5462, accept(1046, krolg, "Take Krolg's final delivery while in furbolg form.")),
     objective(1035, ash("Shadethicket Oracle", 66.7, 82.2),
       "Follow the south road east to Fallen Sky Lake. Kill the Shadethicket Oracle, level 30, on the shore and loot the Fallen Moonstone.", "Fallen Moonstone"),
+    -- The pendant lies between Fallen Sky Lake and Night Run, so it waits for this circuit
+    -- instead of a detour south from Forest Song (2026-11-12 loop check).
+    check(accept(98027, ash("Gleaming Crescent Pendant", 62.99, 71.55), "On the way north to Night Run, look for the pendant in the water at 63.0, 71.6. Use Next if the object is missing."),
+      "Confirm the pendant appears at level 25."),
     along(part(objective(1140, ash("Circle of Imprisonment", 66.6, 57.0),
       "Go north to Night Run and use the Circle of Imprisonment. Watch for Felmusk satyrs in stealth.", "Free the Highborne soul in Night Run"), 1), 1021),
     action("goto", ash("Maseara Autumnmoon", 86.24, 45.86), "Follow the road east to Forest Song. Learn the flight path there if you can."),
@@ -343,7 +368,8 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
       "5 Xavian Rogues", "5 Xavian Felsworn", "5 Xavian Betrayers", "5 Xavian Hellcallers"),
     finish(98418, ash("Maseara Autumnmoon", 86.24, 45.86), "Return east to Maseara in Forest Song."),
     action("hearth", kimlya, "Return to Astranaar. On foot, take the main road west past Forest Song.", ashHearth),
-    finish(1046, raene), finish(1035, pelturas),
+    finish(1046, raene), finish(98027, ash("Maliynn", 36.62, 49.98), "Maliynn, next to Raene, takes the pendant."),
+    finish(1035, pelturas),
     action("goto", illiyana, "Ride west to the Shrine of Aessina."), finish(1031, illiyana),
     action("goto", maestra, "Follow the road north to Maestra's Post."), finish(1140, delgren),
     taxi("fly", at("Caylais Moonfeather", 36.34, 45.58, M.darkshore), "Auberdine, Darkshore",
