@@ -76,12 +76,36 @@ local function questTextStarts(root, value)
   return false
 end
 
+-- The Quests tab's Quest log sub-tab, with this queue's heading ("Missed quests (2)").
 local function questQueue(name)
-  local button = findButton(win(), function(label)
-    return label:match("^" .. name .. " %(%d+%)$")
-  end)
-  check(button, "quest view is available: " .. name)
-  button:Click()
+  click(win(), "Quest log")
+  check(questText(win(), name .. " ("), "quest view is available: " .. name, 2)
+end
+
+-- A guide's button under Quests > Guides, opening folded level bands ("+ LEVELS ...") until it shows.
+local function guideButton(name)
+  click(win(), "Guides")
+  local function find() return findButton(win(), function(l) return l == name end) end
+  local b = find()
+  while not b do
+    local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
+    if not folded then break end
+    folded:Click()
+    b = find()
+  end
+  return b
+end
+
+-- A button under Quests > Step (Resume active quest, Return to leveling, ...).
+local function stepTool(name)
+  click(win(), "Step")
+  return click(win(), name)
+end
+
+local function clickGuide(name)
+  local b = guideButton(name)
+  check(b, "no guide button '" .. name .. "'", 2)
+  b:Click()
 end
 
 function S.questStart()
@@ -132,9 +156,9 @@ function S.questPastRoute()
   S.login()
   slash("quests")
   check(questText(win(), "Darkshire: Mor'Ladim and the Worgen"), "level 31 lists the Darkshire chapter")
-  click(win(), "Wetlands")
+  clickGuide("Wetlands")
   check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
-  click(win(), "Elwynn Forest")
+  clickGuide("Elwynn Forest")
   check(questText(questViewer(), "Elwynn Forest"), "can jump to the nearest available section")
 end
 
@@ -176,7 +200,7 @@ function S.questTravelArrow()
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Redridge Brutes 4/10"), "following the active Redridge objective")
   local arrow = LevelingCodexQuestArrow
@@ -242,7 +266,7 @@ function S.questObjectiveWaypoints()
   MOCK.questLog = { { questID = 92745, objectives = { diggers, miners } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame, arrow = questViewer(), LevelingCodexQuestArrow
   check(questText(frame, "Jangolode Mine") and questText(arrow, "Arrived"), "first mine objective points to Jangolode")
 
@@ -302,7 +326,7 @@ function S.questSkyborne()
   check(questText(questViewer(), "Lakeshire"), "level 19 Skyborne starts in Lakeshire with an older Westfall quest")
   slash("quests")
   check(not findButton(win(), function(l) return l == "Northshire Valley" end), "Human start stays race filtered")
-  check(findButton(win(), function(l) return l == "Westfall" end), "the shared Westfall section remains available")
+  check(guideButton("Westfall"), "the shared Westfall section remains available")
 end
 
 function S.questLayout()
@@ -310,7 +334,7 @@ function S.questLayout()
   MOCK.questLog = { { questID = 3741, isComplete = true }, { questID = 246 } }
   S.login()
   slash("quests")
-  local opener = findButton(win(), function(label) return label == "Show step window" end)
+  local opener = findButton(win(), function(label) return label == "Show step window" or label == "Hide step window" end)
   check(opener, "step window control is visible")
   local _, content = opener:GetPoint(1)
   local function checkBounds()
@@ -344,7 +368,7 @@ function S.questLayout()
   questQueue("Missed quests")
   check(questText(win(), "Missed quests"), "missed view has its own heading")
   checkBounds()
-  click(win(), "Westfall")
+  clickGuide("Westfall")
   check(questText(win(), "The Defias Brotherhood"), "switching sections returns to its route")
   checkBounds()
 end
@@ -546,7 +570,7 @@ function S.questCleanup()
     { questID = 7, title = "Kobold Camp Cleanup", level = 2, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   check(questText(win(), "Quest log cleanup"), "the library lists quests to clean up")
   check(questText(win(), "Stray Errand\nNot in your guides") and questText(win(), "A Threat Within\nGrey"),
     "each quest says why it is listed")
@@ -805,6 +829,39 @@ function S.stepPolish()
   check(frame.glowAnim and frame.glowAnim:IsPlaying(), "a step the game finished makes the window's edge glow")
 end
 
+-- The Quests tab: a fixed step card and button row, then Step, Route, Guides and Quest log sub-tabs.
+function S.questTabViews()
+  S.login()
+  slash("quests")
+  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Quest log" }) do
+    check(findButton(win(), function(l) return l == name end), "the Quests tab has " .. name)
+  end
+  check(findButton(win(), function(l) return l == "Show all steps" end), "Route, the guide's steps, opens first")
+  click(win(), "Step")
+  check(findButton(win(), function(l) return l == "Resume active quest" end), "Step has the step's tools")
+  click(win(), "Guides")
+  check(findButton(win(), function(l) return l == "Search" end)
+    and findButton(win(), function(l) return l:find("^%- LEVELS 1%-12") end),
+    "Guides has the search and the level bands")
+  local folded = findButton(win(), function(l) return l:find("^%+ LEVELS 30%-40") end)
+  check(folded, "a band far from your level is folded")
+  local function band30() -- guide buttons starting in the 30s (class quests can be among them)
+    local n = 0
+    for line in (MOCK.textUnder(win()) .. "\n"):gmatch("(.-)\n") do
+      if line:find("^Levels 3%d%-%d+  |") then n = n + 1 end
+    end
+    return n
+  end
+  local before = band30()
+  folded:Click()
+  check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
+  check(findButton(win(), function(l) return l == "Plan recommended" end), "dungeons live under Guides")
+  click(win(), "Quest log")
+  check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
+  click(win(), "Step")
+  check(findButton(win(), function(l) return l == "Report this step" end), "the step tools sit under Step")
+end
+
 -- A buy step that lists several items waits until the bags hold every one of them.
 function S.questBuyItems()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
@@ -916,7 +973,7 @@ function S.questWindowExtras()
   check(skipped and skipped.tipText:find("Skipped: you passed it with Next", 1, true), "the route list says why a step was skipped")
   click(win(), "Show on map")
   check(MOCK.openedMap == 1433, "Show on map opens the world map at the step")
-  click(win(), "Report this step")
+  stepTool("Report this step")
   local copy = _G.LevelingCodexCopy
   local report = copy and copy:IsShown() and copy.edit:GetText() or ""
   check(report:find("Guide: lakeshire", 1, true) and report:find("Position: 1433", 1, true)
@@ -990,7 +1047,7 @@ function S.questSetup()
   check(LevelingCodexDB.questSetupDone and not questText(win(), "SET UP YOUR GUIDE"), "Done closes the setup")
   local offer = findButton(frame, function(l) return l == "Set up the guide" end)
   check(not (offer and offer:IsShown()), "the step window stops offering the setup")
-  click(win(), "Guide setup")
+  click(win(), "Setup")
   check(questText(win(), "SET UP YOUR GUIDE"), "Guide setup opens it again")
 end
 
@@ -1061,7 +1118,7 @@ local function redridgeBrutes(x, y)
   MOCK.questLog = { { questID = 124, objectives = { { text = "Redridge Brutes 4/10" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Redridge Brutes 4/10"), "following the Redridge objective")
   MOCK.questX, MOCK.questY = x or 32.5, y or 31.5
   MOCK.advance(0.3)
@@ -1200,7 +1257,7 @@ function S.questFlightHub()
   taxiMap(nodes)
   TaxiFrame:Hide()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   MOCK.advance(0.3)
   check(questText(questViewer(), "Digging Through the Ooze"), "following the ooze in the Wetlands")
   check(arrowSays("Fly to Menethil Harbor"), "the arrow sends you to Menethil Harbor: " .. arrowCaption())
@@ -1253,7 +1310,7 @@ function S.questDungeonChoice()
   for id in pairs(open) do MOCK.questLog[#MOCK.questLog + 1] = { questID = id } end
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - "), "resumes at Sprite's turn-in")
   table.remove(MOCK.questLog, 1)
@@ -1709,7 +1766,7 @@ function S.questQuestieNearestPart()
     { text = "Kobold Diggers 0/4", finished = false }, { text = "Riverpaw Miners 0/6", finished = false } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   MOCK.advance(0.25)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "Kobold Digger - 42 yd") and not questText(arrow, "Riverpaw"),
@@ -1893,7 +1950,7 @@ function S.questDuskwoodHandoff()
   MOCK.questLog = { { questID = 133, objectives = { { text = "Ghoul Ribs 6/7" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Ghoul Ribs 6/7"), "resume the final Duskwood quest")
   MOCK.questDone[133], MOCK.questLog = true, {}
@@ -1916,7 +1973,7 @@ function S.questLakeshireHandoff()
   MOCK.questLog = { { questID = 20, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Blackrock Menace"), "resume at the last Lakeshire turn-in")
   check(questText(frame, "Next section: Duskwood"), "the last Lakeshire step names the next section")
@@ -1941,7 +1998,7 @@ function S.questDuskwoodZoneEntry()
   local frame = questViewer()
   -- Select the section so its return-to-town step is current before turning in.
   slash("quests")
-  click(win(), "Lakeshire")
+  clickGuide("Lakeshire")
   check(questText(frame, "Return to Lakeshire"), "the guide is still on the Lakeshire hearth step")
 
   MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 77.7, 44.4
@@ -2028,9 +2085,7 @@ function S.questPassed()
   check(not questText(frame, "Accept - Report to Gryan Stoutmantle"), "a pickup you moved past is not the current step")
   check(questText(frame, "Accept - Westfall Stew"), "a pickup a later quest still needs stays current")
   slash("quests")
-  local missed = findButton(win(), function(l) return l:match("^Missed quests %((%d+)%)$") end)
-  check(missed, "missed view exists")
-  missed:Click()
+  questQueue("Missed quests")
   check(questText(win(), "The Forgotten Heirloom"), "passed pickups are listed under Missed quests")
 end
 
@@ -2088,7 +2143,7 @@ function S.questWetlands()
   MOCK.questX, MOCK.questY = 38.46, 46.02
   MOCK.event("QUEST_LOG_UPDATE")
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(frame, "Ironforge 0/1") and questText(LevelingCodexQuestArrow, "Arrived"),
     "Angerfang starts at the western Ironforge plan even though it is fourth in the quest log")
   check(questText(frame, "Dragonmaw War Banners 3/8"), "show banner progress during the plan sweep")
@@ -2167,7 +2222,7 @@ function S.questStranglethornRoad()
   MOCK.questLog = { { questID = 203, objectives = { { text = "Kurzen Jungle Fighters 3/15" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Stranglethorn") and questText(frame, "Levels 36-38"), "Stranglethorn resumes its 36-38 guide")
   local arrow = LevelingCodexQuestArrow
@@ -2254,7 +2309,7 @@ function S.questWetlandsEnd()
   MOCK.questLog = { { questID = 98209, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Bloom of the Heavens"), "resume at the final Wetlands turn-in")
   check(not questText(frame, "Last step in this guide"), "the Wetlands turn-in is no longer the end of the route")
@@ -2270,7 +2325,7 @@ function S.questRouteEnd()
   MOCK.questLog = { { questID = 1185, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Under the Chitin Was..."), "resume at the last turn-in of the route")
   check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
@@ -2295,7 +2350,7 @@ for name, start in pairs({ Dwarf = "Coldridge Valley", Gnome = "Coldridge Valley
     check(questText(questViewer(), start), name .. " starts in " .. start)
     slash("quests")
     check(not findButton(win(), function(l) return l == "Northshire Valley" end), name .. " doesn't see the Human start")
-    check(findButton(win(), function(l) return l == "Westfall" end), name .. " joins the shared route at Westfall")
+    check(guideButton("Westfall"), name .. " joins the shared route at Westfall")
   end
 end
 
@@ -2363,7 +2418,7 @@ function S.questHordeRouteEnd()
   MOCK.questLog = { { questID = 4511, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Calm Before the Storm") and questText(frame, "Last step in this guide"),
     "the Horde route's last step is the Calm Before the Storm hand-in")
@@ -2404,15 +2459,15 @@ function S.questClassSide()
   S.login()
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "class quests do not interrupt the route")
   slash("quests")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   check(questText(questViewer(), "Accept - First class quest"), "selecting the side section follows its quest")
   click(questViewer(), "Next")
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "skipping the chain returns to leveling")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   check(questText(questViewer(), "Accept - First class quest"), "reopening a class guide restores unfinished quests")
-  click(win(), "Return to leveling")
+  stepTool("Return to leveling")
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "you can leave a class guide early")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   MOCK.questLog = { { questID = 999001 } }
   MOCK.event("QUEST_ACCEPTED", 1, 999001)
   check(questText(questViewer(), "Complete - Find first item"), "the side guide advances on quest events")
@@ -2447,7 +2502,7 @@ function S.questDetourLibrary()
   click(win(), "Settings")
   click(win(), "Show class quests")
   click(win(), "Quests")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Test Dungeon")
   check(questText(win(), "BEFORE YOU GO") and questText(win(), "INSIDE") and questText(win(), "AFTER THE RUN"), "dungeon stages are shown")
   check(questText(win(), "Requires level 15"), "shows the actual level gate")
@@ -2461,11 +2516,12 @@ function S.questDetourLibrary()
   click(win(), "After the run")
   check(questText(questViewer(), "Turn in - Dungeon Test Inside") and not questText(questViewer(), "Turn in - Dungeon Test Pickup"),
     "the after-run phase skips unfinished turn-ins")
-  click(win(), "Return to leveling")
+  stepTool("Return to leveling")
   check(questText(questViewer(), "Report to Gryan Stoutmantle"), "return restores the leveling step")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   click(win(), "Track Dungeon Test Pickup")
   check(questText(questViewer(), "TRACKING") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
+  click(win(), "Guides")
   local search = _G.LevelingCodexQuestSearch
   check(search and search:IsShown(), "search field is available")
   search:SetText("Dungeon Test Inside")
@@ -2481,7 +2537,7 @@ function S.questDungeonContent()
   MOCK.questDone[96392], MOCK.questDone[96390], MOCK.questDone[96391] = true, true, true
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Hall of Thanes")
   check(questText(win(), "Old Ironforge Incursion") and questText(win(), "The Treaty of Understanding"),
     "Hall of Thanes has both outdoor unlock and inside starter")
@@ -2493,7 +2549,7 @@ function S.questDungeonContent()
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - An Ancient Grudge"), "reopening inside starts with the first obtainable inside quest")
   click(questViewer(), "Return to leveling")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Cozy Sleeping Bag")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - ... and that note you found") and questText(questViewer(), "Alexston Farmstead"),
@@ -2511,10 +2567,10 @@ function S.questAlternateSharedPickup()
   MOCK.level, MOCK.questMap = 13, 1436
   S.login()
   slash("quests")
-  click(win(), "Alternate First")
+  clickGuide("Alternate First")
   check(questText(questViewer(), "Accept - Shared Alternate Pickup"), "the first alternate offers the quest")
   click(questViewer(), "Next")
-  click(win(), "Alternate Second")
+  clickGuide("Alternate Second")
   check(questText(questViewer(), "Accept - Shared Alternate Pickup"), "manual skips stay in their own alternate")
   MOCK.questDone[999020] = true
   MOCK.event("QUEST_TURNED_IN", 999020)
@@ -2526,7 +2582,7 @@ function S.questPinCapacity()
   for i = 1, 4 do MOCK.questLog[i] = { questID = 999030 + i, title = "Pin test " .. i } end
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   for i = 1, 3 do click(win(), "Track Pin test " .. i) end
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
@@ -2553,9 +2609,9 @@ function S.questLibraryResume()
   }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Complete - Local Active Quest"), "the local active quest takes precedence")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   click(win(), "Show Earlier Active Quest")
   check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets 1/20"),
     "the library follows an unfinished objective from an earlier section")
@@ -2575,10 +2631,10 @@ function S.questHunterGuides()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
   S.login()
   slash("quests")
-  check(findButton(win(), function(l) return l == "Hunter: Taming in Dun Morogh" end), "Dwarves get their tame guide")
+  check(guideButton("Hunter: Taming in Dun Morogh"), "Dwarves get their tame guide")
   check(not findButton(win(), function(l) return l == "Hunter: Taming in Elwynn" end), "Human taming is race filtered")
   check(not questText(win(), "Warrior: Defensive Stance"), "another class's guides are hidden")
-  click(win(), "Hunter: Taming in Dun Morogh")
+  clickGuide("Hunter: Taming in Dun Morogh")
   check(questText(questViewer(), "Accept - Taming the Beast"), "the guide starts at the Dwarf taming pickup")
 end
 
@@ -2595,8 +2651,8 @@ function S.questHordeShaman()
   MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 20, 1413
   S.login()
   slash("quests")
-  check(findButton(win(), function(l) return l == "Shaman: Water Totem" end), "Tauren Shamans get the Horde Water Totem guide")
-  click(win(), "Shaman: Water Totem")
+  check(guideButton("Shaman: Water Totem"), "Tauren Shamans get the Horde Water Totem guide")
+  clickGuide("Shaman: Water Totem")
   check(questText(questViewer(), "Call of Water"), "the Water Totem guide opens at its first step")
   MOCK.faction = nil
 end
@@ -2605,7 +2661,7 @@ function S.questShamanGuides()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 30, 1455
   S.login()
   slash("quests")
-  click(win(), "Shaman: Air Totem")
+  clickGuide("Shaman: Air Totem")
   check(questText(questViewer(), "Accept - Call of Air"), "the Air Totem quest is in the class guide at 30")
 end
 
@@ -2784,10 +2840,12 @@ function S.questGrey()
   MOCK.level, MOCK.questMap = 20, 1436
   S.login()
   slash("quests")
-  click(win(), "Test grey route")
+  clickGuide("Test grey route")
   local frame = questViewer()
   check(questText(frame, "Accept - Grey Prerequisite"), "a grey pickup leaves the route unless a later quest needs it")
-  check(questText(win(), "LEVELS 12-20") and questText(win(), "0% done") and questText(win(), "Current"),
+  click(win(), "Guides")
+  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end) and questText(win(), "0% done")
+    and questText(win(), "Current"),
     "guides are grouped by level band with progress and status")
   questQueue("Missed quests")
   check(questText(win(), "Outleveled (grey)") and questText(win(), "Grey Errand"), "the grey pickup is listed as outleveled")
@@ -2824,7 +2882,7 @@ function S.questDungeonPlan()
   MOCK.level, MOCK.questMap = 14, 1436
   S.login()
   slash("quests")
-  click(win(), "Test plan route")
+  clickGuide("Test plan route")
   local frame = questViewer()
   check(questText(frame, "Accept - Plan Outdoor Errand"), "the plan fixture starts at its first pickup")
   check(questText(frame, "Chain: part 1 of 3"), "a story chain shows its position")
@@ -2832,7 +2890,7 @@ function S.questDungeonPlan()
   MOCK.event("QUEST_ACCEPTED", 1, 999201)
   check(not questText(frame, "Plan Dungeon Pickup") and not questText(frame, "Plan Optional Errand"),
     "unplanned dungeon pickups and optional errands stay hidden")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   check(findButton(win(), function(l) return l == "Plan recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
@@ -2855,7 +2913,7 @@ function S.questDungeonPlan()
   check(questText(frame, "Your quest log is full (3/3)"), "a full log warns before a pickup")
   C_QuestLog.GetMaxNumQuestsCanAccept = nil
   click(win(), "Quests")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Plan none")
   check(not findButton(frame, function(l) return l == "Run Test Plan Dungeon" end), "dropping the plan removes the run prompt")
 end
@@ -2872,7 +2930,7 @@ function S.questCatchup()
   slash("quests")
   questQueue("Ready to turn in")
   check(questText(win(), "Hilary's Necklace"), "ready quests have their own list")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Accept - The Price of Shoes"), "catch-up retains a prerequisite for later quests")
   MOCK.questDone[118] = true
   MOCK.event("QUEST_TURNED_IN", 118)
@@ -2919,7 +2977,7 @@ function S.questDetour()
   MOCK.level, MOCK.questMap = 15, 1436
   S.login()
   slash("quests")
-  click(win(), "Test outbound")
+  clickGuide("Test outbound")
   local frame = questViewer()
   click(frame, "Try Test detour")
   check(questText(frame, "Accept - Detour objective"), "suggestion switches to the optional route")
@@ -2940,8 +2998,8 @@ function S.questCrossZoneResume()
   MOCK.questLog = { { questID = 999102, objectives = { { text = "Detour progress 2/5" } } } }
   S.login()
   slash("quests")
-  click(win(), "Test outbound")
-  click(win(), "Resume active quest")
+  clickGuide("Test outbound")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(not questText(frame, "Choose a detour"), "resume switches away from the selected guide")
   check(questText(frame, "Detour progress 2/5"), "resume starts with the objective in your zone")
@@ -3015,7 +3073,7 @@ function S.questAlternateRoutes()
   check(not LevelingCodexCharDB.questFlights["Thelsamar, Loch Modan"], "skipping does not record a flight path as learned")
   slash("quests")
   check(findButton(win(), function(label) return label == "Try Darkshore" end), "other suitable routes are offered away from checkpoints")
-  click(win(), "Darkshore")
+  clickGuide("Darkshore")
   check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
   MOCK.questMap = 1439
   MOCK.event("ZONE_CHANGED_NEW_AREA")
@@ -3158,7 +3216,7 @@ function S.questController(mode)
   local frame = questViewer()
   local manager = GamepadMode.FrameControlsManager
   slash("quests")
-  click(win(), "Show step window")
+  click(win(), "Step")
   check(manager:GetActiveFrame() == win(), "the Codex has native controller focus")
   if mode == "backup" then MOCK.padNoFocus = true end
   win().padChrome.close:Click()
