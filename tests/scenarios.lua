@@ -52,11 +52,26 @@ local function questViewer()
 end
 
 local function questText(root, value)
+  local texts = {}
   for _, child in ipairs({ root:GetRegions() }) do
     if child:IsShown() and child._text and child._text:find(value, 1, true) then return true end
+    if child:IsShown() and child._text and child._text ~= "" then texts[#texts + 1] = child._text end
   end
+  -- A checklist row in the step window shows its goal and its count apart: "Kobold Vermin" "4/10".
+  if #texts == 2 and (texts[1] .. " " .. texts[2]):find(value, 1, true) then return true end
   for _, child in ipairs({ root:GetChildren() }) do
     if child:IsShown() and questText(child, value) then return true end
+  end
+  return false
+end
+
+-- A piece of the step window whose text begins with this (UP NEXT lists the next step first).
+local function questTextStarts(root, value)
+  for _, child in ipairs({ root:GetRegions() }) do
+    if child:IsShown() and child._text and child._text:sub(1, #value) == value then return true end
+  end
+  for _, child in ipairs({ root:GetChildren() }) do
+    if child:IsShown() and questTextStarts(child, value) then return true end
   end
   return false
 end
@@ -116,7 +131,7 @@ function S.questPastRoute()
   MOCK.level = 31
   S.login()
   slash("quests")
-  check(questText(win(), "No route covers level 31"), "level 31 is beyond milestone coverage")
+  check(questText(win(), "Darkshire: Mor'Ladim and the Worgen"), "level 31 lists the Darkshire chapter")
   click(win(), "Wetlands")
   check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
   click(win(), "Elwynn Forest")
@@ -264,14 +279,14 @@ function S.questRedridgeOverlap()
   preview("Blackrock Blockade")
   local frame = questViewer()
   check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
-  check(questText(frame, "Also on this loop") and questText(frame, "Battleworn Axe 3/10"),
+  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Battleworn Axe 3/10"),
     "the blockade step shows the overlapping axe objective")
   MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "Also on this loop") and questText(frame, "Blackrock Supplies 4/10"),
+  check(not questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Blackrock Supplies 4/10"),
     "completed axes leave the panel without changing the primary objective")
   preview("Redridge Goulash")
   check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
@@ -632,11 +647,11 @@ function S.questStepTypes()
   MOCK.questLog = { { questID = 999, title = "Old Errand" } }
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Collect - Linen Cloth") and questText(frame, "You have 2/5."), "a collect step counts your bags")
+  check(questText(frame, "Collect - Linen Cloth") and questText(frame, "In your bags 2/5"), "a collect step counts your bags")
   MOCK.bags[2589] = 5
   MOCK.event("BAG_UPDATE_DELAYED")
   check(questText(frame, "Abandon - Old Errand"), "enough items finish the collect step; the sticky goal is passed over")
-  check(questText(frame, "On the way") and questText(frame, "Collect - Glowing Stone: You have 0/1."),
+  check(questText(frame, "ON THE WAY") and questText(frame, "Collect - Glowing Stone 0/1"),
     "a passed sticky goal shows under the current step")
   MOCK.bags[2589] = 0
   MOCK.event("BAG_UPDATE_DELAYED")
@@ -647,7 +662,7 @@ function S.questStepTypes()
     .. "a profession you don't have filters its step, and gated quest steps wait")
   MOCK.bags["Glowing Stone"] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
-  check(not questText(frame, "On the way"), "a finished sticky goal leaves the window")
+  check(not questText(frame, "ON THE WAY"), "a finished sticky goal leaves the window")
   MOCK.level = 4
   MOCK.event("PLAYER_LEVEL_UP", 4)
   check(questText(frame, "Accept - A Threat Within"), "maxLevel skips a step once you're past it")
@@ -710,10 +725,10 @@ function S.questWindowExtras()
   check(report:find("Guide: lakeshire", 1, true) and report:find("Position: 1433", 1, true)
     and report:find("Hearthstone: Goldshire", 1, true), "the step report has the guide, position and hearth")
   copy:Hide()
-  check(questText(frame, "Next: "), "two steps ahead are listed by default")
+  check(questText(frame, "UP NEXT"), "two steps ahead are listed by default")
   LevelingCodexDB.questPreview = 0
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "Next: "), "the step count setting can hide the steps ahead")
+  check(not questText(frame, "UP NEXT"), "the step count setting can hide the steps ahead")
   LevelingCodexDB.questPreview = 2
 end
 
@@ -1095,7 +1110,7 @@ function S.questBossSteps()
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check(questText(frame, "Boss - Rhahk'Zor") and questText(frame, "Pull him back to the group")
     and chatHas("The Deadmines: the step window follows its guide"), "zoning in opens the guide at its first boss")
-  check(questText(frame, "On the way") and questText(frame, "Head of VanCleef: 0/1"),
+  check(questText(frame, "ON THE WAY") and questText(frame, "Head of VanCleef 0/1"),
     "the run's quest objectives show beside the bosses")
   local target = _G.LevelingCodexQuestTarget
   check(target and target:GetAttribute("macrotext") == "/targetexact Rhahk'Zor", "the target button targets the boss")
@@ -1870,10 +1885,11 @@ function S.questWetlands()
 end
 
 function S.questWetlandsTravel()
-  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1431
+  -- Redridge, not Duskwood: at 28 Duskwood now offers the Darkshire chapter's first pickups.
+  MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1433
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Duskwood the Wetlands section starts with the way there")
+  check(questText(frame, "Fly - Stormwind, Elwynn"), "from Redridge the Wetlands section starts with the way there")
   click(frame, "Next")
   check(questText(frame, "The Doomed Fleet"), "Bishop Farthing's pickup in Stormwind follows the flight")
   click(frame, "Next")
@@ -1919,6 +1935,68 @@ function S.questWetlandsAfterEarly()
   end
 end
 
+function S.questStranglethornRoad()
+  -- A 30-60 map: the arrow knows its size, and from Duskwood it names the road south.
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 38.5, 5.0
+  -- Everything the route picks up before this point is done.
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if not section.side and not section.alternate then
+      for _, step in ipairs(section.steps) do
+        if section.id == "stv-36" and step.quest == 203 then break end
+        if step.type == "accept" and step.quest then MOCK.questDone[step.quest] = true end
+      end
+      if section.id == "stv-36" then break end
+    end
+  end
+  MOCK.questLog = { { questID = 203, objectives = { { text = "Kurzen Jungle Fighters 3/15" } } } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 36-38"), "Stranglethorn resumes its 36-38 guide")
+  local arrow = LevelingCodexQuestArrow
+  check(questText(arrow, " yd"), "the Stranglethorn waypoint shows a distance")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 44.0, 80.0
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(0.25)
+  check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
+end
+
+local TICK = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local function shownTexture(root, path)
+  for _, r in ipairs({ root:GetRegions() }) do
+    if r:IsShown() and r._path == path then return true end
+  end
+  for _, c in ipairs({ root:GetChildren() }) do
+    if c:IsShown() and shownTexture(c, path) then return true end
+  end
+  return false
+end
+
+-- The step window shows a step's objectives as a checklist: the goal, its count on the right and a
+-- tick once it's done, from either log style; the Quests tab keeps the log's own words.
+function S.questStepChecklist()
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "4/10 Kobold Vermin slain" } } } }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Kobold Vermin slain 4/10") and not questText(frame, "4/10 Kobold Vermin slain"),
+    "Forever's '4/10 goal' objective is a checklist row with the count on the right: " .. allText(frame))
+  check(not shownTexture(frame, TICK), "an unfinished goal has no tick")
+  MOCK.questLog[1].objectives = { { text = "Kobold Vermin slain: 10/10", finished = true },
+    { text = "Kobold Worker slain: 2/10" } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Kobold Vermin slain 10/10") and questText(frame, "Kobold Worker slain 2/10"),
+    "the classic 'goal: 2/10' style splits the same way: " .. allText(frame))
+  check(shownTexture(frame, TICK), "a finished goal is ticked")
+  click(frame, "Quests")
+  check(questText(win(), "Kobold Vermin slain: 10/10") and questText(win(), "Kobold Worker slain: 2/10"),
+    "the Quests tab's step card keeps the log's own words, one goal per line")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin slain: 9/10" }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not shownTexture(frame, TICK), "a pooled row loses its tick when it shows an unfinished goal")
+end
+
 function S.questWetlandsDig()
   -- In game (2026-11-12) Prospector Whelgar, beside Merrin, offered Uncovering the Past to a level
   -- 24 who had just taken Ormer's first hunt and Merrin's letter. The pickup comes then, not after
@@ -1950,12 +2028,12 @@ function S.questWetlandsDig()
     "the rest of the fragments share the dig with the hunt, with a Sarltooth warning: " .. allText(frame))
   for _, entry in ipairs(MOCK.questLog) do entry.isComplete = true end
   MOCK.event("QUEST_LOG_UPDATE")
-  check(questText(frame, "Next: Turn in - Uncovering the Past"),
+  check(questText(frame, "UP NEXT") and questTextStarts(frame, "Turn in - Uncovering the Past"),
     "Ormer, nearer the dig, comes before Whelgar: " .. allText(frame))
 end
 
 function S.questWetlandsEnd()
-  -- The Wetlands section ends in Auberdine: Nord'el for Thundris after the Stormwind turn-ins.
+  -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
   MOCK.questLog = { { questID = 98209, isComplete = true } }
   S.login()
@@ -1963,16 +2041,32 @@ function S.questWetlandsEnd()
   click(win(), "Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Bloom of the Heavens"), "resume at the final Wetlands turn-in")
-  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  check(not questText(frame, "Last step in this guide"), "the Wetlands turn-in is no longer the end of the route")
   MOCK.questDone[98209], MOCK.questLog = true, {}
   MOCK.event("QUEST_TURNED_IN", 98209)
+  check(frame:IsShown() and questText(frame, "Auberdine - Stormwind Harbor"), "the route continues with the ship to Stormwind")
+  check(questText(frame, "Darkshire"), "the next guide is the Darkshire chapter")
+end
+
+function S.questRouteEnd()
+  -- The leveling route ends in Moonglade at 60: Umber's last hand-in is the final step.
+  MOCK.level, MOCK.questMap = 60, 1450
+  MOCK.questLog = { { questID = 1185, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "resume at the last turn-in of the route")
+  check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
+  MOCK.questDone[1185], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 1185)
   check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the guide shows its ending after the turn-in")
   check(not findButton(frame, function(label) return label == "Next" end), "the ending has no dead Next button")
   click(frame, "Hide")
   click(win(), "Show step window")
   check(frame:IsShown() and questText(frame, "End of the leveling guide"), "the end card can be reopened")
   click(frame, "Back")
-  check(questText(frame, "Turn in - Bloom of the Heavens"), "Back can review the final step")
+  check(questText(frame, "Turn in - Under the Chitin Was..."), "Back can review the final step")
 end
 
 
@@ -2033,6 +2127,44 @@ function S.questHordeBarrens()
   check(routeHas("Journey to the Crossroads") and not routeHas("Crossroads Conscription"),
     "Tauren turn in their own arrival quest, not the Durotar one")
   MOCK.faction = nil
+end
+
+-- Horde 30-60: a level 36 in Stranglethorn resumes its 35-37 chapter, the route ends at Karus in
+-- Orgrimmar at 60, and the Horde's own Zul'Farrak guide opens at the door.
+function S.questHordeStranglethorn()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Troll", 36, 1434, 32.0, 28.0
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"),
+    "a level 36 Troll at Grom'gol follows the Horde Stranglethorn chapter")
+  click(frame, "Next")
+  check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"), "Next stays in the chapter")
+  MOCK.faction = nil
+end
+
+function S.questHordeRouteEnd()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 60, 1454
+  MOCK.questLog = { { questID = 4511, isComplete = true } }
+  S.login()
+  slash("quests")
+  click(win(), "Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Calm Before the Storm") and questText(frame, "Last step in this guide"),
+    "the Horde route's last step is the Calm Before the Storm hand-in")
+  MOCK.questDone[4511], MOCK.questLog = true, {}
+  MOCK.event("QUEST_TURNED_IN", 4511)
+  check(questText(frame, "End of the leveling guide"), "the Horde guide shows its ending at 60")
+  MOCK.faction = nil
+end
+
+function S.questHordeDungeon()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 46, nil
+  MOCK.instanceName, MOCK.instanceID = "Zul'Farrak", 209
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Boss - Antu'sul") and chatHas("Zul'Farrak: the step window follows its guide"),
+    "zoning into Zul'Farrak opens the Horde guide at its first boss")
+  MOCK.faction, MOCK.instanceName, MOCK.instanceID = nil, nil, nil
 end
 
 local function classSideFixture()
@@ -2117,7 +2249,7 @@ function S.questDetourLibrary()
   check(questText(questViewer(), "Report to Gryan Stoutmantle"), "return restores the leveling step")
   click(win(), "Guide library")
   click(win(), "Track Dungeon Test Pickup")
-  check(questText(questViewer(), "Tracking") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
+  check(questText(questViewer(), "TRACKING") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
   local search = _G.LevelingCodexQuestSearch
   check(search and search:IsShown(), "search field is available")
   search:SetText("Dungeon Test Inside")
@@ -2125,7 +2257,7 @@ function S.questDetourLibrary()
   check(questText(win(), "Dungeon Test Inside"), "search finds a quest inside a detour")
   MOCK.questLog = {}
   MOCK.event("QUEST_TURNED_IN", 999011)
-  check(not questText(questViewer(), "Tracking"), "completed quests disappear from the pinned list")
+  check(not questText(questViewer(), "TRACKING"), "completed quests disappear from the pinned list")
 end
 
 function S.questDungeonContent()
@@ -2209,7 +2341,7 @@ function S.questLibraryResume()
   check(questText(questViewer(), "Complete - Local Active Quest"), "the local active quest takes precedence")
   click(win(), "Guide library")
   click(win(), "Show Earlier Active Quest")
-  check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets: 1/20"),
+  check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets 1/20"),
     "the library follows an unfinished objective from an earlier section")
 end
 

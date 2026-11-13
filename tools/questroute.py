@@ -17,7 +17,7 @@ STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dung
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
                "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "skipOn", "maxLevel",
-               "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path"}
+               "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -167,6 +167,9 @@ def audit(data, ref, cap=20):
                     fail(where, "guide must be an existing guide ID")
                 if "suggest" in step:
                     check_suggestions(step["suggest"], label, where)
+                if "drop" in step and (kind != "note" or not isinstance(step["drop"], list) or not step["drop"] or any(
+                        type(id_) is not int or id_ not in ids for id_ in step["drop"])):
+                    fail(where, "drop must be a note step's list of quest IDs to abandon")
                 if "also" in step:
                     also = step["also"]
                     if not isinstance(also, list) or not also or any(
@@ -304,6 +307,11 @@ def audit(data, ref, cap=20):
                     values.update(v for v in rule if isinstance(v, str))
                 elif isinstance(rule, str):
                     values.add(rule)
+        # A dungeon pickup on the route is handed in inside its dungeon guide; once the route is past
+        # that dungeon's run window (its last level + 3, as Q.readyRun uses) it no longer holds a slot.
+        dungeon_end = {s["id"]: s["levels"][1] + 3 for s in sections if s.get("category") == "dungeon"}
+        dungeon_pick = {s.get("quest"): dungeon_end.get(s.get("dungeon")) for _, s, _ in rows
+                        if s["type"] == "accept" and s.get("dungeon") in dungeon_end}
         for race in sorted(races or {""}):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
@@ -322,6 +330,11 @@ def audit(data, ref, cap=20):
                                 and step.get("quest") not in picked) or step.get("logOnly"):
                             continue
                         kind, quest = step["type"], step.get("quest")
+                        # A clean-up note: quests the player abandons here if they still hold them.
+                        active.difference_update(step.get("drop", []))
+                        if not section.get("category"):
+                            active.difference_update({q for q in active if dungeon_pick.get(q) is not None
+                                                      and section["levels"][0] > dungeon_pick[q]})
                         if kind == "accept":
                             for required in step.get("chain", []):
                                 if required not in finished:

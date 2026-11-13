@@ -324,7 +324,7 @@ end
 
 do
   local name = "Shadowfang Keep"
-  add({ id = "dungeon-shadowfang-keep", title = name, zone = silverpine, levels = { 22, 30 }, instanceID = 33,
+  add({ id = "dungeon-shadowfang-keep", title = name, zone = silverpine, levels = { 22, 30 }, instanceID = 33, instance = name,
     links = { "paladin-verigans-fist", "rogue-horn-of-xelthos", "warlock-orb-of-soranruk" },
     bosses = {
       { name = "Rethilgore", encounter = 2748, npc = 3914,
@@ -347,12 +347,18 @@ do
         tip = "Break line of sight behind the room's pillars to dodge Void Bolt, and follow him when he teleports. Crowd control a player he takes over until the curse ends." },
     },
     sources = { "https://www.zockify.com/forever/dungeons/shadowfang-keep/",
-      "https://questing.wiki/wow-forever/dungeons/shadowfang-keep/" } }, {
+      "https://questing.wiki/wow-forever/dungeons/shadowfang-keep/",
+      "https://www.wowhead.com/forever/zone=209" } }, {
       note("Alliance approach", "Meet at Southshore and ride west through Hillsbrad. Give the Horde settlement at the Sepulcher room. Gather with the group on the road above Pyrewood Village."),
-      enter(name, at("Shadowfang Keep", 45.4, 67.6, silverpine),
+      note("Quests", "Shadowfang Keep has no general Alliance quests. Paladins and Warlocks can bring class quests (linked guides); everyone else runs it for gear and experience."),
+      uncertain(enter(name, at("Shadowfang Keep", 45.4, 67.6, silverpine),
         "Follow the road uphill to the keep gate overlooking Pyrewood and enter together."),
+        "Entrance position from the classic map; check it in game."),
     }, {
-      note("Keep route", "Clear the cells and speak to the prisoner who can open the courtyard gate. Keep the group together in the stable and on the stairs. Follow the upper halls to Arugal."),
+      note("Courtyard and cells", "Kill Rethilgore in the first courtyard. The prisoner in the cells opens the courtyard door; on the Alliance side it is Sorcerer Ashcrombe."),
+      note("Stables and kitchen", "Clear the stables, then the dining hall with Razorclaw the Butcher. Baron Silverlaine waits upstairs; pull his room carefully."),
+      note("Ramparts and tower", "Follow the ramparts past Commander Springvale and Odo the Blindwatcher. Fenrus and Wolf Master Nandos guard the last rooms before Arugal's tower."),
+      note("Archmage Arugal", "Clear the tower stairs. In Arugal's room, use the pillars to break line of sight and follow him when he teleports."),
     }, {
       note("Class turn-ins", "If you brought a class quest, follow its linked route to hand it in. The Horn of Xelthos is a separate solo job."),
     })
@@ -768,8 +774,10 @@ end
 
 do
   local name = "Scarlet Monastery: Graveyard"
-  add({ id = "dungeon-scarlet-monastery-graveyard", title = name, zone = tirisfal, levels = { 30, 38 }, instanceID = 189,
-    links = { "rogue-eye-of-bhossca" },
+  add({ id = "dungeon-scarlet-monastery-graveyard", title = name, zone = tirisfal, levels = { 30, 38 },
+    instanceID = 189, instance = "Scarlet Monastery",
+    links = { "dungeon-scarlet-monastery-library", "dungeon-scarlet-monastery-armory", "dungeon-scarlet-monastery-cathedral",
+      "rogue-eye-of-bhossca" },
     bosses = {
       { name = "Interrogator Vishas", encounter = 444, npc = 3983,
         tip = "Kill his Scarlet guards first, then tank Vishas. It is a simple fight." },
@@ -783,12 +791,17 @@ do
         tip = "Clear the whole crypt first. Healer and ranged stand well back, and melee step away when he starts Flame Spike." },
     },
     sources = { "https://www.zockify.com/forever/dungeons/scarlet-monastery/",
-      "https://bytetavern.com/wow-forever-dungeon-quests/#scarlet-monastery-quests-level-30-and-up" } }, {
+      "https://bytetavern.com/wow-forever-dungeon-quests/#scarlet-monastery-quests-level-30-and-up",
+      "https://www.wowhead.com/forever/zone=796" } }, {
       note("Alliance approach", "Travel together from Southshore through Silverpine. Give the Sepulcher, Undercity and Brill a wide berth on the way to the monastery in north-east Tirisfal."),
-      enter(name, at("Scarlet Monastery approach", 82.65, 32.88, tirisfal),
+      note("Quests", "The Graveyard has no Alliance quests. It is the shortest wing and good experience at 30-35; the Library, Armory and Cathedral guides hold the monastery's Alliance quests."),
+      uncertain(enter(name, at("Scarlet Monastery approach", 82.65, 32.88, tirisfal),
         "Regroup outside the monastery stairs. Enter the common hall and take the Graveyard portal on the left."),
+        "Entrance position from the classic map; check it in game."),
     }, {
-      note("Graveyard run", "Clear around Interrogator Vishas, then continue through the courtyard to the crypt and Bloodmage Thalnos."),
+      note("Chapel and Vishas", "Clear the first chapel in small pulls; the Scarlet casters run for help at low health. Interrogator Vishas waits in the room beyond."),
+      note("Graveyard", "Pull the undead in the open graveyard one pack at a time. The rares spawn here; check for Ironspine, Azshir and the Fallen Champion before moving on."),
+      note("Crypt", "Clear every pack in the crypt before Bloodmage Thalnos so nobody runs into adds while stepping away from his Flame Spike."),
     }, {
       note("Other wings", "The Eye of Bhossca is a separate Rogue route through other monastery wings. Open the linked class detour for its mail, disguise and objectives."),
     })

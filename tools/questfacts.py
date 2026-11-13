@@ -32,6 +32,12 @@ ZONES = {
     "Undercity": (1497, 1458), "Stonetalon": (406, 1442), "Ashenvale": (331, 1440),
     "Hillsbrad": (267, 1424), "Thousand Needles": (400, 1441), "Alterac": (36, 1416),
     "Arathi": (45, 1417), "Desolace": (405, 1443), "Dustwallow": (15, 1445),
+    "Stranglethorn": (33, 1434), "Swamp of Sorrows": (8, 1435), "Badlands": (3, 1418), "Tanaris": (440, 1446),
+    "Feralas": (357, 1444), "Hinterlands": (47, 1425), "Searing Gorge": (51, 1427), "Blasted Lands": (4, 1419),
+    "Burning Steppes": (46, 1428), "Western Plaguelands": (28, 1422), "Eastern Plaguelands": (139, 1423),
+    "Felwood": (361, 1448), "Winterspring": (618, 1452), "Azshara": (16, 1447), "Un'Goro": (490, 1449),
+    "Silithus": (1377, 1451), "Moonglade": (493, 1450), "Riverglades": (16591, 2548), "Shen'dralas": (16651, 2652),
+    "Mount Hyjal": (616, 2482), "Deadwind Pass": (41, 1430),
 }
 
 
