@@ -1168,6 +1168,8 @@ renderers.settings = function()
     "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
   tick("Repair at vendors", not db.noAutoRepair, function() db.noAutoRepair = not db.noAutoRepair end,
     "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
+  tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
+    "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
   y = y + 12
 
   head("QUEST GUIDE")

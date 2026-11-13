@@ -1,7 +1,9 @@
 -- Vendor.lua: at a vendor, the Codex sells your grey items (one every 0.15 s, keeping anything a
 -- guide step names and the Hearthstone), then repairs your gear with your own money. Neither starts
--- in combat or while Alt is held when the vendor opens (Settings > Vendor turns each off). Every call
--- is guarded: a client without the container or merchant calls just gets nothing.
+-- in combat or while Alt is held when the vendor opens (Settings > Vendor turns each off). A card
+-- beside the vendor lists what your coming steps need that this vendor sells, with one Buy button
+-- (nothing is bought until you click it). Every call is guarded: a client without the container or
+-- merchant calls just gets nothing.
 local _, ns = ...
 local Q = ns.quests
 local function try(...) return Q.try(...) end
@@ -19,6 +21,7 @@ local events
 -- Hook points: Stats.lua files the money these announce (called just before it moves).
 function V.onSold() end
 function V.onRepaired() end
+function V.onBought() end
 
 local function numSlots(bag)
   local C = C_Container
@@ -131,6 +134,260 @@ local function sellNext(r)
   if #r.queue == 0 then finish(false) else ns.after(STEP, function() sellNext(r) end) end
 end
 
+----------------------------------------------------------------------------
+-- What your coming steps need: pending rows from the current step to the end of the next section.
+-- Buy and collect steps count their items; quests with vendor-only items (QuestShopData.lua) count
+-- theirs, from the quest log's objective once you have the quest. Per item the larger of the two
+-- totals counts (a buy step and the quest it buys for name the same spices), less what you carry.
+----------------------------------------------------------------------------
+
+local function windowRows()
+  local rows = Q.rows()
+  local _, i = Q.current()
+  local out = {}
+  if not i then return out end
+  local seenSections, last = 0, nil
+  for n = i, #rows do
+    local row = rows[n]
+    if row.section ~= last then
+      last, seenSections = row.section, seenSections + 1
+      if seenSections > 2 then break end
+    end
+    if row.state == "pending" then out[#out + 1] = row end
+  end
+  return out
+end
+
+-- How many of `item` the quest still asks for: its log objective naming the item (0 once finished),
+-- else the generated count.
+local function questWants(id, name, generated)
+  local entry = Q.log(id)
+  if not entry then return generated end
+  for _, obj in ipairs(entry.objectives or {}) do
+    local text = type(obj.text) == "string" and obj.text
+    if text and name and text:lower():find(name:lower(), 1, true) then
+      if obj.finished == true or obj.finished == 1 then return 0 end
+      return tonumber(obj.numRequired) or tonumber(text:match("%d+%s*/%s*(%d+)")) or generated
+    end
+  end
+  return generated
+end
+
+local function itemName(item, names)
+  local name = names and names[item]
+  if name then return name end
+  name = try(GetItemInfo, item)
+  return type(name) == "string" and name or nil
+end
+
+-- { { item, need, forText }, ... } in route order. names: item -> name (the vendor's list).
+function V.needs(names)
+  local steps, quests, order, forText, counted, turnins = {}, {}, {}, {}, {}, {}
+  local function note(item, text, better)
+    if not forText[item] then order[#order + 1] = item; forText[item] = text
+    elseif better and forText[item] == "a step ahead" then forText[item] = text end
+  end
+  local rows = windowRows()
+  for _, row in ipairs(rows) do
+    local s = row.step
+    if s.type == "turnin" and s.quest and s.npc then turnins[s.quest] = turnins[s.quest] or s.npc end
+  end
+  for _, row in ipairs(rows) do
+    local s = row.step
+    if s.type == "buy" or s.type == "collect" then
+      if s.item then steps[s.item] = (steps[s.item] or 0) + (s.count or 1); note(s.item, "a step ahead") end
+      for _, pair in ipairs(type(s.items) == "table" and s.items or {}) do
+        steps[pair[1]] = (steps[pair[1]] or 0) + (pair[2] or 1)
+        note(pair[1], "a step ahead")
+      end
+    end
+    local shop = s.quest and not counted[s.quest] and type(ns.questShop) == "table" and ns.questShop[s.quest]
+    if shop then
+      counted[s.quest] = true
+      local who = turnins[s.quest] or s.name or (Q.log(s.quest) or {}).title or "a quest ahead"
+      for _, pair in ipairs(shop) do
+        local item = pair[1]
+        quests[item] = (quests[item] or 0) + questWants(s.quest, itemName(item, names), pair[2] or 1)
+        note(item, who, true)
+      end
+    end
+  end
+  local out = {}
+  for _, item in ipairs(order) do
+    local need = math.max(steps[item] or 0, quests[item] or 0) - Q.itemCount(item)
+    if need > 0 then out[#out + 1] = { item = item, need = need, forText = Q.plain(forText[item]) } end
+  end
+  return out
+end
+
+----------------------------------------------------------------------------
+-- The shopping card
+----------------------------------------------------------------------------
+
+local card, place = nil, {}
+local ROWS = 6
+
+local function goods()
+  local list, names = {}, {}
+  for i = 1, tonumber(try(GetMerchantNumItems)) or 0 do
+    local id = try(GetMerchantItemID, i)
+    if not id then
+      local link = try(GetMerchantItemLink, i)
+      id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+    end
+    local name, icon, price, per, stock, _, _, extended = try(GetMerchantItemInfo, i)
+    if name == nil and type(C_MerchantFrame) == "table" and type(C_MerchantFrame.GetItemInfo) == "function" then
+      local info = try(C_MerchantFrame.GetItemInfo, i)
+      if type(info) == "table" then
+        name, icon, price, per, stock, extended = info.name, info.texture, info.price, info.stackCount,
+          info.numAvailable, info.hasExtendedCost
+      end
+    end
+    price = tonumber(price)
+    if id and type(name) == "string" and price and not extended and not list[id] then
+      list[id] = { index = i, name = name, icon = icon, price = price, per = math.max(1, tonumber(per) or 1),
+        stock = tonumber(stock) or -1 }
+      names[id] = name
+    end
+  end
+  return list, names
+end
+
+-- The rows the card shows: needed items this vendor sells, capped by its stock.
+local function shopping()
+  local list, names = goods()
+  local rows, total = {}, 0
+  for _, want in ipairs(V.needs(names)) do
+    local g = list[want.item]
+    if g and #rows < ROWS then
+      local n = want.need
+      local short = g.stock ~= -1 and g.stock < n
+      if short then n = g.stock end
+      if n > 0 then
+        local cost = g.per == 1 and g.price * n or g.price * math.ceil(n / g.per)
+        rows[#rows + 1] = { good = g, n = n, cost = cost, forText = want.forText, short = short }
+        total = total + cost
+      end
+    end
+  end
+  return rows, total
+end
+
+local function makeCard()
+  local A, C = ns.art, ns.C
+  local h = A.frame("Frame", "LevelingCodexShopCard", UIParent)
+  h:SetSize(300, 100)
+  h:SetFrameStrata("FULLSCREEN_DIALOG")
+  h:SetClampedToScreen(true)
+  h:EnableMouse(true)
+  h:Hide()
+  h.blizz = A.backdrop(h, "tooltip")
+  if h.blizz then
+    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
+    h:SetBackdropBorderColor(ns.rgba(C.edge))
+  else
+    h.bg = h:CreateTexture(nil, "BACKGROUND")
+    h.bg:SetAllPoints()
+    h.bg:SetColorTexture(ns.rgba(C.bg))
+  end
+  h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  h.label:SetPoint("TOPLEFT", 12, -10)
+  h.label:SetText("FOR YOUR GUIDE")
+  h.label:SetTextColor(1, 0.82, 0)
+  h.rows = {}
+  for i = 1, ROWS do
+    local r = {}
+    local top = -26 - (i - 1) * 30
+    r.icon = h:CreateTexture(nil, "ARTWORK")
+    r.icon:SetSize(20, 20)
+    r.icon:SetPoint("TOPLEFT", 12, top)
+    r.name = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.name:SetPoint("TOPLEFT", 38, top)
+    r.name:SetWidth(190)
+    r.name:SetJustifyH("LEFT")
+    r.price = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.price:SetPoint("TOPRIGHT", -12, top)
+    r.price:SetJustifyH("RIGHT")
+    r.sub = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    r.sub:SetPoint("TOPLEFT", 38, top - 13)
+    r.sub:SetWidth(250)
+    r.sub:SetJustifyH("LEFT")
+    h.rows[i] = r
+  end
+  h.buy = A.button(h, 276, 22)
+  h.buy:SetScript("OnClick", function() V.buy() end)
+  ns.gamepad.attach(h, { popup = true, focusables = function()
+    return { { frame = h.buy, x = 0, y = 0, fixed = true } }
+  end })
+  return h
+end
+
+local function hideCard()
+  if card then card:Hide() end
+  place.edgeRoot = nil
+end
+
+local function refreshCard()
+  if ns.db().noShopCard or not isOpen() then hideCard(); return end
+  local rows, total = shopping()
+  if #rows == 0 then hideCard(); return end
+  if not card then card = makeCard() end
+  for i, r in ipairs(card.rows) do
+    local row = rows[i]
+    local shown = row ~= nil
+    r.icon:SetShown(shown); r.name:SetShown(shown); r.price:SetShown(shown); r.sub:SetShown(shown)
+    if row then
+      ns.setIcon(r.icon, row.good.icon or "INV_Misc_Bag_10")
+      r.name:SetText(Q.plain(row.n .. " x " .. row.good.name))
+      r.price:SetText(ns.money(row.cost))
+      r.sub:SetText(Q.plain("for " .. row.forText .. (row.short and ("  (only " .. row.n .. " in stock)") or "")))
+    end
+  end
+  local money = tonumber(try(GetMoney)) or 0
+  local label = money >= total and ("Buy for " .. ns.money(total)) or ("Need " .. ns.money(total - money) .. " more")
+  card.buy:SetLabel(label)
+  card.buy.codexLabel = label
+  card.buy:ClearAllPoints()
+  card.buy:SetPoint("TOPLEFT", 12, -30 - #rows * 30)
+  card:SetHeight(30 + #rows * 30 + 34)
+  local root = MerchantFrame
+  if type(root) == "table" and type(root.IsShown) == "function" then
+    ns.placeByWindow(card, root, place)
+    if not place.hooked and type(root.HookScript) == "function" then
+      place.hooked = true
+      pcall(root.HookScript, root, "OnHide", hideCard)
+    end
+  else
+    card:ClearAllPoints()
+    card:SetPoint("TOP", UIParent, "TOP", 0, -100)
+  end
+  card:Show()
+end
+
+-- Buy everything the card lists (only when you can pay for all of it).
+function V.buy()
+  if not isOpen() then hideCard(); return end
+  local rows, total = shopping()
+  if #rows == 0 or (tonumber(try(GetMoney)) or 0) < total then refreshCard(); return end
+  V.onBought(total)
+  for _, row in ipairs(rows) do
+    local g = row.good
+    if g.per == 1 then
+      local chunk = math.max(1, tonumber(try(GetMerchantItemMaxStack, g.index)) or 20)
+      local left = row.n
+      while left > 0 do
+        local k = math.min(chunk, left)
+        try(BuyMerchantItem, g.index, k)
+        left = left - k
+      end
+    else
+      for _ = 1, math.ceil(row.n / g.per) do try(BuyMerchantItem, g.index) end
+    end
+    ns.say(Q.plain("Bought " .. row.n .. " " .. g.name .. " for " .. ns.money(row.cost) .. "."))
+  end
+  refreshCard()
+end
+
 local function onShow()
   merchantOpen = true
   seen.visits = seen.visits + 1
@@ -146,14 +403,26 @@ end
 local function onClose()
   merchantOpen = false
   finish(true)
+  hideCard()
 end
 
 function ns.startVendor()
   if events then return end
   events = CreateFrame("Frame")
-  for _, ev in ipairs({ "MERCHANT_SHOW", "MERCHANT_CLOSED" }) do pcall(events.RegisterEvent, events, ev) end
+  for _, ev in ipairs({ "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "BAG_UPDATE_DELAYED" }) do
+    pcall(events.RegisterEvent, events, ev)
+  end
   events:SetScript("OnEvent", function(_, event)
-    if event == "MERCHANT_SHOW" then onShow() elseif event == "MERCHANT_CLOSED" then onClose() end
+    if event == "MERCHANT_SHOW" then
+      onShow()
+      refreshCard()
+      -- the window can open just after the event: place the card against it once it's there
+      ns.after(0.3, function() if isOpen() then refreshCard() end end)
+    elseif event == "MERCHANT_CLOSED" then
+      onClose()
+    elseif merchantOpen then
+      refreshCard()
+    end
   end)
 end
 

@@ -6072,6 +6072,68 @@ function S.vendorRepair()
   check(not MOCK.repaired, "Settings can turn repairing off")
 end
 
+-- Vendor: a card lists what your coming steps need from this vendor, with one Buy button.
+function S.vendorShopping()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+      table.insert(section.steps, 3, { type = "buy", item = 159, count = 5, name = "Refreshing Spring Water",
+        text = "Buy 5 Refreshing Spring Water.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  if MOCK.minimal then
+    MOCK.openMerchant({ items = {} })
+    MOCK.advance(1)
+    check(not (_G.LevelingCodexShopCard and _G.LevelingCodexShopCard:IsShown()), "no card without the merchant API")
+    return
+  end
+  MOCK.money = 1000
+  local spices = { id = 3713, name = "Soothing Spices", price = 50, per = 1, stock = -1, maxStack = 20 }
+  MOCK.openMerchant({ items = { { id = 4540, name = "Tough Hunk of Bread", price = 5 }, spices } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown() and questText(card, "3 x Soothing Spices"), "the card lists a coming step's item")
+  check(not questText(card, "Hunk of Bread"), "items no step needs are left out")
+  click(card, "Buy for 1s 50c")
+  check(#MOCK.bought == 1 and MOCK.bought[1][1] == 3713 and MOCK.bought[1][2] == 3, "Buy buys the count")
+  check(chatHas("Bought 3 Soothing Spices for 1s 50c%."), "chat says what it bought")
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(not card:IsShown(), "the card hides once nothing is left to buy")
+  MOCK.closeMerchant()
+  -- The water step: 5 at 25c is 1s 25c.
+  local water = { id = 159, name = "Refreshing Spring Water", price = 25, per = 1, stock = -1 }
+  MOCK.bought, MOCK.money = {}, 100
+  MOCK.openMerchant({ items = { water } })
+  MOCK.advance(0.5)
+  check(findButton(card, function(l) return l == "Need 25c more" end), "short of gold: the button says how much")
+  click(card, "Need 25c more")
+  check(#MOCK.bought == 0, "and buys nothing")
+  MOCK.closeMerchant()
+  water.stock, MOCK.money = 2, 1000
+  MOCK.openMerchant({ items = { water } })
+  MOCK.advance(0.5)
+  check(questText(card, "only 2 in stock"), "limited stock is noted")
+  click(card, "Buy for 50c")
+  check(MOCK.bought[1][2] == 2, "and only the stock is bought")
+  MOCK.closeMerchant()
+  check(not card:IsShown(), "closing the vendor hides the card")
+end
+
+-- Vendor: a quest in your log that needs a vendor item, next to the step that buys it, counts once.
+function S.vendorShoppingQuest()
+  routeAt("Human", 35, 1445, 66.4, 51.5, { { questID = 1218, title = "Soothing Spices",
+    objectives = { { text = "Soothing Spices: 0/3", finished = false } } } })
+  MOCK.money = 1000
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown() and questText(card, "3 x Soothing Spices"), "Theramore: the card lists Jarl's spices")
+  check(not questText(card, "6 x Soothing Spices"), "the buy step and the quest don't add up")
+  check(questText(card, "Swamp Eye"), "it says who they're for")
+end
+
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.
 function S.trainerReqs()
   if not D() or MOCK.minimal then return end
