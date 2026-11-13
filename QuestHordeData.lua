@@ -102,6 +102,11 @@ do
   local function og(name, x, y) return at(name, x, y, orgrimmar) end
   local function ba(name, x, y) return at(name, x, y, barrens) end
   local ORC, TROLL = "ORC", "TROLL"
+  -- Spots the arrow visits in turn (`points`), for mobs spread along a shore.
+  local function tour(step, ...)
+    step.points = { ... }
+    return step
+  end
 
   -- Valley of Trials
   local kaltunk = du("Kaltunk", 43.29, 68.53)
@@ -125,7 +130,7 @@ do
   q(788, "Cutting Teeth", 2, 1)
   q(790, "Sarkoth", 5, 1)
   q(804, "Sarkoth", 5, 1, 790)
-  q(789, "Sting of the Scorpid", 3, 1)
+  q(789, "Sting of the Scorpid", 3, 1, 788)
   q(4402, "Galgar's Cactus Apple Surprise", 3, 1)
   q(5441, "Lazy Peons", 4, 3)
   q(6394, "Thazz'ril's Pick", 4, 3, 5441)
@@ -270,6 +275,11 @@ do
   quest[96876].startItem = 275722
   q(96604, "The Great Outdoors", 6, 4, 96652, true)
   q(96655, "Camping 101: Cooking", 6, 4, 96604, true)
+  -- The gathering lessons, optional as in Mulgore and Tirisfal (Settings > Show optional quests).
+  q(97905, "Camping 101: Herbalism", 6, 4, 96604, true)
+  q(97907, "Camping 101: Mining", 6, 4, 96604, true)
+  q(97908, "Camping 101: Skinning", 6, 4, 96604, true)
+  for _, id in ipairs({ 97905, 97907, 97908 }) do quest[id].optional = true end
   q(806, "Dark Storms", 12, 4, 823)
   q(784, "Vanquish the Betrayers", 7, 3)
   q(825, "From The Wreckage....", 8, 3)
@@ -337,6 +347,9 @@ do
     objective(96604, du(nil, 52.06, 47.33), "Sit by Brakk's campfire (type /sit) until you get the Boosted Rest buff.",
       "Rest at the campfire"),
     finish(96604, brakk), accept(96655, brakk),
+    accept(97905, brakk, "If you know Herbalism, ask Brakk for the herbalism lesson too."),
+    accept(97907, brakk, "If you know Mining, ask Brakk for the mining lesson too."),
+    accept(97908, brakk, "If you know Skinning, ask Brakk for the skinning lesson too."),
     finish(96655, torka, "Learn Cooking from Cook Torka by the Razor Hill barracks."),
     accept(96825, torka), accept(815, torka),
     finish(96821, garthok, "Gar'Thok stands in front of the barracks in Razor Hill."),
@@ -371,7 +384,10 @@ do
       "Swim out to the gnomish wreckage east of the keep and loot the tools from the crates.", "3 Gnomish Tools"),
     finish(784, garthok), finish(830, garthok), finish(825, garthok),
     accept(831, garthok), accept(837, garthok),
-    finish(99049, orgnil), finish(791, furl), finish(96822, turroc),
+    finish(99049, orgnil), finish(791, furl),
+    finish(97907, du("Krunn", 51.81, 40.88),
+      "Miners: Krunn, the Razor Hill mining trainer, takes the lesson once your Mining skill has grown a little."),
+    finish(96822, turroc),
     action("train", nil, "Visit your class trainer in Razor Hill. Train spells for level", { level = 10 }),
     along(objective(96825, du(nil, 48.8, 49.0),
       "Go west into the Razormane Grounds. Kill Razormane Quilboars and Scouts and pick Prickly Pear Fruit from the cactuses.",
@@ -430,7 +446,11 @@ do
     objective(97282, du(nil, 39.4, 25.3),
       "Kill Lightning Hides in Thunder Ridge for the organs. The elite Halikor roams here too; with help, loot his hoof.",
       "5 Charged Thunder Lizard Organs"),
+    tour(objective(816, du(nil, 35.8, 24.5),
+      "Go down to the Southfury River west of Thunder Ridge. Kill Dreadmaw Crocolisks along the bank until one drops Kron's Amulet. It is a rare drop, so expect a few kills.",
+      "Kron's Amulet"), { 36.6, 22.2 }, { 35.2, 24.6 }, { 35.7, 25.3 }, { 35.0, 26.1 }, { 35.3, 28.3 }, { 35.2, 30.1 }),
     withItem(275723, accept(96877, du(nil, 40.76, 30.1), "Read Halikor's Hoof from your bags.")),
+    finish(816, misha, "Bring the amulet to Misha Tor'kren at her farmstead east of the river."),
     finish(97282, rezlak),
     finish(828, margoz, "Margoz camps on the hill east of the road north of Rezlak."),
     accept(827, margoz),
@@ -445,12 +465,14 @@ do
     accept(97246, thatog, "Thatog runs the food stand just inside the gate."),
     finish(97246, borstan, "Borstan's Firepit is in the Valley of Strength."), accept(97249, borstan),
     finish(829, neeru), finish(832, neeru), accept(809, neeru),
+    finish(97905, og("Jandi", 55.62, 39.46), "Herbalists: Jandi, the herbalism trainer, is on the way north to Kor'geld."),
     accept(97242, korgeld, "Take the tunnel north to the Valley of Honor. Kor'geld is inside Yelmak's shop."),
     objective(97242, og(nil, 69.4, 34.6), "Cut Cattails and Speargrass by the streams in the east of the Valley of Honor.",
       "2 Handfuls of Cattails", "2 Bundles of Speargrass"),
+    finish(97908, og("Thuwd", 63.36, 45.42), "Skinners: Thuwd, the skinning trainer, stands a little south of the way back west."),
+    finish(96877, kamari, "Bring Halikor's Hoof to Kamari, next to Thuwd south-west of the streams."),
     finish(97242, korgeld), accept(97275, yelmak),
     finish(97275, whuut),
-    finish(96877, kamari, "Bring Halikor's Hoof to Kamari in the Valley of Honor."),
     finish(97249, migi, "Walk west to the back of Grommash Hold. Migi sits there."),
     accept(97326, thra),
     objective(97326, og(nil, 43.7, 34.6),
@@ -458,11 +480,8 @@ do
     finish(97326, thra),
     finish(5726, thrall, "Show Thrall the insignia in Grommash Hold."),
     action("goto", orgGate, "Leave Orgrimmar through the south gate."),
-    objective(816, du(nil, 34.7, 42.3),
-      "Go west to the Southfury River. Kill Dreadmaw Crocolisks along the bank until one drops Kron's Amulet.",
-      "Kron's Amulet"),
-    finish(816, misha),
-    action("goto", du(nil, 34.6, 42.6), "Take the road west across the bridge into the Barrens."),
+    action("goto", du(nil, 34.6, 42.6),
+      "Follow the road south from the gate and take the western road to the bridge over the Southfury River, into the Barrens."),
     finish(840, kargal, "Kargal waits at the Far Watch Outpost on the far side of the bridge."),
     accept(842, kargal),
     finish(809, akzeloth),

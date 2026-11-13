@@ -87,6 +87,10 @@ do
   q(76160, "Stalk With The Earthmother", 11, nil, 76156, true)
   q(76240, "Stalk With The Earthmother", 11, nil, 76160, true)
   q(886, "The Barrens Oases", 10, 10)
+  -- Eylah Sunhorn stands beside Eyahn at the top of the lift. Reputation and a little XP, but it
+  -- costs four vendor items, so it is optional (Settings > Show optional quests).
+  q(97485, "Traditions of the Bluff", 10, nil, nil, true)
+  quest[97485].optional = true
   q(5722, "Searching for the Lost Satchel", 16, 9)
   q(5723, "Testing an Enemy's Strength", 15, 9)
   q(854, "Journey to the Crossroads", 12, 9)
@@ -190,6 +194,8 @@ do
   local eyahn = tb("Eyahn Eagletalon", 37.75, 59.57)
   local melor = tb("Melor Stonehoof", 61.54, 80.92)
   local rahauro = tb("Rahauro", 70.14, 29.52)
+  local eylah = tb("Eylah Sunhorn", 38.0, 55.9)
+  local onTraditions = { ifOnQuest = 97485, optional = true }
   local bloodhoofTrainers = {
     { "WARRIOR", krang },
     { "HUNTER", yaw },
@@ -254,11 +260,21 @@ do
     finish(772, wiserunner, "Seer Wiserunner sits in a small cave just north of the harpies."),
     accept(773, wiserunner),
     action("goto", lift, "Walk north to Thunder Bluff and ride the lift up the side of the mesa."),
+    accept(97485, eylah,
+      "Eylah Sunhorn, near the top of the lift, wants ceremonial incense made from four cheap goods sold on the central mesa."),
     accept(76156, boarton, "Boarton Shadetotem is stealthed near the top of the lift. Look closely to find him."),
     action("sethearth", pala, "Bind your hearthstone at the Thunder Bluff inn.", { bind = "Thunder Bluff" }),
     taxi("getfp", tb("Tal", 47.0, 49.82), "Thunder Bluff, Mulgore", "Learn the flight path from Tal at the top of the wind rider tower."),
-    finish(97935, tb("Brek Stonehoof", 34.37, 57.9), "Miners: Brek Stonehoof has the next mining lesson."),
+    action("goto", tb("Naal Mistrunner", 50.99, 52.45), "For Eylah: buy Ceremonial Flint and Tinder from Naal Mistrunner, the cooking supplier.",
+      onTraditions),
+    action("goto", tb("Mahu", 43.8, 45.12), "For Eylah: buy Sinew Thread from Mahu, the leatherworking supplier.", onTraditions),
+    action("goto", tb("Nata Dawnstrider", 44.99, 38.75), "For Eylah: buy a Bundle of Cedar Twigs from Nata Dawnstrider, the enchanting supplier.",
+      onTraditions),
+    action("goto", tb("Nida Winterhoof", 49.57, 39.57),
+      "For Eylah: buy a Bundle of Herbs from Nida Winterhoof, the herbalism supplier, then use it from your bags to combine the four goods into incense.",
+      onTraditions),
     finish(97933, tb("Komin Winterhoof", 49.95, 40.41), "Herbalists: Komin Winterhoof has the next herbalism lesson."),
+    finish(97935, tb("Brek Stonehoof", 34.37, 57.9), "Miners: Brek Stonehoof has the next mining lesson."),
     accept(744, eyahn, "Eyahn Eagletalon stands near the top of the lift."),
     action("goto", liftTop, "Ride the lift back down to Mulgore."),
     withItem(4854, accept(770, nil, "If Ghost Howl, a level 12 grey wolf that roams Mulgore, dropped the Demon Scarred Cloak, use it to start the quest.")),
@@ -316,13 +332,21 @@ do
     along(withItem(5416, objective(760, 42.49, 24.68, "Head east to the Wildmane Water Well and use the cleansing totem.", "Cleanse the Wildmane Water Well")), 861),
     along(objective(776, 50.92, 23.34, "Find Arra'chea, the big kodo that roams the plain east of the well, and take its horn.", "Horn of Arra'chea"), 861),
     objective(861, 43.55, 22.3, "Kill Flatland Prowlers on the northern plain for their claws.", "4 Flatland Prowler Claws"),
+    -- Third visit as one loop: the lift-top NPCs, across to Cairne, south to Hunter Rise, then
+    -- back past Boarton (his fish lesson) and Eylah to the lift.
     action("goto", lift, "Return to Thunder Bluff by the lift."),
-    finish(776, cairne), finish(744, eyahn),
-    finish(76160, boarton), accept(76240, boarton),
-    withItem(206344, objectiveAt(76240, boarton, "Buy a Raw Brilliant Smallfish at the auction house or catch one in the pond, then use the Knife Set in front of Boarton.", "Fish Chunks")),
-    finish(76240, boarton),
-    finish(861, melor, "Melor Stonehoof is on Hunter Rise."),
+    finish(744, eyahn, "Eyahn Eagletalon waits near the top of the lift."),
+    finish(76160, boarton),
+    accept(76240, boarton,
+      "Boarton's last lesson needs a Raw Brilliant Smallfish. If you have none, Kah Mistrunner teaches Fishing and Sewa Mistrunner sells poles near Cairne's lodge, on your way."),
+    finish(776, cairne, "Cross the mesa to Cairne Bloodhoof in the great lodge."),
+    finish(861, melor, "Melor Stonehoof is on Hunter Rise, across the bridge south of the lodge."),
     accept(860, melor),
+    objectiveAt(97485, tb("Incense Burner", 53.0, 87.8),
+      "Walk to the incense burner on the south edge of Hunter Rise and sprinkle the incense there.", "Incense sprinkled"),
+    withItem(206344, objectiveAt(76240, boarton, "Back by the lift, catch a Raw Brilliant Smallfish in the water just north of Boarton if you still need one (or buy one), then use the Knife Set in front of him.", "Fish Chunks")),
+    finish(76240, boarton),
+    finish(97485, eylah, "Eylah Sunhorn waits beside Eyahn, near the top of the lift."),
     -- CARRY: turnin 860 Sergra Darkthorn at Sergra Darkthorn, Crossroads (the Barrens file owns the Crossroads).
     -- CARRY: turnin 886 The Barrens Oases at Tonga Runetotem, Crossroads (druids only here).
     -- Veteran Uzzek (1505, Warriors) and Call of Fire (2984, Shamans) are left for the class-quest pass.
