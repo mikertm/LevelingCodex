@@ -650,6 +650,30 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- The step sound: the game finishing a step (an accept, a turn-in) plays it; Next doesn't.
+function S.stepSound()
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - A Threat Within"), "Northshire starts with A Threat Within")
+  MOCK.sounds = {}
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(#MOCK.sounds == 1, "accepting the step's quest plays the step sound (" .. #MOCK.sounds .. ")")
+  check(MOCK.sounds[1].channel == "Master", "on the Master channel, so a low effects volume doesn't hide it")
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(#MOCK.sounds == 2, "turning it in plays it again (" .. #MOCK.sounds .. ")")
+  click(frame, "Next")
+  check(#MOCK.sounds == 2, "Next is quiet")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("step sound: played 2 times this session, last for Turn in %- A Threat Within"),
+    "debug says when the step sound played")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
@@ -1103,6 +1127,7 @@ function S.stepPolish()
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(frame.glowAnim and frame.glowAnim:IsPlaying(), "a step the game finished makes the window's edge glow")
+  check(MOCK.sounds and #MOCK.sounds > 0, "and plays a sound")
 end
 
 -- The Quests tab: a fixed step card and button row, then Step, Route, Guides and Quest log sub-tabs.

@@ -803,16 +803,20 @@ function Q.detail(step, requiredFor, withStickies)
   return Q.plain(table.concat(lines, "\n"))
 end
 
--- A step the game finished (not Next/Back or a jump) plays the map ping, like a quest objective.
+-- A step the game finished (not Next/Back or a jump) plays the map ping, like a quest objective,
+-- on the Master channel so a low effects volume doesn't hide it. Counted for /codex debug.
+local sounds = { n = 0 }
 local function completionSound(row)
   local done = lastRow and row ~= lastRow and not quiet and lastRow.state == "done"
+  local finished = lastRow
   lastRow, quiet = row, false
   if done and viewer and viewer.glowAnim then
     viewer.glowAnim:Stop()
     viewer.glowAnim:Play()
   end
   if done and not ns.db().questNoSound and type(PlaySound) == "function" then
-    pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175)
+    sounds.n, sounds.last = sounds.n + 1, Q.plain(Q.label(finished.step))
+    pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175, "Master")
   end
 end
 
@@ -2022,5 +2026,7 @@ function ns.questDebugLines()
   local known, probed = Q.flightDebug()
   lines[#lines + 1] = "Known flight paths: " .. known .. (probed and (" (" .. probed .. " from C_TaxiMap)") or " (no C_TaxiMap)")
     .. ". Hearth: " .. Q.plain(Q.bindLocation() or "unknown") .. ". Arrow art: " .. tostring(arrowFile or "text only")
+  lines[#lines + 1] = "step sound: " .. (ns.db().questNoSound and "off, " or "") .. "played " .. sounds.n
+    .. (sounds.n == 1 and " time" or " times") .. " this session" .. (sounds.last and (", last for " .. sounds.last) or "")
   return lines
 end

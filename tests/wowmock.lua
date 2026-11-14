@@ -817,7 +817,11 @@ local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROG
 function UnitClass(unit) return CLASS_NAMES[MOCK.class] or MOCK.class, MOCK.class end
 function InCombatLockdown() return MOCK.combat end
 function GetCursorPosition() return MOCK.cursor[1], MOCK.cursor[2] end
-function PlaySound() end
+-- MOCK.sounds records { id, channel } for each sound played.
+function PlaySound(id, channel)
+  MOCK.sounds = MOCK.sounds or {}
+  MOCK.sounds[#MOCK.sounds + 1] = { id = id, channel = channel }
+end
 SOUNDKIT = { LEVEL_UP = 888 }
 function ReloadUI() error("ReloadUI is protected in Forever", 2) end
 function CreateColor(r, g, b, a) return { r = r, g = g, b = b, a = a } end
