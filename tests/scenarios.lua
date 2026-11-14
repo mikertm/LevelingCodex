@@ -650,6 +650,25 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- After a /reload the game keeps the waypoint the Codex set, but the Codex has forgotten it set it:
+-- one on a step of your route is still the Codex's and follows the step; the player's own stays.
+function S.questMapPinReload()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  local old
+  for _, s in ipairs(northshire.steps) do
+    if s.map == 1429 and s.x and math.abs(s.x - 48.17) > 1 then old = s; break end
+  end
+  MOCK.userWaypoint = { uiMapID = 1429, position = { x = old.x / 100, y = old.y / 100 } }
+  S.login()
+  local w = MOCK.userWaypoint
+  check(w and math.abs(w.position.x - 0.4817) < 0.0001 and math.abs(w.position.y - 0.4294) < 0.0001,
+    "the waypoint left on an earlier step moves to the current step")
+  MOCK.userWaypoint = { uiMapID = 1429, position = { x = 0.1, y = 0.1 } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(MOCK.userWaypoint.position.x == 0.1, "a waypoint off the route is the player's and stays")
+end
+
 -- The quest arrow: drag it anywhere, Ctrl+wheel resizes it, lock and reset; it hides with the window.
 function S.arrowMove()
   LevelingCodexDB = { questArrowScale = 9 }

@@ -1035,6 +1035,25 @@ function ns.questMapPinSpot()
   if map and samePoint(pinned, map, x, y) then return { map = pinned.map, x = pinned.x, y = pinned.y } end
 end
 
+-- A waypoint on a spot of your route (a step, its way in or its points) is one the Codex set,
+-- perhaps before a /reload made it forget: the game keeps user waypoints, the Codex doesn't.
+local routeSpot = { key = nil, hit = false } -- the last waypoint checked, and the answer
+local function onRoute(map, x, y)
+  local key = map .. ":" .. x .. ":" .. y
+  if routeSpot.key == key then return routeSpot.hit end
+  local hit = false
+  local function near(m, px, py) return m == map and px and math.abs(px / 100 - x) < 0.0005 and math.abs(py / 100 - y) < 0.0005 end
+  for _, row in ipairs((Q.rows())) do
+    local s = row.step
+    if near(s.map, s.x, s.y) then hit = true end
+    for _, p in ipairs(s.path or {}) do if near(p[3] or s.map, p[1], p[2]) then hit = true end end
+    for _, p in ipairs(s.points or {}) do if near(s.map, p[1], p[2]) then hit = true end end
+    if hit then break end
+  end
+  routeSpot.key, routeSpot.hit = key, hit
+  return hit
+end
+
 local function updateMapPin()
   local M = C_Map
   if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
@@ -1042,7 +1061,7 @@ local function updateMapPin()
   local step = row and Q.waypoint(row.step)
   local want = not ns.db().noQuestMapPin and step and step.map and step.x and step.y
   local map, x, y = userWaypoint()
-  local ours = pinned and map and samePoint(pinned, map, x, y)
+  local ours = map and (pinned and samePoint(pinned, map, x, y) or not pinned and onRoute(map, x, y))
   if map and not ours then pinned = nil; return end -- the player's own waypoint
   if not want then
     if ours then try(M.ClearUserWaypoint) end
