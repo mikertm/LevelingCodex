@@ -11,6 +11,7 @@
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
 
 Data.lua
+TalentTreeData.lua
 ProfessionData.lua
 QuestData.lua
 QuestAlternateData.lua

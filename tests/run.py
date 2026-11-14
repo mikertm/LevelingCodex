@@ -274,7 +274,7 @@ def data_checks():
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_npc_checks() + quest_shop_checks() + quest_danger_checks()
-            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks(),
+            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks() + talent_tree_checks(),
             warnings + prof_warnings + game_warnings + choice_warnings)
 
 
@@ -634,6 +634,58 @@ def prof_shape_checks():
                 if first not in names:
                     errors.append("professions %s: part %s: %s is not in the cloth list" % (key, p.get("name"), first))
     return errors, warnings
+
+
+def load_addon_file(name, ns=None):
+    """Run one addon file in a fresh Lua state with (addonName, ns); returns ns."""
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = ns if ns is not None else lua.table()
+    f = lua.execute("return function(src) return loadstring(src) end")(open(os.path.join(ROOT, name), encoding="utf-8").read())
+    f("LevelingCodex", ns)
+    return lua, ns
+
+
+def talent_tree_checks():
+    """TalentTreeData.lua: generated from the reference by `tools/gamedata.py talentdata`, the full
+    talent trees the Talents tab and the custom path editor draw."""
+    errors = []
+    path = os.path.join(ROOT, "TalentTreeData.lua")
+    if not os.path.exists(path):
+        return ["talent tree: TalentTreeData.lua missing (python tools/gamedata.py talentdata)"]
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if os.path.exists(gamedata.REF) and open(path, encoding="utf-8").read() != gamedata.talentdata_text(gamedata.load_reference()):
+        errors.append("talent tree: TalentTreeData.lua is stale (python tools/gamedata.py talentdata)")
+    _, ns = load_addon_file("TalentTreeData.lua")
+    trees = ns.talentTrees
+    if trees is None:
+        return errors + ["talent tree: no ns.talentTrees"]
+    for cls in CLASSES:
+        t = trees[cls]
+        if t is None or len(t.tabs) != 3:
+            errors.append("talent tree %s: needs 3 tabs" % cls)
+            continue
+        talents = [t.talents[i] for i in range(1, len(t.talents) + 1)]
+        keys = [(x.tab, x.row, x.col) for x in talents]
+        if keys != sorted(keys):
+            errors.append("talent tree %s: talents not sorted by tab, row, column" % cls)
+        for x in talents:
+            if any(ord(c) > 126 for c in (x.tip or "") + x.name):
+                errors.append("talent tree %s: %s has non-ASCII text" % (cls, x.name))
+            if not x.icon or not x.max:
+                errors.append("talent tree %s: %s needs an icon and max" % (cls, x.name))
+    def find(cls, name):
+        t = trees[cls]
+        for i in range(1, len(t.talents) + 1):
+            if t.talents[i].name == name:
+                return t.talents[i]
+    ms = find("WARRIOR", "Mortal Strike")
+    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"] \
+            or [2, 48] not in [list(r.values()) for r in ms.spell.values()]:
+        errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
+    if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
+        errors.append("talent tree: hidden talents (Lightning Reflexes, Holy Specialization) must be left out")
+    return errors
 
 
 def game_checks():
