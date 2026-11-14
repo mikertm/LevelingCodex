@@ -73,7 +73,7 @@ local function scan()
     for slot = 1, numSlots(bag) do
       local id, count, quality, noValue, locked, link = slotInfo(bag, slot)
       if id and not locked and not kept(id) then
-        local name, _, q, _, _, _, _, _, _, _, price = try(GetItemInfo, link or id)
+        local name, _, q, _, _, _, _, _, _, _, price = ns.itemInfo(link or id)
         quality = quality or q
         price = (noValue and 0) or tonumber(price) or 0
         if name and quality == 0 and price > 0 then
@@ -209,7 +209,7 @@ end
 local function itemName(item, names)
   local name = names and names[item]
   if name then return name end
-  name = try(GetItemInfo, item)
+  name = ns.itemInfo(item)
   return type(name) == "string" and name or nil
 end
 

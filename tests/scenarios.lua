@@ -7108,6 +7108,13 @@ function S.vendorJunk()
   check(#MOCK.sold == 0, "Settings can turn selling off")
 end
 
+-- The owner's report "auto sell junk did not" (the repair worked): WoW: Forever, like retail, reads
+-- item info through C_Item.GetItemInfo, and the junk scan only asked the old global GetItemInfo, so
+-- no grey had a price. The scenarios after this one run without the global.
+function S.noGlobalItemInfo()
+  GetItemInfo = nil
+end
+
 -- Vendor: repairs with your own money once the junk money is in, or says it's short.
 function S.vendorRepair()
   S.login()

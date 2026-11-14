@@ -888,6 +888,10 @@ def main():
             runs.append(("WARRIOR/full/vendor-pad", "WARRIOR", False, ["vendorPad"]))
             runs.append(("WARRIOR/full/vendor-buy-fails", "WARRIOR", False, ["vendorBuyFails"]))
             runs.append(("WARRIOR/full/vendor-late-window", "WARRIOR", False, ["vendorLateWindow"]))
+            # WoW: Forever reads item info through C_Item.GetItemInfo only
+            runs.append(("WARRIOR/full/c-item-junk", "WARRIOR", False, ["noGlobalItemInfo", "vendorJunk"]))
+            runs.append(("WARRIOR/full/c-item-reward", "WARRIOR", False, ["noGlobalItemInfo", "questReward"]))
+            runs.append(("WARRIOR/full/c-item-enchant", "WARRIOR", False, ["noGlobalItemInfo"] + ENCHANT))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
         runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
         runs.append(("WARRIOR/%s/pace-kills" % variant, "WARRIOR", minimal, ["paceKills"]))

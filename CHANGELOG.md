@@ -37,6 +37,7 @@
 - **Junk and repairs.** At a vendor the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. Both can be turned off in Settings or the guide setup; hold Alt as you open the vendor to skip them once.
 - **A shopping card.** When a coming step needs something this vendor sells, a card lists it with one Buy button.
 - Selling and repairing now wait for the vendor window: in Forever it opens a moment after the vendor does, and the Codex used to give up before its first sale, so nothing was sold or repaired. `/codex debug` says what the last vendor visit did.
+- Grey items now sell: the Codex read item prices the old way, which Forever doesn't answer, so no grey had a price. The same fix brings back the coin on the best-selling quest reward and your bag items in the Enchanting tab's disenchanting list.
 
 ### Stats and pace
 

@@ -1992,7 +1992,7 @@ local function markReward(tries)
   for i = 1, choices do
     local name, _, count = try(GetQuestItemInfo, "choice", i)
     local link = try(GetQuestItemLink, "choice", i)
-    local price = link and select(11, try(GetItemInfo, link))
+    local price = link and select(11, ns.itemInfo(link))
     if price == nil then missing = true end
     local value = (tonumber(price) or 0) * math.max(1, tonumber(count) or 1)
     if value > bestValue then best, bestValue, bestName = i, value, name end
@@ -2301,6 +2301,7 @@ function ns.questDebugLines()
     { "Death", _G, "UnitIsGhost" },
     { "XP", _G, "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP" },
     { "Rewards", _G, "GetQuestItemInfo", "GetQuestItemLink", "GetItemInfo" },
+    { "C_Item", C_Item, "GetItemInfo" },
     { "C_DeathInfo", C_DeathInfo, "GetCorpseMapPosition" },
     { "Tracker", C_QuestLog, "AddQuestWatch", "RemoveQuestWatch", "GetQuestWatchType" },
     { "Classic tracker and map", _G, "AddQuestWatch", "RemoveQuestWatch", "IsQuestWatched", "OpenWorldMap", "ToggleWorldMap" },

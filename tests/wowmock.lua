@@ -1151,6 +1151,9 @@ function GetItemInfo(link)
     end
   end
 end
+-- Modern clients (retail, and WoW: Forever by every add-on written for it) read item info through
+-- C_Item.GetItemInfo; scenario noGlobalItemInfo drops the old global, the minimal client drops C_Item.
+C_Item = { GetItemInfo = GetItemInfo }
 
 local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
 function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end
@@ -1492,7 +1495,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
-  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame" }
+  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

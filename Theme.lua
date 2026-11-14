@@ -71,6 +71,21 @@ function ns.try(fn, ...)
   return pcall(fn, ...)
 end
 
+-- GetItemInfo's returns (name, link, quality, ..., sellPrice 11th, classID 12th): C_Item.GetItemInfo
+-- where the client has it (WoW: Forever, like retail, reads item info there: asking only the old
+-- global left every grey without a price), else the classic global; nil while the item isn't cached,
+-- on an error or without either call.
+local function okValues(ok, ...) if ok then return ... end end
+function ns.itemInfoAPI()
+  if type(C_Item) == "table" and type(C_Item.GetItemInfo) == "function" then return C_Item.GetItemInfo end
+  if type(GetItemInfo) == "function" then return GetItemInfo end
+end
+function ns.itemInfo(item)
+  local get = ns.itemInfoAPI()
+  if not get or item == nil then return nil end
+  return okValues(pcall(get, item))
+end
+
 -- Timers: C_Timer when the client has it, else a small OnUpdate scheduler.
 local jobs, clock
 local function schedule(sec, fn, every)

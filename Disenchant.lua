@@ -58,13 +58,13 @@ end
 function ns.deBagItems(key)
   local hasBags = (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerItemInfo)
     or (GetContainerNumSlots and GetContainerItemInfo)
-  if not hasBags or not GetItemInfo then return nil end
+  if not hasBags or not ns.itemInfoAPI() then return nil end
   local list = {}
   for bag = 0, 4 do
     for slot = 1, slotCount(bag) do
       local link = slotLink(bag, slot)
       if link then
-        local r = { pcall(GetItemInfo, link) }
+        local r = { true, ns.itemInfo(link) }
         local name, quality, level, classID = r[2], tonumber(r[4]), tonumber(r[5]), tonumber(r[13])
         local band = name and ns.deBand(key, level)
         if band and quality and quality >= 2 and quality <= 4 and (classID == 2 or classID == 4) then
