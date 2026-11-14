@@ -1233,16 +1233,18 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
-  head("CLASS TRAINER")
+  head("TRAINERS")
   tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
     "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
+  tick("Show what to learn at profession trainers", not db.noProfTrainer, function() db.noProfTrainer = not db.noProfTrainer end,
+    "At a profession trainer, a card lists the next rank when you can train it and the recipes your route needs from this trainer, and names the trainer or vendor for one it doesn't teach.")
   y = y + 12
 
   head("PROFESSIONS")
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open Blacksmithing, Smelting, Tailoring, Enchanting or Leatherworking, the Codex outlines the recipe to make for your skill and shows how many more to make.")
+    "When you open a crafting profession or Smelting, the Codex outlines the recipe to make for your skill and shows how many more to make.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "Shows a card for new steps, training or skill caps in Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning and Leatherworking. Mining and Herbalism also announce new nodes.")
+    "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
   y = y + 12
 
   head("GATHERING")
@@ -1266,6 +1268,8 @@ renderers.settings = function()
     "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
   tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
     "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
+  tick("Include profession supplies", not db.noProfShop, function() db.noProfShop = not db.noProfShop end,
+    "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
   y = y + 12
 
   head("QUEST GUIDE")
