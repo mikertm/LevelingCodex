@@ -1244,6 +1244,9 @@ function makers.row(template)
   r.count = r:CreateFontString(nil, "OVERLAY", template)
   r.count:SetJustifyH("RIGHT")
   r.count:SetPoint("TOPRIGHT", 0, 0)
+  -- the goal's bar under its text: a dark track and the share done
+  r.track = r:CreateTexture(nil, "ARTWORK")
+  r.bar = r:CreateTexture(nil, "OVERLAY")
   -- A rising count flashes the row gold for a moment.
   r.flash = r:CreateTexture(nil, "BACKGROUND")
   r.flash:SetPoint("TOPLEFT", -4, 2)
@@ -1314,6 +1317,10 @@ end
 
 -- Goal counts drawn for the step on screen: a count that rose since the last draw flashes its row.
 local seenCounts, newCounts, countsRow = {}, {}, nil
+-- Goal bars: the current step kind's colour (set by the refresh), the loop's other quests in orange,
+-- a finished goal green and full.
+local goalColor
+local LOOP_COLOR, DONE_COLOR, TRACK_COLOR = { 0.95, 0.65, 0.25 }, { 0.45, 0.85, 0.4 }, { 0.1, 0.13, 0.15, 0.9 }
 
 local function putGoal(b)
   local small, indent = b.small, b.indent or 0
@@ -1321,7 +1328,7 @@ local function putGoal(b)
   local width, line = WIDTH - indent, small and 12 or 14
   r:SetPoint("TOPLEFT", LEFT + indent, -cursor)
   r:SetWidth(width)
-  r.count:SetText(b.count or "")
+  r.count:SetText(b.count and (b.done and "done" or b.count) or "")
   r.count:SetShown(b.count ~= nil)
   local countWidth = b.count and math.ceil(tonumber(try(r.count.GetStringWidth, r.count)) or 30) + 8 or 0
   r.name:SetWidth(width - 16 - countWidth)
@@ -1362,6 +1369,23 @@ local function putGoal(b)
     newCounts[b.text] = have
   end
   local height = math.max(line, tonumber(r.name:GetStringHeight()) or line)
+  local need = type(b.count) == "string" and tonumber(b.count:match("/(%d+)$"))
+  r.track:SetShown(need ~= nil)
+  r.bar:SetShown(need ~= nil)
+  if need then
+    local barWidth = width - 16
+    r.track:ClearAllPoints()
+    r.track:SetPoint("TOPLEFT", 16, -(height + 1))
+    r.track:SetSize(barWidth, 4)
+    r.track:SetColorTexture(ns.rgba(TRACK_COLOR))
+    local share = b.done and 1 or (need > 0 and math.min(1, (have or 0) / need) or 0)
+    local color = b.done and DONE_COLOR or (small and LOOP_COLOR or goalColor or C.accent)
+    r.bar:ClearAllPoints()
+    r.bar:SetPoint("TOPLEFT", r.track, "TOPLEFT", 0, 0)
+    r.bar:SetSize(math.max(0.01, barWidth * share), 4)
+    r.bar:SetColorTexture(color[1], color[2], color[3], 1)
+    height = height + 6
+  end
   r:SetHeight(height)
   cursor = cursor + height + (small and 1 or 2)
 end
@@ -1445,6 +1469,7 @@ function ns.questRefresh()
     -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)
+    goalColor = style and style.color or nil
     local x = icon and 36 or 16
     viewer.stripe:SetShown(style ~= nil)
     viewer.chip:SetShown(style ~= nil)

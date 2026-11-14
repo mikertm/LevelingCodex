@@ -1293,6 +1293,14 @@ function S.stepPolish()
   local frame = questViewer()
   check(frame.titleIcon and frame.titleIcon:IsShown() and frame.titleIcon._path == "Interface\\Cursor\\Attack",
     "a kill step shows the sword before its title")
+  local row
+  for _, c in ipairs({ frame:GetChildren() }) do
+    if c.count and c.count._text == "4/10" and c:IsShown() then row = c end
+  end
+  check(row and row.bar and row.bar:IsShown() and row.track:IsShown()
+    and math.abs(row.bar:GetWidth() - 0.4 * row.track:GetWidth()) < 1, "a 4/10 goal fills 40% of its bar")
+  local c = row.bar._color
+  check(c and math.abs(c[1] - 0.95) < 0.01 and math.abs(c[2] - 0.45) < 0.01, "in the kill step's red")
   local function flashing()
     for g in pairs(MOCK.anims) do if g._owner and g._owner._isFlash and g:IsPlaying() then return true end end
     return false
@@ -2794,8 +2802,14 @@ function S.questStepChecklist()
   MOCK.questLog[1].objectives = { { text = "Kobold Vermin slain: 10/10", finished = true },
     { text = "Kobold Worker slain: 2/10" } }
   MOCK.event("QUEST_LOG_UPDATE")
-  check(questText(frame, "Kobold Vermin slain 10/10") and questText(frame, "Kobold Worker slain 2/10"),
-    "the classic 'goal: 2/10' style splits the same way: " .. allText(frame))
+  check(questText(frame, "Kobold Vermin slain done") and questText(frame, "Kobold Worker slain 2/10"),
+    "the classic 'goal: 2/10' style splits the same way; a finished goal says done: " .. allText(frame))
+  local doneRow
+  for _, c in ipairs({ frame:GetChildren() }) do
+    if c.count and c.count._text == "done" and c:IsShown() then doneRow = c end
+  end
+  check(doneRow and doneRow.bar:IsShown() and math.abs(doneRow.bar:GetWidth() - doneRow.track:GetWidth()) < 1
+    and math.abs(doneRow.bar._color[2] - 0.85) < 0.01, "with a full green bar")
   check(shownTexture(frame, TICK), "a finished goal is ticked")
   click(frame, "Quests")
   check(questText(win(), "Kobold Vermin slain: 10/10") and questText(win(), "Kobold Worker slain: 2/10"),
