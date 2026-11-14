@@ -1523,6 +1523,7 @@ end
 
 -- How far an up-next step is: "N yd" on your map, its zone's name on another, else nothing.
 local nextRows = {} -- the up-next rows drawn now, for the tick to update their distances
+local compactStep -- compact mode: the step whose distance the title row shows (the tick updates it)
 local function nextDistance(step)
   local spot = step and Q.waypoint(step)
   if not (spot and spot.map) then return "" end
@@ -1539,6 +1540,7 @@ function ns.questNextDistances()
   for _, r in ipairs(nextRows) do
     if r:IsShown() and r.step then r.dist:SetText(nextDistance(r.step)) end
   end
+  if compactStep and levels and viewer and viewer:IsShown() then levels:SetText(nextDistance(compactStep)) end
 end
 
 local function putNext(b)
@@ -1694,6 +1696,21 @@ function ns.questRefresh()
         or "Open Quests to revisit a section or check for missed quests." }
     end
     addTracking(blocks)
+    compactStep = nil
+    if compact then
+      -- compact: at the right of the title, the first unfinished goal's count, else how far the step
+      -- is (kept live by the tick); the title is sized after it, so a long zone name can't overlap
+      local right = ""
+      for _, b in ipairs(blocks) do
+        if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
+      end
+      if right == "" and row then
+        right = nextDistance(row.step)
+        compactStep = row.step
+      end
+      levels:SetText(right)
+      title:SetWidth(334 - x - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 0) - 10)
+    end
     releaseAll()
     cursor = 28 + math.max(14, title:GetStringHeight()) + 2
     local xpX, xpY = LEFT, nil
@@ -1714,15 +1731,7 @@ function ns.questRefresh()
     end
     -- the detail starts below the portrait
     if portrait then cursor = math.max(cursor, 74) end
-    if compact then
-      -- compact: at the right of the title, the first unfinished goal's count, else how far the step is
-      local right = ""
-      for _, b in ipairs(blocks) do
-        if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
-      end
-      if right == "" and row then right = nextDistance(row.step) end
-      levels:SetText(right)
-    else
+    if not compact then
       -- A story chain's place sits right under the step's name.
       for _, b in ipairs(blocks) do
         if b.kind == "chain" then putText(b.text, "dim") end

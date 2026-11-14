@@ -941,6 +941,28 @@ function S.stepScaleSaved()
     "a dragged window keeps its spot when resized (" .. tostring(x) .. ", " .. tostring(y) .. ")")
 end
 
+-- Compact mode's distance on the title row stays live as you move.
+function S.stepCompactDistance()
+  LevelingCodexDB = { questCompact = true }
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  local frame = questViewer()
+  local function dist()
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsShown() and type(r._text) == "string" and r._text:match("^%d+ yd$") then return r._text end
+      end
+      for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and walk(c); if hit then return hit end end
+    end
+    return walk(frame)
+  end
+  local before = dist()
+  check(before, "compact shows how far the step is")
+  MOCK.questX = 46
+  MOCK.advance(0.5)
+  check(dist() and dist() ~= before, "and it updates as you move (" .. tostring(before) .. " then " .. tostring(dist()) .. ")")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
