@@ -35,7 +35,7 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "compartment", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
-        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "talentTreeLayout", "talentPathPick", "macroMockups",
+        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "talentTreeLayout", "talentPathPick", "pathMacros", "oldMacroBodies", "macroMockups",
         "tabGlow", "keycapsLight", "bannerBuiltIn", "talentHintOnScreen", "talentTraceThemed", "controllerSides", "bannerFindsDisplay", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
@@ -277,7 +277,7 @@ def data_checks():
     choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_npc_checks() + quest_shop_checks() + quest_danger_checks()
             + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks() + talent_tree_checks()
-            + talent_path_checks(),
+            + talent_path_checks() + path_macro_checks(),
             warnings + prof_warnings + game_warnings + choice_warnings)
 
 
@@ -704,6 +704,45 @@ def talent_tree_checks():
         errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
     if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
         errors.append("talent tree: hidden talents (Lightning Reflexes, Holy Specialization) must be left out")
+    return errors
+
+
+def path_macro_checks():
+    """PathMacros.lua: every talent path's macro set goes through tools/gamedata.py's macro audit with game_checks
+    (gamedata.audit). Here: the file loads, and the audit itself catches a broken set."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if not os.path.exists(gamedata.REF):
+        return []
+    if not hasattr(gamedata, "load_path_macros") or not os.path.exists(gamedata.PATH_MACROS):
+        return ["path macros: PathMacros.lua or tools/gamedata.py load_path_macros missing"]
+    errors = []
+    sets, old = gamedata.load_path_macros()
+    if not isinstance(sets, dict) or not isinstance(old, dict):
+        return ["path macros: ns.PATH_MACROS and ns.OLD_MACRO_BODIES must be tables by class"]
+    ref, data, paths = gamedata.load_reference(), gamedata.load_data(), gamedata.load_paths()
+    fight = dict(name="Fight", title="Fight", icon="ability_warrior_savageblow", lo=1, hi=60, pad="RT+A", kb="1",
+                 body="#showtooltip\n/startattack\n/cast Heroic Strike", tips=["Attack and queue Heroic Strike."])
+
+    def errs(ms):
+        res = gamedata.audit({"WARRIOR": data["WARRIOR"]}, ref, "WARRIOR", paths=paths,
+                             path_macros={"WARRIOR": {"arms": ms}}, draft=True)
+        return [m for _, lvl, m in res if lvl == "error" and m.startswith("path arms")]
+    if errs([fight]):
+        errors.append("path macros: the audit flags a good Arms set: %s" % errs([fight]))
+    broken = [
+        ("a body over 255 characters", [dict(fight, body="/cast Heroic Strike\n" * 14)], "max 255"),
+        ("two macros on one button", [fight, dict(fight, name="Rend", body="/cast Rend", kb="2")], "both use it"),
+        ("a talent spell the path never takes", [fight, dict(fight, name="Thirst", body="/cast Bloodthirst", pad="RT+B", kb="2")],
+         "only learned at 99"),
+        ("a castsequence step before it is learned", [dict(fight, body="/castsequence Rend, Overpower")], "the sequence stalls"),
+        ("versions that overlap", [dict(fight, hi=30), dict(fight, lo=20)], "overlap"),
+        ("a known: ID the class doesn't have", [dict(fight, body="/cast [known:123456789] Rend")], "known:123456789"),
+        ("non-ASCII tips", [dict(fight, tips=["Charge → Rend"])], "non-ASCII"),
+    ]
+    for what, ms, want in broken:
+        if not any(want in m for m in errs(ms)):
+            errors.append("path macros: the audit misses %s" % what)
     return errors
 
 

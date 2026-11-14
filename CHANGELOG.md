@@ -1,5 +1,27 @@
 # Leveling Codex
 
+## v0.24.0
+
+### Macros
+
+- **Macros for every talent path.** Each talent path now has its own macro set, built for how that spec plays while leveling: Arms and Fury Warriors, Holy and Protection Paladins, Beast Mastery and Survival Hunters, Assassination and Subtlety Rogues, Arcane and Fire Mages, Demonology and Destruction Warlocks, Discipline and Holy Priests, Elemental and Restoration Shamans, and Balance, Cat, Bear and Restoration Druids.
+- **Your macros follow your path.** Set up macros, the level-up refresh, the Macros tab and the level-up banner all use the path you follow. Switch path and the Codex's macros change to the new path's versions in place, on the same buttons and keys. A custom path uses the set of the path closest to your points.
+- **Every guide's macros audited and fixed.** Every class's guide macros were checked against WoW: Forever's own spell data:
+  - Cast sequences that waited on a cooldown are gone: Paladin's Judgement and Holy Strike, Mage's Frost Nova, Hunter's Aimed Shot, Shaman's shocks, Rogue's Kick and Gouge.
+  - Lines that could never fire are fixed: Frost Mages lost Fire Blast once Ice Lance arrived, so targets that weren't frozen had no finisher.
+  - The Rogue's builder and finisher now sit on two buttons, so a miss or a crit no longer finishes at the wrong count.
+  - The Warrior's Bloodrage tips now say when it really fires.
+- **Smarter buttons.**
+  - Heals go to whoever you hover, else your friendly target, else whoever your enemy is attacking, else you.
+  - Fight buttons pick the next enemy after a kill.
+  - Openers know Stealth and Prowl.
+  - Pet buttons know whether your pet is out, dismissed or dead.
+  - Mana gems and Healthstones are made out of combat and used in combat.
+  - Interrupts stop your own cast first.
+  - Cooldowns that must land first, like Cold Blood, Presence of Mind or Nature's Swiftness, get their own Burst button, so they never block your main attack.
+- Every new macro has tips: what each press does and when a new piece joins.
+- Macros made by an older Codex still update in place, even when WoW: Forever doesn't load your saved settings.
+
 ## v0.23.0
 
 ### Talents

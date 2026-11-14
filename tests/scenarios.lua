@@ -5504,7 +5504,8 @@ function S.lostSavedVariables()
     MOCK.level = level
     MOCK.event("PLAYER_LEVEL_UP", level)
     MOCK.advance(1.5)
-    for _, m in ipairs(D().macros) do
+    -- the set your path gives (the class runs spend a spec path's talents first: that path's macros)
+    for _, m in ipairs(MOCK.ns.pathMacros()) do
       if level >= m.lo and level <= m.hi then
         local i = GetMacroIndexByName(m.name)
         if i > 0 then check(MOCK.macros[i].body == m.body, m.name .. " follows level " .. level .. " without saved variables") end
@@ -6169,7 +6170,9 @@ function S.talentPathPick()
   check(LevelingCodexCharDB.talentPath == p.key, "clicking a card chooses its path")
   local text = MOCK.textUnder(win())
   check(text:find("Chosen", 1, true), "the chosen card says so")
-  check(text:find("Macros and tips follow the " .. D().spec .. " guide.", 1, true), "macros and tips stay the guide's")
+  local own = ((ns.PATH_MACROS or {})[MOCK.class] or {})[p.key]
+  check(text:find(own and ("Macros follow this path; tips follow the " .. D().spec .. " guide.")
+    or ("Macros and tips follow the " .. D().spec .. " guide."), 1, true), "the card says what follows the path")
   local hit, rank = ns.talentAt(30)
   local node = iconsTitled(hit.name)[1]
   check(node and node.tipTitle == hit.name .. "  " .. rank .. "/" .. hit.max, "the tree shows " .. hit.name .. " " .. rank .. "/" .. hit.max)
@@ -6399,7 +6402,7 @@ function S.talentTrainerPath()
   check(text:find("Mortal Strike (Rank 2)", 1, true), "Arms trains Mortal Strike (Rank 2)")
   check(not text:find("Shield Slam (Rank 2)", 1, true), "no Shield Slam ranks for Arms")
   click(win(), "Macros")
-  check(MOCK.textUnder(win()):find("These macros are built for the Protection guide.", 1, true), "macros say which guide")
+  check(MOCK.textUnder(win()):find("Built for the Arms path.", 1, true), "the Macros tab names the path")
   MOCK.ns.setTalentPath("guide")
   click(win(), "Trainer")
   check(MOCK.textUnder(win()):find("Shield Slam (Rank 2)", 1, true), "the guide path trains Shield Slam")
@@ -6407,6 +6410,122 @@ function S.talentTrainerPath()
   check(not MOCK.textUnder(win()):find("These macros are built for", 1, true), "no note on the guide path")
   win():Hide()
   LevelingCodexCharDB.talentPath = nil
+end
+
+-- Every spec path has its own macro set (PathMacros.lua): choosing the path gives its macros at every
+-- level (Set up macros makes exactly that set's versions, the Macros tab names the path), switching path
+-- moves the macros the Codex made to the new path's versions in place, and a custom path takes the set
+-- of the path that shares the most points with it.
+function S.pathMacros()
+  if not D() then return end
+  local ns = MOCK.ns
+  local sets = (ns.PATH_MACROS or {})[MOCK.class] or {}
+  local specPaths = 0
+  for _, p in ipairs(ns.talentPaths()) do
+    if not p.guide and not p.custom then
+      specPaths = specPaths + 1
+      local set = sets[p.key]
+      check(set, p.key .. " has its own macros")
+      if set then
+        ns.setTalentPath(p.key)
+        check(ns.pathMacros() == set, p.key .. ": the macros follow the path")
+        MOCK.macros, MOCK.chat = {}, {}
+        local levels = { 60 }
+        for _, m in ipairs(set) do levels[#levels + 1] = m.lo end
+        for _, level in ipairs(levels) do
+          MOCK.level = level
+          slash("macros")
+          for _, m in ipairs(set) do
+            if level >= m.lo and level <= m.hi then
+              check(installedMacroBody(m.name) == m.body, p.key .. " " .. m.name .. " at " .. level)
+            end
+          end
+        end
+        check(not chatHas("couldn't make"), p.key .. ": every macro fits the character slots")
+        openAt(40, "Macros")
+        check(MOCK.textUnder(win()):find("Built for the " .. p.spec .. " path.", 1, true), p.key .. ": the Macros tab names the path")
+        for _, m in ipairs(ns.macrosFor(40)) do
+          check(#iconsTitled(m.name) > 0, p.key .. ": " .. m.name .. " shows on the Macros tab")
+        end
+        win():Hide()
+      end
+    end
+  end
+  check(specPaths > 0, "the class has spec paths")
+  -- switching path: a macro the Codex made under a name both sets use takes the new path's body
+  MOCK.macros, MOCK.chat = {}, {}
+  MOCK.level = 60
+  ns.setTalentPath("guide")
+  slash("macros")
+  local moved
+  for _, p in ipairs(ns.talentPaths()) do
+    local set = sets[p.key]
+    if set and not moved then
+      for _, m in ipairs(set) do
+        if 60 >= m.lo and 60 <= m.hi and installedMacroBody(m.name) and installedMacroBody(m.name) ~= m.body then
+          moved = { p = p, m = m }
+          break
+        end
+      end
+    end
+  end
+  if moved then
+    MOCK.chat = {}
+    ns.setTalentPath(moved.p.key)
+    check(installedMacroBody(moved.m.name) == moved.m.body, moved.m.name .. " switches to the " .. moved.p.key .. " version")
+    check(chatHas("your macros now follow the " .. moved.p.spec .. " path"), "chat says the macros follow the new path")
+    -- recognising a body needs GetMacroInfo, which the minimal client lacks (it goes by charDB.made there)
+    if not MOCK.minimal then check(ns.countOurMacros() > 0, "macros made on another path still count as the Codex's") end
+  end
+  -- a custom path gets the set of the path closest to its points
+  for _, p in ipairs(ns.talentPaths()) do
+    if sets[p.key] then
+      ns.setTalentPath("custom")
+      ns.customFrom(p.key)
+      local mp = ns.macroPath()
+      check(mp and mp.key == p.key, "a custom path started from " .. p.key .. " uses its macros")
+      openAt(30, "Macros")
+      check(MOCK.textUnder(win()):find("Your custom path uses the " .. p.spec .. " macros", 1, true), "the Macros tab says which set")
+      win():Hide()
+      break
+    end
+  end
+  ns.customClear()
+  check(ns.macroPath() and ns.macroPath().guide, "an empty custom path uses the guide's macros")
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+  ns.talentVersion = ns.talentVersion + 1
+  MOCK.macros = {}
+end
+
+-- A macro an older Codex made (a body it no longer ships, PathMacros.lua's OLD_MACRO_BODIES) is still the
+-- Codex's own without saved variables: the next level-up moves it to the current version.
+function S.oldMacroBodies()
+  if not D() or MOCK.minimal then return end
+  local ns = MOCK.ns
+  local old = (ns.OLD_MACRO_BODIES or {})[MOCK.class]
+  if not old then return end
+  local names = {}
+  for name in pairs(old) do names[#names + 1] = name end
+  table.sort(names)
+  local tried = 0
+  for _, name in ipairs(names) do
+    local want
+    for _, m in ipairs(ns.pathMacros()) do
+      if m.name == name and m.lo > 1 and not want then want = m end
+    end
+    if want then
+      MOCK.macros = { { name = name, icon = 134400, body = old[name][1], perChar = true } }
+      LevelingCodexCharDB.made = {}
+      MOCK.level = want.lo
+      MOCK.event("PLAYER_LEVEL_UP", want.lo)
+      MOCK.advance(1.5)
+      check(MOCK.macros[1].body == want.body, name .. ": an old Codex body is updated at level " .. want.lo)
+      tried = tried + 1
+      MOCK.advance(10)
+    end
+    if tried >= 3 then break end
+  end
+  MOCK.macros = {}
 end
 
 -- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.

@@ -880,6 +880,7 @@
       "level": 26,
       "line": "Restoration",
       "icon": "spell_nature_nullifypoison_02",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -1205,6 +1206,7 @@
       "line": "Feral Combat",
       "cooldown": "5 min",
       "icon": "ability_druid_dash",
+      "offgcd": true,
       "stances": [
        "Cat Form"
       ],
@@ -1217,6 +1219,7 @@
       "line": "Feral Combat",
       "cooldown": "5 min",
       "icon": "ability_druid_dash",
+      "offgcd": true,
       "stances": [
        "Cat Form"
       ],
@@ -1338,6 +1341,7 @@
       "line": "Feral Combat",
       "cooldown": "1 min",
       "icon": "ability_druid_enrage",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -1539,6 +1543,7 @@
       "power": "Rage",
       "cooldown": "15 sec",
       "icon": "ability_hunter_pet_bear",
+      "offgcd": true,
       "stances": [
        "Cat Form",
        "Bear Form",
@@ -1672,6 +1677,7 @@
       "level": 0,
       "line": "Feral Combat",
       "icon": "ability_bullrush",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -1748,6 +1754,7 @@
       "line": "Feral Combat",
       "cooldown": "8 sec",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2444,6 +2451,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2458,6 +2466,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2472,6 +2481,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2486,6 +2496,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2500,6 +2511,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2514,6 +2526,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2528,6 +2541,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_druid_maul",
+      "offgcd": true,
       "stances": [
        "Bear Form",
        "Dire Bear Form"
@@ -2876,6 +2890,7 @@
       "line": "Restoration",
       "cooldown": "3 min",
       "icon": "spell_nature_ravenform",
+      "offgcd": true,
       "stances": [
        "Tree of Life"
       ],
@@ -3026,6 +3041,7 @@
       "line": "Feral Combat",
       "cooldown": "10 sec",
       "icon": "ability_ambush",
+      "offgcd": true,
       "stances": [
        "Cat Form"
       ],
@@ -3038,6 +3054,7 @@
       "line": "Feral Combat",
       "cooldown": "10 sec",
       "icon": "ability_ambush",
+      "offgcd": true,
       "stances": [
        "Cat Form"
       ],
@@ -3050,6 +3067,7 @@
       "line": "Feral Combat",
       "cooldown": "10 sec",
       "icon": "ability_ambush",
+      "offgcd": true,
       "stances": [
        "Cat Form"
       ],
@@ -3541,6 +3559,7 @@
       "cost": "75%",
       "power": "Mana",
       "icon": "ability_druid_lunarguidance",
+      "offgcd": true,
       "stances": [
        "Tree of Life",
        "Moonkin Form"
@@ -3555,6 +3574,7 @@
       "cost": "75%",
       "power": "Mana",
       "icon": "ability_druid_lunarguidance",
+      "offgcd": true,
       "stances": [
        "Tree of Life",
        "Moonkin Form"
@@ -3569,6 +3589,7 @@
       "cost": "75%",
       "power": "Mana",
       "icon": "ability_druid_lunarguidance",
+      "offgcd": true,
       "stances": [
        "Tree of Life",
        "Moonkin Form"
@@ -3583,6 +3604,7 @@
       "cost": "75%",
       "power": "Mana",
       "icon": "ability_druid_lunarguidance",
+      "offgcd": true,
       "stances": [
        "Tree of Life",
        "Moonkin Form"
@@ -3597,6 +3619,7 @@
       "cost": "75%",
       "power": "Mana",
       "icon": "ability_druid_lunarguidance",
+      "offgcd": true,
       "stances": [
        "Tree of Life",
        "Moonkin Form"
@@ -5329,6 +5352,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "spell_nature_starfall",
+      "offgcd": true,
       "desc": "Increases Arcane resistance by 30."
      },
      {
@@ -5337,6 +5361,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_nature_starfall",
+      "offgcd": true,
       "desc": "Increases Arcane resistance by 60."
      },
      {
@@ -5345,6 +5370,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_nature_starfall",
+      "offgcd": true,
       "desc": "Increases Arcane resistance by 90."
      },
      {
@@ -5353,6 +5379,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_nature_starfall",
+      "offgcd": true,
       "desc": "Increases Arcane resistance by 120."
      }
     ],
@@ -5671,6 +5698,7 @@
       "level": 1,
       "line": "Marksmanship",
       "icon": "ability_whirlwind",
+      "offgcd": true,
       "desc": "Automatically shoots the target until cancelled."
      }
     ],
@@ -5704,6 +5732,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "ability_hunter_beastcall02",
+      "offgcd": true,
       "desc": "Lets you train your pet with various abilities that you have learned how to teach."
      }
     ],
@@ -5740,6 +5769,7 @@
       "power": "Mana",
       "cooldown": "2 min",
       "icon": "ability_druid_ferociousbite",
+      "offgcd": true,
       "desc": "Send your pet into a rage causing 50% additional damage for 18 sec. While enraged, the beast does not feel pity or remorse or fear and it cannot be stopped unless killed."
      }
     ],
@@ -5750,6 +5780,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5758,6 +5789,7 @@
       "level": 8,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5766,6 +5798,7 @@
       "level": 16,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5774,6 +5807,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5782,6 +5816,7 @@
       "level": 32,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5790,6 +5825,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5798,6 +5834,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5806,6 +5843,7 @@
       "level": 56,
       "line": "Beast Training",
       "icon": "ability_racial_cannibalize",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -5844,6 +5882,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5852,6 +5891,7 @@
       "level": 12,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5860,6 +5900,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5868,6 +5909,7 @@
       "level": 36,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5876,6 +5918,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5884,6 +5927,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_boar",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -5894,6 +5938,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5902,6 +5947,7 @@
       "level": 8,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5910,6 +5956,7 @@
       "level": 16,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5918,6 +5965,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5926,6 +5974,7 @@
       "level": 32,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5934,6 +5983,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5942,6 +5992,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -5950,6 +6001,7 @@
       "level": 56,
       "line": "Beast Training",
       "icon": "ability_druid_rake",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -5971,6 +6023,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_guardianward",
+      "offgcd": true,
       "desc": "Increases attack speed by 30%, but decreases damage."
      }
     ],
@@ -6041,6 +6094,7 @@
       "level": 5,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6049,6 +6103,7 @@
       "level": 15,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6057,6 +6112,7 @@
       "level": 25,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6065,6 +6121,7 @@
       "level": 35,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6073,6 +6130,7 @@
       "level": 45,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6081,6 +6139,7 @@
       "level": 55,
       "line": "Beast Training",
       "icon": "ability_druid_cower",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -6091,6 +6150,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "ability_druid_dash",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6099,6 +6159,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_druid_dash",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6107,6 +6168,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "ability_druid_dash",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -6139,6 +6201,7 @@
       "level": 8,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_bat",
+      "offgcd": true,
       "desc": "Blasts a single enemy for 8 damage and lowers the attack power of all enemies in melee range by 41. Effect lasts 30 sec."
      },
      {
@@ -6147,6 +6210,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_bat",
+      "offgcd": true,
       "desc": "Blasts a single enemy for 11 damage and lowers the attack power of all enemies in melee range by 77. Effect lasts 30 sec."
      },
      {
@@ -6155,6 +6219,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_bat",
+      "offgcd": true,
       "desc": "Blasts a single enemy for 24 damage and lowers the attack power of all enemies in melee range by 153. Effect lasts 30 sec."
      },
      {
@@ -6163,6 +6228,7 @@
       "level": 56,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_bat",
+      "offgcd": true,
       "desc": "Blasts a single enemy for 33 damage and lowers the attack power of all enemies in melee range by 198. Effect lasts 30 sec."
      }
     ],
@@ -6175,6 +6241,7 @@
       "line": "Survival",
       "cooldown": "5 min",
       "icon": "ability_whirlwind",
+      "offgcd": true,
       "desc": "When activated, increases your Dodge and Parry chance by 25% for 10 sec."
      }
     ],
@@ -6220,6 +6287,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crocolisk",
+      "offgcd": true,
       "desc": "Viciously bites enemy appendages for 12 damage and reduces the effectiveness of any healing by 25% for 6 sec."
      },
      {
@@ -6228,6 +6296,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crocolisk",
+      "offgcd": true,
       "desc": "Viciously bites enemy appendages for 19 damage and reduces the effectiveness of any healing by 25% for 6 sec."
      },
      {
@@ -6236,6 +6305,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crocolisk",
+      "offgcd": true,
       "desc": "Viciously bites enemy appendages for 28 damage and reduces the effectiveness of any healing by 25% for 6 sec."
      },
      {
@@ -6244,6 +6314,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crocolisk",
+      "offgcd": true,
       "desc": "Viciously bites enemy appendages for 42 damage and reduces the effectiveness of any healing by 25% for 6 sec."
      },
      {
@@ -6252,6 +6323,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crocolisk",
+      "offgcd": true,
       "desc": "Viciously bites enemy appendages for 54 damage and reduces the effectiveness of any healing by 25% for 6 sec."
      }
     ],
@@ -6340,6 +6412,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_shadow_burningspirit",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6348,6 +6421,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_shadow_burningspirit",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6356,6 +6430,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_shadow_burningspirit",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -6366,6 +6441,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_sleep",
+      "offgcd": true,
       "desc": "Your tallstrider kicks up an abrasive cloud of dust, reducing the target's Armor by 65 for 30 sec, stacking up to 1 times."
      },
      {
@@ -6374,6 +6450,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_sleep",
+      "offgcd": true,
       "desc": "Your tallstrider kicks up an abrasive cloud of dust, reducing the target's Armor by 175 for 30 sec, stacking up to 1 times."
      },
      {
@@ -6382,6 +6459,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_sleep",
+      "offgcd": true,
       "desc": "Your tallstrider kicks up an abrasive cloud of dust, reducing the target's Armor by 285 for 30 sec, stacking up to 1 times."
      },
      {
@@ -6390,6 +6468,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_sleep",
+      "offgcd": true,
       "desc": "Your tallstrider kicks up an abrasive cloud of dust, reducing the target's Armor by 395 for 30 sec, stacking up to 1 times."
      },
      {
@@ -6398,6 +6477,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_sleep",
+      "offgcd": true,
       "desc": "Your tallstrider kicks up an abrasive cloud of dust, reducing the target's Armor by 505 for 30 sec, stacking up to 1 times."
      }
     ],
@@ -6467,6 +6547,7 @@
       "level": 0,
       "line": "Survival",
       "icon": "spell_nature_stranglevines",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -6563,6 +6644,7 @@
       "level": 10,
       "line": "Beast Mastery",
       "icon": "ability_hunter_beasttraining",
+      "offgcd": true,
       "desc": "Feed your pet the selected item. Feeding your pet increases happiness. Using food close to the pet's level will have a better result."
      }
     ],
@@ -6576,6 +6658,7 @@
       "power": "Mana",
       "cooldown": "30 sec",
       "icon": "ability_rogue_feigndeath",
+      "offgcd": true,
       "desc": "Feign death which may trick enemies into ignoring you. Lasts 6 min. If not cancelled, after 6 min you will actually die."
      }
     ],
@@ -6597,6 +6680,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "spell_fire_firearmor",
+      "offgcd": true,
       "desc": "Increases Fire resistance by 30."
      },
      {
@@ -6605,6 +6689,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_fire_firearmor",
+      "offgcd": true,
       "desc": "Increases Fire resistance by 60."
      },
      {
@@ -6613,6 +6698,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_fire_firearmor",
+      "offgcd": true,
       "desc": "Increases Fire resistance by 90."
      },
      {
@@ -6621,6 +6707,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_fire_firearmor",
+      "offgcd": true,
       "desc": "Increases Fire resistance by 120."
      }
     ],
@@ -6708,6 +6795,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "spell_frost_frostward",
+      "offgcd": true,
       "desc": "Increases Frost resistance by 30."
      },
      {
@@ -6716,6 +6804,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_frost_frostward",
+      "offgcd": true,
       "desc": "Increases Frost resistance by 60."
      },
      {
@@ -6724,6 +6813,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_frost_frostward",
+      "offgcd": true,
       "desc": "Increases Frost resistance by 90."
      },
      {
@@ -6732,6 +6822,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_frost_frostward",
+      "offgcd": true,
       "desc": "Increases Frost resistance by 120."
      }
     ],
@@ -6760,6 +6851,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_wolf",
+      "offgcd": true,
       "desc": "Party members within 15 yards receive an extra 5 damage to their next Physical attack. Lasts 1 min."
      },
      {
@@ -6768,6 +6860,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_wolf",
+      "offgcd": true,
       "desc": "Party members within 15 yards receive an extra 34 damage to their next Physical attack. Lasts 1 min."
      },
      {
@@ -6776,6 +6869,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_wolf",
+      "offgcd": true,
       "desc": "Party members within 15 yards receive an extra 60 damage to their next Physical attack. Lasts 1 min."
      },
      {
@@ -6784,6 +6878,7 @@
       "level": 56,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_wolf",
+      "offgcd": true,
       "desc": "Party members within 15 yards receive an extra 82 damage to their next Physical attack. Lasts 1 min."
      }
     ],
@@ -6794,6 +6889,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 3."
      },
      {
@@ -6802,6 +6898,7 @@
       "level": 12,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 5."
      },
      {
@@ -6810,6 +6907,7 @@
       "level": 18,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 7."
      },
      {
@@ -6818,6 +6916,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 10."
      },
      {
@@ -6826,6 +6925,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 13."
      },
      {
@@ -6834,6 +6934,7 @@
       "level": 36,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 17."
      },
      {
@@ -6842,6 +6943,7 @@
       "level": 42,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 21."
      },
      {
@@ -6850,6 +6952,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 26."
      },
      {
@@ -6858,6 +6961,7 @@
       "level": 54,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 32."
      },
      {
@@ -6866,6 +6970,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
+      "offgcd": true,
       "desc": "Stamina increased by 40."
      }
     ],
@@ -6876,6 +6981,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6884,6 +6990,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6892,6 +6999,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6900,6 +7008,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6908,6 +7017,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6916,6 +7026,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      },
      {
@@ -6924,6 +7035,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "ability_physical_taunt",
+      "offgcd": true,
       "desc": "Taunt the target, increasing the likelihood the creature will focus attacks on you."
      }
     ],
@@ -6934,6 +7046,7 @@
       "level": 0,
       "line": "Beast Training",
       "icon": "ability_hunter_harass",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6942,6 +7055,7 @@
       "level": 0,
       "line": "Beast Training",
       "icon": "ability_hunter_harass",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -6950,6 +7064,7 @@
       "level": 0,
       "line": "Beast Training",
       "icon": "ability_hunter_harass",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -7261,6 +7376,7 @@
       "level": 60,
       "line": "Beast Mastery",
       "icon": "ability_hunter_mendpet",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -7380,6 +7496,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_fire_windsofwoe",
+      "offgcd": true,
       "desc": "Breathes molten lava at the target, instantly dealing 84 Fire damage and reducing the target's casting speed by 25% for 10 sec."
      },
      {
@@ -7388,6 +7505,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_fire_windsofwoe",
+      "offgcd": true,
       "desc": "Breathes molten lava at the target, instantly dealing 106 Fire damage and reducing the target's casting speed by $25% for 10 sec."
      }
     ],
@@ -7409,6 +7527,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 9 Nature damage to a single target."
      },
      {
@@ -7417,6 +7536,7 @@
       "level": 12,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 21 Nature damage to a single target."
      },
      {
@@ -7425,6 +7545,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 34 Nature damage to a single target."
      },
      {
@@ -7433,6 +7554,7 @@
       "level": 36,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 50 Nature damage to a single target."
      },
      {
@@ -7441,6 +7563,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 76 Nature damage to a single target."
      },
      {
@@ -7449,6 +7572,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "Breathes lightning, instantly dealing 92 Nature damage to a single target."
      }
     ],
@@ -7584,6 +7708,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_natureswrath",
+      "offgcd": true,
       "desc": "Grabs an enemy's weapon with its talons, causing 11 damage and disarming them for 3 sec."
      },
      {
@@ -7592,6 +7717,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_natureswrath",
+      "offgcd": true,
       "desc": "Grabs an enemy's weapon with its talons, causing 15 damage and disarming them for 3 sec."
      },
      {
@@ -7600,6 +7726,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_natureswrath",
+      "offgcd": true,
       "desc": "Grabs an enemy's weapon with its talons, causing 22 damage and disarming them for 3 sec."
      },
      {
@@ -7608,6 +7735,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_natureswrath",
+      "offgcd": true,
       "desc": "Grabs an enemy's weapon with its talons, causing 35 damage and disarming them for 3 sec."
      },
      {
@@ -7616,6 +7744,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_natureswrath",
+      "offgcd": true,
       "desc": "Grabs an enemy's weapon with its talons, causing 44 damage and disarming them for 3 sec."
      }
     ],
@@ -7717,6 +7846,7 @@
       "level": 10,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 50."
      },
      {
@@ -7725,6 +7855,7 @@
       "level": 12,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 100."
      },
      {
@@ -7733,6 +7864,7 @@
       "level": 18,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 160."
      },
      {
@@ -7741,6 +7873,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 240."
      },
      {
@@ -7749,6 +7882,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 330."
      },
      {
@@ -7757,6 +7891,7 @@
       "level": 36,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 430."
      },
      {
@@ -7765,6 +7900,7 @@
       "level": 42,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 550."
      },
      {
@@ -7773,6 +7909,7 @@
       "level": 48,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 675."
      },
      {
@@ -7781,6 +7918,7 @@
       "level": 54,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 810."
      },
      {
@@ -7789,6 +7927,7 @@
       "level": 60,
       "line": "Beast Training",
       "icon": "spell_nature_spiritarmor",
+      "offgcd": true,
       "desc": "Armor increased by 1000."
      }
     ],
@@ -7799,6 +7938,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "spell_nature_resistnature",
+      "offgcd": true,
       "desc": "Increases Nature resistance by 30."
      },
      {
@@ -7807,6 +7947,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_nature_resistnature",
+      "offgcd": true,
       "desc": "Increases Nature resistance by 60."
      },
      {
@@ -7815,6 +7956,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_nature_resistnature",
+      "offgcd": true,
       "desc": "Increases Nature resistance by 90."
      },
      {
@@ -7823,6 +7965,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_nature_resistnature",
+      "offgcd": true,
       "desc": "Increases Nature resistance by 120."
      }
     ],
@@ -7844,6 +7987,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crab",
+      "offgcd": true,
       "desc": "Pinches an enemy's legs for 20 damage and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -7852,6 +7996,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crab",
+      "offgcd": true,
       "desc": "Pinches an enemy's legs for 34 damage and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -7860,6 +8005,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crab",
+      "offgcd": true,
       "desc": "Pinches an enemy's legs for 44 damage and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -7868,6 +8014,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crab",
+      "offgcd": true,
       "desc": "Pinches an enemy's legs for 73 damage and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -7876,6 +8023,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_crab",
+      "offgcd": true,
       "desc": "Pinches an enemy's legs for 95 damage and reduces movement speed by 50% for 9 sec."
      }
     ],
@@ -7886,6 +8034,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "ability_druid_supriseattack",
+      "offgcd": true,
       "desc": "Puts your pet in stealth mode, but slows its movement to 50% of normal. The first attack from stealth receives a 20% bonus to damage. Lasts until cancelled."
      },
      {
@@ -7894,6 +8043,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_druid_supriseattack",
+      "offgcd": true,
       "desc": "Puts your pet in stealth mode, but slows its movement to 45% of normal. The first attack from stealth receives a 35% bonus to damage. Lasts until cancelled."
      },
      {
@@ -7902,6 +8052,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "ability_druid_supriseattack",
+      "offgcd": true,
       "desc": "Puts your pet in stealth mode, but slows its movement to 40% of normal. The first attack from stealth receives a 50% bonus to damage. Lasts until cancelled."
      }
     ],
@@ -7926,6 +8077,7 @@
       "power": "Mana",
       "cooldown": "5 min",
       "icon": "ability_hunter_runningshot",
+      "offgcd": true,
       "desc": "Increases ranged and melee attack speed by 40% for 15 sec."
      }
     ],
@@ -7939,6 +8091,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 5."
      },
      {
@@ -7950,6 +8103,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 11."
      },
      {
@@ -7961,6 +8115,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 21."
      },
      {
@@ -7972,6 +8127,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 30."
      },
      {
@@ -7983,6 +8139,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 35."
      },
      {
@@ -7994,6 +8151,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 40."
      },
      {
@@ -8005,6 +8163,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 55."
      },
      {
@@ -8016,6 +8175,7 @@
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_meleedamage",
+      "offgcd": true,
       "desc": "A strong attack that deals melee weapon damage plus 70."
      }
     ],
@@ -8038,6 +8198,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_raptor",
+      "offgcd": true,
       "desc": "Slash an enemy with razor talons, causing the target to Bleed for 30 damage over 18 sec and take 0% additional damage from Bleed effects for the duration."
      },
      {
@@ -8046,6 +8207,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_raptor",
+      "offgcd": true,
       "desc": "Slash an enemy with razor talons, causing the target to Bleed for 54 damage over 18 sec and take 0% additional damage from Bleed effects for the duration."
      },
      {
@@ -8054,6 +8216,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_raptor",
+      "offgcd": true,
       "desc": "Slash an enemy with razor talons, causing the target to Bleed for 72 damage over 18 sec and take 0% additional damage from Bleed effects for the duration."
      },
      {
@@ -8062,6 +8225,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_raptor",
+      "offgcd": true,
       "desc": "Slash an enemy with razor talons, causing the target to Bleed for 120 damage over 18 sec and take 0% additional damage from Bleed effects for the duration."
      },
      {
@@ -8070,6 +8234,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_raptor",
+      "offgcd": true,
       "desc": "Slash an enemy with razor talons, causing the target to Bleed for 156 damage over 18 sec and take 0% additional damage from Bleed effects for the duration."
      }
     ],
@@ -8140,6 +8305,7 @@
       "level": 8,
       "line": "Beast Training",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Inflicts 5 Nature damage over 10 sec. Effect can stack up to 5 times on a single target."
      },
      {
@@ -8148,6 +8314,7 @@
       "level": 24,
       "line": "Beast Training",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Inflicts 10 Nature damage over 10 sec. Effect can stack up to 5 times on a single target."
      },
      {
@@ -8156,6 +8323,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Inflicts 20 Nature damage over 10 sec. Effect can stack up to 5 times on a single target."
      },
      {
@@ -8164,6 +8332,7 @@
       "level": 56,
       "line": "Beast Training",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Inflicts 25 Nature damage over 10 sec. Effect can stack up to 5 times on a single target."
      }
     ],
@@ -8278,6 +8447,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "spell_shadow_antishadow",
+      "offgcd": true,
       "desc": "Increases Shadow resistance by 30."
      },
      {
@@ -8286,6 +8456,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "spell_shadow_antishadow",
+      "offgcd": true,
       "desc": "Increases Shadow resistance by 60."
      },
      {
@@ -8294,6 +8465,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "spell_shadow_antishadow",
+      "offgcd": true,
       "desc": "Increases Shadow resistance by 90."
      },
      {
@@ -8302,6 +8474,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "spell_shadow_antishadow",
+      "offgcd": true,
       "desc": "Increases Shadow resistance by 120."
      }
     ],
@@ -8312,6 +8485,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_turtle",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -8367,6 +8541,7 @@
       "level": 0,
       "line": "Beast Mastery",
       "icon": "ability_druid_demoralizingroar",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -8375,6 +8550,7 @@
       "level": 0,
       "line": "Beast Mastery",
       "icon": "ability_druid_demoralizingroar",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -8491,6 +8667,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "inv_misc_monsterclaw_03",
+      "offgcd": true,
       "desc": "Swipe 3 nearby enemies, inflicting 4 damage."
      },
      {
@@ -8499,6 +8676,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "inv_misc_monsterclaw_03",
+      "offgcd": true,
       "desc": "Swipe 3 nearby enemies, inflicting 9 damage."
      },
      {
@@ -8507,6 +8685,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "inv_misc_monsterclaw_03",
+      "offgcd": true,
       "desc": "Swipe 3 nearby enemies, inflicting 12 damage."
      },
      {
@@ -8515,6 +8694,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "inv_misc_monsterclaw_03",
+      "offgcd": true,
       "desc": "Swipe 3 nearby enemies, inflicting 17 damage."
      },
      {
@@ -8523,6 +8703,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "inv_misc_monsterclaw_03",
+      "offgcd": true,
       "desc": "Swipe 3 nearby enemies, inflicting 21 damage."
      }
     ],
@@ -8561,6 +8742,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_hyena",
+      "offgcd": true,
       "desc": "Tears at an enemy's legs for 12 damage over 9 sec and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -8569,6 +8751,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_hyena",
+      "offgcd": true,
       "desc": "Tears at an enemy's legs for 21 damage over 9 sec and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -8577,6 +8760,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_hyena",
+      "offgcd": true,
       "desc": "Tears at an enemy's legs for 27 damage over 9 sec and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -8585,6 +8769,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_hyena",
+      "offgcd": true,
       "desc": "Tears at an enemy's legs for 45 damage over 9 sec and reduces movement speed by 50% for 9 sec."
      },
      {
@@ -8593,6 +8778,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_hyena",
+      "offgcd": true,
       "desc": "Tears at an enemy's legs for 60 damage over 9 sec and reduces movement speed by 50% for 9 sec."
      }
     ],
@@ -8613,6 +8799,7 @@
       "level": 30,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_gorilla",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -8621,6 +8808,7 @@
       "level": 40,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_gorilla",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -8629,6 +8817,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_gorilla",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -8637,6 +8826,7 @@
       "level": 50,
       "line": "Beast Training",
       "icon": "ability_hunter_pet_gorilla",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -8740,6 +8930,7 @@
       "level": 20,
       "line": "Beast Training",
       "icon": "ability_hunter_aspectofthefox",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -8881,6 +9072,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_web",
+      "offgcd": true,
       "desc": "Entangles an enemy in a corrosive web, immobilizing them and dealing 12 Nature damage over 4 sec."
      },
      {
@@ -8889,6 +9081,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_web",
+      "offgcd": true,
       "desc": "Entangles an enemy in a corrosive web, immobilizing them and dealing 20 Nature damage over 4 sec."
      },
      {
@@ -8897,6 +9090,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_web",
+      "offgcd": true,
       "desc": "Entangles an enemy in a corrosive web, immobilizing them and dealing 28 Nature damage over 4 sec."
      },
      {
@@ -8905,6 +9099,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_web",
+      "offgcd": true,
       "desc": "Entangles an enemy in a corrosive web, immobilizing them and dealing 40 Nature damage over 4 sec."
      },
      {
@@ -8913,6 +9108,7 @@
       "level": 1,
       "line": "Beast Training",
       "icon": "spell_nature_web",
+      "offgcd": true,
       "desc": "Entangles an enemy in a corrosive web, immobilizing them and dealing 52 Nature damage over 4 sec."
      }
     ],
@@ -14732,6 +14928,7 @@
       "line": "Arcane",
       "cooldown": "3 min",
       "icon": "spell_nature_lightning",
+      "offgcd": true,
       "desc": "For the next 15 sec, your spells deal 30% more damage while costing 30% more mana to cast."
      }
     ],
@@ -14977,6 +15174,7 @@
       "level": 1,
       "line": "Frost",
       "icon": "spell_frost_icestorm",
+      "offgcd": true,
       "desc": "Chills the target for 1.5 sec."
      }
     ],
@@ -14987,6 +15185,7 @@
       "level": 10,
       "line": "Arcane",
       "icon": "spell_shadow_manaburn",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -14999,6 +15198,7 @@
       "line": "Frost",
       "cooldown": "10 min",
       "icon": "spell_frost_wizardmark",
+      "offgcd": true,
       "desc": "Finishes the remaining cooldown on all your other Frost spells."
      }
     ],
@@ -15011,6 +15211,7 @@
       "line": "Fire",
       "cooldown": "3 min",
       "icon": "spell_fire_sealoffire",
+      "offgcd": true,
       "desc": "When activated, this spell causes each of your Fire damage spell hits to increase your critical strike chance with Fire damage spells by 10%. This effect lasts until you have caused 3 non-periodic critical strikes with Fire spells.",
       "shares_cooldown": [
        "Presence of Mind"
@@ -15024,6 +15225,7 @@
       "level": 6,
       "line": "Comprehension",
       "icon": null,
+      "offgcd": true,
       "desc": "Decipher an untranslated scroll."
      },
      {
@@ -15032,6 +15234,7 @@
       "level": 6,
       "line": "Comprehension",
       "icon": null,
+      "offgcd": true,
       "desc": "Decipher an untranslated scroll."
      },
      {
@@ -15040,6 +15243,7 @@
       "level": 6,
       "line": "Comprehension",
       "icon": null,
+      "offgcd": true,
       "desc": "Decipher an untranslated scroll."
      },
      {
@@ -15048,6 +15252,7 @@
       "level": 6,
       "line": "Comprehension",
       "icon": null,
+      "offgcd": true,
       "desc": "Decipher an untranslated scroll."
      },
      {
@@ -15056,6 +15261,7 @@
       "level": 6,
       "line": "Comprehension",
       "icon": null,
+      "offgcd": true,
       "desc": "Decipher an untranslated scroll."
      }
     ],
@@ -15328,6 +15534,7 @@
       "power": "Mana",
       "cooldown": "30 sec",
       "icon": "spell_frost_iceshock",
+      "offgcd": true,
       "desc": "Counters the enemy's spellcast, preventing any spell from that school of magic from being cast for 10 sec. Generates a high amount of threat."
      }
     ],
@@ -15545,6 +15752,7 @@
       "level": 0,
       "line": "Fire",
       "icon": "spell_fire_soulburn",
+      "offgcd": true,
       "desc": "Increases Fire damage taken from the Mage by 3% per stack."
      }
     ],
@@ -16003,6 +16211,7 @@
       "level": 10,
       "line": "Frost",
       "icon": "spell_frost_frostarmor",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -16378,6 +16587,7 @@
       "level": 10,
       "line": "Fire",
       "icon": "spell_fire_meteorstorm",
+      "offgcd": true,
       "desc": "Fire spells have a chance to stun the target for 2 sec."
      }
     ],
@@ -16541,6 +16751,7 @@
       "level": 0,
       "line": "Arcane",
       "icon": "spell_nature_astralrecalgroup",
+      "offgcd": true,
       "desc": "Restores 1% of total mana."
      },
      {
@@ -16641,6 +16852,7 @@
       "level": 1,
       "line": "Fire",
       "icon": "spell_fire_masterofelements",
+      "offgcd": true,
       "desc": "Restores 1 mana."
      }
     ],
@@ -16837,6 +17049,7 @@
       "line": "Arcane",
       "cooldown": "3 min",
       "icon": "spell_nature_enchantarmor",
+      "offgcd": true,
       "desc": "When activated, your next Mage spell with a casting time less than 10 sec becomes an instant cast spell.",
       "shares_cooldown": [
        "Combustion"
@@ -17041,6 +17254,7 @@
       "line": "Comprehension",
       "cooldown": "60 min",
       "icon": "inv_misc_book_08",
+      "offgcd": true,
       "desc": "Perform spell research, resulting in a bundle of scrolls. Requires a suitable library."
      }
     ],
@@ -18390,6 +18604,7 @@
       "power": "Mana",
       "cooldown": "2 min",
       "icon": "spell_holy_heal",
+      "offgcd": true,
       "desc": "When activated, gives your next Flash of Light, Holy Light, or Holy Shock spell a 100% critical effect chance."
      }
     ],
@@ -19434,6 +19649,7 @@
       "power": "Mana",
       "cooldown": "10 sec",
       "icon": "spell_holy_righteousfury",
+      "offgcd": true,
       "desc": "Unleash the energy of a Seal spell upon an enemy. Does not consume the Seal. Refer to individual Seals for Judgement effect."
      }
     ],
@@ -20186,6 +20402,7 @@
       "line": "Protection",
       "cooldown": "1 min",
       "icon": "ability_paladin_judgementred",
+      "offgcd": true,
       "desc": "Unleash the energy of a Seal spell upon an enemy. Does not consume the Seal. Refer to individual Seals for Judgement effect. Does not share a cooldown with your Judgement ability."
      }
     ],
@@ -20200,6 +20417,7 @@
       "power": "Mana",
       "cooldown": "5 min",
       "icon": "ability_paladin_shieldofthetemplar",
+      "offgcd": true,
       "desc": "When activated, this ability grants you an absorb shield equal to 100% of your maximum health for 8 sec. Applies Forbearance for 1 min. Cannot be cast while Forbearance is active."
      }
     ],
@@ -20309,6 +20527,7 @@
       "level": 0,
       "line": "Retribution",
       "icon": "spell_holy_vindication",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -20320,6 +20539,7 @@
       "line": "Holy",
       "cooldown": "3 min",
       "icon": "inv_misc_horn_03",
+      "offgcd": true,
       "desc": "Grants you immunity to Silence and Interrupt effects for 6 sec."
      }
     ]
@@ -21252,6 +21472,7 @@
       "level": 0,
       "line": "Holy",
       "icon": "spell_holy_blessedrecovery",
+      "offgcd": true,
       "desc": "Heals the target over 6 sec."
      }
     ],
@@ -21322,6 +21543,7 @@
       "power": "Mana",
       "cooldown": "2 min",
       "icon": "ability_paladin_blindinglight2",
+      "offgcd": true,
       "desc": "Confuses up to $i enemies within 0 yds for 3 sec. Any damage taken will break the effect."
      }
     ],
@@ -22142,6 +22364,7 @@
       "level": 0,
       "line": "Discipline",
       "icon": "spell_arcane_blink",
+      "offgcd": true,
       "desc": "When cast, you no longer lose casting time due to taking damage. Lasts 6 sec."
      }
     ],
@@ -22828,6 +23051,7 @@
       "line": "Discipline",
       "cooldown": "3 min",
       "icon": "spell_frost_windwalkon",
+      "offgcd": true,
       "stances": [
        "Shadowform"
       ],
@@ -22943,6 +23167,7 @@
       "level": 40,
       "line": "Holy",
       "icon": "spell_holy_summonlightwell",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -22951,6 +23176,7 @@
       "level": 50,
       "line": "Holy",
       "icon": "spell_holy_summonlightwell",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -22959,6 +23185,7 @@
       "level": 60,
       "line": "Holy",
       "icon": "spell_holy_summonlightwell",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -23461,6 +23688,7 @@
       "power": "Mana",
       "cooldown": "3 min",
       "icon": "spell_holy_powerinfusion",
+      "offgcd": true,
       "desc": "Infuses the target with power, increasing their spell damage and healing done by 20% for 15 sec."
      }
     ],
@@ -25971,6 +26199,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "ability_creature_disease_03",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing the enemy's melee attack power by 205 for 15 sec. 105 charges."
      }
     ],
@@ -26100,6 +26329,7 @@
       "level": 34,
       "line": "Poisons",
       "icon": "inv_misc_ammo_gunpowder_02",
+      "offgcd": true,
       "desc": "Create the reagent for the Blind ability."
      }
     ],
@@ -26138,6 +26368,7 @@
       "line": "Assassination",
       "cooldown": "3 min",
       "icon": "spell_ice_lament",
+      "offgcd": true,
       "desc": "When activated, increases the critical strike chance of your next Sinister Strike, Backstab, Ambush, Eviscerate, or Mutilate by 100%."
      }
     ],
@@ -26159,6 +26390,7 @@
       "level": 20,
       "line": "Poisons",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, slowing their movement speed by 50% for 12 sec."
      }
     ],
@@ -26169,6 +26401,7 @@
       "level": 50,
       "line": "Poisons",
       "icon": "ability_poisonsting",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, slowing their movement speed by 70% for 12 sec."
      }
     ],
@@ -26189,6 +26422,7 @@
       "level": 30,
       "line": "Poisons",
       "icon": "ability_rogue_dualweild",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 24 Nature damage over 12 sec. Stacks up to 5 times on a single target. 90 charges."
      }
     ],
@@ -26199,6 +26433,7 @@
       "level": 38,
       "line": "Poisons",
       "icon": "ability_rogue_dualweild",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 36 Nature damage over 12 sec. Stacks up to 5 times on a single target. 115 charges."
      }
     ],
@@ -26209,6 +26444,7 @@
       "level": 46,
       "line": "Poisons",
       "icon": "ability_rogue_dualweild",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 56 Nature damage over 12 sec. Stacks up to 5 times on a single target. 135 charges."
      }
     ],
@@ -26219,6 +26455,7 @@
       "level": 54,
       "line": "Poisons",
       "icon": "ability_rogue_dualweild",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 72 Nature damage over 12 sec. Stacks up to 5 times on a single target. 240 charges."
      }
     ],
@@ -26229,6 +26466,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "ability_rogue_dualweild",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 92 Nature damage over 12 sec. Stacks up to 5 times on a single target. 240 charges."
      }
     ],
@@ -26318,6 +26556,7 @@
       "level": 30,
       "line": "Subtlety",
       "icon": "spell_shadow_grimward",
+      "offgcd": true,
       "desc": "Sneak up on the trap in order to disarm it. Don't get too close or the trap will go off."
      }
     ],
@@ -26386,6 +26625,7 @@
       "line": "Combat",
       "cooldown": "5 min",
       "icon": "spell_shadow_shadowward",
+      "offgcd": true,
       "desc": "The rogue's dodge chance will increase by 50% for 15 sec."
      }
     ],
@@ -26801,6 +27041,7 @@
       "level": 1,
       "line": "Combat",
       "icon": "inv_weapon_shortblade_05",
+      "offgcd": true,
       "desc": "Increases your chance to get a critical strike with Daggers and Fist Weapons by 5%."
      },
      {
@@ -26809,6 +27050,7 @@
       "level": 1,
       "line": "Combat",
       "icon": "inv_mace_01",
+      "offgcd": true,
       "desc": "Your attacks with Maces ignore up to 15% of your target's armor."
      },
      {
@@ -26975,6 +27217,7 @@
       "level": 0,
       "line": "Subtlety",
       "icon": "spell_shadow_fumble",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -26985,6 +27228,7 @@
       "level": 20,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 15 Nature damage. 60 charges."
      }
     ],
@@ -26995,6 +27239,7 @@
       "level": 28,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 23 Nature damage. 85 charges."
      }
     ],
@@ -27005,6 +27250,7 @@
       "level": 36,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 33 Nature damage. 105 charges."
      }
     ],
@@ -27015,6 +27261,7 @@
       "level": 44,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 51 Nature damage. 1800 charges."
      }
     ],
@@ -27025,6 +27272,7 @@
       "level": 52,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 71 Nature damage. 150 charges."
      }
     ],
@@ -27035,6 +27283,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "ability_poisons",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy which instantly inflicts 88 Nature damage. 250 charges."
      }
     ],
@@ -27159,6 +27408,7 @@
       "level": 24,
       "line": "Poisons",
       "icon": "spell_nature_nullifydisease",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy, increasing their casting time by 40% for 10 sec. 75 charges."
      }
     ],
@@ -27169,6 +27419,7 @@
       "level": 38,
       "line": "Poisons",
       "icon": "spell_nature_nullifydisease",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy, increasing their casting time by 50% for 12 sec. 115 charges."
      }
     ],
@@ -27179,6 +27430,7 @@
       "level": 52,
       "line": "Poisons",
       "icon": "spell_nature_nullifydisease",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 20% chance of poisoning the enemy, increasing their casting time by 60% for 14 sec. 225 charges."
      }
     ],
@@ -27232,6 +27484,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "ability_creature_disease_03",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, increasing the time between the enemy's melee attacks by 20% for 15 sec. 105 charges."
      }
     ],
@@ -27242,6 +27495,7 @@
       "level": 54,
       "line": "Poisons",
       "icon": "spell_holy_nullifydisease",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 108 Nature damage over 12 sec and causing the enemy to take 4% increased Arcane, Fire, Frost, Nature, and Shadow damage. Stacks up to 5 times on a single target. Occult Poison counts as Deadly Poison and benefits from all talents and effects that trigger from or modify Deadly Poison."
      }
     ],
@@ -27252,6 +27506,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "spell_holy_nullifydisease",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy for 136 Nature damage over 12 sec and causing the enemy to take 4% increased Arcane, Fire, Frost, Nature, and Shadow damage. Stacks up to 5 times on a single target. Occult Poison counts as Deadly Poison and benefits from all talents and effects that trigger from or modify Deadly Poison."
      }
     ],
@@ -27273,6 +27528,7 @@
       "level": 1,
       "line": "Lockpicking",
       "icon": "spell_nature_moonkey",
+      "offgcd": true,
       "desc": "Allows opening of locked chests and doors."
      }
     ],
@@ -27283,6 +27539,7 @@
       "level": 4,
       "line": "Subtlety",
       "icon": "inv_misc_bag_11",
+      "offgcd": true,
       "stances": [
        "Stealth"
       ],
@@ -27306,6 +27563,7 @@
       "level": 20,
       "line": "Poisons",
       "icon": "trade_brewpoison",
+      "offgcd": true,
       "desc": "You can create and mix poisons, with both found and storebought ingredients."
      }
     ],
@@ -27329,6 +27587,7 @@
       "line": "Subtlety",
       "cooldown": "2 min",
       "icon": "spell_shadow_possession",
+      "offgcd": true,
       "desc": "Adds 2 Combo Points to your target. You must add to or use those combo points within 20 sec or the combo points are lost."
      }
     ],
@@ -27363,6 +27622,7 @@
       "line": "Subtlety",
       "cooldown": "10 sec",
       "icon": "inv_throwingknife_01",
+      "offgcd": true,
       "desc": "Removes all your existing combo points from your target and stores them for up to 15 sec. These stored combat points will be transferred to the next non-player enemy you hit with a melee or ranged ability."
      }
     ],
@@ -27399,6 +27659,7 @@
       "power": "Energy",
       "cooldown": "6 sec",
       "icon": "ability_warrior_challange",
+      "offgcd": true,
       "desc": "A strike that becomes active after parrying an opponent's attack. This attack deals 150% weapon damage and disarms the target for 0 sec."
      }
     ],
@@ -27554,6 +27815,7 @@
       "level": 60,
       "line": "Poisons",
       "icon": "ability_creature_poison_06",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing the enemy's armor by 1700 for 15 sec. 105 charges. Sebacious Poison benefits from the Improved Expose Armor talent."
      }
     ],
@@ -27725,6 +27987,7 @@
       "line": "Combat",
       "cooldown": "5 min",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "desc": "Increases the rogue's movement speed by 50% for 15 sec. Does not break stealth."
      },
      {
@@ -27734,6 +27997,7 @@
       "line": "Combat",
       "cooldown": "5 min",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "desc": "Increases the rogue's movement speed by 60% for 15 sec. Does not break stealth."
      },
      {
@@ -27743,6 +28007,7 @@
       "line": "Combat",
       "cooldown": "5 min",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "desc": "Increases the rogue's movement speed by 70% for 15 sec. Does not break stealth."
      }
     ],
@@ -27754,6 +28019,7 @@
       "line": "Subtlety",
       "cooldown": "10 sec",
       "icon": "ability_stealth",
+      "offgcd": true,
       "desc": "Allows the rogue to sneak around, but reduces your speed by 50%. Lasts until cancelled."
      },
      {
@@ -27763,6 +28029,7 @@
       "line": "Subtlety",
       "cooldown": "10 sec",
       "icon": "ability_stealth",
+      "offgcd": true,
       "desc": "Allows the rogue to sneak around, but reduces your speed by 40%. Lasts until cancelled."
      },
      {
@@ -27772,6 +28039,7 @@
       "line": "Subtlety",
       "cooldown": "10 sec",
       "icon": "ability_stealth",
+      "offgcd": true,
       "desc": "Allows the rogue to sneak around, but reduces your speed by 35%. Lasts until cancelled."
      },
      {
@@ -27781,6 +28049,7 @@
       "line": "Subtlety",
       "cooldown": "10 sec",
       "icon": "ability_stealth",
+      "offgcd": true,
       "desc": "Allows the rogue to sneak around, but reduces your speed by 30%. Lasts until cancelled."
      }
     ],
@@ -27792,6 +28061,7 @@
       "line": "Subtlety",
       "cooldown": "5 min",
       "icon": "ability_vanish",
+      "offgcd": true,
       "desc": "Allows the rogue to vanish from sight, entering an improved stealth mode for 10 sec. Also breaks movement impairing effects."
      },
      {
@@ -27801,6 +28071,7 @@
       "line": "Subtlety",
       "cooldown": "5 min",
       "icon": "ability_vanish",
+      "offgcd": true,
       "desc": "Allows the rogue to vanish from sight, entering an improved stealth mode for 10 sec. Also breaks movement impairing effects. More effective than Vanish (Rank 1)."
      }
     ],
@@ -27811,6 +28082,7 @@
       "level": 0,
       "line": "Subtlety",
       "icon": "ability_vanish",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -27865,6 +28137,7 @@
       "level": 32,
       "line": "Poisons",
       "icon": "inv_misc_herb_16",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing all healing effects used on them by 67 for 15 sec. Stacks up to 5 times on a single target. 90 charges."
      }
     ],
@@ -27875,6 +28148,7 @@
       "level": 40,
       "line": "Poisons",
       "icon": "inv_misc_herb_16",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing all healing effects used on them by 92 for 15 sec. Stacks up to 5 times on a single target. 115 charges."
      }
     ],
@@ -27885,6 +28159,7 @@
       "level": 48,
       "line": "Poisons",
       "icon": "inv_misc_herb_16",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing all healing effects used on them by 128 for 15 sec. Stacks up to 5 times on a single target. 135 charges."
      }
     ],
@@ -27895,6 +28170,7 @@
       "level": 56,
       "line": "Poisons",
       "icon": "inv_misc_herb_16",
+      "offgcd": true,
       "desc": "Coats a weapon with poison that lasts for 30 minutes. Each strike has a 30% chance of poisoning the enemy, reducing all healing effects used on them by 165 for 15 sec. Stacks up to 5 times on a single target. 240 charges."
      }
     ]
@@ -28730,6 +29006,7 @@
       "level": 0,
       "line": "Restoration",
       "icon": "spell_nature_undyingstrength",
+      "offgcd": true,
       "desc": "Increases your armor value from items by 8%."
      }
     ],
@@ -29177,6 +29454,7 @@
       "level": 0,
       "line": "Elemental Combat",
       "icon": "spell_fire_elementaldevastation",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -30215,6 +30493,7 @@
       "line": "Elemental Combat",
       "cooldown": "3 min",
       "icon": "spell_nature_unrelentingstorm",
+      "offgcd": true,
       "desc": "Gain mastery over Lightning, reducing the cast time of your Lightning Bolt spell by -0.5 sec, and removing the cooldown from your Chain Lightning spell. Lasts 15 sec."
      },
      {
@@ -30587,6 +30866,7 @@
       "line": "Restoration",
       "cooldown": "3 min",
       "icon": "spell_nature_ravenform",
+      "offgcd": true,
       "desc": "When activated, your next Nature spell with a casting time less than 10 sec. becomes an instant cast spell."
      }
     ],
@@ -30644,6 +30924,7 @@
       "line": "Enhancement",
       "cooldown": "3 min",
       "icon": "spell_nature_bloodlust",
+      "offgcd": true,
       "desc": "Increases your attack speed by 30% for 25 sec."
      }
     ],
@@ -30664,6 +30945,7 @@
       "line": "Restoration",
       "cooldown": "60 min",
       "icon": "spell_nature_reincarnation",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -31238,6 +31520,7 @@
       "level": 0,
       "line": "Enhancement",
       "icon": "inv_axe_10",
+      "offgcd": true,
       "desc": "Allows you to use Two-Handed Axes and Two-Handed Maces."
      }
     ],
@@ -32306,6 +32589,7 @@
       "line": "Affliction",
       "cooldown": "3 min",
       "icon": "spell_shadow_contagion",
+      "offgcd": true,
       "desc": "Increases the effect of your next Curse of Weakness or Bane of Agony by 50%, or your next Curse of Exhaustion by 20%. Lasts 30 sec."
      }
     ],
@@ -32412,6 +32696,7 @@
       "level": 60,
       "line": "Affliction",
       "icon": "spell_shadow_auraofdarkness",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -32425,6 +32710,7 @@
       "cost": "5%",
       "power": "Mana",
       "icon": "ability_warlock_baneofhavoc",
+      "offgcd": true,
       "desc": "Afflicts the target for 5 min, causing 15% of all damage done by the Warlock to other targets to also be dealt to the cursed target. Bane of Havoc is limited to 1 target, and only one Bane per Warlock can be active on any one target."
      }
     ],
@@ -33089,6 +33375,7 @@
       "talent": true,
       "line": "Demonology",
       "icon": "spell_shadow_psychicscream",
+      "offgcd": true,
       "desc": "When activated, sacrifices your summoned Demon to enhance the opposing aspect of your power, granting you an effect that lasts 120 min. The effect is canceled if any Demon is summoned. Imp: Increases your Shadow damage by 15%. Voidwalker: Restores 2% of your total Mana every 4 sec. Succubus/Incubus: Increases your Fire damage by 15%. Felhunter: Restores 3% of your total Health every 4 sec."
      }
     ],
@@ -33308,6 +33595,7 @@
       "level": 10,
       "line": "Explorer Imp",
       "icon": "ability_warlock_empoweredimp",
+      "offgcd": true,
       "desc": "Summon your Explorer Imp. Though it cannot fight, it can travel through portals to explore other worlds and bring back treasures."
      }
     ],
@@ -33375,6 +33663,7 @@
       "line": "Demonology",
       "cooldown": "5 min",
       "icon": "spell_nature_removecurse",
+      "offgcd": true,
       "desc": "Your next Imp, Voidwalker, Succubus, Incubus, or Felhunter Summon spell has its casting time reduced by 5.5 sec and its Mana cost reduced by 50%."
      }
     ],
@@ -34046,6 +34335,7 @@
       "level": 0,
       "line": "Demonology",
       "icon": "spell_shadow_shadowpact",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -34054,6 +34344,7 @@
       "level": 0,
       "line": "Demonology",
       "icon": "spell_shadow_shadowpact",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -34062,6 +34353,7 @@
       "level": 0,
       "line": "Demonology",
       "icon": "spell_shadow_shadowpact",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -34070,6 +34362,7 @@
       "level": 0,
       "line": "Demonology",
       "icon": "spell_shadow_shadowpact",
+      "offgcd": true,
       "desc": ""
      },
      {
@@ -34100,6 +34393,7 @@
       "level": 1,
       "line": "Demonology",
       "icon": "inv_misc_rune_06",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -34134,6 +34428,7 @@
       "level": 35,
       "line": "Destruction",
       "icon": "spell_fire_volcano",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -36459,6 +36754,7 @@
       "line": "Arms",
       "cooldown": "1 sec",
       "icon": "ability_warrior_offensivestance",
+      "offgcd": true,
       "desc": "A balanced combat stance.",
       "shares_cooldown": [
        "Berserker Stance",
@@ -36498,6 +36794,7 @@
       "line": "Fury",
       "cooldown": "1 sec",
       "icon": "ability_racial_avatar",
+      "offgcd": true,
       "desc": "An aggressive stance. Critical strike chance increased by 3% and all damage taken is increased by 10%.",
       "shares_cooldown": [
        "Battle Stance",
@@ -36536,6 +36833,7 @@
       "power": "-2",
       "cooldown": "1 min",
       "icon": "ability_racial_bloodrage",
+      "offgcd": true,
       "desc": "Generates 10 rage at the cost of health, and then generates an additional 10 rage over 10 sec."
      }
     ],
@@ -36634,6 +36932,7 @@
       "line": "Arms",
       "cooldown": "15 sec",
       "icon": "ability_warrior_charge",
+      "offgcd": true,
       "stances": [
        "Battle Stance"
       ],
@@ -36646,6 +36945,7 @@
       "line": "Arms",
       "cooldown": "15 sec",
       "icon": "ability_warrior_charge",
+      "offgcd": true,
       "stances": [
        "Battle Stance"
       ],
@@ -36658,6 +36958,7 @@
       "line": "Arms",
       "cooldown": "15 sec",
       "icon": "ability_warrior_charge",
+      "offgcd": true,
       "stances": [
        "Battle Stance"
       ],
@@ -36673,6 +36974,7 @@
       "cost": "20",
       "power": "Rage",
       "icon": "ability_warrior_cleave",
+      "offgcd": true,
       "desc": "A sweeping attack that does your weapon damage plus 5 to the target and a second nearby enemy."
      },
      {
@@ -36683,6 +36985,7 @@
       "cost": "20",
       "power": "Rage",
       "icon": "ability_warrior_cleave",
+      "offgcd": true,
       "desc": "A sweeping attack that does your weapon damage plus 10 to the target and a second nearby enemy."
      },
      {
@@ -36693,6 +36996,7 @@
       "cost": "20",
       "power": "Rage",
       "icon": "ability_warrior_cleave",
+      "offgcd": true,
       "desc": "A sweeping attack that does your weapon damage plus 18 to the target and a second nearby enemy."
      },
      {
@@ -36703,6 +37007,7 @@
       "cost": "20",
       "power": "Rage",
       "icon": "ability_warrior_cleave",
+      "offgcd": true,
       "desc": "A sweeping attack that does your weapon damage plus 32 to the target and a second nearby enemy."
      },
      {
@@ -36713,6 +37018,7 @@
       "cost": "20",
       "power": "Rage",
       "icon": "ability_warrior_cleave",
+      "offgcd": true,
       "desc": "A sweeping attack that does your weapon damage plus 50 to the target and a second nearby enemy."
      }
     ],
@@ -36727,6 +37033,7 @@
       "power": "Rage",
       "cooldown": "45 sec",
       "icon": "ability_thunderbolt",
+      "offgcd": true,
       "desc": "Stuns the target for 5 sec."
      }
     ],
@@ -36774,6 +37081,7 @@
       "line": "Protection",
       "cooldown": "1 sec",
       "icon": "ability_warrior_defensivestance",
+      "offgcd": true,
       "desc": "A defensive combat stance. Decreases damage taken by 10% and damage caused by 10%. Increases all threat generated by {(80+100)*(15/100+1)-100)}%.",
       "shares_cooldown": [
        "Battle Stance",
@@ -37042,6 +37350,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 11 and causes a high amount of threat."
      },
      {
@@ -37052,6 +37361,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 21 and causes a high amount of threat."
      },
      {
@@ -37062,6 +37372,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 32 and causes a high amount of threat."
      },
      {
@@ -37072,6 +37383,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 44 and causes a high amount of threat."
      },
      {
@@ -37082,6 +37394,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 58 and causes a high amount of threat."
      },
      {
@@ -37092,6 +37405,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 80 and causes a high amount of threat."
      },
      {
@@ -37102,6 +37416,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 111 and causes a high amount of threat."
      },
      {
@@ -37112,6 +37427,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 138 and causes a high amount of threat."
      },
      {
@@ -37122,6 +37438,7 @@
       "cost": "15",
       "power": "Rage",
       "icon": "ability_rogue_ambush",
+      "offgcd": true,
       "desc": "A strong attack that increases melee damage by 157 and causes a high amount of threat."
      }
     ],
@@ -37541,6 +37858,7 @@
       "power": "Rage",
       "cooldown": "30 sec",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "stances": [
        "Berserker Stance"
       ],
@@ -37555,6 +37873,7 @@
       "power": "Rage",
       "cooldown": "30 sec",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "stances": [
        "Berserker Stance"
       ],
@@ -37569,6 +37888,7 @@
       "power": "Rage",
       "cooldown": "30 sec",
       "icon": "ability_rogue_sprint",
+      "offgcd": true,
       "stances": [
        "Berserker Stance"
       ],
@@ -37608,6 +37928,7 @@
       "line": "Protection",
       "cooldown": "3 min",
       "icon": "spell_holy_ashestoashes",
+      "offgcd": true,
       "desc": "When activated, this ability temporarily grants you 30% of your maximum health for 20 sec. After the effect expires, the health is lost."
      }
     ],
@@ -37618,6 +37939,7 @@
       "level": 0,
       "line": "Arms",
       "icon": "spell_frost_stun",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -38187,6 +38509,7 @@
       "power": "Rage",
       "cooldown": "5 sec",
       "icon": "ability_defend",
+      "offgcd": true,
       "stances": [
        "Defensive Stance"
       ],
@@ -38418,6 +38741,7 @@
       "power": "Rage",
       "cooldown": "30 sec",
       "icon": "ability_rogue_slicedice",
+      "offgcd": true,
       "stances": [
        "Battle Stance"
       ],
@@ -38442,6 +38766,7 @@
       "line": "Protection",
       "cooldown": "8 sec",
       "icon": "spell_nature_reincarnation",
+      "offgcd": true,
       "stances": [
        "Defensive Stance"
       ],
@@ -38577,6 +38902,7 @@
       "level": 1,
       "line": "Fury",
       "icon": "spell_nature_stoneclawtotem",
+      "offgcd": true,
       "desc": ""
      }
     ],
@@ -38598,6 +38924,7 @@
       "level": 1,
       "line": "Arms",
       "icon": "inv_sword_27",
+      "offgcd": true,
       "desc": "Gives you a 0% chance to get an extra attack on the same target after dealing damage with your Sword."
      },
      {
@@ -38606,6 +38933,7 @@
       "level": 1,
       "line": "Arms",
       "icon": "inv_mace_01",
+      "offgcd": true,
       "desc": "Your attacks with Maces and Staves ignore 15% of your target's armor."
      },
      {
@@ -38614,6 +38942,7 @@
       "level": 1,
       "line": "Arms",
       "icon": "inv_axe_06",
+      "offgcd": true,
       "desc": "Increases your chance to get a critical strike with Axes and Polearms by 1%."
      }
     ],

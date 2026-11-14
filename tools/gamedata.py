@@ -468,6 +468,11 @@ def build_reference(build):
                 if cd and int(cd["RecoveryTime"] or 0) + int(cd["CategoryRecoveryTime"] or 0) > 0:
                     item["cooldown"] = secs(max(int(cd["RecoveryTime"] or 0), int(cd["CategoryRecoveryTime"] or 0)))
                 item["icon"] = S.icon(sid)
+                # off the global cooldown (SpellCooldowns.StartRecoveryTime 0 or no row): a macro can fire it
+                # after a GCD spell on the same press. Passive spells (Attributes_0 0x40) never are.
+                passive = int((S.misc.get(sid) or {}).get("Attributes_0") or 0) & 0x40
+                if not passive and not int((S.cooldown.get(sid) or {}).get("StartRecoveryTime") or 0):
+                    item["offgcd"] = True
                 if sid in S.stances:
                     item["stances"] = S.stances[sid]
                 cd = S.cooldown.get(sid)
@@ -482,6 +487,13 @@ def build_reference(build):
         for d in (spells, pets):
             for name in d:
                 d[name].sort(key=lambda i: (i["rank"] or 0, i["level"], i["id"]))
+        # Lightning Shield, Holy Nova, Touch of Weakness...: each rank has an internal copy (the proc or the
+        # heal) with no cost and no GCD row. The rank you cast is the one with the cost: only it says off-GCD.
+        for rows in spells.values():
+            if any(r.get("cost") for r in rows):
+                for r in rows:
+                    if not r.get("cost"):
+                        r.pop("offgcd", None)
         # spells that share one cooldown (same category with a category cooldown)
         groups = collections.defaultdict(set)
         for name, rows in spells.items():
@@ -1246,6 +1258,208 @@ def macro_spells(body):
     return out
 
 
+def spell_lookup(R, learned):
+    """(spell_level, rows_of) for class R whose talent points come from `learned` ({talent: first level}):
+    spell_level(name, rank) is the level a name is first usable at (99 = a talent this plan never takes,
+    None = the game doesn't know it); rows_of(name) the game's rows for a spell or pet spell ([] if none)."""
+    talents, spells, pets = R["talents"], R["spells"], R["pet"]
+    tl = {n.lower(): n for n in talents}
+    sl = {n.lower(): n for n in spells}
+    pl = {n.lower(): n for n in pets}
+
+    def spell_level(name, rank=None):
+        low = name.lower()
+        if name in INNATE:
+            return 1
+        if low in tl:
+            n = tl[low]
+            return learned.get(n, 99)
+        if low in sl:
+            rows = spells[sl[low]]
+            if rank:
+                rows = [r for r in rows if r["rank"] == rank]
+                if not rows:
+                    return None
+            talent = any(r.get("talent") for r in spells[sl[low]])
+            lv = first_level(rows)
+            if talent and sl[low].lower() in tl:
+                return max(lv, learned.get(tl[sl[low].lower()], 99))
+            return lv
+        if low in pl:
+            return first_level(pets[pl[low]])
+        return None
+
+    def rows_of(name):
+        low = name.lower()
+        return spells[sl[low]] if low in sl else (pets[pl[low]] if low in pl else [])
+    return spell_level, rows_of
+
+
+PAD_BUTTONS = {"A", "B", "X", "Y", "Up", "Down", "Left", "Right"}
+ARROWS = {"↑": "Up", "↓": "Down", "←": "Left", "→": "Right"}
+MAX_CHAR_MACROS = 18  # character-specific macro slots in a Classic client
+
+
+def macro_cast_lines(body):
+    """Each /cast or /castsequence line as (command, has_conditions, [spells by clause])."""
+    out = []
+    for line in body.split("\n"):
+        m = re.match(r"\s*/(cast|castsequence|use)\s+(.*)", line)
+        if not m:
+            continue
+        cmd, rest = m.group(1), m.group(2)
+        spells = []
+        for clause in rest.split(";"):
+            c = re.sub(r"\[[^\]]*\]", "", clause).strip()
+            c = re.sub(r"^reset=\S+\s*", "", c)
+            spells.append([p.strip().lstrip("!").strip() for p in (c.split(",") if cmd == "castsequence" else [c]) if p.strip()])
+        out.append((cmd, "[" in rest, spells))
+    return out
+
+
+def audit_macros(macros, R, spell_level, rows_of, add, prefix, strict=False):
+    """One macro set (Data.lua's guide set, or a talent path's from PathMacros.lua) against the game and the
+    client's macro rules (CLAUDE.md, client facts): limits, spells and when they're learned, `known:` IDs,
+    a spell with a cooldown that blocks the lines after it, cast sequences that wait on a cooldown, versions
+    of one name that overlap, two macros on one button, and the 18 character slots. strict: hand-written
+    text (a path's set): ASCII everywhere and tips on every macro."""
+    ids = {r["id"] for rows in R["spells"].values() for r in rows} | {r["id"] for rows in R["pet"].values() for r in rows} \
+        | {t["spell"] for t in R["talents"].values()}
+    known_names = {n.lower() for n in R["spells"]} | {n.lower() for n in R["talents"]}
+    for m in macros:
+        where = "%smacro %s (%d-%d)" % (prefix, m["name"], m["lo"], m["hi"])
+        body = m.get("body") or ""
+        if len(m["name"].encode()) > 16:
+            add("error", "%s: name over 16 characters" % where)
+        if len(body.encode()) > 255:
+            add("error", "%s: body is %d characters (max 255)" % (where, len(body.encode())))
+        if any(ord(c) > 127 for c in m["name"] + body):
+            add("error", "%s: non-ASCII in name or body" % where)
+        if not 1 <= m["lo"] <= m["hi"] <= 60:
+            add("error", "%s: levels must run 1-60, low to high" % where)
+        if not m.get("icon"):
+            add("error", "%s: no icon" % where)
+        if strict:
+            for field in ("title", "pad", "kb"):
+                if any(ord(c) > 126 for c in m.get(field) or ""):
+                    add("error", "%s: %s must be ASCII" % (where, field))
+            tips = m.get("tips") or []
+            if not tips:
+                add("error", "%s: needs tips (how to use it)" % where)
+            for t in tips:
+                if any(ord(c) > 126 for c in t):
+                    add("error", "%s: tip has non-ASCII characters: %s" % (where, t[:40]))
+                if len(t) > 300:
+                    add("error", "%s: tip is %d characters (keep it to 300)" % (where, len(t)))
+        pad = m.get("pad") or ""
+        if pad:
+            raw = pad
+            for a, b in ARROWS.items():
+                raw = raw.replace(a, b)
+            toks = [t.strip() for t in re.sub(r"\s*\(.*\)\s*$", "", raw).split("+")]
+            buttons = [t for t in toks if t in PAD_BUTTONS]
+            if len(buttons) != 1 or any(t not in PAD_BUTTONS | {"LT", "RT"} for t in toks):
+                add("error", "%s: pad '%s' must be LT/RT modifiers and one of %s" % (where, pad, "/".join(sorted(PAD_BUTTONS))))
+        # spells, and when the path has them
+        for cmd, s in macro_spells(body):
+            name, rank = split_rank(s.replace("(Rank", " (Rank"))
+            lv = spell_level(name, rank)
+            if lv is None:
+                if cmd == "use":
+                    add("info", "%s: uses '%s' (an item?)" % (where, s))
+                else:
+                    add("error", "%s: '%s' is not a spell this class has" % (where, s))
+            elif lv > m["hi"]:
+                add("error", "%s: %s is only learned at %d, after the macro's levels" % (where, name, lv))
+            elif lv > m["lo"]:
+                if cmd == "castsequence":
+                    add("error", "%s: castsequence step %s is learned at %d: the sequence stalls at %d-%d" %
+                        (where, name, lv, m["lo"], lv - 1))
+                else:
+                    add("info", "%s: %s is learned at %d (skipped before)" % (where, name, lv))
+        # [known:X]: a spell ID or name the class really has
+        for k in re.findall(r"known:([^,\]]+)", body):
+            k = k.strip()
+            if (k.isdigit() and int(k) not in ids) or (not k.isdigit() and k.lower() not in known_names):
+                add("error", "%s: known:%s is not a spell or talent of this class" % (where, k))
+        # Forever stops a macro at the first known spell that can't be used now: a spell with a cooldown on an
+        # unconditional line blocks every line after it while it cools down
+        lines = macro_cast_lines(body)
+        for i, (cmd, cond, spells) in enumerate(lines[:-1]):
+            if cmd != "cast" or cond or len(spells) != 1 or len(spells[0]) != 1:
+                continue
+            name = split_rank(spells[0][0])[0]
+            rows = rows_of(name)
+            later = [x for _, _, cl in lines[i + 1:] for c in cl for x in c]
+            if rows and rows[-1].get("cooldown") and later and (spell_level(name) or 99) <= m["hi"]:
+                add("warn", "%s: %s (%s cooldown) comes before %s: while it cools down the macro stops there" %
+                    (where, name, rows[-1]["cooldown"], ", ".join(later[:3])))
+        for cmd, cond, spells in lines:
+            if cmd != "castsequence":
+                continue
+            for name in sorted({split_rank(x)[0] for c in spells for x in c}):
+                rows = rows_of(name)
+                if rows and rows[-1].get("cooldown"):
+                    add("warn", "%s: castsequence step %s has a %s cooldown: the sequence waits on it" %
+                        (where, name, rows[-1]["cooldown"]))
+    # versions of one name: no overlap, and they keep their button
+    by_name = collections.defaultdict(list)
+    for m in macros:
+        by_name[m["name"]].append(m)
+    for name, vs in by_name.items():
+        vs = sorted(vs, key=lambda m: m["lo"])
+        for a, b in zip(vs, vs[1:]):
+            if b["lo"] <= a["hi"]:
+                add("error", "%smacro %s: versions %d-%d and %d-%d overlap" % (prefix, name, a["lo"], a["hi"], b["lo"], b["hi"]))
+            if (a.get("pad"), a.get("kb")) != (b.get("pad"), b.get("kb")):
+                add("warn", "%smacro %s: moves from %s / %s to %s / %s at %d (players must move it on their bars)" %
+                    (prefix, name, a.get("pad"), a.get("kb"), b.get("pad"), b.get("kb"), b["lo"]))
+    # one macro per button and key at every level, within the character's slots
+    clashes = set()
+    for level in range(1, 61):
+        active = [m for m in macros if m["lo"] <= level <= m["hi"]]
+        if len({m["name"] for m in active}) > MAX_CHAR_MACROS:
+            add("error", "%slevel %d: %d macros, more than the %d character slots" % (prefix, level, len(active), MAX_CHAR_MACROS))
+        for field in ("pad", "kb"):
+            seen = {}
+            for m in active:
+                v = (m.get(field) or "").strip()
+                if not v:
+                    continue
+                if v in seen and seen[v] != m["name"]:
+                    clashes.add((field, v, tuple(sorted((seen[v], m["name"]))), level))
+                seen.setdefault(v, m["name"])
+    first = {}
+    for field, v, names, level in sorted(clashes, key=lambda c: c[3]):
+        first.setdefault((field, v, names), level)
+    for (field, v, names), level in sorted(first.items(), key=lambda kv: kv[1]):
+        add("error", "%s%s %s: %s and %s both use it (from level %d)" % (prefix, "button" if field == "pad" else "key", v,
+                                                                         names[0], names[1], level))
+
+
+PATH_MACROS = os.path.join(ROOT, "PathMacros.lua")
+
+
+def load_path_macros(path=PATH_MACROS):
+    """PathMacros.lua as Python data: (ns.PATH_MACROS, ns.OLD_MACRO_BODIES); ({}, {}) without the file."""
+    if not os.path.exists(path):
+        return {}, {}
+    import lupa.lua51 as lupa
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    with open(path, encoding="utf-8") as f:
+        lua.execute("return function(src, ns) assert(loadstring(src))('LevelingCodex', ns) end")(f.read(), ns)
+
+    def conv(t):
+        if lupa.lua_type(t) != "table":
+            return t
+        keys = list(t.keys())
+        if keys and all(isinstance(k, int) for k in keys) and sorted(keys) == list(range(1, len(keys) + 1)):
+            return [conv(t[k]) for k in sorted(keys)]
+        return {str(k): conv(v) for k, v in t.items()} if keys else []
+    return (conv(ns.PATH_MACROS) or {}), (conv(ns.OLD_MACRO_BODIES) or {})
+
+
 def plan_audit(plan, cls, R, add, prefix, icon_level="warn"):
     """A talent plan (Data.lua's or a path's) point by point against the class tree R: names, trees, ranks,
     icons, points needed per row, prerequisites. Returns {talent: first level}."""
@@ -1387,9 +1601,13 @@ def audit_paths(paths, data, ref):
     return res
 
 
-def audit(data, ref, only=None):
-    """[(class, 'error'|'warn'|'info', message)]. Errors: the game says the guide can't be done as written."""
+def audit(data, ref, only=None, paths=None, path_macros=None, draft=False):
+    """[(class, 'error'|'warn'|'info', message)]. Errors: the game says the guide can't be done as written.
+    paths / path_macros: TalentPaths.lua and PathMacros.lua (read from the files when None). draft: path_macros
+    comes from a work file (`macros CLASS --file F`), whose `guide` set stands in for Data.lua's macros."""
     res = []
+    paths = load_paths() if paths is None else paths
+    path_macros = load_path_macros()[0] if path_macros is None else path_macros
     for cls in CLASSES:
         if only and only.upper() != cls:
             continue
@@ -1407,28 +1625,7 @@ def audit(data, ref, only=None):
         # --- talent plan, point by point in level order
         learned = plan_audit(d["plan"], cls, R, add, "plan")
 
-        def spell_level(name, rank=None):
-            """Level a name is first usable at, or None if the game doesn't know it."""
-            low = name.lower()
-            if name in INNATE:
-                return 1
-            if low in tl:
-                n = tl[low]
-                return learned.get(n, 99)
-            if low in sl:
-                rows = spells[sl[low]]
-                if rank:
-                    rows = [r for r in rows if r["rank"] == rank]
-                    if not rows:
-                        return None
-                talent = any(r.get("talent") for r in spells[sl[low]])
-                lv = first_level(rows)
-                if talent and sl[low].lower() in tl:
-                    return max(lv, learned.get(tl[sl[low].lower()], 99))
-                return lv
-            if low in pl:
-                return first_level(pets[pl[low]])
-            return None
+        spell_level, rows_of = spell_lookup(R, learned)
 
         # --- trainer visits
         mentioned = set()
@@ -1481,25 +1678,44 @@ def audit(data, ref, only=None):
             if n not in mentioned and n.lower() not in tl:
                 add("info", "trainer: %s (level %d) is never listed" % (n, real[0]["level"]))
 
-        # --- macros
-        for m in d["macros"]:
-            where = "macro %s (%d-%d)" % (m["name"], m["lo"], m["hi"])
-            for cmd, s in macro_spells(m["body"]):
-                name, rank = split_rank(s.replace("(Rank", " (Rank"))
-                lv = spell_level(name, rank)
-                if lv is None:
-                    if cmd == "use":
-                        add("info", "%s: uses '%s' (an item?)" % (where, s))
-                    else:
-                        add("error", "%s: '%s' is not a spell this class has" % (where, s))
-                elif lv > m["hi"]:
-                    add("error", "%s: %s is only learned at %d, after the macro's levels" % (where, name, lv))
-                elif lv > m["lo"]:
-                    if cmd == "castsequence":
-                        add("error", "%s: castsequence step %s is learned at %d: the sequence stalls at %d-%d" %
-                            (where, name, lv, m["lo"], lv - 1))
-                    else:
-                        add("info", "%s: %s is learned at %d (skipped before)" % (where, name, lv))
+        # --- macros: the guide's (Data.lua), or a draft's `guide` set in its place
+        guide_macros = (path_macros.get(cls) or {}).get("guide") if draft else None
+        audit_macros(guide_macros if guide_macros is not None else d["macros"], R, spell_level, rows_of, add, "",
+                     strict=guide_macros is not None)
+        # --- each talent path's own macros (PathMacros.lua), with the talent spells that path takes
+        plist = {P.get("key"): P for P in (paths.get(cls) or [])}
+        sets = path_macros.get(cls) or {}
+        for key, ms in sorted(sets.items()):
+            if key == "guide":
+                if not draft:
+                    add("error", "PathMacros.lua: the guide's macros live in Data.lua, not under 'guide'")
+                continue
+            P = plist.get(key)
+            if not P or not P.get("plan"):
+                add("error", "PathMacros.lua: '%s' is not a talent path of this class" % key)
+                continue
+            path_learned = plan_audit(P["plan"], cls, R, lambda *a: None, "path")
+            lv, rows = spell_lookup(R, path_learned)
+            audit_macros(ms, R, lv, rows, add, "path %s: " % key, strict=True)
+            for level in range(10, 61):
+                if not any(m["lo"] <= level <= m["hi"] for m in ms):
+                    add("error", "path %s: no macro at level %d" % (key, level))
+                    break
+        for key, P in plist.items():
+            if key != "guide" and P.get("plan") and key not in sets and (path_macros or not draft):
+                add("error", "path %s has no macros in PathMacros.lua" % key)
+        # one name keeps its button and key in every set: switching path updates the macro in place
+        spots = collections.defaultdict(set)
+        all_sets = [("guide", guide_macros if guide_macros is not None else d["macros"])] + \
+            [(k, v) for k, v in sorted(sets.items()) if k != "guide"]
+        for key, ms in all_sets:
+            for m in ms:
+                spots[m["name"]].add((m.get("pad") or "", m.get("kb") or "", key))
+        for name, s in sorted(spots.items()):
+            places = {(p, k) for p, k, _ in s}
+            if len(places) > 1:
+                add("warn", "macro %s sits on different buttons or keys across paths: %s" % (
+                    name, "; ".join(sorted("%s %s / %s" % (key, p, k) for p, k, key in s))))
 
         # --- text: "Name (NN)" level mentions and "Name N/M" ranks
         texts = []
@@ -1648,7 +1864,73 @@ def spell_list(ref, cls, name=None):
                                ("cost %s %s " % (r.get("cost"), r.get("power"))) if r.get("cost") else "",
                                ("cd %s" % r.get("cooldown")) if r.get("cooldown") else "",
                                (" shares cd with " + ", ".join(r["shares_cooldown"])) if r.get("shares_cooldown") else "",
-                               (" only in " + "/".join(r["stances"])) if r.get("stances") else "", r.get("desc", "")))
+                               (" only in " + "/".join(r["stances"])) if r.get("stances") else "" +
+                               (" (off the GCD)" if r.get("offgcd") else ""), r.get("desc", "")))
+    return "\n".join(out)
+
+
+def spell_facts(ref, cls, data, paths, path_key=None):
+    """Every active class spell in one line each, for writing macros: ranks by level, cost, cooldown, shared
+    cooldowns, off-GCD, the stance or form it needs, then the first rank's tooltip. Then each talent path's
+    talent-taught spells with the level that path learns them (path_key: only that path)."""
+    R = ref["classes"][cls]
+    out = ["# %s spells in WoW: Forever build %s (passives and unlearnable rows left out)" % (cls, ref["build"])]
+    for n, rows in sorted(R["spells"].items(), key=lambda kv: (first_level(kv[1]), kv[0])):
+        lv = first_level(rows)
+        if lv <= 0 or lv > 60:
+            continue
+        top = [r for r in rows if 0 < r["level"] <= 60] or rows
+        last = top[-1]
+        # passive talents and the effects that carry no cost or cooldown (Chilled, Ignite): not macro material
+        if not last.get("cost") and not last.get("cooldown") and (lv <= 1 or any(r.get("talent") for r in rows)):
+            continue
+        bits = ", ".join("%s%d" % ("r%d@" % r["rank"] if r["rank"] else "", r["level"]) for r in top)
+        info = []
+        if last.get("cost"):
+            info.append("%s %s" % (last["cost"], last.get("power", "")))
+        if last.get("cooldown"):
+            info.append("cd " + last["cooldown"])
+        if last.get("shares_cooldown"):
+            info.append("shares cd: " + "/".join(last["shares_cooldown"]))
+        if any(r.get("offgcd") for r in top):
+            info.append("OFF GCD")
+        if last.get("stances"):
+            info.append("only in " + "/".join(last["stances"]))
+        if any(r.get("talent") for r in rows):
+            info.append("talent")
+        info.append("icon " + str(last.get("icon")))
+        out.append("%-26s %s | %s | %s" % (n, bits, "; ".join(info), (top[0].get("desc") or "")[:220]))
+    if R["pet"]:
+        out.append("\n# pet spells")
+    for n, rows in sorted(R["pet"].items(), key=lambda kv: (first_level(kv[1]), kv[0])):
+        r = rows[0]
+        out.append("%-26s %s [%s]%s | %s" % (n, first_level(rows), r.get("pet"), " OFF GCD" if any(x.get("offgcd") for x in rows) else "",
+                                             (r.get("desc") or "")[:160]))
+    # talent-taught spells you press (a cost or a cooldown), not the passive ranks
+    talent_spells = {n for n, rows in R["spells"].items() if any(r.get("talent") for r in rows)
+                     and any(r.get("cost") or r.get("cooldown") for r in rows)}
+    for P in paths.get(cls) or []:
+        if path_key and P.get("key") != path_key:
+            continue
+        plan = P.get("plan") or (data.get(cls) or {}).get("plan") or []
+        learned = plan_audit(plan, cls, R, lambda *a: None, "path")
+        taught = sorted((lv, n) for n, lv in learned.items() if n in talent_spells)
+        out.append("\n# path %s (%s, %s): talent spells to press: %s" % (P.get("key"), P.get("spec"), P.get("role"),
+                   ", ".join("%s %d" % (n, lv) for lv, n in taught) or "none"))
+    return "\n".join(out)
+
+
+def macro_sheet(data, path_macros, cls, draft=False):
+    """One class's macro sets as text: the guide's (or a draft's) and each path's, level band by level band."""
+    out = []
+    sets = [("guide", ((path_macros.get(cls) or {}).get("guide") if draft else None) or (data.get(cls) or {}).get("macros") or [])]
+    sets += [(k, v) for k, v in sorted((path_macros.get(cls) or {}).items()) if k != "guide"]
+    for key, ms in sets:
+        out.append("## %s %s: %d macro versions" % (cls, key, len(ms)))
+        for m in ms:
+            out.append("[%s] %d-%d  pad %s  key %s  %d chars" % (m["name"], m["lo"], m["hi"], m.get("pad"), m.get("kb"),
+                                                                len((m.get("body") or "").encode())))
+            out += ["    " + l for l in (m.get("body") or "").split("\n")]
     return "\n".join(out)
 
 
@@ -1659,13 +1941,14 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["update", "fetch", "build", "diff", "audit", "review", "tree", "spells", "packet", "recipes", "profs",
-                                       "talentdata"])
+                                       "talentdata", "macros", "facts"])
     ap.add_argument("args", nargs="*")
     ap.add_argument("--build")
     ap.add_argument("--report", help="update: also write a markdown report (game changes + audit) to this file")
     ap.add_argument("-k", dest="only")
     ap.add_argument("-v", action="store_true", dest="verbose")
     ap.add_argument("--check", action="store_true", help="talentdata: fail when TalentTreeData.lua is stale")
+    ap.add_argument("--file", help="macros: read the path macros from this draft file instead of PathMacros.lua")
     a = ap.parse_args()
 
     if a.cmd in ("fetch", "build", "update"):
@@ -1740,6 +2023,20 @@ def main():
         print(tree(ref, cls))
     elif a.cmd == "spells":
         print(spell_list(ref, cls, a.args[1] if len(a.args) > 1 else None))
+    elif a.cmd == "facts":
+        print(spell_facts(ref, cls, load_data(), load_paths(), a.args[1] if len(a.args) > 1 else None))
+    elif a.cmd == "macros":
+        pm = load_path_macros(a.file)[0] if a.file else load_path_macros()[0]
+        res = audit(load_data(), ref, cls, path_macros=pm, draft=bool(a.file))
+        res = [r for r in res if "macro" in r[2].lower() or r[2].startswith("path ") or "button " in r[2] or "key " in r[2]]
+        print(macro_sheet(load_data(), pm, cls, draft=bool(a.file)))
+        print("\n## Audit")
+        for _, lvl, msg in res:
+            if lvl != "info" or a.verbose:
+                print("  %-5s %s" % (lvl, msg))
+        errs = sum(1 for r in res if r[1] == "error")
+        print("%d error(s), %d warning(s)" % (errs, sum(1 for r in res if r[1] == "warn")))
+        return 1 if errs else 0
     return 0
 
 
