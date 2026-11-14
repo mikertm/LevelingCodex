@@ -277,13 +277,13 @@ end
 ### Task 7: Window comfort
 
 **Files:**
-- Modify: `QuestGuide.lua` (scale, background alpha, combat fade, compact mode, the corner chevron), `Window.lua` (Settings rows: "Step window size" stepper 70-150%, "Step window background" stepper 20-100%, "Fade the step window in combat", "Compact step window")
+- Modify: `QuestGuide.lua` (scale, Ctrl+wheel resize, background alpha, combat fade, compact mode, the corner chevron), `Window.lua` (Settings rows: "Step window size" stepper 50-150%, "Step window background" stepper 20-100%, "Fade the step window in combat", "Compact step window"), `QuestTab.lua` (setup card: a "Step window" row with the size stepper and a "Compact" check box, under Map lines)
 - Test: `tests/scenarios.lua` (new `S.stepComfort`), `tests/run.py`
 
 **Interfaces:**
-- Produces: `db.questViewerScale` (0.7-1.5, step 0.1), `db.questViewerAlpha` (0.2-1.0, step 0.1), `db.noQuestFade`, `db.questCompact`; the chevron button `codexLabel` "Compact" / "Expand"; `viewer.background` (the window's background texture, whose alpha the background stepper sets).
+- Produces: `ns.setQuestViewerScale(step)` (adds `step` to `db.questViewerScale`, held to 0.5-1.5, rounded to 0.1, applies it; Settings, the setup card and the wheel all call it); `db.questViewerScale` (0.5-1.5, step 0.1), `db.questViewerAlpha` (0.2-1.0, step 0.1), `db.noQuestFade`, `db.questCompact`; the chevron button `codexLabel` "Compact" / "Expand"; `viewer.background` (the window's background texture, whose alpha the background stepper sets).
 
-Fade: register PLAYER_REGEN_DISABLED (pcall); a tween moves `viewer:GetAlpha()` to its target over 0.3 s (OnUpdate on the viewer); in combat the target is 0.3, 1 while the mouse is over the window (OnEnter/OnLeave hooks), and 1 again at PLAYER_REGEN_ENABLED. Background alpha: the backdrop's colours (`SetBackdropColor` / `SetBackdropBorderColor` with alpha) and `flatBackground`'s alpha. Compact: `ns.questRefresh` draws only the title row (chip, title, at the right the first unfinished goal's count, else the current up-next-style distance to the step, else nothing), the bar and the buttons.
+Wheel: like the arrow, the window enables the mouse wheel only while hovered with Ctrl held (checked in its OnUpdate) and disables it on leave; OnMouseWheel calls `ns.setQuestViewerScale(0.1 * delta)`. Fade: register PLAYER_REGEN_DISABLED (pcall); a tween moves `viewer:GetAlpha()` to its target over 0.3 s (OnUpdate on the viewer); in combat the target is 0.3, 1 while the mouse is over the window (OnEnter/OnLeave hooks), and 1 again at PLAYER_REGEN_ENABLED. Background alpha: the backdrop's colours (`SetBackdropColor` / `SetBackdropBorderColor` with alpha) and `flatBackground`'s alpha. Compact: `ns.questRefresh` draws only the title row (chip, title, at the right the first unfinished goal's count, else the current up-next-style distance to the step, else nothing), the bar and the buttons.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -296,6 +296,15 @@ function S.stepComfort()
   click(win(), "Settings")
   for _ = 1, 2 do click(win(), "Step window size +") end
   check(math.abs(frame:GetScale() - 1.2) < 0.001, "the size stepper scales the window")
+  for _ = 1, 10 do click(win(), "Step window size -") end
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "down to half size for small screens")
+  check(not frame:IsMouseWheelEnabled(), "the wheel stays the camera's")
+  MOCK.fire(frame, "OnEnter"); MOCK.ctrl = true; MOCK.advance(0.1)
+  check(frame:IsMouseWheelEnabled(), "Ctrl over the window takes the wheel")
+  MOCK.fire(frame, "OnMouseWheel", 1)
+  check(math.abs(frame:GetScale() - 0.6) < 0.001, "and the wheel resizes it")
+  MOCK.ctrl = false; MOCK.fire(frame, "OnLeave"); MOCK.advance(0.1)
+  check(not frame:IsMouseWheelEnabled(), "letting go gives the wheel back")
   local textAlpha = frame:GetAlpha()
   for _ = 1, 3 do click(win(), "Step window background -") end
   check(frame.background and math.abs(frame.background:GetAlpha() - 0.7) < 0.01 and frame:GetAlpha() == textAlpha,
@@ -317,6 +326,17 @@ function S.stepComfort()
   check(questText(frame, "UP NEXT"), "and expands again")
 end
 
+-- The guide setup card offers the step window's size and compact mode (laptops meet them on first run).
+function S.stepSetupWindow()
+  S.login()
+  slash("quests")
+  local frame = questViewer()
+  click(win(), "Step window size -")
+  check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
+  click(win(), "Compact")
+  check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+end
+
 -- Compact mode on a step with no goals and no spot draws the title row alone.
 function S.stepCompactNote()
   local northshire
@@ -329,7 +349,7 @@ function S.stepCompactNote()
     "a compact note step: chip and title, no count or distance")
 end
 ```
-(The stepper buttons' codexLabels are "Step window size -" / "Step window size +" and "Step window background -" / "Step window background +"; the window's background (the backdrop and `flatBackground`) is reachable as `viewer.background` for the alpha check. Add `stepCompactNote` to the run list too.)
+(The stepper buttons' codexLabels are "Step window size -" / "Step window size +" and "Step window background -" / "Step window background +"; the window's background (the backdrop and `flatBackground`) is reachable as `viewer.background` for the alpha check. Add `stepCompactNote` and `stepSetupWindow` to the run list too. The setup card's stepper and check box share the Settings labels "Step window size -" / "+" and need a distinct label for its check box: "Compact" on the card is a check box, the window's corner chevron is "Compact" too, so `stepSetupWindow` clicks the card's first (the window's chevron sits in the step window, not under `win()`).)
 
 - [ ] **Step 2: Run** `python tests/run.py -k stepComfort`. Expected: FAIL.
 - [ ] **Step 3: Implement**.

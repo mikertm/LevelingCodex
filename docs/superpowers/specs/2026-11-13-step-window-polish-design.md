@@ -106,8 +106,13 @@ quest isn't in the log.
 
 ## 3. Window comfort
 
-- **Size**: Settings > Step window size, a stepper 70% to 150% in 10% steps (`db.questViewerScale`,
-  default 100%), applied with `SetScale`; the arrow keeps its own size.
+- **Size** (small screens such as laptops): Settings > Step window size, a stepper 50% to 150% in
+  10% steps (`db.questViewerScale`, default 100%), applied with `SetScale`; the arrow keeps its own
+  size. Ctrl+mouse wheel over the window changes the same setting (the window takes the wheel only
+  while Ctrl is held over it, like the arrow, so the wheel zooms the camera otherwise). The guide
+  setup card (Quests tab) gets a "Step window" row with the same size stepper and a Compact check
+  box, so a player on a small screen meets both on first run. No size is guessed from the screen:
+  the game's default UI scale gives every screen the same height, so a laptop can't be told apart.
 - **Background opacity**: Settings > Step window background, 20% to 100% (`db.questViewerAlpha`,
   default 100%), applied to the window's background and border only; text, bars and buttons stay
   opaque.
@@ -139,7 +144,9 @@ Player-level scenarios in `tests/scenarios.lua`, each failing first:
   hides it; the minimal client (no `PlayerModel`) draws the icon.
 - Buttons: the four `codexLabel`s exist and click as before; Next shows "Next step" / "Skip run";
   tooltips name the icon buttons; a theme switch repaints Next.
-- Comfort: the size stepper scales the window; the opacity stepper changes the background alpha only;
+- Comfort: the size stepper scales the window down to 50%; Ctrl+wheel over the window resizes it and
+  the wheel is the camera's otherwise; the setup card's Step window row sets size and compact; the
+  opacity stepper changes the background alpha only;
   PLAYER_REGEN_DISABLED fades to 0.3, OnEnter restores 1, OnLeave fades again, PLAYER_REGEN_ENABLED
   restores 1; with the setting off nothing fades; compact mode hides the detail rows and the chevron
   toggles it.
