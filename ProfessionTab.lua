@@ -10,9 +10,12 @@ local shown        -- profession key on screen (nil = pick one you have)
 local pending      -- restore this selection if a temporary read failure clears
 local picked = {}  -- key -> { index = step clicked in the route, at = your skill then }
 local displayed = {}  -- last rendered reading can differ from the skill-up watcher's
+local browse       -- a guide you haven't learned, opened from Other guides (shown as at skill 1)
+local grid = false -- the Other guides picker is open
+local shopAll = false -- this session: the shopping list counts to 300, not to your cap
 
 local function choose(key)
-  shown, pending = key, nil
+  shown, pending, browse, grid = key, nil, nil, false
 end
 
 function ns.profTabSkillsChanged(snapshot)
@@ -125,34 +128,73 @@ local function renderer(_, snapshot)
       0, y, W, "body", C.dim) + 10
   end
   if unavailable then y = y + T("Profession skills are unavailable right now.", 0, y, W, "body", C.dim) + 10 end
-  if not shown then
-    if not (hidden or unavailable) then y = y + T("No supported professions learned.", 0, y, W, "body", C.dim) + 10 end
-    return y + T("Supported guides: " .. names .. ".", 0, y, W, "small", C.dim) + 10
+  if browse and snapshot[browse] and snapshot[browse].rank then choose(browse) end -- learned it meanwhile
+
+  -- the switch: your guides, then Other guides (the ones the client says you haven't learned: a
+  -- closed Skills heading or a failed read could be hiding one you have)
+  local others = {}
+  for _, k in ipairs(ns.PROF_ORDER) do
+    local r = snapshot[k]
+    if ns.P[k] and r and not (r.rank or r.hidden or r.unavailable) then others[#others + 1] = k end
+  end
+  if #learned == 0 and #others == 0 then return y end
+  local picker = grid or not (browse or shown)
+  if #learned > 0 or browse then
+    local n = #learned + (#others > 0 and 1 or 0)
+    local per = math.min(n, 5)
+    local bw = math.min(140, math.floor((W - 6 * (per - 1)) / per))
+    local function place(i) return ((i - 1) % per) * (bw + 6), y + math.floor((i - 1) / per) * 28 end
+    for i, k in ipairs(learned) do
+      local name = ns.P[k].name
+      local bx, by = place(i)
+      btn(name, bx, by, bw, function() choose(k); ui.refresh() end, k == shown and not (browse or grid), "Show the " .. name .. " guide.")
+    end
+    if #others > 0 then
+      local bx, by = place(n)
+      btn(#learned > 0 and "Other guides" or "All guides", bx, by, bw, function() grid = not grid; ui.refresh() end, picker or browse ~= nil,
+        "The guides for professions you haven't learned: see the trainers, the route and what it costs before you pick one.")
+    end
+    y = y + math.ceil(n / per) * 28 + 6
+  end
+  if picker then
+    T(#learned > 0 and "OTHER PROFESSION GUIDES" or "PROFESSION GUIDES", 0, y, W, "label", C.gold)
+    y = y + 18
+    if #learned == 0 and not (hidden or unavailable) then
+      y = y + T("No supported professions learned yet.", 0, y, W, "body", C.dim) + 4
+    end
+    y = y + T("Pick a guide to see where to learn it, its whole route and what it needs to 300.", 0, y, W, "small", C.dim) + 8
+    local per = 4
+    local gw = math.floor((W - 6 * (per - 1)) / per)
+    for i, k in ipairs(others) do
+      local name = ns.P[k].name
+      btn(name, ((i - 1) % per) * (gw + 6), y + math.floor((i - 1) / per) * 28, gw, function()
+        browse, grid = k, false
+        ui.refresh()
+      end, k == browse, "Show the " .. name .. " guide as if you were starting it.")
+    end
+    return y + math.ceil(#others / per) * 28 + 10
   end
 
-  local key = shown
+  local key = browse or shown
   local P = ns.P[key]
-  local x, n = 0, #learned
-  local bw = math.min(140, math.floor((W - 6 * (n - 1)) / n))
-  for _, k in ipairs(learned) do
-    local name = ns.P[k].name
-    btn(name, x, y, bw, function() choose(k); ui.refresh() end, k == key, "Show the " .. name .. " guide.")
-    x = x + bw + 6
-  end
-  y = y + 34
-
-  local reading = snapshot[key]
+  local reading = snapshot[key] or {}
   local skill, cap = reading.rank, reading.cap
   local level = UnitLevel("player") or 1
 
-  -- header card: your skill
+  -- header card: your skill (or where to learn a guide you're browsing)
   local top = y
   y = y + 14
   icon(P.icon, 16, y, 40, P.name, nil)
-  T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
-  local tier = ns.profTier(key, skill, cap)
-  T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
-  y = y + 50
+  if skill then
+    T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
+    local tier = ns.profTier(key, skill, cap)
+    T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
+    y = y + 50
+  else
+    T(P.name .. "  -  not learned", 66, y + 2, W - 90, "head", C.ink)
+    local h = T("Learn it at: " .. plain(P.tiers[1].where) .. ".", 66, y + 26, W - 90, "small", C.inkSoft)
+    y = y + math.max(50, 30 + h)
+  end
   box(0, top, W, y - top, C.parch, C.edge)
   y = y + 12
 
@@ -204,7 +246,7 @@ local function renderer(_, snapshot)
     y = y + 18
     y = y + T("You've reached " .. (skill or 300) .. " " .. P.name .. ". The route is done.", 16, y, W - 32, "body", C.ink) + 14
   elseif step.name then
-    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or "DO THIS NOW", 16, y, 300, "label", C.inkSoft)
+    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or (skill and "DO THIS NOW" or "FIRST STEP"), 16, y, 300, "label", C.inkSoft)
     T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
     y = y + 18
     icon(step.icon, 16, y, 46, step.name, plain(step.note))
@@ -263,7 +305,7 @@ local function renderer(_, snapshot)
     if step.alt and step.alt ~= "" then y = y + T("Instead: " .. plain(step.alt), 16, y, W - 32, "small", C.inkSoft) + 6 end
     y = y + 8
   else -- Gathering
-    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or "DO THIS NOW", 16, y, 300, "label", C.inkSoft)
+    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or (skill and "DO THIS NOW" or "FIRST STEP"), 16, y, 300, "label", C.inkSoft)
     T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
     y = y + 18
     y = y + T(plain(step.title), 16, y, W - 32, "head", C.ink) + 8
@@ -274,8 +316,8 @@ local function renderer(_, snapshot)
       local node = ns.profNode(key, name)
       if node then
         icon(node.icon, 16, y, 30, node.name, node.ore)
-        local col = ns.profNodeColor(node, skill)
-        T(node.name .. "  " .. node.skill .. "  " .. col, 54, y + 1, W - 70, "body", C.ink)
+        local col = skill and ("  " .. ns.profNodeColor(node, skill)) or ""
+        T(node.name .. "  " .. node.skill .. col, 54, y + 1, W - 70, "body", C.ink)
         local h = T("Where: " .. table.concat(ns.profZones(node), ", "), 54, y + 17, W - 70, "small", C.inkSoft)
         y = y + math.max(36, 21 + h)
       end
@@ -323,14 +365,29 @@ local function renderer(_, snapshot)
   end
   y = y + 10
 
-  -- shopping list (crafting) or camp objects (Mining)
-  local list = ns.profShopping(key, skill, cap)
-  if #list > 0 then
+  -- shopping list (crafting): to your cap (the next one once you're at it) or, picked, to 300
+  local limit, which = ns.profShopLimit(key, skill, cap)
+  local upto = (limit and not shopAll) and limit or nil
+  local list = ns.profShopping(key, skill, cap, upto)
+  if #list > 0 or (upto and #ns.profShopping(key, skill, cap) > 0) then
     top = y
     y = y + 12
-    T("SHOPPING LIST TO 300", 16, y, W - 32, "label", C.gold)
+    T("SHOPPING LIST TO " .. (upto or 300), 16, y, W - 32, "label", C.gold)
     T(skill and ("from " .. skill) or "from 1", 16, y, W - 32, "small", C.dim, "RIGHT")
     y = y + 20
+    if limit then
+      local mine = which == "cap"
+      y = y + ui.segments(16, y, W - 32, { "To " .. limit .. (mine and " (your cap)" or " (next cap)"), "To 300" },
+        upto and 1 or 2, function(i)
+          shopAll = i == 2
+          ui.refresh()
+        end, { mine and ("What your steps need before you can train past " .. limit .. ".")
+            or ("What you need from your next training up to its cap, " .. limit .. "."),
+          "Everything the route needs from your skill to 300." }) + 10
+    end
+    if #list == 0 then
+      y = y + T("Nothing to buy before " .. upto .. ".", 16, y, W - 32, "body", C.light) + 6
+    end
     local col = (W - 32) / 2
     local rowH = 0  -- the taller text of the pair: a long cloth row wraps
     for i, m in ipairs(list) do
