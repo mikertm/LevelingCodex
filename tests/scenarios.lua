@@ -729,6 +729,35 @@ function S.stepKinds()
   check(frame.chip.text._text == "Turn in" and near(frame.stripe._color, 0.45, 0.85, 0.4), "a turn-in step: green")
 end
 
+-- Up next rows: the step's icon and how far it is, updating as you move.
+function S.stepUpNext()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 3, { type = "goto", text = "Look in on Stormwind.", map = 1453, x = 50, y = 50 })
+  MOCK.mapInfo = { [1453] = { name = "Stormwind City", mapType = 3, parentMapID = 1415 } }
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  local frame = questViewer()
+  local function dist()
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsShown() and type(r._text) == "string" and r._text:match("^%d+ yd$") then return r._text end
+      end
+      for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and walk(c); if hit then return hit end end
+    end
+    return walk(frame)
+  end
+  local before = dist()
+  check(before, "an up-next row shows its distance")
+  check(questText(frame, "Stormwind City"), "a step on another map shows its zone")
+  MOCK.questX = 47
+  MOCK.advance(0.5)
+  check(dist() and dist() ~= before, "and it updates as you move")
+  MOCK.questX, MOCK.questY = nil, nil -- no position (an instance)
+  MOCK.advance(0.5)
+  check(not dist(), "no position: no distances, no error")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()

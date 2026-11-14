@@ -1170,12 +1170,12 @@ local function addPreview(out, row, i)
   if nextRow.section ~= row.section then
     out[#out + 1] = { kind = "note", tone = "dim", text = "Next section: " .. nextRow.section.title }
   end
-  local labels = { Q.label(nextRow.step) }
+  -- one row per step: its icon, its label and (Task 3) how far it is
+  out[#out + 1] = { kind = "upnext", step = nextRow.step, text = Q.label(nextRow.step) }
   for n = 2, #upcoming do
     if upcoming[n].section ~= nextRow.section then break end
-    labels[#labels + 1] = Q.label(upcoming[n].step)
+    out[#out + 1] = { kind = "upnext", step = upcoming[n].step, text = Q.label(upcoming[n].step) }
   end
-  out[#out + 1] = { kind = "next", text = table.concat(labels, "\n") }
 end
 
 -- Quests pinned in the Quests tab, with their open goals, then the party's steps.
@@ -1230,6 +1230,21 @@ function makers.head()
 end
 
 function makers.rule() return viewer:CreateTexture(nil, "ARTWORK") end
+
+-- An UP NEXT row: the step's icon, its label and, at the right, how far it is.
+function makers.upnext()
+  local r = CreateFrame("Frame", nil, viewer)
+  r.icon = r:CreateTexture(nil, "OVERLAY")
+  r.icon:SetPoint("TOPLEFT", 0, 0)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.name:SetJustifyH("LEFT")
+  r.name:SetWordWrap(false)
+  r.name:SetPoint("TOPLEFT", 16, 0)
+  r.dist = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.dist:SetJustifyH("RIGHT")
+  r.dist:SetPoint("TOPRIGHT", 0, 0)
+  return r
+end
 
 function makers.row(template)
   local r = CreateFrame("Frame", nil, viewer)
@@ -1390,7 +1405,44 @@ local function putGoal(b)
   cursor = cursor + height + (small and 1 or 2)
 end
 
+-- How far an up-next step is: "N yd" on your map, its zone's name on another, else nothing.
+local nextRows = {} -- the up-next rows drawn now, for the tick to update their distances
+local function nextDistance(step)
+  local spot = step and Q.waypoint(step)
+  if not (spot and spot.map) then return "" end
+  local map, x, y = Q.position()
+  if spot.map == map then
+    local _, yards = Q.vector(spot, map, x, y)
+    return yards and (math.floor(yards + 0.5) .. " yd") or ""
+  end
+  local info = try(C_Map and C_Map.GetMapInfo, spot.map)
+  return type(info) == "table" and type(info.name) == "string" and Q.plain(info.name) or ""
+end
+
+function ns.questNextDistances()
+  for _, r in ipairs(nextRows) do
+    if r:IsShown() and r.step then r.dist:SetText(nextDistance(r.step)) end
+  end
+end
+
+local function putNext(b)
+  local r = take("upnext")
+  r:SetPoint("TOPLEFT", LEFT, -cursor)
+  r:SetSize(WIDTH, 13)
+  ns.questMap.paintIcon(r.icon, b.step, 12, 6)
+  r.step = b.step
+  r.dist:SetText(nextDistance(b.step))
+  r.dist:SetTextColor(ink("dim"))
+  local distWidth = math.ceil(tonumber(try(r.dist.GetStringWidth, r.dist)) or 40) + 8
+  r.name:SetWidth(WIDTH - 16 - distWidth)
+  r.name:SetText(Q.plain(b.text))
+  r.name:SetTextColor(ink("dim"))
+  nextRows[#nextRows + 1] = r
+  cursor = cursor + 14
+end
+
 local function draw(blocks)
+  nextRows = {}
   local last
   for _, b in ipairs(blocks) do
     if b.gap then cursor = cursor + b.gap end
@@ -1401,7 +1453,7 @@ local function draw(blocks)
     elseif b.kind == "text" then putText(b.text, "text", nil, 0, 2)
     elseif b.kind == "note" then putText(b.text, b.tone)
     elseif b.kind == "danger" then cursor = cursor + 3; putText(b.text, "danger")
-    elseif b.kind == "next" then putText(b.text, "dim", nil, 0, 1)
+    elseif b.kind == "upnext" then putNext(b)
     elseif b.kind ~= "chain" then putText(b.text, "text") end
     last = b.kind
   end
@@ -2049,7 +2101,7 @@ function ns.startQuestGuide()
     tickFlight()
     recordFlight()
     followTracker()
-    if Q.checkPosition() then ns.questRefresh() else paintArrow(); updateMapPin() end
+    if Q.checkPosition() then ns.questRefresh() else paintArrow(); updateMapPin(); ns.questNextDistances() end
   end)
 end
 
