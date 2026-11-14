@@ -650,6 +650,22 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- A dungeon run done before the guide knew about it: every quest of the guide is turned in, but
+-- the guide never saw you enter. Steps after the entry are done, so the entry is too.
+function S.dungeonDoneBefore()
+  MOCK.level = 25
+  local guide
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "dungeon-deadmines" then guide = s end end
+  for _, step in ipairs(guide.steps) do if step.quest then MOCK.questDone[step.quest] = true end end
+  S.login()
+  slash("quests")
+  clickGuide("The Deadmines")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(not questText(frame, "Dungeon - The Deadmines"), "the entry step isn't left to do")
+  check(not questText(frame, "Deadmines"), "a finished guide hands back to leveling: " .. MOCK.textUnder(frame))
+end
+
 -- After a /reload the game keeps the waypoint the Codex set, but the Codex has forgotten it set it:
 -- one on a step of your route is still the Codex's and follows the step; the player's own stays.
 function S.questMapPinReload()

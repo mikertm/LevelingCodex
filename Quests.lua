@@ -502,6 +502,8 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   end
   if s.type == "getfp" and knownFlights[s.flight] then return "done" end
   if s.type == "dungeon" and row.section.category == "dungeon" and inDungeon(row.section) then return "done" end
+  -- a later step of its guide is done: you've been inside (perhaps before the guide could see it)
+  if s.type == "dungeon" and later then return "done" end
   if s.quest then
     local entry = log[s.quest]
     if gameDone(s) then return "done" end

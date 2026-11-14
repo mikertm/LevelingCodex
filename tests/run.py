@@ -786,7 +786,7 @@ def main():
                              "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
-                             "questMapPin", "questMapPinReload", "questWarriorFangs", "questWarriorFangsNotTaken",
+                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "worldMapPins", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
