@@ -5614,6 +5614,121 @@ function S.traitLayoutTree()
   win():Hide()
 end
 
+----------------------------------------------------------------------------
+-- Talent paths (Talents.lua): the spec paths, Custom, the rules, share codes, the trainer list
+----------------------------------------------------------------------------
+
+-- A spec path of this class by key (TalentPaths.lua).
+local function specPath(key)
+  for _, p in ipairs((MOCK.ns.TALENT_PATHS or {})[MOCK.class] or {}) do
+    if p.key == key then return p end
+  end
+end
+
+-- The talents a plan has after its first n points, as the game's trait nodes would report them.
+local function seedTraitRanks(plan, n)
+  local ranks, order = {}, {}
+  local points = {}
+  for _, p in ipairs(plan) do
+    for l = p.from, p.to do points[#points + 1] = { level = l, name = p.name } end
+  end
+  table.sort(points, function(a, b) return a.level < b.level end)
+  for i = 1, math.min(n, #points) do
+    local name = points[i].name
+    if not ranks[name] then order[#order + 1] = name end
+    ranks[name] = (ranks[name] or 0) + 1
+  end
+  MOCK.traitNodes = {}
+  for i, name in ipairs(order) do
+    MOCK.spells[60000 + i] = name
+    MOCK.traitNodes[800 + i] = { posX = i * 100, posY = 0, spellID = 60000 + i, rank = ranks[name] }
+  end
+end
+
+local function listHas(list, value)
+  for _, v in ipairs(list or {}) do if v == value then return true end end
+  return false
+end
+
+function S.talentPathApi()
+  local ns = MOCK.ns
+  if not D() then
+    check(#ns.talentPaths() == 0, "no talent paths without a guide")
+    check(ns.talentAt(20) == nil, "no talent point without a guide")
+    return
+  end
+  MOCK.level = 40
+  if MOCK.class == "DRUID" then
+    check(#ns.talentPaths() == 6, "Druid: the guide, four spec paths and Custom (got " .. #ns.talentPaths() .. ")")
+    return
+  end
+  local key, how = ns.talentPathKey()
+  check(key == "guide" and how == "default", "the Codex guide by default, got " .. tostring(key) .. " " .. tostring(how))
+  ns.setTalentPath("arms")
+  check(ns.talentAt(40).name == "Mortal Strike", "Arms puts level 40 into Mortal Strike")
+  check(LevelingCodexCharDB.talentPath == "arms", "the choice is saved for the character")
+  check(select(2, ns.talentPathKey()) == "saved", "a chosen path counts as saved")
+  -- the trainer list swaps talent spells: Shield Slam ranks go, Mortal Strike ranks come
+  local v48 = ns.trainAt(48)
+  check(v48 and listHas(v48.spells, "Mortal Strike (Rank 2)"), "Arms trains Mortal Strike (Rank 2) at 48")
+  check(not listHas(v48.spells, "Shield Slam (Rank 2)"), "Arms has no Shield Slam ranks")
+  check(#v48.spells == #v48.icons and #v48.spells == #v48.notes, "trainer spells, notes and icons stay parallel")
+  ns.setTalentPath("guide")
+  check(listHas(ns.trainAt(48).spells, "Shield Slam (Rank 2)"), "the guide path keeps its Shield Slam ranks")
+  -- custom: the game's rules
+  ns.setTalentPath("custom")
+  ns.customClear()
+  local ok, why = ns.customAdd("Mortal Strike")
+  check(not ok and why == "Needs 30 points in Arms (has 0)", "Mortal Strike needs 30 Arms points, got " .. tostring(why))
+  check(select(2, ns.customAdd("Bogus Talent")) == "Not a talent", "an unknown talent is refused")
+  check(ns.customFrom("arms"), "a custom path starts from Arms")
+  check(#ns.customPoints() == 51, "Arms copied in full")
+  check(select(2, ns.customAdd("Deflection")) == "All 51 points placed", "no 52nd point")
+  for _ = 1, 11 do ns.customUndo() end
+  check(#ns.customPoints() == 40, "undo removes the last points")
+  check(ns.talentAt(49) and not ns.talentUnplanned(49), "level 49 still planned")
+  check(ns.talentAt(50) == nil and ns.talentUnplanned(50), "level 50 not planned yet")
+  check(not ns.talentUnplanned(9), "no point to plan before 10")
+  -- share codes
+  local code = ns.talentCode()
+  check(code:find("^LC1%-WARRIOR%-%w%w%w%w%-"), "a share code: " .. code)
+  ns.customClear()
+  check(#ns.customPoints() == 0, "clear empties the custom path")
+  check(ns.readTalentCode("  " .. code:lower() .. "\n"), "a pasted code with spaces and lower case reads")
+  check(#ns.customPoints() == 40, "the code brings back 40 points")
+  local ok2, r2 = ns.readTalentCode((code:gsub("WARRIOR", "MAGE")))
+  check(not ok2 and r2 == "This code is for a Mage", "another class's code is refused, got " .. tostring(r2))
+  local ok3, r3 = ns.readTalentCode((code:gsub("^(LC1%-WARRIOR%-)%w%w%w%w", "%1ZZZZ")))
+  check(not ok3 and r3 == "This code was made for other talent trees", "another tree version is refused, got " .. tostring(r3))
+  local ok4, r4 = ns.readTalentCode("hello")
+  check(not ok4 and r4 == "Not a Leveling Codex talent code", "a non-code is refused")
+  check(#ns.customPoints() == 40, "a refused code changes nothing")
+  -- a save from before a game patch: cut at the first point that no longer fits
+  LevelingCodexCharDB.customTalents = { "Improved Rend", "Bogus", "Improved Rend" }
+  ns.setTalentPath("custom")
+  check(#ns.customPoints() == 1, "a stale custom path is cut at its first bad point")
+  -- a saved key that no longer exists
+  LevelingCodexCharDB.talentPath = "gone"
+  check(ns.talentPathKey() == "guide", "an unknown saved path falls back to the guide")
+  LevelingCodexCharDB.talentPath = nil
+  if MOCK.minimal then
+    check(ns.talentPathKey() == "guide", "no trait API: the guide")
+    check(not ns.customFromLive(), "no trait API: no current talents to copy")
+    return
+  end
+  -- no saved path: the spec path your spent talents follow
+  seedTraitRanks(specPath("arms").plan, 12)
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  local k2, h2 = ns.talentPathKey()
+  check(k2 == "arms" and h2 == "matched", "spent Arms talents pick Arms, got " .. tostring(k2) .. " " .. tostring(h2))
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  check(ns.customFromLive(), "your current talents copy into a custom path")
+  check(#ns.customPoints() == 12, "all 12 spent points copied")
+  MOCK.traitNodes = {}
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
 -- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.
 function S.macroMockups()
   if not D() then return end

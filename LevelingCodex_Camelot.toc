@@ -49,6 +49,7 @@ QuestFlightData.lua
 Theme.lua
 Art.lua
 Guide.lua
+Talents.lua
 Quests.lua
 QuestieSupport.lua
 QuestTravel.lua

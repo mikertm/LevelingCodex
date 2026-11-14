@@ -248,6 +248,50 @@ function ns.traitLayout()
   return layoutCache
 end
 
+-- The talents you have now: lower(name) -> points in it, from the trait nodes (each node's active
+-- entry, else its first). nil when the client can't tell us (no trait API, or no nodes yet).
+local function plainNumber(v)
+  if issecretvalue and issecretvalue(v) then return nil end
+  return tonumber(v)
+end
+function ns.traitRanks()
+  if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits and C_Traits.GetConfigInfo
+    and C_Traits.GetTreeNodes and C_Traits.GetNodeInfo and C_Traits.GetEntryInfo and C_Traits.GetDefinitionInfo) then
+    return nil
+  end
+  local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+  if not (ok and configID) then return nil end
+  local iok, info = pcall(C_Traits.GetConfigInfo, configID)
+  if not (iok and type(info) == "table" and type(info.treeIDs) == "table") then return nil end
+  local out, seen = {}, 0
+  for _, treeID in ipairs(info.treeIDs) do
+    local nok, nodes = pcall(C_Traits.GetTreeNodes, treeID)
+    if nok and type(nodes) == "table" then
+      for i = 1, math.min(#nodes, 400) do
+        local gok, node = pcall(C_Traits.GetNodeInfo, configID, nodes[i])
+        if gok and type(node) == "table" then
+          seen = seen + 1
+          local rank = plainNumber(node.ranksPurchased) or plainNumber(node.currentRank) or 0
+          local entryID = (type(node.activeEntry) == "table" and node.activeEntry.entryID)
+            or (type(node.entryIDs) == "table" and node.entryIDs[1])
+          if rank > 0 and entryID then
+            local eok, entry = pcall(C_Traits.GetEntryInfo, configID, entryID)
+            local defID = eok and type(entry) == "table" and entry.definitionID
+            local dok, def = false, nil
+            if defID then dok, def = pcall(C_Traits.GetDefinitionInfo, defID) end
+            if dok and type(def) == "table" then
+              local name = (def.overrideName and def.overrideName ~= "" and def.overrideName) or spellNameOf(def.spellID or def.overriddenSpellID)
+              if name then out[lower(name)] = (out[lower(name)] or 0) + rank end
+            end
+          end
+        end
+      end
+    end
+  end
+  if seen == 0 then return nil end
+  return out
+end
+
 -- The plan level of the next point to spend: with 2 points left at 30, that's level 29's.
 local function nextPlanLevel(level, unspent)
   if not unspent then return level end

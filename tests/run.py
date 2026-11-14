@@ -990,6 +990,10 @@ def main():
         for cls in CLASSES:
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/warrior-macros" % variant, "WARRIOR", minimal, ["login", "warriorPackMacros"]))
+        runs.append(("WARRIOR/%s/talent-path-api" % variant, "WARRIOR", minimal, ["login", "talentPathApi"]))
+        if not minimal:
+            for cls in ("DRUID", UNSUPPORTED):
+                runs.append(("%s/full/talent-path-api" % cls, cls, False, ["login", "talentPathApi"]))
         if not minimal:
             runs.append(("WARRIOR/full/warrior-macros-upgrade", "WARRIOR", False, ["login", "warriorMacroUpgrade"]))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))
