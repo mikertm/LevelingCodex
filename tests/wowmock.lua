@@ -720,7 +720,13 @@ function CreateFrame(kind, name, parent, template)
         f:SetSize(32, 32)
       elseif t == "SecureActionButtonTemplate" then
         f._secure = true
-      elseif t == "InputBoxTemplate" or t == "UIPanelButtonTemplate" then
+      elseif t == "UIPanelButtonTemplate" then
+        -- the red panel art in three pieces, like the client's template
+        for _, k in ipairs({ "Left", "Middle", "Right" }) do
+          f[k] = f:CreateTexture(nil, "BACKGROUND")
+          f[k]:SetTexture("Interface\\Buttons\\UI-Panel-Button-Up")
+        end
+      elseif t == "InputBoxTemplate" then
         -- nothing extra needed
       else
         error("CreateFrame: unknown template " .. t, 2)

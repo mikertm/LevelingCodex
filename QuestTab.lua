@@ -33,13 +33,18 @@ local function setPlans(list, on)
 end
 
 -- Which dungeon plan the setup lights: "all" (Plan every dungeon run, or every run planned),
--- "none", "recommended" (exactly Q.recommendedRuns()) or "picks", with the planned count.
+-- "none", "recommended" (exactly Q.recommendedRuns()) or "picks", with the planned count. Only
+-- runs you haven't outleveled count, as for the recommended ones, so Recommended stays lit as
+-- you level past some of its runs.
 local function dungeonState()
-  local all, planned, set = Q.dungeons(), 0, {}
+  local _, _, _, lvl = Q.rows()
+  local all, planned, set, every = Q.dungeons(), 0, {}, true
   for _, section in ipairs(all) do
-    if Q.planned(section.id) then planned, set[section.id] = planned + 1, true end
+    local on = Q.planned(section.id)
+    if not on then every = false end
+    if on and (lvl or 1) <= section.levels[2] then planned, set[section.id] = planned + 1, true end
   end
-  if ns.db().questDungeons or (planned > 0 and planned == #all) then return "all", planned end
+  if ns.db().questDungeons or (#all > 0 and every) then return "all", planned end
   if planned == 0 then return "none", 0 end
   local recommended = Q.recommendedRuns()
   local same = #recommended == planned

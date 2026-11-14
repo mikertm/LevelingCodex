@@ -650,6 +650,20 @@ function S.questMapPin()
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
 end
 
+-- Recommended stays the lit dungeon choice as you level past some of its runs.
+function S.questSetupLevelled()
+  S.login()
+  slash("quests")
+  click(win(), "Recommended")
+  MOCK.level = 30
+  MOCK.event("PLAYER_LEVEL_UP", 30)
+  slash("quests")
+  click(win(), "Guides")
+  local rec = findButton(win(), function(l) return l == "Recommended" end)
+  check(rec and rec.codexOn, "Recommended is still lit at level 30")
+  check(not findButton(win(), function(l) return l:find("^Your picks") end), "not your picks")
+end
+
 -- A dungeon run done before the guide knew about it: every quest of the guide is turned in, but
 -- the guide never saw you enter. Steps after the entry are done, so the entry is too.
 function S.dungeonDoneBefore()
@@ -1302,6 +1316,12 @@ function S.questSetup()
   local function seg(name) return findButton(win(), function(l) return l == name end) end
   check(seg("Fastest").codexOn and not seg("Every quest").codexOn, "a fresh setup lights Fastest")
   check(seg("Recommended") and seg("All") and seg("None"), "dungeons are three choices")
+  local off, on = seg("Every quest"), seg("Fastest")
+  check(off:GetAlpha() == 1 and off.plate and off.plate:IsShown(), "an unlit choice is a flat plate, not a dimmed button")
+  if on.Left then
+    check(off.Left:GetAlpha() == 0 and on.Left:GetAlpha() == 1 and not on.plate:IsShown(),
+      "the panel button's art shows on the lit choice only")
+  end
   click(win(), "None")
   check(seg("None").codexOn and not seg("Recommended").codexOn, "None lights once nothing is planned")
   click(win(), "Recommended")
@@ -1717,6 +1737,7 @@ function S.paceCard()
   -- what an earlier session (or a /reload) saved
   LevelingCodexCharDB = { stats = { version = 1, zones = {}, totals = { goldIn = {}, goldOut = {} },
     levels = { [3] = rec(0, 0, 0, 0, 0, 0), [4] = rec(3900, 900, 600, 250, 4, 9), [5] = rec(1800, 300, 200, 100, 2, 3) } } }
+  LevelingCodexCharDB.stats.levels[5].rested = 1200
   S.login()
   MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 50 experience.")
   MOCK.xp = 450
@@ -1726,6 +1747,7 @@ function S.paceCard()
   if MOCK.minimal then check(questText(win(), "YOUR PACE"), "the card shows without the XP calls"); return end
   check(questText(win(), "Level 5: 450 / 1,000 XP") and questText(win(), "Level 6 in about"), "the XP bar's figures")
   check(questText(win(), "30 min on this level (all sessions)"), "time on the level survives a reload")
+  check(questText(win(), "XP per hour this session, 1,200 rested XP on this level"), "the rested figure says what it counts")
   check(questText(win(), "Quests 200 XP, 2 turned in") and questText(win(), "Kills 150 XP, 4 kills"), "XP by source")
   check(questText(win(), "Level 4") and questText(win(), "1 h 5 min, 4 quests, 9 kills"), "the last levels")
   click(win(), "<")

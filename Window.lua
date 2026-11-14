@@ -710,7 +710,8 @@ local function paceCard(V, y)
       .. (rec.fromPct and (" (counted from " .. rec.fromPct .. "%)") or ""), 16, y, W - 32, "body", C.light) + 4
     if V == me and rate then
       y = y + T(ns.thousands(rate) .. " XP per hour this session"
-        .. ((rec.rested or 0) > 0 and (", " .. ns.thousands(rec.rested) .. " rested") or ""), 16, y, W - 32, "small",
+        .. ((rec.rested or 0) > 0 and (", " .. ns.thousands(rec.rested) .. " rested XP on this level") or ""), 16, y,
+        W - 32, "small",
         C.light) + 6
     end
     local other = (rec.xp or 0) - (rec.questXP or 0) - (rec.killXP or 0)

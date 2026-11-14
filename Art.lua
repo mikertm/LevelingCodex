@@ -201,12 +201,27 @@ function A.button(parent, w, h)
   return b
 end
 
--- One choice in a row of segments (Window.lua's U.segments): the panel button. SetLook(true) keeps
--- it lit with a 1 px gold inner edge, a gold label and the check box's tick at its left; unlit it
--- is dimmed with a soft grey label.
+-- One choice in a row of segments (Window.lua's U.segments). SetLook(true): the red panel button,
+-- kept lit, with a 1 px gold inner edge, a gold label and the check box's tick at its left;
+-- SetLook(false): a flat dim plate (C.btnOff) with a soft grey label, so it never reads as a
+-- disabled button. Where the template has no Left/Middle/Right art to hide, unlit is dimmed.
 function A.segment(parent)
   local b = A.button(parent, 100, 24)
   local base = b.SetLook
+  b.panelArt = {}
+  for _, k in ipairs({ "Left", "Middle", "Right" }) do
+    if type(b[k]) == "table" and b[k].SetAlpha then b.panelArt[#b.panelArt + 1] = b[k] end
+  end
+  if #b.panelArt > 0 then
+    b.plate = b:CreateTexture(nil, "BACKGROUND", nil, 1)
+    b.plate:SetPoint("TOPLEFT", 1, -1)
+    b.plate:SetPoint("BOTTOMRIGHT", -1, 1)
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16)
+  elseif b.bg then
+    b.plate = b.bg -- the flat button: its fill is the plate (C.btnOff unlit, C.btnOn lit)
+  end
   b.goldEdges = {}
   for i = 1, 4 do
     local e = b:CreateTexture(nil, "OVERLAY")
@@ -228,7 +243,14 @@ function A.segment(parent)
   end
   b.SetLook = function(self, on)
     base(self, on)
-    self:SetAlpha(on and 1 or 0.6)
+    if #self.panelArt > 0 then
+      for _, t in ipairs(self.panelArt) do t:SetAlpha(on and 1 or 0) end
+      self.plate:SetColorTexture(rgba(C.btnOff))
+      self.plate:SetShown(not on)
+      self:SetAlpha(1)
+    else
+      self:SetAlpha((on or self.plate) and 1 or 0.6)
+    end
     local fs = self.label or (self.GetFontString and self:GetFontString())
     if fs then
       if on then fs:SetTextColor(1, 0.82, 0) else fs:SetTextColor(0.75, 0.75, 0.75) end
