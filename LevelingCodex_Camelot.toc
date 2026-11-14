@@ -11,6 +11,8 @@
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
 
 Data.lua
+TalentTreeData.lua
+TalentPaths.lua
 ProfessionData.lua
 QuestData.lua
 QuestAlternateData.lua
@@ -47,6 +49,7 @@ QuestFlightData.lua
 Theme.lua
 Art.lua
 Guide.lua
+Talents.lua
 Quests.lua
 QuestieSupport.lua
 QuestTravel.lua
@@ -55,6 +58,7 @@ Disenchant.lua
 Macros.lua
 Banner.lua
 Window.lua
+TalentTab.lua
 ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua

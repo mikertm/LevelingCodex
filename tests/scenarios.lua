@@ -4312,7 +4312,8 @@ S.talent = talent
 
 -- mode "name": buttons answer GetDefinitionInfo() with a spellID (C_Traits style)
 -- mode "icon": buttons only carry an icon texture
-function S.makeTalentWindow(mode, frameName)
+-- all = "all": a button for every talent of the class tree, not only the guide plan's
+function S.makeTalentWindow(mode, frameName, all)
   if not D() then return end
   local root = CreateFrame("Frame", frameName or "PlayerSpellsFrame", UIParent)
   root:SetSize(800, 600)
@@ -4353,6 +4354,10 @@ function S.makeTalentWindow(mode, frameName)
   for i = 1, 25 do addButton("Decoy", "Decoy Talent " .. i, "inv_misc_questionmark_decoy" .. i) end
   for _, p in ipairs(D().plan) do
     if not talent.byName[p.name] then talent.byName[p.name] = addButton(p.tree, p.name, p.icon) end
+  end
+  local tree = all == "all" and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not talent.byName[t.name] then talent.byName[t.name] = addButton(tree.tabs[t.tab], t.name, t.icon) end
   end
   ToggleTalentFrame_Mock = function() if root:IsShown() then root:Hide() else root:Show() end end
   return root
@@ -4513,6 +4518,8 @@ function S.everyButton()
     end
   end
   slash("minimap"); slash("minimap") -- re-apply the minimap setting
+  -- the path cards were clicked too: back to the Codex guide's path
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
 end
 
 -- Settings: both themes, all pad names, banner move/lock, sizes, window position.
@@ -5790,6 +5797,57 @@ function S.talentTree()
     local snippet = future.why:match("^[A-Za-z0-9 ,%.']+") or "" -- not %w: it takes UTF-8 bytes on Windows
     if #snippet > 8 then check(text:find(snippet, 1, true), "detail shows why " .. future.name) end
   end
+  -- the whole game tree is drawn: a talent the guide never takes shows greyed at 0
+  local tree = MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  local inPlan = {}
+  for _, p in ipairs(D().plan) do inPlan[p.name] = true end
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not inPlan[t.name] then
+      local node = iconsTitled(t.name)[1]
+      check(node and node.tipTitle == t.name .. "  0/" .. t.max and node.tex._desat == true,
+        t.name .. " (not in the plan) is drawn greyed at 0")
+      break
+    end
+  end
+  win():Hide()
+end
+
+-- Nodes sit at the game's rows and columns (TalentTreeData.lua): the trees side by side, a talent under
+-- a prerequisite in its column.
+function S.talentTreeLayout()
+  local tree = D() and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  if not tree then return end
+  openAt(30, "Talents")
+  local function spot(name)
+    local node = iconsTitled(name)[1]
+    check(node, "tree node for " .. name)
+    local _, _, _, x, y = node:GetPoint(1)
+    return x, y
+  end
+  local byName = {}
+  for _, t in ipairs(tree.talents) do byName[t.name] = t end
+  local maxX1, minX2 = -1e9, 1e9
+  for _, t in ipairs(tree.talents) do
+    local x, y = spot(t.name)
+    if t.tab == 1 then maxX1 = math.max(maxX1, x) elseif t.tab == 2 then minX2 = math.min(minX2, x) end
+    for _, pn in ipairs(t.prereq) do
+      local o = byName[pn]
+      if o and o.tab == t.tab and o.col == t.col then
+        local px, py = spot(pn)
+        check(px == x and py > y, t.name .. " sits under its prerequisite " .. pn)
+      end
+    end
+  end
+  check(maxX1 < minX2, "the first tree sits left of the second")
+  -- every node sits inside the trees, above the talent detail card under them (Affliction has 9 rows)
+  local bottom, detailTop = 0, nil
+  for _, b in ipairs(MOCK.buttons(win())) do
+    local _, _, _, _, by = b:GetPoint(1)
+    if by and b.tipTitle and b.tipTitle:find("  %d+/%d+$") then bottom = math.max(bottom, -by + (b:GetWidth() or 0)) end
+    if by and b.tipTitle and byName[b.tipTitle] and b:GetWidth() == 40 then detailTop = -by end
+  end
+  check(detailTop, "the talent detail card under the trees")
+  check(bottom < detailTop, "every node sits above the detail card (" .. bottom .. " < " .. tostring(detailTop) .. ")")
   win():Hide()
 end
 
@@ -5819,6 +5877,393 @@ function S.traitLayoutTree()
   end
   check(not MOCK.textUnder(win()):find("Open your talent window once", 1, true), "no layout note once the game's layout is known")
   win():Hide()
+end
+
+----------------------------------------------------------------------------
+-- Talent paths (Talents.lua): the spec paths, Custom, the rules, share codes, the trainer list
+----------------------------------------------------------------------------
+
+-- A spec path of this class by key (TalentPaths.lua).
+local function specPath(key)
+  for _, p in ipairs((MOCK.ns.TALENT_PATHS or {})[MOCK.class] or {}) do
+    if p.key == key then return p end
+  end
+end
+
+-- The talents a plan has after its first n points, as the game's trait nodes would report them.
+local function seedTraitRanks(plan, n)
+  local ranks, order = {}, {}
+  local points = {}
+  for _, p in ipairs(plan) do
+    for l = p.from, p.to do points[#points + 1] = { level = l, name = p.name } end
+  end
+  table.sort(points, function(a, b) return a.level < b.level end)
+  for i = 1, math.min(n, #points) do
+    local name = points[i].name
+    if not ranks[name] then order[#order + 1] = name end
+    ranks[name] = (ranks[name] or 0) + 1
+  end
+  MOCK.traitNodes = {}
+  for i, name in ipairs(order) do
+    MOCK.spells[60000 + i] = name
+    MOCK.traitNodes[800 + i] = { posX = i * 100, posY = 0, spellID = 60000 + i, rank = ranks[name] }
+  end
+end
+
+local function listHas(list, value)
+  for _, v in ipairs(list or {}) do if v == value then return true end end
+  return false
+end
+
+function S.talentPathApi()
+  local ns = MOCK.ns
+  if not D() then
+    check(#ns.talentPaths() == 0, "no talent paths without a guide")
+    check(ns.talentAt(20) == nil, "no talent point without a guide")
+    return
+  end
+  MOCK.level = 40
+  if MOCK.class == "DRUID" then
+    check(#ns.talentPaths() == 6, "Druid: the guide, four spec paths and Custom (got " .. #ns.talentPaths() .. ")")
+    return
+  end
+  local key, how = ns.talentPathKey()
+  check(key == "guide" and how == "default", "the Codex guide by default, got " .. tostring(key) .. " " .. tostring(how))
+  ns.setTalentPath("arms")
+  check(ns.talentAt(40).name == "Mortal Strike", "Arms puts level 40 into Mortal Strike")
+  check(LevelingCodexCharDB.talentPath == "arms", "the choice is saved for the character")
+  check(select(2, ns.talentPathKey()) == "saved", "a chosen path counts as saved")
+  -- the trainer list swaps talent spells: Shield Slam ranks go, Mortal Strike ranks come
+  local v48 = ns.trainAt(48)
+  check(v48 and listHas(v48.spells, "Mortal Strike (Rank 2)"), "Arms trains Mortal Strike (Rank 2) at 48")
+  check(not listHas(v48.spells, "Shield Slam (Rank 2)"), "Arms has no Shield Slam ranks")
+  check(#v48.spells == #v48.icons and #v48.spells == #v48.notes, "trainer spells, notes and icons stay parallel")
+  ns.setTalentPath("guide")
+  check(listHas(ns.trainAt(48).spells, "Shield Slam (Rank 2)"), "the guide path keeps its Shield Slam ranks")
+  -- custom: the game's rules
+  ns.setTalentPath("custom")
+  ns.customClear()
+  local ok, why = ns.customAdd("Mortal Strike")
+  check(not ok and why == "Needs 30 points in Arms (has 0)", "Mortal Strike needs 30 Arms points, got " .. tostring(why))
+  check(select(2, ns.customAdd("Bogus Talent")) == "Not a talent", "an unknown talent is refused")
+  check(ns.customFrom("arms"), "a custom path starts from Arms")
+  check(#ns.customPoints() == 51, "Arms copied in full")
+  check(select(2, ns.customAdd("Deflection")) == "All 51 points placed", "no 52nd point")
+  for _ = 1, 11 do ns.customUndo() end
+  check(#ns.customPoints() == 40, "undo removes the last points")
+  check(ns.talentAt(49) and not ns.talentUnplanned(49), "level 49 still planned")
+  check(ns.talentAt(50) == nil and ns.talentUnplanned(50), "level 50 not planned yet")
+  check(not ns.talentUnplanned(9), "no point to plan before 10")
+  -- share codes
+  local code = ns.talentCode()
+  check(code:find("^LC1%-WARRIOR%-%w%w%w%w%-"), "a share code: " .. code)
+  ns.customClear()
+  check(#ns.customPoints() == 0, "clear empties the custom path")
+  check(ns.readTalentCode("  " .. code:lower() .. "\n"), "a pasted code with spaces and lower case reads")
+  check(#ns.customPoints() == 40, "the code brings back 40 points")
+  local ok2, r2 = ns.readTalentCode((code:gsub("WARRIOR", "MAGE")))
+  check(not ok2 and r2 == "This code is for a Mage", "another class's code is refused, got " .. tostring(r2))
+  local ok3, r3 = ns.readTalentCode((code:gsub("^(LC1%-WARRIOR%-)%w%w%w%w", "%1ZZZZ")))
+  check(not ok3 and r3 == "This code was made for other talent trees", "another tree version is refused, got " .. tostring(r3))
+  local ok4, r4 = ns.readTalentCode("hello")
+  check(not ok4 and r4 == "Not a Leveling Codex talent code", "a non-code is refused")
+  check(#ns.customPoints() == 40, "a refused code changes nothing")
+  -- a save from before a game patch: cut at the first point that no longer fits
+  LevelingCodexCharDB.customTalents = { "Improved Rend", "Bogus", "Improved Rend" }
+  ns.setTalentPath("custom")
+  check(#ns.customPoints() == 1, "a stale custom path is cut at its first bad point")
+  -- a saved key that no longer exists
+  LevelingCodexCharDB.talentPath = "gone"
+  check(ns.talentPathKey() == "guide", "an unknown saved path falls back to the guide")
+  LevelingCodexCharDB.talentPath = nil
+  if MOCK.minimal then
+    check(ns.talentPathKey() == "guide", "no trait API: the guide")
+    check(not ns.customFromLive(), "no trait API: no current talents to copy")
+    return
+  end
+  -- no saved path: the spec path your spent talents follow
+  seedTraitRanks(specPath("arms").plan, 12)
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  local k2, h2 = ns.talentPathKey()
+  check(k2 == "arms" and h2 == "matched", "spent Arms talents pick Arms, got " .. tostring(k2) .. " " .. tostring(h2))
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  check(ns.customFromLive(), "your current talents copy into a custom path")
+  check(#ns.customPoints() == 12, "all 12 spent points copied")
+  -- ranks that still read 0 at login (the trees loading) are read again a few seconds later
+  seedTraitRanks(specPath("arms").plan, 12)
+  for _, n in pairs(MOCK.traitNodes) do n.saved, n.rank = n.rank, 0 end
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  check(ns.talentPathKey() == "guide", "no ranks yet: the guide")
+  for _, n in pairs(MOCK.traitNodes) do n.rank = n.saved end
+  MOCK.advance(6)
+  check(ns.talentPathKey() == "arms", "ranks that arrive later are matched")
+  MOCK.traitNodes = {}
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The Talents tab's path cards: click one to follow it (saved), the tree and every-point list follow.
+function S.talentPathPick()
+  if not D() then return end
+  local ns = MOCK.ns
+  local paths = ns.talentPaths()
+  local p = paths[2]
+  if not p or p.custom then return end
+  openAt(30, "Talents")
+  -- the guide card's tags fit their line (every guide card shows both by default)
+  local function fontString(root, value)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r._text == value and r:IsShown() then return r end
+    end
+    for _, k in ipairs({ root:GetChildren() }) do
+      local f = fontString(k, value)
+      if f then return f end
+    end
+  end
+  local tag = fontString(win(), "Codex guide  -  Chosen")
+  check(tag and (tag:GetWidth() or 0) >= tag:GetStringWidth(), "the guide card's tags fit their line")
+  click(win(), "Path: " .. p.spec)
+  check(LevelingCodexCharDB.talentPath == p.key, "clicking a card chooses its path")
+  local text = MOCK.textUnder(win())
+  check(text:find("Chosen", 1, true), "the chosen card says so")
+  check(text:find("Macros and tips follow the " .. D().spec .. " guide.", 1, true), "macros and tips stay the guide's")
+  local hit, rank = ns.talentAt(30)
+  local node = iconsTitled(hit.name)[1]
+  check(node and node.tipTitle == hit.name .. "  " .. rank .. "/" .. hit.max, "the tree shows " .. hit.name .. " " .. rank .. "/" .. hit.max)
+  local row
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle == "Level 30: " .. hit.name .. " " .. rank .. "/" .. hit.max then row = b end
+  end
+  check(row, "every point in order follows the path at 30")
+  -- a talent the guide takes at 30 but this path never does: greyed at 0
+  local inPath = {}
+  for _, e in ipairs(p.plan) do inPath[e.name] = true end
+  for _, e in ipairs(D().plan) do
+    if not inPath[e.name] then
+      local n = iconsTitled(e.name)[1]
+      check(n and n.tipTitle == e.name .. "  0/" .. e.max and n.tex._desat == true, e.name .. " greyed on " .. p.spec)
+      break
+    end
+  end
+  click(win(), "Path: " .. paths[1].spec)
+  check(LevelingCodexCharDB.talentPath == "guide", "the guide's card chooses it again")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- The controller reaches the path cards and the tree (the Codex's own navigation), and A chooses a path.
+function S.padTalentPaths()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  LevelingCodexDB.padNative = false
+  openAt(30, "Talents")
+  local guideLabel = "Path: " .. MOCK.ns.talentPaths()[1].spec
+  local card
+  for _ = 1, 40 do
+    local t = LevelingCodexPadFocus.target
+    local l = t and t.codexLabel or ""
+    if l:find("^Path: ") and l ~= guideLabel then card = l; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(card, "the D-pad reaches a path card")
+  pad(win(), "PAD1")
+  local want
+  for _, p in ipairs(MOCK.ns.talentPaths()) do if "Path: " .. p.spec == card then want = p.key end end
+  check(LevelingCodexCharDB.talentPath == want, "A on a card chooses its path")
+  local node
+  for _ = 1, 80 do
+    local t = LevelingCodexPadFocus.target
+    if t and (t.tipTitle or ""):find("%d/%d") and t:GetScript("OnClick") then node = t; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(node, "the D-pad reaches a tree node")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- The custom path editor: start from a path, undo, clear (two clicks), place points by clicking the
+-- tree, the game's rules refusing a point with the reason.
+function S.talentCustom()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  local function has(label) return findButton(win(), function(l) return l == label end) ~= nil end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  check(LevelingCodexCharDB.talentPath == "custom", "the Custom card chooses Custom")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "an empty custom path counts 0 of 51")
+  check(has("Start from: Arms") and has("Start from: Protection") and has("Start empty"), "start from a path or empty")
+  check(not has("Start from: My current talents"), "no current talents to copy here (nothing readable)")
+  click(win(), "Start from: Arms")
+  check(text():find("Points placed: 51 of 51", 1, true), "Arms copied in full")
+  check(not has("Start from: Arms"), "the start row goes once the path has points")
+  click(win(), "Undo")
+  check(text():find("Points placed: 50 of 51 - next point is level 60", 1, true), "undo takes the last point back")
+  check(text():find("Lv 59", 1, true), "the last point placed is marked with its level")
+  check(has("Done"), "starting from a path opens the editor")
+  iconsTitled("Mortal Strike")[1]:Click()
+  check(text():find("Points placed: 50 of 51", 1, true), "a refused point changes nothing")
+  check(text():find("Can't place it: Already taken", 1, true), "the editor says why a point was refused")
+  click(win(), "Clear")
+  check(text():find("Points placed: 50 of 51", 1, true), "one click on Clear only asks")
+  click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "a second click clears")
+  iconsTitled("Improved Rend")[1]:Click()
+  check(text():find("Points placed: 1 of 51 - next point is level 11", 1, true), "clicking a talent places the next point")
+  check(text():find("Lv 10", 1, true), "the point just placed is marked")
+  check(iconsTitled("Mortal Strike")[1].tipText:find("^Needs 30 points in Arms"), "a closed talent's tooltip says why")
+  click(win(), "Done")
+  check(has("Edit path"), "Done closes the editor")
+  check(MOCK.ns.talentAt(10).name == "Improved Rend", "the custom point is level 10's talent")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- Share codes: copy one out, paste one back (a bad one says why and changes nothing).
+function S.talentCode()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  click(win(), "Start from: Fury")
+  click(win(), "Share code")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown() and copy.edit:GetText():find("^LC1%-WARRIOR%-"), "Share code shows the code")
+  local code = copy.edit:GetText()
+  copy:Hide()
+  click(win(), "Clear"); click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51", 1, true), "cleared")
+  click(win(), "Paste code")
+  check(copy:IsShown() and copy.edit:GetText() == "", "Paste code opens an empty box")
+  copy.edit:SetText("nonsense")
+  click(copy, "Use this code")
+  check(copy:IsShown() and copy.count:GetText() == "Not a Leveling Codex talent code", "a bad code says why")
+  check((copy.count:GetWidth() or 0) > 0 and copy.count:GetWidth() <= 210, "the reason wraps clear of the buttons")
+  check(text():find("Points placed: 0 of 51", 1, true), "a bad code changes nothing")
+  copy.edit:SetText(code)
+  click(copy, "Use this code")
+  check(not copy:IsShown(), "a good code closes the box")
+  check(text():find("Points placed: 51 of 51", 1, true), "the code brings the path back")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- A saved path comes back next session (the persisted run saves "fury": Warrior has it, Mage doesn't).
+function S.talentPathSaved()
+  if not D() then return end
+  local key, how = MOCK.ns.talentPathKey()
+  local want = MOCK.class == "WARRIOR" and "fury" or "guide"
+  check(key == want, "the saved path comes back: " .. tostring(key))
+  check(how == (MOCK.class == "WARRIOR" and "saved" or "default"), "how it was picked: " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  local chosen
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.codexLabel and b.codexLabel:find("^Path: ") and (b.tipText or ""):find("You follow this path.", 1, true) then
+      chosen = b.codexLabel
+    end
+  end
+  check(chosen == (MOCK.class == "WARRIOR" and "Path: Fury" or "Path: " .. MOCK.ns.talentPaths()[1].spec),
+    "the chosen card: " .. tostring(chosen))
+  win():Hide()
+end
+
+-- Before login in a lost-SavedVariables run: the talents of the class's first spec path's first 15
+-- points are spent (the run starts at 25).
+function S.talentSeed()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if paths and paths[2] then seedTraitRanks(paths[2].plan, 15) end
+end
+
+-- SavedVariables didn't load: the path your spent talents follow is picked (and not saved).
+function S.talentPathLost()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if not D() or not paths or not paths[2] then return end
+  local key, how = MOCK.ns.talentPathKey()
+  check(key == paths[2].key and how == "matched", "spent talents pick " .. paths[2].key .. ", got " .. tostring(key) .. " " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  check(MOCK.textUnder(win()):find("Picked from the talents you have spent. Choose one to keep it.", 1, true), "the tab says why")
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  click(win(), "Path: " .. paths[2].spec)
+  check(LevelingCodexCharDB.talentPath == paths[2].key, "choosing it keeps it")
+  check(not MOCK.textUnder(win()):find("Picked from the talents", 1, true), "no note once chosen")
+  win():Hide()
+end
+
+-- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the
+-- trace in the talent window; a custom path's unplanned point says to plan it.
+function S.talentPathFollow()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local ns = MOCK.ns
+  ns.setTalentPath("arms")
+  local function levelUp(level)
+    MOCK.chat = {}
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
+    MOCK.advance(4.5)
+  end
+  levelUp(40)
+  check(chatHas("Mortal Strike 1/1"), "chat names the Arms point at 40")
+  check(MOCK.textUnder(toast()):find("Mortal Strike  1/1", 1, true), "banner names the Arms point at 40")
+  MOCK.advance(10)
+  openAt(40, "This Level")
+  check(MOCK.textUnder(win()):find("Mortal Strike", 1, true), "This Level shows the Arms point")
+  win():Hide()
+  local mini = _G.LevelingCodexMinimapButton
+  MOCK.fire(mini, "OnEnter")
+  check((GameTooltip._lines[2] or ""):find("^Arms"), "minimap tooltip names the path: " .. tostring(GameTooltip._lines[2]))
+  check(table.concat(GameTooltip._lines, " "):find("Mortal Strike", 1, true), "minimap tooltip: the talent now")
+  MOCK.fire(mini, "OnLeave")
+  MOCK.unspent = 1
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local trace = _G.LevelingCodexTalentTrace
+  local _, on = trace:GetPoint(1)
+  check(trace:IsShown() and on == talent.byName["Mortal Strike"], "the trace is on Mortal Strike")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  -- a custom path that stops at 49
+  ns.customFrom("arms")
+  for _ = 1, 11 do ns.customUndo() end
+  ns.setTalentPath("custom")
+  levelUp(50)
+  check(chatHas("plan it in .-/codex talents.- %(your custom path has none for this level%)"), "chat: plan the point")
+  check(MOCK.textUnder(toast()):find("Plan it in /codex talents", 1, true), "banner: plan the point")
+  MOCK.advance(10)
+  openAt(50, "This Level")
+  check(MOCK.textUnder(win()):find("Your custom path has no point for level 50 yet. Plan it on the Talents tab.", 1, true),
+    "This Level: plan the point")
+  win():Hide()
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local hint = _G.LevelingCodexTalentHint
+  check(hint:IsShown() and hint.name:GetText() == "No point planned", "hint card: no point planned")
+  check(hint.next:GetText() == "Plan it in /codex talents.", "hint card: plan it")
+  check(not trace:IsShown(), "nothing traced without a planned point")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  MOCK.unspent = nil
+  slash("debug")
+  check(chatHas("talent path: custom %(saved%), custom points: 40"), "debug names the path")
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The trainer list and the Macros tab under another spec's path.
+function S.talentTrainerPath()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  MOCK.ns.setTalentPath("arms")
+  openAt(48, "Trainer")
+  local text = MOCK.textUnder(win())
+  check(text:find("Mortal Strike (Rank 2)", 1, true), "Arms trains Mortal Strike (Rank 2)")
+  check(not text:find("Shield Slam (Rank 2)", 1, true), "no Shield Slam ranks for Arms")
+  click(win(), "Macros")
+  check(MOCK.textUnder(win()):find("These macros are built for the Protection guide.", 1, true), "macros say which guide")
+  MOCK.ns.setTalentPath("guide")
+  click(win(), "Trainer")
+  check(MOCK.textUnder(win()):find("Shield Slam (Rank 2)", 1, true), "the guide path trains Shield Slam")
+  click(win(), "Macros")
+  check(not MOCK.textUnder(win()):find("These macros are built for", 1, true), "no note on the guide path")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
 end
 
 -- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.
@@ -6067,10 +6512,18 @@ function S.profNone()
   check(chatHas("profession: Herbalism not learned"), "Herbalism not learned in debug")
   openAt(9, "Professions")
   local content = profText()
-  check(content:find("No supported professions learned", 1, true), "empty profession switch")
-  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism" }) do
-    check(content:find(name, 1, true) and not profButton(name), "only text for supported " .. name)
+  check(content:find("No supported professions learned", 1, true) and content:find("PROFESSION GUIDES", 1, true),
+    "nothing learned: the guide picker shows")
+  for _, k in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism", "Skinning", "Leatherworking",
+      "Alchemy", "Engineering", "First Aid", "Cooking", "Fishing" }) do
+    check(profButton(k), "a button for every guide: " .. k)
   end
+  check(not profButton("All guides"), "no way back needed before a guide is open")
+  click(win(), "Enchanting")
+  content = profText()
+  check(content:find("Enchanting  -  not learned", 1, true) and content:find("Runed Copper Rod", 1, true), "browsing a guide")
+  click(win(), "All guides")
+  check(profText():find("PROFESSION GUIDES", 1, true) and profButton("Fishing"), "All guides goes back to the picker")
   win():Hide()
   MOCK.level = 10
   MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
@@ -6163,7 +6616,7 @@ function S.profOpenHeadingWithClosedWeapons()
   check(profButton("Mining"), "Mining confirmed with the Professions heading open")
   MOCK.removeSkill("Mining")
   MOCK.advance(1.2)
-  check(not profButton("Mining") and profText():find("No supported professions learned", 1, true),
+  check(not profText():find("Mining 30 / 75", 1, true) and profText():find("No supported professions learned", 1, true),
     "an unrelated closed heading cannot hide an unlearned profession")
 end
 
@@ -6204,12 +6657,13 @@ function S.profTab()
   if not D() then return end
   openAt(30, "Professions")
   click(win(), "Blacksmithing")
+  click(win(), "To 300")
   local t = profText()
   check(t:find("Blacksmithing 97 / 150"), "skill header")
   check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
   check(t:find("Learn at 95"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
-  check(t:find("1882 Thorium Bar"), "shopping list counts the 140 Thorium Bars the Imperial Plate quests take")
+  check(t:find("1620 Thorium Bar"), "shopping list counts the 100 Thorium Bars the two Imperial Plate quests take")
   check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
@@ -6224,6 +6678,82 @@ function S.profTab()
   click(win(), "Mining")
   t = profText()
   check(t:find("Mining 140 / 225") and t:find("Iron Deposit") and t:find("Arathi Highlands"), "mining header, vein, zones")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- The shopping list counts to your cap first (the next cap once you're at it); To 300 counts the
+-- whole route, and the choice holds for the session.
+function S.profShopScope()
+  if not D() then return end
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  local t = profText()
+  check(t:find("SHOPPING LIST TO 150", 1, true), "the list counts to your cap first")
+  check(t:find("\n10 Green Dye", 1, true), "a step that crosses the cap counts its crafts to the cap")
+  local function shopPart(text)
+    local a = text:find("SHOPPING LIST", 1, true)
+    local b = a and text:find("CAMP OBJECTS", a, true)
+    return a and text:sub(a, b or #text) or ""
+  end
+  check(not shopPart(t):find("Thorium Bar", 1, true) and not shopPart(t):find("Mithril Bar", 1, true), "nothing past the cap")
+  check(findButton(win(), function(l) return l == "To 150 (your cap)" end), "the switch names your cap")
+  click(win(), "To 300")
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and t:find("1620 Thorium Bar", 1, true) and
+    t:find("\n25 Green Dye", 1, true), "To 300 counts the whole route")
+  click(win(), "Mining")
+  click(win(), "Blacksmithing")
+  check(profText():find("SHOPPING LIST TO 300", 1, true), "the choice holds when you come back")
+  click(win(), "To 150 (your cap)")
+  MOCK.setSkill("Blacksmithing", 150, 150); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 225", 1, true) and findButton(win(), function(l) return l == "To 225 (next cap)" end),
+    "at your cap the list counts to the next one")
+  check(shopPart(t):find("Mithril Bar", 1, true) and not shopPart(t):find("Thorium Bar", 1, true), "and stops there")
+  MOCK.setSkill("Blacksmithing", 210, 300); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and not findButton(win(), function(l) return l == "To 300" end),
+    "with a cap of 300 there's nothing to switch")
+  win():Hide()
+end
+
+-- Other guides: every guide you haven't learned, shown as if you were starting it.
+function S.profBrowse()
+  if not D() then return end
+  MOCK.faction, MOCK.race = "Alliance", "Human"
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  click(win(), "Other guides")
+  local t = profText()
+  check(t:find("OTHER PROFESSION GUIDES", 1, true), "the picker opens")
+  check(profButton("Tailoring") and profButton("Fishing") and profButton("First Aid"), "it lists the guides you haven't learned")
+  local count = 0
+  for _, b in ipairs(MOCK.buttons(win())) do if labelOf(b) == "Blacksmithing" then count = count + 1 end end
+  check(count == 1, "a learned guide keeps its own button, not a second one in the picker")
+  click(win(), "Alchemy")
+  t = profText()
+  check(t:find("Alchemy  -  not learned", 1, true) and t:find("Any Alchemy trainer", 1, true), "where to learn it")
+  check(t:find("FIRST STEP", 1, true) and t:find("Minor Arcane Elixir", 1, true), "its first step")
+  check(t:find("THE WHOLE ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
+    "its route and shopping list from 1")
+  check(not t:find("DO THIS NOW", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^90%-120") then b:Click(); break end
+  end
+  check(profText():find("STEP 90-120", 1, true) and profText():find("Elixir of Wisdom", 1, true), "a step can be opened")
+  click(win(), "Other guides")
+  click(win(), "Herbalism")
+  t = profText()
+  check(t:find("Herbalism  -  not learned", 1, true) and t:find("Peacebloom  1\n", 1, true) and
+    t:find("Elwynn Forest", 1, true), "a gathering guide lists its first nodes without colours")
+  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("Herbalism 1 / 75", 1, true) and t:find("DO THIS NOW", 1, true), "learning it turns the page into your guide")
+  click(win(), "Mining")
+  check(profText():find("Mining 140 / 225", 1, true), "your own guides are a click away")
+  MOCK.removeSkill("Herbalism"); MOCK.advance(1.2)
+  MOCK.faction, MOCK.race = nil, nil
   MOCK.staleUnder(win(), "Professions")
   win():Hide()
 end
@@ -6397,7 +6927,9 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 25, 75); MOCK.advance(1.2)
   check(profText():find("Peacebloom  1  yellow"), "Peacebloom turns yellow at 25")
   MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
-  check(profText():find("Peacebloom  1  green") and profText():find("TRAIN JOURNEYMAN"), "green and training at 50")
+  check(profText():find("Peacebloom  1  yellow") and profText():find("TRAIN JOURNEYMAN"), "still yellow, and training at 50")
+  MOCK.setSkill("Herbalism", 65, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  green"), "Forever's herbs turn green at skill + 65")
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
   check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
@@ -6491,6 +7023,10 @@ function S.alchemyTab()
   content = profText()
   check(content:find("TRAIN ARTISAN", 1, true) and content:find("Kylanna Windwhisper", 1, true) and
     content:find("Rogvar", 1, true) and content:find("level 35", 1, true), "Artisan rank unlock and trainers")
+  check(content:find("SHOPPING LIST TO 225", 1, true) and not content:find("Stonescale Oil", 1, true),
+    "to the Expert cap the oil isn't needed yet")
+  click(win(), "To 300")
+  content = profText()
   check(content:find("75 Leaded Vial (includes 43 for 86 Stonescale Oil", 1, true),
     "the shared vial row separates oil supplies from the vials for earlier recipes")
   MOCK.bags = { ["Stonescale Eel"] = 3, ["Leaded Vial"] = 1 }
@@ -6530,7 +7066,7 @@ function S.skinningLeatherworkingTab()
   click(win(), "Leatherworking")
   content = profText()
   check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
-    content:find("SHOPPING LIST TO 300"), "Leatherworking starter and shopping estimate")
+    content:find("SHOPPING LIST TO 75"), "Leatherworking starter and shopping estimate, to the Apprentice cap")
   check(content:find("125  Tanning Rack") and content:find("Runic Leather Headband"), "hotfixed camp unlock and final step")
   MOCK.setSkill("Leatherworking", 200, 225); MOCK.advance(1.2)
   check(profText():find("TRAIN ARTISAN") and profText():find("Hahrana Ironhide"), "Leatherworking Artisan trainer")
@@ -6562,6 +7098,8 @@ end
 
 -- The shopping list's text only (between its title and the cloth section).
 local function shoppingText()
+  local whole = findButton(win(), function(l) return l == "To 300" end)
+  if whole and not whole.codexOn then whole:Click() end
   local t = profText()
   local a = t:find("SHOPPING LIST TO 300", 1, true)
   local b = t:find("\nCLOTH\n", a or 1, true)
@@ -6690,7 +7228,7 @@ function S.tailorTab()
   local t = tailoring()
   check(t:find("Tailoring 150 / 225"), "Tailoring header")
   check(t:find("Earthen Vest"), "step at 150: Earthen Vest")
-  check(t:find("SHOPPING LIST TO 300") and t:find("\nCLOTH\n"), "shopping list and cloth section")
+  check(t:find("SHOPPING LIST TO 225") and t:find("\nCLOTH\n"), "shopping list (to your cap) and cloth section")
   local shop = shoppingText()
   check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
   local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
@@ -6722,7 +7260,10 @@ function S.tailorTab()
   MOCK.staleUnder(win(), "Professions")
   click(win(), "Settings")
   local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
-  check(cards and cards.tipText and cards.tipText:find("Tailoring"), "Settings: skill-up cards name Tailoring")
+  check(cards and cards.tipText and cards.tipText:find("every profession the Codex guides", 1, true),
+    "Settings: skill-up cards cover every guided profession")
+  check(findButton(win(), function(l) return l == "Show what to learn at profession trainers" end) and
+    findButton(win(), function(l) return l == "Include profession supplies" end), "Settings: the trainer and vendor switches")
   win():Hide()
 end
 
@@ -6757,8 +7298,8 @@ function S.tailorTabCases()
   check(t:find("Runecloth  %-  you need this now"), "Runecloth marked at 260")
   MOCK.setSkill("Tailoring", 285, 300)
   t = tailoring()
-  check(t:find("Runecloth Shoulders") and t:find("Venomspew Gloves") and t:find("Venomspew Cord"),
-    "Runecloth finish with vendor alternatives")
+  check(t:find("Runecloth Shoulders") and t:find("Venomspew patterns") and t:find("need a Loom"),
+    "Runecloth finish: the vendor patterns need a Loom")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
   check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
@@ -7297,6 +7838,74 @@ function S.classTrainer()
   check(not card:IsShown(), "the setting turns the card off")
 end
 
+-- A profession trainer: the card lists the next rank when you can train it and the route recipes this
+-- trainer teaches up to your cap, and names where the next one it doesn't teach comes from.
+function S.profTrainer()
+  MOCK.level = 30
+  MOCK.setSkill("Blacksmithing", 97, 150); MOCK.advance(1.2)
+  local window = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+  window:SetSize(384, 512)
+  window:Show()
+  MOCK.tradeskillTrainer = true
+  MOCK.trainer = {
+    { "Rough Bronze Leggings", "Blacksmithing", 95, category = "used" },
+    { "Heavy Grinding Stone", "Blacksmithing", 100, category = "unavailable", cost = 500 },
+    { "Iron Buckle", "Blacksmithing", 125, category = "unavailable", cost = 800 },
+    { "Bronze Warhammer", "Blacksmithing", 100, category = "unavailable", cost = 900 },
+    { "Silver Rod", "Blacksmithing", 100, cost = 300 },
+    { "Blacksmithing", "Blacksmithing", 125, rank = "Expert", category = "unavailable", cost = 10000 },
+  }
+  MOCK.money = 1000
+  MOCK.event("TRAINER_SHOW")
+  local card = _G.LevelingCodexTrainerHint
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no trainer card without the trainer APIs")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "PROFESSION TRAINER"), "a profession trainer gets its own card")
+  check(questText(card, "Nothing to learn here yet") and
+    questText(card, "Next here: Heavy Grinding Stone at 100, Bronze Warhammer at 100, Iron Buckle at 125"),
+    "before the skill is there it says what this trainer teaches next")
+  check(questText(card, "Expert Blacksmithing at skill 125 and level 20"), "and when the next rank opens")
+  check(questText(card, "Not taught here: Green Iron Bracers (learn at 140): Expert trainers: Bengus Deepforge"),
+    "and where the route's next recipe this trainer lacks comes from")
+  check(not questText(card, "Silver Rod"), "recipes off the route are left out")
+  MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "available", "available"
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (130-140)"),
+    "what to learn now for the route, and the cost")
+  check(questText(card, "You have 10s: 4s short"), "and when money is short")
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "used", "used"
+  MOCK.setSkill("Blacksmithing", 125, 150); MOCK.advance(1.2)
+  MOCK.trainer[3].category, MOCK.trainer[6].category = "available", "available"
+  MOCK.money = 100000
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-130)"),
+    "the next rank comes first")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession trainer: Blacksmithing, route items now: 2"), "/codex debug reports the profession trainer")
+  table.remove(MOCK.trainer, 6)
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Expert Blacksmithing isn't listed here: Bengus Deepforge"), "a rank this trainer doesn't teach points to one who does")
+  LevelingCodexDB.noTrainerGuide = true
+  MOCK.event("TRAINER_SHOW")
+  check(card:IsShown(), "the class trainer setting leaves the profession card alone")
+  LevelingCodexDB.noTrainerGuide, LevelingCodexDB.noProfTrainer = nil, true
+  MOCK.event("TRAINER_SHOW")
+  check(not card:IsShown(), "Settings > Trainers turns the profession card off")
+  LevelingCodexDB.noProfTrainer = nil
+  MOCK.removeSkill("Blacksmithing"); MOCK.advance(1.2)
+  MOCK.trainer = { { "Blacksmithing", nil, nil, rank = "Apprentice", cost = 10 } }
+  MOCK.event("TRAINER_SHOW")
+  check(questText(card, "Start Blacksmithing here") and questText(card, "Professions > Other guides"),
+    "a profession you don't have yet points to its guide")
+  MOCK.event("TRAINER_CLOSED")
+  check(not card:IsShown(), "closing the trainer hides the card")
+  MOCK.tradeskillTrainer = false
+end
+
 -- Vendor: greys sell one by one when a vendor opens, guide items and the Hearthstone are kept.
 function S.vendorJunk()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
@@ -7470,6 +8079,58 @@ function S.vendorShopping()
   check(MOCK.bought[1][2] == 2, "and only the stock is bought")
   MOCK.closeMerchant()
   check(not card:IsShown(), "closing the vendor hides the card")
+end
+
+-- Vendor: the shopping card also offers what your current profession steps need from this vendor:
+-- materials (a part's own materials), a tool, the rod you lack; never what a later step needs.
+function S.vendorProfSupplies()
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.setSkill("Engineering", 30, 75)
+  MOCK.advance(1.2)
+  MOCK.money = 100000
+  MOCK.bags = { ["Coarse Thread"] = 5 }
+  local thread = { id = 2320, name = "Coarse Thread", price = 10, per = 1, stock = -1, maxStack = 200 }
+  local hammer = { id = 5956, name = "Blacksmith Hammer", price = 16 }
+  MOCK.openMerchant({ items = { thread, { id = 2321, name = "Fine Thread", price = 100 }, hammer,
+    { id = 2604, name = "Red Dye", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no card without the merchant API")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "34 x Coarse Thread") and questText(card, "for Linen Belt (Tailoring)"),
+    "the card offers the thread your step's crafts still need (39, you have 5)")
+  check(questText(card, "1 x Blacksmith Hammer") and questText(card, "for Handful of Copper Bolts (Engineering)"),
+    "and the tool your Engineering step needs")
+  check(not questText(card, "Fine Thread") and not questText(card, "Red Dye"), "nothing a later step needs")
+  click(card, "Buy for 3s 56c")
+  check(#MOCK.bought == 2 and MOCK.bought[1][1] == 2320 and MOCK.bought[1][2] == 34 and MOCK.bought[2][1] == 5956,
+    "one click buys them")
+  MOCK.closeMerchant()
+  MOCK.bought, MOCK.bags = {}, { ["Coarse Thread"] = 39, ["Blacksmith Hammer"] = 1 }
+  MOCK.openMerchant({ items = { thread, hammer } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "with the thread and the hammer in your bags there's nothing to buy")
+  MOCK.closeMerchant()
+  MOCK.removeSkill("Tailoring"); MOCK.removeSkill("Engineering")
+  MOCK.setSkill("Enchanting", 12, 75); MOCK.advance(1.2)
+  MOCK.bags = {}
+  local rod = { id = 6217, name = "Copper Rod", price = 124 }
+  local mote = { id = 1245321, name = "Mote of Magic", price = 40 }
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(questText(card, "1 x Copper Rod") and questText(card, "1 x Mote of Magic") and
+    questText(card, "for Runed Copper Rod (Enchanting)"), "without the rod your step needs, the card offers its materials")
+  check(not questText(card, "9 x Mote of Magic"), "the step's own Motes are made from Strange Dust, not bought")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = true
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "Settings > Vendor > Include profession supplies turns it off")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = nil
 end
 
 -- Stats: XP, gold by source, activity and zone time, counted per level and saved.

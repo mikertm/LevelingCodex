@@ -767,6 +767,8 @@ renderers.level = function(V)
       T(hit.tree, 74, y + h + 2, W - 100, "small", C.inkSoft)
       y = y + math.max(50, h + 20)
       y = y + T(plain(text), 16, y, W - 32, "body", C.ink) + 14
+    elseif ns.talentUnplanned(V) then
+      y = y + T("Your custom path has no point for level " .. V .. " yet. Plan it on the Talents tab.", 16, y, W - 32, "body", C.ink) + 14
     end
   else
     T("YOUR TALENT POINT", 16, y, 300, "label", C.inkSoft)
@@ -785,6 +787,9 @@ renderers.level = function(V)
       if h2 then
         icon(h2.icon, x, y, 28, l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max, plain(l == h2.from and h2.why or h2.more))
         T(l .. "  " .. h2.name .. " " .. r2 .. "/" .. h2.max, x + 34, y + 8, 160, "small", C.light)
+        x = x + 196
+      elseif ns.talentUnplanned(l) then
+        T(l .. "  Not planned yet", x + 34, y + 8, 160, "small", C.dim)
         x = x + 196
       end
     end
@@ -836,220 +841,16 @@ renderers.level = function(V)
 end
 
 ----------------------------------------------------------------------------
--- Talents: the build as a tree that fills in up to the level shown, plus every point and why
+-- Talents: the path cards, the game's tree and every point (TalentTab.lua)
 ----------------------------------------------------------------------------
 
--- The plan as talents: { name, icon, max, tree, points = { { level, rank, text } } }, by tree.
-local function talentModel()
-  local trees, byTree, byName, ranks = {}, {}, {}, {}
-  for _, p in ipairs(ns.D.plan) do
-    local t = byName[p.name]
-    if not t then
-      t = { name = p.name, icon = p.icon, max = p.max, tree = p.tree, points = {} }
-      byName[p.name] = t
-      if not byTree[p.tree] then
-        byTree[p.tree] = { name = p.tree, talents = {} }
-        trees[#trees + 1] = byTree[p.tree]
-      end
-      table.insert(byTree[p.tree].talents, t)
-    end
-    for l = p.from, p.to do
-      ranks[p.name] = (ranks[p.name] or 0) + 1
-      t.points[#t.points + 1] = { level = l, rank = ranks[p.name], text = (l == p.from or p.more == "") and p.why or p.more }
-    end
-  end
-  for _, t in pairs(byName) do table.sort(t.points, function(a, b) return a.level < b.level end) end
-  return trees, byName
-end
-
--- Grid positions: the game's own tree layout when the trait system tells us, else tiers worked
--- out from the plan (a talent sits in the tier its tree had 5 points per row for when it's taken).
-local function layoutTree(tree)
-  local live = ns.traitLayout and ns.traitLayout()
-  if live then
-    local xs, ys, ok = {}, {}, true
-    for _, t in ipairs(tree.talents) do
-      local p = live[string.lower(t.name)]
-      if not p then ok = false; break end
-      xs[p.x], ys[p.y] = true, true
-    end
-    if ok then
-      local function index(set)
-        local list, idx = {}, {}
-        for v in pairs(set) do list[#list + 1] = v end
-        table.sort(list)
-        for i, v in ipairs(list) do idx[v] = i - 1 end
-        return idx, #list
-      end
-      local xi, nx = index(xs)
-      local yi, ny = index(ys)
-      for _, t in ipairs(tree.talents) do
-        local p = live[string.lower(t.name)]
-        t.col, t.row = xi[p.x], yi[p.y]
-      end
-      return math.max(nx, 1), math.max(ny, 1), true
-    end
-  end
-  local order = {}
-  for _, t in ipairs(tree.talents) do order[#order + 1] = t end
-  table.sort(order, function(a, b) return a.points[1].level < b.points[1].level end)
-  local used, ncols, nrows = {}, 1, 1
-  for _, t in ipairs(order) do
-    local before = 0
-    for _, o in ipairs(tree.talents) do
-      for _, p in ipairs(o.points) do if p.level < t.points[1].level then before = before + 1 end end
-    end
-    local tier = math.min(6, math.floor(before / 5))
-    used[tier] = (used[tier] or 0) + 1
-    t.row, t.col = tier, used[tier] - 1
-    ncols = math.max(ncols, used[tier])
-    nrows = math.max(nrows, tier + 1)
-  end
-  return math.max(ncols, 4), nrows, false
-end
-
-local selectedTalent
-
-local function rankAt(t, V)
-  local r, nextP, here = 0, nil, false
-  for _, p in ipairs(t.points) do
-    if p.level <= V then
-      r = p.rank
-      if p.level == V then here = true end
-    elseif not nextP then
-      nextP = p
-    end
-  end
-  return r, nextP, here
-end
-
--- a 2 px outline around a node
-local function outline(x, y, w, h, color)
-  rect(x, y, w, 2, color, "border", 1); rect(x, y + h - 2, w, 2, color, "border", 1)
-  rect(x, y, 2, h, color, "border", 1); rect(x + w - 2, y, 2, h, color, "border", 1)
-end
-
-renderers.talents = function(V)
-  local trees, byName = talentModel()
-  local y = sectionTitle("Talent tree", 0, "your build at level " .. V .. "  -  click a talent for every point")
-  local sel = selectedTalent and byName[selectedTalent]
-  if not sel then
-    local hit = ns.talentAt(math.max(10, V))
-    sel = hit and byName[hit.name]
-  end
-  for _, tree in ipairs(trees) do
-    local ncols, nrows, live = layoutTree(tree)
-    local cellW = math.min(96, math.floor((W - 40) / ncols))
-    local cellH = 72
-    local x0 = math.floor((W - cellW * ncols) / 2)
-    local top = y
-    y = y + 12
-    local got, total = 0, 0
-    for _, t in ipairs(tree.talents) do
-      for _, p in ipairs(t.points) do
-        total = total + 1
-        if p.level <= V then got = got + 1 end
-      end
-    end
-    T(tree.name, 16, y, 300, "head", C.gold)
-    T(got .. " of " .. total .. " points by level " .. V, 16, y + 4, W - 32, "small", C.dim, "RIGHT")
-    y = y + 34
-    local gy = y
-    for _, t in ipairs(tree.talents) do
-      local nx = x0 + t.col * cellW + math.floor((cellW - 40) / 2)
-      local ny = gy + t.row * cellH
-      local r, nextP, here = rankAt(t, V)
-      if here then rect(nx - 7, ny - 7, 54, 54, { C.accent[1], C.accent[2], C.accent[3], 0.5 }, "border", 0) end
-      if t == sel then outline(nx - 4, ny - 4, 48, 48, { 1, 0.82, 0, 1 }) end
-      local f = icon(t.icon, nx, ny, 40, nil, nil)
-      local rankInk
-      if r == 0 then
-        f.tex:SetDesaturated(true); f.tex:SetVertexColor(0.65, 0.65, 0.65)
-        f.ring:SetColorTexture(0.38, 0.38, 0.38, 0.9)
-        rankInk = { 0.75, 0.75, 0.75, 1 }
-      elseif r >= t.max then
-        f.ring:SetColorTexture(1, 0.82, 0, 1); rankInk = { 1, 0.82, 0, 1 }
-      else
-        f.ring:SetColorTexture(0.3, 0.9, 0.35, 1); rankInk = { 0.4, 1, 0.45, 1 }
-      end
-      f:SetScript("OnClick", function() selectedTalent = t.name; refresh() end)
-      f.tipTitle = t.name .. "  " .. r .. "/" .. t.max
-      f.tipText = (here and ("Level " .. V .. ": your point goes here. ") or "") ..
-        (nextP and ("Next point at level " .. nextP.level .. ". ") or "All points taken. ") ..
-        plain(t.points[1].text) .. "\n\nClick for every point and why."
-      -- rank tag on the corner, like the talent window
-      rect(nx + 20, ny + 27, 24, 15, { 0, 0, 0, 0.88 }, nil, 0, nil, true)
-      T(r .. "/" .. t.max, nx + 20, ny + 28, 24, "small", rankInk, "CENTER", true)
-      if here then
-        T("NOW", nx - 10, ny + 46, 60, "label", C.gold, "CENTER")
-      elseif nextP then
-        T("Lv " .. nextP.level, nx - 10, ny + 46, 60, "small", C.dim, "CENTER")
-      end
-    end
-    y = gy + nrows * cellH + 2
-    if not live then
-      y = y + T("Open your talent window once and the Codex lays this out exactly like the game's tree.",
-        16, y, W - 32, "small", C.dim, "CENTER") + 4
-    end
-    y = y + 6
-    box(0, top, W, y - top, C.panel, C.edge)
-    y = y + 12
-  end
-
-  -- the selected talent: every point that goes into it, and why
-  if sel then
-    local top = y
-    y = y + 14
-    local r = rankAt(sel, V)
-    icon(sel.icon, 16, y, 40, sel.name, nil)
-    T(sel.name, 66, y, W - 90, "head", C.ink)
-    T(sel.tree .. "  -  " .. r .. "/" .. sel.max .. " at level " .. V, 66, y + 22, W - 90, "small", C.inkSoft)
-    y = y + 52
-    for _, p in ipairs(sel.points) do
-      local now, past = p.level == V, p.level < V
-      local h = T(plain(p.text), 110, y + 3, W - 130, "body", past and C.inkSoft or C.ink)
-      local rowH = math.max(20, h + 6)
-      if now then rect(10, y - 2, W - 20, rowH + 2, { C.accent[1], C.accent[2], C.accent[3], 0.22 }, nil, 4) end
-      T("Level " .. p.level, 16, y + 4, 60, "label", past and C.inkSoft or C.ink)
-      T(p.rank .. "/" .. sel.max, 76, y + 4, 30, "label", past and C.inkSoft or C.ink, "CENTER")
-      y = y + rowH + 4
-    end
-    y = y + 8
-    box(0, top, W, y - top, C.parch, C.edge)
-    y = y + 14
-  end
-
-  -- every point in order (click one to see that level)
-  T("EVERY POINT, IN ORDER", 0, y, W, "label", C.gold)
-  T("click a level to open it", 0, y, W - 6, "small", C.dim, "RIGHT")
-  y = y + 20
-  local me = UnitLevel("player")
-  for l = 10, 60 do
-    local hit, rank, text = ns.talentAt(l)
-    if hit then
-      if l == V then rect(0, y, W, 28, { C.accent[1], C.accent[2], C.accent[3], 0.18 }, nil, 2) end
-      if l == me then rect(0, y, 3, 28, C.edge, "border") end
-      T(tostring(l), 8, y + 7, 30, "label", l <= me and C.goldDim or C.gold, "RIGHT")
-      icon(hit.icon, 46, y + 2, 24, hit.name, plain(text))
-      T(hit.name .. "  " .. rank .. "/" .. hit.max, 80, y + 7, 330, "body", l < me and C.dim or C.light)
-      T(hit.tree, 0, y + 8, W - 10, "small", C.dim, "RIGHT")
-      local hb = take("hit", newHit)
-      hb:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y); hb:SetSize(W, 28)
-      hb.tipTitle = "Level " .. l .. ": " .. hit.name .. " " .. rank .. "/" .. hit.max
-      hb.tipText = plain(text)
-      hb:SetScript("OnClick", function() viewLevel = l; activeTab = "level"; refresh() end)
-      hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
-      y = y + 30
-    end
-  end
-  return y + 8
-end
+renderers.talents = function(V) return ns.renderTalents(V) end
 
 renderers.trainer = function(V)
   local y = sectionTitle("Trainer visits", 0, "every new spell and rank, by level")
   local me = UnitLevel("player")
   local list = {}
-  for _, t in ipairs(ns.D.train) do list[#list + 1] = t end
+  for _, t in ipairs(ns.trainVisits()) do list[#list + 1] = t end
   table.sort(list, function(a, b) return a.level < b.level end)
   for _, t in ipairs(list) do
     local here = t.level == V
@@ -1074,6 +875,10 @@ local PAD_NAMES = { xbox = "Xbox", ps = "PlayStation", switch = "Switch" }
 renderers.macros = function(V)
   local list = ns.macrosFor(V)
   local y = sectionTitle("Macros for level " .. V, 0, "hover a button for how it works")
+  local path = ns.talentPath()
+  if path and not path.guide then
+    y = y + T("These macros are built for the " .. ns.D.spec .. " guide.", 0, y, W, "small", C.gold) + 6
+  end
   local h = T("Set up macros makes them all at once (character tab of Esc > Macros). Then put each on the button or key shown below.",
     0, y, W - 170, "small", C.dim)
   btn("Set up macros", W - 150, y - 2, 150, function() ns.setupMacros(false) end, true,
@@ -1233,16 +1038,18 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
-  head("CLASS TRAINER")
+  head("TRAINERS")
   tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
     "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
+  tick("Show what to learn at profession trainers", not db.noProfTrainer, function() db.noProfTrainer = not db.noProfTrainer end,
+    "At a profession trainer, a card lists the next rank when you can train it and the recipes your route needs from this trainer, and names the trainer or vendor for one it doesn't teach.")
   y = y + 12
 
   head("PROFESSIONS")
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open Blacksmithing, Smelting, Tailoring, Enchanting or Leatherworking, the Codex outlines the recipe to make for your skill and shows how many more to make.")
+    "When you open a crafting profession or Smelting, the Codex outlines the recipe to make for your skill and shows how many more to make.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "Shows a card for new steps, training or skill caps in Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning and Leatherworking. Mining and Herbalism also announce new nodes.")
+    "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
   y = y + 12
 
   head("GATHERING")
@@ -1266,6 +1073,8 @@ renderers.settings = function()
     "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
   tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
     "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
+  tick("Include profession supplies", not db.noProfShop, function() db.noProfShop = not db.noProfShop end,
+    "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
   y = y + 12
 
   head("QUEST GUIDE")
@@ -1481,6 +1290,7 @@ end
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
   segments = segments, fold = fold,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
+  openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 
 function ns.placeWindow()
@@ -1786,8 +1596,9 @@ local function makeCopy()
   local function reselect(self) self:SetFocus(); self:HighlightText() end
   eb:SetScript("OnEscapePressed", function() copy:Hide() end)
   eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-  -- read-only: typing puts the macro back, still selected
+  -- read-only: typing puts the macro back, still selected (a paste box keeps what you type)
   eb:SetScript("OnTextChanged", function(self, userInput)
+    if copy.paste then return end
     if userInput and copy.body and self:GetText() ~= copy.body then self:SetText(copy.body); self:HighlightText() end
   end)
   eb:SetScript("OnMouseUp", reselect)
@@ -1795,6 +1606,9 @@ local function makeCopy()
 
   copy.count = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   copy.count:SetPoint("BOTTOMLEFT", 24, 24)
+  copy.count:SetWidth(210) -- clear of the buttons at the bottom right (a refused code's reason wraps)
+  copy.count:SetJustifyH("LEFT")
+  copy.count:SetWordWrap(true)
   copy.count:SetTextColor(rgba(C.dim))
 
   local function button(label, w, onClick)
@@ -1809,6 +1623,15 @@ local function makeCopy()
   copy.nextB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   copy.prevB = button("Back", 70, function() ns.showMacroCopy(nil, nil, -1) end)
   copy.prevB:SetPoint("RIGHT", copy.nextB, "LEFT", -6, 0)
+  -- paste mode: hand the text to the entry's onAccept; a refusal says why and keeps the box open
+  copy.useB = button("Use this code", 120, function()
+    local cur = copy.list and copy.list[copy.index]
+    if not (cur and cur.onAccept) then return end
+    local ok, why = cur.onAccept(copy.edit:GetText())
+    if ok then copy:Hide() else copy.count:SetText(why or "") end
+  end)
+  copy.useB.codexLabel = "Use this code"
+  copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
@@ -1841,14 +1664,16 @@ function ns.showMacroCopy(m, list, step)
   if not cur then return end
   local many = #copy.list > 1
   copy.title:SetText(cur.copyTitle or (cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro")))
-  copy.help:SetText(cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp)
+  copy.help:SetText(cur.help or (cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp))
   copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
-  copy.body = cur.body
+  copy.paste = cur.paste and true or false
+  copy.useB:SetShown(copy.paste)
+  copy.body = cur.body or ""
   copy:Show()
-  copy.edit:SetText(cur.body)
+  copy.edit:SetText(copy.body)
   copy.edit:SetFocus()
-  copy.edit:HighlightText()
+  if not copy.paste then copy.edit:HighlightText() end
 end
 
 function ns.toggleWindow()

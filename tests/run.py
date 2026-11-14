@@ -35,15 +35,17 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "compartment", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
-        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "traitLayoutTree", "macroMockups",
+        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "talentTreeLayout", "talentPathPick", "macroMockups",
         "tabGlow", "keycapsLight", "bannerBuiltIn", "talentHintOnScreen", "talentTraceThemed", "controllerSides", "bannerFindsDisplay", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
 # The client has every API but none of the Blizzard art files: everything falls back.
 NOART = ["skills:BS;97;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
-PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
+PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved"]
 LOST = ["lost", "login", "lostSavedVariables"]
+# The class runs also spend talents before login: the path they follow is picked.
+LOST_TALENTS = ["lost", "talentSeed", "login", "lostSavedVariables", "talentPathLost"]
 # Gathering tracking (Find Herbs / Find Minerals) that the client drops at login and loading screens.
 TRACK = ["trackKnown:herbs,minerals", "login", "trackRestored", "trackLoadingScreen", "trackDeath", "trackCombat",
          "trackOtherChoice", "trackSettingOff", "trackDebug"]
@@ -69,7 +71,7 @@ HERBALISM = ["skills:HE;1;75:professions:Alliance:Human", "login"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
        "padBackupCombat", "padCopyBox", "padForeverCombat", "padTalents", "padForeverFocus", "padForeverActive",
-       "padStickKeepsFocus"]
+       "padStickKeepsFocus", "padTalentPaths"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftHandsOff", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "craftTailoring", "craftEnchanting", "debugReport"]
@@ -80,7 +82,7 @@ CRAFT_SCROLLBOX = ["makeCraftWindow:scrollbox", "login", "craftScrolled", "craft
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
   windowPos = { "CENTER", "CENTER", 50, 0 }, windowScale = 0.9, minimapAngle = 45, quiet = true, noAutoMacros = true }
-LevelingCodexCharDB = { made = { Fight = true } }
+LevelingCodexCharDB = { made = { Fight = true }, talentPath = "fury" }
 """
 
 # Saved variables didn't load, but last session's macros (made at level 25) are still there.
@@ -274,7 +276,8 @@ def data_checks():
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_npc_checks() + quest_shop_checks() + quest_danger_checks()
-            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks(),
+            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks() + talent_tree_checks()
+            + talent_path_checks(),
             warnings + prof_warnings + game_warnings + choice_warnings)
 
 
@@ -636,6 +639,102 @@ def prof_shape_checks():
     return errors, warnings
 
 
+def load_addon_file(name, ns=None):
+    """Run one addon file in a fresh Lua state with (addonName, ns); returns ns."""
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = ns if ns is not None else lua.table()
+    f = lua.execute("return function(src) return loadstring(src) end")(open(os.path.join(ROOT, name), encoding="utf-8").read())
+    f("LevelingCodex", ns)
+    return lua, ns
+
+
+def talent_tree_checks():
+    """TalentTreeData.lua: generated from the reference by `tools/gamedata.py talentdata`, the full
+    talent trees the Talents tab and the custom path editor draw."""
+    errors = []
+    path = os.path.join(ROOT, "TalentTreeData.lua")
+    if not os.path.exists(path):
+        return ["talent tree: TalentTreeData.lua missing (python tools/gamedata.py talentdata)"]
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if os.path.exists(gamedata.REF) and open(path, encoding="utf-8").read() != gamedata.talentdata_text(gamedata.load_reference()):
+        errors.append("talent tree: TalentTreeData.lua is stale (python tools/gamedata.py talentdata)")
+    _, ns = load_addon_file("TalentTreeData.lua")
+    trees = ns.talentTrees
+    if trees is None:
+        return errors + ["talent tree: no ns.talentTrees"]
+    for cls in CLASSES:
+        t = trees[cls]
+        if t is None or len(t.tabs) != 3:
+            errors.append("talent tree %s: needs 3 tabs" % cls)
+            continue
+        talents = [t.talents[i] for i in range(1, len(t.talents) + 1)]
+        keys = [(x.tab, x.row, x.col) for x in talents]
+        if keys != sorted(keys):
+            errors.append("talent tree %s: talents not sorted by tab, row, column" % cls)
+        rows = {x.name: x.row for x in talents}
+        for x in talents:
+            # the game's edges run both ways (Hunter: Bestial Wrath "opens" Intimidation, two rows up);
+            # a prerequisite in a later row can never come first
+            for pn in x.prereq.values():
+                if rows.get(pn, 0) > x.row:
+                    errors.append("talent tree %s: %s lists %s (a later row) as a prerequisite" % (cls, x.name, pn))
+            if any(ord(c) > 126 for c in (x.tip or "") + x.name):
+                errors.append("talent tree %s: %s has non-ASCII text" % (cls, x.name))
+            if any(c in (x.tip or "") for c in "${}"):
+                errors.append("talent tree %s: %s's tooltip has unresolved game formula text: %s" % (cls, x.name, x.tip))
+            if not x.icon or not x.max:
+                errors.append("talent tree %s: %s needs an icon and max" % (cls, x.name))
+    def find(cls, name):
+        t = trees[cls]
+        for i in range(1, len(t.talents) + 1):
+            if t.talents[i].name == name:
+                return t.talents[i]
+    ms = find("WARRIOR", "Mortal Strike")
+    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"] \
+            or [2, 48] not in [list(r.values()) for r in ms.spell.values()]:
+        errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
+    if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
+        errors.append("talent tree: hidden talents (Lightning Reflexes, Holy Specialization) must be left out")
+    return errors
+
+
+def talent_path_checks():
+    """TalentPaths.lua: every spec path through the same rules as the Data.lua talent plan (tools/gamedata.py
+    audit_paths), and the audit itself catches a broken path."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if not os.path.exists(gamedata.REF):
+        return []
+    if not hasattr(gamedata, "audit_paths") or not os.path.exists(os.path.join(ROOT, "TalentPaths.lua")):
+        return ["talent paths: TalentPaths.lua or tools/gamedata.py audit_paths missing"]
+    ref, data = gamedata.load_reference(), gamedata.load_data()
+    errors = ["talent paths %s: %s" % (c, m) for c, lvl, m in gamedata.audit_paths(gamedata.load_paths(), data, ref)
+              if lvl == "error"]
+    # the audit catches a broken path: Mortal Strike at 10, a missing level, an unknown role
+    good = gamedata.load_paths()["WARRIOR"]
+    arms = next(p for p in good if p["key"] == "arms")
+
+    def flagged(path, want):
+        paths ={"WARRIOR": [p for p in good if p["key"] != "arms"] + [path]}
+        return any(want in m for _, lvl, m in gamedata.audit_paths(paths, data, ref) if lvl == "error")
+    import copy
+    early = copy.deepcopy(arms)
+    early["plan"][0] = dict(early["plan"][0], name="Mortal Strike", tree="Arms", max=1, icon="ability_warrior_savageblow",
+                            to=early["plan"][0]["from"])
+    early["plan"].insert(1, dict(arms["plan"][0], **{"from": arms["plan"][0]["from"] + 1}))
+    if not flagged(early, "needs 30 points in Arms"):
+        errors.append("talent paths: the audit misses Mortal Strike before 30 points in Arms")
+    gap = copy.deepcopy(arms)
+    gap["plan"] = [p for p in gap["plan"] if not (p["from"] <= 37 <= p["to"])]
+    if not flagged(gap, "level 37 has 0 points"):
+        errors.append("talent paths: the audit misses a level without a point")
+    pet = dict(copy.deepcopy(arms), role="Pet")
+    if not flagged(pet, "role 'Pet'"):
+        errors.append("talent paths: the audit misses an unknown role")
+    return errors
+
+
 def game_checks():
     """Data.lua against what the game client says (tools/reference/forever.json, built by tools/gamedata.py).
 
@@ -779,12 +878,14 @@ def update_audit_checks(gamedata, ref, tag):
     import tempfile
     built = copy.deepcopy(ref)
     built["quests"]["maps"] = {int(key): value for key, value in built["quests"]["maps"].items()}
-    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit")
+    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata")
     saved = {name: getattr(gamedata, name) for name in names}
-    audited, calls = [], []
+    audited, calls, trees_written = [], [], []
     fd, path = tempfile.mkstemp(suffix=".json")
     os.close(fd)
     argv = sys.argv
+    trees = os.path.join(ROOT, "TalentTreeData.lua")
+    before = os.stat(trees).st_mtime_ns if os.path.exists(trees) else None
     try:
         saved["write_reference"](ref, path)
         gamedata.latest_build = lambda: ref["build"]
@@ -793,6 +894,7 @@ def update_audit_checks(gamedata, ref, tag):
         gamedata.write_reference = lambda r, p=path: saved["write_reference"](r, p)
         gamedata.load_reference = lambda p=path: saved["load_reference"](p)
         gamedata.full_audit = lambda r, only=None: calls.append(r) or audited.extend(saved["full_audit"](r, "QUESTS")) or audited
+        gamedata.write_talentdata = lambda r: trees_written.append(r)
         sys.argv = ["gamedata.py", "update"]
         with contextlib.redirect_stdout(io.StringIO()):
             gamedata.main()
@@ -801,6 +903,11 @@ def update_audit_checks(gamedata, ref, tag):
         for name, value in saved.items():
             setattr(gamedata, name, value)
         os.remove(path)
+    # the harness never writes the repo: `update` rewrites TalentTreeData.lua for real
+    if before is not None and os.stat(trees).st_mtime_ns != before:
+        return ["%s tools: the harness's update check rewrote TalentTreeData.lua in the repo" % tag]
+    if not trees_written:
+        return ["%s tools: update doesn't regenerate TalentTreeData.lua" % tag]
     wrong = [m for _, lvl, m in audited if lvl == "error"]
     if not calls or wrong:
         return ["%s tools: update audits the freshly built reference, not the written one (%d quest errors, e.g. %s)" %
@@ -902,6 +1009,15 @@ def main():
         for cls in CLASSES:
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/warrior-macros" % variant, "WARRIOR", minimal, ["login", "warriorPackMacros"]))
+        runs.append(("WARRIOR/%s/talent-path-api" % variant, "WARRIOR", minimal, ["login", "talentPathApi"]))
+        if not minimal:
+            for cls in ("DRUID", UNSUPPORTED):
+                runs.append(("%s/full/talent-path-api" % cls, cls, False, ["login", "talentPathApi"]))
+            runs.append(("WARRIOR/full/talent-path-follow", "WARRIOR", False,
+                         ["makeTalentWindow:name:PlayerSpellsFrame:all", "login", "talentPathFollow"]))
+        runs.append(("WARRIOR/%s/talent-path-trainer" % variant, "WARRIOR", minimal, ["login", "talentTrainerPath"]))
+        runs.append(("WARRIOR/%s/talent-custom" % variant, "WARRIOR", minimal, ["login", "talentCustom"]))
+        runs.append(("WARRIOR/%s/talent-code" % variant, "WARRIOR", minimal, ["login", "talentCode"]))
         if not minimal:
             runs.append(("WARRIOR/full/warrior-macros-upgrade", "WARRIOR", False, ["login", "warriorMacroUpgrade"]))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))
@@ -914,15 +1030,17 @@ def main():
             runs.append(("DRUID/full/tracking-learn", "DRUID", False, TRACK_LEARN))
         for cls in CLASSES:
             if not minimal:  # needs GetMacroInfo to recognise last session's macros
-                runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST))
+                runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST_TALENTS))
         if not minimal:
             for cls in ("WARRIOR", "PRIEST", "DRUID"):
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("WARRIOR/%s/class-trainer" % variant, "WARRIOR", minimal, ["login", "classTrainer"]))
+        runs.append(("WARRIOR/%s/prof-trainer" % variant, "WARRIOR", minimal, ["login", "profTrainer"]))
         runs.append(("WARRIOR/%s/vendor-junk" % variant, "WARRIOR", minimal, ["vendorJunk"]))
         runs.append(("WARRIOR/%s/vendor-repair" % variant, "WARRIOR", minimal, ["vendorRepair"]))
         runs.append(("WARRIOR/%s/vendor-shopping" % variant, "WARRIOR", minimal, ["vendorShopping"]))
+        runs.append(("WARRIOR/%s/vendor-prof-supplies" % variant, "WARRIOR", minimal, ["vendorProfSupplies"]))
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
@@ -958,6 +1076,10 @@ def main():
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
+        runs.append(("WARRIOR/%s/prof-shop-scope" % variant, "WARRIOR", minimal,
+                     ["skills:BS;97;150,MI;140;225:professions", "login", "profShopScope"]))
+        runs.append(("WARRIOR/%s/prof-browse" % variant, "WARRIOR", minimal,
+                     ["skills:BS;97;150,MI;140;225:professions", "login", "profBrowse"]))
         runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
         runs.append(("WARRIOR/%s/prof-reader-open" % variant, "WARRIOR", minimal, ["login", "profReaderRecoversAfterOpen"]))
         runs.append(("WARRIOR/%s/prof-reader-closed-weapons" % variant, "WARRIOR", minimal,

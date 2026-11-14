@@ -60,7 +60,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
   "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
-  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED" }) do
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -965,7 +965,8 @@ C_Traits = {
   end,
 }
 function UnitCharacterPoints(unit) return unspentNow() end
--- the tree's layout: MOCK.traitNodes[nodeID] = { posX, posY, spellID } (empty = no layout yet)
+-- the tree's layout: MOCK.traitNodes[nodeID] = { posX, posY, spellID, rank } (empty = no layout yet;
+-- rank = points you have in it, read as the node's ranksPurchased)
 MOCK.traitNodes = {}
 C_Traits.GetTreeNodes = function(treeID)
   local ids = {}
@@ -975,7 +976,10 @@ C_Traits.GetTreeNodes = function(treeID)
 end
 C_Traits.GetNodeInfo = function(configID, nodeID)
   local n = MOCK.traitNodes[nodeID]
-  if n then return { ID = nodeID, posX = n.posX, posY = n.posY, entryIDs = { nodeID } } end
+  if n then
+    return { ID = nodeID, posX = n.posX, posY = n.posY, entryIDs = { nodeID }, activeEntry = { entryID = nodeID },
+      ranksPurchased = n.rank or 0, currentRank = n.rank or 0 }
+  end
 end
 C_Traits.GetEntryInfo = function(configID, entryID) return { definitionID = entryID } end
 C_Traits.GetDefinitionInfo = function(defID)
