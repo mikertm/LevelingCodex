@@ -1,5 +1,47 @@
 # Leveling Codex
 
+## v0.22.0
+
+### Step window
+
+- **Colour-coded steps.** Each step shows what it asks of you in a chip before its title, and the title and a stripe down the left take its colour: pickups gold, turn-ins green, kills red, collecting orange, travel blue, dungeons purple. Travel chips say Fly, Flight path, Boat, Hearth or Bind, and a step without a name shows the first sentence of its instructions as its title.
+- **Goals you can read at a glance.** Every objective has a bar that fills as you go, and a finished one says "done". The quests you can work on along the way get bars too.
+- **Up next with distances.** Each coming step shows its icon and how far away it is ("340 yd"), or its zone when it's elsewhere, and the distance counts down as you move.
+- **Turn-in XP.** A turn-in shows the XP it gives ("+2,100 XP") and "levels you up" when it will.
+- **NPC portraits.** A small 3D portrait of the quest giver, the NPC you turn in to, or the creature you're hunting sits beside the step's title (Settings > Show the NPC portrait).
+- **New buttons.** A wide Next step button in the theme's colour, with small Back, Quests and Hide buttons around it.
+- **Made for smaller screens.** Shrink the window to as little as 50% (Settings, the guide setup card, or Ctrl+mouse wheel over the window), turn down its background, let it fade while you fight (the mouse over it brings it back), or switch to compact mode with the button in its corner: just the step, its count or distance, a progress bar and the buttons.
+- **Progress you can feel.** A completion bar under the step counts the guide's steps (hover it for the quests turned in too), a goal that moves on flashes, and a step the game finishes glows and plays a sound.
+
+### Arrow, minimap and world map
+
+- **Move the arrow anywhere.** Drag it, Ctrl+mouse wheel over it to resize it, or lock it; when you arrive, the step's icon bobs over a gold ring.
+- **The route on your minimap.** Pins for the current and next two steps, a dotted line from you to the step that bends through tunnels and caves, an arrow on the rim when the step is off the minimap (it steps aside for the game's own waypoint arrow), and tooltips on hover.
+- **The route on your world map.** Numbered pins for the current and next steps that keep their size as you zoom, and a dotted line from you to the step (on or off in Settings and the guide setup).
+- The map pin keeps following your steps after a /reload.
+
+### Quests tab
+
+- **A new layout.** The current step sits at the top with its buttons, and the rest is split into Route, Step, Guides and Quest log.
+- **A clearer guide setup.** Choices light up when they're on: pace, dungeons, the automation helpers, the map lines, the step window's size and compact mode, and the vendor helpers.
+- **Guides as quest-log rows.** Each guide shows a progress bar and one tag (Current, Suggested, Side, Later, Done, Outleveled), and level bands fold away.
+- **What you get.** Special chains and class quests say what they give you, from the Cozy Sleeping Bag's bonus XP to the attunements and the class spells.
+- A dungeon run you finished before its guide could see you enter no longer leaves the guide stuck on its entry step.
+
+### Vendors
+
+- **Junk and repairs.** At a vendor the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. Both can be turned off in Settings or the guide setup; hold Alt as you open the vendor to skip them once.
+- **A shopping card.** When a coming step needs something this vendor sells, a card lists it with one Buy button.
+
+### Stats and pace
+
+- **A Stats tab.** Headline tiles, your level splits as bars, gold earned and spent by source, activity and zones, for this session or for the character.
+- **Pace you can trust.** The This Level card reads your saved stats, so a /reload keeps the level's time and counts, with an XP bar showing your rested XP and your last levels. Kills are counted in every client language.
+
+### Routes
+
+- **Duskwood:** Seasoned Wolf Kabobs now shows on the Ira's Dagger hunt and in the spider woods, where its wolf flanks also drop.
+
 ## v0.21.1
 
 ### Alliance quest guide, levels 30-60
