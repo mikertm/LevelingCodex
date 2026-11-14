@@ -726,7 +726,7 @@ local function paceCard(V, y)
     end
     y = y + 20
   end
-  local earlier = S and S.earlierLevels(V, 3) or {}
+  local earlier = S and S.earlierLevels(math.min(V, me), 3) or {}
   if #earlier > 0 then
     y = y + 4
     T("LAST LEVELS", 16, y, 300, "label", C.goldDim)

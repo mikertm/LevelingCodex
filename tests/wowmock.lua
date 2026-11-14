@@ -123,7 +123,8 @@ C_Map = {
   ClearUserWaypoint = function() MOCK.userWaypoint = nil end,
   CanSetUserWaypointOnMap = function(map) return not (MOCK.noWaypointMaps and MOCK.noWaypointMaps[map]) end,
 }
-C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end }
+C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end,
+  IsSuperTrackingUserWaypoint = function() return MOCK.superTracked and true or false end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
 function GetInstanceInfo()
@@ -414,8 +415,13 @@ function FontString:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 function FontString:SetFontObject(o)
   if self._font then self._fontStale = true end
 end
-function FontString:SetTextColor(r, g, b)
+function FontString:SetTextColor(r, g, b, a)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetTextColor: bad color", 2) end
+  self._color = { r, g, b, a or 1 }
+end
+function FontString:GetTextColor()
+  local c = self._color or { 1, 1, 1, 1 }
+  return c[1], c[2], c[3], c[4]
 end
 function FontString:SetShadowColor() end
 function FontString:SetShadowOffset() end
@@ -721,11 +727,14 @@ function CreateFrame(kind, name, parent, template)
       elseif t == "SecureActionButtonTemplate" then
         f._secure = true
       elseif t == "UIPanelButtonTemplate" then
-        -- the red panel art in three pieces, like the client's template
+        -- the red panel art in three pieces and the label's font string (GetFontString; the
+        -- button's own text stays in `_text`), like the client's template
         for _, k in ipairs({ "Left", "Middle", "Right" }) do
           f[k] = f:CreateTexture(nil, "BACKGROUND")
           f[k]:SetTexture("Interface\\Buttons\\UI-Panel-Button-Up")
         end
+        f._fs = f:CreateFontString(nil, "OVERLAY")
+        f._fs:SetPoint("CENTER", f, "CENTER", 0, 0)
       elseif t == "InputBoxTemplate" then
         -- nothing extra needed
       else

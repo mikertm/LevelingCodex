@@ -819,7 +819,7 @@ def main():
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
-                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
+                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
@@ -863,6 +863,8 @@ def main():
         runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
         runs.append(("WARRIOR/%s/pace-kills" % variant, "WARRIOR", minimal, ["paceKills"]))
         runs.append(("WARRIOR/%s/pace-kills-locale" % variant, "WARRIOR", minimal, ["paceKillsLocale"]))
+        runs.append(("WARRIOR/%s/pace-kills-grammar" % variant, "WARRIOR", minimal, ["paceKillsGrammar"]))
+        runs.append(("WARRIOR/%s/pace-kills-number-first" % variant, "WARRIOR", minimal, ["paceKillsNumberFirst"]))
         runs.append(("WARRIOR/%s/stats-from-pct" % variant, "WARRIOR", minimal, ["statsFromPct"]))
         if minimal:
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))

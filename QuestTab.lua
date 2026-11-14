@@ -404,7 +404,9 @@ local function renderGuides(rows, sections, y)
         if section.category == "dungeon" then
           local planned = Q.planned(section.id)
           tag, tip = planned and "Planned" or "Not planned", runInfo(section) .. ". View steps and quest readiness."
-          if status ~= "current" then status = planned and "suggested" or "open" end
+          if status ~= "current" and status ~= "done" and status ~= "outleveled" then
+            status = planned and "suggested" or "open"
+          end
         end
         y = guideRow(y, section, status, done, total, tag, function() showGuide(section) end, tip)
         count = count + 1

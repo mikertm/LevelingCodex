@@ -200,7 +200,7 @@ function S.earlierLevels(lvl, n)
 end
 
 function S.reset()
-  session = fresh()
+  session, levelUp = fresh(), nil
   if type(LevelingCodexCharDB) == "table" then LevelingCodexCharDB.stats = fresh() end
 end
 

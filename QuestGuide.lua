@@ -1031,10 +1031,13 @@ local function userWaypoint()
   if type(x) == "number" and type(y) == "number" then return point.uiMapID, x, y end
 end
 
--- The waypoint the Codex set ({ map, x, y } in 0-1), while it's still the game's user waypoint:
--- the minimap leaves the rim to the game's own waypoint arrow there.
+-- The waypoint the Codex set ({ map, x, y } in 0-1), while it's still the game's user waypoint and
+-- the game's arrow tracks it (where the client can say): the minimap leaves the rim to that arrow.
 function ns.questMapPinSpot()
   if not pinned then return end
+  local ST = C_SuperTrack
+  if type(ST) == "table" and type(ST.IsSuperTrackingUserWaypoint) == "function"
+      and try(ST.IsSuperTrackingUserWaypoint) == false then return end
   local map, x, y = userWaypoint()
   if map and samePoint(pinned, map, x, y) then return { map = pinned.map, x = pinned.x, y = pinned.y } end
 end

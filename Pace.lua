@@ -17,21 +17,28 @@ end
 
 -- The kill line in the client's own words (COMBATLOG_XPGAIN_FIRSTPERSON, e.g. "%s dies, you gain
 -- %d experience."): its name and number become captures, not anchored at the end, so rested and
--- group bonus text after it still matches. Without that string, the English line.
+-- group bonus text after it still matches. The client's grammar codes (|1a;b; picks a particle,
+-- |4one:many; a plural) match whatever it printed; a format that puts the number first (%2$d before
+-- %1$s) is read in that order. Without that string, the English line.
+local numberFirst -- the kill pattern's number capture comes before the name's
 local function buildKillPattern()
   local fmt = COMBATLOG_XPGAIN_FIRSTPERSON
   if type(fmt) ~= "string" or not fmt:find("%", 1, true) then
-    return "(.+) dies, you gain ([%d,%.]+) experience"
+    return "(.+) dies, you gain ([%d,%.]+) experience", false
   end
-  local p = fmt:gsub("%%%d+%$s", "\1"):gsub("%%s", "\1"):gsub("%%%d+%$d", "\2"):gsub("%%d", "\2")
+  local p = fmt:gsub("|1[^;]*;[^;]*;", "\3"):gsub("|4[^;]*;", "\3")
+  p = p:gsub("%%%d+%$s", "\1"):gsub("%%s", "\1"):gsub("%%%d+%$d", "\2"):gsub("%%d", "\2")
+  local name, number = p:find("\1", 1, true), p:find("\2", 1, true)
   p = p:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
-  return (p:gsub("\1", "(.+)"):gsub("\2", "([%%d,%%.]+)"))
+  p = p:gsub("\1", "(.+)"):gsub("\2", "([%%d,%%.]+)"):gsub("\3", ".-")
+  return p, (name and number and number < name) and true or false
 end
 
 -- The XP a kill line gives, or nil when the line isn't a kill.
 local function killXP(text)
-  killPattern = killPattern or buildKillPattern()
-  local _, digits = text:match(killPattern)
+  if not killPattern then killPattern, numberFirst = buildKillPattern() end
+  local a, b = text:match(killPattern)
+  local digits = numberFirst and a or b
   return digits and tonumber((digits:gsub("[,%.]", ""))) or nil
 end
 

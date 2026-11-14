@@ -874,6 +874,12 @@ function S.minimapPins()
   MOCK.advance(0.2)
   check(not pins.edge:IsShown() and not pins.current:IsShown() and dots() > 0,
     "the game's own waypoint arrow marks the rim, so ours stays off; the dots still run there")
+  MOCK.superTracked = false -- you track something else: the game's arrow points there instead
+  MOCK.advance(0.2)
+  check(pins.edge:IsShown(), "while the game's arrow tracks something else, ours shows")
+  MOCK.superTracked = true
+  MOCK.advance(0.2)
+  check(not pins.edge:IsShown(), "and gives way again once it tracks the Codex's waypoint")
   LevelingCodexDB.noQuestMapPin = true
   MOCK.event("QUEST_LOG_UPDATE")
   MOCK.advance(0.2)
@@ -1006,6 +1012,28 @@ function S.paceKillsLocale()
   check(l.killXP == 75 and l.kills == 1, "the client's own wording counts")
 end
 
+-- Pace: a kill line with the client's grammar codes (|1a;b; picks a particle, |4 a plural) counts.
+function S.paceKillsGrammar()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%s|1i;ga; jugeossseumnida. gyeongheomchi %d|4jeom:jeom; hoekdeuk."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold ga jugeossseumnida. gyeongheomchi 75jeom hoekdeuk.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l and l.killXP == 75 and l.kills == 1, "a line with grammar codes counts")
+end
+
+-- Pace: a kill line that puts the number before the creature's name.
+function S.paceKillsNumberFirst()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%2$d XP: %1$s stirbt."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "75 XP: Kobold stirbt.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l and l.killXP == 75 and l.kills == 1, "a number-first line counts")
+end
+
 -- Stats: a level first counted partway in remembers where counting began.
 function S.statsFromPct()
   MOCK.level, MOCK.xp, MOCK.xpMax = 5, 400, 1000
@@ -1024,6 +1052,31 @@ function S.statsFromPct()
   check(#earlier == 1 and earlier[1].level == 5 and earlier[1].record == st.levels[5], "earlier levels, newest first")
   check(MOCK.ns.stats.levelRecord(6) == st.levels[6] and MOCK.ns.stats.levelRecord(7) == nil
     and st.levels[7] == nil, "a level's record, never made by asking")
+  MOCK.xp = 500
+  slash("")
+  click(win(), "Stats")
+  click(win(), "Reset stats")
+  click(win(), "Click again to reset")
+  MOCK.advance(2)
+  local again = LevelingCodexCharDB.stats.levels[6]
+  check(again and again.fromPct == 50, "after Reset stats, a level counted from partway in is marked again")
+end
+
+-- An outleveled dungeon's row fades like an outleveled guide's.
+function S.guideRowsFade()
+  MOCK.race, MOCK.level = "Human", 40
+  S.login()
+  slash("quests")
+  click(win(), "Guides")
+  local function find(f, text)
+    for _, r in ipairs({ f:GetRegions() }) do if r._text == text and r:IsShown() then return r end end
+    for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c, text); if hit then return hit end end
+  end
+  local title = find(win(), "The Deadmines")
+  local dim = MOCK.ns.C.dim
+  local r, g, b = title:GetTextColor()
+  check(math.abs(r - dim[1]) < 0.01 and math.abs(g - dim[2]) < 0.01 and math.abs(b - dim[3]) < 0.01,
+    "the outleveled Deadmines row is dimmed")
 end
 
 -- A long guide title stays on one line inside its row.
@@ -1433,6 +1486,12 @@ function S.questSetup()
   if on.Left then
     check(off.Left:GetAlpha() == 0 and on.Left:GetAlpha() == 1 and not on.plate:IsShown(),
       "the panel button's art shows on the lit choice only")
+  end
+  local onLabel, offLabel = on.GetFontString and on:GetFontString(), off.GetFontString and off:GetFontString()
+  if on.tick and onLabel and offLabel then
+    local _, _, _, x = onLabel:GetPoint()
+    local _, _, _, ox = offLabel:GetPoint()
+    check(x and x >= 8 and ox == 0, "the lit label moves right of its tick; an unlit one stays centred")
   end
   click(win(), "None")
   check(seg("None").codexOn and not seg("Recommended").codexOn, "None lights once nothing is planned")
@@ -1867,6 +1926,10 @@ function S.paceCard()
   check(questText(win(), "XP per hour this session, 1,200 rested XP on this level"), "the rested figure says what it counts")
   check(questText(win(), "Quests 200 XP, 2 turned in") and questText(win(), "Kills 150 XP, 4 kills"), "XP by source")
   check(questText(win(), "Level 4") and questText(win(), "1 h 5 min, 4 quests, 9 kills"), "the last levels")
+  click(win(), ">")
+  check(questText(win(), "Level 4") and not questText(win(), "Level 5"),
+    "above your level, the last levels are still the ones you finished")
+  click(win(), "<")
   click(win(), "<")
   click(win(), "<")
   check(questText(win(), "0 min on this level"), "an empty record draws without dividing by zero")

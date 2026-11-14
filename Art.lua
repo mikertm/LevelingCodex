@@ -254,6 +254,11 @@ function A.segment(parent)
     local fs = self.label or (self.GetFontString and self:GetFontString())
     if fs then
       if on then fs:SetTextColor(1, 0.82, 0) else fs:SetTextColor(0.75, 0.75, 0.75) end
+      -- clear of the tick, which sits at the left edge of a lit choice
+      if fs.ClearAllPoints and fs.SetPoint then
+        fs:ClearAllPoints()
+        fs:SetPoint("CENTER", self, "CENTER", (on and self.tick) and 9 or 0, 0)
+      end
     end
     for _, edge in ipairs(self.goldEdges) do edge:SetShown(on and true or false) end
     if self.tick then self.tick:SetShown(on and true or false) end
