@@ -102,12 +102,35 @@ end
 -- screens), the background's opacity, fading to 30% in combat (the mouse over it brings it back)
 -- and compact mode (db.questCompact: the title row, the bar and the buttons).
 local FADED, FADE_TIME = 0.3, 0.3
-local inCombat = false
+local inCombat, comfortPending = false, false
+
+-- The arrow's room above the window (clamp inset) is 76 px on screen, so 76 / scale window units.
+local function arrowRoom() return 76 / (tonumber(viewer and viewer:GetScale()) or 1) end
 
 local function applyComfort()
   if not viewer then return end
   local db = ns.db()
-  viewer:SetScale(math.max(0.5, math.min(1.5, tonumber(db.questViewerScale) or 1)))
+  local scale = math.max(0.5, math.min(1.5, tonumber(db.questViewerScale) or 1))
+  local old = tonumber(viewer:GetScale()) or 1
+  if math.abs(scale - old) > 0.001 then
+    -- In combat the secure item and target buttons beside the window can't move, so a new size
+    -- waits for PLAYER_REGEN_ENABLED.
+    if try(InCombatLockdown) then
+      comfortPending = true
+    else
+      comfortPending = false
+      -- a dragged window keeps its spot on screen: its offsets are in its own (scaled) units
+      local p = db.questPosition
+      if type(p) == "table" and tonumber(p[3]) and tonumber(p[4]) then
+        p[3], p[4] = p[3] * old / scale, p[4] * old / scale
+        placedBy = nil
+      end
+      viewer:SetScale(scale)
+      if not placedBy then place() end
+      if not db.questArrowPos then try(viewer.SetClampRectInsets, viewer, 0, 0, arrowRoom(), 0) end
+      updateItemButton()
+    end
+  end
   local a = math.max(0.2, math.min(1, tonumber(db.questViewerAlpha) or 1))
   viewer.background:SetAlpha(a)
   if type(viewer.SetBackdropColor) == "function" then
@@ -467,7 +490,7 @@ function ns.placeQuestArrow()
     try(viewer.SetClampRectInsets, viewer, 0, 0, 0, 0)
   else
     arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 28)
-    try(viewer.SetClampRectInsets, viewer, 0, 0, 76, 0)
+    try(viewer.SetClampRectInsets, viewer, 0, 0, arrowRoom(), 0)
   end
 end
 
@@ -1074,7 +1097,9 @@ local function updateTargetButton()
   local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
   targetButton:ClearAllPoints()
   if left and top then
-    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left - 10, top - 72)
+    -- the window's edges are in its own units: times its scale for UIParent's
+    local s = tonumber(viewer:GetScale()) or 1
+    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 10, (top - 72) * s)
   else
     targetButton:SetPoint("CENTER", UIParent, "CENTER", -260, 30)
   end
@@ -1109,7 +1134,8 @@ updateItemButton = function()
   local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
   itemButton:ClearAllPoints()
   if left and top then
-    itemButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left - 6, top - 26)
+    local s = tonumber(viewer:GetScale()) or 1
+    itemButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 6, (top - 26) * s)
   else
     itemButton:SetPoint("CENTER", UIParent, "CENTER", -260, 80)
   end
@@ -2140,7 +2166,10 @@ local function handle(event, a, b, c, d, e)
     return
   end
   if event == "PLAYER_REGEN_DISABLED" then inCombat = true; return end
-  if event == "PLAYER_REGEN_ENABLED" then inCombat = false end
+  if event == "PLAYER_REGEN_ENABLED" then
+    inCombat = false
+    if comfortPending then applyComfort() end
+  end
   if event == "PLAYER_REGEN_ENABLED" and itemPending then
     updateItemButton()
     return

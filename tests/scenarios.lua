@@ -905,6 +905,42 @@ function S.stepCompactNote()
     "a compact note step: chip and title, no count or distance")
 end
 
+-- At any size the target button sits beside the window (in UIParent units), the arrow keeps its room
+-- above it, and in combat a new size waits (the secure buttons beside it can't move then).
+function S.stepScaleButtons()
+  S.login()
+  local frame = questViewer()
+  frame._left, frame._top = 400, 600 -- the window's edges in its own units
+  slash("")
+  click(win(), "Settings")
+  for _ = 1, 5 do click(win(), "Step window size -") end
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "half size")
+  local target = _G.LevelingCodexQuestTarget
+  local _, _, _, x, y = target:GetPoint()
+  check(target:IsShown() and math.abs(x - (400 * 0.5 - 10)) < 0.01 and math.abs(y - (600 * 0.5 - 72 * 0.5)) < 0.01,
+    "the target button sits beside the half-size window (" .. tostring(x) .. ", " .. tostring(y) .. ")")
+  check(frame._clampInsets and math.abs(frame._clampInsets[3] - 152) < 0.01, "the arrow keeps its room above the window")
+  MOCK.combat = true
+  click(win(), "Step window size +")
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "in combat the new size waits")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(math.abs(frame:GetScale() - 0.6) < 0.001, "and applies after combat")
+end
+
+-- A dragged window keeps its spot on screen when it's resized (Ctrl+wheel stays under the cursor).
+function S.stepScaleSaved()
+  LevelingCodexDB = { questPosition = { "CENTER", "CENTER", 100, 50 } }
+  S.login()
+  local frame = questViewer()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Step window size -")
+  local _, _, _, x, y = frame:GetPoint()
+  check(math.abs(x * frame:GetScale() - 100) < 0.01 and math.abs(y * frame:GetScale() - 50) < 0.01,
+    "a dragged window keeps its spot when resized (" .. tostring(x) .. ", " .. tostring(y) .. ")")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
