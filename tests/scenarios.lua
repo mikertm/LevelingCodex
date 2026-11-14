@@ -1900,6 +1900,63 @@ function S.questSetup()
   check(questText(win(), "SET UP YOUR GUIDE"), "Guide setup opens it again")
 end
 
+-- Steps shown ahead (the setup card and Settings, 0-10): the list runs on into the next section.
+function S.questPreviewAhead()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 22, 1433, "Lakeshire"
+  local order, seen = {}, {}
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "lakeshire" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not seen[step.quest] then seen[step.quest], order[#order + 1] = true, step.quest end
+      end
+    end
+  end
+  local last, before = order[#order], order[#order - 1]
+  for _, id in ipairs(order) do
+    if id ~= last and id ~= before then MOCK.questDone[id] = true end
+  end
+  MOCK.questLog = { { questID = before, isComplete = true }, { questID = last, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  LevelingCodexDB.questPreview = 8
+  MOCK.event("QUEST_LOG_UPDATE")
+  local Q = MOCK.ns.quests
+  local row, i = Q.current()
+  local ahead = row and Q.upcoming(i, 8) or {}
+  check(row and row.section.id == "lakeshire" and #ahead == 8 and ahead[1].section.id == "lakeshire"
+    and ahead[8].section.id == "duskwood", "the test starts a few steps before the end of Lakeshire")
+  for n, r in ipairs(ahead) do
+    check(questText(frame, Q.label(r.step)), "8 steps ahead lists step " .. n .. ": " .. Q.label(r.step))
+  end
+  check(questText(frame, "Next section: Duskwood"), "the list names the next section where it starts")
+
+  local function seg(name) return findButton(win(), function(l) return l == name end) end
+  click(win(), "Setup")
+  check(not seg("2 steps").codexOn and questText(win(), "8 steps: see Settings"),
+    "the setup card says when the count is one Settings set")
+  click(win(), "10 steps")
+  check(LevelingCodexDB.questPreview == 10 and seg("10 steps").codexOn, "the setup card can show 10 steps ahead")
+  click(win(), "2 steps")
+  check(LevelingCodexDB.questPreview == 2 and seg("2 steps").codexOn and not questText(frame, Q.label(ahead[8].step)),
+    "and back to 2")
+  click(win(), "Settings")
+  local function stepsButton(label)
+    for _, b in ipairs(MOCK.buttons(win())) do
+      if labelOf(b) == label and b.tipText and b.tipText:find("steps the step window lists", 1, true) then return b end
+    end
+    check(false, "Settings has a '" .. label .. "' button for the steps shown ahead", 2)
+  end
+  LevelingCodexDB.questPreview = 9
+  stepsButton("+"):Click()
+  check(LevelingCodexDB.questPreview == 10, "Settings goes up to 10 steps ahead")
+  stepsButton("+"):Click()
+  check(LevelingCodexDB.questPreview == 10, "Settings stops at 10 steps ahead")
+  stepsButton("-"):Click()
+  check(LevelingCodexDB.questPreview == 9, "Settings can show fewer steps ahead")
+end
+
 -- Hostile elites and rares near the current step are named until you outlevel them.
 function S.questDanger()
   S.login()

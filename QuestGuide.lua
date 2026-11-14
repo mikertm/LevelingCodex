@@ -1297,9 +1297,23 @@ function ns.showQuestStepOnMap()
   end
 end
 
--- The steps after this one (Settings > Steps shown ahead, 0-5, default 2), as UP NEXT.
+-- How many of the next steps the step window lists (the setup card and Settings, 0-10, default 2).
+local PREVIEW_MAX = 10
+
+function ns.questPreviewCount()
+  local count = math.floor(tonumber(ns.db().questPreview) or 2)
+  return math.max(0, math.min(PREVIEW_MAX, count))
+end
+
+function ns.setQuestPreview(count)
+  ns.db().questPreview = math.max(0, math.min(PREVIEW_MAX, math.floor(tonumber(count) or 2)))
+  ns.questRefresh()
+end
+
+-- The steps after this one, as UP NEXT. The list runs on into the next sections of the route,
+-- each one named where it starts; a side guide (dungeon, special) stops at its own end.
 local function addPreview(out, row, i)
-  local count = math.max(0, math.min(5, tonumber(ns.db().questPreview) or 2))
+  local count = ns.questPreviewCount()
   local upcoming = Q.upcoming(i, math.max(1, count))
   local nextRow = upcoming[1]
   if not nextRow then
@@ -1311,14 +1325,14 @@ local function addPreview(out, row, i)
   end
   if count == 0 then return end
   out[#out + 1] = { kind = "heading", text = "Up next" }
-  if nextRow.section ~= row.section then
-    out[#out + 1] = { kind = "note", tone = "dim", text = "Next section: " .. nextRow.section.title }
-  end
-  -- one row per step: its icon, its label and (Task 3) how far it is
-  out[#out + 1] = { kind = "upnext", step = nextRow.step, text = Q.label(nextRow.step) }
-  for n = 2, #upcoming do
-    if upcoming[n].section ~= nextRow.section then break end
-    out[#out + 1] = { kind = "upnext", step = upcoming[n].step, text = Q.label(upcoming[n].step) }
+  -- one row per step: its icon, its label and how far it is
+  local section = row.section
+  for n, ahead in ipairs(upcoming) do
+    if ahead.section ~= section then
+      section = ahead.section
+      out[#out + 1] = { kind = "note", tone = "dim", gap = n > 1 and 3 or nil, text = "Next section: " .. section.title }
+    end
+    out[#out + 1] = { kind = "upnext", step = ahead.step, text = Q.label(ahead.step) }
   end
 end
 
