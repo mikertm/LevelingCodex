@@ -4123,7 +4123,8 @@ S.talent = talent
 
 -- mode "name": buttons answer GetDefinitionInfo() with a spellID (C_Traits style)
 -- mode "icon": buttons only carry an icon texture
-function S.makeTalentWindow(mode, frameName)
+-- all = "all": a button for every talent of the class tree, not only the guide plan's
+function S.makeTalentWindow(mode, frameName, all)
   if not D() then return end
   local root = CreateFrame("Frame", frameName or "PlayerSpellsFrame", UIParent)
   root:SetSize(800, 600)
@@ -4164,6 +4165,10 @@ function S.makeTalentWindow(mode, frameName)
   for i = 1, 25 do addButton("Decoy", "Decoy Talent " .. i, "inv_misc_questionmark_decoy" .. i) end
   for _, p in ipairs(D().plan) do
     if not talent.byName[p.name] then talent.byName[p.name] = addButton(p.tree, p.name, p.icon) end
+  end
+  local tree = all == "all" and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not talent.byName[t.name] then talent.byName[t.name] = addButton(tree.tabs[t.tab], t.name, t.icon) end
   end
   ToggleTalentFrame_Mock = function() if root:IsShown() then root:Hide() else root:Show() end end
   return root
@@ -5727,6 +5732,83 @@ function S.talentPathApi()
   MOCK.traitNodes = {}
   MOCK.event("TRAIT_CONFIG_UPDATED", 7)
   LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the
+-- trace in the talent window; a custom path's unplanned point says to plan it.
+function S.talentPathFollow()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local ns = MOCK.ns
+  ns.setTalentPath("arms")
+  local function levelUp(level)
+    MOCK.chat = {}
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
+    MOCK.advance(4.5)
+  end
+  levelUp(40)
+  check(chatHas("Mortal Strike 1/1"), "chat names the Arms point at 40")
+  check(MOCK.textUnder(toast()):find("Mortal Strike  1/1", 1, true), "banner names the Arms point at 40")
+  MOCK.advance(10)
+  openAt(40, "This Level")
+  check(MOCK.textUnder(win()):find("Mortal Strike", 1, true), "This Level shows the Arms point")
+  win():Hide()
+  local mini = _G.LevelingCodexMinimapButton
+  MOCK.fire(mini, "OnEnter")
+  check((GameTooltip._lines[2] or ""):find("^Arms"), "minimap tooltip names the path: " .. tostring(GameTooltip._lines[2]))
+  check(table.concat(GameTooltip._lines, " "):find("Mortal Strike", 1, true), "minimap tooltip: the talent now")
+  MOCK.fire(mini, "OnLeave")
+  MOCK.unspent = 1
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local trace = _G.LevelingCodexTalentTrace
+  local _, on = trace:GetPoint(1)
+  check(trace:IsShown() and on == talent.byName["Mortal Strike"], "the trace is on Mortal Strike")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  -- a custom path that stops at 49
+  ns.customFrom("arms")
+  for _ = 1, 11 do ns.customUndo() end
+  ns.setTalentPath("custom")
+  levelUp(50)
+  check(chatHas("plan it in .-/codex talents.- %(your custom path has none for this level%)"), "chat: plan the point")
+  check(MOCK.textUnder(toast()):find("Plan it in /codex talents", 1, true), "banner: plan the point")
+  MOCK.advance(10)
+  openAt(50, "This Level")
+  check(MOCK.textUnder(win()):find("Your custom path has no point for level 50 yet. Plan it on the Talents tab.", 1, true),
+    "This Level: plan the point")
+  win():Hide()
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local hint = _G.LevelingCodexTalentHint
+  check(hint:IsShown() and hint.name:GetText() == "No point planned", "hint card: no point planned")
+  check(hint.next:GetText() == "Plan it in /codex talents.", "hint card: plan it")
+  check(not trace:IsShown(), "nothing traced without a planned point")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  MOCK.unspent = nil
+  slash("debug")
+  check(chatHas("talent path: custom %(saved%), custom points: 40"), "debug names the path")
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The trainer list and the Macros tab under another spec's path.
+function S.talentTrainerPath()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  MOCK.ns.setTalentPath("arms")
+  openAt(48, "Trainer")
+  local text = MOCK.textUnder(win())
+  check(text:find("Mortal Strike (Rank 2)", 1, true), "Arms trains Mortal Strike (Rank 2)")
+  check(not text:find("Shield Slam (Rank 2)", 1, true), "no Shield Slam ranks for Arms")
+  click(win(), "Macros")
+  check(MOCK.textUnder(win()):find("These macros are built for the Protection guide.", 1, true), "macros say which guide")
+  MOCK.ns.setTalentPath("guide")
+  click(win(), "Trainer")
+  check(MOCK.textUnder(win()):find("Shield Slam (Rank 2)", 1, true), "the guide path trains Shield Slam")
+  click(win(), "Macros")
+  check(not MOCK.textUnder(win()):find("These macros are built for", 1, true), "no note on the guide path")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
 end
 
 -- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.

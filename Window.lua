@@ -767,6 +767,8 @@ renderers.level = function(V)
       T(hit.tree, 74, y + h + 2, W - 100, "small", C.inkSoft)
       y = y + math.max(50, h + 20)
       y = y + T(plain(text), 16, y, W - 32, "body", C.ink) + 14
+    elseif ns.talentUnplanned(V) then
+      y = y + T("Your custom path has no point for level " .. V .. " yet. Plan it on the Talents tab.", 16, y, W - 32, "body", C.ink) + 14
     end
   else
     T("YOUR TALENT POINT", 16, y, 300, "label", C.inkSoft)
@@ -785,6 +787,9 @@ renderers.level = function(V)
       if h2 then
         icon(h2.icon, x, y, 28, l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max, plain(l == h2.from and h2.why or h2.more))
         T(l .. "  " .. h2.name .. " " .. r2 .. "/" .. h2.max, x + 34, y + 8, 160, "small", C.light)
+        x = x + 196
+      elseif ns.talentUnplanned(l) then
+        T(l .. "  Not planned yet", x + 34, y + 8, 160, "small", C.dim)
         x = x + 196
       end
     end
@@ -1049,7 +1054,7 @@ renderers.trainer = function(V)
   local y = sectionTitle("Trainer visits", 0, "every new spell and rank, by level")
   local me = UnitLevel("player")
   local list = {}
-  for _, t in ipairs(ns.D.train) do list[#list + 1] = t end
+  for _, t in ipairs(ns.trainVisits()) do list[#list + 1] = t end
   table.sort(list, function(a, b) return a.level < b.level end)
   for _, t in ipairs(list) do
     local here = t.level == V
@@ -1074,6 +1079,10 @@ local PAD_NAMES = { xbox = "Xbox", ps = "PlayStation", switch = "Switch" }
 renderers.macros = function(V)
   local list = ns.macrosFor(V)
   local y = sectionTitle("Macros for level " .. V, 0, "hover a button for how it works")
+  local path = ns.talentPath()
+  if path and not path.guide then
+    y = y + T("These macros are built for the " .. ns.D.spec .. " guide.", 0, y, W, "small", C.gold) + 6
+  end
   local h = T("Set up macros makes them all at once (character tab of Esc > Macros). Then put each on the button or key shown below.",
     0, y, W - 170, "small", C.dim)
   btn("Set up macros", W - 150, y - 2, 150, function() ns.setupMacros(false) end, true,

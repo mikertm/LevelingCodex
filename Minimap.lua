@@ -41,7 +41,10 @@ local function showTip(owner, isButton)
   local D = ns.D
   GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
   GameTooltip:SetText("The Leveling Codex", rgba(C.tipTitle))
-  if D then GameTooltip:AddLine(D.spec .. " " .. (ns.CLASS_NAME or "") .. " - level " .. UnitLevel("player"), 0.8, 0.8, 0.8) end
+  if D then
+    local path = ns.talentPath()
+    GameTooltip:AddLine((path and path.spec or D.spec) .. " " .. (ns.CLASS_NAME or "") .. " - level " .. UnitLevel("player"), 0.8, 0.8, 0.8)
+  end
   local hit, rank
   if D then hit, rank = ns.talentAt(UnitLevel("player")) end
   if hit then GameTooltip:AddLine("Talent now: " .. hit.name .. " " .. rank .. "/" .. hit.max, 1, 1, 1) end

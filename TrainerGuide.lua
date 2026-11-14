@@ -13,7 +13,7 @@ local seen        -- what the last visit read, for /codex debug
 -- The guide's spells up to your level: { name, rank, text, icon }, first visit first.
 local function guideSpells(level)
   local list, known = {}, {}
-  for _, visit in ipairs(ns.D and ns.D.train or {}) do
+  for _, visit in ipairs(ns.D and ns.trainVisits() or {}) do
     if visit.level <= level then
       for i, spell in ipairs(visit.spells or {}) do
         local text = plain(spell)

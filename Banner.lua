@@ -15,6 +15,8 @@ function ns.levelUpMessage(level)
   local hit, rank, text = ns.talentAt(level)
   if hit then
     ns.say("level " .. level .. " - talent: " .. WHITE .. hit.name .. " " .. rank .. "/" .. hit.max .. "|r (" .. hit.tree .. "). " .. plain(text))
+  elseif ns.talentUnplanned(level) then
+    ns.say("level " .. level .. " - talent point: plan it in " .. WHITE .. "/codex talents|r (your custom path has none for this level).")
   end
   local t = ns.trainAt(level)
   if t then ns.say("new spells at your trainer: " .. plain(table.concat(t.spells, ", ")) .. ".") end
@@ -307,6 +309,8 @@ local function unlocksAt(level)
   local hit, rank = ns.talentAt(level)
   if hit then
     rows[#rows + 1] = { hit.icon, "TALENT POINT", hit.name .. "  " .. rank .. "/" .. hit.max }
+  elseif ns.talentUnplanned(level) then
+    rows[#rows + 1] = { ns.ADDON_ICON, "TALENT POINT", "Plan it in /codex talents" }
   end
   local t = ns.trainAt(level)
   if t then

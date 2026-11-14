@@ -994,6 +994,9 @@ def main():
         if not minimal:
             for cls in ("DRUID", UNSUPPORTED):
                 runs.append(("%s/full/talent-path-api" % cls, cls, False, ["login", "talentPathApi"]))
+            runs.append(("WARRIOR/full/talent-path-follow", "WARRIOR", False,
+                         ["makeTalentWindow:name:PlayerSpellsFrame:all", "login", "talentPathFollow"]))
+        runs.append(("WARRIOR/%s/talent-path-trainer" % variant, "WARRIOR", minimal, ["login", "talentTrainerPath"]))
         if not minimal:
             runs.append(("WARRIOR/full/warrior-macros-upgrade", "WARRIOR", False, ["login", "warriorMacroUpgrade"]))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))

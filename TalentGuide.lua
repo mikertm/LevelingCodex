@@ -593,6 +593,28 @@ hideGuide = function()
   guide.edgeRoot = nil -- look for bars around the window again on the next open
 end
 
+-- A custom path with no point for this level: the card says to plan it, nothing is traced.
+local function showUnplanned(root, planLevel)
+  local key = "unplanned:" .. planLevel
+  if guide.open and guide.root == root and guide.key == key and guide.theme == ns.themeVersion then
+    if guide.hint and guide.hint:IsShown() and ns.windowEdgesDue(guide) then ns.placeByWindow(guide.hint, root, guide) end
+    return
+  end
+  guide.open, guide.root, guide.theme, guide.key = true, root, ns.themeVersion, key
+  guide.talent, guide.button, guide.traced = nil, nil, false
+  guide.trace = guide.trace or makeTrace()
+  guide.hint = guide.hint or makeHint()
+  paintTrace(guide.trace); paintHint(guide.hint)
+  local h = guide.hint
+  ns.setIcon(h.icon, ns.ADDON_ICON)
+  h.label:SetText("LEVELING CODEX  -  LEVEL " .. planLevel)
+  h.name:SetText("No point planned")
+  h.next:SetText("Plan it in /codex talents.")
+  guide.trace:Hide()
+  ns.placeByWindow(h, root, guide)
+  h:Show()
+end
+
 -- Runs every 0.25 s. Cheap once the talent is traced: one name check on the cached button.
 -- Shows only while there's a talent point to spend (when the client can tell us).
 local function talentGuideTick()
@@ -613,6 +635,7 @@ local function talentGuideTick()
   local planLevel = nextPlanLevel(level, unspent)
   local hit, rank = ns.talentAt(planLevel)
   if not hit then
+    if ns.talentUnplanned(planLevel) then return showUnplanned(root, planLevel) end
     if guide.open then hideGuide() end
     return
   end
@@ -692,7 +715,7 @@ end
 
 -- For /codex debug: what the talent guide can see right now.
 function ns.talentDebugLines()
-  local out = {}
+  local out = ns.talentPathDebugLines and ns.talentPathDebugLines() or {}
   local root = shownTalentRoot()
   local rname = root and root.GetName and select(2, pcall(root.GetName, root)) or nil
   out[#out + 1] = "talent window: " .. (root and tostring(rname or "(unnamed)") or "not open")
