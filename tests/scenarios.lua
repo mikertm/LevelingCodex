@@ -821,6 +821,15 @@ function S.stepButtons()
     check(GameTooltip._lines[1] == name, name .. " names itself on hover")
     MOCK.fire(b, "OnLeave")
   end
+  local hide = findButton(frame, function(l) return l == "Hide" end)
+  local compactB = findButton(frame, function(l) return l == "Compact" end)
+  if hide.icon then
+    check(hide.icon._path == "Interface\\Buttons\\UI-Panel-MinimizeButton-Up"
+      and not (compactB.icon and compactB.icon._path == hide.icon._path),
+      "Hide is the close button, not the compact switch's minus")
+  else
+    check(hide.label._text ~= (compactB.label and compactB.label._text), "Hide and the compact switch read differently")
+  end
   local before = nextB.fill._color[1]
   slash("")
   click(win(), "Settings")

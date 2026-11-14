@@ -295,7 +295,7 @@ local function makeViewer()
   viewer.buttons = {
     icon("Back", 12, A.FILES.prevUp, "<", function() ns.moveQuestStep(true) end),
     icon("Quests", 270, A.FILES.questBook, "Q", function() ns.openQuestStep() end),
-    icon("Hide", 302, A.FILES.minusUp, "x", ns.hideQuestViewer),
+    icon("Hide", 302, A.FILES.closeUp, "x", ns.hideQuestViewer), -- the close art: minus is compact's
   }
   nextButton = primary("Next", 44, 222, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
@@ -1647,7 +1647,8 @@ function ns.questRefresh()
     local cb = viewer.compactButton
     cb.codexLabel = compact and "Expand" or "Compact"
     cb.tipTitle = compact and "Expand" or "Compact"
-    if cb.icon then cb.icon:SetTexture(compact and A.FILES.plusUp or A.FILES.minusUp)
+    local fold = compact and A.FILES.plusUp or A.FILES.minusUp
+    if cb.icon and A.hasFile(fold) then cb.icon:SetTexture(fold)
     elseif cb.label then cb.label:SetText(compact and "+" or "-") end
     local portrait = viewer.portrait:ShowFor(not compact and row and row.step or nil, kind)
     if portrait then viewer.titleIcon:Hide() end

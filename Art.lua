@@ -36,6 +36,7 @@ A.FILES = {
   plusUp      = "Interface\\Buttons\\UI-PlusButton-Up",
   minusUp     = "Interface\\Buttons\\UI-MinusButton-Up",
   questBook   = "Interface\\QuestFrame\\UI-QuestLog-BookIcon",
+  closeUp     = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up",
 }
 
 -- Does the client have this file? (cached; probed on a hidden texture)
