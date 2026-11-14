@@ -878,12 +878,14 @@ def update_audit_checks(gamedata, ref, tag):
     import tempfile
     built = copy.deepcopy(ref)
     built["quests"]["maps"] = {int(key): value for key, value in built["quests"]["maps"].items()}
-    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit")
+    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata")
     saved = {name: getattr(gamedata, name) for name in names}
-    audited, calls = [], []
+    audited, calls, trees_written = [], [], []
     fd, path = tempfile.mkstemp(suffix=".json")
     os.close(fd)
     argv = sys.argv
+    trees = os.path.join(ROOT, "TalentTreeData.lua")
+    before = os.stat(trees).st_mtime_ns if os.path.exists(trees) else None
     try:
         saved["write_reference"](ref, path)
         gamedata.latest_build = lambda: ref["build"]
@@ -892,6 +894,7 @@ def update_audit_checks(gamedata, ref, tag):
         gamedata.write_reference = lambda r, p=path: saved["write_reference"](r, p)
         gamedata.load_reference = lambda p=path: saved["load_reference"](p)
         gamedata.full_audit = lambda r, only=None: calls.append(r) or audited.extend(saved["full_audit"](r, "QUESTS")) or audited
+        gamedata.write_talentdata = lambda r: trees_written.append(r)
         sys.argv = ["gamedata.py", "update"]
         with contextlib.redirect_stdout(io.StringIO()):
             gamedata.main()
@@ -900,6 +903,11 @@ def update_audit_checks(gamedata, ref, tag):
         for name, value in saved.items():
             setattr(gamedata, name, value)
         os.remove(path)
+    # the harness never writes the repo: `update` rewrites TalentTreeData.lua for real
+    if before is not None and os.stat(trees).st_mtime_ns != before:
+        return ["%s tools: the harness's update check rewrote TalentTreeData.lua in the repo" % tag]
+    if not trees_written:
+        return ["%s tools: update doesn't regenerate TalentTreeData.lua" % tag]
     wrong = [m for _, lvl, m in audited if lvl == "error"]
     if not calls or wrong:
         return ["%s tools: update audits the freshly built reference, not the written one (%d quest errors, e.g. %s)" %
