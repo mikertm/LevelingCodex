@@ -141,6 +141,17 @@ function ns.padText(s)
   return s
 end
 
+-- Copper as "1g 20s 5c" with each part in its coin's colour (colour codes are ASCII).
+function ns.coins(copper)
+  copper = math.max(0, math.floor(tonumber(copper) or 0))
+  local parts = {}
+  local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+  if g > 0 then parts[#parts + 1] = "|cffffd100" .. g .. "g|r" end
+  if s > 0 then parts[#parts + 1] = "|cffc7c7cf" .. s .. "s|r" end
+  if c > 0 or #parts == 0 then parts[#parts + 1] = "|cffeda55f" .. c .. "c|r" end
+  return table.concat(parts, " ")
+end
+
 -- A whole number with thousands separators: 21400 -> "21,400".
 function ns.thousands(n)
   n = math.floor((tonumber(n) or 0) + 0.5)

@@ -6707,20 +6707,43 @@ function S.statsLevelUp()
     "a level-up just before its own turn-in still files the reward at the level it finished")
 end
 
--- The Stats tab: this session, level splits, gold, activity and zones; two clicks reset.
+-- The Stats tab: tiles, level splits with bars, gold earned and spent, activity tiles and zones, a
+-- session/character switch; two clicks reset.
 function S.statsTab()
-  MOCK.mapInfo = STATS_MAPS
+  MOCK.mapInfo, MOCK.money = STATS_MAPS, 1000 -- money known at login, so the reward's change is filed
+  LevelingCodexCharDB = { stats = { version = 1, zones = {}, totals = { goldIn = {}, goldOut = {} },
+    levels = { [MOCK.level + 1] = { seconds = 0, xp = 0, questXP = 0, killXP = 0, rested = 0, quests = 0, kills = 0,
+      deaths = 0, goldIn = {}, goldOut = {} } } } } -- an empty record: drawn without dividing by zero
   S.login()
-  MOCK.event("QUEST_TURNED_IN", 783, 120, 0)
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.setMoney(1500)
   MOCK.advance(2)
   slash("")
   click(win(), "Stats")
-  local text = MOCK.textUnder(win())
-  for _, head in ipairs({ "THIS SESSION", "LEVEL SPLITS", "GOLD", "ACTIVITY", "ZONES" }) do
-    check(text:find(head, 1, true), "the Stats tab has " .. head)
+  for _, head in ipairs({ "LEVEL SPLITS", "GOLD EARNED", "GOLD SPENT", "ACTIVITY", "ZONES", "XP per hour",
+      "Next level in", "Gold per hour" }) do
+    check(questText(win(), head), "the Stats tab has " .. head)
   end
-  check(questText(win(), "Quests turned in"), "counts show")
+  local function seg(name) return findButton(win(), function(l) return l == name end) end
+  if not MOCK.minimal then
+    check(seg("This character") and seg("This character").codexOn, "the character's figures by default")
+  end
+  check((MOCK.minimal or questText(win(), "Quest rewards")) and not questText(win(), "Repairs"),
+    "only sources that moved money (the minimal client has no GetMoney)")
+  check(not MOCK.minimal or questText(win(), "Nothing yet."), "an empty column says so")
+  local split = findButton(win(), function(l) return l == "Level " .. MOCK.level end)
+  check(split, "each level split is hoverable")
+  MOCK.fire(split, "OnEnter")
+  -- (the minimal client counts nothing here, like statsCounters: only the line's shape is checked)
+  check(GameTooltip._lines and GameTooltip._lines[2]
+    and GameTooltip._lines[2]:find(MOCK.minimal and "Quest XP " or "Quest XP 120", 1, true),
+    "hovering a split gives its XP by source")
+  MOCK.fire(split, "OnLeave")
   check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
+  click(win(), "This session")
+  check(seg("This session").codexOn and not findButton(win(), function(l) return l == "Level " .. (MOCK.level + 1) end),
+    "this session's figures leave out levels from saved sessions")
+  click(win(), "This character")
   click(win(), "Reset stats")
   click(win(), "Click again to reset")
   check(LevelingCodexCharDB.stats.totals.quests == 0, "two clicks reset the saved stats")
@@ -6746,6 +6769,7 @@ function S.statsTabLost()
   slash("")
   click(win(), "Stats")
   check(questText(win(), "Counting since you logged in"), "without saved data the tab says what it counts")
+  check(not findButton(win(), function(l) return l == "This character" end), "no switch without saved data")
 end
 
 -- Vendor with a server round trip (money and bought items arrive later): the repair waits for the

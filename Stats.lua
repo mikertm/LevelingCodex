@@ -365,6 +365,9 @@ local GOLD_NAMES = { quest = "Quest rewards", loot = "Looted", junk = "Junk sold
   other = "Other", repair = "Repairs", training = "Training", flights = "Flights", buys = "Vendor purchases" }
 local showAllLevels, showAllZones = false, false
 local confirmReset, confirmAt
+local scope = "character" -- the tab's switch, this session: "session" or "character"
+local SOURCE_COLORS = { { 0.88, 0.7, 0.29, 1 }, { 0.77, 0.33, 0.29, 1 }, { 0.36, 0.45, 0.46, 1 } }
+local EARNED, SPENT, TRACK = { 0.88, 0.7, 0.29, 1 }, { 0.77, 0.33, 0.29, 1 }, { 0.05, 0.05, 0.08, 0.9 }
 
 local function duration(seconds)
   local minutes = math.floor((tonumber(seconds) or 0) / 60 + 0.5)
@@ -374,7 +377,7 @@ end
 
 local function signed(copper)
   copper = tonumber(copper) or 0
-  return (copper < 0 and "-" or "") .. ns.money(math.abs(copper))
+  return (copper < 0 and "-" or "") .. ns.coins(math.abs(copper))
 end
 
 local function sum(t)
@@ -383,79 +386,109 @@ local function sum(t)
   return n
 end
 
-local function totalsOf(tree)
-  local xp, seconds = 0, 0
-  for _, l in pairs(tree.levels) do
-    if type(l) == "table" then xp, seconds = xp + (tonumber(l.xp) or 0), seconds + (tonumber(l.seconds) or 0) end
-  end
-  return xp, seconds
-end
+local function num(v) return tonumber(v) or 0 end
+local function plural(n, word) return n .. " " .. word .. (n == 1 and "" or "s") end
+-- XP that came neither from a turn-in nor a kill (a turn-in's XP can be filed before its XP update)
+local function otherXP(l) return math.max(0, num(l.xp) - num(l.questXP) - num(l.killXP)) end
 
 local function render()
   local U, C = ns.ui, ns.C
   local W = U.W
   local lost = ns.settingsLost
-  local tree = (not lost and saved()) or session
-  local y = U.sectionTitle("Stats", 0, lost and "counting since you logged in" or "this session and all saved")
-
-  -- A parchment card: its heading, then { label, value } rows (a row with `cols` is a table row).
-  local function card(title, rows, note)
-    local top = y
-    y = y + 10
-    y = y + U.T(title, 14, y, W - 28, "label", C.inkSoft) + 6
-    if note then y = y + U.T(note, 14, y, W - 28, "small", C.ink) + 6 end
-    for _, row in ipairs(rows) do
-      if row.cols then
-        local x, h = 14, 0
-        for i, text in ipairs(row.cols) do
-          local w = row.widths[i]
-          h = math.max(h, (U.T(text, x, y, w, row.head and "label" or "small", row.head and C.inkSoft or C.ink,
-            i == 1 and "LEFT" or "RIGHT")))
-          x = x + w
-        end
-        y = y + h + 3
-      else
-        U.T(row[1], 14, y, W * 0.55, "body", C.ink)
-        y = y + U.T(row[2], W * 0.55, y, W * 0.45 - 14, "body", C.ink, "RIGHT") + 4
-      end
-    end
-    y = y + 8
-    U.box(0, top, W, y - top, C.parch, C.edge)
-    y = y + 12
+  local useSession = lost or scope == "session"
+  local tree = (not useSession and saved()) or session
+  local current = level()
+  local y = U.sectionTitle("Stats", 0)
+  if lost then
+    y = y + U.T("Counting since you logged in: Forever didn't load your saved stats.", 0, y, W, "small", C.dim) + 8
+  else
+    U.segments(W - 260, 0, 260, { "This session", "This character" }, useSession and 1 or 2, function(i)
+      scope = i == 1 and "session" or "character"
+      U.refresh()
+    end, { "Only what you did since you logged in.", "Everything saved for this character, every session." })
   end
 
-  -- 1. This session
-  local now = time and time() or 0
-  local hours = math.max(1 / 60, (now - (tonumber(session.started) or now)) / 3600)
-  local xp = totalsOf(session)
-  local net = sum(session.totals.goldIn) - sum(session.totals.goldOut)
-  card("THIS SESSION", {
-    { "Time", duration(hours * 3600) },
-    { "XP per hour", tostring(math.floor(xp / hours + 0.5)) },
-    { "Gold per hour", signed(math.floor(net / hours + 0.5)) },
-    { "Quests turned in", tostring(session.totals.quests or 0) },
-    { "Kills", tostring(session.totals.kills or 0) },
-    { "Deaths", tostring(session.totals.deaths or 0) },
-  }, lost and "Counting since you logged in: Forever didn't load your saved stats." or nil)
+  -- Tiles: { label, value, sub, colour }, `perRow` to a row, 58 px tall.
+  local function tiles(list, perRow)
+    local tw = math.floor((W - 8 * (perRow - 1)) / perRow)
+    for i, t in ipairs(list) do
+      local x, ty = ((i - 1) % perRow) * (tw + 8), y + math.floor((i - 1) / perRow) * 66
+      U.box(x, ty, tw, 58, C.panel, C.edge)
+      U.T(t[1], x + 10, ty + 8, tw - 20, "small", C.dim)
+      U.T(t[2], x + 10, ty + 21, tw - 20, "head", t[4] or C.light)
+      if t[3] then U.T(t[3], x + 10, ty + 41, tw - 20, "small", C.dim) end
+    end
+    y = y + math.ceil(#list / perRow) * 66 + 6
+  end
+  local function heading(text, x, w, right)
+    U.T(text, (x or 0) + 14, y, (w or W) - 28, "label", C.gold)
+    if right then U.T(right, (x or 0) + 14, y, (w or W) - 28, "small", C.light, "RIGHT") end
+  end
 
-  -- 2. Level splits: the last 10 levels (or all), newest first.
+  -- 1. Headline tiles
+  local here = tree.levels[current]
+  local rate = ns.paceRate and ns.paceRate()
+  local cur, max = tonumber(try(UnitXP, "player")), tonumber(try(UnitXPMax, "player"))
+  local toGo = cur and max and max > cur and max - cur
+  local now = time and time() or 0
+  local hours = math.max(1 / 60, (now - num(session.started or now)) / 3600)
+  local perHour = math.floor((sum(session.totals.goldIn) - sum(session.totals.goldOut)) / hours + 0.5)
+  tiles({
+    { "Level " .. current .. " so far", duration(here and here.seconds), useSession and "this session" or "all sessions" },
+    { "XP per hour", rate and ns.thousands(rate) or "-", "this session" },
+    { "Next level in", rate and toGo and duration(toGo / rate * 3600) or "-",
+      toGo and (ns.thousands(toGo) .. " XP to go") or nil },
+    { "Gold per hour", signed(perHour), "net, this session" },
+  }, 4)
+
+  -- 2. Level splits: the last 10 levels (or all), newest first, as bars of quest, kill and other XP.
   local levels = {}
   for lvl, l in pairs(tree.levels) do if type(l) == "table" then levels[#levels + 1] = tonumber(lvl) end end
   table.sort(levels, function(a, b) return a > b end)
-  local widths = { 0.16 * (W - 28), 0.2 * (W - 28), 0.2 * (W - 28), 0.14 * (W - 28), 0.12 * (W - 28), 0.18 * (W - 28) }
-  local rows = { { head = true, widths = widths, cols = { "LEVEL", "TIME", "QUEST XP", "KILLS", "DEATHS", "NET GOLD" } } }
-  local current = level()
+  local top = y
+  y = y + 10
+  heading("LEVEL SPLITS")
+  for i, name in ipairs({ "Quests", "Kills", "Other" }) do
+    local lx = W - 14 - (4 - i) * 70
+    U.rect(lx, y + 3, 9, 9, SOURCE_COLORS[i])
+    U.T(name, lx + 13, y, 56, "small", C.dim)
+  end
+  y = y + 22
+  local shown, longest = {}, 1
   for i, lvl in ipairs(levels) do
     if i > 10 and not showAllLevels then break end
+    shown[#shown + 1] = lvl
+    longest = math.max(longest, num(tree.levels[lvl].seconds))
+  end
+  if #shown == 0 then y = y + U.T("No levels counted yet.", 14, y, W - 28, "small", C.dim) + 4 end
+  local barX, barW = 74, W - 14 - 74 - 96
+  for _, lvl in ipairs(shown) do
     local l = tree.levels[lvl]
-    local share = (tonumber(l.xp) or 0) > 0 and math.floor((tonumber(l.questXP) or 0) * 100 / l.xp + 0.5) .. "%" or "-"
-    rows[#rows + 1] = { widths = widths, cols = { lvl .. (lvl == current and " (now)" or ""), duration(l.seconds), share,
-      tostring(l.kills or 0), tostring(l.deaths or 0), signed(sum(l.goldIn) - sum(l.goldOut)) } }
+    local seconds = num(l.seconds)
+    U.T(lvl .. (lvl == current and " now" or ""), 14, y, 56, "small", lvl == current and C.gold or C.light)
+    U.rect(barX, y + 2, barW, 10, TRACK)
+    local len = barW * seconds / longest
+    if seconds > 0 then len = math.max(2, len) end
+    local parts = { num(l.questXP), num(l.killXP), otherXP(l) }
+    local xpTotal = parts[1] + parts[2] + parts[3]
+    local x = barX
+    for p = 1, 3 do
+      local w = xpTotal > 0 and len * parts[p] / xpTotal or (p == 3 and len or 0)
+      if w >= 0.5 then U.rect(x, y + 2, w, 10, SOURCE_COLORS[p], nil, 1) end
+      x = x + w
+    end
+    U.T(duration(seconds), W - 14 - 90, y, 90, "small", C.light, "RIGHT")
+    local tip = duration(seconds) .. " on this level"
+      .. "\nQuest XP " .. ns.thousands(l.questXP) .. ", kill XP " .. ns.thousands(l.killXP) .. ", other " .. ns.thousands(otherXP(l))
+      .. "\n" .. plural(num(l.quests), "quest") .. ", " .. plural(num(l.kills), "kill") .. ", " .. plural(num(l.deaths), "death")
+      .. "\nNet gold " .. signed(sum(l.goldIn) - sum(l.goldOut))
+      .. (l.fromPct and ("\nCounted from " .. l.fromPct .. "%") or "")
+    U.hit(10, y - 2, W - 20, 18, "Level " .. lvl, tip, nil, "Level " .. lvl)
+    y = y + 18
   end
-  if tree.played and tree.played.total then
-    rows[#rows + 1] = { "Played (from your last /played)", duration(tree.played.total) }
-  end
-  card("LEVEL SPLITS", rows)
+  y = y + 8
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  y = y + 12
   if #levels > 10 then
     U.btn(showAllLevels and "Show the last 10 levels" or "Show all levels", 0, y - 6, 200, function()
       showAllLevels = not showAllLevels
@@ -464,41 +497,73 @@ local function render()
     y = y + 30
   end
 
-  -- 3. Gold by source.
-  local gold = {}
-  for _, key in ipairs(S.GOLD_IN) do
-    gold[#gold + 1] = { "+ " .. GOLD_NAMES[key], ns.money(session.totals.goldIn[key] or 0) .. " / "
-      .. ns.money(tree.totals.goldIn[key] or 0) }
+  -- 3. Gold earned and spent, side by side: a bar per source that moved money.
+  local colW = math.floor((W - 12) / 2)
+  local function goldColumn(x, title, keys, totals, color, sign)
+    local cy = y + 10
+    local rows, total, largest = {}, 0, 0
+    for _, key in ipairs(keys) do
+      local c = num(totals[key])
+      if c > 0 then rows[#rows + 1] = { key, c }; total = total + c; largest = math.max(largest, c) end
+    end
+    U.T(title, x + 14, cy, colW - 28, "label", C.gold)
+    U.T(sign .. ns.coins(total), x + 14, cy, colW - 28, "small", C.light, "RIGHT")
+    cy = cy + 22
+    if #rows == 0 then cy = cy + U.T("Nothing yet.", x + 14, cy, colW - 28, "small", C.dim) + 4 end
+    for _, r in ipairs(rows) do
+      U.T(GOLD_NAMES[r[1]], x + 14, cy, colW - 28, "small", C.light)
+      U.T(ns.coins(r[2]), x + 14, cy, colW - 28, "small", C.light, "RIGHT")
+      cy = cy + 15
+      U.rect(x + 14, cy, colW - 28, 4, TRACK)
+      local bw = (colW - 28) * r[2] / largest
+      if bw >= 1 then U.rect(x + 14, cy, bw, 4, color, nil, 1) end
+      cy = cy + 10
+    end
+    return cy + 6
   end
-  for _, key in ipairs(S.GOLD_OUT) do
-    gold[#gold + 1] = { "- " .. GOLD_NAMES[key], ns.money(session.totals.goldOut[key] or 0) .. " / "
-      .. ns.money(tree.totals.goldOut[key] or 0) }
-  end
-  local here = tree.levels[current]
-  gold[#gold + 1] = { "Net this level", here and signed(sum(here.goldIn) - sum(here.goldOut)) or "0c" }
-  card("GOLD", gold, "This session / all saved.")
+  local leftEnd = goldColumn(0, "GOLD EARNED", S.GOLD_IN, tree.totals.goldIn or {}, EARNED, "+")
+  local rightEnd = goldColumn(colW + 12, "GOLD SPENT", S.GOLD_OUT, tree.totals.goldOut or {}, SPENT, "-")
+  local bottom = math.max(leftEnd, rightEnd)
+  U.box(0, y, colW, bottom - y, C.panel, C.edge)
+  U.box(colW + 12, y, colW, bottom - y, C.panel, C.edge)
+  y = bottom + 12
 
-  -- 4. Activity.
+  -- 4. Activity tiles.
   local t = tree.totals
-  card("ACTIVITY", {
-    { "Quests turned in", tostring(t.quests or 0) }, { "Kills", tostring(t.kills or 0) },
-    { "Deaths", tostring(t.deaths or 0) }, { "Flights", tostring(t.flights or 0) },
-    { "Time in the air", duration(t.flightSeconds) }, { "Hearthstone uses", tostring(t.hearths or 0) },
-    { "Dungeon runs", tostring(t.dungeons or 0) }, { "Bosses killed", tostring(t.bosses or 0) },
-  })
+  local played = tree.played and tree.played.total
+  U.T("ACTIVITY", 0, y, W, "label", C.gold)
+  y = y + 20
+  tiles({
+    { "Quests", ns.thousands(t.quests), "turned in" }, { "Kills", ns.thousands(t.kills) },
+    { "Deaths", ns.thousands(t.deaths) }, { "Flights", ns.thousands(t.flights), duration(t.flightSeconds) .. " in the air" },
+    { "Hearthstone", ns.thousands(t.hearths), "uses" }, { "Dungeon runs", ns.thousands(t.dungeons) },
+    { "Bosses", ns.thousands(t.bosses), "killed" },
+    { "Played", played and duration(played) or "-", played and "at your last /played" or "type /played" },
+  }, 4)
 
-  -- 5. Zones by time.
+  -- 5. Zones by time, as bars against the longest.
   local zones = {}
-  for id, z in pairs(tree.zones) do if type(z) == "table" then zones[#zones + 1] = z end end
-  table.sort(zones, function(a, b) return (a.seconds or 0) > (b.seconds or 0) end)
-  local zw = { 0.46 * (W - 28), 0.2 * (W - 28), 0.2 * (W - 28), 0.14 * (W - 28) }
-  local zoneRows = { { head = true, widths = zw, cols = { "ZONE", "TIME", "XP", "QUESTS" } } }
+  for _, z in pairs(tree.zones) do if type(z) == "table" then zones[#zones + 1] = z end end
+  table.sort(zones, function(a, b) return num(a.seconds) > num(b.seconds) end)
+  top = y
+  y = y + 10
+  heading("ZONES")
+  y = y + 22
+  if #zones == 0 then y = y + U.T("No zone time yet.", 14, y, W - 28, "small", C.dim) + 4 end
+  local most = math.max(1, zones[1] and num(zones[1].seconds) or 1)
+  local zx, zw = 190, W - 14 - 190 - 150
   for i, z in ipairs(zones) do
     if i > 8 and not showAllZones then break end
-    zoneRows[#zoneRows + 1] = { widths = zw, cols = { Q.plain(z.name or "?"), duration(z.seconds), tostring(z.xp or 0),
-      tostring(z.quests or 0) } }
+    U.T(Q.plain(z.name or "?"), 14, y, 170, "small", C.light)
+    U.rect(zx, y + 3, zw, 8, TRACK)
+    local bw = zw * num(z.seconds) / most
+    if bw >= 1 then U.rect(zx, y + 3, bw, 8, C.accent, nil, 1) end
+    U.T(duration(z.seconds) .. ", " .. plural(num(z.quests), "quest"), W - 14 - 146, y, 146, "small", C.light, "RIGHT")
+    y = y + 18
   end
-  card("ZONES", zoneRows, #zones == 0 and "No zone time yet." or nil)
+  y = y + 8
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  y = y + 12
   if #zones > 8 then
     U.btn(showAllZones and "Show the top 8 zones" or "Show all zones", 0, y - 6, 200, function()
       showAllZones = not showAllZones
