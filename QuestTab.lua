@@ -199,7 +199,9 @@ local function renderLibrarySection(rows, section, y)
   end, false, "Back to the list of guides.")
   y = y + 34
   y = y + U.sectionTitle(section.title, y)
-  y = y + U.T(sectionInfo(section), 0, y, W, "small", C.dim) + 8
+  y = y + U.T(sectionInfo(section), 0, y, W, "small", C.dim) + 4
+  if section.reward then y = y + U.T("You get: " .. Q.plain(section.reward), 0, y, W, "body", C.gold) + 4 end
+  y = y + 4
   local col = math.floor((W - 16) / 3)
   local minimum = Q.guideMinimum(section)
   if minimum then
@@ -254,12 +256,14 @@ local function renderLibrarySection(rows, section, y)
 end
 
 -- A guide as a quest-log row (36 px): a 3 px edge (gold current, teal suggested), the title on one
--- line, its levels, a step progress bar under the title and one tag at the right.
+-- line, its levels, a step progress bar under the title and one tag at the right. A guide with a
+-- `reward` (special and class quests) adds what you get under the bar (48 px).
 local TRACK = { 0.14, 0.21, 0.23, 1 }
 local function guideRow(y, section, status, done, total, tag, onClick, tip)
   local current, suggested = status == "current", status == "suggested"
-  if current then U.rect(0, y, W, 36, { C.accent[1], C.accent[2], C.accent[3], 0.12 }) end
-  if current or suggested then U.rect(0, y, 3, 36, current and C.gold or C.accent) end
+  local height = section.reward and 48 or 36
+  if current then U.rect(0, y, W, height, { C.accent[1], C.accent[2], C.accent[3], 0.12 }) end
+  if current or suggested then U.rect(0, y, 3, height, current and C.gold or C.accent) end
   local faded = status == "done" or status == "outleveled" or status == "later"
   local _, title = U.T(Q.plain(section.title), 12, y + 5, W - 200, "body",
     current and C.gold or faded and C.dim or C.light)
@@ -267,13 +271,17 @@ local function guideRow(y, section, status, done, total, tag, onClick, tip)
   U.T("Levels " .. section.levels[1] .. "-" .. section.levels[2], W - 186, y + 7, 90, "small", C.dim, "RIGHT")
   U.rect(12, y + 22, W - 212, 4, TRACK)
   if total > 0 and done > 0 then U.rect(12, y + 22, math.max(1, (W - 212) * done / total), 4, C.accent) end
+  if section.reward then
+    local _, line = U.T(Q.plain(section.reward), 12, y + 30, W - 106, "small", C.dim)
+    if line.SetWordWrap then line:SetWordWrap(false) end
+  end
   if tag then
     U.plate(W - 90, y + 7, 84, 20, { 0, 0, 0, 0.35 }, { C.edge[1], C.edge[2], C.edge[3], 0.6 })
     U.T(tag, W - 90, y + 11, 84, "small", current and C.gold or suggested and C.accent or faded and C.dim or C.light,
       "CENTER")
   end
-  U.hit(0, y, W, 36, Q.plain(section.title), tip, onClick, section.title)
-  return y + 38
+  U.hit(0, y, W, height, Q.plain(section.title), tip, onClick, section.title)
+  return y + height + 2
 end
 
 -- A guide's tag: Current, Suggested, Side (an alternate route), Later, Done or Outleveled, with

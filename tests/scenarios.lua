@@ -1078,6 +1078,18 @@ function S.worldMapPins()
   check(not pins:IsShown(), "the setting turns them off")
 end
 
+-- Special and class guides say what you get from them, in their row and on their page.
+function S.guideRewards()
+  MOCK.race, MOCK.level = "Human", 20
+  S.login()
+  slash("quests")
+  click(win(), "Guides")
+  local reward = "A sleeping bag: rest in it for up to 3% bonus XP"
+  check(questText(win(), reward), "a special chain says what you get")
+  click(win(), "Cozy Sleeping Bag")
+  check(questText(win(), "You get: " .. reward), "and so does its page")
+end
+
 -- World map: a dotted route line from you, through a step's way-in points, to the step.
 function S.worldMapLine()
   local northshire

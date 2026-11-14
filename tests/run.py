@@ -788,7 +788,7 @@ def main():
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
-                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "worldMapPins", "worldMapLine", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
+                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "worldMapPins", "worldMapLine", "guideRewards", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
