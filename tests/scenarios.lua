@@ -963,6 +963,30 @@ function S.stepCompactDistance()
   check(dist() and dist() ~= before, "and it updates as you move (" .. tostring(before) .. " then " .. tostring(dist()) .. ")")
 end
 
+-- Titles keep their meaning: a travel chip says the step's own verb, and a step without a name takes
+-- the first sentence of its text as its title (not "Travel" twice).
+function S.stepTitles()
+  local style = MOCK.ns.questKindStyle
+  check(style("travel", { type = "fly" }).label == "Fly" and style("travel", { type = "getfp" }).label == "Flight path"
+    and style("travel", { type = "boat" }).label == "Boat" and style("travel", { type = "goto" }).label == "Travel",
+    "travel chips say the step's own verb")
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave. Mind the kobolds.",
+    map = 1429, x = 52, y = 47 })
+  S.login()
+  local frame = questViewer()
+  local function shown(text)
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do if r:IsShown() and r._text == text then return true end end
+      for _, c in ipairs({ f:GetChildren() }) do if c:IsShown() and walk(c) then return true end end
+    end
+    return walk(frame)
+  end
+  check(frame.chip.text._text == "Travel" and shown("Go down the tunnel to the cave."),
+    "a nameless step's title is the first sentence of its text")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()

@@ -66,6 +66,8 @@ local KIND_STYLE = {
   travel = { "Travel", { 0.4, 0.7, 1 } }, dungeon = { "Dungeon", { 0.7, 0.55, 1 } },
 }
 local OTHER_WORD = { note = "Note", train = "Train", grind = "Grind", abandon = "Abandon", use = "Use" }
+-- A travel chip says the step's own verb, so a flight path or a boat keeps its meaning.
+local TRAVEL_WORD = { fly = "Fly", getfp = "Flight path", boat = "Boat", hearth = "Hearth", sethearth = "Bind" }
 
 function ns.questStepKind(step)
   if type(step) ~= "table" then return "other" end
@@ -78,7 +80,10 @@ end
 function ns.questKindStyle(kind, step)
   local style = KIND_STYLE[kind]
   if style then
-    return { label = (kind == "dungeon" and step and step.type == "boss") and "Boss" or style[1], color = style[2] }
+    local label = style[1]
+    if kind == "dungeon" and step and step.type == "boss" then label = "Boss" end
+    if kind == "travel" and step and TRAVEL_WORD[step.type] then label = TRAVEL_WORD[step.type] end
+    return { label = label, color = style[2] }
   end
   local t = step and step.type
   local word = OTHER_WORD[t] or (type(t) == "string" and (t:sub(1, 1):upper() .. t:sub(2))) or "Step"

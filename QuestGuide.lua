@@ -1672,9 +1672,18 @@ function ns.questRefresh()
     if row ~= countsRow then seenCounts, countsRow = {}, row end
     newCounts = {}
     if row then
-      -- the chip says what to do, the title names it; the full label stays the title's codexLabel
-      local label = Q.label(row.step)
-      title:SetText(Q.plain(label:match("^.- %- (.+)$") or label))
+      -- the chip says what to do, the title names it (a quest, a flight point); a step without a name
+      -- takes the first sentence of its text; the full label stays the title's codexLabel
+      local s = row.step
+      local label = Q.label(s)
+      local name = not (s.type == "hearth" and s.bind) and (s.name or s.flight) or nil
+      if not name and type(s.text) == "string" and not (s.type == "hearth" and s.bind) then
+        local text = Q.plain(s.text)
+        name = text:match("^(.-[%.!?])%s") or text
+        if #name > 70 then name = name:sub(1, 67) .. "..." end
+        if name == "" then name = nil end
+      end
+      title:SetText(Q.plain(name or label))
       title.codexLabel = Q.plain(label)
       if style then
         -- on the light parchment (no dialog art) a darker shade keeps the title readable

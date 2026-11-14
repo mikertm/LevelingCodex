@@ -845,7 +845,7 @@ def main():
                              "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
-                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "stepButtons", "stepComfort", "stepSetupWindow", "stepCompactNote", "stepScaleButtons", "stepScaleSaved", "stepCompactDistance", "questWarriorFangs", "questWarriorFangsNotTaken",
+                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "stepButtons", "stepComfort", "stepSetupWindow", "stepCompactNote", "stepScaleButtons", "stepScaleSaved", "stepCompactDistance", "stepTitles", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
