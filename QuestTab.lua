@@ -607,6 +607,17 @@ local function renderSetup(y)
     ns.questRefresh()
     U.refresh()
   end, "The same dots on your world map.")
+  y = y + 30
+  -- the step window's size and compact mode, so a small screen meets them on first run
+  label("Step window")
+  U.btn("-", x, y - 1, 28, function() ns.setQuestViewerScale(-0.1); U.refresh() end).codexLabel = "Step window size -"
+  U.T(math.floor((tonumber(db.questViewerScale) or 1) * 100 + 0.5) .. "%", x + 32, y + 4, 44, "body", C.ink, "CENTER")
+  U.btn("+", x + 80, y - 1, 28, function() ns.setQuestViewerScale(0.1); U.refresh() end).codexLabel = "Step window size +"
+  U.check("Compact", x + 150, y - 1, db.questCompact, function()
+    db.questCompact = not db.questCompact
+    ns.questRefresh()
+    U.refresh()
+  end, "Only the step's title, a thin progress bar and the buttons: for small screens.")
   y = y + 34
   U.btn("Done", 16, y, W - 32, function()
     db.questSetupDone, setupOpen = true, false

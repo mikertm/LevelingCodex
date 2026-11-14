@@ -238,6 +238,7 @@ local function btn(label, x, y, w, onClick, on, tip)
   b:SetLook(on)
   b:SetScript("OnClick", onClick)
   b.tipTitle, b.tipText = tip and label or nil, tip
+  b.codexLabel = nil -- a caller may name it (steppers); a reused button forgets the old name
   return b
 end
 
@@ -1349,6 +1350,22 @@ renderers.settings = function()
     ns.questRefresh()
   end, "The same gold dots on your world map, from you to the current step, on the map you're on.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
+  -- The step window's size (down to half for small screens) and background, as steppers.
+  local function stepper(label, value, change)
+    T(label, 0, y + 4, 150, "body", C.light)
+    btn("-", 156, y, 28, function() change(-0.1); refresh() end, false).codexLabel = label .. " -"
+    T(math.floor(value * 100 + 0.5) .. "%", 188, y + 4, 46, "body", C.gold, "CENTER")
+    btn("+", 238, y, 28, function() change(0.1); refresh() end, false).codexLabel = label .. " +"
+    y = y + 30
+  end
+  stepper("Step window size", tonumber(db.questViewerScale) or 1, ns.setQuestViewerScale)
+  stepper("Step window background", tonumber(db.questViewerAlpha) or 1, ns.setQuestViewerAlpha)
+  T("Ctrl+mouse wheel over the step window also changes its size.", 0, y - 2, W, "small", C.dim)
+  y = y + 18
+  tick("Fade the step window in combat", not db.noQuestFade, function() db.noQuestFade = not db.noQuestFade end,
+    "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
+  tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
+    "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
   local function questieNote(on, text)

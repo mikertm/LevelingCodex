@@ -98,6 +98,35 @@ local function fitHeader(text)
   end
 end
 
+-- Window comfort: its size (Settings, the setup card, Ctrl+wheel over it; 50% to 150% for small
+-- screens), the background's opacity, fading to 30% in combat (the mouse over it brings it back)
+-- and compact mode (db.questCompact: the title row, the bar and the buttons).
+local FADED, FADE_TIME = 0.3, 0.3
+local inCombat = false
+
+local function applyComfort()
+  if not viewer then return end
+  local db = ns.db()
+  viewer:SetScale(math.max(0.5, math.min(1.5, tonumber(db.questViewerScale) or 1)))
+  local a = math.max(0.2, math.min(1, tonumber(db.questViewerAlpha) or 1))
+  viewer.background:SetAlpha(a)
+  if type(viewer.SetBackdropColor) == "function" then
+    local r, g, b = ns.rgba(C.parch)
+    pcall(viewer.SetBackdropColor, viewer, r, g, b, a)
+    local er, eg, eb = ns.rgba(C.edge)
+    pcall(viewer.SetBackdropBorderColor, viewer, er, eg, eb, a)
+  end
+end
+
+local function nudge(key, step, low, high)
+  local db = ns.db()
+  if type(LevelingCodexDB) ~= "table" then return end
+  db[key] = math.floor(math.max(low, math.min(high, (tonumber(db[key]) or 1) + step)) * 10 + 0.5) / 10
+  applyComfort()
+end
+function ns.setQuestViewerScale(step) nudge("questViewerScale", step, 0.5, 1.5) end
+function ns.setQuestViewerAlpha(step) nudge("questViewerAlpha", step, 0.2, 1) end
+
 local function makeViewer()
   viewer = A.frame("Frame", "LevelingCodexQuestViewer", UIParent)
   viewer:SetSize(350, 182)
@@ -126,6 +155,39 @@ local function makeViewer()
   place()
   flatBackground = viewer:CreateTexture(nil, "BACKGROUND")
   flatBackground:SetAllPoints()
+  viewer.background = flatBackground
+  -- In combat the window fades to 30% unless the mouse is over it; Ctrl held over it lets the wheel
+  -- resize it (otherwise the wheel stays the camera's).
+  try(viewer.EnableMouseWheel, viewer, false)
+  viewer:HookScript("OnEnter", function(self) self.hoverFlag = true end)
+  viewer:HookScript("OnLeave", function(self) self.hoverFlag = false end)
+  viewer:SetScript("OnMouseWheel", function(_, delta)
+    if not try(IsControlKeyDown) then return end
+    ns.setQuestViewerScale((tonumber(delta) or 0) > 0 and 0.1 or -0.1)
+  end)
+  viewer:HookScript("OnUpdate", function(self, elapsed)
+    local hovered = self.hoverFlag or (type(self.IsMouseOver) == "function" and self:IsMouseOver() == true)
+    local goal = (inCombat and not ns.db().noQuestFade and not hovered) and FADED or 1
+    local a = tonumber(self:GetAlpha()) or 1
+    if a ~= goal then
+      local move = (tonumber(elapsed) or 0) / FADE_TIME * (1 - FADED)
+      self:SetAlpha(a < goal and math.min(goal, a + move) or math.max(goal, a - move))
+    end
+    local wheel = hovered and try(IsControlKeyDown) and true or false
+    if wheel ~= self.wheelOn then
+      self.wheelOn = wheel
+      try(self.EnableMouseWheel, self, wheel)
+    end
+  end)
+  -- Compact mode's switch in the top-right corner.
+  viewer.compactButton = A.iconButton(viewer, A.FILES.minusUp, "-")
+  viewer.compactButton:SetSize(16, 16)
+  viewer.compactButton:SetPoint("TOPRIGHT", -7, -7)
+  viewer.compactButton:SetScript("OnClick", function()
+    if type(LevelingCodexDB) ~= "table" then return end
+    LevelingCodexDB.questCompact = not LevelingCodexDB.questCompact
+    ns.questRefresh()
+  end)
   headerArt, header = A.header(viewer, "Quest Guide", 300)
   try(header.SetWordWrap, header, false)
   levels = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -1553,7 +1615,13 @@ function ns.questRefresh()
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)
     goalColor = style and style.color or nil
-    local portrait = viewer.portrait:ShowFor(row and row.step, kind)
+    local compact = ns.db().questCompact and true or false
+    local cb = viewer.compactButton
+    cb.codexLabel = compact and "Expand" or "Compact"
+    cb.tipTitle = compact and "Expand" or "Compact"
+    if cb.icon then cb.icon:SetTexture(compact and A.FILES.plusUp or A.FILES.minusUp)
+    elseif cb.label then cb.label:SetText(compact and "+" or "-") end
+    local portrait = viewer.portrait:ShowFor(not compact and row and row.step or nil, kind)
     if portrait then viewer.titleIcon:Hide() end
     local x = portrait and 64 or (icon and 36 or 16)
     viewer.stripe:SetShown(style ~= nil)
@@ -1605,7 +1673,7 @@ function ns.questRefresh()
     local xpX, xpY = LEFT, nil
     if portrait then xpX, xpY = 64, cursor end
     -- a turn-in's XP, when the game says how much (the quest must be in your log)
-    local xp = row and kind == "turnin" and row.step.quest and Q.log(row.step.quest)
+    local xp = not compact and row and kind == "turnin" and row.step.quest and Q.log(row.step.quest)
       and tonumber((try(GetQuestLogRewardXP, row.step.quest))) or 0
     viewer.xp:SetShown(xp > 0)
     if xp > 0 then
@@ -1620,13 +1688,23 @@ function ns.questRefresh()
     end
     -- the detail starts below the portrait
     if portrait then cursor = math.max(cursor, 74) end
-    -- A story chain's place sits right under the step's name.
-    for _, b in ipairs(blocks) do
-      if b.kind == "chain" then putText(b.text, "dim") end
+    if compact then
+      -- compact: at the right of the title, the first unfinished goal's count, else how far the step is
+      local right = ""
+      for _, b in ipairs(blocks) do
+        if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
+      end
+      if right == "" and row then right = nextDistance(row.step) end
+      levels:SetText(right)
+    else
+      -- A story chain's place sits right under the step's name.
+      for _, b in ipairs(blocks) do
+        if b.kind == "chain" then putText(b.text, "dim") end
+      end
     end
     cursor = cursor + 3
     if paintBar(row) then cursor = cursor + 12 end
-    draw(blocks)
+    if not compact then draw(blocks) else nextRows = {} end
     seenCounts = newCounts
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
@@ -1648,7 +1726,8 @@ function ns.questRefresh()
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
-    viewer:SetHeight(math.max(140, cursor + (offer and 64 or 38)))
+    viewer:SetHeight(compact and (cursor + (offer and 64 or 38)) or math.max(140, cursor + (offer and 64 or 38)))
+    applyComfort()
     viewer:Show()
     painting = false
     paintArrow()
@@ -2060,6 +2139,8 @@ local function handle(event, a, b, c, d, e)
     end
     return
   end
+  if event == "PLAYER_REGEN_DISABLED" then inCombat = true; return end
+  if event == "PLAYER_REGEN_ENABLED" then inCombat = false end
   if event == "PLAYER_REGEN_ENABLED" and itemPending then
     updateItemButton()
     return
@@ -2133,7 +2214,8 @@ function ns.startQuestGuide()
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED",
-    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL" }) do
+    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL",
+    "PLAYER_REGEN_DISABLED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)

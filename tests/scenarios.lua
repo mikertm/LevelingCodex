@@ -830,6 +830,72 @@ function S.stepButtons()
   check(findButton(frame, function(l) return l == "Back" end), "Next still moves on")
 end
 
+-- Step window comfort: size (down to half for small screens, Ctrl+wheel), background, fading in
+-- combat, compact mode.
+function S.stepComfort()
+  S.login()
+  local frame = questViewer()
+  slash("")
+  click(win(), "Settings")
+  for _ = 1, 2 do click(win(), "Step window size +") end
+  check(math.abs(frame:GetScale() - 1.2) < 0.001, "the size stepper scales the window")
+  for _ = 1, 10 do click(win(), "Step window size -") end
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "down to half size for small screens")
+  local textAlpha = frame:GetAlpha() or 1
+  for _ = 1, 3 do click(win(), "Step window background -") end
+  check(frame.background and math.abs((frame.background:GetAlpha() or 1) - 0.7) < 0.01
+    and (frame:GetAlpha() or 1) == textAlpha, "the background stepper fades the background only")
+  check(not frame:IsMouseWheelEnabled(), "the wheel stays the camera's")
+  MOCK.fire(frame, "OnEnter"); MOCK.ctrl = true; MOCK.advance(0.1)
+  check(frame:IsMouseWheelEnabled(), "Ctrl over the window takes the wheel")
+  MOCK.fire(frame, "OnMouseWheel", 1)
+  check(math.abs(frame:GetScale() - 0.6) < 0.001, "and the wheel resizes it")
+  MOCK.ctrl = false; MOCK.fire(frame, "OnLeave"); MOCK.advance(0.1)
+  check(not frame:IsMouseWheelEnabled(), "letting go gives the wheel back")
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 0.3) < 0.01, "combat fades the window")
+  MOCK.fire(frame, "OnEnter"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "the mouse brings it back")
+  MOCK.fire(frame, "OnLeave"); MOCK.advance(0.5)
+  check((frame:GetAlpha() or 1) < 0.5, "leaving fades it again")
+  MOCK.event("PLAYER_REGEN_ENABLED"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "after combat it's back")
+  LevelingCodexDB.noQuestFade = true
+  MOCK.event("PLAYER_REGEN_DISABLED"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "with the setting off nothing fades")
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  local tall = frame:GetHeight()
+  click(frame, "Compact")
+  check(frame:GetHeight() < tall and not questText(frame, "UP NEXT") and findButton(frame, function(l) return l == "Expand" end),
+    "compact mode keeps only the title row, the bar and the buttons")
+  click(frame, "Expand")
+  check(questText(frame, "UP NEXT"), "and expands again")
+end
+
+-- The guide setup card offers the step window's size and compact mode (laptops meet them on first run).
+function S.stepSetupWindow()
+  S.login()
+  slash("quests")
+  local frame = questViewer()
+  click(win(), "Step window size -")
+  check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
+  click(win(), "Compact")
+  check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+end
+
+-- Compact mode on a step with no goals and no spot draws the title row alone.
+function S.stepCompactNote()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "note", text = "Read this first." })
+  LevelingCodexDB = { questCompact = true }
+  S.login()
+  local frame = questViewer()
+  check(frame:IsShown() and frame.chip.text._text == "Note" and not questText(frame, " yd"),
+    "a compact note step: chip and title, no count or distance")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
