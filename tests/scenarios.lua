@@ -7135,6 +7135,47 @@ function S.vendorRepair()
   check(not MOCK.repaired, "Settings can turn repairing off")
 end
 
+-- Vendor, the owner's report "auto repair didn't work": Forever fires MERCHANT_SHOW before the
+-- vendor window shows (MOCK.merchantLate). The greys still sell and the repair still runs once the
+-- window is there, and /codex debug says what the last visit did.
+function S.vendorLateWindow()
+  S.login()
+  MOCK.money, MOCK.merchantLate = 150, 0.4
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(3)
+  check(#MOCK.sold == 1 and MOCK.sold[1][1] == 3300, "the grey sells once the late window shows")
+  check(MOCK.repaired == 210 and chatHas("Repaired for 2s 10c%."), "and the repair follows")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("vendor: last visit: window .* after MERCHANT_SHOW; sold 1 grey item for 1s; repaired for 2s 10c"),
+    "debug says what the last visit did")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.money, MOCK.bagItems = nil, 1000, {}
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(MOCK.repaired == 210, "with nothing to sell the repair runs once the window shows")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.sold = nil, {}
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(0.2)
+  MOCK.closeMerchant()
+  MOCK.advance(2)
+  check(#MOCK.sold == 0 and not MOCK.repaired, "a vendor closed before its window showed gets nothing")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("vendor: last visit: closed before its window showed"), "and debug says so")
+  MOCK.money, MOCK.alt = 1000, true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  MOCK.chat = {}
+  slash("debug")
+  check(not MOCK.repaired and chatHas("vendor: last visit: .*held back %(Alt%)"), "debug names what held it back")
+  MOCK.alt, MOCK.merchantLate = false, nil
+  MOCK.closeMerchant()
+end
+
 -- Vendor: a card lists what your coming steps need from this vendor, with one Buy button.
 function S.vendorShopping()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do

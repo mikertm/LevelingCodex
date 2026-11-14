@@ -887,6 +887,7 @@ def main():
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
             runs.append(("WARRIOR/full/vendor-pad", "WARRIOR", False, ["vendorPad"]))
             runs.append(("WARRIOR/full/vendor-buy-fails", "WARRIOR", False, ["vendorBuyFails"]))
+            runs.append(("WARRIOR/full/vendor-late-window", "WARRIOR", False, ["vendorLateWindow"]))
         runs.append(("WARRIOR/%s/stats-counters" % variant, "WARRIOR", minimal, ["statsCounters"]))
         runs.append(("WARRIOR/%s/stats-level-up" % variant, "WARRIOR", minimal, ["statsLevelUp"]))
         runs.append(("WARRIOR/%s/pace-kills" % variant, "WARRIOR", minimal, ["paceKills"]))

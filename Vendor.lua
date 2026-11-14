@@ -14,8 +14,10 @@ ns.vendor = V
 local HEARTHSTONE = 6948
 local STEP = 0.15 -- seconds between two sales, and before the first
 local merchantOpen = false
-local run -- this visit's selling run: { queue, sold, total }
+local run -- this visit's selling run: { queue, sold, total, visit }
 local seen = { visits = 0, sold = 0, total = 0 } -- for /codex debug
+local visit -- the last visit, for /codex debug: { at, window, note, greys, sold, total, stopped, repair }
+local WINDOW_WAIT = 3 -- seconds a visit waits for the vendor window after MERCHANT_SHOW
 local events
 
 -- Hook points: Stats.lua files the money these announce (called just before it moves).
@@ -89,20 +91,24 @@ local function isOpen()
   return not (type(frame) == "table" and type(frame.IsShown) == "function") or frame:IsShown() and true or false
 end
 
+local function noteRepair(text) if visit then visit.repair = text end end
+
 -- After the junk money is in: repair everything, if this vendor repairs and you can pay for it.
 local function repair()
-  if ns.db().noAutoRepair then return end
+  if ns.db().noAutoRepair then noteRepair("repair off"); return end
   local can = try(CanMerchantRepair)
-  if can ~= true and can ~= 1 then return end
+  if can ~= true and can ~= 1 then noteRepair("no repair here (CanMerchantRepair " .. tostring(can) .. ")"); return end
   local cost = tonumber((try(GetRepairAllCost))) or 0
-  if cost <= 0 then return end
+  if cost <= 0 then noteRepair("nothing to repair"); return end
   local money = tonumber(try(GetMoney)) or 0
   if money < cost then
+    noteRepair("not enough money for " .. ns.money(cost))
     ns.say("Not enough money to repair (" .. ns.money(cost) .. ").")
     return
   end
   V.onRepaired(cost)
   try(RepairAllItems)
+  noteRepair("repaired for " .. ns.money(cost))
   ns.say("Repaired for " .. ns.money(cost) .. ".")
 end
 
@@ -113,6 +119,7 @@ local function repairWhenPaid(total)
   local cost = tonumber((try(GetRepairAllCost))) or 0
   local money = tonumber(try(GetMoney)) or 0
   if total <= 0 or cost <= money or cost > money + total then repair(); return end
+  noteRepair("waiting for the junk money")
   local token = {}
   pendingRepair = token
   ns.after(3, function()
@@ -136,6 +143,7 @@ local function finish(stopped)
   if not r then return end
   run, V.selling = nil, false
   seen.sold, seen.total = seen.sold + r.sold, seen.total + r.total
+  if r.visit then r.visit.sold, r.visit.total, r.visit.stopped = r.sold, r.total, stopped end
   if r.sold > 0 then
     ns.say("Sold " .. r.sold .. " grey item" .. (r.sold == 1 and "" or "s") .. " for " .. ns.money(r.total)
       .. (stopped and " (the vendor closed)" or "") .. ".")
@@ -454,21 +462,45 @@ function V.buy()
   refreshCard()
 end
 
-local function onShow()
-  merchantOpen = true
-  seen.visits = seen.visits + 1
-  if run then finish(true) end
-  local held = try(InCombatLockdown) or try(IsAltKeyDown)
-  if held then return end
-  local r = { queue = ns.db().noAutoSell and {} or scan(), sold = 0, total = 0 }
+-- The window is there: sell the greys, then repair.
+local function begin(v)
+  local r = { queue = ns.db().noAutoSell and {} or scan(), sold = 0, total = 0, visit = v }
+  v.greys = ns.db().noAutoSell and "selling off" or #r.queue
   if #r.queue == 0 then repair(); return end
   run, V.selling = r, true
   ns.after(STEP, function() sellNext(r) end)
 end
 
+-- Forever fires MERCHANT_SHOW before the vendor window shows (Zygor's Forever build says so too),
+-- and a run that started then found the window "closed" and stopped before its first sale: the
+-- visit waits for the window (up to WINDOW_WAIT), then sells and repairs. Alt and combat are read
+-- as the vendor opens.
+local function onShow()
+  merchantOpen = true
+  seen.visits = seen.visits + 1
+  if run then finish(true) end
+  local v = { at = GetTime() }
+  visit = v
+  if try(InCombatLockdown) then v.note = "held back (combat)"; return end
+  if try(IsAltKeyDown) then v.note = "held back (Alt)"; return end
+  local function wait()
+    if visit ~= v or not merchantOpen then return end
+    if isOpen() then
+      v.window = GetTime() - v.at
+      begin(v)
+      if v.window > 0 then refreshCard() end
+      return
+    end
+    if GetTime() - v.at >= WINDOW_WAIT then v.note = "the vendor window never showed"; return end
+    ns.after(0.1, wait)
+  end
+  wait()
+end
+
 -- A purchase still on its way is kept: its items can arrive after the window closes.
 local function onClose()
   merchantOpen, pendingRepair = false, nil
+  if visit and not visit.window and not visit.note then visit.note = "closed before its window showed" end
   finish(true)
   hideCard()
 end
@@ -496,7 +528,23 @@ function ns.startVendor()
   end)
 end
 
+local function visitLine()
+  local v = visit
+  if not v then return "vendor: last visit: none this session" end
+  local parts = {}
+  if v.window then parts[#parts + 1] = string.format("window %.1f s after MERCHANT_SHOW", v.window) end
+  if v.note then parts[#parts + 1] = v.note end
+  if v.greys == 0 then parts[#parts + 1] = "no greys to sell"
+  elseif type(v.greys) == "string" then parts[#parts + 1] = v.greys end
+  if v.sold then
+    parts[#parts + 1] = "sold " .. v.sold .. " grey item" .. (v.sold == 1 and "" or "s") .. " for "
+      .. ns.money(v.total) .. (v.stopped and " (stopped: the window closed)" or "")
+  end
+  if v.repair then parts[#parts + 1] = v.repair end
+  return "vendor: last visit: " .. (#parts > 0 and table.concat(parts, "; ") or "nothing done yet")
+end
+
 function ns.vendorDebugLines()
   return { "vendor: " .. seen.visits .. " visits this session, sold " .. seen.sold .. " grey items for "
-    .. ns.money(seen.total) .. (V.selling and ", selling now" or "") }
+    .. ns.money(seen.total) .. (V.selling and ", selling now" or ""), visitLine() }
 end

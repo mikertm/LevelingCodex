@@ -1189,12 +1189,25 @@ function RepairAllItems()
   MOCK.merchant.repairCost = 0
   fromServer(function() MOCK.setMoney((MOCK.money or 0) - cost) end)
 end
+-- MOCK.merchantLate = s: Forever's order, MERCHANT_SHOW first and the vendor window s seconds
+-- later (Zygor's Forever build waits for it too); closing before then keeps it hidden.
+local merchantVisit = 0
 function MOCK.openMerchant(m)
   MOCK.merchant = m
+  merchantVisit = merchantVisit + 1
+  if MOCK.merchantLate and MerchantFrame then
+    local visit = merchantVisit
+    MOCK.event("MERCHANT_SHOW")
+    C_Timer.After(MOCK.merchantLate, function()
+      if visit == merchantVisit then MerchantFrame:Show() end
+    end)
+    return
+  end
   if MerchantFrame then MerchantFrame:Show() end
   MOCK.event("MERCHANT_SHOW")
 end
 function MOCK.closeMerchant()
+  merchantVisit = merchantVisit + 1
   if MerchantFrame then MerchantFrame:Hide() end
   MOCK.event("MERCHANT_CLOSED")
 end
