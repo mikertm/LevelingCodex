@@ -46,14 +46,15 @@ local function showTip(owner, isButton)
   if D then hit, rank = ns.talentAt(UnitLevel("player")) end
   if hit then GameTooltip:AddLine("Talent now: " .. hit.name .. " " .. rank .. "/" .. hit.max, 1, 1, 1) end
   GameTooltip:AddLine(" ")
-  GameTooltip:AddLine("|cffffd100Left-click|r  open the Codex", 1, 1, 1)
-  GameTooltip:AddLine("|cffffd100Right-click|r  settings", 1, 1, 1)
+  GameTooltip:AddLine("|cffffd100Left-click|r  open or close the Codex", 1, 1, 1)
+  GameTooltip:AddLine("|cffffd100Right-click|r  show or hide the step window", 1, 1, 1)
   if isButton then GameTooltip:AddLine("|cffffd100Drag|r  move it around the minimap", 1, 1, 1) end
   GameTooltip:Show()
 end
 
+-- Left: the Codex window (Settings is one of its tabs). Right: the quest step window.
 local function onClick(button)
-  if button == "RightButton" then ns.openTab("settings") else ns.toggleWindow() end
+  if button == "RightButton" then ns.toggleQuestViewer() else ns.toggleWindow() end
 end
 
 -- Forever's addon compartment, once per session (clients without one keep just the button).

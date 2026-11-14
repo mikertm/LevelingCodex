@@ -187,9 +187,16 @@ local function makeViewer()
     placedBy = nil -- the next refresh anchors the saved spot to UIParent
     updateItemButton()
   end)
-  viewer:HookScript("OnHide", function()
-    if not painting then dismissed = true end
+  -- Closed by the player (Esc, another addon) = dismissed until they show it again. A hidden parent
+  -- isn't a close: a new character's intro cinematic and Alt+Z hide UIParent, and the window must
+  -- come back with it.
+  viewer:HookScript("OnHide", function(self)
+    local parent = self:GetParent()
+    if not painting and not (parent and not parent:IsVisible()) then dismissed = true end
     if arrow then arrow:Hide() end
+  end)
+  viewer:HookScript("OnShow", function()
+    if not painting and not dismissed then ns.questRefresh() end
   end)
   viewer:Hide()
   place()
@@ -925,7 +932,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   for _, id in ipairs(step.also or {}) do
     local entry = Q.incomplete(id)
     if entry and entry.title then
-      if not alsoShown then add({ kind = "heading", text = "Also on this loop" }); alsoShown = true end
+      if not alsoShown then add({ kind = "heading", text = "While you're here" }); alsoShown = true end
       add({ kind = "quest", text = entry.title })
       addGoals(out, entry, nil, nil, true, true, 12)
     end
@@ -1866,6 +1873,17 @@ end
 function ns.hideQuestViewer()
   dismissed = true
   ns.questRefresh()
+end
+
+-- The minimap button's right-click: show or hide the step window. With nothing to show (no guide
+-- for your level yet), the Quests tab says why.
+function ns.toggleQuestViewer()
+  if viewer and viewer:IsShown() then
+    ns.hideQuestViewer()
+    return
+  end
+  ns.showQuestViewer()
+  if not (viewer and viewer:IsShown()) then ns.openQuestRoute() end
 end
 
 function ns.updateQuestSettings()

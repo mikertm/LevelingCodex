@@ -687,6 +687,19 @@ do
       end
     end
     assert(best, "Horde class objectives: " .. routeId .. " never visits that map")
+    -- After that step, or before it when that saves 50 yd or more of walking (yards on the map;
+    -- a leg to a neighbour on another map or without a spot isn't counted).
+    local size = LevelingCodexQuests.HORDE.extents[found.map] or { 100, 100 }
+    local function yards(a, b)
+      if not (a and b and a.map == found.map and b.map == found.map and a.x and b.x) then return nil end
+      return math.sqrt(((a.x - b.x) * size[1] / 100) ^ 2 + ((a.y - b.y) * size[2] / 100) ^ 2)
+    end
+    local function detour(prev, nxt)
+      local inA, outB, direct = yards(prev, found), yards(found, nxt), yards(prev, nxt)
+      return (inA or 0) + (outB or 0) - ((inA and outB and direct) or 0)
+    end
+    local here = route.steps[best]
+    if detour(route.steps[best - 1], here) + 50 < detour(here, route.steps[best + 1]) then best = best - 1 end
     local copy = {}
     for k, v in pairs(found) do copy[k] = v end
     copy.logOnly, copy.phase, copy.guide, copy.sticky = true, nil, nil, nil

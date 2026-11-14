@@ -305,7 +305,7 @@ function S.questDuskwoodFlanks()
   end
   local frame = questViewer()
   preview("Ira's Dagger")
-  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Seasoned Wolf Kabobs")
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Seasoned Wolf Kabobs")
     and questText(frame, "Lean Wolf Flank 3/10"), "the ravager hunt lists the kabobs' wolf flanks")
   preview("Eight-Legged Menaces")
   check(questText(frame, "Seasoned Wolf Kabobs") and questText(frame, "Lean Wolf Flank 3/10"),
@@ -331,14 +331,14 @@ function S.questRedridgeOverlap()
   preview("Blackrock Blockade")
   local frame = questViewer()
   check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
-  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Battleworn Axe 3/10"),
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Battleworn Axe 3/10"),
     "the blockade step shows the overlapping axe objective")
   MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Blackrock Supplies 4/10"),
+  check(not questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Blackrock Supplies 4/10"),
     "completed axes leave the panel without changing the primary objective")
   preview("Redridge Goulash")
   check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
@@ -797,9 +797,25 @@ function S.questPortrait()
   MOCK.modelFails = true
   MOCK.ns.questNPCs[783].finish = 824
   MOCK.event("QUEST_LOG_UPDATE")
+  local asked = p.model._asked
   MOCK.advance(1.2)
-  check(p.icon:IsShown() and not p.model:IsShown(), "a model that doesn't load gives way to the icon")
+  check(p.icon:IsShown(), "a model still loading after a second shows the icon meanwhile")
+  MOCK.advance(2.2)
+  check(p.model._asked == asked + 1, "a model still loading is asked for once more")
   MOCK.modelFails = nil
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and not p.icon:IsShown(), "a model that loads late replaces the icon")
+  MOCK.modelFails = true
+  MOCK.ns.questNPCs[783].finish = 825
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(11)
+  check(p.icon:IsShown() and not p.model:IsShown(), "a model that never loads gives way to the icon")
+  MOCK.targetGUID = "Creature-0-1-2-3-825-0001"
+  MOCK.event("PLAYER_TARGET_CHANGED")
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and p.model._unit == "target" and not p.icon:IsShown(),
+    "targeting the step's NPC shows it from the target")
+  MOCK.targetGUID, MOCK.modelFails = nil, nil
   MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
   MOCK.event("QUEST_LOG_UPDATE")
   check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
@@ -4365,9 +4381,18 @@ function S.minimap()
   check(win():IsShown(), "left-click opens the window")
   mini:Click("LeftButton")
   check(not win():IsShown(), "left-click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   mini:Click("RightButton")
-  check(win():IsShown(), "right-click opens settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  mini:Click("RightButton")
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   for _, shape in ipairs({ "ROUND", "SQUARE" }) do
     MOCK.minimapShape = shape
     MOCK.fire(mini, "OnDragStart", "LeftButton")
@@ -4720,9 +4745,18 @@ function S.compartment()
   check(win() and win():IsShown(), "click opens the Codex")
   entry.func(entry, { buttonName = "LeftButton" })
   check(not win():IsShown(), "click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   entry.func(entry, { buttonName = "RightButton" })
-  check(win():IsShown() and MOCK.textUnder(win()):find("Minimap button"), "right-click opens Settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  entry.func(entry, { buttonName = "RightButton" })
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   local owner = CreateFrame("Button", nil, UIParent)
   entry.funcOnEnter(owner)
   local lines = table.concat(GameTooltip._lines or {}, " / ")
@@ -7735,4 +7769,52 @@ function S.craftSmeltingCases()
   check(t:find("no points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
+end
+
+-- A new character's intro cinematic (or Alt+Z) hides UIParent: the step window comes back with it.
+-- Only the player's own Hide keeps it closed.
+function S.questUiHidden()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Rude Awakening"), "a fresh Undead starts at Rude Awakening")
+  UIParent:Hide()
+  check(not frame:IsVisible(), "hidden with the UI")
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(frame:IsShown() and frame:IsVisible(), "back when the UI comes back")
+  click(frame, "Hide")
+  UIParent:Hide()
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not frame:IsShown(), "a window the player hid stays hidden")
+  MOCK.faction = nil
+end
+
+-- A fresh character whose client lists flight points as known: guides it hasn't started show no %.
+function S.questFreshProgress()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  LevelingCodexCharDB = { questFlights = { ["Crossroads, The Barrens"] = true, ["Ratchet, The Barrens"] = true,
+    ["The Sepulcher, Silverpine Forest"] = true, ["Undercity, Tirisfal"] = true, ["Orgrimmar, Durotar"] = true } }
+  S.login()
+  MOCK.questLog = { { questID = 363 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 363)
+  MOCK.event("QUEST_LOG_UPDATE")
+  slash("quests")
+  for _, name in ipairs({ "The Crossroads", "Silverpine Forest", "Northern Barrens" }) do
+    check(guideButton(name), "the guide list has " .. name)
+  end
+  local function tagged(root)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r:IsShown() and type(r._text) == "string" and r._text:find("^Later %d+%%") then return r._text end
+    end
+    for _, c in ipairs({ root:GetChildren() }) do
+      local hit = c:IsShown() and tagged(c)
+      if hit then return hit end
+    end
+  end
+  local tag = tagged(win())
+  check(not tag, "no guide you haven't started shows a percentage: " .. tostring(tag))
+  MOCK.faction = nil
 end

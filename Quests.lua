@@ -1096,15 +1096,21 @@ end
 
 -- The step window's completion bar: the section's steps you're past (done, skipped or missed) out
 -- of its steps that count for you (not filtered, outleveled or cut from a chain).
+-- A guide counts nothing until one of its quest steps is passed: steps the client can finish before
+-- you get there (a flight path Forever already lists as known, a lead-in ride skipped because you
+-- stand on that map) would otherwise give a fresh level 1 a few percent of guides it hasn't seen.
 function Q.stepProgress(section)
-  local passed, total = 0, 0
+  local passed, total, started = 0, 0, false
   for _, row in ipairs(steps) do
     if row.section == section and row.state ~= "filtered" and not row.grey and not row.cut then
       total = total + 1
-      if row.state == "done" or row.state == "skipped" or row.state == "deferred" then passed = passed + 1 end
+      if row.state == "done" or row.state == "skipped" or row.state == "deferred" then
+        passed = passed + 1
+        if row.step.quest then started = true end
+      end
     end
   end
-  return passed, total
+  return started and passed or 0, total
 end
 
 -- A guide's progress everywhere (the guide list, band headers, the step bar): its steps.

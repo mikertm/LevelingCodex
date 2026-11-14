@@ -73,6 +73,8 @@ do
   local turner = rg(nil, 41.5, 62.5)
   local meadowsbrook = rg(nil, 42.7, 80.8)
   local bristle = rg(nil, 16.6, 70.8)
+  local sleebo = rg("Sleebo Fizzlespout", 68.2, 48.6)
+  local pools = rg(nil, 62.1, 57.6)
 
   need(93786, "A Message in Blood", 36, 35, nil, true)
   need(93787, "Food for the Taking", 36, 36, 93786, true)
@@ -94,6 +96,14 @@ do
   need(95955, "Stick 'Em", 39, 36, 95951, true)
   need(95062, "Frazzlespark's Crate", 36, 36, nil, true)
   need(95033, "On the Other Side", 41, 40, nil, true)
+  -- Breadcrumbs into Rog'mar (bindonforever: Commander Aggro'gosh at Grom'gol, Tor'gan at Hammerfall);
+  -- handed in only if you carry them.
+  need(95141, "Report to Rog'mar", 38, 36, nil, true)
+  need(95143, "Finding Tan'jani", 38, 36, nil, true)
+  -- Sleebo Fizzlespout on the road east of Rog'mar (bindonforever 96063, 96067; the marsh gas and
+  -- G45-B4G spots and the order from a published Forever guide's Horde Riverglades chapter).
+  need(96063, "Gaseous Gold", 38, nil, nil, true)
+  need(96067, "Rock 'em and Sock 'em", 40, nil, 96063, true)
 
   alternate("riverglades-rogmar", "Riverglades: Rog'mar and the Plains", M.riverglades, 36, 41, zoneSources,
     { "riverglades-bolderok", "riverglades-eastsea" }, {
@@ -102,6 +112,8 @@ do
       .. "Kingdoms, ride in from the Badlands or north from the Swamp of Sorrows."),
       "The barge is confirmed by several sources; the overland ways in come from zone notes and need an in-game check."),
     taxi("getfp", p.flight, ROGMAR, "Learn the Rog'mar flight path from Grakna. It links to Kargath, Stonard, Hammerfall and Flame Crest."),
+    B.optional(finish(95141, p.kromrosh, "If Commander Aggro'gosh sent you, report to Krom'rosh.")),
+    B.optional(finish(95143, p.tanjani, "If Tor'gan in Hammerfall sent you, find Tan'jani a little west of Krom'rosh.")),
     accept(93786, p.kromrosh, "Krom'rosh leads the camp. He wants blood from the Alliance farm at Meadowsbrook."),
     note(accept(94483, p.kromrosh, "He also wants the Farholde soldiers at Turner's Logging Camp thinned out."),
       "No prerequisite is published; check that he offers it on your first visit."),
@@ -120,9 +132,9 @@ do
     along(note(targets(objective(93788, rg(nil, 37.1, 62.6), "Kill the lumberjacks on the west side of the camp and take their axes.",
       "10 Woodworker's Axe"), "Turner's Mill Lumberjack", "Woodworker"),
       "Which of the camp's workers carry the axes is not published."), 95951, 94483),
-    along(note(objective(95951, rg(nil, 38.5, 62.5),
-      "Pick up Wood Bundles from the Peasant Woodpiles around the camp, then fletch them into spears.", "20 Makeshift Stickin' Spears"),
-      "Woodpile spots and how the fletching works need an in-game check."), 93788),
+    along(note(withItem(271629, objective(95951, rg(nil, 38.5, 62.5),
+      "Pick up Wood Bundles from the Peasant Woodpiles around the camp, then use the bundles to fletch them into spears.", "20 Makeshift Stickin' Spears")),
+      "Woodpile spots need an in-game check; a published Forever guide uses the Wood Bundle (271629) to fletch."), 93788),
     along(targets(objective(94483, rg(nil, 43.5, 64.6), "Kill Farholde Priests and Scouts on the east side of the camp.",
       "8 Farholde Priests", "12 Farholde Scouts"), "Farholde Priest", "Farholde Scout"), 93788),
     action("goto", meadowsbrook, "Ride south to the Meadowsbrook farm."),
@@ -143,18 +155,23 @@ do
     finish(95951, p.tanjani), accept(95955, p.tanjani),
     finish(94532, p.neza), finish(94533, p.neza), finish(96107, p.neza), accept(96108, p.neza),
     finish(96103, p.neza, "Show Neza the skull. She knows the lion that made those marks."), accept(96104, p.neza),
-    action("goto", plains, "Go back down to the plains."),
-    targets(objective(96104, rg(nil, 52.9, 57.7), "Kill Roving Tallstriders until one leaves its beak whole.", "Intact Tallstrider Beak"),
-      "Roving Tallstrider"),
-    targets(objective(96108, rg(nil, 58.1, 59.8), "Kill Glade Vipers by the pools near the watchtower for their venom.", "4 Glade Viper Venom"),
+    action("goto", sleebo, "Ride east along the road to Sleebo Fizzlespout, who camps on the way to Powderfuse Port."),
+    accept(96063, sleebo, "Sleebo wants marsh gas from the pools on the plains."),
+    action("goto", pools, "Ride south-west to the pools near the Alliance watchtower."),
+    along(note(objective(96063, pools, "Fill Sleebo's vials with marsh gas at the pools.", "5 Marsh Gas Vials"),
+      "Pool spot from a published Forever guide's route; how the vials are filled needs an in-game check."), 96108),
+    targets(objective(96108, rg(nil, 58.1, 59.8), "Kill Glade Vipers by the same pools for their venom.", "4 Glade Viper Venom"),
       "Glade Viper"),
-    action("goto", rg(nil, 40.9, 59.1), "Ride west to the river north of Turner's Logging Camp."),
-    note(targets(objective(95955, rg(nil, 40.9, 59.1), "Throw your spears at the Freshwater Crocolisks along the river.",
-      "10 Freshwater Crocolisks"), "Freshwater Crocolisk"), "Check whether the spears are thrown from an item button."),
+    targets(objective(96104, rg(nil, 52.9, 57.7), "Ride west and kill Roving Tallstriders until one leaves its beak whole.", "Intact Tallstrider Beak"),
+      "Roving Tallstrider"),
     action("goto", meadowsbrook, "Ride south to Meadowsbrook once more."),
     note(objective(93787, meadowsbrook, "Take Feed Satchels from around the Meadowsbrook farm.", "6 Feed Satchels"),
       "Satchel spots are not published; search the barns and fields."),
-    action("goto", p.kromrosh, "Ride back north to Rog'mar."),
+    action("goto", rg(nil, 54.6, 48.8), "Ride back north toward Rog'mar. Stop at the river below the camp."),
+    note(targets(objective(95955, rg(nil, 54.6, 48.8), "Throw your spears at the Freshwater Crocolisks along the river around Rog'mar.",
+      "10 Freshwater Crocolisks"), "Freshwater Crocolisk"),
+      "River spots near camp from a published Forever guide's route (the crocolisks also swim by Turner's Logging Camp); check whether the spears are thrown from an item button."),
+    action("goto", p.kromrosh, "Ride up into Rog'mar."),
     finish(95955, p.tanjani), finish(93787, p.kromrosh), accept(94480, p.kromrosh),
     finish(94480, p.gorg, "Bring the stolen feed to Gorg, the camp cook."), accept(94481, p.gorg),
     finish(96108, p.neza), accept(96109, p.neza), finish(96104, p.neza), accept(96105, p.neza),
@@ -164,13 +181,18 @@ do
     action("goto", rg(nil, 55.5, 54.5), "Ride south to the lions' hill on the plains."),
     along(targets(objective(96109, rg(nil, 55.0, 54.2), "Kill Wildplains Huntresses and Patriarchs for prized lion hides.",
       "6 Prized Lion Hides"), "Wildplains Huntress", "Wildplains Patriarch"), 96105),
-    note(withItem("Tallstrider Call", targets(objective(96105, rg("Ombassa", 57.1, 56.3),
+    note(withItem(271779, targets(objective(96105, rg("Ombassa", 57.1, 56.3),
       "At the top of the hill, use the Tallstrider Call to bring out Ombassa, the pride leader. Kill it and take its hide.",
       "Ombassa's Hide"), "Ombassa")), "Ombassa is elite (level 41). Bring a friend if you need one."),
     action("goto", p.neza, "Ride back to Rog'mar."),
     finish(96109, p.neza), finish(96105, p.neza),
     B.optional(accept(95033, p.tanjani, "If you go to Feralas next, Tan'jani sends you to Witch Doctor Uzer'i at Camp Mojache.")),
-    action("goto", p.friz, "Ride east along the road to Powderfuse Port, the goblin town on the coast."),
+    action("goto", sleebo, "Ride east along the road toward Powderfuse Port. Stop at Sleebo's camp."),
+    finish(96063, sleebo), accept(96067, sleebo, "Sleebo wants help testing his new creation."),
+    note(targets(objective(96067, rg("G45-B4G", 68.3, 48.7), "Fight Sleebo's machine, G45-B4G, beside his camp.", "G45-B4G tested"), "G45-B4G"),
+      "From a published Forever guide's route; the objective text is not published."),
+    finish(96067, sleebo),
+    action("goto", p.friz, "Ride on east along the road to Powderfuse Port, the goblin town on the coast."),
     note(taxi("getfp", p.portFlight, PORT, "Learn the Powderfuse Port flight path if a flight master is there."),
       "The client lists a Horde flight point here with no routes yet; a creator found no flight master on the beta."),
     finish(93976, p.friz, "Give Kreza's blade to Friz Frazzlespark and tell her they are even."),
@@ -196,7 +218,17 @@ do
   local camp = rg(nil, 39.5, 45.5)
   local caves = rg(nil, 45.5, 51.2)
   local shroud = rg(nil, 26.0, 42.5)
+  local gelinda = rg("Gelinda Coppergleam", 30.2, 69.1)
+  local nazok = rg("Na'zok", 70.7, 28.1)
 
+  -- Gelinda Coppergleam in the Bristle Hills and Na'zok south of Bolder'ok (bindonforever 95792, 95934,
+  -- 95936, 95162, 95163); the objective spots come from a published Forever guide's Horde Riverglades
+  -- chapters, which also send you there.
+  need(95792, "Clear 'em Out", 42, 36, nil, true)
+  need(95934, "Proof of Profit", 42, nil, nil, true)
+  fromItem(95936, 271613, "Hail the Dragonslayer", 43, 36)
+  need(95162, "Paletusk Harvesting", 41, 38, nil, true)
+  need(95163, "Drive Them Back", 40, 38, nil, true)
   need(94672, "Encroaching Twilight", 41, 36, nil, true)
   need(94680, "Twilight Missives", 41, 36, nil, true)
   need(94727, "Digging for Answers", 40, 36, 94680, true)
@@ -246,9 +278,14 @@ do
   alternate("riverglades-bolderok", "Riverglades: Bolder'ok and the Twilight's Shroud", M.riverglades, 41, 46, zoneSources,
     { "riverglades-eastsea" }, {
     taxi("fly", p.flight, ROGMAR, "Fly to Rog'mar. If you have never been there, follow the way in from the Rog'mar guide."),
+    taxi("getfp", p.flight, ROGMAR, "Learn the Rog'mar flight path from Grakna if you rode in."),
     accept(94672, p.trangul, "Tran'gul keeps watch on the Twilight's Hammer at Sunnyglade."), accept(94680, p.trangul),
+    dungeon("krol-dok-stronghold", accept(94972, p.trangul, "Tran'gul also wants the Tome of Twilight from Krol'dok Stronghold. Take it if you plan that dungeon.")),
+    dungeon("krol-dok-stronghold", accept(94968, p.kromrosh, "Krom'rosh wants Overseer Mugg of Krol'dok dead.")),
     accept(95992, rg("WANTED!", 59.5, 47.0), "Read the wanted poster at the south end of camp: Ghostmaw, a white crocolisk."),
     accept(95882, rg("Wanted", 59.6, 47.0), "The second poster names Scoutmaster Vargas, an Alliance scout."),
+    note(action("sethearth", p.toka, "Make Rog'mar your home at Innkeeper Toka before you leave. This guide hearths back here.", rogmarInn),
+      "Bind name assumed to be Rog'mar."),
     action("goto", fuzzle, "Ride west toward Sunnyglade. Fuzzle, a gnoll, hides in the brush on the way."),
     accept(94961, fuzzle, "Fuzzle pays for Twilight finger bones."),
     action("goto", camp, "Go on west to the Twilight's Hammer camp below the ogre fortress."),
@@ -264,8 +301,22 @@ do
     action("goto", rg(nil, 41.2, 64.0), "Ride south to the river by Turner's Logging Camp."),
     note(targets(objective(95992, rg("Ghostmaw", 41.2, 65.9), "Ghostmaw, an elite white crocolisk, swims the river here. "
       .. "Kill it for its fang.", "Ghostmaw's Fang"), "Ghostmaw"), "Elite, level 42. It patrols the river, so the spot is a guess."),
-    action("goto", p.trangul, "Ride back to Rog'mar."),
+    action("goto", gelinda, "Ride west into the Bristle Hills to Gelinda Coppergleam's camp."),
+    accept(95792, gelinda, "Gelinda Coppergleam wants the dragon whelps around her camp cleared."),
+    accept(95934, gelinda, "She also wants a piece of Cubic Draconia from the same hills."),
+    along(note(targets(objective(95792, rg(nil, 30.1, 72.9), "Kill Cinderscale Whelps and Warriors in the hills just south of her camp.",
+      "8 Cinderscale Whelps", "4 Cinderscale Warriors"), "Cinderscale Whelp", "Cinderscale Warrior"),
+      "Counts from bindonforever (the Alliance file says 8 warriors); the quest log shows the real ones."), 95934),
+    note(objective(95934, rg(nil, 30.1, 73.3), "Search the whelps' hills for a piece of Cubic Draconia.", "Cubic Draconia"),
+      "Spot from a published Forever guide's route; what the draconia looks like is not published."),
+    B.optional(note(action("collect", rg("Scaldaron", 31.5, 73.3), "Scaldaron, an elite dragon, waits just east of the whelps. "
+      .. "With a group, kill him for his head. Use Next to skip him.", { item = 271613, name = "Head of Scaldaron" }),
+      "Elite (level 43) in the earlier notes; spot from a published Forever guide's route.")),
+    withItem(271613, accept(95936, nil, "If you took the Head of Scaldaron, read it. Krom'rosh at Rog'mar wants it.")),
+    finish(95792, gelinda), finish(95934, gelinda),
+    action("goto", p.trangul, "Ride back east to Rog'mar."),
     finish(94672, p.trangul), finish(94680, p.trangul), accept(94727, p.trangul),
+    finish(95936, p.kromrosh, "Give Krom'rosh the Head of Scaldaron."),
     finish(95992, p.tanjani, "Give Tan'jani the fang: the poster was his."),
     action("goto", clubtoe, "Ride west to Sunnyglade and find Clubtoe, an ogre who digs for the cult."),
     finish(94727, clubtoe, "Get Clubtoe talking about what the cult digs for."),
@@ -293,16 +344,25 @@ do
     ringFight(94739, "Kronk", 42, "Back into the ring: Kronk is next."),
     finish(94739, jezap), accept(94962, jezap),
     ringFight(94962, "Bonegnaw", 42, "Your third fight is Bonegnaw."),
-    finish(94962, jezap),
+    finish(94962, jezap), accept(94964, jezap),
+    ringFight(94964, "Mog'thar", 43, "Your fourth fight is Mog'thar."),
+    finish(94964, jezap), accept(94733, jezap),
+    finish(94733, gobam, "Gobam waits just north of the ring."),
+    accept(94734, gobam, "Gobam wants Sweetberries and Riverweed. Both grow on your way: the berries in the eastern hills, the weed along the river to Rog'mar."),
     accept(95183, gorgegut, "Gorgegut, east of the ring, wants good rocks for Hamur's weapons."),
     accept(94556, jomjom, "Jom-jom, east of Gorgegut, wants to go home to Clugfist."),
     note(objective(94556, jomjom, "Keep Jom-jom alive on the walk back to Clugfist.", "Escort Jom-jom"),
       "Escort path not published. If it starts at once, do the next steps after it."),
     finish(94556, p.clugfist),
+    action("goto", nazok, "Ride south out of Bolder'ok to Na'zok's farm."),
+    accept(95162, nazok, "Na'zok wants boar meat from the Mature Paletusks in the hills around his farm."),
+    note(accept(95163, nazok, "He also wants his Young Paletusks brought back to the farm."), "How the young boars are brought back is not published."),
     along(note(objective(95183, rg(nil, 70.0, 27.0), "Pick up good rocks by the river outside Bolder'ok.", "10 Good Rocks"),
-      "Rock spots are not published; the quest says the river near Bolder'ok."), 95424),
+      "Rock spots are not published; the quest says the river near Bolder'ok."), 95424, 95162),
+    along(targets(objective(95162, rg(nil, 67.5, 29.0), "Kill Mature Paletusks in the hills around the farm for Chunks of Boar Meat.",
+      "10 Chunk of Boar Meat"), "Mature Paletusk"), 95183, 95424),
     along(targets(part(95424, 1, rg(nil, 67.6, 30.2), "Kill Twilight Maulers in the camp south of Bolder'ok.", "7 Twilight Maulers"),
-      "Twilight Mauler"), 95183),
+      "Twilight Mauler"), 95183, 95162),
     along(targets(part(95424, 2, rg(nil, 74.1, 29.2), "Kill Twilight Firecallers farther east, toward the water.", "7 Twilight Firecallers"),
       "Twilight Firecaller"), 95425),
     note(targets(objective(95425, rg("Klunk", 74.8, 27.1), "Klunk took Clugfist's weapon to a cave by the water. Kill him and take it back.",
@@ -310,17 +370,19 @@ do
     note(targets(objective(95882, rg("Scoutmaster Vargas", 73.4, 34.2), "Swim to the small island south of here. Scoutmaster Vargas "
       .. "camps there with his pet. Kill him for his eye.", "Scoutmaster's Eye"), "Scoutmaster Vargas"),
       "Elite quest (level 43); his pet fights with him."),
+    note(part(94734, 1, rg(nil, 78.9, 37.4), "Ride south-east to the hills above the Eastsea raiders' camp and pick Sweetberries.", "8 Sweetberry"),
+      "Spot from a published Forever guide's route."),
+    note(targets(objective(95163, rg(nil, 72.6, 39.9), "Ride west through the fields south of the farm and gather Young Paletusks for Na'zok.",
+      "10 Young Paletusks"), "Young Paletusk"), "Spot from a published Forever guide's route; whether the boars follow you or are an item is not published."),
+    action("goto", nazok, "Ride north back to Na'zok's farm."),
+    finish(95162, nazok), finish(95163, nazok),
     action("goto", p.clugfist, "Go back to Bolder'ok."),
     finish(95424, p.clugfist), finish(95425, p.clugfist), accept(95428, p.clugfist),
     finish(95183, hamur, "Hamur takes the rocks."),
-    accept(94964, jezap),
-    ringFight(94964, "Mog'thar", 43, "Your fourth fight is Mog'thar."),
-    finish(94964, jezap), accept(94733, jezap),
-    finish(94733, gobam, "Gobam waits just north of the ring."), accept(94734, gobam),
-    note(objective(94734, rg(nil, 67.5, 20.0), "Gather Sweetberry and Riverweed around Bolder'ok.", "8 Sweetberry", "12 Riverweed"),
-      "Plant spots are not published; look along the river and the hills by the town."),
-    finish(94734, gobam), accept(94737, gobam), finish(94737, jezap),
-    action("goto", p.kromrosh, "Ride south to Rog'mar."),
+    action("goto", rg(nil, 62.4, 40.8), "Ride south along the river toward Rog'mar."),
+    note(part(94734, 2, rg(nil, 62.4, 40.8), "Pick Riverweed along the banks as you go.", "12 Riverweed"),
+      "Spots from a published Forever guide's route; the weed grows all along the river down to Rog'mar."),
+    action("goto", p.kromrosh, "Ride on to Rog'mar."),
     finish(95428, p.kromrosh), accept(94744, p.kromrosh),
     finish(95882, p.neza, "Give Neza the scoutmaster's eye."),
     action("goto", p.dagrosh, "Ride west past Sunnyglade to the hills east of the Twilight's Shroud and find Da'grosh."),
@@ -343,13 +405,13 @@ do
       .. "Bring a group, kill him and take his head.", "Kilgar's Head"), "Overlord Kilgar"), "Elite quest (level 46)."),
     finish(94768, p.dagrosh), accept(95278, p.dagrosh),
     dungeon("krol-dok-stronghold", accept(94975, p.dagrosh, "Da'grosh also wants ears from the cultists inside Krol'dok Stronghold, "
-      .. "the cave north of here.")),
+      .. "whose cave entrance is a short ride east of here.")),
     action("hearth", p.toka, "Hearth to Rog'mar.", rogmarInn),
-    finish(95278, p.kromrosh),
-    dungeon("krol-dok-stronghold", accept(94968, p.kromrosh, "Krom'rosh wants Overseer Mugg of Krol'dok dead.")),
-    dungeon("krol-dok-stronghold", accept(94972, p.trangul, "Tran'gul wants the Tome of Twilight from the stronghold.")),
+    B.withGuide("dungeon-krol-dok-stronghold", finish(95278, p.kromrosh,
+      "Report to Krom'rosh. If you took the Krol'dok quests, the stronghold east of Da'grosh's camp is ready for a group now.")),
     action("goto", p.clugfist, "Ride north to Bolder'ok."),
     finish(95433, p.clugfist, "Give Clugfist the executioner's mace."),
+    finish(94734, gobam, "Give Gobam the Sweetberries and Riverweed."), accept(94737, gobam), finish(94737, jezap),
     accept(94965, jezap),
     ringFight(94965, "Snufflesnout", 44, "Back to the ring: Snufflesnout."),
     finish(94965, jezap), accept(95063, jezap),
@@ -371,7 +433,10 @@ do
   local islands = rg(nil, 73.6, 73.5)
   local crew = rg(nil, 82.0, 43.8)
   local raiders = rg(nil, 76.0, 32.0)
+  local guts = rg(nil, 67.5, 29.0)
+  local mushrooms = rg(nil, 75.0, 26.1)
 
+  need(95295, "I Know a Guy", 40, 36, nil, true)
   need(95118, "Saltwater Savages", 41, 36, nil, true)
   need(95121, "A Taste of the Sea", 40, 36, nil, true)
   need(95254, "WANTED: Trapclaw", 42, 36, nil, true)
@@ -420,32 +485,40 @@ do
     finish(95260, argo, "Argo Brinewhistle, a fisherman on the docks, knows the monster on the hide."), accept(95261, argo),
     action("goto", crew, "Ride north along the coast to the Eastsea crew's camps."),
     along(targets(objective(95119, crew, "Kill Eastsea Buccaneers and Musketeers along the shore.", "10 Eastsea Buccaneers",
-      "10 Eastsea Musketeers"), "Eastsea Buccaneer", "Eastsea Musketeer"), 95288, 95261),
+      "10 Eastsea Musketeers"), "Eastsea Buccaneer", "Eastsea Musketeer"), 95288),
     along(note(objective(95288, crew, "Loot Smuggled Goods from the Eastsea pirates.", "8 Smuggled Goods"),
       "Whether the goods drop or lie in crates is not published."), 95119),
-    along(note(objective(95261, rg(nil, 78.0, 56.6), "Collect Beast Entrails from beasts along the coast and Rotflesh Mushrooms.",
-      "15 Beast Entrails", "8 Rotflesh Mushrooms"), "Which beasts and where the mushrooms grow is not published."), 95119),
     action("goto", p.whizzbuzz, "Go back to Powderfuse Port."),
     finish(95119, p.whizzbuzz), accept(95122, p.whizzbuzz), accept(95123, p.whizzbuzz),
-    finish(95288, p.friz), accept(95293, p.friz, "Friz has a special delivery for Captain Bentcoin at Windstead."),
+    finish(95288, p.friz), accept(95293, p.friz, "Friz has a special delivery for Captain Bentcoin at Windstead. You pass there with the charges later."),
     action("goto", raiders, "Ride north to the pirates who burned Windstead."),
     along(targets(objective(95122, raiders, "Kill Eastsea Raiders and Bombardiers.", "8 Eastsea Raiders", "8 Eastsea Bombardiers"),
       "Eastsea Raider", "Eastsea Bombardier"), 95123),
     along(note(objective(95123, raiders, "Steal Eastsea Powder Kegs from the pirate camp.", "5 Eastsea Powder Kegs"),
       "Keg spots are not published."), 95122),
-    action("goto", bentcoin, "Ride east to the ruins of Windstead."),
+    note(targets(part(95261, 1, guts, "Ride west into the hills south of Bolder'ok. Kill Mature Paletusks for Beast Entrails.", "15 Beast Entrails"),
+      "Mature Paletusk"), "The paletusks as the entrails' source and their spots are from a published Forever guide's route."),
+    note(part(95261, 2, mushrooms, "Ride back east to the Twilight camp by the water and pick Rotflesh Mushrooms around it.", "8 Rotflesh Mushrooms"),
+      "Mushroom spots from a published Forever guide's route."),
+    action("goto", p.whizzbuzz, "Ride south back to Powderfuse Port."),
+    finish(95122, p.whizzbuzz), finish(95123, p.whizzbuzz), accept(95165, p.whizzbuzz), accept(95124, p.whizzbuzz),
+    finish(95261, argo), accept(95267, argo),
+    action("goto", bentcoin, "Ride north-east to the ruins of Windstead."),
     finish(95293, bentcoin, "Deliver the Friz Special to Captain Bentcoin."),
     accept(95294, haynes, "Captain Haynes has an offer for Friz."),
-    action("goto", p.whizzbuzz, "Ride back to Powderfuse Port."),
-    finish(95122, p.whizzbuzz), finish(95123, p.whizzbuzz), accept(95165, p.whizzbuzz), accept(95124, p.whizzbuzz),
-    finish(95294, p.friz), finish(95261, argo), accept(95267, argo),
-    action("goto", rg(nil, 88.0, 31.0), "Ride north to the Eastsea ships and Admiral Lamora's camp."),
-    along(note(objective(95165, rg(nil, 88.0, 31.0), "Board each of the three Eastsea boats and plant a charge near its cannons.",
-      "3 Charges Planted"), "Boat positions are not published."), 95124),
-    note(targets(objective(95124, rg("Admiral Lamora", 89.2, 30.9), "Kill Admiral Lamora, then find his stash of loot nearby.",
-      "Lamora's Loot"), "Admiral Lamora"), "Group size needed is not known."),
+    note(part(95165, 3, rg(nil, 91.1, 39.4), "One Eastsea boat lies off Windstead. Board it and plant a charge.", "Third charge planted"),
+      "Boat spots from a published Forever guide's route; the objective names are not published."),
+    action("goto", rg(nil, 90.5, 29.8), "Ride north to the Eastsea ships and Admiral Lamora's camp."),
+    along(note(part(95165, 2, rg(nil, 90.6, 29.6), "Plant a charge on the boat by Lamora's camp.", "Second charge planted"),
+      "Boat spot from a published Forever guide's route."), 95124),
+    note(targets(objective(95124, rg("Admiral Lamora", 90.5, 29.6), "Kill Admiral Lamora, take his key and open his stash of loot nearby.",
+      "Admiral Lamora", "Lamora's Loot"), "Admiral Lamora"), "Group size needed is not known; spots from a published Forever guide's route."),
+    note(part(95165, 1, rg(nil, 88.3, 25.8), "The last boat lies farther north-west along the shore. Plant your last charge there.", "First charge planted"),
+      "Boat spot from a published Forever guide's route."),
     action("goto", p.whizzbuzz, "Ride back to Powderfuse Port."),
     finish(95165, p.whizzbuzz), finish(95124, p.whizzbuzz),
+    finish(95294, p.friz),
+    B.optional(accept(95295, p.friz, "If you go to Stranglethorn next, Friz sends you to her contact in Booty Bay.")),
     action("goto", islands, "Ride south to the murloc islands where you found the painted hide."),
     note(withItem("Big Ball o' Bait", targets(objective(95267, rg("Monstrous Threshadon", 72.9, 73.6),
       "Throw the Big Ball o' Bait into the water by the fresh wreckage, then kill the sea monster and take its head.",
@@ -533,7 +606,7 @@ do
     accept(94972, p.trangul, "Tran'gul wants the Tome of Twilight from inside."),
     action("goto", p.dagrosh, "Ride west to Da'grosh's camp east of the Twilight's Shroud."),
     accept(94975, p.dagrosh, "Da'grosh wants ears from the cultists hiding in the stronghold."),
-    note(action("dungeon", rg("Krol'dok Stronghold entrance", 37.5, 37.3), "Ride north to the ogre fortress. The gates stay shut: "
+    note(action("dungeon", rg("Krol'dok Stronghold entrance", 37.5, 37.3), "Ride east to the ogre fortress. The gates stay shut: "
       .. "the portal is in a cave west of them, next to the meeting stone.", { name = name }),
       "Entrance from published guides (37.5, 37.3); check it in game."),
   })
@@ -552,6 +625,9 @@ do
     finish(94973, p.kreza, "Show the moulding to Kreza Darkthorn at the forge."),
     note(accept(94974, p.kreza, "She can cast a key from it if you bring 4 Thick Leather and 12 Iron Bars."),
       "One source swaps the counts (12 leather, 4 bars); check the quest log."),
+    note(action("collect", p.kreza, "Bring 4 Thick Leather and 12 Iron Bars. Skinners and miners make them; otherwise buy them at an Auction House "
+      .. "(Orgrimmar or the Undercity) and fly back. Use Next if the quest log asks for other counts.",
+      { items = { { 4304, 4 }, { 3575, 12 } }, name = "Thick Leather and Iron Bars" }), "Counts as in the item list; one source swaps them."),
     finish(94974, p.kreza, "Hand over the leather and bars for the Krol'dok Compound Key."),
   })
 
@@ -613,9 +689,9 @@ do
   offer("tanaris-41", "riverglades-eastsea", "shendralas-pylons")
   offer("feralas-43", "shendralas-pylons")
   offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41")
-  offer("riverglades-bolderok", "feralas-43", "stv-44", "swamp-45")
+  offer("riverglades-bolderok", "feralas-43", "stv-44", "swamp-45", "tanaris-46")
   offer("riverglades-eastsea", "feralas-43", "stv-44", "swamp-45")
-  offer("shendralas-pylons", "feralas-43", "stv-44", "swamp-45")
+  offer("shendralas-pylons", "feralas-43", "stv-44", "swamp-45", "tanaris-46")
   -- 40-50 into 50-60.
   offer("feralas-49", "blasted-50", "searing-alt", "ungoro-alt", "azshara-alt")
   offer("searing-45", "blasted-50", "searing-alt")

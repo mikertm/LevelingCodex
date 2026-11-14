@@ -361,7 +361,9 @@ local barrensSouth = (function()
     accept(97250, logmar),
     objectiveAt(868, ba(nil, 42.91, 69.86), "Loot Silithid Eggs from the mounds in the Field of Giants south of camp. Kill a Silithid Harvester for the Digging Claw.", "12 Silithid Eggs", "Digging Claw"),
     withItem(5138, accept(897, ba("Silithid Harvester", 43.1, 70.1), "If the Silithid Harvester drops its head in the Field of Giants, use it.")),
-    accept(843, gann, "Follow the road south to Gann Stonespire's camp above Bael Modan."),
+    -- The Cozy Sleeping Bag chain starts at the burned watchtower beside Gann's camp (a special guide).
+    B.withGuide("cozy-sleeping-bag-horde", accept(843, gann,
+      "Follow the road south to Gann Stonespire's camp above Bael Modan. The burned watchtower beside the road starts the Cozy Sleeping Bag chain.")),
     accept(98093, sulhasa, "Sulhasa is stuck up the tree beside the road. She wants the lizards and hyenas cleared."),
     along(objectiveAt(98093, ba(nil, 46.6, 76.2), "Kill Stormhide lizards and Hecklefang Stalkers around the tree and the road.", "7 Stormhides", "7 Hecklefang Stalkers"), 879),
     withItem(5103, accept(885, ba("Washte Pawne", 45.7, 77.9), "If you kill Washte Pawne, a rare wind serpent around here, use his feather.")),
