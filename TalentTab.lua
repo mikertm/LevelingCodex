@@ -116,7 +116,13 @@ local function drawCards(y)
   if p then
     if p.note and p.note ~= "" then y = y + U.T(plain(p.note), 0, y, U.W, "body", C.light) + 4 end
     if not p.guide then
-      y = y + U.T("Macros and tips follow the " .. ns.D.spec .. " guide.", 0, y, U.W, "small", C.dim) + 4
+      local _, from = ns.pathMacros()
+      local text = "Macros and tips follow the " .. ns.D.spec .. " guide."
+      if from and not from.guide then
+        text = (from == p and "Macros follow this path" or ("Macros follow the " .. from.spec .. " path")) ..
+          "; tips follow the " .. ns.D.spec .. " guide."
+      end
+      y = y + U.T(text, 0, y, U.W, "small", C.dim) + 4
     end
     if how == "matched" then
       y = y + U.T("Picked from the talents you have spent. Choose one to keep it.", 0, y, U.W, "small", C.gold) + 4

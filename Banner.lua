@@ -21,7 +21,7 @@ function ns.levelUpMessage(level)
   local t = ns.trainAt(level)
   if t then ns.say("new spells at your trainer: " .. plain(table.concat(t.spells, ", ")) .. ".") end
   local changed = {}
-  for _, m in ipairs(D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if m.lo == level then changed[#changed + 1] = m.name end
   end
   if #changed > 0 then
@@ -322,10 +322,11 @@ local function unlocksAt(level)
   end
   -- profession training this level opens, next to the class trainer (the banner holds 5 rows)
   for _, r in ipairs(ns.profLevelRows and ns.profLevelRows(level) or {}) do rows[#rows + 1] = r end
-  for _, m in ipairs(ns.D.macros) do
+  local macros = ns.pathMacros()
+  for _, m in ipairs(macros) do
     if m.lo == level then
       local older = false
-      for _, o in ipairs(ns.D.macros) do
+      for _, o in ipairs(macros) do
         if o.name == m.name and o.lo < m.lo then older = true end
       end
       rows[#rows + 1] = { m.icon, older and "MACRO UPDATED" or "NEW MACRO", m.name .. "  -  /codex macros" }

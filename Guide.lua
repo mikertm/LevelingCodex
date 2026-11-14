@@ -51,10 +51,11 @@ function ns.bracketFor(level)
   return best
 end
 
+-- Macros follow the talent path you follow (ns.pathMacros, Talents.lua).
 function ns.macrosFor(level)
   local list = {}
   if not ns.D then return list end
-  for _, m in ipairs(ns.D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if level >= m.lo and level <= m.hi then list[#list + 1] = m end
   end
   return list
@@ -64,7 +65,7 @@ end
 function ns.comingMacros(level)
   local list, seen = {}, {}
   if not ns.D then return list end
-  for _, m in ipairs(ns.D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if m.lo > level and not seen[m.name .. m.lo] then
       seen[m.name .. m.lo] = true
       list[#list + 1] = m

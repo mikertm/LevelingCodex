@@ -580,11 +580,14 @@ local function controllerMock(list, y)
         local ms = set.slots[name]
         local b = set.isDir and { dir = name } or { face = name }
         if ms and #ms > 1 then
-          -- shared button: both icons, overlapped, each with its own tooltip
-          for k = math.min(#ms, 2), 1, -1 do
+          -- shared button (a druid's caster, Bear and Cat Fight, used in different forms): up to three
+          -- icons, overlapped, the first on top, each with its own tooltip
+          local n = math.min(#ms, 3)
+          local size, step = n == 2 and 25 or 21, n == 2 and 10 or 7
+          for k = n, 1, -1 do
             local m = ms[k]
-            local f = icon(m.icon, sx - 17 + (k - 1) * 10, sy - 17 + (k - 1) * 10, 25, m.name, macroTip(m))
-            f:SetFrameLevel(overlay:GetFrameLevel() + 1 + (k == 1 and 1 or 0))
+            local f = icon(m.icon, sx - 17 + (k - 1) * step, sy - 17 + (k - 1) * step, size, m.name, macroTip(m))
+            f:SetFrameLevel(overlay:GetFrameLevel() + 1 + (n - k))
           end
           glyph(sx + 13, sy + 13, 16, b)
         elseif ms then
@@ -875,9 +878,15 @@ local PAD_NAMES = { xbox = "Xbox", ps = "PlayStation", switch = "Switch" }
 renderers.macros = function(V)
   local list = ns.macrosFor(V)
   local y = sectionTitle("Macros for level " .. V, 0, "hover a button for how it works")
+  -- the macros follow your talent path: its own set, or the guide's when it has none
   local path = ns.talentPath()
-  if path and not path.guide then
-    y = y + T("These macros are built for the " .. ns.D.spec .. " guide.", 0, y, W, "small", C.gold) + 6
+  local _, from = ns.pathMacros()
+  if path and path.custom then
+    y = y + T("Your custom path uses the " .. ((from and from.spec) or ns.D.spec) ..
+      " macros: that path shares the most points with yours.", 0, y, W, "small", C.gold) + 6
+  elseif path and not path.guide then
+    y = y + T(from and not from.guide and ("Built for the " .. path.spec .. " path.")
+      or ("These macros are built for the " .. ns.D.spec .. " guide."), 0, y, W, "small", C.gold) + 6
   end
   local h = T("Set up macros makes them all at once (character tab of Esc > Macros). Then put each on the button or key shown below.",
     0, y, W - 170, "small", C.dim)

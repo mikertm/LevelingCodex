@@ -277,10 +277,68 @@ end
 
 function ns.setTalentPath(key)
   if not pathByKey(key) then return false end
+  local before = ns.pathMacros()
   LevelingCodexCharDB = LevelingCodexCharDB or {}
   LevelingCodexCharDB.talentPath = key
   bump()
+  -- the macros follow the path: switch the ones the Codex made to this path's versions
+  local now, from = ns.pathMacros()
+  if now ~= before and ns.D then
+    if not ns.db().noAutoMacros and ns.setupMacros then ns.setupMacros(true) end
+    ns.say("your macros now follow the " .. (from and from.spec or ns.D.spec) .. " path. " .. ns.WHITE ..
+      "/codex macros|r sets up any new ones.")
+  end
   return true
+end
+
+----------------------------------------------------------------------------
+-- Macros follow the path (PathMacros.lua; the guide's own set is Data.lua's)
+----------------------------------------------------------------------------
+
+-- The path whose macros you get: the one you follow, or for Custom the path whose plan shares the most
+-- points with yours (the guide when none does, or on a tie).
+function ns.macroPath()
+  local p = ns.talentPath()
+  if not (p and p.custom) then return p end
+  local have = {}
+  for _, n in ipairs(ns.customPoints()) do have[n] = (have[n] or 0) + 1 end
+  local best, bestScore = pathByKey("guide"), 0
+  for _, q in ipairs(ns.talentPaths()) do
+    if q.plan and not q.custom then
+      local want = {}
+      for _, n in ipairs(pointsOf(q.plan)) do want[n] = (want[n] or 0) + 1 end
+      local overlap = 0
+      for n, c in pairs(want) do overlap = overlap + math.min(c, have[n] or 0) end
+      if overlap > bestScore then best, bestScore = q, overlap end
+    end
+  end
+  return best
+end
+
+-- The macro set you get (a path's own, else the guide's) and the path it belongs to.
+function ns.pathMacros()
+  if not ns.D then return {} end
+  local p = ns.macroPath()
+  local sets = (ns.PATH_MACROS or {})[classToken()]
+  local own = p and not p.guide and sets and sets[p.key]
+  if own then return own, p end
+  return ns.D.macros, pathByKey("guide")
+end
+
+-- Every macro set of your class, the guide's first: a macro the Codex made on any path is still its own.
+function ns.classMacroSets()
+  local out = {}
+  if ns.D then out[1] = ns.D.macros end
+  local sets = (ns.PATH_MACROS or {})[classToken()] or {}
+  for _, p in ipairs(ns.talentPaths()) do
+    if sets[p.key] then out[#out + 1] = sets[p.key] end
+  end
+  return out
+end
+
+-- Bodies the Codex shipped before under a macro name (PathMacros.lua's OLD_MACRO_BODIES).
+function ns.oldMacroBodies(name)
+  return ((ns.OLD_MACRO_BODIES or {})[classToken()] or {})[name]
 end
 
 local planCache = { version = -1 }
