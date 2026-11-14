@@ -982,6 +982,8 @@ local function completionSound(row)
     sounds.n, sounds.last = sounds.n + 1, Q.plain(Q.label(finished.step))
     pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175, "Master")
   end
+  -- Settings > Say steps I finish in party chat (said at the end of this refresh)
+  if done then ns.partyStepDone(finished.step) end
 end
 
 -- The use-item button: a secure button beside the step window that uses the current
@@ -1356,10 +1358,13 @@ local function addTracking(out)
     out[#out + 1] = { kind = "quest", text = entry.title or ("Quest " .. id) }
     addGoals(out, entry, nil, nil, true, true, 12)
   end
-  local party = ns.partyLines()
+  -- one row per party member against your step; the heading says when everyone is on it
+  local party = ns.partyRows()
   if #party > 0 then
-    out[#out + 1] = { kind = "heading", text = "Party" }
-    out[#out + 1] = { kind = "note", tone = "dim", text = table.concat(party, "\n") }
+    local together = true
+    for _, r in ipairs(party) do if r.status ~= "same" then together = false end end
+    out[#out + 1] = { kind = "heading", text = together and "Party - all on this step" or "Party" }
+    for _, r in ipairs(party) do out[#out + 1] = { kind = "party", text = r.text, where = r.where, status = r.status } end
   end
 end
 
@@ -1412,6 +1417,24 @@ function makers.upnext()
   r.dist = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   r.dist:SetJustifyH("RIGHT")
   r.dist:SetPoint("TOPRIGHT", 0, 0)
+  return r
+end
+
+-- A PARTY row: a dot in the member's status colour, "Name (level): their step or goal", and at the
+-- right where they are against you ("same step", "2 behind", the other guide).
+function makers.party()
+  local r = CreateFrame("Frame", nil, viewer)
+  r.dot = r:CreateTexture(nil, "OVERLAY")
+  r.dot:SetSize(7, 7)
+  r.dot:SetPoint("TOPLEFT", 2, -3)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.name:SetJustifyH("LEFT")
+  r.name:SetWordWrap(true)
+  r.name:SetPoint("TOPLEFT", 14, 0)
+  r.where = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.where:SetJustifyH("RIGHT")
+  r.where:SetWordWrap(false)
+  r.where:SetPoint("TOPRIGHT", 0, 0)
   return r
 end
 
@@ -1612,6 +1635,27 @@ local function putNext(b)
   cursor = cursor + 14
 end
 
+-- Party rows: green on your step, orange behind you (wait for them), the theme's accent ahead,
+-- dim in another guide or with no step shared.
+local function putParty(b)
+  local r = take("party")
+  r:SetPoint("TOPLEFT", LEFT, -cursor)
+  r:SetWidth(WIDTH)
+  r.where:SetText(Q.plain(b.where or ""))
+  local tone = b.status == "same" and "done" or b.status == "behind" and "warn" or nil
+  local cr, cg, cb = ink(tone or "dim")
+  if b.status == "ahead" then cr, cg, cb = ns.rgba(C.accent) end
+  r.dot:SetColorTexture(cr, cg, cb, 1)
+  r.where:SetTextColor(cr, cg, cb)
+  local whereWidth = math.ceil(tonumber(try(r.where.GetStringWidth, r.where)) or 60) + 8
+  r.name:SetWidth(WIDTH - 14 - whereWidth)
+  r.name:SetText(Q.plain(b.text))
+  r.name:SetTextColor(ink((b.status == "other" or b.status == "none") and "dim" or "text"))
+  local height = math.max(12, tonumber(r.name:GetStringHeight()) or 12)
+  r:SetHeight(height)
+  cursor = cursor + height + 2
+end
+
 local function draw(blocks)
   nextRows = {}
   local last
@@ -1625,6 +1669,7 @@ local function draw(blocks)
     elseif b.kind == "note" then putText(b.text, b.tone)
     elseif b.kind == "danger" then cursor = cursor + 3; putText(b.text, "danger")
     elseif b.kind == "upnext" then putNext(b)
+    elseif b.kind == "party" then putParty(b)
     elseif b.kind ~= "chain" then putText(b.text, "text") end
     last = b.kind
   end

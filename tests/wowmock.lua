@@ -84,10 +84,17 @@ C_QuestLog = {
   GetQuestWatchType = function(id) return MOCK.watches and MOCK.watches[id] and 0 or nil end,
   IsPushableQuest = function() return true end,
 }
--- Parties: MOCK.party = in a party; addon messages go to MOCK.addonSent, chat to MOCK.said,
--- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed).
+-- Parties: MOCK.party = in a party (MOCK.raid = a raid); addon messages go to MOCK.addonSent, chat to MOCK.said,
+-- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed). MOCK.partyMembers = { { name, realm, level,
+-- class } } are party1..N (UnitName/UnitLevel/UnitClass, GetNumSubgroupMembers).
 function IsInGroup() return MOCK.party or false end
-function IsInRaid() return false end
+function IsInRaid() return MOCK.party and MOCK.raid or false end
+local function partyMember(unit)
+  local n = type(unit) == "string" and tonumber(unit:match("^party(%d)$"))
+  return n and MOCK.party and MOCK.partyMembers and MOCK.partyMembers[n] or nil
+end
+MOCK.partyMember = partyMember
+function GetNumSubgroupMembers() return MOCK.party and MOCK.partyMembers and #MOCK.partyMembers or 0 end
 C_ChatInfo = {
   RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefix = prefix; return true end,
   SendAddonMessage = function(prefix, text, channel)
@@ -854,11 +861,23 @@ end
 
 function GetTime() return MOCK.time end
 function time() return 1700000000 + math.floor(MOCK.time) end
-function UnitLevel(unit) return MOCK.level end
-function UnitName() return "Tester" end
+function UnitLevel(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.level end
+  return MOCK.level
+end
+function UnitName(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.name, m.realm end
+  return "Tester"
+end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
   PALADIN = "Paladin", SHAMAN = "Shaman", WARLOCK = "Warlock", DRUID = "Druid" }
-function UnitClass(unit) return CLASS_NAMES[MOCK.class] or MOCK.class, MOCK.class end
+function UnitClass(unit)
+  local m = MOCK.partyMember(unit)
+  local class = m and m.class or MOCK.class
+  return CLASS_NAMES[class] or class, class
+end
 function InCombatLockdown() return MOCK.combat end
 function GetCursorPosition() return MOCK.cursor[1], MOCK.cursor[2] end
 -- MOCK.sounds records { id, channel } for each sound played.
@@ -874,10 +893,17 @@ function IsShiftKeyDown() return MOCK.shift or false end
 function IsControlKeyDown() return MOCK.ctrl or false end
 
 -- Questie (opt-in, made by scenarios): its settings and its tracker frame.
--- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx }
+-- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
+--   announce = { channel = "party", objectives, items, shutUp } }
 function MOCK.makeQuestie(opts)
   opts = opts or {}
   local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
+  if opts.announce then
+    profile.questAnnounceChannel = opts.announce.channel or "party"
+    profile.questAnnounceObjectives = opts.announce.objectives == true
+    profile.questAnnounceItems = opts.announce.items == true
+    profile.questieShutUp = opts.announce.shutUp == true
+  end
   if opts.legacyAccept then profile.autoaccept = true else profile.autoAccept = { enabled = opts.autoAccept == true } end
   Questie = { db = { profile = profile } }
   local tracker = _G.Questie_BaseFrame
@@ -1525,7 +1551,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
-  "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
+  "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 

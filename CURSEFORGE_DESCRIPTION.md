@@ -38,7 +38,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 - **Turn-in XP** ("+2,100 XP", or "levels you up"), a 3D portrait of the NPC or creature, and a completion bar for the guide.
 - **Watch out here:** hostile elites and rares near your step, until you outlevel them.
 - **Fits any screen.** Shrink it to 50% (Ctrl+mouse wheel), let it fade while you fight, or switch to compact mode: just the step, its count or distance, a bar and the buttons.
-- **Party play.** Party members who use the Codex see each other's current step and how far ahead or behind they are. Sharing guide quests and saying your flights in party chat are optional.
+- **Party play.** The step window lists your party: who is on your step (with their kill or loot count), who is ahead or behind and by how many steps, and who isn't sharing a step. Party members need the Codex to share theirs. Optional party chat lines, like Questie's, say the steps you finish, the quest items you pick up and your quest progress. Sharing guide quests and saying your flights in party chat are optional too.
 
 ### The arrow and your maps
 - **The arrow** shows the distance and about how long until you get there. It turns green when you're on course, gold when the step is off to your side, and red when it's behind you. Drag it, resize it or lock it.

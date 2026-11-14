@@ -2130,14 +2130,14 @@ function S.questParty()
   MOCK.event("GROUP_ROSTER_UPDATE")
   local last = MOCK.addonSent and MOCK.addonSent[#MOCK.addonSent]
   check(MOCK.addonPrefix == "LevCodex" and last and last.channel == "PARTY", "the Codex talks to the party by addon message")
-  local told
-  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^S;northshire;%d+;Accept %- A Threat Within$") then told = true end end
-  check(told, "the current step is told to the party")
+  local pos
+  for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);Accept %- A Threat Within$")) or pos end
+  check(pos, "the current step is told to the party")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;northshire;40;Turn in - Bounty on Garrick Padfoot", "PARTY", "Ann-Realm")
-  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot (") and questText(frame, "ahead)"),
+  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot " .. (40 - pos) .. " ahead"),
     "a party member's step shows with how far ahead they are")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;westfall;3;Accept - Westfall Stew", "PARTY", "Bo")
-  check(questText(frame, "Bo: Accept - Westfall Stew (Westfall)"), "a member in another guide shows that guide")
+  check(questText(frame, "Bo: Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
   check(not MOCK.pushed, "quest sharing is off by default")
   LevelingCodexDB.questShareParty = true
   MOCK.questLog = { { questID = 783 } }
@@ -2152,6 +2152,173 @@ function S.questParty()
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(not questText(frame, "Ann:"), "leaving the party clears the party's steps")
+end
+
+-- Party sync: one row per party member in the step window, with their level and where they are
+-- against you (same step with their goal, N behind, N ahead, another guide, no step shared), and a
+-- heading that says when everyone is on your step. The roster decides who shows.
+function S.questPartySync()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", realm = "Elsewhere", level = 4, class = "WARRIOR" } }
+  S.login()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function myPos()
+    local pos
+    for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);")) or pos end
+    return pos
+  end
+  local pos = myPos()
+  check(pos, "your step goes out")
+  local goal
+  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^G;") then goal = m.text end end
+  check(goal == "G;", "your goal goes out with it (none on an accept step)")
+  check(questText(frame, "Ann (5) no step shared") and questText(frame, "Bo (4) no step shared"),
+    "party members who haven't shared a step show with their level")
+  local function from(name, text) MOCK.event("CHAT_MSG_ADDON", "LevCodex", text, "PARTY", name) end
+  from("Ann-Realm", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  from("Ann-Realm", "G;Kobold Vermin slain: 3/10")
+  check(questText(frame, "Ann (5): Kobold Vermin slain: 3/10 same step"), "a member on your step shows their goal")
+  check(questText(frame, "PARTY") and not questText(frame, "ALL ON THIS STEP"), "not everyone is on your step yet")
+  from("Bo-Elsewhere", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  check(questText(frame, "PARTY - ALL ON THIS STEP"), "the heading says when everyone is on your step")
+  from("Ann-Realm", "S;northshire;" .. (pos + 3) .. ";Turn in - Something")
+  check(questText(frame, "Ann (5): Turn in - Something 3 ahead"), "a member ahead of you")
+  check(not questText(frame, "ALL ON THIS STEP"), "the heading follows")
+  click(frame, "Next")
+  click(frame, "Next")
+  MOCK.advance(2.5)
+  local now = myPos()
+  check(now and now > pos, "your new step goes out after Next")
+  check(questText(frame, "Bo (4): Accept - A Threat Within " .. (now - pos) .. " behind"), "a member behind you")
+  from("Bo-Elsewhere", "S;westfall;3;Accept - Westfall Stew")
+  check(questText(frame, "Bo (4): Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
+  MOCK.partyMembers = { MOCK.partyMembers[1] }
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(questText(frame, "Ann (5)") and not questText(frame, "Bo (4)"), "a member who left the party is gone")
+  MOCK.raid = true
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(not questText(frame, "Ann (5)"), "nothing in a raid")
+end
+
+-- Party chat announcements (Settings > Party, each off by default, said as "Codex: ..."): quest
+-- items you pick up (each new count; a route item that starts a quest) and quest progress (an
+-- objective finished, a quest ready to turn in). Nothing for what's in your log at login, at most a
+-- line a second (a newer count of the same item replaces a waiting one), nothing in a raid, and
+-- what Questie already says in party chat is left to it.
+function S.questPartyChat()
+  MOCK.party = true
+  local function goal(text, kind, have, need)
+    return { text = text .. ": " .. have .. "/" .. need, type = kind, numFulfilled = have, numRequired = need,
+      finished = have >= need }
+  end
+  local meat = goal("Tough Wolf Meat", "item", 2, 8)
+  local vermin, worker = goal("Kobold Vermin slain", "monster", 9, 10), goal("Kobold Worker slain", "monster", 0, 10)
+  MOCK.questLog = { { questID = 33, title = "Wolves Across the Border", objectives = { meat } },
+    { questID = 7, title = "Kobold Camp Cleanup", objectives = { vermin, worker } } }
+  S.login()
+  MOCK.advance(5) -- the quest log can fill in over the first seconds: nothing is said for it
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function hints()
+    local n = 0
+    for _, line in ipairs(MOCK.chat) do if line:find("Settings > Party", 1, true) then n = n + 1 end end
+    return n
+  end
+  check(hints() == 1, "joining a party says once where the chat announcements are")
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(hints() == 1, "only once a session")
+  local function set(obj, have)
+    obj.numFulfilled, obj.finished = have, have >= obj.numRequired
+    obj.text = obj.text:gsub("%d+/", have .. "/")
+    MOCK.event("QUEST_LOG_UPDATE")
+  end
+  local function said(text)
+    local n = 0
+    for _, m in ipairs(MOCK.said or {}) do if m.channel == "PARTY" and m.text == text then n = n + 1 end end
+    return n
+  end
+  set(meat, 3)
+  check(not MOCK.said, "announcements are off by default")
+  slash("quests")
+  click(win(), "Settings")
+  click(win(), "Say quest items I pick up")
+  click(win(), "Say quest progress in party chat")
+  check(LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress, "Settings turns them on")
+  check(not MOCK.said, "nothing for what was already in your log")
+  set(meat, 4)
+  check(said("Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)") == 1, "a quest item you pick up is said in party chat")
+  set(meat, 5)
+  set(meat, 6)
+  check(#MOCK.said == 1, "a line a second at most")
+  MOCK.advance(1.1)
+  check(#MOCK.said == 2 and said("Codex: Tough Wolf Meat: 6/8 (Wolves Across the Border)") == 1,
+    "a newer count replaces the waiting one")
+  set(worker, 5)
+  MOCK.advance(1.1)
+  check(#MOCK.said == 2, "kills are said when the objective is finished, not each one")
+  set(vermin, 10)
+  MOCK.advance(1.1)
+  check(said("Codex: Kobold Vermin slain: 10/10 (Kobold Camp Cleanup)") == 1, "a finished objective")
+  set(worker, 10)
+  MOCK.advance(1.1)
+  check(said("Codex: Kobold Camp Cleanup is ready to turn in.") == 1
+    and said("Codex: Kobold Worker slain: 10/10 (Kobold Camp Cleanup)") == 0, "the last objective says the quest is ready instead")
+  MOCK.bagItems = { { id = 1307, name = "Gold Pickup Schedule", level = 1, quality = 1 } }
+  MOCK.bags[1307] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.advance(1.1)
+  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1, "a route item that starts a quest")
+  -- Questie says finished objectives and quest-starting items itself: the Codex leaves those to it.
+  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  MOCK.bags[1307] = 0
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.bags[1307] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  local bandana, thug = goal("Red Burlap Bandana", "item", 5, 12), goal("Defias Thug slain", "monster", 9, 10)
+  table.insert(MOCK.questLog, { questID = 18, title = "Brotherhood of Thieves", objectives = { bandana, thug } })
+  MOCK.event("QUEST_LOG_UPDATE")
+  set(thug, 10)
+  MOCK.advance(1.1)
+  set(bandana, 6)
+  MOCK.advance(1.1)
+  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1
+    and said("Codex: Defias Thug slain: 10/10 (Brotherhood of Thieves)") == 0, "what Questie says is left to it")
+  check(said("Codex: Red Burlap Bandana: 6/12 (Brotherhood of Thieves)") == 1, "item counts still go out")
+  click(win(), "Settings")
+  check(questText(win(), "leaves those to Questie"), "Settings says so")
+  MOCK.raid = true
+  set(bandana, 7)
+  MOCK.advance(1.1)
+  check(said("Codex: Red Burlap Bandana: 7/12 (Brotherhood of Thieves)") == 0, "nothing in a raid")
+end
+
+-- Settings > Say steps I finish in party chat: a step the game finished (not Next or Back) goes out
+-- as "Codex: Done - <step>".
+function S.questPartyChatSteps()
+  MOCK.party = true
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(not chatHas("Settings > Party"), "no hint once an announcement is on")
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  local last = MOCK.said and MOCK.said[#MOCK.said]
+  check(last and last.text == "Codex: Done - Accept - A Threat Within" and last.channel == "PARTY", "a step the game finished is said")
+  MOCK.advance(1.1)
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  last = MOCK.said[#MOCK.said]
+  check(last.text == "Codex: Done - Turn in - A Threat Within", "and the next one")
+  local n = #MOCK.said
+  MOCK.advance(1.1)
+  click(frame, "Next")
+  MOCK.advance(1.1)
+  check(#MOCK.said == n, "Next isn't a finished step")
 end
 
 -- Trips through flight masters (QuestTravel.lua): the arrow leads to a flight master when flying
@@ -2174,6 +2341,36 @@ local function redridgeBrutes(x, y)
   check(questText(questViewer(), "Redridge Brutes 4/10"), "following the Redridge objective")
   MOCK.questX, MOCK.questY = x or 32.5, y or 31.5
   MOCK.advance(0.3)
+end
+
+-- Party sync sends your step's live goal ("G;Redridge Brutes 4/10") with your step, and a new count
+-- within 2 s. With every announcement on, a kill step whose quest is just ready says "ready to turn
+-- in" once, not "Done" as well.
+function S.questPartyGoal()
+  MOCK.party = true
+  redridgeBrutes()
+  MOCK.advance(5)
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function sent(text)
+    for _, m in ipairs(MOCK.addonSent or {}) do if m.text == text then return true end end
+    return false
+  end
+  check(sent("G;Redridge Brutes 4/10"), "your step's goal goes out to the party")
+  LevelingCodexDB.questAnnounceSteps, LevelingCodexDB.questAnnounceItems = true, true
+  LevelingCodexDB.questAnnounceProgress = true
+  MOCK.questLog[1].objectives[1].text = "Redridge Brutes 5/10"
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not sent("G;Redridge Brutes 5/10"), "at most every 2 s")
+  MOCK.advance(2.1)
+  check(sent("G;Redridge Brutes 5/10"), "a new count goes out once the 2 s are up")
+  check(not MOCK.said, "a kill that doesn't finish the objective isn't said")
+  MOCK.questLog[1].objectives[1] = { text = "Redridge Brutes 10/10", finished = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1.1)
+  local lines = {}
+  for _, m in ipairs(MOCK.said or {}) do lines[#lines + 1] = m.text end
+  check(#lines == 1 and lines[1] == "Codex: A Baying of Gnolls is ready to turn in.",
+    "one line for the finished kill step: " .. table.concat(lines, " | "))
 end
 
 local function arrowCaption()

@@ -1142,11 +1142,21 @@ renderers.settings = function()
   y = y + 6
   head("PARTY")
   tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
-    "Party members who use the Codex see each other's current step in the step window, and how far ahead or behind they are.")
+    "The step window lists your party: who is on your step (with their kill or loot count), how many steps ahead or behind the others are, and who isn't sharing a step. Party members need the Codex to share theirs.")
   tick("Share guide quests with my party", db.questShareParty, function() db.questShareParty = not db.questShareParty end,
     "Off by default. When you accept a quest from your guide, the Codex offers it to your party.")
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
+  tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
+    "Off by default. When the game finishes a step of your guide (not Next or Back), party chat gets \"Codex: Done - Accept - A Threat Within\".")
+  tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
+    "Off by default. Each quest item you loot goes to party chat with your count, \"Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)\", and so does an item that starts a quest of your guide.")
+  tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
+    "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
+  if ns.questie.announces("objectives") or ns.questie.announces("items") then
+    y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
+      28, y - 4, W - 28, "small", C.dim) + 6
+  end
   T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
   row("-", 150, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() - 1) end,
     "Fewer of the next steps the step window lists under the current one.")

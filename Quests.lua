@@ -92,10 +92,10 @@ local function classicObjectives(i)
   if type(count) ~= "number" then return end
   local rows = {}
   for n = 1, count do
-    local label, _, done = try(GetQuestLogLeaderBoard, n, i)
+    local label, kind, done = try(GetQuestLogLeaderBoard, n, i)
     if type(label) == "string" then
       local have, need = label:match("(%d+)%s*/%s*(%d+)")
-      rows[#rows + 1] = { text = label, finished = done == true or done == 1,
+      rows[#rows + 1] = { text = label, finished = done == true or done == 1, type = type(kind) == "string" and kind or nil,
         numFulfilled = tonumber(have), numRequired = tonumber(need) }
     else
       rows[#rows + 1] = {} -- Keep objective indices aligned when a leaderboard row is unavailable.
@@ -1182,6 +1182,9 @@ function Q.greyPickups() return greyRows end
 
 -- Items any step of your route names (`item`, `items`, `startItem`): the vendor never sells them.
 function Q.routeItems() return routeItems end
+
+-- The route's quest-starting items: item ID -> in your bags (as of the last bag read).
+function Q.starterItems() return startItems end
 
 -- A guide's turn-ins: quests turned in out of the quests it turns in (the step bar's tooltip).
 function Q.turninProgress(section)
