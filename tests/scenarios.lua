@@ -1244,7 +1244,27 @@ function S.arrowColor()
   check(r == 1 and g == 1 and b == 1, "and the arrow stays gold")
 end
 
+-- The icon's height over the arrow's centre, sampled every frame at 60 fps for `seconds`:
+-- the lowest and highest it went and the biggest move from one frame to the next.
+local function bobRun(arrow, seconds)
+  local function lift()
+    local point, _, _, _, y = arrow.here:GetPoint()
+    return point == "CENTER" and y or nil
+  end
+  local low, high, jump, last = math.huge, -math.huge, 0, lift() or 0
+  for _ = 1, math.floor(seconds * 60 + 0.5) do
+    MOCK.advance(1 / 60, 1 / 60)
+    local y = lift() or 1000 -- an icon off its centre anchor counts as a jump
+    low, high = math.min(low, y), math.max(high, y)
+    jump = math.max(jump, math.abs(y - last))
+    last = y
+  end
+  return low, high, jump
+end
+
 -- The arrow on arrival: the step's icon bobs over a gold ring that pulses once; leaving brings it back.
+-- In game the bob (a Translation looping BOUNCE) jumped where it turned: it is now drawn from the
+-- clock every frame, so it rises and falls 8 px with no step at the turns or where it loops.
 function S.arrowArrival()
   MOCK.questX, MOCK.questY = 60, 60 -- away from Deputy Willem (the default spot is next to him)
   S.login()
@@ -1255,17 +1275,23 @@ function S.arrowArrival()
   check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
   check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
   check(arrow.here._path == "Interface\\GossipFrame\\AvailableQuestIcon", "a pickup shows the yellow !")
-  check(arrow.bob:IsPlaying() and arrow.pulse:IsPlaying(), "the icon bobs and the ring pulses")
-  MOCK.advance(1)
-  check(not arrow.pulse:IsPlaying() and arrow.bob:IsPlaying(), "the ring pulses once, the bob goes on")
+  check(arrow.pulse:IsPlaying(), "the ring pulses")
+  local low, high, jump = bobRun(arrow, 1)
+  check(not arrow.pulse:IsPlaying(), "the ring pulses once")
+  check(low > -0.01 and low < 0.5 and high > 7.5 and high < 8.01,
+    "the icon bobs 8 px (went from " .. low .. " to " .. high .. ")")
+  low, high, jump = bobRun(arrow, 2.5) -- three more loops
+  check(high > 7.5 and jump < 0.6, "the bob goes on smoothly, also at its turns (biggest step " .. jump .. " px)")
   MOCK.questX, MOCK.questY = 60, 60
   MOCK.advance(0.5)
-  check(not arrow.here:IsShown() and not arrow.bob:IsPlaying() and arrow:GetRegions():IsShown(),
-    "leaving the spot brings the arrow back")
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "leaving the spot brings the arrow back")
+  local _, _, _, _, y = arrow.here:GetPoint()
+  check(y == 0, "and the icon is back on its centre for the next arrival")
   LevelingCodexDB.noArrowBounce = true
   MOCK.questX, MOCK.questY = 48.17, 42.94
   MOCK.advance(0.5)
-  check(arrow.here:IsShown() and not arrow.bob:IsPlaying(), "with the animation off the icon stays still")
+  low, high = bobRun(arrow, 1)
+  check(arrow.here:IsShown() and low == 0 and high == 0, "with the animation off the icon stays still")
 end
 
 -- Minimap: pins for the current and next steps, an edge arrow out of range, a dotted line.
@@ -2166,6 +2192,16 @@ function S.questFlightPlan()
   local _, onto = glow:GetPoint(1)
   check(glow:IsShown() and onto == _G.TaxiButton3, "the guide's flight master lights up on the map")
   check(not glow:IsMouseEnabled(), "the light lets the click through to the flight master")
+  -- Its ring pulses from the clock, like the arrival bob: no jump where it turns (an Alpha looping
+  -- BOUNCE could step there in game).
+  local low, high, jump, last = math.huge, -math.huge, 0, glow.ring:GetAlpha() or 1
+  for _ = 1, 240 do -- 4 s at 60 fps
+    MOCK.advance(1 / 60, 1 / 60)
+    local a = glow.ring:GetAlpha() or 1
+    low, high, jump, last = math.min(low, a), math.max(high, a), math.max(jump, math.abs(a - last)), a
+  end
+  check(low < 0.4 and high > 0.95 and jump < 0.05,
+    "the ring pulses smoothly (" .. low .. " to " .. high .. ", biggest step " .. jump .. ")")
   check(MOCK.tookTaxi == nil, "the flight is only marked while travel automation is off")
   TaxiFrame:Hide()
   walkTo(1436, 56.0, 50.0)

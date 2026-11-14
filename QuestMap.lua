@@ -247,6 +247,8 @@ local function makePins()
     fade:SetFromAlpha(1)
     fade:SetToAlpha(0)
     fade:SetDuration(0.6)
+    -- ends faded out (no frame back at full alpha before OnFinished hides it); pulse() resets it
+    Q.try(c.pulse.SetToFinalAlpha, c.pulse, true)
     c.pulse:SetScript("OnFinished", function() c.ring:Hide() end)
   end
   pins.edge = pinFrame(14, 3)

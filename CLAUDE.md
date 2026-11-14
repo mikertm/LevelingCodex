@@ -102,6 +102,7 @@ Quest modules in .toc order:
 - Macros: max **255 characters** per body, **16** per name. Macros **skip** unlearned spells but **stop** on a learned spell that isn't ready ("You can't do that yet"). `/castsequence` **stalls** on a not-ready or unlearned step; `reset=N` counts from the last press.
 - The game font can't draw `→ ↑ — ×` and similar: **all runtime text must be ASCII** (route guide text through `plain()`).
 - Missing texture paths render **green**: always use `setIcon`, or check `SetTexture`'s return value and fall back.
+- **Looping animations jump.** The arrival bob (a Translation looping `BOUNCE`) visibly jumped at its turns in game. Draw anything that loops (bobs, pulses) from `GetTime()` in an OnUpdate as a cosine, like the arrow's `bob()` and the taxi ring; keep AnimationGroups for one-shots, and give a fade-out that hides in `OnFinished` `SetToFinalAlpha(true)`.
 - Assume any non-core API may be missing: guard with existence checks and `pcall`.
 
 ## Tests

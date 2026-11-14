@@ -269,6 +269,8 @@ local function makeToast()
   -- exit
   toast.leave = toast:CreateAnimationGroup()
   alphaAnim(toast.leave, 1, 0, 1.0, 1)
+  -- ends faded out (no frame back at full alpha before OnFinished hides it); every Show sets alpha 1
+  if toast.leave.SetToFinalAlpha then toast.leave:SetToFinalAlpha(true) end
   toast.leave:SetScript("OnFinished", function()
     toast:Hide()
   end)
