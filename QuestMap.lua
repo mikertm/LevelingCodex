@@ -55,6 +55,37 @@ function ns.questIcon(step)
   if ns.art.hasFile(path) then return path end
 end
 
+-- What a step asks of you, for the step window's chip, stripe and title colour: "accept",
+-- "turnin", "kill", "collect", "travel", "dungeon" or "other".
+local KIND_OF = { accept = "accept", turnin = "turnin", collect = "collect", buy = "collect",
+  ["goto"] = "travel", fly = "travel", getfp = "travel", boat = "travel", hearth = "travel", sethearth = "travel",
+  dungeon = "dungeon", boss = "dungeon", plan = "dungeon" }
+local KIND_STYLE = {
+  accept = { "Accept", { 1, 0.82, 0 } }, turnin = { "Turn in", { 0.45, 0.85, 0.4 } },
+  kill = { "Kill", { 0.95, 0.45, 0.4 } }, collect = { "Collect", { 0.95, 0.65, 0.25 } },
+  travel = { "Travel", { 0.4, 0.7, 1 } }, dungeon = { "Dungeon", { 0.7, 0.55, 1 } },
+}
+local OTHER_WORD = { note = "Note", train = "Train", grind = "Grind", abandon = "Abandon", use = "Use" }
+
+function ns.questStepKind(step)
+  if type(step) ~= "table" then return "other" end
+  if step.type == "complete" then return kills(step) and "kill" or "collect" end
+  return KIND_OF[step.type] or "other"
+end
+
+-- The chip's label and colour { r, g, b } for a kind; "other" kinds use the step type's word and
+-- the theme's accent, a boss step says Boss.
+function ns.questKindStyle(kind, step)
+  local style = KIND_STYLE[kind]
+  if style then
+    return { label = (kind == "dungeon" and step and step.type == "boss") and "Boss" or style[1], color = style[2] }
+  end
+  local t = step and step.type
+  local word = OTHER_WORD[t] or (type(t) == "string" and (t:sub(1, 1):upper() .. t:sub(2))) or "Step"
+  local c = ns.C.accent
+  return { label = word, color = { c[1], c[2], c[3] } }
+end
+
 -- Show a step's icon on a texture, or a gold dot of `dot` px when the client lacks the file.
 local function paintIcon(tex, step, size, dot)
   local icon = ns.questIcon(step)

@@ -55,6 +55,8 @@ local function questText(root, value)
   local texts = {}
   for _, child in ipairs({ root:GetRegions() }) do
     if child:IsShown() and child._text and child._text:find(value, 1, true) then return true end
+    -- the step title shows the name; its full label ("Accept - X") is its codexLabel
+    if child:IsShown() and type(child.codexLabel) == "string" and child.codexLabel:find(value, 1, true) then return true end
     if child:IsShown() and child._text and child._text ~= "" then texts[#texts + 1] = child._text end
   end
   -- A checklist row in the step window shows its goal and its count apart: "Kobold Vermin" "4/10".
@@ -698,6 +700,33 @@ function S.stepSound()
   slash("debug")
   check(chatHas("step sound: played 2 times this session, last for Turn in %- A Threat Within"),
     "debug says when the step sound played")
+end
+
+-- The step window colours each step by kind: a chip, the title in that colour, a stripe down the left.
+function S.stepKinds()
+  local kind = MOCK.ns.questStepKind
+  check(kind({ type = "accept" }) == "accept" and kind({ type = "turnin" }) == "turnin"
+    and kind({ type = "fly" }) == "travel" and kind({ type = "boss" }) == "dungeon"
+    and kind({ type = "note" }) == "other" and kind({ type = "buy" }) == "collect", "step kinds")
+  check(MOCK.ns.questKindStyle("other", { type = "train" }).label == "Train", "other kinds use the step's word")
+  check(MOCK.ns.questKindStyle("dungeon", { type = "boss" }).label == "Boss", "a boss step's chip")
+  S.login()
+  local frame = questViewer()
+  local function shown(text)
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do if r:IsShown() and r._text == text then return true end end
+      for _, c in ipairs({ f:GetChildren() }) do if c:IsShown() and walk(c) then return true end end
+    end
+    return walk(frame)
+  end
+  local function near(c, r, g, b) return c and math.abs(c[1] - r) < 0.01 and math.abs(c[2] - g) < 0.01 and math.abs(c[3] - b) < 0.01 end
+  check(frame.chip and frame.chip.text._text == "Accept" and shown("A Threat Within") and not shown("Accept - A Threat Within"),
+    "an accept step: the chip says Accept, the title shows the name alone")
+  check(near(frame.stripe._color, 1, 0.82, 0), "the stripe is gold for a pickup")
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(frame.chip.text._text == "Turn in" and near(frame.stripe._color, 0.45, 0.85, 0.4), "a turn-in step: green")
 end
 
 -- Recommended stays the lit dungeon choice as you level past some of its runs.

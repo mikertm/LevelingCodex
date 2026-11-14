@@ -136,6 +136,18 @@ local function makeViewer()
   viewer.titleIcon:SetSize(16, 16)
   viewer.titleIcon:SetPoint("TOPLEFT", 16, -27)
   viewer.titleIcon:Hide()
+  -- The step's kind (QuestMap.lua): a stripe down the left edge and a chip before the title.
+  viewer.stripe = viewer:CreateTexture(nil, "ARTWORK")
+  viewer.stripe:SetPoint("TOPLEFT", 5, -5)
+  viewer.stripe:SetPoint("BOTTOMLEFT", 5, 5)
+  viewer.stripe:SetWidth(3)
+  viewer.chip = CreateFrame("Frame", nil, viewer)
+  viewer.chip:SetSize(40, 14)
+  viewer.chip.plate = viewer.chip:CreateTexture(nil, "ARTWORK")
+  viewer.chip.plate:SetAllPoints()
+  viewer.chip.text = viewer.chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.chip.text:SetPoint("CENTER", 0, 0)
+  viewer.chip:Hide()
   -- A step the game finishes: the window's edge glows once (gold lines inside the border, fading).
   local glow = CreateFrame("Frame", nil, viewer)
   glow:SetAllPoints()
@@ -1430,13 +1442,39 @@ function ns.questRefresh()
     local icon = row and ns.questIcon(row.step)
     viewer.titleIcon:SetShown(icon ~= nil)
     if icon then viewer.titleIcon:SetTexture(icon) end
+    -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
+    local kind = row and ns.questStepKind(row.step)
+    local style = kind and ns.questKindStyle(kind, row.step)
+    local x = icon and 36 or 16
+    viewer.stripe:SetShown(style ~= nil)
+    viewer.chip:SetShown(style ~= nil)
+    if style then
+      local r, g, b = style.color[1], style.color[2], style.color[3]
+      viewer.stripe:SetColorTexture(r, g, b, 1)
+      viewer.chip.plate:SetColorTexture(r * 0.3, g * 0.3, b * 0.3, 0.9)
+      viewer.chip.text:SetText(style.label)
+      viewer.chip.text:SetTextColor(r + (1 - r) * 0.5, g + (1 - g) * 0.5, b + (1 - b) * 0.5)
+      local chipWidth = math.ceil(tonumber(try(viewer.chip.text.GetStringWidth, viewer.chip.text)) or 36) + 10
+      viewer.chip:SetSize(chipWidth, 14)
+      viewer.chip:ClearAllPoints()
+      viewer.chip:SetPoint("TOPLEFT", x, -28)
+      x = x + chipWidth + 6
+    end
     title:ClearAllPoints()
-    title:SetPoint("TOPLEFT", icon and 36 or 16, -28)
-    title:SetWidth(318 - (icon and 20 or 0) - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
+    title:SetPoint("TOPLEFT", x, -28)
+    title:SetWidth(334 - x - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     if row ~= countsRow then seenCounts, countsRow = {}, row end
     newCounts = {}
     if row then
-      title:SetText(Q.label(row.step))
+      -- the chip says what to do, the title names it; the full label stays the title's codexLabel
+      local label = Q.label(row.step)
+      title:SetText(Q.plain(label:match("^.- %- (.+)$") or label))
+      title.codexLabel = Q.plain(label)
+      if style then
+        -- on the light parchment (no dialog art) a darker shade keeps the title readable
+        local shade = onDark and 1 or 0.55
+        title:SetTextColor(style.color[1] * shade, style.color[2] * shade, style.color[3] * shade)
+      end
       -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
       if run then
         blocks[1] = { kind = "note", tone = "gold", text = "Find a group for " .. run.title .. ": " .. runCount
@@ -1445,6 +1483,8 @@ function ns.questRefresh()
       for _, b in ipairs(Q.detailBlocks(row.step, row.requiredFor, true)) do blocks[#blocks + 1] = b end
       addPreview(blocks, row, i)
     else
+      title.codexLabel = nil
+      title:SetTextColor(ns.rgba(C.gold))
       title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
       blocks[1] = { kind = "text", text = suggestion and "Try the suggested section below, or open Quests to choose another."
         or "Open Quests to revisit a section or check for missed quests." }
