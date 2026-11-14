@@ -205,6 +205,7 @@ local function makeViewer()
   -- Compact mode's switch in the top-right corner.
   viewer.compactButton = A.iconButton(viewer, A.FILES.minusUp, "-")
   viewer.compactButton:SetSize(16, 16)
+  if viewer.compactButton.icon then viewer.compactButton.icon:SetSize(16, 16) end
   viewer.compactButton:SetPoint("TOPRIGHT", -7, -7)
   viewer.compactButton:SetScript("OnClick", function()
     if type(LevelingCodexDB) ~= "table" then return end

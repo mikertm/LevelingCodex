@@ -96,10 +96,10 @@ quest isn't in the log.
 
 - Back: a 28 x 24 icon button with the spellbook's previous-page arrow
   (`Interface\Buttons\UI-SpellbookIcon-PrevPage-Up`); Quests: a book icon; Hide: a hide icon. Each
-  is a dark plate (`C.btnOff`) with a 1 px theme edge (`C.edge`), the icon in the theme's light ink,
-  a hover highlight and a tooltip with its name. Without the art, a "<" / "Q" / "x" label.
+  is Blizzard's art alone with a hover highlight and a tooltip with its name (no outline: the owner's
+  call after seeing it in game). Without the art, a "<" / "Q" / "x" label on a flat dark plate.
 - Next: the wide primary button between them, filled with `C.btnOn`, label "Next step" in
-  `C.btnOnInk` with a ">" arrow, a 1 px light edge; "Skip run" on a Dungeon-ahead step as today.
+  `C.btnOnInk` with a ">" arrow, no outline; "Skip run" on a Dungeon-ahead step as today.
   Forever theme = teal, Codex theme = gold (both from the palette, so a theme switch repaints them).
 - `codexLabel`s stay "Back", "Next" (or "Skip"), "Quests", "Hide".
 - The window's offer button (Return to leveling, Run <dungeon>, Plan <guide>, Set up the guide) gets

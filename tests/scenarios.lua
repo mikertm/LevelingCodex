@@ -821,6 +821,11 @@ function S.stepButtons()
     check(GameTooltip._lines[1] == name, name .. " names itself on hover")
     MOCK.fire(b, "OnLeave")
   end
+  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact", "Next" }) do
+    local b = findButton(frame, function(l) return l == name end)
+    check(b and not b.edgeLines, name .. " has no outline")
+    if b.icon then check(not (b.bg and b.bg:IsShown()), name .. " is just its art") end
+  end
   local hide = findButton(frame, function(l) return l == "Hide" end)
   local compactB = findButton(frame, function(l) return l == "Compact" end)
   if hide.icon then

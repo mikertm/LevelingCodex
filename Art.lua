@@ -269,30 +269,20 @@ function A.segment(parent)
   return b
 end
 
--- The step window's buttons, in the theme's colours (Repaint() after a theme switch).
--- A small icon button: a dark plate with a 1 px theme edge, the art (16 px) or a short label.
-local function edgeLines(b)
-  b.edgeLines = {}
-  for i = 1, 4 do b.edgeLines[i] = b:CreateTexture(nil, "BORDER") end
-  local e = b.edgeLines
-  e[1]:SetPoint("TOPLEFT"); e[1]:SetPoint("TOPRIGHT"); e[1]:SetHeight(1)
-  e[2]:SetPoint("BOTTOMLEFT"); e[2]:SetPoint("BOTTOMRIGHT"); e[2]:SetHeight(1)
-  e[3]:SetPoint("TOPLEFT"); e[3]:SetPoint("BOTTOMLEFT"); e[3]:SetWidth(1)
-  e[4]:SetPoint("TOPRIGHT"); e[4]:SetPoint("BOTTOMRIGHT"); e[4]:SetWidth(1)
-end
-
+-- The step window's buttons, in the theme's colours (Repaint() after a theme switch); no outlines.
+-- A small icon button: Blizzard's art alone (it has its own frame) with a hover glow; without the
+-- art, a short label on a flat dark plate.
 function A.iconButton(parent, file, fallback)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(28, 24)
-  b.bg = b:CreateTexture(nil, "BACKGROUND")
-  b.bg:SetAllPoints()
-  edgeLines(b)
   if A.hasFile(file) then
     b.icon = b:CreateTexture(nil, "ARTWORK")
-    b.icon:SetSize(16, 16)
+    b.icon:SetSize(18, 18)
     b.icon:SetPoint("CENTER")
     b.icon:SetTexture(file)
   else
+    b.bg = b:CreateTexture(nil, "BACKGROUND")
+    b.bg:SetAllPoints()
     b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     b.label:SetPoint("CENTER")
     b.label:SetText(fallback)
@@ -301,8 +291,7 @@ function A.iconButton(parent, file, fallback)
   hl:SetAllPoints()
   hl:SetColorTexture(1, 1, 1, 0.12)
   b.Repaint = function(self)
-    self.bg:SetColorTexture(rgba(C.btnOff))
-    for _, e in ipairs(self.edgeLines) do e:SetColorTexture(rgba(C.edge)) end
+    if self.bg then self.bg:SetColorTexture(rgba(C.btnOff)) end
     if self.label then self.label:SetTextColor(rgba(C.gold)) end
   end
   b:Repaint()
@@ -311,13 +300,12 @@ function A.iconButton(parent, file, fallback)
 end
 
 -- The primary button (the step window's Next step and its offers): the theme's button colour with its
--- ink, a 1 px light edge; SetLabel(text, arrow) adds a ">" after the text when arrow is true.
+-- ink; SetLabel(text, arrow) adds a ">" after the text when arrow is true.
 function A.primaryButton(parent)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(120, 24)
   b.fill = b:CreateTexture(nil, "BACKGROUND")
   b.fill:SetAllPoints()
-  edgeLines(b)
   b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   b.label:SetPoint("CENTER")
   local hl = b:CreateTexture(nil, "HIGHLIGHT")
@@ -326,9 +314,7 @@ function A.primaryButton(parent)
   b.SetLabel = function(self, text, arrow) self.label:SetText(arrow and (text .. " >") or text) end
   b.Repaint = function(self)
     self.fill:SetColorTexture(rgba(C.btnOn))
-    local r, g, bl = rgba(C.btnOnInk)
-    for _, e in ipairs(self.edgeLines) do e:SetColorTexture(r, g, bl, 0.55) end
-    self.label:SetTextColor(r, g, bl)
+    self.label:SetTextColor(rgba(C.btnOnInk))
   end
   b:Repaint()
   hoverTips(b)
