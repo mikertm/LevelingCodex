@@ -50,10 +50,15 @@ ns.THEMES = {
 local C = {}
 ns.C = C
 
+-- A third theme, "ellesmere", exists while EllesmereUI lends the Codex its look (Ellesmere.lua); its
+-- palette carries eui = true, which the other two leave out (a key a theme doesn't name is cleared).
 ns.themeVersion = 0 -- bumped on every switch, so long-lived frames know to repaint
 function ns.useTheme(name)
-  local t = ns.THEMES[name] or ns.THEMES.forever
+  local key = ns.THEMES[name] and name or "forever"
+  local t = ns.THEMES[key]
+  for k in pairs(C) do if t[k] == nil then C[k] = nil end end
   for k, v in pairs(t) do C[k] = v end
+  ns.themeKey = key
   ns.themeVersion = ns.themeVersion + 1
 end
 ns.useTheme("forever")

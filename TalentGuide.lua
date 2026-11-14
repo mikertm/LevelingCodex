@@ -440,12 +440,10 @@ local function makeTrace()
   t.tag = ns.art.frame("Frame", nil, t)
   t.tag:SetSize(10, 22)
   t.tag:SetPoint("BOTTOM", t, "TOP", 0, 8)
-  t.tag.blizz = ns.art.backdrop(t.tag, "tooltip")
-  if not t.tag.blizz then
-    t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
-    t.tag.line = t.tag:CreateTexture(nil, "BORDER")
-    t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
-  end
+  -- the flat look's fill and underline (shown without the tooltip border and EllesmereUI's panel)
+  t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
+  t.tag.line = t.tag:CreateTexture(nil, "BORDER")
+  t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
   t.tag.text = t.tag:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   t.tag.text:SetPoint("CENTER", 0, 0)
 
@@ -495,13 +493,22 @@ local function paintTrace(t)
   t.shapeGlow:SetVertexColor(a[1], a[2], a[3]); t.shapeLine:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
   t.disc:SetVertexColor(a[1], a[2], a[3])
   t.spark:SetVertexColor(C.gem[1], C.gem[2], C.gem[3]); t.spark2:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
-  if t.tag.blizz then
-    t.tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
-    t.tag:SetBackdropBorderColor(rgba(C.edge))
-  else
-    t.tag.bg:SetColorTexture(rgba(C.panel)); t.tag.line:SetColorTexture(rgba(C.edge))
+  -- the tag's frame, again after a theme switch: the tooltip border, the flat look or EllesmereUI's panel
+  local tag = t.tag
+  if tag.chromeFor ~= ns.themeVersion then
+    tag.chromeFor = ns.themeVersion
+    local skinned = ns.ellesmere.backing(tag, "Panel")
+    tag.blizz = ns.art.backdrop(tag, "tooltip")
+    tag.bg:SetShown(not skinned and not tag.blizz); tag.line:SetShown(not skinned and not tag.blizz)
+    ns.ellesmere.fonts(tag)
   end
-  t.tag.text:SetTextColor(rgba(C.titleInk))
+  if tag.blizz then
+    tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
+    tag:SetBackdropBorderColor(rgba(C.edge))
+  else
+    tag.bg:SetColorTexture(rgba(C.panel)); tag.line:SetColorTexture(rgba(C.edge))
+  end
+  tag.text:SetTextColor(rgba(C.titleInk))
 end
 
 -- Fit the trace to the button: copy its border when we can read it, else a box or a disc.
@@ -544,16 +551,7 @@ local function makeHint()
   h:SetClampedToScreen(true)
   h:EnableMouse(false)
   h:Hide()
-  h.blizz = A.backdrop(h, "tooltip")
-  if not h.blizz then
-    h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
-    h.edges = {}
-    for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
-    h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
-    h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
-    h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
-    h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
-  end
+  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")
@@ -566,7 +564,8 @@ local function makeHint()
   h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, 1)
   h.name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   h.name:SetPoint("TOPLEFT", h.label, "BOTTOMLEFT", 0, -2)
-  h.name:SetFont("Fonts\\MORPHEUS.TTF", 18, "")
+  h.name:SetFont(ns.headFont(), 18, "")
+  h.name.codexHead = 18
   h.name:SetShadowOffset(1, -1)
   h.next = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   h.next:SetPoint("TOPLEFT", h.name, "BOTTOMLEFT", 0, -2)
@@ -575,15 +574,8 @@ local function makeHint()
 end
 
 local function paintHint(h)
-  if h.blizz then
-    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
-    h:SetBackdropBorderColor(rgba(C.edge))
-  else
-    h.bg:SetColorTexture(rgba(C.bg))
-    for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
-  end
-  ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
-  h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
+  ns.art.paintCard(h)
+  h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
 end
 
 hideGuide = function()

@@ -9407,3 +9407,214 @@ function S.questFreshProgress()
   check(not tag, "no guide you haven't started shows a percentage: " .. tostring(tag))
   MOCK.faction = nil
 end
+
+----------------------------------------------------------------------------
+-- EllesmereUI (MOCK.makeEllesmere): its skin API themes the Codex. Its pieces must only go on the
+-- backing frames the Codex makes for them: EllesmereUI fades every texture of a frame it skinned again
+-- whenever some Blizzard windows open (the talent window among them, under the talent card).
+----------------------------------------------------------------------------
+
+local function eachFrame(root, fn)
+  fn(root)
+  for _, c in ipairs({ root:GetChildren() }) do eachFrame(c, fn) end
+end
+
+local function euiCalled(kind, frame)
+  for _, c in ipairs(MOCK.eui.calls) do
+    if c[1] == kind and (frame == nil or c[2] == frame) then return true end
+  end
+  return false
+end
+
+-- Every frame EllesmereUI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
+local function euiOnlyOnBacking()
+  for frame, kind in pairs(MOCK.eui.skinned) do
+    if MOCK.eui.restrip[frame] then
+      check(frame.codexSkin, "EllesmereUI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
+      for _, r in ipairs({ frame:GetRegions() }) do
+        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an EllesmereUI backing frame", 2)
+      end
+    end
+  end
+end
+
+-- EllesmereUI's re-fade leaves every Codex texture under these frames as it was.
+local function survivesRestrip(roots, what)
+  local before, n = {}, 0
+  for _, root in ipairs(roots) do
+    eachFrame(root, function(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsObjectType("Texture") and not MOCK.eui.own[r] then before[r] = r:GetAlpha(); n = n + 1 end
+      end
+    end)
+  end
+  check(n > 0, what .. " has textures to check", 2)
+  MOCK.euiRestrip()
+  for r, a in pairs(before) do check(r:GetAlpha() == a, "EllesmereUI's re-fade hid a texture of " .. what, 2) end
+end
+
+local function usesFont(root, path)
+  local hit
+  eachFrame(root, function(f)
+    for _, r in ipairs({ f:GetRegions() }) do
+      if r:IsShown() and r._font == path and r._text and r._text ~= "" then hit = true end
+    end
+  end)
+  return hit
+end
+
+local MORPHEUS = "Fonts\\MORPHEUS.TTF"
+
+-- Installed and on: the theme at login, EllesmereUI's shell, close button and font, nothing on content.
+function S.euiSkin()
+  local E = MOCK.eui
+  check(E and E.fired.LevelingCodex, "the Codex registered its skin with EllesmereUI and it ran")
+  check(#E.registry == 1, "registered once (" .. #E.registry .. ")")
+  if not D() then return end
+  openAt(30, "This Level")
+  local f = win()
+  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has EllesmereUI's window shell")
+  check(f._backdrop == nil, "no Blizzard dialog border under the EllesmereUI shell")
+  check(euiCalled("CloseButton"), "the close button is EllesmereUI's")
+  check(euiCalled("PageButton"), "the level arrows are EllesmereUI's")
+  check(usesFont(f, E.font), "the window's text is in the EllesmereUI font")
+  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the EllesmereUI theme")
+  for _, tab in ipairs({ "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }) do
+    click(win(), tab)
+    check(not usesFont(win(), MORPHEUS), "no Morpheus on " .. tab)
+  end
+  click(win(), "This Level")
+  euiOnlyOnBacking()
+  survivesRestrip({ win() }, "the Codex window")
+  local v = questViewer()
+  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has EllesmereUI's panel")
+  check(v._backdrop == nil, "no Blizzard dialog border on the step window")
+  check(not usesFont(v, MORPHEUS), "no Morpheus on the step window")
+  survivesRestrip({ v }, "the step window")
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+-- The trainer, talent, crafting and vendor cards: an EllesmereUI panel behind them, their icons kept.
+function S.euiCards()
+  local seen = 0
+  for _, name in ipairs({ "LevelingCodexTrainerHint", "LevelingCodexTalentHint", "LevelingCodexCraftHint", "LevelingCodexShopCard" }) do
+    local card = _G[name]
+    if card then
+      seen = seen + 1
+      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an EllesmereUI panel behind it")
+      check(card._backdrop == nil, name .. " has no Blizzard tooltip border")
+      check(not usesFont(card, MORPHEUS), name .. " has no Morpheus heading")
+      survivesRestrip({ card }, name)
+    end
+  end
+  check(seen > 0 or MOCK.minimal, "a card to check")
+  euiOnlyOnBacking()
+end
+
+-- Settings: the EllesmereUI theme sits beside the other two and a choice made with it on is kept apart.
+function S.euiThemePick()
+  if not D() then return end
+  openAt(30, "Settings")
+  check(findButton(win(), function(l) return l == "EllesmereUI" end), "Settings offers the EllesmereUI theme")
+  local before = LevelingCodexDB.theme
+  click(win(), "Forever (teal)")
+  check(LevelingCodexDB.euiTheme == "forever", "the choice made with EllesmereUI on is saved apart")
+  check(LevelingCodexDB.theme == before, "the theme without EllesmereUI is untouched")
+  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the EllesmereUI shell")
+  check(not MOCK.minimal == (win()._backdrop ~= nil), "Forever teal draws its own border again")
+  local v = _G.LevelingCodexQuestViewer
+  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the EllesmereUI panel") end
+  click(win(), "Settings")
+  click(win(), "EllesmereUI")
+  check(LevelingCodexDB.euiTheme == "ellesmere", "EllesmereUI chosen again")
+  check(win().euiSkin and win().euiSkin:IsShown(), "the EllesmereUI shell is back")
+  if v and v:IsShown() then check(v.euiSkin and v.euiSkin:IsShown(), "the step window's panel is back") end
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+-- A new accent colour in EllesmereUI repaints the Codex and never opens a closed window. A colour
+-- picker sends a change for every step of a drag: the Codex repaints once, after the last.
+function S.euiAccent()
+  if not D() then return end
+  if win() then win():Hide() end
+  MOCK.euiLooks({ 1, 0.5, 0 })
+  MOCK.advance(0.5)
+  check(not (win() and win():IsShown()), "an accent change leaves the window closed")
+  openAt(30, "Settings")
+  local accent = MOCK.ns.C.accent
+  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows EllesmereUI's new accent")
+  local function shells()
+    local n = 0
+    for _, c in ipairs(MOCK.eui.calls) do if c[1] == "Shell" then n = n + 1 end end
+    return n
+  end
+  local before = shells()
+  for i = 1, 8 do MOCK.euiLooks({ 0.2, 0.6, 0.1 * i }); MOCK.advance(0.05) end
+  check(shells() == before, "no repaint while the colour is still moving")
+  MOCK.advance(0.5)
+  check(shells() == before + 1, "one repaint after the last change (" .. (shells() - before) .. ")")
+  check(win():IsShown(), "an accent change keeps an open window open")
+  check(math.abs(MOCK.ns.C.accent[3] - 0.8) < 1e-9, "and repaints it in the last colour")
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+function S.euiDebug()
+  MOCK.chat = {}
+  slash("debug")
+  if MOCK.eui and MOCK.eui.off then
+    check(chatHas("EllesmereUI: installed, skin off"), "debug says EllesmereUI's skin is off for the Codex")
+  elseif MOCK.eui then
+    check(chatHas("EllesmereUI: skin on %(api 4, style eui%)"), "debug says the EllesmereUI skin is on")
+  else
+    check(chatHas("EllesmereUI: not installed"), "debug says EllesmereUI isn't installed")
+  end
+end
+
+-- EllesmereUI installed with its skin for the Codex turned off: nothing changes.
+function S.euiOff()
+  check(MOCK.eui and not MOCK.eui.fired.LevelingCodex, "the skin callback never ran")
+  if not D() then return end
+  openAt(30, "Settings")
+  check(not findButton(win(), function(l) return l == "EllesmereUI" end), "no EllesmereUI theme while its skin is off")
+  check(not win().euiSkin, "no EllesmereUI shell")
+  check(not MOCK.minimal == (win()._backdrop ~= nil), "the Codex draws its own border")
+  win():Hide()
+  S.euiDebug()
+end
+
+function S.euiDispatch() MOCK.euiDispatch() end
+
+-- EllesmereUI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
+function S.euiLate()
+  local v = questViewer()
+  check(not v.euiSkin, "Forever teal until EllesmereUI's callback runs")
+  if D() then openAt(30, "This Level"); win():Hide() end
+  MOCK.euiDispatch()
+  check(MOCK.eui.fired.LevelingCodex, "the callback ran")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the EllesmereUI panel at once")
+  check(not usesFont(v, MORPHEUS), "and its fonts")
+  if D() then
+    check(not win():IsShown(), "the window stays closed")
+    openAt(30, "This Level")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the EllesmereUI theme")
+    win():Hide()
+  end
+  euiOnlyOnBacking()
+end
+
+-- Saved settings from before EllesmereUI (Codex gold): installing EllesmereUI still brings its theme.
+function S.euiSkinOn()
+  check(MOCK.eui.fired.LevelingCodex, "the callback ran")
+  check(MOCK.ns.C.eui == true, "the EllesmereUI theme is on")
+  local v = questViewer()
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the EllesmereUI panel")
+  if D() then
+    openAt(30, "This Level")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the EllesmereUI shell")
+    win():Hide()
+  end
+  euiOnlyOnBacking()
+end

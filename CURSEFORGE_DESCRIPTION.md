@@ -140,8 +140,10 @@ Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Fishing, He
 ### Gathering tracking stays on
 WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zone or die. The Codex turns the one you had back on for you (out of combat, never over another tracking such as Track Beasts), and turns it on when you learn Herbalism or Mining. Untick it in Settings if you'd rather do it yourself.
 
-### Two themes
+### Themes, and EllesmereUI
 **Forever** (teal, the default) or **Codex** (gold and parchment).
+
+**Works with EllesmereUI.** With EllesmereUI installed, the Codex takes on its look: its window frame and dark panels, your accent colour and your UI font, on the Codex window, the step window, the banner and the trainer, vendor, crafting and talent cards. Pick Forever or Codex in Settings > Theme to keep the Codex's own look, or turn it off in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons).
 
 ---
 

@@ -115,15 +115,18 @@ end
 
 -- The banner shows the guide's short name (the part before a colon; the Quests tab has the full
 -- title). The dialog header art's plate is about 45% of the texture's width, so the art widens
--- with the name, Morpheus drops to 12 for long names, and anything longer still is cut off.
-local HEADER_FONT, PLATE = "Fonts\\MORPHEUS.TTF", 0.45
+-- with the name, Morpheus (the EllesmereUI font in its theme) drops to 12 for long names, and anything
+-- longer still is cut off.
+local PLATE = 0.45
 local function fitHeader(text)
   header:SetText(Q.plain(text))
-  try(header.SetFont, header, HEADER_FONT, 14, "")
+  header.codexHead = 14
+  try(header.SetFont, header, ns.headFont(), 14, "")
   try(header.SetWidth, header, 0)
   local width = tonumber(try(header.GetStringWidth, header)) or 0
   if width > 150 then
-    try(header.SetFont, header, HEADER_FONT, 12, "")
+    header.codexHead = 12
+    try(header.SetFont, header, ns.headFont(), 12, "")
     width = tonumber(try(header.GetStringWidth, header)) or width
   end
   local fits = math.min(width, 190)
@@ -168,6 +171,7 @@ local function applyComfort()
   end
   local a = math.max(0.2, math.min(1, tonumber(db.questViewerAlpha) or 1))
   viewer.background:SetAlpha(a)
+  if viewer.euiSkin then viewer.euiSkin:SetAlpha(a) end -- the EllesmereUI panel behind it
   if type(viewer.SetBackdropColor) == "function" then
     local r, g, b = ns.rgba(C.parch)
     pcall(viewer.SetBackdropColor, viewer, r, g, b, a)
@@ -296,8 +300,13 @@ local function makeViewer()
   local glow = CreateFrame("Frame", nil, viewer)
   glow:SetAllPoints()
   glow:SetAlpha(0)
+  local glowEdges = {}
+  viewer.glowEdge = function(c) -- gold, or the accent in the EllesmereUI theme
+    for _, t in ipairs(glowEdges) do t:SetColorTexture(c[1], c[2], c[3], 0.9) end
+  end
   local function edge(a, b, w, h)
     local t = glow:CreateTexture(nil, "OVERLAY")
+    glowEdges[#glowEdges + 1] = t
     t:SetColorTexture(1, 0.82, 0.25, 0.9)
     try(t.SetBlendMode, t, "ADD")
     t:SetPoint(a, 4 * (a:find("LEFT") and 1 or -1), 4 * (a:find("TOP") and -1 or 1))
@@ -1719,10 +1728,13 @@ function ns.questRefresh()
     place()
     if theme ~= ns.themeVersion then
       local backdrop = A.backdrop(viewer, "dialog", C.parch, C.edge)
+      -- the EllesmereUI theme: its panel on a backing frame (never on the window, Ellesmere.lua)
+      local skinned = ns.ellesmere.backing(viewer, "Panel")
       flatBackground:SetColorTexture(ns.rgba(C.parch))
-      flatBackground:SetShown(not backdrop)
-      -- Ink only on the flat parchment; the dialog art is dark, so it needs light text.
-      onDark = backdrop and true or false
+      flatBackground:SetShown(not backdrop and not skinned)
+      -- Ink only on the flat parchment; the dialog art and EllesmereUI's panel are dark: light text.
+      onDark = (backdrop or skinned) and true or false
+      viewer.glowEdge(C.eui and C.accent or { 1, 0.82, 0.25 })
       title:SetTextColor(ns.rgba(C.gold))
       for _, b in ipairs(viewer.buttons) do b:Repaint() end
       nextButton:Repaint()
@@ -1877,6 +1889,7 @@ function ns.questRefresh()
     end
     viewer:SetHeight(compact and (cursor + (offer and 64 or 38)) or math.max(140, cursor + (offer and 64 or 38)))
     applyComfort()
+    ns.ellesmere.fonts(viewer) -- the theme's fonts, for rows made this time too (each string once)
     viewer:Show()
     painting = false
     paintArrow()

@@ -584,6 +584,7 @@ function Frame:IsUserPlaced() return false end
 -- modern clients: only frames made with BackdropTemplate have backdrops
 function Frame:SetBackdrop(b)
   if BackdropTemplateMixin and not self._backdropTemplate then error("SetBackdrop needs BackdropTemplate", 2) end
+  if b == nil then self._backdrop = nil; return end -- like the client: nil takes the backdrop off
   if type(b) ~= "table" or type(b.edgeFile) ~= "string" then error("SetBackdrop: bad backdrop", 2) end
   self._backdrop = b
 end
@@ -957,6 +958,86 @@ function MOCK.makeQuestieDB(opts)
     Item = { name = getter(items, "name"), npcDrops = getter(items, "npcDrops"), objectDrops = getter(items, "objectDrops") },
     Support = { Get = function(name) if name == "ZoneDB" then return zoneDB end end },
   }
+end
+
+-- EllesmereUI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
+-- the .toc lists as an optional dependency). Its public skin API (SKINNING_API.md, apiVersion 4):
+-- EllesmereUI.RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
+-- else hears it (EllesmereUI loads first), or at MOCK.euiDispatch() with opts.manual; never with
+-- opts.off (the player turned third-party skins off). The facade records each call in MOCK.eui.calls
+-- and, like the real engine, fades every texture of a frame it skins. Shell, Panel, Inset and Button
+-- keep the frame for MOCK.euiRestrip(), which fades them all again (EllesmereUI does that when some
+-- Blizzard windows open), sparing only the textures the facade made itself. MOCK.euiLooks(accent)
+-- changes the accent colour and calls every OnLooksChanged callback.
+-- MOCK.makeEllesmere{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
+function MOCK.makeEllesmere(opts)
+  opts = opts or {}
+  local E = { calls = {}, skinned = {}, restrip = {}, own = {}, looks = {}, registry = {}, fired = {},
+    accent = opts.accent or { 0.047, 0.824, 0.616 }, style = opts.style or "eui", off = opts.off,
+    font = "Interface\\AddOns\\EllesmereUI\\media\\fonts\\Expressway.ttf" }
+  MOCK.eui = E
+  local function fade(frame)
+    for _, r in ipairs({ frame:GetRegions() }) do
+      if r:IsObjectType("Texture") and not E.own[r] then r:SetAlpha(0) end
+    end
+  end
+  local function skin(kind, keep)
+    return function(frame, o)
+      E.calls[#E.calls + 1] = { kind, frame, o }
+      if type(frame) ~= "table" or E.skinned[frame] then return end -- idempotent, like the real one
+      E.skinned[frame] = kind
+      fade(frame)
+      if keep then E.restrip[frame] = true end
+      local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+      bg:SetColorTexture(0.08, 0.08, 0.08, 0.92)
+      bg:SetAllPoints(frame)
+      E.own[bg] = true
+    end
+  end
+  local S = { apiVersion = 4 }
+  for _, k in ipairs({ "Shell", "Panel", "Inset", "Button" }) do S[k] = skin(k, true) end
+  for _, k in ipairs({ "CloseButton", "Checkbox", "EditBox", "ScrollBar", "PageButton", "Tab" }) do S[k] = skin(k, false) end
+  function S.Font(fs)
+    E.calls[#E.calls + 1] = { "Font", fs }
+    local _, size, flags = fs:GetFont()
+    fs:SetFont(E.font, size or 12, flags or "")
+  end
+  function S.IsEnabled() return not E.off end
+  function S.GetStyle() return E.style end
+  function S.GetAccentColor() return E.accent[1], E.accent[2], E.accent[3] end
+  function S.GetPanelColor() return 0.08, 0.08, 0.08, 0.92 end
+  function S.GetFont() return E.font, "" end
+  function S.OnLooksChanged(fn) E.looks[#E.looks + 1] = fn end
+  E.S = S
+  local function dispatch(entry)
+    if E.fired[entry.name] or E.off then return end
+    E.fired[entry.name] = true
+    local ok, err = pcall(entry.apply, S)
+    if not ok then problem("lua", "EllesmereUI skin callback: " .. tostring(err)) end
+  end
+  EllesmereUI = {
+    RegisterSkin = function(name, fn)
+      local entry = { name = name, apply = fn }
+      E.registry[#E.registry + 1] = entry
+      if E.loginDone then dispatch(entry) end
+    end,
+  }
+  function MOCK.euiDispatch()
+    E.loginDone = true
+    for _, entry in ipairs(E.registry) do dispatch(entry) end
+  end
+  function MOCK.euiRestrip() for frame in pairs(E.restrip) do fade(frame) end end
+  function MOCK.euiLooks(accent)
+    E.accent = accent
+    for _, fn in ipairs(E.looks) do fn() end
+  end
+  if not opts.manual then
+    local event = MOCK.event
+    MOCK.event = function(name, ...)
+      if name == "PLAYER_LOGIN" and not E.loginDone then MOCK.euiDispatch() end
+      return event(name, ...)
+    end
+  end
 end
 
 function MOCK.fileID(path)
@@ -1610,7 +1691,7 @@ local ALLOWED_GLOBALS = {
   TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
   GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
-  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true,
+  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true, EllesmereUI = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
