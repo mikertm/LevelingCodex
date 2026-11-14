@@ -1112,6 +1112,7 @@ function S.guideRewards()
   click(win(), "Guides")
   local reward = "A sleeping bag: rest in it for up to 3% bonus XP"
   check(questText(win(), reward), "a special chain says what you get")
+  check(questText(win(), "Teaches Defensive Stance, Taunt and Sunder Armor"), "a class guide says what it teaches")
   click(win(), "Cozy Sleeping Bag")
   check(questText(win(), "You get: " .. reward), "and so does its page")
 end

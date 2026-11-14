@@ -274,7 +274,8 @@ def data_checks():
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_shop_checks() + quest_danger_checks()
-            + quest_flight_checks() + choice_errors + release_notes_checks(), warnings + prof_warnings + game_warnings + choice_warnings)
+            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks(),
+            warnings + prof_warnings + game_warnings + choice_warnings)
 
 
 def quest_choice_checks():
@@ -294,6 +295,36 @@ def quest_choice_checks():
             elif count < 3:
                 warnings.append("quest route %s: only %d leveling guide(s) cover level %d" % (faction, count, level))
     return errors, warnings
+
+
+def quest_reward_checks():
+    """What a special chain or class guide gives you (`reward`, QuestClassData.lua's REWARDS): one
+    ASCII line of at most 60 characters with no closing period, only on special and class guides,
+    and every REWARDS id names a real guide."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    import questroute
+    data = gamedata.load_lua_global(questroute.ROUTES, "LevelingCodexQuests")
+    errors, ids, count = [], set(), 0
+    for faction in ("ALLIANCE", "HORDE"):
+        for s in data[faction]["sections"]:
+            ids.add(s["id"])
+            reward = s.get("reward")
+            if reward is None:
+                continue
+            count += 1
+            where = "quest reward %s %s" % (faction, s["id"])
+            if s.get("category") != "special" and not s.get("class"):
+                errors.append(where + ": only special and class guides say what you get")
+            if any(ord(c) > 127 for c in reward) or len(reward) > 60 or reward.endswith("."):
+                errors.append(where + ": one ASCII line of at most 60 characters, no closing period: " + repr(reward))
+    text = open(os.path.join(ROOT, "QuestClassData.lua"), encoding="utf-8").read()
+    for rid in re.findall(r'^    \["([a-z0-9-]+)"\] = "', text, re.M):
+        if rid not in ids:
+            errors.append("quest reward: REWARDS names %s, which is no guide" % rid)
+    if count < 100:
+        errors.append("quest reward: only %d guides say what you get (expected 100 or more)" % count)
+    return errors
 
 
 def release_notes_checks():
