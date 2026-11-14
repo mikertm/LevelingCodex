@@ -111,7 +111,8 @@ The Guides sub-tab lists each guide as a row 36 px tall instead of a button:
 - one tag at the right: Current, Suggested, Side (alternate), Later, Done, Outleveled, with the
   percentage for Current, Side and Later when above 0;
 - the row is a pooled Button (`codexLabel` = the guide title, hover highlight, tooltip as today);
-  clicking opens the guide's page as today.
+  clicking follows the guide in the step window, as the button did (dungeon and special quest chain
+  rows open their page, as theirs did).
 
 Band headers become a fold row: the game's plus/minus button texture
 (`Interface\Buttons\UI-PlusButton-Up` / `UI-MinusButton-Up`, probed; else "+"/"-" text), "LEVELS 20-30"
