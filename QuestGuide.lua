@@ -148,6 +148,19 @@ local function makeViewer()
   viewer.chip.text = viewer.chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   viewer.chip.text:SetPoint("CENTER", 0, 0)
   viewer.chip:Hide()
+  -- A turn-in's XP under the title: a purple chip "+N XP", then "levels you up" when it would.
+  viewer.xp = CreateFrame("Frame", nil, viewer)
+  viewer.xp:SetSize(60, 14)
+  viewer.xp.plate = viewer.xp:CreateTexture(nil, "ARTWORK")
+  viewer.xp.plate:SetAllPoints()
+  viewer.xp.plate:SetColorTexture(0.23, 0.16, 0.37, 0.9)
+  viewer.xp.text = viewer.xp:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.xp.text:SetPoint("CENTER", 0, 0)
+  viewer.xp.text:SetTextColor(0.84, 0.78, 1)
+  viewer.xp.note = viewer.xp:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.xp.note:SetPoint("LEFT", viewer.xp, "RIGHT", 6, 0)
+  viewer.xp.note:SetTextColor(0.84, 0.78, 1)
+  viewer.xp:Hide()
   -- A step the game finishes: the window's edge glows once (gold lines inside the border, fading).
   local glow = CreateFrame("Frame", nil, viewer)
   glow:SetAllPoints()
@@ -1569,6 +1582,20 @@ function ns.questRefresh()
     addTracking(blocks)
     releaseAll()
     cursor = 28 + math.max(14, title:GetStringHeight()) + 2
+    -- a turn-in's XP, when the game says how much (the quest must be in your log)
+    local xp = row and kind == "turnin" and row.step.quest and Q.log(row.step.quest)
+      and tonumber((try(GetQuestLogRewardXP, row.step.quest))) or 0
+    viewer.xp:SetShown(xp > 0)
+    if xp > 0 then
+      viewer.xp.text:SetText("+" .. ns.thousands(xp) .. " XP")
+      viewer.xp:SetSize(math.ceil(tonumber(try(viewer.xp.text.GetStringWidth, viewer.xp.text)) or 50) + 10, 14)
+      local cur, max = tonumber((try(UnitXP, "player"))), tonumber((try(UnitXPMax, "player")))
+      local levelsUp = cur and max and max > 0 and cur + xp >= max and (UnitLevel("player") or 1) < 60
+      viewer.xp.note:SetText(levelsUp and "levels you up" or "")
+      viewer.xp:ClearAllPoints()
+      viewer.xp:SetPoint("TOPLEFT", LEFT, -cursor)
+      cursor = cursor + 17
+    end
     -- A story chain's place sits right under the step's name.
     for _, b in ipairs(blocks) do
       if b.kind == "chain" then putText(b.text, "dim") end

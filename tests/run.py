@@ -817,7 +817,7 @@ def main():
                              "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
-                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "questWarriorFangs", "questWarriorFangsNotTaken",
+                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
@@ -870,6 +870,7 @@ def main():
             runs.append(("WARRIOR/minimal/minimap-pins", "WARRIOR", True, ["minimapPins"]))
             runs.append(("WARRIOR/minimal/quests-setup", "WARRIOR", True, ["questSetup"]))
             runs.append(("WARRIOR/minimal/guide-rows", "WARRIOR", True, ["guideRowsLong"]))
+            runs.append(("WARRIOR/minimal/step-xp", "WARRIOR", True, ["stepXP"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))

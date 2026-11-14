@@ -758,6 +758,27 @@ function S.stepUpNext()
   check(not dist(), "no position: no distances, no error")
 end
 
+-- A turn-in step shows the XP it gives, and when it levels you up.
+function S.stepXP()
+  MOCK.xp, MOCK.xpMax = 100, 400
+  MOCK.rewardXP = { [783] = 350 }
+  S.login()
+  local frame = questViewer()
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  if MOCK.minimal then check(not questText(frame, " XP"), "no XP API: no chip"); return end
+  check(questText(frame, "+350 XP") and questText(frame, "levels you up"), "the turn-in's XP chip")
+  MOCK.rewardXP[783] = 100
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "+100 XP") and not questText(frame, "levels you up"), "not enough to level")
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "+100 XP"), "the next step has no chip")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
