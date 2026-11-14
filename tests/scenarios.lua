@@ -1078,6 +1078,54 @@ function S.worldMapPins()
   check(not pins:IsShown(), "the setting turns them off")
 end
 
+-- World map: a dotted route line from you, through a step's way-in points, to the step.
+function S.worldMapLine()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave.", map = 1429,
+    x = 52, y = 47, path = { { 48, 43 }, { 50, 45 } } })
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.worldMapID = 1429
+  WorldMapFrame:Show()
+  local pins = _G.LevelingCodexWorldMapPins
+  local function dots()
+    local list = {}
+    for _, d in ipairs(pins.dots or {}) do if d:IsShown() then list[#list + 1] = d end end
+    return list
+  end
+  local line = dots()
+  check(#line > 5, "a dotted line runs on the world map (" .. #line .. " dots)")
+  local far = 0
+  for _, d in ipairs(line) do local _, _, _, x = d:GetPoint(); far = math.max(far, x) end
+  check(far > 0.5 * 1002 and far <= 0.52 * 1002 + 1, "through the tunnel points to the cave (" .. far .. ")")
+  MOCK.canvasScale = 2
+  MOCK.advance(0.1)
+  local farZoomed = 0
+  for _, d in ipairs(dots()) do local _, _, _, x = d:GetPoint(); farZoomed = math.max(farZoomed, x) end
+  check(math.abs(pins.line:GetScale() - 0.5) < 0.001 and farZoomed > 2 * 0.5 * 1002 and farZoomed <= 2 * 0.52 * 1002 + 2,
+    "zoomed in, the line keeps its dot size and its spots (" .. farZoomed .. ")")
+  MOCK.canvasScale = nil
+  MOCK.advance(0.1)
+  local _, _, _, x1 = line[1]:GetPoint()
+  MOCK.questX = 46
+  MOCK.advance(0.5)
+  local _, _, _, x2 = dots()[1]:GetPoint()
+  check(x2 > x1, "moving with the map open moves the line's start")
+  MOCK.worldMapID = 1453
+  WorldMapFrame:OnMapChanged()
+  check(#dots() == 0, "a map you're not on has no line")
+  MOCK.worldMapID = 1429
+  WorldMapFrame:OnMapChanged()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Route line on the world map")
+  check(LevelingCodexDB.noWorldMapLine and #dots() == 0, "Settings turns it off")
+  click(win(), "Route line on the world map")
+  check(#dots() > 0, "and on again")
+end
+
 -- The step window's completion bar: steps you're past out of the guide's steps, sliding to its value.
 function S.stepProgress()
   S.login()
@@ -1369,6 +1417,11 @@ function S.questSetup()
   check(seg("Auto-accept"):GetChecked(), "and ticks the box")
   click(win(), "Fastest")
   check(not LevelingCodexDB.questKeepGrey and not LevelingCodexDB.questOptional, "Fastest drops them again")
+  check(seg("Minimap"):GetChecked() and seg("World map"):GetChecked(), "both route lines start on")
+  click(win(), "World map")
+  check(LevelingCodexDB.noWorldMapLine and not seg("World map"):GetChecked(), "the setup turns the world map line off")
+  click(win(), "Minimap")
+  check(LevelingCodexDB.noMinimapLine, "and the minimap line")
   LevelingCodexDB.questDungeons = false
   LevelingCodexDB.questDungeonPlan = { ["dungeon-deadmines"] = true }
   slash("quests")

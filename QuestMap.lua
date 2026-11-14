@@ -359,6 +359,16 @@ local function layout(map, x, y, half, radius, turn, square, goal, chain, pinSpo
   end
 end
 
+-- Where the line runs after you: the arrow's goal, then for a step's way in (`path`) the rest of
+-- its points and the step itself (Q.pathRest). The minimap and the world map draw the same chain.
+local function goalChain(goal)
+  local chain = { goal.spot }
+  if goal.kind == "step" and goal.spot.world and goal.step and goal.step.path then
+    for _, p in ipairs(Q.pathRest(goal.step)) do chain[#chain + 1] = p end
+  end
+  return chain
+end
+
 local function update()
   local map, x, y = Q.position()
   local half = (tonumber(Minimap:GetWidth()) or 0) / 2
@@ -371,10 +381,7 @@ local function update()
   end
   local turn, square = rotation(), Q.try(GetMinimapShape) == "SQUARE"
   -- a step's way in: from the tunnel point the arrow leads to, on through the rest to the step
-  local chain = { spot }
-  if goal.kind == "step" and spot.world and goal.step and goal.step.path then
-    for _, p in ipairs(Q.pathRest(goal.step)) do chain[#chain + 1] = p end
-  end
+  local chain = goalChain(goal)
   local pinSpot = ns.questMapPinSpot and ns.questMapPinSpot()
   -- lay out again only when something that places the pins changed
   local parts = { map, x, y, half, radius, turn, tostring(square), goal.kind, tostring(goal.key),
@@ -422,6 +429,50 @@ local function canvas()
   return frame, type(scroll) == "table" and scroll.Child or nil, type(scroll) == "table" and scroll or nil
 end
 
+-- The route line on the world map: gold dots from you through the chain, in a holder drawn at
+-- 1 / zoom like the pins (its units are canvas pixels times the zoom), WORLD_GAP apart or spread
+-- out so a long line fits the pool. Returns how many dots it used.
+local WORLD_DOTS, WORLD_GAP, WORLD_CLEAR = 160, 14, 9
+local function worldDots(points, w, h, z)
+  local holder = wpins.line
+  holder:SetScale(1 / z)
+  holder:SetSize(math.max(1, w * z), math.max(1, h * z))
+  local pts, total = {}, 0
+  for i, p in ipairs(points) do
+    pts[i] = { p[1] / 100 * w * z, p[2] / 100 * h * z }
+    if i > 1 then
+      local dx, dy = pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]
+      total = total + math.sqrt(dx * dx + dy * dy)
+    end
+  end
+  local gap = math.max(WORLD_GAP, total / WORLD_DOTS)
+  local used, r = 0, WORLD_CLEAR
+  for s = 2, #pts do
+    local x1, y1, x2, y2 = pts[s - 1][1], pts[s - 1][2], pts[s][1], pts[s][2]
+    local dx, dy = x2 - x1, y2 - y1
+    local len = math.sqrt(dx * dx + dy * dy)
+    local stop = s == #pts and len - WORLD_CLEAR or len
+    while r <= stop and used < WORLD_DOTS and len > 0 do
+      used = used + 1
+      local d = wpins.dots[used]
+      d:ClearAllPoints()
+      d:SetPoint("CENTER", holder, "TOPLEFT", x1 + dx * r / len, -(y1 + dy * r / len))
+      d:Show()
+      r = r + gap
+    end
+    r = math.max(0, r - len)
+  end
+  return used
+end
+
+-- What the line depends on besides the map: your spot (tenths of a percent) and the arrow's goal.
+local function lineKey()
+  local map, x, y = Q.position()
+  local goal = ns.questArrowGoal and ns.questArrowGoal()
+  return tostring(map) .. ":" .. (x and math.floor(x * 10) or "-") .. ":" .. (y and math.floor(y * 10) or "-")
+    .. ":" .. tostring(goal and goal.key) .. ":" .. tostring(goal and goal.spot and goal.spot.x)
+end
+
 -- How much larger the map's zoom draws the canvas (1 = zoomed out).
 local function zoom()
   local _, _, scroll = canvas()
@@ -436,8 +487,25 @@ function M.drawWorld()
     wpins = CreateFrame("Frame", "LevelingCodexWorldMapPins", child)
     wpins:SetAllPoints(child)
     wpins:SetFrameLevel((tonumber(child:GetFrameLevel()) or 1) + 20)
-    -- zooming scales the canvas: pins are drawn again at 1 / zoom so they keep their size
-    wpins:SetScript("OnUpdate", function() if zoom() ~= wpins.zoom then M.drawWorld() end end)
+    -- zooming scales the canvas: pins are drawn again at 1 / zoom so they keep their size; the
+    -- route line follows you (checked five times a second) and the arrow's goal
+    wpins:SetScript("OnUpdate", function(_, elapsed)
+      if zoom() ~= wpins.zoom then return M.drawWorld() end
+      wpins.since = (wpins.since or 0) + (tonumber(elapsed) or 0)
+      if wpins.since < 0.2 then return end
+      wpins.since = 0
+      if not ns.db().noWorldMapLine and lineKey() ~= wpins.where then M.drawWorld() end
+    end)
+    wpins.line = CreateFrame("Frame", nil, wpins)
+    wpins.line:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
+    wpins.dots = {}
+    for n = 1, WORLD_DOTS do
+      local d = wpins.line:CreateTexture(nil, "OVERLAY")
+      d:SetSize(5, 5)
+      d:SetColorTexture(1, 0.82, 0, 0.9)
+      d:Hide()
+      wpins.dots[n] = d
+    end
     wpins.current = worldPin(20)
     wpins.next = { worldPin(14), worldPin(14) }
     for n, pin in ipairs(wpins.next) do
@@ -471,6 +539,20 @@ function M.drawWorld()
   end
   put(wpins.current, row.step, 20, 10)
   for n, nextRow in ipairs(Q.upcoming(i, 2)) do put(wpins.next[n], nextRow.step, 14, 7) end
+  -- the route line, on the map you're on: from you through the chain while it stays on this map
+  local used = 0
+  local map, px, py = Q.position()
+  local goal = ns.questArrowGoal and ns.questArrowGoal()
+  wpins.where = lineKey()
+  if not ns.db().noWorldMapLine and goal and goal.spot and map == shown and px and py then
+    local points = { { px, py } }
+    for _, spot in ipairs(goalChain(goal)) do
+      if not (spot.map == shown and spot.x and spot.y) then break end
+      points[#points + 1] = { spot.x, spot.y }
+    end
+    if #points > 1 then used = worldDots(points, w, h, z) end
+  end
+  for n = used + 1, #wpins.dots do wpins.dots[n]:Hide() end
   wpins:Show()
 end
 

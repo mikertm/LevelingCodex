@@ -1338,8 +1338,12 @@ renderers.settings = function()
     "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
   tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,
     "Pins for the current step and the next two on your world map; hover one for its step.")
-  tick("Dotted line to the step", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
-    "Gold dots on the minimap drift from you toward the current step.")
+  tick("Route line on the minimap", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
+    "Gold dots on the minimap run from you to the current step, through a cave or tunnel's way in.")
+  tick("Route line on the world map", not db.noWorldMapLine, function()
+    db.noWorldMapLine = not db.noWorldMapLine
+    ns.questRefresh()
+  end, "The same gold dots on your world map, from you to the current step, on the map you're on.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."

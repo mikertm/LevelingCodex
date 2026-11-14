@@ -586,6 +586,17 @@ local function renderSetup(y)
     "Turn in the guide's current quest by itself when there's no reward to choose. Hold Alt to stop it.")
   U.check("Auto-fly and bind", x + 300, y - 1, db.questAutoTravel, toggle("questAutoTravel"),
     "Take the step's flight, and pick the bind option at the step's inn (you accept the bind). Hold Alt to stop it.")
+  y = y + 30
+  label("Map lines")
+  U.check("Minimap", x, y - 1, not db.noMinimapLine, function()
+    db.noMinimapLine = not db.noMinimapLine
+    U.refresh()
+  end, "Gold dots on the minimap from you to the current step.")
+  U.check("World map", x + 150, y - 1, not db.noWorldMapLine, function()
+    db.noWorldMapLine = not db.noWorldMapLine
+    ns.questRefresh()
+    U.refresh()
+  end, "The same dots on your world map.")
   y = y + 34
   U.btn("Done", 16, y, W - 32, function()
     db.questSetupDone, setupOpen = true, false
