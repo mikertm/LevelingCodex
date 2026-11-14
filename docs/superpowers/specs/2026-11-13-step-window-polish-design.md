@@ -47,14 +47,15 @@ A in the Forever colours.
 | turnin | `turnin` | Turn in | green 0.45, 0.85, 0.4 |
 | kill | `complete` whose objectives say slain/killed, or that `ns.questMobs` lists with no item objective (the same rule as `ns.questIcon`'s Attack cursor) | Kill | red 0.95, 0.45, 0.4 |
 | collect | any other `complete`, `collect`, `buy` | Collect | orange 0.95, 0.65, 0.25 |
-| travel | `goto`, `fly`, `getfp`, `boat`, `hearth`, `sethearth` | Travel | blue 0.4, 0.7, 1 |
+| travel | `goto`, `fly`, `getfp`, `boat`, `hearth`, `sethearth` | the step's own verb: Travel, Fly, Flight path, Boat, Hearth, Bind | blue 0.4, 0.7, 1 |
 | dungeon | `dungeon`, `boss`, `plan` | Dungeon / Boss | purple 0.7, 0.55, 1 |
 | other | `note`, `train`, `grind`, `abandon` and anything else | the step type's word ("Note", "Train", "Grind", "Abandon") | the theme accent (`C.accent`) |
 
 The window gets a 3 px stripe down its left edge in that colour; the title row starts with the chip
 (a small plate in a dark shade of the colour, its label in a light shade) and the title is drawn in
-the colour. The title drops the "Accept - " / "Turn in - " / "Complete - " prefix the chip now says
-(`Q.label` stays as it is for every other place it's used).
+the colour. The title is the step's name (a quest, a flight point) without the prefix the chip now
+says; a step without a name shows the first sentence of its text (cut at 70 characters), a hearth
+step "Return to <town>" (`Q.label` stays as it is for every other place it's used).
 
 ### 1.2 Goal bars
 
