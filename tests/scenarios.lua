@@ -1190,6 +1190,8 @@ function S.worldMapLine()
   local line = dots()
   check(#line > 5, "a dotted line runs on the world map (" .. #line .. " dots)")
   check(line[1].edge and line[1].edge:IsShown(), "each dot has a dark edge, so it reads on the parchment map")
+  check(pins:GetFrameLevel() >= 2000 and pins.line:GetFrameLevel() >= 2000 and pins.current:GetFrameLevel() >= 2000,
+    "the pins and the line draw at the map's own pin level, above its art (" .. pins:GetFrameLevel() .. ")")
   MOCK.chat = {}
   slash("debug")
   check(chatHas("world map line: %d+ dots from you to the step"), "debug says what the line drew")

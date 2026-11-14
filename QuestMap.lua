@@ -477,6 +477,16 @@ local function lineKey()
     .. ":" .. tostring(goal and goal.key) .. ":" .. tostring(goal and goal.spot and goal.spot.x)
 end
 
+-- The map's own pin level (the level Questie's pins get from the map), so our layer draws above
+-- the map's art, which sits above the canvas's own level; without that manager, a little above it.
+local function layerLevel(child)
+  local frame = WorldMapFrame
+  local mgr = type(frame.GetPinFrameLevelsManager) == "function" and Q.try(frame.GetPinFrameLevelsManager, frame)
+  local level = type(mgr) == "table" and type(mgr.GetValidFrameLevel) == "function"
+    and tonumber((Q.try(mgr.GetValidFrameLevel, mgr, "PIN_FRAME_LEVEL_AREA_POI"))) or nil
+  return level or ((tonumber(child:GetFrameLevel()) or 1) + 20)
+end
+
 -- How much larger the map's zoom draws the canvas (1 = zoomed out).
 local function zoom()
   local _, _, scroll = canvas()
@@ -537,6 +547,14 @@ function M.drawWorld()
     return
   end
   local shown = Q.try(frame.GetMapID, frame)
+  local level = layerLevel(child)
+  if wpins.level ~= level then
+    wpins.level = level
+    wpins:SetFrameLevel(level)
+    wpins.line:SetFrameLevel(level + 1)
+    for _, pin in ipairs(wpins.next) do pin:SetFrameLevel(level + 2) end
+    wpins.current:SetFrameLevel(level + 3)
+  end
   local w, h = tonumber(child:GetWidth()) or 0, tonumber(child:GetHeight()) or 0
   local z = zoom()
   wpins.zoom = z
@@ -577,6 +595,7 @@ function M.drawWorld()
     M.worldLine = used .. " dots from you to " .. (TO[goal.kind] or "the step")
       .. (#points > 1 and "" or " (its spot is on map " .. tostring(goal.spot.map) .. ")")
       .. ", zoom " .. string.format("%.2f", z) .. ", canvas " .. math.floor(w) .. "x" .. math.floor(h)
+      .. ", level " .. level
   end
   for n = used + 1, #wpins.dots do wpins.dots[n]:Hide(); wpins.dots[n].edge:Hide() end
   wpins:Show()

@@ -771,6 +771,14 @@ WorldMapFrame.ScrollContainer.Child = CreateFrame("Frame", nil, WorldMapFrame.Sc
 WorldMapFrame.ScrollContainer.Child:SetSize(1002, 668)
 -- The map's zoom: the canvas (Child) is drawn this many times larger (MOCK.canvasScale).
 function WorldMapFrame.ScrollContainer:GetCanvasScale() return MOCK.canvasScale or 1 end
+-- The map's pin frame levels (its art draws above the canvas's own level): a known pin type gets
+-- its level, an unknown one errors like the client's manager.
+local pinLevels = { PIN_FRAME_LEVEL_AREA_POI = 2000 }
+function WorldMapFrame:GetPinFrameLevelsManager()
+  return { GetValidFrameLevel = function(_, kind)
+    return pinLevels[kind] or error("unknown pin frame level type " .. tostring(kind))
+  end }
+end
 function WorldMapFrame:GetMapID() return MOCK.worldMapID end
 function WorldMapFrame:OnMapChanged() end
 
