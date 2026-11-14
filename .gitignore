@@ -3,3 +3,4 @@ __pycache__/
 dist/
 tools/.cache/
 RELEASE_NOTES.html
+RELEASE_NOTES.md

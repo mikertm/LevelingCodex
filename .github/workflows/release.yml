@@ -21,10 +21,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      # CurseForge gets only this version's notes, as HTML (the tag's CHANGELOG.md section).
+      # CurseForge gets only this version's notes, as Markdown (the tag's CHANGELOG.md section).
       # Fails when CHANGELOG.md has no section for the tag.
       - name: Write the release notes
-        run: python3 tools/release_notes.py "$GITHUB_REF_NAME" > RELEASE_NOTES.html
+        run: python3 tools/release_notes.py "$GITHUB_REF_NAME" > RELEASE_NOTES.md
 
       - name: Package and upload
         uses: BigWigsMods/packager@v2

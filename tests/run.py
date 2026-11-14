@@ -334,7 +334,15 @@ def release_notes_checks():
     """Every CHANGELOG.md version section converts to clean release notes (tools/release_notes.py)."""
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import release_notes
-    return ["release notes: " + p for p in release_notes.check()]
+    errors = ["release notes: " + p for p in release_notes.check()]
+    # CurseForge gets the Markdown notes: its author console garbled the HTML ones.
+    pkgmeta = open(os.path.join(ROOT, ".pkgmeta"), encoding="utf-8").read()
+    workflow = open(os.path.join(ROOT, ".github", "workflows", "release.yml"), encoding="utf-8").read()
+    if not re.search(r"manual-changelog:\s*\n\s+filename: RELEASE_NOTES\.md\s*\n\s+markup-type: markdown", pkgmeta):
+        errors.append("release notes: .pkgmeta's manual-changelog must be RELEASE_NOTES.md with markup-type: markdown")
+    if "tools/release_notes.py \"$GITHUB_REF_NAME\" > RELEASE_NOTES.md" not in workflow:
+        errors.append("release notes: release.yml must write RELEASE_NOTES.md with tools/release_notes.py")
+    return errors
 
 
 def quest_flight_checks():
