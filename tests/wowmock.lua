@@ -697,11 +697,22 @@ function Anim:GetStartDelay() return self._delay end
 -- CreateFrame and templates
 ----------------------------------------------------------------------------
 
+-- PlayerModel (the step window's portrait): SetCreature records `_creature`; GetModelFileID is 123
+-- once "loaded", nil with MOCK.modelFails. The minimal client has no PlayerModel frame type.
+local PlayerModel = setmetatable({}, { __index = Frame })
+PlayerModel.__index = PlayerModel
+function PlayerModel:SetCreature(id) self._creature = id end
+function PlayerModel:ClearModel() self._creature = nil end
+function PlayerModel:SetPortraitZoom(z) self._zoom = z end
+function PlayerModel:SetCamera(c) self._camera = c end
+function PlayerModel:GetModelFileID() if self._creature and not MOCK.modelFails then return 123 end end
+
 local CLASSES = { Frame = Frame, Button = Button, ScrollFrame = ScrollFrame, EditBox = EditBox, Slider = Slider,
-  CheckButton = Button, StatusBar = Frame, GameTooltip = Frame }
+  CheckButton = Button, StatusBar = Frame, GameTooltip = Frame, PlayerModel = PlayerModel }
 
 function CreateFrame(kind, name, parent, template)
   local class = CLASSES[kind]
+  if kind == "PlayerModel" and MOCK.minimal then class = nil end
   if not class then error("CreateFrame: unknown frame type " .. tostring(kind), 2) end
   if parent == nil and UIParent and kind ~= "GameTooltip" then parent = nil end
   local f = new(class, kind, parent, name)

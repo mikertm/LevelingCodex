@@ -1286,6 +1286,10 @@ renderers.settings = function()
   tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
     "A button below the item button that targets the current step's quest giver, or the creatures its objectives need. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+  tick("Show the NPC portrait", not db.noQuestPortrait, function()
+    db.noQuestPortrait = not db.noQuestPortrait
+    ns.questRefresh()
+  end, "A small 3D portrait of the quest giver, the one you turn in to, or the creature to hunt, beside the step's title.")
   tick("Animate the arrow on arrival", not db.noArrowBounce, function() db.noArrowBounce = not db.noArrowBounce end,
     "When you reach the step's spot (or its mob or object), the arrow turns into the step's icon, bobbing gently over a gold ring that pulses once.")
   tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,

@@ -148,6 +148,9 @@ local function makeViewer()
   viewer.chip.text = viewer.chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   viewer.chip.text:SetPoint("CENTER", 0, 0)
   viewer.chip:Hide()
+  -- The step's NPC (QuestPortrait.lua), left of the title for pickups, turn-ins and kills.
+  viewer.portrait = ns.makeQuestPortrait(viewer)
+  viewer.portrait:SetPoint("TOPLEFT", 12, -26)
   -- A turn-in's XP under the title: a purple chip "+N XP", then "levels you up" when it would.
   viewer.xp = CreateFrame("Frame", nil, viewer)
   viewer.xp:SetSize(60, 14)
@@ -1535,7 +1538,9 @@ function ns.questRefresh()
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)
     goalColor = style and style.color or nil
-    local x = icon and 36 or 16
+    local portrait = viewer.portrait:ShowFor(row and row.step, kind)
+    if portrait then viewer.titleIcon:Hide() end
+    local x = portrait and 64 or (icon and 36 or 16)
     viewer.stripe:SetShown(style ~= nil)
     viewer.chip:SetShown(style ~= nil)
     if style then
@@ -1582,6 +1587,8 @@ function ns.questRefresh()
     addTracking(blocks)
     releaseAll()
     cursor = 28 + math.max(14, title:GetStringHeight()) + 2
+    local xpX, xpY = LEFT, nil
+    if portrait then xpX, xpY = 64, cursor end
     -- a turn-in's XP, when the game says how much (the quest must be in your log)
     local xp = row and kind == "turnin" and row.step.quest and Q.log(row.step.quest)
       and tonumber((try(GetQuestLogRewardXP, row.step.quest))) or 0
@@ -1593,9 +1600,11 @@ function ns.questRefresh()
       local levelsUp = cur and max and max > 0 and cur + xp >= max and (UnitLevel("player") or 1) < 60
       viewer.xp.note:SetText(levelsUp and "levels you up" or "")
       viewer.xp:ClearAllPoints()
-      viewer.xp:SetPoint("TOPLEFT", LEFT, -cursor)
-      cursor = cursor + 17
+      viewer.xp:SetPoint("TOPLEFT", xpX, -(xpY or cursor))
+      if not xpY then cursor = cursor + 17 end
     end
+    -- the detail starts below the portrait
+    if portrait then cursor = math.max(cursor, 74) end
     -- A story chain's place sits right under the step's name.
     for _, b in ipairs(blocks) do
       if b.kind == "chain" then putText(b.text, "dim") end

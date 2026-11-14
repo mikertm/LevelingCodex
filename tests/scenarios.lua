@@ -779,6 +779,35 @@ function S.stepXP()
   check(not questText(frame, "+100 XP"), "the next step has no chip")
 end
 
+-- A small 3D portrait of the step's NPC, the step's icon when the model can't show.
+function S.questPortrait()
+  MOCK.ns.questNPCs[783] = { start = 197, finish = 823 }
+  S.login()
+  local frame = questViewer()
+  local p = frame.portrait
+  if MOCK.minimal then
+    check(p and p:IsShown() and p.icon:IsShown() and not (p.model and p.model:IsShown()), "no models: the icon")
+    return
+  end
+  check(p:IsShown() and p.creature == 197 and p.model:IsShown(), "an accept step shows its giver")
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p.creature == 823, "a turn-in shows its finisher")
+  MOCK.modelFails = true
+  MOCK.ns.questNPCs[783].finish = 824
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1.2)
+  check(p.icon:IsShown() and not p.model:IsShown(), "a model that doesn't load gives way to the icon")
+  MOCK.modelFails = nil
+  MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
+  LevelingCodexDB.noQuestPortrait = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not p:IsShown(), "the setting hides it")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()
@@ -1341,8 +1370,9 @@ function S.stepPolish()
   MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", numFulfilled = 4 } } } }
   S.login()
   local frame = questViewer()
-  check(frame.titleIcon and frame.titleIcon:IsShown() and frame.titleIcon._path == "Interface\\Cursor\\Attack",
-    "a kill step shows the sword before its title")
+  -- the kill's target in the portrait (QuestNPCData.lua: Kobold Vermin, 6), the small icon hidden
+  check(frame.portrait:IsShown() and frame.portrait.creature == 6 and not frame.titleIcon:IsShown(),
+    "a kill step shows its target before its title")
   local row
   for _, c in ipairs({ frame:GetChildren() }) do
     if c.count and c.count._text == "4/10" and c:IsShown() then row = c end

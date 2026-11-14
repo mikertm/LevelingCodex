@@ -273,7 +273,7 @@ def data_checks():
     prof_errors, prof_warnings = prof_shape_checks()
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
-    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_shop_checks() + quest_danger_checks()
+    return (errors + prof_errors + game_errors + quest_mob_checks() + quest_npc_checks() + quest_shop_checks() + quest_danger_checks()
             + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks(),
             warnings + prof_warnings + game_warnings + choice_warnings)
 
@@ -410,6 +410,34 @@ def quest_danger_checks():
             values = list(spots.values()) if lupa.lua_type(spots) == "table" else []
             if not values or len(values) % 2 or any(not isinstance(v, (int, float)) or not 0 <= v <= 100 for v in values):
                 errors.append(where + ": spots must be x, y pairs in 0-100")
+    return errors
+
+
+def quest_npc_checks():
+    """QuestNPCData.lua (tools/questnpcs.py): quest ID -> { start, finish, mob } creature IDs for the
+    step window's portrait; positive integers, no other keys, and quest 783 has its giver and finisher."""
+    errors = []
+    path = os.path.join(ROOT, "QuestNPCData.lua")
+    if not os.path.exists(path):
+        return ["quest npcs: QuestNPCData.lua missing"]
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    lua.execute("local f = ...; f('LevelingCodex', select(2, ...))",
+                lua.eval("loadstring")(open(path, encoding="utf-8").read()), ns)
+    npcs = ns["questNPCs"]
+    if lupa.lua_type(npcs) != "table":
+        return ["quest npcs: QuestNPCData.lua sets no ns.questNPCs"]
+    for quest, entry in npcs.items():
+        where = "quest npcs %s" % quest
+        if not isinstance(quest, int) or lupa.lua_type(entry) != "table":
+            errors.append(where + ": expected [questID] = { start, finish, mob }")
+            continue
+        for key, value in entry.items():
+            if key not in ("start", "finish", "mob") or not isinstance(value, int) or value <= 0:
+                errors.append(where + ": bad field %r = %r" % (key, value))
+    first = npcs[783]
+    if lupa.lua_type(first) != "table" or not first["start"] or not first["finish"]:
+        errors.append("quest npcs: quest 783 (A Threat Within) needs its giver and finisher")
     return errors
 
 
@@ -817,7 +845,7 @@ def main():
                              "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
                              "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
-                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questWarriorFangs", "questWarriorFangsNotTaken",
+                             "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
@@ -871,6 +899,7 @@ def main():
             runs.append(("WARRIOR/minimal/quests-setup", "WARRIOR", True, ["questSetup"]))
             runs.append(("WARRIOR/minimal/guide-rows", "WARRIOR", True, ["guideRowsLong"]))
             runs.append(("WARRIOR/minimal/step-xp", "WARRIOR", True, ["stepXP"]))
+            runs.append(("WARRIOR/minimal/portrait", "WARRIOR", True, ["questPortrait"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))
