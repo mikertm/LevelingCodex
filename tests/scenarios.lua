@@ -5909,6 +5909,47 @@ function S.talentCode()
   LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
 end
 
+-- A saved path comes back next session (the persisted run saves "fury": Warrior has it, Mage doesn't).
+function S.talentPathSaved()
+  if not D() then return end
+  local key, how = MOCK.ns.talentPathKey()
+  local want = MOCK.class == "WARRIOR" and "fury" or "guide"
+  check(key == want, "the saved path comes back: " .. tostring(key))
+  check(how == (MOCK.class == "WARRIOR" and "saved" or "default"), "how it was picked: " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  local chosen
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.codexLabel and b.codexLabel:find("^Path: ") and (b.tipText or ""):find("You follow this path.", 1, true) then
+      chosen = b.codexLabel
+    end
+  end
+  check(chosen == (MOCK.class == "WARRIOR" and "Path: Fury" or "Path: " .. MOCK.ns.talentPaths()[1].spec),
+    "the chosen card: " .. tostring(chosen))
+  win():Hide()
+end
+
+-- Before login in a lost-SavedVariables run: the talents of the class's first spec path's first 15
+-- points are spent (the run starts at 25).
+function S.talentSeed()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if paths and paths[2] then seedTraitRanks(paths[2].plan, 15) end
+end
+
+-- SavedVariables didn't load: the path your spent talents follow is picked (and not saved).
+function S.talentPathLost()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if not D() or not paths or not paths[2] then return end
+  local key, how = MOCK.ns.talentPathKey()
+  check(key == paths[2].key and how == "matched", "spent talents pick " .. paths[2].key .. ", got " .. tostring(key) .. " " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  check(MOCK.textUnder(win()):find("Picked from the talents you have spent. Choose one to keep it.", 1, true), "the tab says why")
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  click(win(), "Path: " .. paths[2].spec)
+  check(LevelingCodexCharDB.talentPath == paths[2].key, "choosing it keeps it")
+  check(not MOCK.textUnder(win()):find("Picked from the talents", 1, true), "no note once chosen")
+  win():Hide()
+end
+
 -- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the
 -- trace in the talent window; a custom path's unplanned point says to plan it.
 function S.talentPathFollow()

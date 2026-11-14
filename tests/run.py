@@ -42,8 +42,10 @@ ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "tale
 # The client has every API but none of the Blizzard art files: everything falls back.
 NOART = ["skills:BS;97;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
-PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap"]
+PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved"]
 LOST = ["lost", "login", "lostSavedVariables"]
+# The class runs also spend talents before login: the path they follow is picked.
+LOST_TALENTS = ["lost", "talentSeed", "login", "lostSavedVariables", "talentPathLost"]
 # Gathering tracking (Find Herbs / Find Minerals) that the client drops at login and loading screens.
 TRACK = ["trackKnown:herbs,minerals", "login", "trackRestored", "trackLoadingScreen", "trackDeath", "trackCombat",
          "trackOtherChoice", "trackSettingOff", "trackDebug"]
@@ -80,7 +82,7 @@ CRAFT_SCROLLBOX = ["makeCraftWindow:scrollbox", "login", "craftScrolled", "craft
 PERSISTED_DB = """
 LevelingCodexDB = { theme = "codex", pad = "ps", toastPos = { "TOP", "TOP", 10, -100 }, toastScale = 1.3,
   windowPos = { "CENTER", "CENTER", 50, 0 }, windowScale = 0.9, minimapAngle = 45, quiet = true, noAutoMacros = true }
-LevelingCodexCharDB = { made = { Fight = true } }
+LevelingCodexCharDB = { made = { Fight = true }, talentPath = "fury" }
 """
 
 # Saved variables didn't load, but last session's macros (made at level 25) are still there.
@@ -1017,7 +1019,7 @@ def main():
             runs.append(("DRUID/full/tracking-learn", "DRUID", False, TRACK_LEARN))
         for cls in CLASSES:
             if not minimal:  # needs GetMacroInfo to recognise last session's macros
-                runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST))
+                runs.append(("%s/%s/lost-savedvars" % (cls, variant), cls, minimal, LOST_TALENTS))
         if not minimal:
             for cls in ("WARRIOR", "PRIEST", "DRUID"):
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
