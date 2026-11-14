@@ -1109,6 +1109,39 @@ function S.arrowMove()
   check(not arrow:IsShown(), "it hides with the step window")
 end
 
+-- The arrow's colour says how far off course you face: green heading for the step, its own gold with
+-- the step to your side, red with it behind you; Settings turns it off.
+function S.arrowColor()
+  MOCK.questX, MOCK.questY, MOCK.facing = 60, 60, 0 -- away from Deputy Willem, the first step
+  S.login()
+  local art = _G.LevelingCodexQuestArrow:GetRegions()
+  check(art:IsShown() and art._rot, "the arrow points at the step")
+  local ahead = art._rot -- facing this way puts the step straight ahead
+  local function tint(facing)
+    MOCK.facing = facing
+    MOCK.advance(0.3)
+    return art:GetVertexColor()
+  end
+  local r, g, b = tint(ahead)
+  check(math.abs(art._rot) < 0.01 and g == 1 and r < 0.5 and b < 0.5, "heading for the step: green")
+  r, g, b = tint(ahead + math.rad(10))
+  check(g == 1 and r < 0.5, "a little off is still green")
+  r, g, b = tint(ahead + math.pi / 2)
+  check(math.abs(r - 1) < 0.01 and math.abs(g - 1) < 0.01 and math.abs(b - 1) < 0.01,
+    "the step to your side: the arrow's own gold")
+  local r2, g2 = tint(ahead - math.rad(55))
+  check(g2 == 1 and r2 > 0.4 and r2 < 1, "turning toward it blends to green")
+  r, g, b = tint(ahead + math.pi)
+  check(r == 1 and g < 0.5 and b < 0.5, "the step behind you: red")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Colour the arrow by direction")
+  win():Hide()
+  check(LevelingCodexDB.noArrowColor, "Settings turns it off")
+  r, g, b = tint(ahead + math.pi - 0.01)
+  check(r == 1 and g == 1 and b == 1, "and the arrow stays gold")
+end
+
 -- The arrow on arrival: the step's icon bobs over a gold ring that pulses once; leaving brings it back.
 function S.arrowArrival()
   MOCK.questX, MOCK.questY = 60, 60 -- away from Deputy Willem (the default spot is next to him)

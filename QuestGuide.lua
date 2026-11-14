@@ -18,15 +18,32 @@ local RING_TEXTURE = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
 local ringArt -- the ring file exists (else the arrival shows the icon alone)
 local COMPASS = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
 
+-- The arrow's tint by how far off course you face (0 to pi): green within 20 degrees of the step,
+-- blending to the art's own gold (no tint) with the step 90 degrees to your side, then to red
+-- from 160 degrees (behind you). db.noArrowColor keeps the gold.
+local ON_COURSE, BEHIND = { 0.35, 1, 0.35 }, { 1, 0.3, 0.25 }
+local function courseTint(off)
+  local deg = math.deg(off)
+  local c, t
+  if deg <= 90 then c, t = ON_COURSE, 1 - math.max(0, math.min(1, (deg - 20) / 70))
+  else c, t = BEHIND, math.max(0, math.min(1, (deg - 90) / 70)) end
+  return 1 + (c[1] - 1) * t, 1 + (c[2] - 1) * t, 1 + (c[3] - 1) * t
+end
+
 local function turnArrow()
   if not arrowBearing then return end
   local facing = try(GetPlayerFacing)
   if facing == arrowFacing then return end
   arrowFacing = facing
   -- The bearing increases clockwise. Facing and texture rotation increase counterclockwise.
-  local rotated = type(facing) == "number" and arrowFile ~= nil
-    and type(arrowArt.SetRotation) == "function" and pcall(arrowArt.SetRotation, arrowArt, -arrowBearing - facing)
+  local turn = type(facing) == "number" and -arrowBearing - facing
+  local rotated = turn and arrowFile ~= nil
+    and type(arrowArt.SetRotation) == "function" and pcall(arrowArt.SetRotation, arrowArt, turn)
   arrowArt:SetShown(rotated)
+  if rotated then
+    if ns.db().noArrowColor then arrowArt:SetVertexColor(1, 1, 1)
+    else arrowArt:SetVertexColor(courseTint(math.abs((turn + math.pi) % (2 * math.pi) - math.pi))) end
+  end
   local compass = COMPASS[(math.floor(arrowBearing / (math.pi / 4) + 0.5) % 8) + 1]
   arrowText:SetText(rotated and arrowCaption or (compass .. (arrowCaption ~= "" and " - " .. arrowCaption or "")))
 end

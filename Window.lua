@@ -1291,6 +1291,10 @@ renderers.settings = function()
     db.noQuestPortrait = not db.noQuestPortrait
     ns.questRefresh()
   end, "A small 3D portrait of the quest giver, the one you turn in to, or the creature to hunt, beside the step's title.")
+  tick("Colour the arrow by direction", not db.noArrowColor, function()
+    db.noArrowColor = not db.noArrowColor
+    ns.questRefresh()
+  end, "Green when you're heading for the step, gold when it's off to your side, red when it's behind you.")
   tick("Animate the arrow on arrival", not db.noArrowBounce, function() db.noArrowBounce = not db.noArrowBounce end,
     "When you reach the step's spot (or its mob or object), the arrow turns into the step's icon, bobbing gently over a gold ring that pulses once.")
   tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,

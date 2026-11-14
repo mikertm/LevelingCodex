@@ -380,7 +380,11 @@ function Texture:SetColorTexture(r, g, b, a)
   if self._grad then self._gradStale = true end
   if self._rot and self._rot ~= 0 then self._rotStale = true end
 end
-function Texture:SetVertexColor() end
+function Texture:SetVertexColor(r, g, b, a) self._vertex = { r or 1, g or 1, b or 1, a or 1 } end
+function Texture:GetVertexColor()
+  local v = self._vertex or { 1, 1, 1, 1 }
+  return v[1], v[2], v[3], v[4]
+end
 function Texture:SetBlendMode(m) if m ~= "ADD" and m ~= "BLEND" and m ~= "ALPHAKEY" and m ~= "DISABLE" and m ~= "MOD" then error("bad blend mode", 2) end end
 function Texture:SetDrawLayer(layer, sub)
   if sub and (sub < -8 or sub > 7) then error("SetDrawLayer: sublevel out of range", 2) end

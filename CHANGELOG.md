@@ -15,6 +15,7 @@
 
 ### Arrow, minimap and world map
 
+- **An arrow that says you're on course.** It turns green as you head for the step, stays gold with the step off to your side and goes red when it's behind you (Settings > Colour the arrow by direction).
 - **Move the arrow anywhere.** Drag it, Ctrl+mouse wheel over it to resize it, or lock it; when you arrive, the step's icon bobs over a gold ring.
 - **The route on your minimap.** Pins for the current and next two steps, a dotted line from you to the step that bends through tunnels and caves, an arrow on the rim when the step is off the minimap (it steps aside for the game's own waypoint arrow), and tooltips on hover.
 - **The route on your world map.** Numbered pins for the current and next steps that keep their size as you zoom, and a dotted line from you to the step (on or off in Settings and the guide setup).
