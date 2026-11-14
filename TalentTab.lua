@@ -7,7 +7,7 @@ local _, ns = ...
 local C, plain = ns.C, ns.plain
 
 local GOLD = { 1, 0.82, 0, 1 }
-local CARD_W, CARD_H = 280, 54
+local CARD_W, CARD_H = 280, 64
 local TREE_W, TREE_GAP = 184, 8
 local CELL_W, CELL_H, NODE = 42, 52, 32
 local CUSTOM_ICON = "inv_misc_note_01"
@@ -93,14 +93,15 @@ local function drawCards(y)
     if chosen then U.rect(x + 3, cy + 3, CARD_W - 6, CARD_H - 6, accent(0.16)) end
     local plan = pathPlan(p)
     local first = plan[1]
-    U.icon(p.custom and CUSTOM_ICON or (first and first.icon) or CUSTOM_ICON, x + 10, cy + 10, 34)
-    U.T(p.spec, x + 54, cy + 8, 150, "head", chosen and C.titleInk or C.light)
-    U.T(p.role ~= "" and p.role or " ", x + 54, cy + 32, 150, "small", C.dim)
+    -- three lines: the spec, then its role and split, then its tags (long names never meet the tags)
+    U.icon(p.custom and CUSTOM_ICON or (first and first.icon) or CUSTOM_ICON, x + 10, cy + 14, 34)
+    U.T(p.spec, x + 54, cy + 7, CARD_W - 64, "head", chosen and C.titleInk or C.light)
+    U.T(p.role ~= "" and p.role or " ", x + 54, cy + 29, 140, "small", C.dim)
+    U.T(p.custom and (#ns.customPoints() .. " of 51 placed") or splitText(plan), x + 150, cy + 29, CARD_W - 160,
+      "small", C.light, "RIGHT")
     local tag = p.guide and "Codex guide" or ""
     if chosen then tag = tag ~= "" and (tag .. "  -  Chosen") or "Chosen" end
-    U.T(tag, x + 150, cy + 8, CARD_W - 160, "label", chosen and GOLD or C.goldDim, "RIGHT")
-    U.T(p.custom and (#ns.customPoints() .. " of 51 placed") or splitText(plan), x + 150, cy + 32, CARD_W - 160,
-      "small", C.light, "RIGHT")
+    U.T(tag, x + 54, cy + 45, CARD_W - 64, "label", chosen and GOLD or C.goldDim)
     local tip = plain(p.note or "") .. (p.custom and "" or ("\n\nAt 60: " .. splitText(plan) .. " (" .. table.concat(ns.talentTree().tabs, " / ") .. ")"))
       .. (chosen and "\n\nYou follow this path." or "\n\nClick to follow this path. It's saved for this character.")
     U.hit(x, cy, CARD_W, CARD_H, p.spec .. (p.guide and " (Codex guide)" or ""), tip, function()
@@ -153,8 +154,11 @@ end
 local function drawTrees(m, V, y, sel, editing, onNode)
   local U = ns.ui
   local top = y
-  local height = 34 + 7 * CELL_H + 4
+  local rows = 7 -- Forever's trees mostly stop at 7, but Affliction runs to 9
+  for _, t in ipairs(m.talents) do rows = math.max(rows, t.row) end
+  local height = 34 + rows * CELL_H + 4
   local placed = editing and ns.customPoints()
+  local last = placed and placed[#placed] -- the editor marks where the last point went
   for tab = 1, 3 do
     local px = (tab - 1) * (TREE_W + TREE_GAP)
     U.box(px, top, TREE_W, height, C.panel, C.edge)
@@ -177,6 +181,7 @@ local function drawTrees(m, V, y, sel, editing, onNode)
       if t.tab == tab then
         local nx, ny = nodeSpot(px, gy, t)
         local r, nextP, here = rankAt(t, V)
+        if editing then here = t.name == last end
         if here then U.rect(nx - 5, ny - 5, NODE + 10, NODE + 10, accent(0.5), "border", 0) end
         if t == sel then outline(nx - 3, ny - 3, NODE + 6, NODE + 6, GOLD) end
         local f = U.icon(t.icon, nx, ny, NODE)
@@ -206,7 +211,9 @@ local function drawTrees(m, V, y, sel, editing, onNode)
         -- rank tag on the corner, like the talent window
         U.rect(nx + 12, ny + 20, 22, 13, { 0, 0, 0, 0.88 }, nil, 0, nil, true)
         U.T(r .. "/" .. t.max, nx + 12, ny + 20, 22, "small", rankInk, "CENTER", true)
-        if not editing then
+        if editing then
+          if here then U.T("Lv " .. (9 + #placed), nx - 5, ny + NODE + 2, NODE + 10, "label", C.gold, "CENTER") end
+        else
           if here then
             U.T("NOW", nx - 5, ny + NODE + 2, NODE + 10, "label", C.gold, "CENTER")
           elseif nextP then

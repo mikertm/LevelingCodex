@@ -886,6 +886,29 @@ def _lua_str(s):
     return '"' + "".join(ch if 32 <= ord(ch) <= 126 else "?" for ch in s) + '"'
 
 
+def tip_text(s):
+    """A talent tooltip without the formula text the client leaves unresolved ({32+($rap*(5/100))},
+    $<minDam>, $@spelltooltip414924, $proccooldown): a formula keeps its base number, a per-level cap
+    says so, cooldowns read "few seconds", and a per-combo-point table of formulas is cut."""
+    s = re.sub(r":?\s*1 points?\s*:.*\{.*$", ".", s)
+    s = re.sub(r"\$@spelltooltip\d+", "", s)
+    s = re.sub(r"every \{?\$proccooldown\}? sec", "every few seconds", s)
+    s = re.sub(r"\$<\w+> to \$<\w+>", "extra", s)
+
+    def formula(m):
+        expr = m.group(1)
+        num = re.search(r"\d+", expr)
+        if "$pl" in expr and num:
+            return "(%s x your level)" % num.group(0)
+        if num and re.match(r"\(?\s*\d+\s*[+*]", expr):
+            return num.group(0)
+        return "some"
+    s = re.sub(r"\{([^{}]*)\}", formula, s)
+    s = re.sub(r"\$<?\w+>?", "some", s)
+    s = re.sub(r"^(Requires [^.]*? Form)\s+(?=[A-Z])", r"\1. ", s)
+    return re.sub(r"\s+\.", ".", re.sub(r"\s{2,}", " ", s)).strip()
+
+
 def talentdata_text(ref):
     """TalentTreeData.lua: every class's full talent tree for the Talents tab and the custom path editor.
     Talents sorted by tab, row, column; hidden talents left out; prereq = the game's prerequisites (any one
@@ -922,7 +945,7 @@ def talentdata_text(ref):
             out.append("    { name = %s, tab = %d, row = %d, col = %d, max = %d, req = %d, icon = %s, prereq = %s, spell = %s,\n      tip = %s }," % (
                 _lua_str(name), tab, row, col, t["max"], t["req"], _lua_str(t.get("icon") or "inv_misc_questionmark"),
                 lst([_lua_str(x) for x in pre]), lst(["{ %d, %d }" % r for r in ranks]),
-                _lua_str((t.get("ranks") or [""])[-1])))
+                _lua_str(tip_text((t.get("ranks") or [""])[-1]))))
         out.append("  } },")
     out.append("}")
     return "\n".join(out) + "\n"

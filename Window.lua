@@ -1594,6 +1594,9 @@ local function makeCopy()
 
   copy.count = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   copy.count:SetPoint("BOTTOMLEFT", 24, 24)
+  copy.count:SetWidth(210) -- clear of the buttons at the bottom right (a refused code's reason wraps)
+  copy.count:SetJustifyH("LEFT")
+  copy.count:SetWordWrap(true)
   copy.count:SetTextColor(rgba(C.dim))
 
   local function button(label, w, onClick)

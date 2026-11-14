@@ -5632,6 +5632,15 @@ function S.talentTreeLayout()
     end
   end
   check(maxX1 < minX2, "the first tree sits left of the second")
+  -- every node sits inside the trees, above the talent detail card under them (Affliction has 9 rows)
+  local bottom, detailTop = 0, nil
+  for _, b in ipairs(MOCK.buttons(win())) do
+    local _, _, _, _, by = b:GetPoint(1)
+    if by and b.tipTitle and b.tipTitle:find("  %d+/%d+$") then bottom = math.max(bottom, -by + (b:GetWidth() or 0)) end
+    if by and b.tipTitle and byName[b.tipTitle] and b:GetWidth() == 40 then detailTop = -by end
+  end
+  check(detailTop, "the talent detail card under the trees")
+  check(bottom < detailTop, "every node sits above the detail card (" .. bottom .. " < " .. tostring(detailTop) .. ")")
   win():Hide()
 end
 
@@ -5773,6 +5782,14 @@ function S.talentPathApi()
   check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
   check(ns.customFromLive(), "your current talents copy into a custom path")
   check(#ns.customPoints() == 12, "all 12 spent points copied")
+  -- ranks that still read 0 at login (the trees loading) are read again a few seconds later
+  seedTraitRanks(specPath("arms").plan, 12)
+  for _, n in pairs(MOCK.traitNodes) do n.saved, n.rank = n.rank, 0 end
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  check(ns.talentPathKey() == "guide", "no ranks yet: the guide")
+  for _, n in pairs(MOCK.traitNodes) do n.rank = n.saved end
+  MOCK.advance(6)
+  check(ns.talentPathKey() == "arms", "ranks that arrive later are matched")
   MOCK.traitNodes = {}
   MOCK.event("TRAIT_CONFIG_UPDATED", 7)
   LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
@@ -5786,6 +5803,18 @@ function S.talentPathPick()
   local p = paths[2]
   if not p or p.custom then return end
   openAt(30, "Talents")
+  -- the guide card's tags fit their line (every guide card shows both by default)
+  local function fontString(root, value)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r._text == value and r:IsShown() then return r end
+    end
+    for _, k in ipairs({ root:GetChildren() }) do
+      local f = fontString(k, value)
+      if f then return f end
+    end
+  end
+  local tag = fontString(win(), "Codex guide  -  Chosen")
+  check(tag and (tag:GetWidth() or 0) >= tag:GetStringWidth(), "the guide card's tags fit their line")
   click(win(), "Path: " .. p.spec)
   check(LevelingCodexCharDB.talentPath == p.key, "clicking a card chooses its path")
   local text = MOCK.textUnder(win())
@@ -5863,6 +5892,7 @@ function S.talentCustom()
   check(not has("Start from: Arms"), "the start row goes once the path has points")
   click(win(), "Undo")
   check(text():find("Points placed: 50 of 51 - next point is level 60", 1, true), "undo takes the last point back")
+  check(text():find("Lv 59", 1, true), "the last point placed is marked with its level")
   check(has("Done"), "starting from a path opens the editor")
   iconsTitled("Mortal Strike")[1]:Click()
   check(text():find("Points placed: 50 of 51", 1, true), "a refused point changes nothing")
@@ -5873,6 +5903,7 @@ function S.talentCustom()
   check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "a second click clears")
   iconsTitled("Improved Rend")[1]:Click()
   check(text():find("Points placed: 1 of 51 - next point is level 11", 1, true), "clicking a talent places the next point")
+  check(text():find("Lv 10", 1, true), "the point just placed is marked")
   check(iconsTitled("Mortal Strike")[1].tipText:find("^Needs 30 points in Arms"), "a closed talent's tooltip says why")
   click(win(), "Done")
   check(has("Edit path"), "Done closes the editor")
@@ -5900,6 +5931,7 @@ function S.talentCode()
   copy.edit:SetText("nonsense")
   click(copy, "Use this code")
   check(copy:IsShown() and copy.count:GetText() == "Not a Leveling Codex talent code", "a bad code says why")
+  check((copy.count:GetWidth() or 0) > 0 and copy.count:GetWidth() <= 210, "the reason wraps clear of the buttons")
   check(text():find("Points placed: 0 of 51", 1, true), "a bad code changes nothing")
   copy.edit:SetText(code)
   click(copy, "Use this code")

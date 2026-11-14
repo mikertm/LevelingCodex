@@ -240,7 +240,8 @@ local function computeMatch()
   if not ranks then return "guide", "default", true end -- can't read them (yet): look again later
   local spent = 0
   for _, r in pairs(ranks) do spent = spent + r end
-  if spent == 0 then return "guide", "default" end
+  -- none spent yet; from 10 that may be the trees still loading at login, so look again
+  if spent == 0 then return "guide", "default", (UnitLevel("player") or 0) >= 10 end
   local best, bestScore
   for _, p in ipairs(ns.talentPaths()) do
     if p.plan then

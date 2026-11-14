@@ -681,6 +681,8 @@ def talent_tree_checks():
                     errors.append("talent tree %s: %s lists %s (a later row) as a prerequisite" % (cls, x.name, pn))
             if any(ord(c) > 126 for c in (x.tip or "") + x.name):
                 errors.append("talent tree %s: %s has non-ASCII text" % (cls, x.name))
+            if any(c in (x.tip or "") for c in "${}"):
+                errors.append("talent tree %s: %s's tooltip has unresolved game formula text: %s" % (cls, x.name, x.tip))
             if not x.icon or not x.max:
                 errors.append("talent tree %s: %s needs an icon and max" % (cls, x.name))
     def find(cls, name):
