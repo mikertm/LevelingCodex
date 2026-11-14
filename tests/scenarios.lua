@@ -2549,9 +2549,10 @@ function S.questPartyGoal()
     "one line for the finished kill step: " .. table.concat(lines, " | "))
 end
 
--- Catch-up cues: a note when a member is 3 or more steps behind you, a ping (the ready-check sound)
--- when the last member reaches your step (Settings: Ping when the party is together on my step, at
--- most every 20 s), and the compact step window's one-line party summary.
+-- Catch-up cues: a note when a member is 3 or more steps behind you, a ping when the last member
+-- reaches your step (Settings: Ping when the party is together on my step, at most every 20 s; a
+-- soft chime on the Sound Effects channel by default, Settings > Ping sound picks another and plays
+-- it), and the compact step window's one-line party summary.
 function S.questPartyCatchUp()
   MOCK.party = true
   MOCK.partyMembers = { { name = "Ann", level = 19 }, { name = "Bo", level = 18 } }
@@ -2560,9 +2561,9 @@ function S.questPartyCatchUp()
   MOCK.event("GROUP_ROSTER_UPDATE")
   MOCK.advance(6)
   MOCK.sounds = {}
-  local function pings()
+  local function pings(id)
     local n = 0
-    for _, s in ipairs(MOCK.sounds) do if s.id == 8960 then n = n + 1 end end
+    for _, s in ipairs(MOCK.sounds) do if s.id == (id or 18019) and s.channel == "SFX" then n = n + 1 end end
     return n
   end
   local Q = MOCK.ns.quests
@@ -2588,7 +2589,9 @@ function S.questPartyCatchUp()
   check(questText(frame, "Bo is " .. partySteps(back) .. " steps behind you."), "a member 3+ steps behind is named")
   check(pings() == 0, "no ping while someone is behind")
   to("Bo", here)
-  check(pings() == 1 and not questText(frame, "steps behind you"), "the last member reaching your step pings")
+  check(pings() == 1 and not questText(frame, "steps behind you"),
+    "the last member reaching your step pings: a soft chime your Sound Effects volume sets")
+  check(pings(8960) == 0, "not the ready-check sound")
   LevelingCodexDB.questCompact = true
   MOCK.ns.questRefresh()
   check(questText(frame, "Party: all on this step"), "the compact window's party line")
@@ -2616,6 +2619,18 @@ function S.questPartyCatchUp()
   check(Q.current() ~= Q.routeRow(), "Back shows an earlier step")
   check(lastStep() == here, "going Back to look doesn't tell the party you're behind")
   check(questText(frame, "Ann (19): Somewhere same step"), "and the rows still measure from your real step")
+  -- Settings > Ping sound: picking one plays it, and the next ping uses it
+  slash("quests")
+  click(win(), "Settings")
+  local count = #MOCK.sounds
+  click(win(), "Party invite")
+  check(LevelingCodexDB.partyPingSound == 2 and #MOCK.sounds == count + 1 and pings(880) == 1,
+    "picking a ping sound plays it so you can hear it")
+  LevelingCodexDB.noPartyPing = false
+  to("Bo", back)
+  MOCK.advance(21)
+  to("Bo", here)
+  check(pings(880) == 2, "the next ping uses it")
 end
 
 local function arrowCaption()

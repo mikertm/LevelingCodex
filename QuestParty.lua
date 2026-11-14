@@ -546,17 +546,31 @@ local function announceStarters()
   end
 end
 
--- The ping (the ready-check sound) when the last member reaches your step, or you reach theirs:
--- not in the first 5 s after someone joins (their replies to HELLO), at most every 20 s
--- (Settings > Ping when the party is together on my step).
+-- The together ping's sound (Settings > Ping sound): the Battle.net friend-online chime by default
+-- (Forever's SoundKit gives it volume 0.4, the ready check 0.69), the party invite or the ready
+-- check. Played on the Sound Effects channel, so that slider sets how loud it is.
+ns.PARTY_PINGS = { { "Soft chime", 18019 }, { "Party invite", 880 }, { "Ready check", 8960 } }
+
+function ns.partyPingIndex()
+  local i = tonumber(ns.db().partyPingSound)
+  return ns.PARTY_PINGS[i] and i or 1
+end
+
+function ns.playPartyPing(i)
+  local sound = ns.PARTY_PINGS[i or ns.partyPingIndex()]
+  if sound and type(PlaySound) == "function" then pcall(PlaySound, sound[2], "SFX") end
+end
+
+-- The ping when the last member reaches your step, or you reach theirs: not in the first 5 s
+-- after someone joins (their replies to HELLO), at most every 20 s (Settings > Ping when the party
+-- is together on my step).
 local wasTogether, pingAt = nil, -60
 local function checkTogether()
   local now = GetTime()
   local isTogether = together(ns.partyRows())
-  if isTogether and wasTogether == false and now - rosterAt >= 5 and now - pingAt >= 20
-      and not ns.db().noPartyPing and type(PlaySound) == "function" then
+  if isTogether and wasTogether == false and now - rosterAt >= 5 and now - pingAt >= 20 and not ns.db().noPartyPing then
     pingAt = now
-    pcall(PlaySound, SOUNDKIT and SOUNDKIT.READY_CHECK or 8960, "Master")
+    ns.playPartyPing()
   end
   wasTogether = isTogether
 end

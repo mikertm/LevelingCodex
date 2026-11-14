@@ -657,7 +657,7 @@ local function renderParty(y)
     { "Say quest progress in party chat", db.questAnnounceProgress, toggle("questAnnounceProgress"),
       "A finished objective and a quest that's ready to turn in go to party chat." },
     { "Ping when the party is together on my step", not db.noPartyPing, toggle("noPartyPing"),
-      "The ready-check sound when the last member reaches your step." },
+      "A soft chime when the last member reaches your step (Settings > Ping sound picks another)." },
   }
   for _, c in ipairs(checks) do
     U.check(c[1], 0, y, c[2], c[3], c[4])
@@ -781,7 +781,7 @@ local function renderSetup(y)
   U.check("Ping together", x + 300, y - 1, not db.noPartyPing, function()
     db.noPartyPing = not db.noPartyPing
     U.refresh()
-  end, "The ready-check sound when the last party member reaches your step.")
+  end, "A soft chime when the last party member reaches your step (Settings > Ping sound picks another).")
   y = y + 30
   -- the party chat lines everyone in the party reads: off until you turn them on
   label("Party chat")

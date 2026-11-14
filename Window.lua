@@ -1180,7 +1180,20 @@ renderers.settings = function()
   tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
     "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
   tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
-    "The ready-check sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+    "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+  -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
+  T("Ping sound", 0, y + 5, 110, "body", C.ink)
+  local pingLabels, pingTips = {}, {
+    "A quiet chime (the game's friend-online sound).",
+    "The game's party invite sound.",
+    "The game's ready-check sound: the loudest.",
+  }
+  for i, sound in ipairs(ns.PARTY_PINGS) do pingLabels[i] = sound[1] end
+  y = y + segments(116, y, W - 116, pingLabels, ns.partyPingIndex(), function(i)
+    db.partyPingSound = i
+    ns.playPartyPing(i)
+    refresh()
+  end, pingTips) + 8
   if ns.questie.announces("objectives") or ns.questie.announces("items") then
     y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
       28, y - 4, W - 28, "small", C.dim) + 6
