@@ -42,7 +42,17 @@ ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "tale
 # The client has every API but none of the Blizzard art files: everything falls back.
 NOART = ["skills:BS;97;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
-PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved"]
+PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved", "euiDebug"]
+# EllesmereUI installed ("eui" makes it before the addon loads; "eui:off" = its skin turned off for the
+# Codex, "eui:manual" = its callback runs only at the euiDispatch step).
+EUI = ["eui", "makeTalentWindow:name", "login", "questStart", "euiSkin", "talentByName", "classTrainer", "euiCards",
+       "browse", "everyButton", "euiThemePick", "euiAccent", "copyMacro", "debugReport", "euiDebug"]
+EUI_OTHER_CLASS = [s for s in EUI if s != "classTrainer"]  # the trainer scenario lists Warrior spells
+EUI_CARDS = [["eui", "vendorShopping", "euiCards"], ["eui", "makeCraftWindow", "login", "craftTrace", "euiCards"]]
+EUI_OFF = ["eui:off", "login", "euiOff"]
+EUI_LATE = ["eui:manual", "login", "euiLate"]
+EUI_EARLY = ["eui:manual", "euiDispatch", "login", "euiSkinOn"]
+EUI_PERSISTED = ["persist", "eui", "login", "euiSkinOn"]
 LOST = ["lost", "login", "lostSavedVariables"]
 # The class runs also spend talents before login: the path they follow is picked.
 LOST_TALENTS = ["lost", "talentSeed", "login", "lostSavedVariables", "talentPathLost"]
@@ -182,9 +192,18 @@ def new_state(cls, minimal, files, pre=None, noart=False):
     return lua, None
 
 
+def is_pre_step(step):
+    """Steps that set up the client before the addon loads, not scenarios."""
+    return step in ("persist", "lost") or step == "eui" or step.startswith("eui:")
+
+
 def run_sequence(name, cls, minimal, files, steps):
-    pre = PERSISTED_DB if "persist" in steps else None
-    lua, err = new_state(cls, minimal, files, pre, noart=steps is NOART)
+    pre = PERSISTED_DB if "persist" in steps else ""
+    for step in steps:
+        if step == "eui" or step.startswith("eui:"):
+            opts = ", ".join("%s = true" % o for o in step.split(":")[1:])
+            pre += "\nMOCK.makeEllesmere({ %s })\n" % opts
+    lua, err = new_state(cls, minimal, files, pre or None, noart=steps is NOART)
     if not err and "lost" in steps:
         lua.execute(LOST_DB.encode())
     failures = []
@@ -192,7 +211,7 @@ def run_sequence(name, cls, minimal, files, steps):
         return [err], []
     try_ = lua.eval(b"function(name, ...) return MOCK.try(SCENARIOS[name], ...) end")
     for step in steps:
-        if step in ("persist", "lost"):
+        if is_pre_step(step):
             continue
         parts = step.split(":")
         args = [p.encode() for p in parts[1:]]
@@ -1069,6 +1088,15 @@ def main():
         if not minimal:
             runs.append(("WARRIOR/full/warrior-macros-upgrade", "WARRIOR", False, ["login", "warriorMacroUpgrade"]))
         runs.append(("WARRIOR/%s/persisted" % variant, "WARRIOR", minimal, PERSISTED))
+        runs.append(("WARRIOR/%s/eui" % variant, "WARRIOR", minimal, EUI))
+        runs.append(("WARRIOR/%s/eui-off" % variant, "WARRIOR", minimal, EUI_OFF))
+        runs.append(("WARRIOR/%s/eui-late" % variant, "WARRIOR", minimal, EUI_LATE))
+        if not minimal:
+            runs.append(("PRIEST/full/eui", "PRIEST", False, EUI_OTHER_CLASS))
+            for i, seq in enumerate(EUI_CARDS):
+                runs.append(("WARRIOR/full/eui-cards-%d" % (i + 1), "WARRIOR", False, seq))
+            runs.append(("WARRIOR/full/eui-early", "WARRIOR", False, EUI_EARLY))
+            runs.append(("WARRIOR/full/eui-persisted", "WARRIOR", False, EUI_PERSISTED))
         runs.append(("MAGE/%s/persisted" % variant, "MAGE", minimal, PERSISTED))
         for cls in ("WARRIOR", "HUNTER", UNSUPPORTED):
             runs.append(("%s/%s/tracking" % (cls, variant), cls, minimal, TRACK))

@@ -22,6 +22,12 @@
 - Every new macro has tips: what each press does and when a new piece joins.
 - Macros made by an older Codex still update in place, even when WoW: Forever doesn't load your saved settings.
 
+### EllesmereUI
+
+- **The Codex takes on EllesmereUI's look.** With EllesmereUI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
+- It's on whenever EllesmereUI is installed. Turn it off for the Codex in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as EllesmereUI is installed.
+- Change your accent colour in EllesmereUI and the Codex follows straight away.
+
 ## v0.23.1
 
 ### Quest guide

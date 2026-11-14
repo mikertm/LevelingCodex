@@ -261,16 +261,7 @@ local function makeHint()
   h:SetClampedToScreen(true)
   h:EnableMouse(false) -- text only: nothing on it to click or for the controller to land on
   h:Hide()
-  h.blizz = A.backdrop(h, "tooltip")
-  if not h.blizz then
-    h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
-    h.edges = {}
-    for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
-    h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
-    h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
-    h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
-    h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
-  end
+  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")
@@ -283,7 +274,8 @@ local function makeHint()
   h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, 1)
   h.name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   h.name:SetPoint("TOPLEFT", h.label, "BOTTOMLEFT", 0, -2)
-  h.name:SetFont("Fonts\\MORPHEUS.TTF", 18, "")
+  h.name:SetFont(ns.headFont(), 18, "")
+  h.name.codexHead = 18
   h.name:SetShadowOffset(1, -1)
   for _, k in ipairs({ "line", "status" }) do
     local fs = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -299,15 +291,8 @@ local function paint()
   local t, h, a = guide.trace, guide.hint, C.accent
   for _, x in ipairs(t.edges) do x:SetColorTexture(a[1], a[2], a[3], 1) end
   t.fill:SetColorTexture(a[1], a[2], a[3], 1)
-  if h.blizz then
-    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
-    h:SetBackdropBorderColor(rgba(C.edge))
-  else
-    h.bg:SetColorTexture(rgba(C.bg))
-    for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
-  end
-  ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
-  h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk))
+  ns.art.paintCard(h)
+  h.name:SetTextColor(rgba(C.titleInk))
   h.line:SetTextColor(rgba(C.light)); h.status:SetTextColor(rgba(C.dim))
   guide.theme = ns.themeVersion
 end

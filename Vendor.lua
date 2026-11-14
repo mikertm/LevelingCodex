@@ -334,19 +334,10 @@ local function makeCard()
   h:SetClampedToScreen(true)
   h:EnableMouse(true)
   h:Hide()
-  h.blizz = A.backdrop(h, "tooltip")
-  if h.blizz then
-    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
-    h:SetBackdropBorderColor(ns.rgba(C.edge))
-  else
-    h.bg = h:CreateTexture(nil, "BACKGROUND")
-    h.bg:SetAllPoints()
-    h.bg:SetColorTexture(ns.rgba(C.bg))
-  end
+  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it (painted in refreshCard)
   h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   h.label:SetPoint("TOPLEFT", 12, -10)
   h.label:SetText("FOR YOUR GUIDE")
-  h.label:SetTextColor(1, 0.82, 0)
   h.rows = {}
   for i = 1, ROWS do
     local r = {}
@@ -384,6 +375,7 @@ local function refreshCard()
   local rows, total = shopping()
   if #rows == 0 then hideCard(); return end
   if not card then card = makeCard() end
+  ns.art.paintCard(card)
   for i, r in ipairs(card.rows) do
     local row = rows[i]
     local shown = row ~= nil

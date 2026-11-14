@@ -1,13 +1,15 @@
 -- Window.lua: the /codex window in Blizzard frame art: the dialog border and gold title banner,
 -- a round class portrait, character-sheet tabs, red panel buttons, check boxes, and cards with
 -- the tooltip border (parchment or dark). Morpheus headings and the theme's accent colour stay.
--- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua).
+-- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua). In the
+-- EllesmereUI theme (Ellesmere.lua) the window is EllesmereUI's shell on a backing frame, the inside
+-- the flat look in its colours and font.
 
 local _, ns = ...
 local C, rgba, plain, padText = ns.C, ns.rgba, ns.plain, ns.padText
 local A = ns.art
 
-local FONT_HEAD = "Fonts\\MORPHEUS.TTF"
+local FONT_HEAD = "head" -- Morpheus, or the EllesmereUI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
 
@@ -84,7 +86,11 @@ local function styleFS(fs, kind)
   local st = STYLES[kind] or STYLES.body
   fs:SetFontObject(st[1])
   local path, size, flags = fontOf(st[1], 12)
-  fs:SetFont(st[2] or path, st[3] or size, (st[2] and "") or flags or "")
+  local face, fl = st[2] or path, (st[2] and "") or flags or ""
+  if face == FONT_HEAD then face = ns.headFont() end
+  local eui, euiFlags = ns.ellesmere.font()
+  if eui and kind ~= "mono" then face, fl = eui, euiFlags end -- code keeps Arial Narrow
+  fs:SetFont(face, st[3] or size, fl)
   local sh = (kind == "head" or kind == "title" or kind == "label") and 1 or 0
   fs:SetShadowOffset(sh, -sh)
   fs:SetSpacing(kind == "mono" and 3 or 2)
@@ -138,9 +144,16 @@ local function newCard()
   return f
 end
 
--- The guide's flat card (when the client has no backdrops): fill, aged shade, double border.
+-- The guide's flat card (when the client has no backdrops): fill, aged shade, double border. In the
+-- EllesmereUI theme its panel: the fill and a 1 px border, nothing else.
 local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
+  if C.eui then
+    edge = edge or C.edge
+    rect(x, y, w, 1, edge, "border"); rect(x, y + h - 1, w, 1, edge, "border")
+    rect(x, y, 1, h, edge, "border"); rect(x + w - 1, y, 1, h, edge, "border")
+    return
+  end
   local shade = rect(x, y, w, h, { 1, 1, 1, 1 }, nil, 1, "fade")
   if fill == C.parch then ns.fade(shade, "VERTICAL", 0.5, 0.35, 0.15, 0.22, 0)
   else ns.fade(shade, "VERTICAL", 0.6, 0.45, 0.2, 0, 0.12) end
@@ -1002,11 +1015,15 @@ renderers.settings = function()
   local function head(str) T(str, 0, y, W, "label", C.gold); y = y + 20 end
 
   head("THEME")
-  local th = db.theme or "forever"
-  row("Forever (teal)", 0, 150, th == "forever", function() db.theme = "forever"; ns.rebuildForTheme() end,
+  local th = ns.themeKey or "forever"
+  row("Forever (teal)", 0, 150, th == "forever", function() ns.setTheme("forever") end,
     "WoW: Forever's logo teal for the accents and highlights.")
-  row("Codex (gold)", 156, 150, th == "codex", function() db.theme = "codex"; ns.rebuildForTheme() end,
+  row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
     "The guide site's gold for the accents and highlights.")
+  if ns.ellesmere.available() then
+    row("EllesmereUI", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
+      "Your EllesmereUI look: its panels, your accent colour and your UI font. EllesmereUI's options can turn it off for the Codex (Blizzard Skins+ > Window Skins > Third-Party Addons).")
+  end
   y = y + 40
 
   head("CONTROLLER BUTTON NAMES")
@@ -1280,6 +1297,7 @@ end
 local function questSearch(x, y, w, value, onChange, onSubmit)
   local edit = take("edit", function()
     local box = CreateFrame("EditBox", "LevelingCodexQuestSearch", overlay, "InputBoxTemplate")
+    if C.eui then ns.ellesmere.call("EditBox", box) end -- its near-black box, the template art gone
     box:SetAutoFocus(false)
     box:SetMaxLetters(80)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -1418,8 +1436,10 @@ local function flatChrome(f)
   doubleBorder(f)
 end
 
--- The game's dialog border and background, with a faint theme-coloured glow under the header.
+-- The game's dialog border and background, with a faint theme-coloured glow under the header;
+-- EllesmereUI's window shell in its theme.
 local function chrome(f, glowHeight)
+  if ns.ellesmere.backing(f, "Shell") then return true end
   if A.backdrop(f, "dialog") then
     -- the dialog background is see-through: darken it so names and effects in the world
     -- don't show through the text
@@ -1435,9 +1455,11 @@ local function chrome(f, glowHeight)
   return false
 end
 
--- A dark inset (the tooltip border) to hold scrolling content or a text box.
+-- A dark inset (the tooltip border) to hold scrolling content or a text box; EllesmereUI's darker
+-- inset panel in its theme.
 local function inset(parent)
   local f = A.frame("Frame", nil, parent)
+  if ns.ellesmere.backing(f, "Panel", { inset = true }) then return f end
   if not A.backdrop(f, "tooltip", { 0, 0, 0, 0.5 }, { C.edgeSoft[1], C.edgeSoft[2], C.edgeSoft[3], 1 }) then
     local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.35)
   end
@@ -1483,7 +1505,8 @@ local function makeFrame()
 
   local spec = header:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
   spec:SetPoint("TOPLEFT", portrait, "TOPRIGHT", 10, -10)
-  spec:SetFont(FONT_HEAD, 24, "")
+  spec:SetFont(ns.headFont(), 24, "")
+  spec.codexHead = 24
   spec:SetTextColor(rgba(C.titleInk))
   spec:SetShadowOffset(1, -1)
   spec:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
@@ -1494,12 +1517,14 @@ local function makeFrame()
 
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
+  if C.eui then ns.ellesmere.call("CloseButton", close) end
 
   -- level picker: view any level, with the spellbook's page arrows
   local nextB = A.arrow(header, "next"); nextB:SetPoint("TOPRIGHT", -36, -22)
   levelText = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  levelText:SetFont(FONT_HEAD, 20, "")
-  levelText:SetTextColor(1, 0.82, 0)
+  levelText:SetFont(ns.headFont(), 20, "")
+  levelText.codexHead = 20
+  if C.eui then levelText:SetTextColor(1, 1, 1) else levelText:SetTextColor(1, 0.82, 0) end
   levelText:SetShadowOffset(1, -1)
   levelText:SetWidth(96); levelText:SetJustifyH("CENTER")
   levelText:SetPoint("RIGHT", nextB, "LEFT", -2, 0)
@@ -1520,6 +1545,7 @@ local function makeFrame()
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 8, -10)
   scroll:SetPoint("BOTTOMRIGHT", -28, 10)
+  ns.ellesmere.scrollBar(scroll)
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(W, 10)
   scroll:SetScrollChild(content)
@@ -1550,6 +1576,7 @@ local function makeFrame()
     for _, b in ipairs(tabs) do b:SetWidth(math.floor((tonumber(b:GetWidth()) or 0) * share)) end
   end
 
+  ns.ellesmere.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   -- after OnShow is set: the controller (Gamepad.lua) hooks it
   ns.gamepad.attach(frame, { main = true, scroll = scroll, focusables = listFocusables, onTab = cycleTab })
@@ -1641,6 +1668,8 @@ local function makeCopy()
   copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
+  if C.eui then ns.ellesmere.call("CloseButton", close) end
+  ns.ellesmere.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
   -- the controller: the text first, then the box's buttons along one row
   ns.gamepad.attach(copy, { popup = true, focusables = function()
@@ -1701,18 +1730,20 @@ function ns.toggleWindow()
   frame:Show()
 end
 
--- Theme change: rebuild the window (and drop the banner) in the new colours.
+-- Theme change: rebuild the window (and drop the banner) in the new colours. A closed window stays
+-- closed (EllesmereUI's accent changes rebuild too).
 function ns.rebuildForTheme()
-  ns.useTheme(ns.db().theme)
+  ns.useTheme(ns.themeName())
   ns.questRefresh()
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
+    local shown = frame:IsShown()
     frame:Hide(); frame = nil -- hiding first hands it back to Forever's controller navigation
     for _, p in pairs(pools) do for i = 1, #p.list do p.list[i]:Hide() end end
     pools = {}
     makeFrame()
-    frame:Show()
+    if shown then frame:Show() end
   end
 end
 

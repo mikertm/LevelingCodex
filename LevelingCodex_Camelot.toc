@@ -5,7 +5,7 @@
 ## Version: @project-version@
 ## SavedVariables: LevelingCodexDB
 ## SavedVariablesPerCharacter: LevelingCodexCharDB
-## OptionalDeps: Questie, QuestieDB
+## OptionalDeps: Questie, QuestieDB, EllesmereUI
 ## IconTexture: Interface\Icons\Achievement_Level_60
 ## X-Curse-Project-ID: 1789784
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
@@ -49,6 +49,7 @@ QuestDangerData.lua
 QuestFlightData.lua
 Theme.lua
 Art.lua
+Ellesmere.lua
 Guide.lua
 Talents.lua
 Quests.lua
