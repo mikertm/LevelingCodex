@@ -4180,7 +4180,9 @@ function S.levelups()
   end
 end
 
--- Hovering keeps the banner up; leaving lets it fade; click opens the window.
+-- The banner always closes by itself, even with the cursor on it (a controller leaves the hidden
+-- cursor in the middle of the screen, where the banner sits: the owner's banner never went away);
+-- click opens the window.
 function S.bannerMouse()
   if not D() then return end
   MOCK.level = 20
@@ -4189,10 +4191,8 @@ function S.bannerMouse()
   local t = toast()
   MOCK.mouseOver[t] = true
   MOCK.advance(12)
-  check(t:IsShown(), "banner stays while hovered")
+  check(not t:IsShown(), "banner fades by itself with the cursor on it")
   MOCK.mouseOver[t] = nil
-  MOCK.advance(12)
-  check(not t:IsShown(), "banner fades after mouse leaves")
   MOCK.event("PLAYER_LEVEL_UP", 20)
   MOCK.advance(4.5)
   MOCK.fire(t, "OnMouseUp", "LeftButton")

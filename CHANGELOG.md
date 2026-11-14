@@ -28,6 +28,10 @@
 - **What you get.** Special chains and class quests say what they give you, from the Cozy Sleeping Bag's bonus XP to the attunements and the class spells.
 - A dungeon run you finished before its guide could see you enter no longer leaves the guide stuck on its entry step.
 
+### Level-up banner
+
+- The level-up banner always closes by itself after 8 seconds, even with the cursor on it. With a controller the hidden cursor sits in the middle of the screen, so the banner used to stay up.
+
 ### Vendors
 
 - **Junk and repairs.** At a vendor the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. Both can be turned off in Settings or the guide setup; hold Alt as you open the vendor to skip them once.

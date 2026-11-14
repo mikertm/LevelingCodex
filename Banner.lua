@@ -94,7 +94,9 @@ local function noteBuiltInSpot(name)
 end
 local TOAST_W = 480
 local MAX_ROWS = 5
-local HOLD = 8 -- seconds on screen before it fades (paused while your mouse is over it)
+-- seconds on screen before it fades, always: the cursor doesn't hold it (a controller parks the hidden
+-- cursor in the middle of the screen, where the banner sits, and the banner never went away)
+local HOLD = 8
 
 function ns.getToast() return toast end
 
@@ -271,12 +273,8 @@ local function makeToast()
 
   toast:SetScript("OnUpdate", function(self, elapsed)
     if self.unlocked or self.testing or not self.holding then return end
-    if self:IsMouseOver() then return end
     self.holding = self.holding - elapsed
     if self.holding <= 0 then self.holding = nil; self.leave:Play() end
-  end)
-  toast:SetScript("OnEnter", function(self)
-    if self.leave:IsPlaying() then self.leave:Stop(); self:SetAlpha(1); self.holding = 2 end
   end)
   toast:SetScript("OnDragStart", function(self) if self.unlocked or self.testing then self:StartMoving() end end)
   toast:SetScript("OnDragStop", function(self)
