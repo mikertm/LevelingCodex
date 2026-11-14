@@ -1584,8 +1584,9 @@ local function makeCopy()
   local function reselect(self) self:SetFocus(); self:HighlightText() end
   eb:SetScript("OnEscapePressed", function() copy:Hide() end)
   eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-  -- read-only: typing puts the macro back, still selected
+  -- read-only: typing puts the macro back, still selected (a paste box keeps what you type)
   eb:SetScript("OnTextChanged", function(self, userInput)
+    if copy.paste then return end
     if userInput and copy.body and self:GetText() ~= copy.body then self:SetText(copy.body); self:HighlightText() end
   end)
   eb:SetScript("OnMouseUp", reselect)
@@ -1607,6 +1608,15 @@ local function makeCopy()
   copy.nextB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   copy.prevB = button("Back", 70, function() ns.showMacroCopy(nil, nil, -1) end)
   copy.prevB:SetPoint("RIGHT", copy.nextB, "LEFT", -6, 0)
+  -- paste mode: hand the text to the entry's onAccept; a refusal says why and keeps the box open
+  copy.useB = button("Use this code", 120, function()
+    local cur = copy.list and copy.list[copy.index]
+    if not (cur and cur.onAccept) then return end
+    local ok, why = cur.onAccept(copy.edit:GetText())
+    if ok then copy:Hide() else copy.count:SetText(why or "") end
+  end)
+  copy.useB.codexLabel = "Use this code"
+  copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
@@ -1639,14 +1649,16 @@ function ns.showMacroCopy(m, list, step)
   if not cur then return end
   local many = #copy.list > 1
   copy.title:SetText(cur.copyTitle or (cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro")))
-  copy.help:SetText(cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp)
+  copy.help:SetText(cur.help or (cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp))
   copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
-  copy.body = cur.body
+  copy.paste = cur.paste and true or false
+  copy.useB:SetShown(copy.paste)
+  copy.body = cur.body or ""
   copy:Show()
-  copy.edit:SetText(cur.body)
+  copy.edit:SetText(copy.body)
   copy.edit:SetFocus()
-  copy.edit:HighlightText()
+  if not copy.paste then copy.edit:HighlightText() end
 end
 
 function ns.toggleWindow()

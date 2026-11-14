@@ -5846,6 +5846,69 @@ function S.padTalentPaths()
   LevelingCodexCharDB.talentPath = nil
 end
 
+-- The custom path editor: start from a path, undo, clear (two clicks), place points by clicking the
+-- tree, the game's rules refusing a point with the reason.
+function S.talentCustom()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  local function has(label) return findButton(win(), function(l) return l == label end) ~= nil end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  check(LevelingCodexCharDB.talentPath == "custom", "the Custom card chooses Custom")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "an empty custom path counts 0 of 51")
+  check(has("Start from: Arms") and has("Start from: Protection") and has("Start empty"), "start from a path or empty")
+  check(not has("Start from: My current talents"), "no current talents to copy here (nothing readable)")
+  click(win(), "Start from: Arms")
+  check(text():find("Points placed: 51 of 51", 1, true), "Arms copied in full")
+  check(not has("Start from: Arms"), "the start row goes once the path has points")
+  click(win(), "Undo")
+  check(text():find("Points placed: 50 of 51 - next point is level 60", 1, true), "undo takes the last point back")
+  check(has("Done"), "starting from a path opens the editor")
+  iconsTitled("Mortal Strike")[1]:Click()
+  check(text():find("Points placed: 50 of 51", 1, true), "a refused point changes nothing")
+  check(text():find("Can't place it: Already taken", 1, true), "the editor says why a point was refused")
+  click(win(), "Clear")
+  check(text():find("Points placed: 50 of 51", 1, true), "one click on Clear only asks")
+  click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "a second click clears")
+  iconsTitled("Improved Rend")[1]:Click()
+  check(text():find("Points placed: 1 of 51 - next point is level 11", 1, true), "clicking a talent places the next point")
+  check(iconsTitled("Mortal Strike")[1].tipText:find("^Needs 30 points in Arms"), "a closed talent's tooltip says why")
+  click(win(), "Done")
+  check(has("Edit path"), "Done closes the editor")
+  check(MOCK.ns.talentAt(10).name == "Improved Rend", "the custom point is level 10's talent")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- Share codes: copy one out, paste one back (a bad one says why and changes nothing).
+function S.talentCode()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  click(win(), "Start from: Fury")
+  click(win(), "Share code")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown() and copy.edit:GetText():find("^LC1%-WARRIOR%-"), "Share code shows the code")
+  local code = copy.edit:GetText()
+  copy:Hide()
+  click(win(), "Clear"); click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51", 1, true), "cleared")
+  click(win(), "Paste code")
+  check(copy:IsShown() and copy.edit:GetText() == "", "Paste code opens an empty box")
+  copy.edit:SetText("nonsense")
+  click(copy, "Use this code")
+  check(copy:IsShown() and copy.count:GetText() == "Not a Leveling Codex talent code", "a bad code says why")
+  check(text():find("Points placed: 0 of 51", 1, true), "a bad code changes nothing")
+  copy.edit:SetText(code)
+  click(copy, "Use this code")
+  check(not copy:IsShown(), "a good code closes the box")
+  check(text():find("Points placed: 51 of 51", 1, true), "the code brings the path back")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
 -- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the
 -- trace in the talent window; a custom path's unplanned point says to plan it.
 function S.talentPathFollow()

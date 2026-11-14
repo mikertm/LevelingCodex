@@ -13,6 +13,9 @@ local CELL_W, CELL_H, NODE = 42, 52, 32
 local CUSTOM_ICON = "inv_misc_note_01"
 
 local selectedTalent
+local editing = false   -- the custom path editor: clicks on the tree place points
+local lastRefusal       -- why the editor refused the last click
+local clearArmed        -- GetTime() of the first click on Clear (the second, within 5 s, clears)
 
 local function accent(a) return { C.accent[1], C.accent[2], C.accent[3], a } end
 
@@ -102,7 +105,8 @@ local function drawCards(y)
       .. (chosen and "\n\nYou follow this path." or "\n\nClick to follow this path. It's saved for this character.")
     U.hit(x, cy, CARD_W, CARD_H, p.spec .. (p.guide and " (Codex guide)" or ""), tip, function()
       ns.setTalentPath(p.key)
-      selectedTalent = nil
+      selectedTalent, lastRefusal = nil, nil
+      if p.key ~= "custom" then editing = false end
       U.refresh()
     end, "Path: " .. p.spec)
   end
@@ -150,6 +154,7 @@ local function drawTrees(m, V, y, sel, editing, onNode)
   local U = ns.ui
   local top = y
   local height = 34 + 7 * CELL_H + 4
+  local placed = editing and ns.customPoints()
   for tab = 1, 3 do
     local px = (tab - 1) * (TREE_W + TREE_GAP)
     U.box(px, top, TREE_W, height, C.panel, C.edge)
@@ -176,7 +181,7 @@ local function drawTrees(m, V, y, sel, editing, onNode)
         if t == sel then outline(nx - 3, ny - 3, NODE + 6, NODE + 6, GOLD) end
         local f = U.icon(t.icon, nx, ny, NODE)
         local blocked
-        if editing then blocked = select(2, ns.talentCanAdd(ns.customPoints(), t.name)) end
+        if editing then blocked = select(2, ns.talentCanAdd(placed, t.name)) end
         local rankInk
         if r == 0 then
           f.tex:SetDesaturated(true); f.tex:SetVertexColor(0.65, 0.65, 0.65)
@@ -192,7 +197,7 @@ local function drawTrees(m, V, y, sel, editing, onNode)
         f.tipTitle = t.name .. "  " .. r .. "/" .. t.max
         local lead
         if editing then
-          lead = blocked and (blocked .. ". ") or ("Click to put level " .. (10 + #ns.customPoints()) .. "'s point here. ")
+          lead = blocked and (blocked .. ". ") or ("Click to put level " .. (10 + #placed) .. "'s point here. ")
         else
           lead = (here and ("Level " .. V .. ": your point goes here. ") or "") ..
             (nextP and ("Next point at level " .. nextP.level .. ". ") or (#t.points > 0 and "All points taken. " or "Not in this path. "))
@@ -215,6 +220,101 @@ local function drawTrees(m, V, y, sel, editing, onNode)
 end
 
 ----------------------------------------------------------------------------
+-- The custom path editor
+----------------------------------------------------------------------------
+
+local SHARE_HELP = "The code is selected: press Ctrl+C (Cmd+C on a Mac) to copy it. On another character, " ..
+  "open Talents > Custom > Paste code to follow the same path."
+local PASTE_HELP = "Paste a Leveling Codex talent code here with Ctrl+V (Cmd+V on a Mac), then click Use this code. " ..
+  "It replaces your custom path."
+
+local function buttonWidth(label) return math.max(64, #label * 7 + 22) end
+
+local function drawEditor(y)
+  local U = ns.ui
+  local n = #ns.customPoints()
+  local top = y
+  y = y + 12
+  U.T("YOUR CUSTOM PATH", 16, y, 300, "label", C.gold)
+  y = y + 18
+  U.T(n >= 51 and "Points placed: 51 of 51" or ("Points placed: " .. n .. " of 51 - next point is level " .. (10 + n)),
+    16, y, U.W - 32, "body", C.light)
+  y = y + 20
+  if lastRefusal then y = y + U.T("Can't place it: " .. lastRefusal, 16, y, U.W - 32, "small", C.gold) + 4 end
+  local x = 16
+  local function button(label, w, onClick, tip, codex)
+    if x + w > U.W - 16 then x, y = 16, y + 28 end
+    local b = U.btn(label, x, y, w, onClick, false, tip)
+    b.codexLabel = codex or label
+    x = x + w + 6
+    return b
+  end
+  button(editing and "Done" or "Edit path", 84, function()
+    editing, lastRefusal = not editing, nil
+    U.refresh()
+  end, editing and "Stop placing points." or "Place points by clicking the tree, in level order.")
+  button("Undo", 60, function()
+    ns.customUndo()
+    lastRefusal = nil
+    U.refresh()
+  end, "Take the last point back.")
+  local now = GetTime and GetTime() or 0
+  local armed = clearArmed and now - clearArmed < 5
+  button(armed and "Click again to clear" or "Clear", armed and 146 or 64, function()
+    local t = GetTime and GetTime() or 0
+    if clearArmed and t - clearArmed < 5 then
+      ns.customClear()
+      clearArmed = nil
+    else
+      clearArmed = t
+    end
+    lastRefusal = nil
+    U.refresh()
+  end, "Remove every point (click twice).", "Clear")
+  button("Share code", 96, function()
+    ns.showMacroCopy({ copyTitle = "Share your talent path", body = ns.talentCode() or "", help = SHARE_HELP })
+  end, "A short code for this path, to paste back later or on another character.")
+  button("Paste code", 96, function()
+    ns.showMacroCopy({ copyTitle = "Paste a talent path", body = "", paste = true, help = PASTE_HELP,
+      onAccept = function(text)
+        local ok, why = ns.readTalentCode(text)
+        if ok then
+          editing, lastRefusal = false, nil
+          U.refresh()
+        end
+        return ok, why
+      end })
+  end, "Follow a path from a Leveling Codex talent code.")
+  y = y + 28
+  if n == 0 then
+    U.T("Start from:", 16, y + 4, 90, "small", C.dim)
+    x = 96
+    local function start(label, codex, tip, fn)
+      button(label, buttonWidth(label), function()
+        local ok, why = fn()
+        editing, lastRefusal = true, (not ok) and why or nil
+        U.refresh()
+      end, tip, codex)
+    end
+    for _, p in ipairs(ns.talentPaths()) do
+      if not p.custom then
+        start(p.spec, "Start from: " .. p.spec, "Copy the " .. p.spec .. " path's points, then change them.",
+          function() return ns.customFrom(p.key) end)
+      end
+    end
+    if ns.traitRanks and ns.traitRanks() then
+      start("My current talents", "Start from: My current talents", "Copy the talents you have spent, then plan the rest.",
+        ns.customFromLive)
+    end
+    start("Start empty", "Start empty", "Place every point yourself.", function() return true end)
+    y = y + 28
+  end
+  y = y + 4
+  U.box(0, top, U.W, y - top, C.panel, C.edge)
+  return y + 12
+end
+
+----------------------------------------------------------------------------
 -- The tab
 ----------------------------------------------------------------------------
 
@@ -228,8 +328,8 @@ function ns.renderTalents(V)
   y = drawCards(y)
   local path = ns.talentPath()
   local custom = path and path.custom
-  local editing = custom and ns.talentEditing and ns.talentEditing()
-  if custom and ns.drawCustomEditor then y = ns.drawCustomEditor(y) end
+  if not custom then editing = false end
+  if custom then y = drawEditor(y) end
   local plan = ns.talentPlan()
   local m = model(plan)
   local shownLevel = editing and 60 or V
@@ -242,7 +342,8 @@ function ns.renderTalents(V)
   end
   y = drawTrees(m, shownLevel, y, sel, editing, function(t)
     if editing then
-      ns.customAdd(t.name)
+      local ok, why = ns.customAdd(t.name)
+      lastRefusal = (not ok) and why or nil
     else
       selectedTalent = t.name
     end
