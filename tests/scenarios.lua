@@ -1189,6 +1189,10 @@ function S.worldMapLine()
   end
   local line = dots()
   check(#line > 5, "a dotted line runs on the world map (" .. #line .. " dots)")
+  check(line[1].edge and line[1].edge:IsShown(), "each dot has a dark edge, so it reads on the parchment map")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("world map line: %d+ dots from you to the step"), "debug says what the line drew")
   local far = 0
   for _, d in ipairs(line) do local _, _, _, x = d:GetPoint(); far = math.max(far, x) end
   check(far > 0.5 * 1002 and far <= 0.52 * 1002 + 1, "through the tunnel points to the cave (" .. far .. ")")
@@ -1208,6 +1212,9 @@ function S.worldMapLine()
   MOCK.worldMapID = 1453
   WorldMapFrame:OnMapChanged()
   check(#dots() == 0, "a map you're not on has no line")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("world map line: none, the map shows 1453 and you're on 1429"), "and debug says why")
   MOCK.worldMapID = 1429
   WorldMapFrame:OnMapChanged()
   slash("")

@@ -455,9 +455,13 @@ local function worldDots(points, w, h, z)
     while r <= stop and used < WORLD_DOTS and len > 0 do
       used = used + 1
       local d = wpins.dots[used]
+      local px, py = x1 + dx * r / len, -(y1 + dy * r / len)
       d:ClearAllPoints()
-      d:SetPoint("CENTER", holder, "TOPLEFT", x1 + dx * r / len, -(y1 + dy * r / len))
+      d:SetPoint("CENTER", holder, "TOPLEFT", px, py)
+      d.edge:ClearAllPoints()
+      d.edge:SetPoint("CENTER", holder, "TOPLEFT", px, py)
       d:Show()
+      d.edge:Show()
       r = r + gap
     end
     r = math.max(0, r - len)
@@ -498,12 +502,19 @@ function M.drawWorld()
     end)
     wpins.line = CreateFrame("Frame", nil, wpins)
     wpins.line:SetPoint("TOPLEFT", child, "TOPLEFT", 0, 0)
+    -- each dot is a bright centre on a dark ring: plain gold vanishes on the parchment map
     wpins.dots = {}
+    local disc = ns.art.hasFile(ns.art.FILES.circle) and ns.art.FILES.circle
+    local function paint(t, size, r, g, b, a)
+      t:SetSize(size, size)
+      if disc then t:SetTexture(disc); t:SetVertexColor(r, g, b, a) else t:SetColorTexture(r, g, b, a) end
+      t:Hide()
+    end
     for n = 1, WORLD_DOTS do
       local d = wpins.line:CreateTexture(nil, "OVERLAY")
-      d:SetSize(5, 5)
-      d:SetColorTexture(1, 0.82, 0, 0.9)
-      d:Hide()
+      paint(d, 5, 1, 0.92, 0.45, 1)
+      d.edge = wpins.line:CreateTexture(nil, "ARTWORK")
+      paint(d.edge, 9, 0.12, 0.05, 0, 0.9)
       wpins.dots[n] = d
     end
     wpins.current = worldPin(20)
@@ -519,6 +530,9 @@ function M.drawWorld()
   local viewer = _G.LevelingCodexQuestViewer
   local row, i = Q.current()
   if ns.db().noWorldMapSteps or not row or not frame:IsShown() or not (viewer and viewer:IsShown()) then
+    M.worldLine = ns.db().noWorldMapSteps and "none, Show steps on the world map is off"
+      or not row and "none, no current step" or not frame:IsShown() and "none, the map is closed"
+      or "none, the step window is hidden"
     wpins:Hide()
     return
   end
@@ -544,15 +558,27 @@ function M.drawWorld()
   local map, px, py = Q.position()
   local goal = ns.questArrowGoal and ns.questArrowGoal()
   wpins.where = lineKey()
-  if not ns.db().noWorldMapLine and goal and goal.spot and map == shown and px and py then
+  local TO = { step = "the step", spawn = "the nearest spawn", leg = "the next leg of the trip", corpse = "your corpse" }
+  if ns.db().noWorldMapLine then
+    M.worldLine = "off (Settings > Route line on the world map)"
+  elseif not (goal and goal.spot) then
+    M.worldLine = "none, the arrow has no goal"
+  elseif map ~= shown then
+    M.worldLine = "none, the map shows " .. tostring(shown) .. " and you're on " .. tostring(map)
+  elseif not (px and py) then
+    M.worldLine = "none, the game gives no position for you"
+  else
     local points = { { px, py } }
     for _, spot in ipairs(goalChain(goal)) do
       if not (spot.map == shown and spot.x and spot.y) then break end
       points[#points + 1] = { spot.x, spot.y }
     end
     if #points > 1 then used = worldDots(points, w, h, z) end
+    M.worldLine = used .. " dots from you to " .. (TO[goal.kind] or "the step")
+      .. (#points > 1 and "" or " (its spot is on map " .. tostring(goal.spot.map) .. ")")
+      .. ", zoom " .. string.format("%.2f", z) .. ", canvas " .. math.floor(w) .. "x" .. math.floor(h)
   end
-  for n = used + 1, #wpins.dots do wpins.dots[n]:Hide() end
+  for n = used + 1, #wpins.dots do wpins.dots[n]:Hide(); wpins.dots[n].edge:Hide() end
   wpins:Show()
 end
 
@@ -564,6 +590,11 @@ local function hookWorldMap()
   if type(frame.OnMapChanged) == "function" and type(hooksecurefunc) == "function" then
     pcall(hooksecurefunc, frame, "OnMapChanged", function() M.drawWorld() end)
   end
+end
+
+-- /codex debug: what the world map's route line did at its last draw.
+function ns.questMapDebugLines()
+  return { "world map line: " .. (M.worldLine or "not drawn yet (open the world map, then ask again)") }
 end
 
 -- Rebuild the pins for the current step (QuestGuide's refresh calls this).
