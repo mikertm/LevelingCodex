@@ -274,7 +274,8 @@ def data_checks():
     game_errors, game_warnings = game_checks()
     choice_errors, choice_warnings = quest_choice_checks()
     return (errors + prof_errors + game_errors + quest_mob_checks() + quest_npc_checks() + quest_shop_checks() + quest_danger_checks()
-            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks() + talent_tree_checks(),
+            + quest_flight_checks() + choice_errors + quest_reward_checks() + release_notes_checks() + talent_tree_checks()
+            + talent_path_checks(),
             warnings + prof_warnings + game_warnings + choice_warnings)
 
 
@@ -685,6 +686,42 @@ def talent_tree_checks():
         errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
     if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
         errors.append("talent tree: hidden talents (Lightning Reflexes, Holy Specialization) must be left out")
+    return errors
+
+
+def talent_path_checks():
+    """TalentPaths.lua: every spec path through the same rules as the Data.lua talent plan (tools/gamedata.py
+    audit_paths), and the audit itself catches a broken path."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import gamedata
+    if not os.path.exists(gamedata.REF):
+        return []
+    if not hasattr(gamedata, "audit_paths") or not os.path.exists(os.path.join(ROOT, "TalentPaths.lua")):
+        return ["talent paths: TalentPaths.lua or tools/gamedata.py audit_paths missing"]
+    ref, data = gamedata.load_reference(), gamedata.load_data()
+    errors = ["talent paths %s: %s" % (c, m) for c, lvl, m in gamedata.audit_paths(gamedata.load_paths(), data, ref)
+              if lvl == "error"]
+    # the audit catches a broken path: Mortal Strike at 10, a missing level, an unknown role
+    good = gamedata.load_paths()["WARRIOR"]
+    arms = next(p for p in good if p["key"] == "arms")
+
+    def flagged(path, want):
+        paths ={"WARRIOR": [p for p in good if p["key"] != "arms"] + [path]}
+        return any(want in m for _, lvl, m in gamedata.audit_paths(paths, data, ref) if lvl == "error")
+    import copy
+    early = copy.deepcopy(arms)
+    early["plan"][0] = dict(early["plan"][0], name="Mortal Strike", tree="Arms", max=1, icon="ability_warrior_savageblow",
+                            to=early["plan"][0]["from"])
+    early["plan"].insert(1, dict(arms["plan"][0], **{"from": arms["plan"][0]["from"] + 1}))
+    if not flagged(early, "needs 30 points in Arms"):
+        errors.append("talent paths: the audit misses Mortal Strike before 30 points in Arms")
+    gap = copy.deepcopy(arms)
+    gap["plan"] = [p for p in gap["plan"] if not (p["from"] <= 37 <= p["to"])]
+    if not flagged(gap, "level 37 has 0 points"):
+        errors.append("talent paths: the audit misses a level without a point")
+    pet = dict(copy.deepcopy(arms), role="Pet")
+    if not flagged(pet, "role 'Pet'"):
+        errors.append("talent paths: the audit misses an unknown role")
     return errors
 
 

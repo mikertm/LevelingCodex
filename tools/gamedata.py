@@ -1149,6 +1149,8 @@ def full_audit(ref, only=None):
     -k names a class (-k BLACKSMITHING shows one profession)."""
     only = (only or "").upper() or None
     res = audit(load_data(), ref, only) if not only or only in CLASSES else []
+    if not only or only in CLASSES:
+        res += [r for r in audit_paths(load_paths(), load_data(), ref) if not only or r[0] == only]
     if not only or only not in CLASSES:
         res += [r for r in audit_professions(load_profdata() or {}, ref) if not only or r[0] == only]
     if not only or only == "QUESTS":
@@ -1214,6 +1216,147 @@ def macro_spells(body):
     return out
 
 
+def plan_audit(plan, cls, R, add, prefix, icon_level="warn"):
+    """A talent plan (Data.lua's or a path's) point by point against the class tree R: names, trees, ranks,
+    icons, points needed per row, prerequisites. Returns {talent: first level}."""
+    talents = R["talents"]
+    tl = {n.lower(): n for n in talents}
+    points = sorted(((lvl, p) for p in plan for lvl in range(p["from"], p["to"] + 1)), key=lambda x: x[0])
+    in_tab, taken = collections.Counter(), collections.Counter()
+    learned = {}
+    for p in plan:
+        n = tl.get(p["name"].lower())
+        if not n:
+            add("error", "%s: talent '%s' is not in the %s tree" % (prefix, p["name"], cls))
+            continue
+        t = talents[n]
+        if p["tree"] != t["tab"]:
+            add("error", "%s: %s is in %s, not %s" % (prefix, n, t["tab"], p["tree"]))
+        if p["max"] != t["max"]:
+            add("error", "%s: %s has %d rank(s), not %d" % (prefix, n, t["max"], p["max"]))
+        if t.get("icon") and p.get("icon") and p["icon"].lower() != t["icon"]:
+            add(icon_level, "%s: %s icon is %s in game, guide uses %s" % (prefix, n, t["icon"], p["icon"]))
+    for lvl, p in points:
+        n = tl.get(p["name"].lower())
+        if not n:
+            continue
+        t = talents[n]
+        if in_tab[t["tab"]] < t["req"]:
+            add("error", "%s: level %d %s needs %d points in %s, only %d spent" %
+                (prefix, lvl, n, t["req"], t["tab"], in_tab[t["tab"]]))
+        pre = t.get("prereq", [])
+        if pre and not any(taken[x] >= talents[x]["max"] for x in pre):
+            add("error", "%s: level %d %s needs %s maxed first" % (prefix, lvl, n, " or ".join(
+                "%s %d/%d (has %d)" % (x, talents[x]["max"], talents[x]["max"], taken[x]) for x in pre)))
+        for x in t.get("requires", []):
+            if taken[x] < talents[x]["max"]:
+                add("error", "%s: level %d %s needs %s %d/%d first (has %d)" %
+                    (prefix, lvl, n, x, talents[x]["max"], talents[x]["max"], taken[x]))
+        in_tab[t["tab"]] += 1
+        taken[n] += 1
+        learned.setdefault(n, lvl)
+    for n, k in taken.items():
+        if k > talents[n]["max"]:
+            add("error", "%s: %s gets %d points, max %d" % (prefix, n, k, talents[n]["max"]))
+    return learned
+
+
+PATHS = os.path.join(ROOT, "TalentPaths.lua")
+ROLES = ("Melee damage", "Ranged damage", "Caster damage", "Tank", "Healer")
+
+
+def load_paths(path=PATHS):
+    """TalentPaths.lua's ns.TALENT_PATHS as Python data ({} when the file isn't there)."""
+    if not os.path.exists(path):
+        return {}
+    import lupa.lua51 as lupa
+    lua = lupa.LuaRuntime(unpack_returned_tuples=True, encoding="utf-8")
+    ns = lua.table()
+    with open(path, encoding="utf-8") as f:
+        lua.execute("return function(src, ns) assert(loadstring(src))('LevelingCodex', ns) end")(f.read(), ns)
+
+    def conv(t):
+        if lupa.lua_type(t) != "table":
+            return t
+        keys = list(t.keys())
+        if keys and all(isinstance(k, int) for k in keys) and sorted(keys) == list(range(1, len(keys) + 1)):
+            return [conv(t[k]) for k in sorted(keys)]
+        return {str(k): conv(v) for k, v in t.items()} if keys else []
+    return conv(ns.TALENT_PATHS) or {}
+
+
+def audit_paths(paths, data, ref):
+    """[(class, 'error'|'warn', message)] for TalentPaths.lua: each spec path is a full 10-60 plan the game
+    allows, with our own short ASCII text; each class has its guide entry and covers all three trees."""
+    res = []
+    for cls in CLASSES:
+        R = ref["classes"].get(cls)
+        if not R:
+            continue
+
+        def add(level, msg, cls=cls):
+            res.append((cls, level, msg))
+        lst = paths.get(cls) or []
+        if not lst:
+            add("error", "no talent paths")
+            continue
+        keys = [p.get("key") for p in lst]
+        if len(set(keys)) != len(keys):
+            add("error", "path keys repeat: %s" % keys)
+        hidden = set(R.get("hidden") or [])
+        mains = []
+        for P in lst:
+            key = P.get("key") or "?"
+            where = "path %s" % key
+            if not re.match(r"^[a-z]+$", key):
+                add("error", "%s: key must be lower-case letters" % where)
+            for field in ("spec", "role", "note"):
+                s = P.get(field) or ""
+                if not s or any(ord(ch) > 126 for ch in s):
+                    add("error", "%s: %s must be ASCII text" % (where, field))
+            if P.get("role") not in ROLES:
+                add("error", "%s: role '%s' is not one of %s" % (where, P.get("role"), ", ".join(ROLES)))
+            if len(P.get("note") or "") > 90:
+                add("error", "%s: note is %d characters (max 90)" % (where, len(P["note"])))
+            plan = P.get("plan")
+            if key == "guide":
+                if plan:
+                    add("error", "path guide: takes its plan from Data.lua, not its own")
+                plan = (data.get(cls) or {}).get("plan") or []
+            else:
+                if not plan:
+                    add("error", "%s: no plan" % where)
+                    continue
+                levels = collections.Counter(lvl for p in plan for lvl in range(p["from"], p["to"] + 1))
+                for lvl in range(10, 61):
+                    if levels[lvl] != 1:
+                        add("error", "%s: level %d has %d points (needs exactly 1)" % (where, lvl, levels[lvl]))
+                for lvl in sorted(levels):
+                    if not 10 <= lvl <= 60:
+                        add("error", "%s: level %d is outside 10-60" % (where, lvl))
+                for p in plan:
+                    label = "%s: %d-%d %s" % (where, p["from"], p["to"], p["name"])
+                    if p["name"] in hidden:
+                        add("error", "%s: the game hides this talent" % label)
+                    for field in ("why", "more"):
+                        if any(ord(ch) > 126 for ch in p.get(field) or ""):
+                            add("error", "%s: %s has non-ASCII characters" % (label, field))
+                    if not (p.get("why") or "").strip():
+                        add("error", "%s: needs a why" % label)
+                    elif len(p["why"]) >= 240:
+                        add("error", "%s: why is %d characters (keep it under 240)" % (label, len(p["why"])))
+                plan_audit(plan, cls, R, add, where, icon_level="error")
+            split = collections.Counter(p["tree"] for p in plan for _ in range(p["from"], p["to"] + 1))
+            if split:
+                mains.append(split.most_common(1)[0][0])
+        if "guide" not in keys:
+            add("error", "no guide entry (the Codex guide's own plan)")
+        for tab in R["tabs"]:
+            if tab not in mains:
+                add("error", "no path spends most of its points in %s" % tab)
+    return res
+
+
 def audit(data, ref, only=None):
     """[(class, 'error'|'warn'|'info', message)]. Errors: the game says the guide can't be done as written."""
     res = []
@@ -1232,47 +1375,7 @@ def audit(data, ref, only=None):
         pl = {n.lower(): n for n in pets}
 
         # --- talent plan, point by point in level order
-        points = []
-        for p in d["plan"]:
-            for lvl in range(p["from"], p["to"] + 1):
-                points.append((lvl, p))
-        points.sort(key=lambda x: x[0])
-        in_tab, taken = collections.Counter(), collections.Counter()
-        learned = {}
-        for p in d["plan"]:
-            n = tl.get(p["name"].lower())
-            if not n:
-                add("error", "plan: talent '%s' is not in the %s tree" % (p["name"], cls))
-                continue
-            t = talents[n]
-            if p["tree"] != t["tab"]:
-                add("error", "plan: %s is in %s, not %s" % (n, t["tab"], p["tree"]))
-            if p["max"] != t["max"]:
-                add("error", "plan: %s has %d rank(s), not %d" % (n, t["max"], p["max"]))
-            if t.get("icon") and p.get("icon") and p["icon"].lower() != t["icon"]:
-                add("warn", "plan: %s icon is %s in game, guide uses %s" % (n, t["icon"], p["icon"]))
-        for lvl, p in points:
-            n = tl.get(p["name"].lower())
-            if not n:
-                continue
-            t = talents[n]
-            if in_tab[t["tab"]] < t["req"]:
-                add("error", "plan: level %d %s needs %d points in %s, only %d spent" %
-                    (lvl, n, t["req"], t["tab"], in_tab[t["tab"]]))
-            pre = t.get("prereq", [])
-            if pre and not any(taken[x] >= talents[x]["max"] for x in pre):
-                add("error", "plan: level %d %s needs %s maxed first" % (lvl, n, " or ".join(
-                    "%s %d/%d (has %d)" % (x, talents[x]["max"], talents[x]["max"], taken[x]) for x in pre)))
-            for x in t.get("requires", []):
-                if taken[x] < talents[x]["max"]:
-                    add("error", "plan: level %d %s needs %s %d/%d first (has %d)" %
-                        (lvl, n, x, talents[x]["max"], talents[x]["max"], taken[x]))
-            in_tab[t["tab"]] += 1
-            taken[n] += 1
-            learned.setdefault(n, lvl)
-        for n, k in taken.items():
-            if k > talents[n]["max"]:
-                add("error", "plan: %s gets %d points, max %d" % (n, k, talents[n]["max"]))
+        learned = plan_audit(d["plan"], cls, R, add, "plan")
 
         def spell_level(name, rank=None):
             """Level a name is first usable at, or None if the game doesn't know it."""

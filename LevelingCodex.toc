@@ -12,6 +12,7 @@
 
 Data.lua
 TalentTreeData.lua
+TalentPaths.lua
 ProfessionData.lua
 QuestData.lua
 QuestAlternateData.lua
