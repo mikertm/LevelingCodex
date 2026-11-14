@@ -945,6 +945,15 @@ for _, a in ipairs({ "talents-node-circle-yellow", "talents-node-square-yellow",
     "talents-node-circle-mask", "talents-node-square-mask", "talents-node-choice-mask" }) do
   MOCK.atlases[a] = true
 end
+-- The client's crosshair cursors (the cursor art without its pointer), 32 to 128 px.
+for _, icon in ipairs({ "quest", "questturnin", "attack", "lootall", "taxi", "innkeeper", "buy", "trainer" }) do
+  for _, size in ipairs({ 32, 48, 64, 96, 128 }) do MOCK.atlases["crosshair_" .. icon .. "_" .. size] = true end
+end
+-- The screen in pixels (MOCK.screenHeight, 1080 unless a scenario sets it).
+function GetPhysicalScreenSize()
+  local h = MOCK.screenHeight or 1080
+  return math.floor(h * 16 / 9 + 0.5), h
+end
 function SetPortraitToTexture(tex, path)
   if type(path) ~= "string" and type(path) ~= "number" then error("SetPortraitToTexture: bad texture", 2) end
   tex._tex, tex._round = path, true
@@ -1506,6 +1515,7 @@ end
 
 -- Remove the APIs a careful addon must not rely on.
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
+  "GetPhysicalScreenSize",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",

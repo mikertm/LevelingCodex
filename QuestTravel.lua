@@ -294,21 +294,19 @@ local function makeMark(frame)
     glow.ring:Hide()
   end
   if A.hasFile(NODE_ART) then glow.node:SetTexture(NODE_ART) else glow.node:Hide() end
-  glow.pulse = glow.ring:CreateAnimationGroup()
-  local fade = glow.pulse:CreateAnimation("Alpha")
-  fade:SetFromAlpha(0.35)
-  fade:SetToAlpha(1)
-  fade:SetDuration(0.6)
-  glow.pulse:SetLooping("BOUNCE")
+  -- The ring pulses from 0.35 to full and back, 1.2 s a loop, set from the clock every frame: a
+  -- cosine has no seam to jump at (an Alpha looping BOUNCE could step where it turned).
+  glow.pulse = function(self)
+    local phase = ((GetTime() - (self.started or 0)) / 1.2) % 1
+    self.ring:SetAlpha(0.35 + 0.65 * (1 - math.cos(2 * math.pi * phase)) / 2)
+  end
+  glow:SetScript("OnUpdate", glow.pulse)
   mark.glow = glow
 end
 
 function ns.markTaxi(want, again)
   pointing = nil
-  if mark then
-    mark.glow.pulse:Stop()
-    mark:Hide()
-  end
+  if mark then mark:Hide() end
   local frame = _G.TaxiFrame or _G.FlightMapFrame
   if not want or type(frame) ~= "table" or type(frame.IsShown) ~= "function" then return end
   if not mark then makeMark(frame) end
@@ -328,8 +326,9 @@ function ns.markTaxi(want, again)
   glow:ClearAllPoints()
   if type(button) == "table" and type(button.GetObjectType) == "function" then
     glow:SetPoint("CENTER", button, "CENTER", 0, 0)
+    glow.started = GetTime()
+    glow:pulse() -- the first frame starts dim too
     glow:Show()
-    glow.pulse:Play()
   else
     glow:Hide()
     if not again then ns.after(0.3, function() if frame:IsShown() then ns.markTaxi(want, true) end end) end

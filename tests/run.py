@@ -1064,6 +1064,7 @@ def main():
                          ["makeTalentWindow:name:PlayerSpellsFrame:all", "login", "talentPathFollow"]))
         runs.append(("WARRIOR/%s/talent-path-trainer" % variant, "WARRIOR", minimal, ["login", "talentTrainerPath"]))
         runs.append(("WARRIOR/%s/talent-custom" % variant, "WARRIOR", minimal, ["login", "talentCustom"]))
+        runs.append(("WARRIOR/%s/quest-icon-art" % variant, "WARRIOR", minimal, ["questIconArt"]))
         runs.append(("WARRIOR/%s/talent-code" % variant, "WARRIOR", minimal, ["login", "talentCode"]))
         if not minimal:
             runs.append(("WARRIOR/full/warrior-macros-upgrade", "WARRIOR", False, ["login", "warriorMacroUpgrade"]))

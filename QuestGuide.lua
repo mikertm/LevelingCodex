@@ -48,6 +48,24 @@ local function turnArrow()
   arrowText:SetText(rotated and arrowCaption or (compass .. (arrowCaption ~= "" and " - " .. arrowCaption or "")))
 end
 
+-- The arrival icon's bob, placed from the clock every frame (the arrow's OnUpdate): a cosine
+-- 8 px high, 0.8 s a loop, so it has no seam. A Translation looping BOUNCE jumped in game where
+-- it turned. bobStart = when this arrival began (nil = no icon); db.noArrowBounce keeps it still.
+local BOB_HEIGHT, BOB_PERIOD = 8, 0.8
+local bobStart, bobY
+local function bob()
+  if not bobStart then return end
+  local y = 0
+  if not ns.db().noArrowBounce then
+    local phase = ((GetTime() - bobStart) / BOB_PERIOD) % 1
+    y = BOB_HEIGHT * (1 - math.cos(2 * math.pi * phase)) / 2
+  end
+  if y ~= bobY then
+    bobY = y
+    arrow.here:SetPoint("CENTER", 0, y)
+  end
+end
+
 -- A saved position wins; without one the window sits beside Questie's tracker (built some
 -- seconds after login, so the refresh and the ticker both check) or in its default spot. It
 -- only re-anchors when the answer changes. On the tracker's right it keeps 58 px clear: the
@@ -414,6 +432,9 @@ local function makeViewer()
   arrow.here = arrow:CreateTexture(nil, "ARTWORK")
   arrow.here:SetSize(36, 36)
   arrow.here:SetPoint("CENTER")
+  -- Between whole pixels too, or the slow top and bottom of the bob step a pixel at a time.
+  try(arrow.here.SetSnapToPixelGrid, arrow.here, false)
+  try(arrow.here.SetTexelSnappingBias, arrow.here, 0)
   arrow.here:Hide()
   arrow.ring = arrow:CreateTexture(nil, "BACKGROUND")
   arrow.ring:SetSize(72, 72)
@@ -425,13 +446,7 @@ local function makeViewer()
     try(arrow.ring.SetBlendMode, arrow.ring, "ADD")
     arrow.ring:SetVertexColor(1, 0.82, 0.25)
   end
-  if type(arrow.here.CreateAnimationGroup) == "function" then
-    arrow.bob = arrow.here:CreateAnimationGroup()
-    local up = arrow.bob:CreateAnimation("Translation")
-    up:SetOffset(0, 8)
-    up:SetDuration(0.4)
-    try(up.SetSmoothing, up, "IN_OUT")
-    arrow.bob:SetLooping("BOUNCE")
+  if type(arrow.ring.CreateAnimationGroup) == "function" then
     arrow.pulse = arrow.ring:CreateAnimationGroup()
     local grow = arrow.pulse:CreateAnimation("Scale")
     if type(grow.SetScaleFrom) == "function" then
@@ -445,6 +460,8 @@ local function makeViewer()
     fade:SetFromAlpha(1)
     fade:SetToAlpha(0)
     fade:SetDuration(0.6)
+    -- ends faded out (no frame back at full alpha before OnFinished hides it); arrive() resets it
+    try(arrow.pulse.SetToFinalAlpha, arrow.pulse, true)
     arrow.pulse:SetScript("OnFinished", function() arrow.ring:Hide() end)
   end
   -- The wheel is the arrow's only while Ctrl is held over it.
@@ -456,6 +473,7 @@ local function makeViewer()
       try(arrow.EnableMouseWheel, arrow, want)
     end
     turnArrow()
+    bob()
   end)
   arrow:SetScript("OnDragStart", function(self)
     if not ns.db().questArrowLocked then self:StartMoving() end
@@ -587,14 +605,7 @@ local function arrive(key, step, caption)
   arrowArt:Hide()
   if arrivedKey == key then return end
   arrivedKey = key
-  local icon = ns.questIcon(step)
-  if icon then
-    arrow.here:SetTexture(icon)
-    arrow.here:SetSize(36, 36)
-  else
-    arrow.here:SetColorTexture(1, 0.82, 0, 1)
-    arrow.here:SetSize(12, 12)
-  end
+  ns.questMap.paintIcon(arrow.here, step, 36, 12)
   arrow.here:Show()
   if arrow.pulse and ringArt then
     arrow.pulse:Stop()
@@ -602,9 +613,8 @@ local function arrive(key, step, caption)
     arrow.ring:Show()
     arrow.pulse:Play()
   end
-  if arrow.bob then
-    if ns.db().noArrowBounce then arrow.bob:Stop() else arrow.bob:Play() end
-  end
+  bobStart = bobStart or GetTime() -- one arrival straight after another bobs on without a jump
+  bob()
 end
 
 local function leave()
@@ -612,7 +622,8 @@ local function leave()
   arrivedKey = nil
   arrow.here:Hide()
   arrow.ring:Hide()
-  if arrow.bob then arrow.bob:Stop() end
+  bobStart, bobY = nil, nil
+  arrow.here:SetPoint("CENTER", 0, 0)
   if arrow.pulse then arrow.pulse:Stop() end
 end
 
@@ -1678,9 +1689,7 @@ function ns.questRefresh()
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
-    local icon = row and ns.questIcon(row.step)
-    viewer.titleIcon:SetShown(icon ~= nil)
-    if icon then viewer.titleIcon:SetTexture(icon) end
+    viewer.titleIcon:SetShown(row and ns.questMap.setIcon(viewer.titleIcon, row.step, 16) or false)
     -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)

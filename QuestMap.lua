@@ -47,14 +47,62 @@ local function kills(step)
   return type(mobs) == "table" and #mobs > 0
 end
 
+local function iconKey(step)
+  if type(step) ~= "table" then return end
+  if step.type == "complete" then return kills(step) and "kill" or "loot" end
+  return ICONS[step.type] and step.type or "spot"
+end
+
 -- The icon file for a step, or nil (the caller draws a gold dot) when the client lacks the file.
 function ns.questIcon(step)
-  if type(step) ~= "table" then return end
-  local key = step.type
-  if key == "complete" then key = kills(step) and "kill" or "loot" end
-  local path = ICONS[key] or ICONS.spot
-  if ns.art.hasFile(path) then return path end
+  local key = iconKey(step)
+  if key and ns.art.hasFile(ICONS[key]) then return ICONS[key] end
 end
+
+-- Sharper art where the client has it: its crosshair cursors, the cursor icons without the
+-- pointer tip, which Blizzard draws at each of SIZES. The files above are 16 px (gossip) or 32 px
+-- (cursors, skull), stretched to the icon's size. A skull or a spot has no crosshair drawing.
+local CROSSHAIR = { accept = "quest", turnin = "questturnin", kill = "attack", loot = "lootall", fly = "taxi",
+  getfp = "taxi", sethearth = "innkeeper", hearth = "innkeeper", buy = "buy", train = "trainer" }
+local SIZES = { 32, 48, 64, 96, 128 }
+local atlasKnown = {}
+local function hasAtlas(name)
+  if atlasKnown[name] == nil then atlasKnown[name] = ns.art.hasAtlas(name) end
+  return atlasKnown[name]
+end
+
+-- How many screen pixels `size` UI units on `tex` take: the UI is 768 units high at scale 1.
+local function pixels(tex, size)
+  local scale = tonumber(Q.try(tex.GetEffectiveScale, tex)) or 1
+  local _, height = Q.try(GetPhysicalScreenSize)
+  return size * scale * ((tonumber(height) or 1080) / 768)
+end
+
+-- A step's icon on a texture of `size` units: the smallest crosshair drawing at least that many
+-- pixels (the largest past 128), else the file. Returns false when the client has neither.
+local function setIcon(tex, step, size)
+  local key = iconKey(step)
+  if not key then return false end
+  local name = CROSSHAIR[key]
+  if name and type(tex.SetAtlas) == "function" then
+    local want, pick = pixels(tex, size), nil
+    for _, s in ipairs(SIZES) do
+      pick = "crosshair_" .. name .. "_" .. s
+      if s >= want then break end
+    end
+    if hasAtlas(pick) then
+      local ok, r = pcall(tex.SetAtlas, tex, pick, false)
+      if ok and r ~= false then return true end
+    end
+  end
+  local path = ICONS[key]
+  if ns.art.hasFile(path) and tex:SetTexture(path) ~= false then
+    tex:SetTexCoord(0, 1, 0, 1) -- an atlas set on this texture before leaves its coordinates
+    return true
+  end
+  return false
+end
+M.setIcon = setIcon
 
 -- What a step asks of you, for the step window's chip, stripe and title colour: "accept",
 -- "turnin", "kill", "collect", "travel", "dungeon" or "other".
@@ -93,11 +141,9 @@ function ns.questKindStyle(kind, step)
   return { label = word, color = { c[1], c[2], c[3] } }
 end
 
--- Show a step's icon on a texture, or a gold dot of `dot` px when the client lacks the file.
+-- Show a step's icon on a texture, or a gold dot of `dot` px when the client lacks the art.
 local function paintIcon(tex, step, size, dot)
-  local icon = ns.questIcon(step)
-  if icon then
-    tex:SetTexture(icon)
+  if setIcon(tex, step, size) then
     tex:SetSize(size, size)
   else
     tex:SetColorTexture(1, 0.82, 0, 1)
@@ -247,6 +293,8 @@ local function makePins()
     fade:SetFromAlpha(1)
     fade:SetToAlpha(0)
     fade:SetDuration(0.6)
+    -- ends faded out (no frame back at full alpha before OnFinished hides it); pulse() resets it
+    Q.try(c.pulse.SetToFinalAlpha, c.pulse, true)
     c.pulse:SetScript("OnFinished", function() c.ring:Hide() end)
   end
   pins.edge = pinFrame(14, 3)
