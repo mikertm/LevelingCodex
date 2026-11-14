@@ -646,7 +646,7 @@ local function renderParty(y)
   local checks = {
     { "Show my party's steps", not db.noPartySteps, toggle("noPartySteps", ns.questRefresh),
       "Party members who use the Codex see each other's step, counts and quests." },
-    { "Share guide quests with my party", db.questShareParty, toggle("questShareParty"),
+    { "Share guide quests with my party", ns.questSharing(), function() ns.toggleQuestSharing(); U.refresh() end,
       "When you accept a quest from your guide, the Codex offers it to party members who don't have it." },
     { "Say my flights in party chat", db.questAnnounceFlights, toggle("questAnnounceFlights"),
       "Taking a flight says where you're flying in party chat." },
@@ -766,6 +766,34 @@ local function renderSetup(y)
     db.noAutoRepair = not db.noAutoRepair
     U.refresh()
   end, "At a vendor who repairs, repair everything with your own money. Hold Alt as you open the vendor to skip it once.")
+  y = y + 30
+  -- the party (QuestParty.lua), the same switches as Settings > Party and Quests > Party
+  label("Party")
+  U.check("Party steps", x, y - 1, not db.noPartySteps, function()
+    db.noPartySteps = not db.noPartySteps
+    ns.questRefresh()
+    U.refresh()
+  end, "Party members who use the Codex see each other's step, kill and loot counts and quests in the step window and Quests > Party.")
+  U.check("Share quests", x + 150, y - 1, ns.questSharing(), function()
+    ns.toggleQuestSharing()
+    U.refresh()
+  end, "When you accept a quest from your guide, the Codex offers it to party members who don't have it yet.")
+  U.check("Ping together", x + 300, y - 1, not db.noPartyPing, function()
+    db.noPartyPing = not db.noPartyPing
+    U.refresh()
+  end, "The ready-check sound when the last party member reaches your step.")
+  y = y + 30
+  -- the party chat lines everyone in the party reads: off until you turn them on
+  label("Party chat")
+  local chatLines = {
+    { "Steps done", "questAnnounceSteps", "\"Codex: Done - <step>\" when the game finishes a step of your guide." },
+    { "Quest items", "questAnnounceItems", "Each quest item you loot, with your count, and an item that starts a quest." },
+    { "Progress", "questAnnounceProgress", "A finished objective, and a quest that's ready to turn in." },
+    { "Flights", "questAnnounceFlights", "Where you're flying, with the time once that flight has been timed." },
+  }
+  for i, c in ipairs(chatLines) do
+    U.check(c[1], x + (i - 1) * 112, y - 1, db[c[2]], toggle(c[2]), "Off by default. In party chat: " .. c[3])
+  end
   y = y + 34
   U.btn("Done", 16, y, W - 32, function()
     db.questSetupDone, setupOpen = true, false

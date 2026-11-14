@@ -1169,8 +1169,8 @@ renderers.settings = function()
   head("PARTY")
   tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
     "The step window lists your party: who is on your step (with their kill or loot count), how many steps ahead or behind the others are, and who isn't sharing a step. Party members need the Codex to share theirs.")
-  tick("Share guide quests with my party", db.questShareParty, function() db.questShareParty = not db.questShareParty end,
-    "Off by default. When you accept a quest from your guide, the Codex offers it to your party.")
+  tick("Share guide quests with my party", ns.questSharing(), ns.toggleQuestSharing,
+    "On by default. When you accept a quest from your guide, the Codex offers it to party members who don't have it yet.")
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
   tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,

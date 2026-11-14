@@ -365,9 +365,12 @@ function ns.partyFollow(name)
   ns.questRefresh()
 end
 
--- Settings > Share guide quests with my party: offer a quest of your route to the party. It waits
--- 2.5 s (a member who takes it at the same time has said so by then) and leaves out a quest every
--- party member's Codex already has.
+-- Settings > Share guide quests with my party (on unless you turned it off: `db.questShareParty`
+-- false): offer a quest of your route to the party. It waits 2.5 s (a member who takes it at the
+-- same time has said so by then) and leaves out a quest every party member's Codex already has.
+function ns.questSharing() return ns.db().questShareParty ~= false end
+function ns.toggleQuestSharing() ns.db().questShareParty = not ns.questSharing() end
+
 local function everyoneHas(id)
   local list = roster()
   if #list == 0 then return false end
@@ -380,7 +383,7 @@ end
 local function accepted(a, b)
   local id = tonumber(b) or tonumber(a)
   local index = b and tonumber(a) or nil
-  if not id or not ns.db().questShareParty or not inParty() or not Q.questMatch(id) then return end
+  if not id or not ns.questSharing() or not inParty() or not Q.questMatch(id) then return end
   ns.after(2.5, function()
     if inParty() and Q.log(id) and not everyoneHas(id) then pushQuest(id, index) end
   end)

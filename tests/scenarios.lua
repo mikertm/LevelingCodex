@@ -2034,6 +2034,21 @@ function S.questSetup()
   check(LevelingCodexDB.noWorldMapLine and not seg("World map"):GetChecked(), "the setup turns the world map line off")
   click(win(), "Minimap")
   check(LevelingCodexDB.noMinimapLine, "and the minimap line")
+  -- the party: every party sync option, with quest sharing on by default and the chat lines off
+  check(seg("Party steps"):GetChecked() and seg("Share quests"):GetChecked() and seg("Ping together"):GetChecked(),
+    "party sync, quest sharing and the together ping start on")
+  check(not seg("Steps done"):GetChecked() and not seg("Quest items"):GetChecked() and not seg("Progress"):GetChecked()
+    and not seg("Flights"):GetChecked(), "the party chat lines start off")
+  click(win(), "Share quests")
+  check(LevelingCodexDB.questShareParty == false and not seg("Share quests"):GetChecked(), "the setup turns quest sharing off")
+  click(win(), "Share quests")
+  check(LevelingCodexDB.questShareParty == true and seg("Share quests"):GetChecked(), "and back on")
+  click(win(), "Party steps")
+  click(win(), "Ping together")
+  check(LevelingCodexDB.noPartySteps and LevelingCodexDB.noPartyPing, "party steps and the ping turn off")
+  for _, name in ipairs({ "Steps done", "Quest items", "Progress", "Flights" }) do click(win(), name) end
+  check(LevelingCodexDB.questAnnounceSteps and LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress
+    and LevelingCodexDB.questAnnounceFlights and seg("Flights"):GetChecked(), "the setup turns each party chat line on")
   LevelingCodexDB.questDungeons = false
   LevelingCodexDB.questDungeonPlan = { ["dungeon-deadmines"] = true }
   slash("quests")
@@ -2162,14 +2177,18 @@ function S.questParty()
     "a party member's step shows with how far ahead they are")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;westfall;3;Accept - Westfall Stew", "PARTY", "Bo")
   check(questText(frame, "Bo: Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
-  check(not MOCK.pushed, "quest sharing is off by default")
-  LevelingCodexDB.questShareParty = true
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.advance(0.6)
   check(not MOCK.pushed, "the offer waits a moment, so a member who takes it at the same time isn't offered it")
   MOCK.advance(2)
-  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party")
+  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party (on by default)")
+  LevelingCodexDB.questShareParty = false
+  MOCK.pushed = nil
+  MOCK.questLog = { { questID = 783 }, { questID = 7 } }
+  MOCK.event("QUEST_ACCEPTED", 2, 7)
+  MOCK.advance(2.6)
+  check(not MOCK.pushed, "turned off, quest sharing stays off")
   LevelingCodexDB.questAnnounceFlights = true
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   TakeTaxiNode(2)
