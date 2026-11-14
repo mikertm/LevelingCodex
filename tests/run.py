@@ -890,7 +890,8 @@ def main():
                              "questStepTypes", "questBuyItems", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
-                             "questBossSteps", "questEntrancePath"):
+                             "questBossSteps", "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",
+                             "questEliteChain", "questEliteFresh"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
@@ -946,6 +947,7 @@ def main():
             runs.append(("WARRIOR/minimal/step-xp", "WARRIOR", True, ["stepXP"]))
             runs.append(("WARRIOR/minimal/portrait", "WARRIOR", True, ["questPortrait"]))
             runs.append(("WARRIOR/minimal/step-buttons", "WARRIOR", True, ["stepButtons"]))
+            runs.append(("WARRIOR/minimal/elite-fresh", "WARRIOR", True, ["questEliteFresh"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))

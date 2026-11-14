@@ -39,15 +39,16 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - When you're ready, the step text says to find a group and the step window offers **Run <dungeon>**.
   - **Boss by boss:** inside, the step window walks the bosses in order with a tip for each fight, ticks them off as they die, and keeps your quests for the run beside them. It opens by itself when you zone in.
   - The arrow leads through the Deadmines tunnels, the Wailing Caverns cave and the way down to the Hall of Thanes.
+- **Elite quests ask first.** Before the pickup of a quest whose target is an elite (Hogger, King Bangalash, Overseer Maltorius...), the step window asks: **Take it** or **Skip** (it passes the quests that need it too). Settings can always take or always skip them.
 - **Class quests** for every class: stances, forms, totems, pets, Voidwalkers and Succubi, Redemption, poisons and class gear. Short ones sit on your route. Longer chains are class guides in the Quests tab, and you return to leveling when you're done.
 - **Special chains** (Alliance) such as the Cozy Sleeping Bag, The Legend of Stalvan and The Missing Diplomat are offered when you pass their start.
 - **Auto-accept and auto-turn-in** for the guide's quest, off by default. Hold Alt (or Questie's key) to do it yourself. Reward choices always stay yours; a coin marks the one that sells for the most.
 - **Flights and binds for you (optional):** the Codex takes the flight the guide marks, and at the step's inn it sets your hearthstone.
-- **Guide setup.** A new character gets a quick setup: fastest or every quest, recommended dungeons or none, and the auto-accept, auto turn-in and flight helpers.
+- **Guide setup.** A new character gets a quick setup: fastest or every quest, recommended dungeons or none, elite quests (ask, take or skip), and the auto-accept, auto turn-in and flight helpers.
 - **More in the step window:** elites and rares near your step until you outlevel them, up to 5 steps ahead, the step's quest on the objective tracker, **Show on map** and **Report this step**, and on hover why a step was skipped.
 - **Party play.** Party members who use the Codex see each other's current step. Sharing guide quests and saying your flights in party chat are optional.
 - **Your pace.** The This Level tab shows your XP per hour, about how long the next level takes, where this level's XP came from, and your last levels' times.
-- **Your settings:** show optional quests, plan every dungeon run, show class quests, keep grey quests in the route, skip hearthstone binding steps, play a sound when a step completes, pin the step on the map, flight master trips, opening a dungeon's guide when you enter it, and hide the arrow or buttons.
+- **Your settings:** show optional quests, elite quests (ask, always take, always skip), plan every dungeon run, show class quests, keep grey quests in the route, skip hearthstone binding steps, play a sound when a step completes, pin the step on the map, flight master trips, opening a dungeon's guide when you enter it, and hide the arrow or buttons.
 
 ### Talent window guide
 Whenever you have a talent point to spend, open your talent window and the Codex **traces the talent to take for your level**. It draws a glowing outline in the theme colour that follows the talent's shape (round, square or choice), with sparks running around it and a *Codex pick 2/3* tag. A card above the window (or below it, near the top of the screen) shows that talent and your next two picks. With several points to spend it starts with the earliest, and it goes away once they're spent.

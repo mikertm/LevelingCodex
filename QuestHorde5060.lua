@@ -275,6 +275,7 @@ do
   need(7728, "STOLEN: Smithing Tuyere and Lookout's Spyglass", 48, 45)
   need(7729, "JOB OPPORTUNITY: Culling the Competition", 48, 45)
   need(7701, "WANTED: Overseer Maltorius", 50, 45)
+  B.elite(7701, "Overseer Maltorius")
   need(4726, "Broodling Essence", 52, 50)
   need(4808, "Felnok Steelspring", 54, 50, 4726)
   need(4296, "Tablet of the Seven", 50, 50)
@@ -301,7 +302,7 @@ do
     taxi("getfp", P.grisha, F.thorium, "Ride north-west to Thorium Point and learn the flight path from Grisha."),
     accept(7723, P.hansel, "Hansel Heavyhands has three jobs for you."), accept(7724, P.hansel), accept(7727, P.hansel),
     accept(7728, P.notice, "Read the board beside the Thorium Point tents for more."), accept(7729, P.notice),
-    B.optional(accept(7701, P.notice, "The board also wants Overseer Maltorius, an elite. Take it if you have a partner.")),
+    accept(7701, P.notice, "The board also wants Overseer Maltorius, an elite."),
     accept(7722, P.burninate),
     B.optional(action("collect", sg("Clunk", 34.69, 51.89),
       "Clunk, a goblin shredder on the Cauldron's west side, drops a Mithril Casing. Keep it for A-Me 01 in Un'Goro.",
@@ -313,8 +314,8 @@ do
     finish(3442, P.kalaran), accept(3443, P.kalaran),
     along(objective(7727, sg(nil, 46.5, 23.7), "Go down into the Slag Pit on the Cauldron's north rim. Incendosaurs fill its lava pools.", "20 Incendosaur"),
       7701, 7722),
-    B.optional(along(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius, an elite, waits in the lowest chamber of the Slag Pit.", "Head of Overseer Maltorius"),
-      7722)),
+    along(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius, an elite, waits in the lowest chamber of the Slag Pit.", "Head of Overseer Maltorius"),
+      7722),
     objective(7722, sg(nil, 40.5, 35.7), "The Fiery Flux plans lie on the table beside Overseer Maltorius, an elite, in the lowest chamber of the Slag Pit.", "Secret Plans: Fiery Flux"),
     along(objective(7729, sg(nil, 44.6, 35.5), "Back on the Cauldron floor, kill Taskmasters and Slavers.", "15 Dark Iron Taskmaster", "15 Dark Iron Slaver"),
       3443),
@@ -333,7 +334,7 @@ do
     objective(7723, sg(nil, 46.3, 38.7), "Finish the Heavy War Golems along the roads around the Cauldron.", "20 Heavy War Golem"),
     finish(3463, P.maltrake, "Ride back to Squire Maltrake on the ridge."),
     accept(3481, P.hoard, "Open the Hoard of the Black Dragonflight beside him."), finish(3481, P.hoard),
-    action("goto", P.lolo, "Ride north to Thorium Point."), B.optional(finish(7701, P.lolo)), finish(7723, P.hansel), finish(7724, P.hansel), finish(7727, P.hansel),
+    action("goto", P.lolo, "Ride north to Thorium Point."), finish(7701, P.lolo), finish(7723, P.hansel), finish(7724, P.hansel), finish(7727, P.hansel),
     finish(7722, P.burninate), finish(7729, P.scrange), finish(7728, P.scrange),
     taxi("getfp", P.vahgruk, F.flameCrest,
       "Ride south down the Searing Gorge to Blackrock Mountain, cross the chain bridges and leave by the Burning Steppes door. Flame Crest is on the ridge to the east; learn its flight path."),

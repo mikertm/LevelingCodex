@@ -81,6 +81,13 @@ end
 
 B.dungeon = { add = add, tip = tip, enter = enter, copy = copy }
 
+-- A pickup whose prerequisite another guide or the route gives: shown once that quest is turned in
+-- (`ifDone`), so the guide still plays on its own.
+local function afterDone(id, step)
+  step.chain, step.ifDone = nil, id
+  return step
+end
+
 local sm = "Scarlet Monastery"
 local smDoor = at("Scarlet Monastery approach", 82.65, 32.88, M.tirisfal)
 local smApproach = tip("Alliance approach", "Fly to Southshore, ride north through Hillsbrad and Silverpine and keep east of Brill. "
@@ -241,11 +248,16 @@ do
   need(2278, "The Platinum Discs", 47, 40)
   need(2279, "The Platinum Discs", 47, 40, 2278)
   need(2439, "The Platinum Discs", 47, 40, 2279)
+  need(2418, "Power Stones", 36, 30)
+  local rigglefuzz = bl("Rigglefuzz", 42.39, 52.93)
   local prep = join({
     accept(2398, stormpike, "Prospector Stormpike in the Hall of Explorers has lost a dig team in Uldaman."),
     accept(1360, krom, "Krom Stoutarm, beside him, left a treasure chest in Uldaman."),
   }, copy("badlands-41", { 707, 738, 739, 2500, 720 }))
   insertAfter(prep, 720, "turnin", { accept(721, ryedol, "Ryedol sends you to find Hammertoe Grez in Uldaman.") })
+  insertAfter(prep, 721, "accept", {
+    accept(2418, rigglefuzz, "Rigglefuzz, at his camp in the middle of the Badlands, wants power stones from the Shadowforge dwarves in Uldaman."),
+  })
   insertAfter(prep, 739, "complete", { accept(709, theldurin, "Ride south to Theldurin's camp; he wants a tablet from Uldaman.") })
   insertAfter(prep, 2500, "turnin", { accept(17, ghak, "Ghak now wants fungus caps from Uldaman.") })
   insertAfter(prep, 739, "turnin", {
@@ -279,6 +291,8 @@ do
     finish(722, nil, "Give Hammertoe his amulet."),
     accept(723, nil, "Take the amulet for Ryedol."),
     objective(709, nil, "The Tablet of Ryun'eh sits in a chest in the outer caves near Magregan.", "Tablet of Ryun'eh"),
+    objective(2418, nil, "Shadowforge dwarves in the outer caves and inside drop Dentrium and An'Alleum Power Stones. Loot them as you go.",
+      "8 Dentrium Power Stones", "8 An'Alleum Power Stones"),
     objective(704, nil, "Open Agmond's urns in the outer caves and inside the instance.", "4 Carved Stone Urns"),
     objective(17, nil, "Pick Magenta Fungus Caps from the mushrooms in both parts of Uldaman.", "12 Magenta Fungus Caps"),
     finish(2398, nil, "Baelog's dwarves wait in the first chamber inside. Speak to Baelog after the fight with the troggs."),
@@ -292,6 +306,7 @@ do
     accept(2279, nil, "Take the miniature discs for the Explorers' League."),
   }, {
     finish(723, ryedol, "Ride to Ryedol's camp in the Badlands."), accept(724, ryedol),
+    finish(2418, rigglefuzz, "Ride south-west to Rigglefuzz's camp."),
     finish(709, theldurin),
     finish(704, ironband), finish(17, ghak),
     finish(724, karnik, "Historian Karnik is in the Hall of Explorers."), accept(725, karnik),
@@ -379,6 +394,7 @@ do
   need(2990, "Thadius Grimshade", 47, 40, 2989)
   need(2991, "Nekrum's Medallion", 47, 40, 2990)
   need(2992, "The Divination", 47, 40, 2991)
+  need(2993, "Return to the Hinterlands", 47, 40, 2992)
   need(2865, "Scarab Shells", 45, 40, 2864)
   need(2768, "Divino-matic Rod", 47, 40)
   need(3042, "Troll Temper", 45, 40)
@@ -432,6 +448,8 @@ do
     finish(2770, wizzle), finish(2846, tabetha),
     finish(2991, thadius, "Take the medallion back to Thadius in Nethergarde Keep."),
     accept(2992, thadius), objective(2992, thadius, "Wait while Thadius performs the divination.", "The Divination"), finish(2992, thadius),
+    accept(2993, thadius, "Thadius sends the divination's word back to Gryphon Master Talonaxe."),
+    finish(2993, talonaxe, "Fly to Aerie Peak in the Hinterlands and speak with Talonaxe at the gryphon roost. Use Next if you won't go back there."),
   })
 end
 
@@ -517,14 +535,22 @@ do
   need(1446, "Jammal'an the Prophet", 53, 38)
   need(4143, "Haze of Evil", 52, 47, 4142)
   fromItem(3373, 10454, "The Essence of Eranikus", 55, 48)
+  -- After Zul'Farrak's Prophecy of Mosh'aru: Yeh'kinya's egg from Jintha'alor, filled in the temple.
+  need(4787, "The Ancient Egg", 50, 40, 3527)
+  need(3528, "The God Hakkar", 53, 40, 4787)
+  local yehkinya = on.tanaris("Yeh'kinya", 66.99, 22.36)
   local prep = join(copy("swamp-38", { 1448, 1449 }), copy("arathi-39", { 1449, 1450, 1451 }), {
     accept(1452, rhapsody, "Rhapsody wants Roc gizzards from Tanaris and Groddoc and Ironfur livers from Feralas."),
-  }, copy("tanaris-43", { 1452 }), copy("feralas-44", { 1452, 3445 }), copy("hinterlands-48", { 1452 }), {
-    accept(1469, rhapsody, "Rhapsody hands you a tablet fragment for Brohann."),
+  }, copy("tanaris-43", { 1452 }), {
+    afterDone(3527, accept(4787, yehkinya, "After Zul'Farrak's Prophecy of Mosh'aru, Yeh'kinya at Steamwheedle Port wants an ancient egg from Jintha'alor in the Hinterlands.")),
+  }, copy("feralas-44", { 1452, 3445 }), copy("hinterlands-48", { 1452 }), {
+    objective(4787, on.hinterlands("Ancient Egg", 57.6, 86.8), "The ancient egg sits in a nest on the south side of Jintha'alor.", "Ancient Egg"),
   }, copy("hinterlands-48", { 1469 }), {
     accept(1475, brohann, "Missable: Brohann only offers this after Rhapsody's Tale. Take it before you leave Stormwind."),
     accept(1446, exile, "The Atal'ai Exile hides in the troll ruins of the southern Hinterlands."),
   }, copy("ungoro-49", { 3445, 4141, 4142 }), {
+    finish(4787, yehkinya, "Give Yeh'kinya the ancient egg at Steamwheedle Port, east of Gadgetzan."),
+    accept(3528, yehkinya, "He gives you the Egg of Hakkar to fill at the temple's altar."),
     accept(3444, marvon, "Marvon left his Stone Circle in a chest at his Ratchet workshop."),
     objective(3444, at("Marvon's Chest", 62.5, 38.5, M.barrens), "Open the chest in Marvon's Ratchet workshop.", "Stone Circle"),
     finish(3444, marvon), accept(3446, marvon), accept(3447, marvon),
@@ -557,10 +583,13 @@ do
     objective(4143, nil, "Deep Lurkers, Murk Worms and Oozes in the flooded halls drop the haze.", "5 Atal'ai Haze"),
     finish(3446, nil, "Find the Altar of Hakkar in the central chamber after the trolls."),
     objective(1446, nil, "Kill Jammal'an the Prophet and loot his head.", "Head of Jammal'an"),
+    uncertain(objective(3528, nil, "At the central altar use the Egg of Hakkar, put out the four flames with Hakkari Blood from the Bloodkeepers, and kill the Avatar of Hakkar.",
+      "Filled Egg of Hakkar"), "Event order from the Horde guide: check in game."),
     withItem(10454, accept(3373, nil, "Use the Essence of Eranikus from the Shade.")),
     finish(3373, nil, "Place the essence in the Essence Font in Eranikus's lair."),
   }, {
     finish(1475, brohann), finish(1446, exile), finish(4143, muigin),
+    finish(3528, yehkinya, "Fly to Gadgetzan and ride east to Yeh'kinya at Steamwheedle Port with the filled egg."),
   })
 end
 
@@ -589,6 +618,8 @@ do
   need(4123, "The Heart of the Mountain", 55, 50)
   need(4324, "Yuka Screwspigot", 53, 48)
   need(4136, "Ribbly Screwspigot", 53, 48, 4324)
+  need(4024, "A Taste of Flame", 58, 52, 4022)
+  local cyrus = bs("Cyrus Therepentous", 95.09, 31.56)
   local prep = join(copy("steppes-56", { 3702, 3701 }), {
     accept(4341, magni, "King Magni wants news of Kharan Mighthammer, held in the Depths."),
     accept(4324, yorba, "If you pass Steamwheedle Port, Yorba Screwspigot sends you to her brother Yuka."),
@@ -598,6 +629,7 @@ do
     accept(4262, jalinda, "Jalinda Sprig wants Overmaster Pyron dead."),
     finish(4324, yuka, "Yuka Screwspigot is at Flame Crest."), accept(4136, yuka),
     accept(4123, maxwort, "Maxwort Uberglint, also at Flame Crest, wants the Heart of the Mountain."),
+    afterDone(4022, accept(4024, cyrus, "After the Black Dragonflight Molt, Cyrus Therepentous has a second task: Bael'Gar's essence from the Depths.")),
     action("goto", brm, "Enter Blackrock Mountain from the Searing Gorge or the Burning Steppes and take the chain down to the Depths' door."),
     uncertain(objective(4262, nil, "Overmaster Pyron guards the quarry by the Depths' entrance. Kill him before the run.", "Overmaster Pyron"),
       "Some guides place Pyron just inside the instance."),
@@ -644,12 +676,14 @@ do
     accept(4361, nil, "Take Kharan's news back to Magni."),
     objective(4286, nil, "Loot Dark Iron fanny packs from the dwarves throughout the Depths.", "20 Dark Iron Fanny Packs"),
     objective(4263, nil, "Kill Lord Incendius at the Black Anvil.", "Lord Incendius"),
+    withItem(11231, objective(4024, nil, "Kill Bael'Gar and use the Altered Black Dragonflight Molt on his body.", "Encased Fiery Essence")),
     uncertain(objective(4123, nil, "Open the safe in the Vault after the four watchers fall for the Heart of the Mountain.", "Heart of the Mountain"),
       "Check the Vault's lock in game."),
     objective(4126, nil, "In the Grim Guzzler, break the ale kegs and kill Hurley Blackbreath for the recipe.", "Lost Thunderbrew Recipe"),
     objective(4136, nil, "Kill Ribbly Screwspigot in the Grim Guzzler and loot his head.", "Ribbly's Head"),
   }, {
     finish(4286, oralius), finish(4263, jalinda), finish(4123, maxwort), finish(4136, yuka),
+    finish(4024, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
     finish(4126, ragnar),
     finish(4361, magni), accept(4362, magni, "Magni sends you back for Princess Moira."),
     objective(4362, nil, "On your next full run, kill Emperor Thaurissan in the throne room without killing Moira.", "Emperor Dagran Thaurissan"),
@@ -985,6 +1019,8 @@ do
   fromItem(5262, 13250, "The Truth Comes Crashing Down", 60, 55, 5251)
   need(5263, "Above and Beyond", 60, 55, 5262)
   need(5264, "Lord Maxwell Tyrosus", 60, 55, 5263)
+  need(5265, "The Argent Hold", 60, 55, 5264)
+  local argentHold = epl("The Argent Hold", 71.96, 48.41)
   need(5212, "The Flesh Does Not Lie", 60, 55)
   need(5213, "The Active Agent", 60, 55, 5212)
   need(5214, "The Great Fras Siabi", 60, 55)
@@ -1042,6 +1078,7 @@ do
     objective(5213, nil, "On a dead-side run, search the ziggurats for new Scourge data.", "Scourge Data"),
     objective(5263, nil, "On a dead-side run, kill Baron Rivendare and take his head.", "Head of Baron Rivendare"),
     finish(5213, betina), finish(5263, zverenhoff), accept(5264, zverenhoff), finish(5264, tyrosus, "Lord Maxwell Tyrosus is inside the chapel."),
+    accept(5265, tyrosus, "Tyrosus opens the Argent Hold for you."), finish(5265, argentHold, "Open the Argent Hold beside him and choose your reward."),
     finish(5848, tirion, "Bring the painting to Tirion Fordring at his hut."),
   })
 end

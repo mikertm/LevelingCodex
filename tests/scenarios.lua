@@ -2200,6 +2200,179 @@ function S.questDungeonChoice()
   check(findButton(frame, function(l) return l == "Run The Deadmines" end), "and offers Run The Deadmines")
 end
 
+-- The quests a section's route takes before the step `stop` matches: turned in before it (MOCK.questDone)
+-- or still open (returned as a set, for the quest log).
+local function routeUpTo(sectionId, stop)
+  local open = {}
+  local route = LevelingCodexQuests[MOCK.faction == "Horde" and "HORDE" or "ALLIANCE"]
+  for _, section in ipairs(route.sections) do
+    if section.id == sectionId then
+      for _, step in ipairs(section.steps) do
+        if stop(step) then break end
+        if step.type == "accept" and step.quest then open[step.quest] = true end
+        if step.type == "turnin" and step.quest then open[step.quest] = nil; MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  return open
+end
+
+local function hasButton(root, label)
+  return findButton(root, function(l) return l == label end) ~= nil
+end
+
+-- A Human at Deputy Rainer in Elwynn with Westbrook Garrison Needs Help! (239) ready, Hogger's poster next.
+local function eliteAtHogger(hoggerInLog)
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 11, 1429, 24.3, 74.5
+  local open = routeUpTo("elwynn", function(s) return s.quest == 239 and s.type == "turnin" end)
+  open[239] = nil
+  MOCK.questLog = { { questID = 239, isComplete = true } }
+  for id in pairs(open) do MOCK.questLog[#MOCK.questLog + 1] = { questID = id } end
+  if hoggerInLog then MOCK.questLog[#MOCK.questLog + 1] = { questID = 176 } end
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Westbrook Garrison Needs Help!"), "resumes at Rainer's turn-in: " .. allText(frame), 2)
+  table.remove(MOCK.questLog, 1)
+  MOCK.questDone[239] = true
+  MOCK.event("QUEST_TURNED_IN", 239)
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 11 }
+  MOCK.event("QUEST_ACCEPTED", 1, 11)
+  return frame
+end
+
+-- An elite quest's pickup asks first: Take it keeps it, Skip passes it (Back asks again), and the
+-- Quests tab offers the same choice for controller players.
+function S.questEliteAsk()
+  local frame = eliteAtHogger()
+  check(questText(frame, 'Elite quest - WANTED: "Hogger"') and questText(frame, "Hogger (elite)")
+    and questText(frame, "bring a group"), "the route asks before Hogger's poster: " .. allText(frame))
+  check(hasButton(frame, "Take it") and hasButton(frame, "Skip") and not hasButton(frame, "Next"),
+    "the step window offers Take it, and Next says Skip")
+  click(win(), "Step")
+  check(hasButton(win(), "Take it") and hasButton(win(), "Skip it"), "the Quests tab's Step view offers both")
+  check(hasButton(win(), "Skip") and not hasButton(win(), "Next step"), "and its Next step button says Skip")
+
+  click(frame, "Skip")
+  check(LevelingCodexCharDB.questElite[176] == false and chatHas('WANTED: "Hogger" is skipped'),
+    "Skip remembers the choice for this character")
+  check(not questText(frame, "Elite quest") and not questText(frame, 'Accept - WANTED: "Hogger"')
+    and questText(frame, "Complete - Riverpaw Gnoll Bounty"), "the route passes Hogger and goes on: " .. allText(frame))
+  click(frame, "Next")
+  check(not questText(frame, 'WANTED: "Hogger"'), "Hogger's own objective is passed too: " .. allText(frame))
+  click(frame, "Back")
+  click(frame, "Back")
+  check(questText(frame, 'Elite quest - WANTED: "Hogger"') and LevelingCodexCharDB.questElite[176] == nil,
+    "Back to the question asks again: " .. allText(frame))
+  click(frame, "Take it")
+  check(LevelingCodexCharDB.questElite[176] == true and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "Take it goes on to the pickup: " .. allText(frame))
+end
+
+-- A quest you already have (or have done) never asks.
+function S.questEliteInLog()
+  local frame = eliteAtHogger(true)
+  check(not questText(frame, "Elite quest") and questText(frame, "Complete - Riverpaw Gnoll Bounty"),
+    "with Hogger in the log there's no question: " .. allText(frame))
+  check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil, "and nothing is saved")
+end
+
+-- Settings > Elite quests: Ask (default), Always take, Always skip.
+function S.questEliteModes()
+  LevelingCodexDB = { questEliteMode = "take" }
+  local frame = eliteAtHogger()
+  check(not questText(frame, "Elite quest") and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "Always take goes straight to the pickup: " .. allText(frame))
+  click(win(), "Settings")
+  local function lit(label)
+    local b = findButton(win(), function(l) return l == label end)
+    return b and b.codexOn
+  end
+  check(lit("Always take") and not lit("Ask"), "Settings lights the mode in use")
+  click(win(), "Always skip")
+  check(LevelingCodexDB.questEliteMode == "skip" and lit("Always skip"), "Always skip is saved")
+  check(not questText(frame, "Elite quest") and not questText(frame, 'Accept - WANTED: "Hogger"')
+    and questText(frame, "Complete - Riverpaw Gnoll Bounty"), "Always skip passes the quest without asking: " .. allText(frame))
+  click(win(), "Ask")
+  check(LevelingCodexDB.questEliteMode == nil and questText(frame, 'Elite quest - WANTED: "Hogger"'),
+    "Ask brings the question back: " .. allText(frame))
+  check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil,
+    "the modes don't save a choice for the quest")
+  click(win(), "Quests")
+  click(win(), "Setup")
+  check(hasButton(win(), "Ask") and hasButton(win(), "Always take") and hasButton(win(), "Always skip"),
+    "the guide setup card has the same three choices")
+  click(win(), "Always take")
+  check(LevelingCodexDB.questEliteMode == "take" and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "the setup card sets the mode too")
+end
+
+-- Skipping an elite quest passes the quests that need it; the Quests tab's Take it and Skip it work too.
+local function eliteChainFixture()
+  local function step(kind, id, name, y, chain, elite)
+    return { type = kind, quest = id, name = name, text = "Test elite chain.", map = 1430, x = 50, y = y,
+      level = 33, min = 30, chain = chain, elite = elite }
+  end
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  sections[#sections + 1] = { id = "test-elite", title = "Test Elite Chain", zone = 1430, levels = { 32, 34 },
+    alternate = true, verified = false, steps = {
+      step("accept", 999201, "Test Bounty", 50, nil, "Test Brute"),
+      step("complete", 999201, "Test Bounty", 60, nil, "Test Brute"),
+      step("turnin", 999201, "Test Bounty", 50, nil, "Test Brute"),
+      step("accept", 999202, "Test Follow-up", 50, { 999201 }),
+      step("turnin", 999202, "Test Follow-up", 50, { 999201 }),
+      step("accept", 999203, "Test Errand", 52),
+      step("turnin", 999203, "Test Errand", 52),
+    } }
+end
+
+function S.questEliteChain()
+  eliteChainFixture()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 33, 1430, 50, 50
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Elite quest - Test Bounty") and questText(frame, "the quests that need it"),
+    "the fixture's elite pickup asks, naming its follow-ups: " .. allText(frame))
+  slash("quests")
+  stepTool("Skip it")
+  check(LevelingCodexCharDB.questElite[999201] == false and questText(frame, "Accept - Test Errand"),
+    "the Quests tab's Skip it passes the quest and its follow-up: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Elite quest - Test Bounty"), "Back asks again: " .. allText(frame))
+  stepTool("Take it")
+  check(LevelingCodexCharDB.questElite[999201] == true and questText(frame, "Accept - Test Bounty"),
+    "the Quests tab's Take it goes on to the pickup: " .. allText(frame))
+  MOCK.questLog = { { questID = 999201, isComplete = true } }
+  MOCK.event("QUEST_ACCEPTED", 1, 999201)
+  check(questText(frame, "Turn in - Test Bounty"), "the taken quest goes on as usual: " .. allText(frame))
+end
+
+-- The same choice with no quest log or map APIs (the minimal client) and nothing saved: an elite
+-- pickup put first in Northshire asks at login; Skip, Back and the Quests tab's Take it work.
+function S.questEliteFresh()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "accept", quest = 999301, name = "Test Elite Bounty", elite = "Test Brute",
+        text = "Test elite pickup.", map = 1429, x = 48.9, y = 41.6, level = 1, min = 1 })
+      table.insert(section.steps, 2, { type = "turnin", quest = 999301, name = "Test Elite Bounty", elite = "Test Brute",
+        text = "Test elite hand-in.", map = 1429, x = 48.9, y = 41.6 })
+    end
+  end
+  LevelingCodexDB, LevelingCodexCharDB = nil, nil
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Elite quest - Test Elite Bounty") and questText(frame, "Test Brute (elite)"),
+    "a fresh character is asked at the elite pickup: " .. allText(frame))
+  click(frame, "Skip")
+  check(questText(frame, "Accept - A Threat Within"), "Skip passes the pickup and its hand-in: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Elite quest - Test Elite Bounty"), "Back asks again: " .. allText(frame))
+  slash("quests")
+  stepTool("Take it")
+  check(questText(frame, "Accept - Test Elite Bounty"), "the Quests tab's Take it goes on to the pickup: " .. allText(frame))
+end
+
 -- Inside a dungeon: zoning in opens its guide (Settings > Open a dungeon's guide when you enter
 -- it), each boss is a step with its tip, ticked off by ENCOUNTER_END or BOSS_KILL (or Next; never
 -- the combat log, which Forever keeps from addons), the quest objectives show as On the way, and

@@ -1275,6 +1275,14 @@ renderers.settings = function()
     "Off: pickups that have gone grey for your level leave the route (unless a later quest needs them) and are listed under Quests > Missed quests > Outleveled.")
   tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
     "Side errands the route can skip, such as Forever's Camping 101 profession introductions.")
+  -- Elite quests: ask at each pickup (default), or take or skip them all.
+  T("Elite quests", 0, y + 5, 110, "body", C.ink)
+  local Q = ns.quests
+  y = y + segments(116, y, W - 116, Q.ELITE_LABELS, Q.eliteModeIndex(), function(i)
+    Q.setEliteMode(i)
+    ns.updateQuestSettings()
+    refresh()
+  end, Q.ELITE_TIPS) + 8
   tick("Skip hearthstone binding steps", db.questSkipBind, function()
     db.questSkipBind = not db.questSkipBind
     ns.updateQuestSettings()

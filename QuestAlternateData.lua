@@ -288,7 +288,7 @@ local function part(step, index)
   return step
 end
 chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24, 30, ashSources,
-  { "wetlands", "southshore", "duskwood-late", "redridge-late", "stonetalon" }, {
+  { "darkshire-30", "wetlands", "southshore", "duskwood-late", "redridge-late", "stonetalon" }, {
     taxi("getfp", astranaar, astranaarFlight, "Return to Astranaar. Fly from Stonetalon Peak or walk back through Talondeep Path."),
     -- Shindrell stands beside the flight point: take Kayneth's letter before the inn and Raene
     -- (2026-11-12 loop check).
@@ -526,11 +526,15 @@ q(219, "Missing In Action", 25, 19)
 q(34, "An Unwelcome Guest", 24, 18)
 q(150, "Murloc Poachers", 20, 20)
 q(169, "Wanted: Gath'Ilzogg", 26, 15)
+B.elite(169, "Gath'Ilzogg")
 q(95999, "WANTED: Incinerator Gar'im", 25, 20, nil, true)
 -- The game also wants Blackrock Menace (20) for Marris's two and A Baying of Gnolls (124) for
 -- Verner's: both are in the main Lakeshire route, so this chapter keeps no chain and says so.
 q(19, "Tharil'zun", 25, 18)
 q(115, "Shadow Magic", 23, 18)
+-- Stonewatch Keep's Blackrock orcs are elite: the route asks before each of the three.
+B.elite(19, "Tharil'zun")
+B.elite(115, "the Blackrock Shadowcasters of Stonewatch Keep")
 q(126, "Howling in the Hills", 25, 15)
 -- Theocritus is on the Elwynn road: an optional pickup for players who ride in from Stormwind.
 q(94, "A Watchful Eye", 21, 20)
@@ -634,7 +638,7 @@ chapter("duskwood-late", "Darkshire: Worgen and the Night Watch", M.duskwood, 25
   "https://bindonforever.com/zones/duskwood",
   "https://www.wowhead.com/forever/quest=173/worgen-in-the-woods",
   "https://www.wowhead.com/forever/quest=58/the-night-watch",
-}, { "wetlands", "southshore", "ashenvale-late", "redridge-late" }, {
+}, { "darkshire-30", "wetlands", "southshore", "ashenvale-late", "redridge-late" }, {
   taxi("getfp", darkshire, "Darkshire, Duskwood", "Learn the Darkshire flight path. From Lakeshire, take the road west to Three Corners, then south and east into Darkshire."),
   action("sethearth", trelayne, "Bind at the Scarlet Raven Tavern for the loops west of Darkshire.", darkshireHearth),
   accept(56, althea), accept(173, calor),
@@ -701,7 +705,7 @@ chapter("southshore", "Southshore: Coastal Patrols", hillsbrad, 27, 30, {
   "https://bindonforever.com/zones/hillsbrad-foothills",
   "https://www.wowhead.com/forever/quest=98071",
   "https://www.wowhead.com/forever/quest=98059",
-}, { "wetlands", "duskwood-late", "ashenvale-late" }, {
+}, { "darkshire-30", "wetlands", "duskwood-late", "ashenvale-late" }, {
   taxi("getfp", darla, "Southshore, Hillsbrad", "Take the ship from Menethil Harbor's northern pier or Auberdine's west pier. Stay aboard until Southshore, then walk north through town to Darla Harris."),
   -- Level 27 errands first: the coast quests below want level 29.
   check(accept(98059, hill("Captain McManus", 46.43, 50.2),

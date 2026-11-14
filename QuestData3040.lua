@@ -141,6 +141,10 @@ do
   q(190, "Panther Mastery", 31, 28, 583)
   q(690, "Malin's Request", 32, 30)
   q(1301, "James Hyal", 35, 30)
+  -- Elite targets: the route asks at the pickup whether to take them (Take it / Skip).
+  B.elite(55, "Morbent Fel")
+  B.elite(228, "Mor'Ladim")
+  B.elite(253, "Eliza")
 
   section("darkshire-30", "Darkshire: Mor'Ladim and the Worgen", M.duskwood, 30, 32, {
     "https://www.wowhead.com/forever/zone=10/duskwood",
@@ -201,7 +205,7 @@ do
     withItem(7297, objective(55, dw("Morbent Fel", 16.9, 33.4),
       "Use Morbent's Bane on Morbent Fel at the hill west of the cemetery to strip his shield, then kill him.", "Morbent Fel")),
     note(objective(228, dw("Mor'Ladim", 19.6, 37.3),
-      "Mor'Ladim walks the cemetery paths. He is level 35: bring help, or skip him and use Next.", "Mor'Ladim's Skull"),
+      "Mor'Ladim, a level 35 elite, walks the cemetery paths. He hits hard but moves slowly: bring help.", "Mor'Ladim's Skull"),
       "Patrol path and difficulty need an in-game check."),
     finish(55, sven, "Ride back west to Sven for the Morbent Fel turn-in."),
     action("goto", on.stv(nil, 40.6, 3.5), "Follow the main road south out of Duskwood into Stranglethorn Vale."),
@@ -260,6 +264,8 @@ do
   q(681, "Northfold Manor", 31, 30)
   q(700, "A King's Tribute", 31, 25, 689)
   q(1453, "Reclaimers' Business in Desolace", 33, 30)
+  q(98463, "Talk of the Town", 33, nil, nil, true)
+  q(92432, "An Alarming Request", 33, nil, nil, true)
 
   section("hillsbrad-32", "Southshore, Alterac and Refuge Pointe", M.hillsbrad, 31, 34, {
     "https://www.wowhead.com/forever/zone=267/hillsbrad-foothills",
@@ -267,9 +273,13 @@ do
     "https://bindonforever.com/zones/hillsbrad-foothills",
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
   }, {
-    action("goto", nil, "Take the Deeprun Tram from Stormwind's Dwarven District to Ironforge. Use Next when you arrive."),
+    withGuide("dungeon-gnomeregan", action("goto", nil,
+      "Take the Deeprun Tram from Stormwind's Dwarven District to Ironforge. Use Next when you arrive. The tram stops in Tinker Town, where the Gnomeregan quests are.")),
     accept(683, ifg("Sara Balloo", 63.5, 67.3), "Sara Balloo in the Mystic Ward has a plea for the king."),
     finish(683, magni, "Bring her note to King Magni in the High Seat."), accept(686, magni),
+    action("collect", ifg("Auctioneer Lympkin", 25.8, 75.5),
+      "Bartolo in Southshore will want a Hillman's Cloak and a Bolt of Woolen Cloth. Buy them at the Auction House if a leatherworker or tailor can't make them for you. Use Next to skip.",
+      { items = { { 3719, 1 }, { 2997, 1 } }, name = "Hillman's Cloak and Bolt of Woolen Cloth" }),
     finish(686, marblesten, "Grand Mason Marblesten works in the Great Forge's south hall."),
     accept(689, marblesten, "He wants Alterac Granite. You will find it in the hills of Hillsbrad and Alterac."),
     accept(1179, ifg("Pilot Longbeard", 72.73, 94.01), "Pilot Longbeard, by the Ironforge gate, needs a crate carried to the Shimmering Flats later on."),
@@ -283,12 +293,14 @@ do
     accept(659, hb("Phin Odelic", 50.3, 59.0), "Phin Odelic, outside the inn, wants word sent to Arathi."),
     B.optional(finish(98219, farren, "If Lord Grayson sent you, report to Lieutenant Farren Orinelle on the dock road.")),
     accept(536, farren), accept(505, maleb),
-    accept(565, bartolo, "Bartolo wants cloth, thread, a Hillman's Cloak and yeti fur. Leatherworkers make the cloak: check the Auction House or ask a crafter."),
+    forDungeon(withGuide("dungeon-city-of-dalaran", accept(92432, hb("Emissary Jacques", 48.34, 60.04),
+      "Emissary Jacques, a few steps from Magistrate Maleb, sends City of Dalaran runners to Archmage Modera's image outside the city.")), "dungeon-city-of-dalaran"),
+    accept(565, bartolo, "Bartolo wants a Bolt of Woolen Cloth, Fine Thread, a Hillman's Cloak and yeti fur."),
     accept(555, jessen, "Chef Jessen wants Turtle Meat from the Snapjaws in Alterac and his Soothing Spices."),
     action("sethearth", anderson, "Bind at the Southshore inn.", southshore),
     -- Carried from the Wetlands 26-30 route's Arathi shore (optional there): Bilger is by the inn.
     B.optional(finish(647, hb("Brewmeister Bilger", 52.13, 58.74), "If Foggy MacKreel gave you his moonshine, Brewmeister Bilger beside the inn takes it.")),
-    action("buy", micha, "Buy Fine Thread and Soothing Spices from Micha Yance at the general store. Get a Bolt of Woolen Cloth from the Auction House or a tailor if you have none.",
+    action("buy", micha, "Buy Fine Thread and Soothing Spices from Micha Yance at the general store.",
       { items = { { 2321, 1 }, { 3713, 1 } } }),
     objective(536, hb(nil, 44.7, 67.2), "Walk west from the docks along the Western Strand. Pull Tidehunters and Oracles back onto dry land.",
       "10 Torn Fin Tidehunters", "10 Torn Fin Oracles"),
@@ -315,7 +327,9 @@ do
       "Keep north through the pass to Chillwind Camp and learn its flight path. Stay out of the Plaguelands for now."),
     taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly back to Southshore."),
     finish(565, bartolo), finish(511, dibbs), accept(514, dibbs, "Keep the letter for Prospector Stormpike in Ironforge."),
-    finish(555, jessen), finish(505, maleb), finish(510, maleb), finish(564, darren),
+    finish(555, jessen),
+    accept(98463, hb("Barkeep Kelly", 51.57, 58.57), "Barkeep Kelly, behind the inn's bar, has gossip for a barkeep in Booty Bay. You get there at 36."),
+    finish(505, maleb), finish(510, maleb), finish(564, darren),
     action("goto", hb(nil, 82.4, 39.6), "Take the east road out of Hillsbrad through Thoradin's Wall into Arathi."),
     taxi("getfp", ar("Cedrik Prose", 45.7, 46.1), "Refuge Pointe, Arathi", "Follow the road to Refuge Pointe and learn its flight path."),
     accept(681, nials), finish(690, ar("Skuerto", 46.65, 47.01)),
@@ -369,6 +383,7 @@ do
   q(1175, "A Bump in the Road", 33, 28)
   q(1178, "Goblin Sponsorship", 37, 29, 1176)
   q(1111, "Wharfmaster Dizzywig", 36, 30)
+  q(5762, "Hemet Nesingwary", 31, 28)
 
   section("needles-33", "Theramore and the Shimmering Flats", M.needles, 33, 35, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
@@ -377,6 +392,8 @@ do
   }, {
     action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks in Theramore.",
       { name = "Menethil Harbor - Theramore Isle" }),
+    action("note", nil, "Clean out your quest log: abandon the Blackfathom Deeps, Excavation Site and City of Dalaran quests unless you still plan to run them. All three dungeons are grey or nearly so at 33.",
+      { name = "Quest log", drop = { 971, 1275, 95646, 95647, 98815, 92432 } }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
     withGuide("missing-diplomat", finish(1302, dm("Clerk Lendry", 67.88, 48.24),
       "Clerk Lendry is in Foothold Citadel. Commander Samaul, in the same keep, finishes the Missing Diplomat.")),
@@ -397,12 +414,14 @@ do
     withItem(5791, accept(1100, nil, "If Henrig Lonebrow's Journal dropped from a centaur, read it to start the quest.")),
     taxi("getfp", on.feralas("Thyssiana", 89.5, 45.9), "Thalanaar, Feralas",
       "Follow the canyon road west to Thalanaar on the Feralas border and learn its flight path."),
-    finish(1100, on.feralas("Falfindel Waywarder", 89.64, 46.57)),
+    withGuide("dungeon-razorfen-kraul", finish(1100, on.feralas("Falfindel Waywarder", 89.64, 46.57),
+      "Give Falfindel Waywarder the journal. His next task leads into Razorfen Kraul.")),
     B.optional(finish(1059, on.feralas("Falfindel Waywarder", 89.64, 46.57),
       "If you carried Keeper Albagorm's charred vale report from Stonetalon, hand it to Falfindel too.")),
     objective(1135, tn(nil, 11.1, 35.6), "Climb to Highperch, west of the canyon road, and kill wyverns for their venom sacs.", "10 Highperch Venom Sacs"),
     action("goto", flats, "Follow the canyon road east through Freewind Post's lower roads to the Shimmering Flats. Keep to the road past the centaur camps."),
     accept(1110, kravel, "Kravel Koalbeard runs the gnome racing camp."), accept(1111, kravel, "Kravel also wants parts picked up from Ratchet's wharfmaster."),
+    accept(5762, kravel, "He also has a crate for Hemet Nesingwary in Stranglethorn. Keep it until you reach Hemet's camp at 36."),
     finish(1179, wizzle, "Hand the crash helmets to Wizzle Brassbolts."), accept(1105, wizzle), accept(1104, fizzle),
     accept(1176, pozzik, "Pozzik runs the goblin camp just east of the gnomes."), accept(1175, zherin),
     along(objective(1110, flats, "Rocket car wreckage lies all over the salt flats. Pick up parts while you hunt.", "30 Rocket Car Parts"),
@@ -456,6 +475,10 @@ do
   local ryan = rg("Marshal Ryan", 26.2, 40.8)
   local dunston = rg("Dunston Willis", 68.6, 12.6)
   local gelinda = rg("Gelinda Coppergleam", 30.2, 69.0)
+  local tessa = rg("Tessa Dawnbright", 63.8, 82.2)
+  local bertrand = rg("Bertrand Ironbrow", 63.5, 80.6)
+  local marla = rg("Marla Bell", 62.2, 86.0)
+  local sleebo = rg("Sleebo Fizzlespout", 68.2, 48.6)
   local mudfin = rg(nil, 49.2, 78.8)
   local twilight = rg(nil, 45.5, 55.8)
   local farholdeFlight, portFlight = "Farholde Keep, Riverglades", "Powderfuse Port, Riverglades"
@@ -471,34 +494,39 @@ do
   rq(94929, "Deliver the Second Shipment", 38, 36)
   rq(93443, "Lost Shipping Crate", 36, 36)
   rq(95147, "The Lost Scout", 37, 36)
-  rq(95148, "Southern Watch Gnoll Report", 37, 36, 95147)
+  -- Chains below follow a published Forever guide's Alliance Riverglades order (2026-11-14 audit):
+  -- Dalton's report waits for the gnolls, Benjy's horses for Foal Play, Halligan's saplings for the plant
+  -- food, and Cornelius's camp tasks for Hunting the Hunters (not for Out in the Field).
+  rq(95148, "Southern Watch Gnoll Report", 37, 36, { 95147, 94678 })
   rq(94678, "Gnoll Infestation", 38, 36)
   rq(94679, "Snargl's Snout", 40, 36)
   rq(94999, "Eyes for the Watchman", 36, 36)
   rq(94857, "If a Tree Falls, and No One Hears...", 39, 36)
   rq(94861, "Helping Hands", 39, 36, 94857)
   rq(94842, "Unsavory Plant Food", 38, 36)
-  rq(94843, "From Seed to Sprout", 38, 36)
+  rq(94843, "From Seed to Sprout", 38, 36, 94842)
   rq(94931, "Stolen Saws", 38, 36)
   rq(95330, "Love Thy Neighbor", 37, 36)
   rq(94613, "My Kingdom for a Horse", 38, 36)
   rq(94614, "Freshwater Fiends", 38, 36, 94613)
   rq(94615, "Foal Play", 38, 36, 94613)
   rq(94617, "Coyote Huntin'", 38, 36, 94615)
-  rq(94618, "Wheeler's Fleeing Steeds", 38, 36, 94613)
-  rq(94992, "Rescue Roundup", 38, 36)
+  rq(94618, "Wheeler's Fleeing Steeds", 38, 36, 94615)
+  rq(94992, "Rescue Roundup", 38, 36, 94618)
   rq(95329, "Out in the Field", 38, 36)
   rq(95603, "Bats in the Belfry", 38, 36)
-  rq(95615, "In Memoriam", 38, 36)
-  rq(96082, "Doctor's Orderly", 40, 36)
+  rq(95613, "Keeping the Light On", 38, 36, 95603)
+  rq(95615, "In Memoriam", 38, 36, 95613)
+  rq(96081, "Wound Dressings", 40, 36)
+  rq(96082, "Doctor's Orderly", 40, 36, 96081)
   rq(96083, "Clerical Quarantine", 40, 36, 96082)
   rq(96084, "Something's in the Water", 40, 36, 96083)
-  rq(94924, "Hunting the Hunters", 39, 36, 95329)
-  rq(94925, "A Fur Trade", 39, 36, 95329)
+  rq(94924, "Hunting the Hunters", 39, 36)
+  rq(94925, "A Fur Trade", 39, 36)
   rq(94928, "A Few Furs for Friz", 39, 36, 94925)
-  rq(95064, "Preventative Measures", 39, 36, 95329)
-  rq(95426, "Rog'mar Supplies", 39, 36, 95329)
-  rq(95066, "The Rog'mar Situation", 39, 36, 95329)
+  rq(95064, "Preventative Measures", 39, 36, 94924)
+  rq(95426, "Rog'mar Supplies", 39, 36, 94924)
+  rq(95066, "The Rog'mar Situation", 39, 36, { 95064, 95426 })
   rq(95983, "A Feast for Buzzards", 38, 36)
   rq(95984, "Song of the Strider", 39, 36, 95983)
   rq(95986, "King of the Wild Plains", 41, 36, 95984)
@@ -507,90 +535,129 @@ do
   rq(95121, "A Taste of the Sea", 40, 36)
   rq(95988, "Goes Down Smooth", 38, 36)
   rq(95254, "WANTED: Trapclaw", 42, 36)
+  -- Added 2026-11-14 from a published Forever guide's Alliance Riverglades chapter (IDs, order and
+  -- positions) and the Horde route's Sleebo data; levels from the Horde file or the quest pages.
+  rq(95156, "Stuff 'Em and Stick 'Em", 38, 36)
+  rq(95943, "Foreman's Plight", 38, 36)
+  rq(95561, "Apple of My Eye", 38, 36)
+  rq(95913, "Fit for a Princess", 38, 36, 95561)
+  rq(96063, "Gaseous Gold", 38, 36)
+  rq(96067, "Rock 'em and Sock 'em", 40, 36, 96063)
+  B.elite(94679, "Snargl")
+  B.elite(95986, "Ombassa")
 
   section("riverglades-farholde", "Riverglades: Farholde Keep and the Plains", M.riverglades, 36, 41, sources, {
     note(action("goto", rg(nil, 20.5, 69.5),
       "From Lakeshire, ride east through Redridge Pass, south of the Bristle Hills, into the Riverglades."),
       "The pass position is from the zone description; confirm the road in game."),
     accept(95147, rg("Scout Bolain", 23.6, 67.8), "Scout Bolain hides near the pass, east of the gnoll hills."),
-    finish(95147, dalton, "Follow the road east to Southern Watch and find Captain Dalton."), accept(95148, dalton),
+    finish(95147, dalton, "Follow the road east to Southern Watch and find Captain Dalton."),
     accept(94678, dalton), accept(94679, dalton),
     accept(94999, rg("Eleanor Holmsby", 43.4, 82.4), "Ride southeast to the Meadowsbrook farm and talk to Eleanor Holmsby."),
     finish(94999, rg("Watcher Fredericks", 36.4, 75.8), "Take her delivery back to Watcher Fredericks just west of Southern Watch."),
-    along(objective(94678, rg(nil, 17.4, 71.8), "Clear Redridge Brutes, Mystics and Trappers in the Bristle Hills west of Southern Watch.",
-      "8 Redridge Brutes", "8 Redridge Mystics", "8 Redridge Trappers"), 94679),
-    along(objective(94679, rg("Snargl", 16.0, 73.2), "Snargl leads the gnolls at the west end of the hills. Kill him for his snout.", "Snargl's Snout"), 94678),
-    finish(94678, dalton), finish(94679, dalton),
-    accept(94857, rg("Curly", 46.0, 71.0), "Ride northeast and find Curly by the fallen trees."),
+    accept(94857, rg("Curly", 46.0, 71.0), "Ride north-east and find Curly by the fallen trees."),
     finish(94857, rg("Hurley", 41.4, 64.4), "Hurley is at Turner's Logging Camp, to the north."), accept(94861, rg("Hurley", 41.4, 64.4)),
     finish(94861, halligan, "Walk with Hurley to Halligan Turner in the camp."),
-    accept(94842, halligan), accept(94843, halligan), accept(94931, halligan),
-    along(objective(94843, rg("Loamy Soil", 39.7, 62.9), "Plant Halligan's saplings in the patches of loamy soil around the camp.",
-      "5 Saplings Planted"), 94931),
-    along(note(objective(94931, rg(nil, 40.0, 63.0), "Take the stolen saws back from the lumberjacks around the mill.", "8 Stolen Saws"),
-      "Check where the saws drop or lie in game."), 94843),
-    action("goto", mudfin, "Head southeast past the Mudfin murlocs on the way to Farholde Keep."),
-    note(objective(94842, mudfin, "Kill Mudfin murlocs and crawfish along the river for Halligan's plant food.", "4 Plant Food"),
-      "Item name not published; the murlocs and Jumbo Crawfish drop it."),
+    accept(94842, halligan, "Halligan wants plant food: crawfish shells, fresh manure and murloc heads. You pass all three before the keep."),
+    accept(94931, halligan, "His stolen saws are in crates at the gnoll camps in the Bristle Hills."),
+    B.objectivePart(94842, 1, rg(nil, 42.6, 66.4), "Kill Jumbo Crawfish along the stream south of the camp for their shells.",
+      "Jumbo Crawfish Shells"),
+    action("goto", rg(nil, 20.0, 71.0), "Ride back west into the Bristle Hills, where the gnolls camp."),
+    along(objective(94678, rg(nil, 17.4, 71.8), "Clear Redridge Brutes, Mystics and Trappers in the gnoll camps.",
+      "8 Redridge Brutes", "8 Redridge Mystics", "8 Redridge Trappers"), 94931, 94679),
+    along(objective(94931, rg("Crates", 18.6, 69.8), "Open the crates in the gnoll camps for Halligan's saws.", "Stolen Saws"), 94678),
+    objective(94679, rg("Snargl", 16.1, 73.4), "Snargl, an elite, leads the gnolls from a cave at the west end of the hills. Kill him for his snout.",
+      "Snargl's Snout"),
+    finish(94678, dalton, "Ride back east to Captain Dalton at Southern Watch."), finish(94679, dalton),
+    accept(95148, dalton, "Dalton's report on the gnolls goes to Demar Brant at Farholde Keep."),
+    B.objectivePart(94842, 2, rg(nil, 45.6, 80.7), "On the way east, pick up fresh manure by the Meadowsbrook farm.", "Fresh Manure"),
+    B.objectivePart(94842, 3, rg(nil, 50.4, 79.4), "Kill Mudfin murlocs along the river for their heads.", "Mudfin Murloc Heads"),
     action("goto", brant, "Follow the road east to Farholde Keep."),
     finish(95148, brant, "Knight Commander Demar Brant holds the keep's hall."),
-    B.optional(finish(95315, brant, "Hand in Captain Nials' report from Refuge Pointe.")),
     B.optional(finish(94929, brant, "Hand in the shipment from the Swamp of Sorrows.")),
-    accept(94613, brant), accept(95329, brant),
-    taxi("getfp", rg(nil, 60.6, 81.6), farholdeFlight, "Learn the Farholde Keep flight path."),
-    accept(95330, cassandra, "Cassandra Wheeler has farm goods for Halligan Turner. You will pass his camp again later."),
-    accept(95603, rowland, "Sister Rowland tends the chapel south of the keep."), accept(95615, rowland),
-    accept(96082, lowley, "Brother Lowley nurses the wounded inside the keep."),
+    accept(94613, brant),
+    accept(95156, ember, "Ember Bladewhisper, in the courtyard, wants the harvest sentries at Wheeler's Grange stopped."),
+    accept(96081, lowley, "Brother Lowley nurses the wounded inside the keep."), finish(96081, lowley, "Give him the wound dressings."),
+    accept(96082, lowley),
     objective(96082, lowley, "Bandage the wounded soldiers lying around Brother Lowley.", "3 Wounded Soldiers Bandaged"),
     finish(96082, lowley), accept(96083, lowley),
+    accept(95943, bertrand, "Bertrand Ironbrow lost a foreman's crate on the plains north of Wheeler's Grange."),
+    accept(95561, tessa, "Tessa Dawnbright wants fresh apples from around the chapel."),
+    accept(95330, cassandra, "Cassandra Wheeler has farm goods for Halligan Turner. You will pass his camp again later."),
+    taxi("getfp", rg(nil, 60.6, 81.6), farholdeFlight, "Learn the Farholde Keep flight path."),
+    accept(95603, rowland, "Sister Rowland tends the chapel south of the keep."),
     finish(96083, rowland), accept(96084, rowland),
-    along(objective(95603, rg(nil, 60.2, 84.4), "Kill the Roosting Duskbats in the chapel's bell tower.", "5 Roosting Duskbats"), 95615),
+    along(objective(95603, rg(nil, 60.2, 84.4), "Kill the Roosting Duskbats in the chapel's bell tower.", "5 Roosting Duskbats"), 95561),
+    finish(95603, rowland), accept(95613, rowland),
+    action("buy", marla, "Buy 5 Holy Candles from Marla Bell, just south of the chapel.", { item = 17028, count = 5 }),
+    finish(95613, rowland), accept(95615, rowland),
     along(objective(95615, rg("Burned Memorial Candle", 61.6, 83.5), "Place memorial candles on the graves in the chapel yard.",
-      "3 Candles Placed"), 95603),
-    finish(95603, rowland), finish(95615, rowland),
+      "3 Candles Placed"), 95561),
+    along(objective(95561, rg(nil, 62.6, 83.0), "Pick up the fresh apples lying around the chapel grounds.", "Fresh Apples"), 95615),
+    finish(95615, rowland), finish(95561, tessa), accept(95913, tessa),
     finish(94613, benjy, "Ride west to Wheeler's Grange and find Benjy Wheeler."),
-    accept(94614, benjy), accept(94615, benjy), accept(94618, benjy),
-    objective(94615, benjy, "Search around the Wheeler stables for signs of the missing horses.", "Evidence Found"),
-    finish(94615, benjy), accept(94617, benjy),
-    along(objective(94617, rg("Sootfur", 53.8, 86.2), "Sootfur, a coyote, prowls south of the farm. Kill it and take its pelt.", "Sootfur's Pelt"), 94618),
-    along(objective(94614, mudfin, "Kill Mudfin Oracles and Warriors along the river west of the farm.", "8 Mudfin Oracles", "8 Mudfin Warriors"), 94618),
-    objective(94618, rg("Lost Horse", 53.6, 66.2), "Find a lost horse north of the farm and give it Benjy's feed.", "Horse Fed"),
-    accept(94992, rg("Lost Horse", 53.6, 66.2)),
-    finish(94614, benjy), finish(94617, benjy), finish(94618, benjy), finish(94992, benjy),
-    finish(95329, cornelius, "Ride north to Terral's Watch and report to Watcher Cornelius."),
-    accept(94924, cornelius), accept(94925, cornelius), accept(95064, cornelius), accept(95426, cornelius),
-    accept(95066, cornelius, "Keep his report on Rog'mar for Demar Brant."),
-    accept(95983, rg("Picked Carcass", 61.6, 58.8), "Look at the picked carcass just north of the watchtower."),
-    note(objective(96084, rg(nil, 56.5, 60.5), "Fill a water sample from the stream on the plains below the tower.", "Water Sample"),
-      "Sample spot not published; any plains stream near Terral's Watch is a guess."),
-    along(objective(94924, rg(nil, 58.2, 61.0), "Kill Rog'mar Poachers around the plains near the tower.", "12 Rog'mar Poachers"), 94925, 95983),
-    along(objective(94925, rg(nil, 60.1, 53.0), "Hunt Wildplains lions north of the tower for their hides.", "8 Lion Hides"), 94924, 95983),
-    along(note(objective(95983, rg(nil, 61.6, 58.8), "Collect what the buzzards leave behind on the plains.", "Buzzard Remains"),
-      "Objective wording not published."), 94924, 94925),
+    accept(94614, benjy), accept(94615, benjy),
+    along(objective(94615, rg(nil, 54.3, 77.9), "Search south of the Wheeler stables for signs of the missing horses.", "Evidence Found"), 95156),
+    along(objective(95156, rg(nil, 55.0, 75.9), "Destroy the Harvest Sentries in the fields around the grange for Ember.", "Harvest Sentries"), 94615),
+    finish(94615, benjy), accept(94617, benjy), accept(94618, benjy),
+    along(objective(94617, rg("Sootfur", 53.8, 86.2), "Sootfur, a coyote, prowls south of the farm. Kill it and take its pelt.", "Sootfur's Pelt"), 95913),
+    along(objective(95913, rg(nil, 55.0, 85.0), "The Plains Coyotes around Sootfur carry the pelts Tessa wants.", "Coyote Pelts"), 94617),
+    along(objective(94614, rg(nil, 50.4, 79.4), "Kill Mudfin Oracles and Warriors along the river west of the farm.", "8 Mudfin Oracles", "8 Mudfin Warriors"),
+      94618),
+    finish(94618, rg("Lost Horse", 53.8, 66.4), "Find the lost horse north of the farm and give it Benjy's feed."),
+    accept(94992, rg("Lost Horse", 53.8, 66.4)),
+    note(objective(94992, rg("Lost Horse", 53.8, 66.4), "Lead the horse home. Coyote Prowlers come for it on the way: fight them off.", "Horse Rescued"),
+      "Coyote Prowlers from a published guide's route; the objective wording needs an in-game check."),
+    finish(94614, benjy), finish(94617, benjy), finish(94992, benjy),
+    accept(94924, cornelius, "Ride north to Terral's Watch. Watcher Cornelius wants the Rog'mar poachers stopped."), accept(94925, cornelius),
+    accept(95983, rg("Picked Carcass", 61.6, 58.9), "Look at the picked carcass just north of the watchtower."),
+    objective(95983, rg(nil, 61.6, 58.9), "Kill the Low Plains Buzzards picking at the carcass.", "Low Plains Buzzards"),
+    finish(95983, cornelius), accept(95984, cornelius),
+    withItem(281229, objective(96084, rg(nil, 62.0, 56.5), "Use Rowland's vial at the stream north of the tower to take a water sample.",
+      "Water Sample")),
+    along(objective(94925, rg(nil, 60.1, 53.0), "Hunt Wildplains lions north of the tower for their hides.", "8 Lion Hides"), 94924, 95984),
+    along(objective(94924, rg(nil, 61.0, 50.0), "Kill Rog'mar Poachers on the plains farther north.", "12 Rog'mar Poachers"), 94925, 95984),
+    along(objective(95984, rg(nil, 57.4, 58.5), "Find a Roving Tallstrider on the plains west of the tower.", "Tallstrider Song"), 94924, 94925),
+    objective(95943, rg("Foreman's Crate", 51.1, 57.2), "Ride west to the broken wheelbarrow and take Bertrand's crate from it.", "Foreman's Crate"),
+    finish(94924, cornelius, "Ride back to Watcher Cornelius at Terral's Watch."), finish(94925, cornelius), finish(95984, cornelius),
+    accept(95064, cornelius), accept(95426, cornelius), accept(94928, cornelius), accept(95986, cornelius),
+    withItem(271779, objective(95986, rg("Ombassa", 59.4, 53.9),
+      "On the hill north of the tower, use the Tallstrider Call to bring out Ombassa, an elite lion, and defeat it.", "Ombassa")),
     action("goto", rg(nil, 59.0, 35.5), "Go north toward Rog'mar. Keep clear of the Horde town itself."),
     along(objective(95064, rg(nil, 59.0, 35.5), "Kill Rog'mar Trainees at the training camps north of the plains.", "12 Rog'mar Trainees"), 95426),
     along(objective(95426, rg(nil, 60.0, 33.0), "Take Horde supply shipments from the training camps.", "8 Horde Supply Shipments"), 95064),
-    finish(94924, cornelius), finish(94925, cornelius), finish(95064, cornelius), finish(95426, cornelius), finish(95983, cornelius),
-    accept(95984, cornelius), accept(94928, cornelius),
-    objective(95984, rg(nil, 54.6, 58.0), "Find a Roving Tallstrider on the plains west of the tower.", "Tallstrider Song"),
-    finish(95984, cornelius), accept(95986, cornelius),
-    objective(95986, rg("Ombassa", 59.4, 53.8), "Find Ombassa, the great lion of the plains, and defeat it.", "Ombassa"),
-    finish(95986, cornelius),
+    finish(95064, cornelius, "Ride back south to Cornelius."), finish(95426, cornelius), finish(95986, cornelius),
+    accept(95066, cornelius, "Keep his report on Rog'mar for Demar Brant."),
+    action("goto", sleebo, "Ride north-east along the road to Sleebo Fizzlespout's camp."),
+    accept(96063, sleebo, "Sleebo wants marsh gas from the pools on the plains."),
+    note(objective(96063, rg(nil, 62.1, 57.6), "Fill Sleebo's vials at the marsh gas pools south-west of his camp.", "Marsh Gas"),
+      "Pool spot from the Horde route's published guide data; check how the vials are filled in game."),
+    finish(96063, sleebo, "Ride back to Sleebo's camp on the road to Powderfuse Port."), accept(96067, sleebo),
+    note(objective(96067, rg("G45-B4G", 68.3, 48.7), "Fight Sleebo's machine, G45-B4G, beside his camp.", "G45-B4G tested"),
+      "Spot from the Horde route's published guide data; the objective text is not published."),
+    finish(96067, sleebo),
     action("goto", friz, "Follow the road east to Powderfuse Port on the coast."),
     taxi("getfp", rg(nil, 77.5, 53.5), portFlight, "Learn the Powderfuse Port flight path."),
     finish(94928, friz, "Friz Frazzlespark buys the lion hides."), B.optional(finish(93443, friz, "Hand over the lost crate from Stranglethorn.")),
     accept(95059, friz, "Friz has a crate for Demar Brant."),
-    accept(95118, whizzbuzz), accept(95121, fimbo), accept(95988, zizplink),
+    accept(95118, whizzbuzz), accept(95121, fimbo),
+    accept(95988, zizplink, "Innkeeper Zizplink wants the makings of a drink: crawler parts and three goods from the port's merchants."),
     accept(95254, rg("WANTED!", 78.5, 53.9), "Read the wanted poster by the inn."),
-    along(objective(95988, rg(nil, 78.6, 49.6), "Kill Shore Crawlers on the beach north of the port.", "3 Crawler Parts"), 95121),
-    along(objective(95118, rg(nil, 72.4, 69.5), "Go south along the shore for the murloc camps.", "8 Murloc Oracles", "8 Murloc Warriors"), 95121),
-    along(objective(95121, rg(nil, 74.2, 67.2), "Loot eyes from the murlocs and meat from the Sand Crawlers.", "12 Murloc Eyes", "6 Crawler Meat"), 95118),
-    along(objective(95254, rg("Trapclaw", 79.5, 53.3), "On the way back, look for Trapclaw, a big crawler that walks the shore by the port.", "Trapclaw's Claw"), 95988),
+    action("buy", rg("Gritta Chumwater", 78.4, 55.0), "Buy Fresh Chum from Gritta Chumwater beside the inn.", { item = 271657, count = 1 }),
+    action("buy", rg("Krikshank", 76.8, 51.1), "Buy Expired Poison from Krikshank on the north side of the port.", { item = 271654, count = 1 }),
+    action("buy", rg("Kor'gar", 77.7, 51.2), "Buy Goblin Degreaser from Kor'gar next to him.", { item = 271653, count = 1 }),
+    along(objective(95988, rg(nil, 82.0, 47.0), "Kill Shore Crawlers on the beach north-east of the port for their parts.", "Crawler Parts"), 95121, 95254),
+    along(B.objectivePart(95121, 2, rg(nil, 82.0, 47.0), "The same Shore Crawlers give Fimbo's crawler meat.", "Crawler Meat"), 95988),
+    along(B.objectivePart(95121, 1, rg(nil, 74.2, 67.2), "Go south along the shore to the murloc camps and loot their eyes.", "Murloc Eyes"), 95118),
+    along(objective(95118, rg(nil, 72.4, 69.5), "Kill the murloc oracles and warriors in the same camps.", "8 Murloc Oracles", "8 Murloc Warriors"), 95121),
+    along(objective(95254, rg("Trapclaw", 80.5, 53.7), "On the way back, look for Trapclaw, a big crawler that walks the shore by the port.", "Trapclaw's Claw"), 95121),
     finish(95988, zizplink), finish(95254, fimbo), finish(95118, whizzbuzz), finish(95121, fimbo),
     taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly back to Farholde Keep."),
-    finish(95059, brant), finish(95066, brant), finish(96084, rowland),
-    finish(95330, halligan, "When you are next by Turner's Logging Camp, give Halligan the farm goods."),
-    finish(94842, halligan), finish(94843, halligan), finish(94931, halligan),
+    finish(95059, brant), finish(95066, brant), finish(95156, ember), finish(95943, bertrand), finish(95913, tessa), finish(96084, rowland),
+    finish(95330, halligan, "Ride west to Turner's Logging Camp and give Halligan the farm goods."),
+    finish(94842, halligan), finish(94931, halligan), accept(94843, halligan),
+    objective(94843, rg("Loamy Soil", 39.7, 62.9), "Plant Halligan's saplings in the patches of loamy soil around the camp.", "5 Saplings Planted"),
+    finish(94843, halligan),
   }, { alternate = true, suggest = { "riverglades-shroud", "dustwallow-40" } })
 
   rq(94829, "What We Lost", 40, 36)
@@ -601,8 +668,8 @@ do
   rq(94887, "Saving Marshal Ryan", 47, 36, 94885)
   rq(94892, "Dying Wish", 47, 36, 94887)
   rq(94893, "Delivering Closure", 47, 36, 94892)
-  rq(94884, "An Unsettling Discovery", 41, 36)
-  rq(95562, "Cut Off the Heads", 41, 36)
+  rq(94884, "An Unsettling Discovery", 41, 36, 95562)
+  rq(95562, "Cut Off the Heads", 41, 36, { 95642, 95643 })
   rq(95642, "Abominable Magics", 40, 36)
   rq(95643, "Indiscriminate Purge", 40, 36)
   rq(94961, "Biting the Hand", 40, 36)
@@ -624,22 +691,32 @@ do
   rq(95912, "WANTED: Blademaster Kaijo", 42, 38)
   rq(95991, "WANTED: Ghostmaw", 42, 38)
   rq(95119, "Unfriendly Competition", 43, 38)
-  rq(95122, "Unchecked Expansion", 44, 38)
-  rq(95165, "See Ya, Scallywags!", 44, 38)
-  rq(95124, "Admiral Lamora", 45, 38)
+  rq(95122, "Unchecked Expansion", 44, 38, 95119)
+  rq(95123, "A Blast Ye Scurvy Dogs!", 44, 38, 95119)
+  rq(95165, "See Ya, Scallywags!", 44, 38, { 95122, 95123 })
+  rq(95124, "Admiral Lamora", 45, 38, { 95122, 95123 })
   rq(95288, "Smuggler's Paradise", 43, 38)
+  rq(95293, "Smuggler's Special", 42, 38, 95288)
+  rq(95294, "Smuggler's Bargain", 42, 38, 95293)
+  rq(94879, "Scraps of Knowledge", 38, 36)
+  rq(95934, "Proof of Profit", 42, 36)
+  rq(95935, "Hail the Dragonslayer", 43, 36)
+  quest[95935].startItem = 271612
+  quest[94885].startItem = 266427
+  B.elite(95562, "Chogg'Zac")
+  B.elite(95991, "Ghostmaw")
   rq(95260, "Terrors From the Deep", 42, 38)
   rq(95261, "It Takes Guts", 42, 38, 95260)
   rq(95267, "The Monster Surfaces", 42, 38, 95261)
   rq(95120, "WANTED: Old Rot-Chum", 42, 36)
+  B.elite(95120, "Old Rot-Chum")
   rq(95792, "Clear 'em Out", 42, 36)
   local krol = "dungeon-krol-dok-stronghold"
 
   section("riverglades-shroud", "Riverglades: Sunnyglade and the Twilight's Shroud", M.riverglades, 40, 46, sources, {
     taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly to Farholde Keep."),
-    accept(94877, brant), accept(94886, brant), accept(94894, brant, "Brant also wants Highlord Bolvar warned. Keep the report until you next fly to Stormwind."),
-    forDungeon(accept(94982, brant, "Brant's dungeon task: infiltrate Krol'dok Stronghold."), krol),
-    accept(94881, ashe), accept(94907, ashe),
+    accept(94877, brant, "Knight Commander Demar Brant wants Sunnyglade freed from the Twilight's Hammer."),
+    accept(94881, ashe), accept(94879, ashe, "Ashe Amberhall also wants the Twilight's pages from Sunnyglade."),
     accept(95912, rg("Wanted", 65.9, 81.1), "Read the wanted poster in the keep's courtyard."),
     accept(95991, rg("WANTED!", 65.6, 80.9)),
     accept(96125, cornelius, "Stop at Terral's Watch on the way north."),
@@ -650,25 +727,28 @@ do
     finish(94829, elbrim), accept(94858, elbrim),
     objective(94858, rg("Converted Farmer", 53.4, 45.0), "Look for what is left of Elbrim's family among the converted farmers east of the farm.", "Converted Farmer"),
     finish(94858, elbrim),
-    accept(94884, claire, "Apprentice Claire is camped west of the farm."), accept(95642, claire), accept(95643, claire), accept(95562, claire),
+    accept(95642, claire, "Apprentice Claire is camped west of the farm."), accept(95643, claire),
     accept(94961, fuzzle, "Fuzzle, a hungry critter, hides in the brush west of Claire."),
     along(objective(94877, twilight, "Defeat Twilight Shadowmancers, Neophytes and Raiders around Sunnyglade.",
       "8 Twilight Shadowmancers", "8 Twilight Neophytes", "8 Twilight Raiders"), 94881, 94961, 94885),
     along(objective(94881, twilight, "Loot trinkets from the Twilight cultists.", "25 Twilight Trinkets"), 94877, 94961),
     along(objective(94961, twilight, "Fuzzle wants food from the Twilight cultists. Pick it up while you fight.", "20 Morsels"), 94877, 94881),
-    accept(94885, nil, "A cultist carries the Field Marshal's log. Read it when it drops."),
+    along(note(objective(94879, twilight, "Pick up the Twilight pages lying around the cultists' camps for Ashe.", "Twilight Pages"),
+      "Page spots from a published guide's route (clicked during the Sunnyglade fights); check the count in game."), 94877, 94881),
+    withItem(266427, accept(94885, nil, "A cultist carries the Field Marshal's log. Read it when it drops.")),
+    objective(95991, rg("Ghostmaw", 47.2, 56.7), "Ghostmaw, an elite, prowls the south edge of Sunnyglade. Bring a partner.", "Ghostmaw's Head"),
     along(objective(95643, rg(nil, 48.4, 48.4), "Kill the Empowered Brutes and Twilight Ritualists at the ritual site.", "5 Empowered Brutes", "5 Twilight Ritualists"),
       95642),
     along(objective(95642, rg(nil, 47.8, 49.4), "Use the item Claire gave you on the brutes and ritualists to absorb their magic.",
       "25 Samples"), 95643),
-    note(objective(95562, rg("Chogg'Zac", 44.8, 51.2), "Chogg'Zac lurks in the caves beneath Sunnyglade. Bring a partner.", "Chogg'Zac's Heads"),
-      "Two-headed ogre; check whether it is elite."),
+    finish(95642, claire), finish(95643, claire), accept(95562, claire, "Claire now wants Chogg'Zac's heads."),
+    objective(95562, rg("Chogg'Zac", 44.8, 51.2), "Chogg'Zac, an elite two-headed ogre, lurks in the caves beneath Sunnyglade. Bring a partner.",
+      "Chogg'Zac's Heads"),
     finish(94961, fuzzle), accept(94963, fuzzle),
     objective(94963, rg("Fuzzle's Treasure", 41.7, 47.7), "Follow Fuzzle to its hidden treasure.", "Fuzzle's Treasure"),
     finish(94963, rg("Fuzzle's Treasure", 41.7, 47.7)),
-    finish(95642, claire), finish(95643, claire), finish(95562, claire),
+    finish(95562, claire), accept(94884, claire, "Claire's findings go to Ashe Amberhall at Farholde Keep."),
     objective(95912, rg("Blademaster Kaijo", 57.4, 36.6), "Blademaster Kaijo trains warriors north of Sunnyglade. Kill him for the bounty.", "Kaijo's Blade"),
-    objective(95991, rg("Ghostmaw", 59.9, 46.5), "Ghostmaw hunts the hills east of Sunnyglade.", "Ghostmaw's Head"),
     action("goto", rg(nil, 66.0, 22.0), "Ride north to the ogre camp at Bolder'ok."),
     finish(96125, dunston, "Find Dunston Willis, held by the ogres."), accept(96126, dunston),
     objective(96126, rg("Gronok the Butcher", 67.6, 19.2), "Kill Gronok the Butcher and take the key to Dunston's shackles.", "Shackle Key"),
@@ -676,8 +756,10 @@ do
     objective(94927, dunston, "Escort Dunston out of Bolder'ok. Fight off the ogres that chase you.", "Dunston Escorted"),
     finish(94927, cornelius, "Report to Watcher Cornelius at Terral's Watch."),
     action("goto", brant, "Ride south to Farholde Keep."),
-    finish(94877, brant), finish(94881, ashe), finish(94884, ashe), finish(94885, brant), accept(94887, brant), finish(95912, ember),
-    finish(95991, rg("Wheatley", 63.6, 85.0)),
+    finish(94877, brant), accept(94886, brant, "Brant now sends you west to Sergeant Riftan at the Twilight's Shroud."),
+    finish(94885, brant), accept(94887, brant),
+    finish(94881, ashe), finish(94879, ashe), finish(94884, ashe), accept(94907, ashe),
+    finish(95912, ember), finish(95991, rg("Wheatley", 63.6, 85.0)),
     action("goto", riftan, "Ride west to the Twilight's Shroud and find Sergeant Riftan at the edge of the fog."),
     finish(94886, riftan), accept(94888, riftan), accept(94889, riftan), accept(96015, riftan),
     forDungeon(accept(94983, riftan, "Riftan wants bangles from the Twilight's Hammer inside Krol'dok."), krol),
@@ -698,31 +780,58 @@ do
     finish(94891, ashe), finish(94892, brant), finish(94907, ashe),
     forDungeon(accept(94984, ashe, "Ashe's next task, Nar'gurk, is inside Krol'dok Stronghold."), krol),
     accept(94893, brant),
+    accept(94894, brant, "Brant also wants Highlord Bolvar warned. Keep the report until you fly to Stormwind at the end."),
+    withGuide("dungeon-krol-dok-stronghold", forDungeon(accept(94982, brant,
+      "Brant's dungeon task: the Eye of Mugg from Krol'dok Stronghold, north of Sunnyglade. Plan the run here if you want it."), krol)),
     taxi("fly", B.at(nil, 76.8, 53, 2548), portFlight, "Fly to Powderfuse Port for the pirates on the east coast."),
-    accept(95119, whizzbuzz), accept(95122, whizzbuzz), accept(95165, whizzbuzz), accept(95124, whizzbuzz), accept(95288, friz),
-    accept(95120, rg("WANTED!", 78.5, 53.9)),
-    accept(95260, rg("Painted Hide", 72.3, 61.8), "Look at the painted hide on the shore south of the port."),
-    finish(95260, argo), accept(95261, argo),
-    along(objective(95122, rg(nil, 78.4, 35.6), "Go north along the coast to the Eastsea pirate camp for Raiders and Bombardiers.",
-      "8 Eastsea Raiders", "8 Eastsea Bombardiers"), 95119, 95288, 95165, 95261),
-    along(objective(95119, rg(nil, 85.5, 35.0), "Kill Eastsea Buccaneers and Musketeers farther east.", "10 Eastsea Buccaneers", "10 Eastsea Musketeers"),
-      95122, 95288, 95165),
-    along(objective(95288, rg(nil, 85.5, 35.0), "Loot smuggled goods from the Eastsea pirates.", "8 Smuggled Goods"), 95119, 95122),
-    along(objective(95165, rg("Cannon Ammunition", 88.4, 25.8), "Plant charges on the three piles of cannon ammunition along the pirate shore.",
-      "3 Charges Planted"), 95119, 95124),
-    note(objective(95124, rg("Admiral Lamora", 90.6, 29.2), "Admiral Lamora commands from the far end of the pirate shore. Clear her guards first.",
-      "Admiral Lamora"), "Group size needed is unknown; check in game."),
-    along(objective(95261, rg(nil, 78.0, 56.6), "Loot guts from the boars, crawlers and other beasts along the coast.", "15 Beast Guts"), 95120),
-    objective(95120, rg("Old Rot-Chum", 77.4, 72.2), "Old Rot-Chum roams the south shore.", "Proof of Old Rot-Chum"),
-    finish(95119, whizzbuzz), finish(95122, whizzbuzz), finish(95165, whizzbuzz), finish(95124, whizzbuzz),
-    finish(95288, friz), finish(95120, whizzbuzz), finish(95261, argo), accept(95267, argo),
-    objective(95267, rg("Monstrous Threshadon", 74.4, 72.2),
-      "Use the item Argo gave you in the water south of the port, then kill the Monstrous Threshadon.", "Monstrous Threshadon"),
-    finish(95267, argo),
-    taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly to Farholde Keep, then ride west to Southern Watch."),
-    accept(95792, gelinda, "Gelinda Coppergleam, near Southern Watch, wants the dragon whelps cleared."),
-    objective(95792, rg(nil, 29.6, 73.2), "Kill Cinderscale Whelps and Warriors south of Gelinda's camp.", "8 Cinderscale Whelps", "8 Cinderscale Warriors"),
-    finish(95792, gelinda),
+    accept(95119, whizzbuzz, "Wharfmaster Whizzbuzz wants the Eastsea pirates' crews thinned out."), accept(95288, friz),
+    accept(95120, rg("WANTED!", 78.5, 53.9), "Read the wanted poster by the inn: Old Rot-Chum, an elite, swims the south shore."),
+    accept(95260, rg("Painted Hide", 72.3, 61.8), "Ride south along the shore and look at the painted hide on the beach."),
+    objective(95120, rg("Old Rot-Chum", 77.4, 72.2), "Old Rot-Chum roams the south shore beyond the hide. Bring a partner.", "Proof of Old Rot-Chum"),
+    finish(95260, argo, "Ride back to Powderfuse Port and show the hide to Argo Brinewhistle on the docks."), accept(95261, argo),
+    finish(95120, whizzbuzz),
+    along(note(B.objectivePart(95261, 1, rg(nil, 82.0, 47.0), "Ride north-east along the beach. Beasts there, the Shore Crawlers first, give the entrails Argo wants.",
+      "Beast Entrails"), "The published guides differ on the entrails' source (shore crawlers here, paletusks south of Bolder'ok)."), 95119),
+    along(objective(95119, rg(nil, 85.4, 37.9), "Kill Eastsea Buccaneers and Musketeers along the pirate shore farther north.",
+      "10 Eastsea Buccaneers", "10 Eastsea Musketeers"), 95288),
+    along(objective(95288, rg(nil, 85.4, 37.9), "Loot smuggled goods from the same pirates.", "8 Smuggled Goods"), 95119),
+    finish(95119, whizzbuzz, "Ride back to Whizzbuzz at the port."), accept(95122, whizzbuzz), accept(95123, whizzbuzz),
+    finish(95288, friz), accept(95293, friz, "Friz has a special delivery for Captain Bentcoin. You pass him at the pirate shore later."),
+    along(objective(95122, rg(nil, 78.5, 34.5), "Ride north to Windstead and kill the Eastsea Raiders and Bombardiers there.",
+      "8 Eastsea Raiders", "8 Eastsea Bombardiers"), 95123, 95261),
+    along(note(objective(95123, rg(nil, 78.5, 34.5), "Take the Eastsea powder kegs lying around Windstead.", "Eastsea Powder Kegs"),
+      "Keg spots are not published."), 95122),
+    note(B.objectivePart(95261, 2, rg(nil, 75.0, 26.1), "Ride west to the Twilight camp by the water and pick the mushrooms around it.", "Rotflesh Mushrooms"),
+      "Mushroom spots from the published guides' routes."),
+    finish(95122, whizzbuzz, "Ride back to the port."), finish(95123, whizzbuzz), accept(95165, whizzbuzz), accept(95124, whizzbuzz),
+    finish(95261, argo), accept(95267, argo),
+    finish(95293, rg("Captain Bentcoin", 91.3, 39.7), "Ride north-east along the shore and deliver Friz's special to Captain Bentcoin."),
+    accept(95294, rg("Captain Haynes", 91.2, 39.8), "Captain Haynes, beside him, has an offer for Friz."),
+    note(B.objectivePart(95165, 3, rg(nil, 91.1, 39.4), "One Eastsea boat lies right here. Board it and plant a charge.", "Third charge planted"),
+      "Boat spots from the published guides' routes; the objective names are not published."),
+    along(note(B.objectivePart(95165, 2, rg(nil, 90.6, 29.6), "Ride north to the boat by Lamora's camp and plant a charge.", "Second charge planted"),
+      "Boat spot from the published guides' routes."), 95124),
+    note(objective(95124, rg("Admiral Lamora", 90.6, 29.2), "Kill Admiral Lamora at the camp and open the stash of loot nearby.",
+      "Admiral Lamora", "Lamora's Loot"), "Group size needed is unknown; check in game."),
+    note(B.objectivePart(95165, 1, rg(nil, 88.3, 25.8), "Plant your last charge on the boat farther north-west along the shore.", "First charge planted"),
+      "Boat spot from the published guides' routes."),
+    finish(95165, whizzbuzz, "Ride back to Powderfuse Port."), finish(95124, whizzbuzz),
+    finish(95294, friz),
+    withItem(268647, objective(95267, rg("Monstrous Threshadon", 74.4, 72.2),
+      "Ride south and use Argo's bait in the water by the wreckage, then kill the Monstrous Threshadon.", "Monstrous Threshadon")),
+    finish(95267, argo, "Ride back to Argo with the sea monster's head."),
+    taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly to Farholde Keep, then ride west past Southern Watch."),
+    accept(95792, gelinda, "Gelinda Coppergleam, south-west of Southern Watch, wants the dragon whelps cleared."),
+    accept(95934, gelinda, "She also wants a piece of Cubic Draconia from the same hills."),
+    along(note(objective(95792, rg(nil, 30.1, 72.9), "Kill Cinderscale Whelps and Warriors in the hills south of her camp.",
+      "Cinderscale Whelps", "Cinderscale Warriors"), "Counts differ between sources; the quest log shows the real ones."), 95934),
+    along(objective(95934, rg(nil, 30.1, 73.2), "Search the whelps' hills for a piece of Cubic Draconia.", "Cubic Draconia"), 95792),
+    B.optional(note(action("collect", rg("Scaldaron", 31.5, 73.2), "Scaldaron, an elite dragon, waits just east of the whelps. "
+      .. "With a group, kill him for his head. Use Next to skip him.", { item = 271612, name = "Head of Scaldaron" }),
+      "Elite from the Horde route's published data; spot from the published guides' routes.")),
+    withItem(271612, accept(95935, nil, "If you took the Head of Scaldaron, read it. Captain Dalton at Southern Watch wants it.")),
+    finish(95792, gelinda), finish(95934, gelinda),
+    finish(95935, dalton, "Ride back east to Southern Watch and give Captain Dalton the Head of Scaldaron."),
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), "Stormwind, Elwynn", "Ride back to Farholde Keep and fly to Stormwind."),
     finish(94893, at("Abigail Lawson", 50.2, 51.8, M.stormwind), "Deliver Marshal Ryan's last words to Abigail Lawson near the Cathedral."),
     finish(94894, at("Highlord Bolvar Fordragon", 80.21, 38.35, M.stormwind), "Report the Twilight threat to Highlord Bolvar in Stormwind Keep."),
@@ -779,8 +888,9 @@ do
     action("goto", kreldig, "Keep north on the Desolace road to Nijel's Point, high on the eastern ridge."),
     taxi("getfp", ds("Baritanas Skyriver", 64.7, 10.5), "Nijel's Point, Desolace", "Learn the Nijel's Point flight path."),
     action("sethearth", lyshaerya, "Bind at the Nijel's Point inn.", nijels),
+    accept(261, anton, "Brother Anton stands just south of the inn."),
     finish(1453, kreldig, "Kreldig Ungor runs the Reclaimers' camp."), accept(1458, kreldig), accept(1454, kreldig),
-    accept(1437, vahlarriel), accept(97284, vahlarriel, "Vahlarriel also wants the Burning Blade at Thunder Axe Fortress punished."), accept(261, anton), accept(1387, melkins), accept(1382, pentigast),
+    accept(1437, vahlarriel), accept(97284, vahlarriel, "Vahlarriel also wants the Burning Blade at Thunder Axe Fortress punished."), accept(1387, melkins), accept(1382, pentigast),
     objective(1458, ds(nil, 72.5, 17.9), "Go east to the satyr grounds at Sargeron and loot claws and horns from the Hatefury satyrs.",
       "10 Hatefury Claws", "10 Hatefury Horns"),
     finish(1458, kreldig), accept(1459, kreldig),
@@ -888,6 +998,20 @@ do
   q(97328, "Anything of Value", 35, 30, nil, true)
   q(97329, "Where's the Key?", 37, 30, nil, true)
   q(97331, "Zimmix's Great Escape", 37, 30, 97329, true)
+  q(575, "Supply and Demand", 31, 26)
+  q(577, "Some Assembly Required", 36, 31, 575)
+  q(635, "Crystal in the Mountains", 35, 30)
+  quest[635].startItem = 4614
+  -- Picked up here for the 41-43 Stranglethorn chapter (QuestData4050.lua does them): the route is at
+  -- their givers now and only comes back to the Rebel Camp and Nesingwary's camp at the end of that chapter.
+  q(193, "Panther Mastery", 40, 28, 192)
+  q(196, "Raptor Mastery", 41, 28, 195)
+  q(202, "Colonel Kurzen", 40, 30, 574)
+  q(205, "Troll Witchery", 40, 30, 207)
+  q(1183, "Goblin Sponsorship", 37, 29, 1182)
+  B.elite(193, "Bhag'thera")
+  B.elite(202, "Colonel Kurzen")
+  local drizzlik = st("Drizzlik", 28.29, 77.59)
 
   section("stv-36", "Stranglethorn: Rebels, Kurzen and Nesingwary", M.stv, 36, 38, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
@@ -901,26 +1025,26 @@ do
     action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from Ratchet's dock to Booty Bay. Use Next when you arrive.",
       { name = "Ratchet - Booty Bay" }),
     taxi("getfp", gyll, "Booty Bay, Stranglethorn", "Learn the Booty Bay flight path from Gyll, up the ramps above the inn."),
-    action("note", nil, "Stranglethorn fills your quest log. Abandon the Blackfathom Deeps and Excavation Site quests if you are not going to run them.",
-      { name = "Quest log", drop = { 971, 1275, 95646, 95647, 98815 } }),
     finish(1180, lozgil, "Wharfmaster Lozgil stands on the docks."), accept(1181, lozgil),
     accept(605, crank, "Crank Fizzlebub waits on the inn's lower floor."),
     action("sethearth", skindle, "Bind at the Salty Sailor Tavern.", bootyBay),
+    finish(98463, st("Nixxrax Fillamug", 27.04, 77.17), "Pass Barkeep Kelly's gossip to Nixxrax Fillamug at the tavern's bar."),
     accept(198, krazek, "Krazek, on the inn's upper balcony, has supplies for the Rebel Camp."), accept(201, krazek), accept(616, krazek),
     accept(213, kebok, "Kebok stands beside Krazek."), accept(189, kebok),
+    accept(575, drizzlik, "Drizzlik, a few doors east of the inn, wants two crocolisk skins from the river by Nesingwary's camp."),
     finish(616, revilgaz, "Baron Revilgaz looks over the bay from the top floor of the inn."), accept(578, revilgaz),
     finish(1181, revilgaz), accept(1182, revilgaz),
     taxi("fly", B.at("Felicia Maline", 77.49, 44.29, 1431), "Darkshire, Duskwood", "Fly to Darkshire."),
     action("goto", st(nil, 38.0, 3.5), "Take the road south out of Duskwood into Stranglethorn and climb to the Rebel Camp."),
     finish(198, st("Private Thorsen", 37.98, 3.41)), accept(203, yohwa), accept(204, yohwa), accept(200, doren),
-    accept(210, st("Corporal Kaleb", 37.74, 3.3), "Corporal Kaleb has a recipe errand for Krazek in Booty Bay."),
-    B.optional(accept(93443, st("Lost Shipping Crate", 38.0, 3.1),
-      "A lost shipping crate sits by the Rebel Camp. Take it if you plan to visit the Riverglades.")),
     objective(201, hemet, "Walk down to Nesingwary's Expedition: you have found the hunters' camp for Krazek.", "Hunters' Camp Found"),
+    finish(5762, hemet, "Give Hemet the crate from Kravel."),
     accept(186, ajeck), accept(191, erlgadin), accept(194, hemet),
+    objective(575, st(nil, 38.0, 11.6), "River Crocolisks swim in the stream east of the camp, on your way to the compound. Kill them until you have two skins.",
+      "2 Large River Crocolisk Skins"),
     accept(97047, wendel, "Wendel Mathers hides on the slope above the Kurzen compound. His cook is locked up inside."),
     along(objective(203, kurzen, "Clear the Kurzen Jungle Fighters around the compound.", "15 Kurzen Jungle Fighters"), 204, 200, 97047),
-    along(objective(204, kurzen, "Medicine Men carry Jungle Remedies. The Venom Fern Extract is in a chest in the compound's back cave.",
+    along(objective(204, kurzen, "Medicine Men carry Jungle Remedies (the Auction House sells them too). The Venom Fern Extract is in a chest in the compound's back cave.",
       "7 Jungle Remedy", "Venom Fern Extract"), 203, 200, 97047),
     along(objective(97047, st(nil, 48.8, 5.4), "Loot a Kurzen Fighter's Uniform and the compound's cage key from the Kurzen guards, then free the cook.",
       "Kurzen Fighter's Uniform", "Compound Cage Key"), 203, 204),
@@ -943,31 +1067,44 @@ do
     along(objective(187, st(nil, 31.9, 19.9), "Elder Stranglethorn Tigers live farther south and west.", "10 Elder Stranglethorn Tigers"), 191, 194),
     along(objective(194, st(nil, 27.2, 16.1), "Stranglethorn Raptors hunt near the western coast.", "10 Stranglethorn Raptors"), 191, 187, 207),
     accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp on the coast."),
+    B.objectivePart(207, 3, st("Tablet", 22.9, 12.0), "Read the troll tablet in the ruins beside Zimmix's cage.", "The Third Troll Legend"),
     along(objective(189, bloodscalp, "Kill Bloodscalp trolls along the coast for their ears.", "15 Bloodscalp Ears"), 97329, 97328),
     along(objective(97329, bloodscalp, "A Bloodscalp troll carries Zimmix's Primitive Key.", "Primitive Key"), 189),
+    B.objectivePart(207, 4, st("Tablet", 24.7, 8.9), "Read the next tablet in the ruins just north of the Bloodscalp camp.", "The Fourth Troll Legend"),
+    note(withItem(4614, accept(635, nil, "If a Bloodscalp dropped a Pendant of Myzrael, use it to start the quest. The crystal it shows waits in Arathi.")),
+      "The pendant's drop rate is unknown; it also drops from the Skullsplitters later."),
     along(objective(97328, st(nil, 26.0, 13.0), "Pick up the stolen shipments scattered around the Bloodscalp camps.", "8 Stolen Shipments"), 189),
     finish(97329, zimmix), accept(97331, zimmix),
     objective(97331, zimmix, "Help Zimmix out of the troll camp.", "Zimmix Escaped"),
-    B.objectivePart(207, 4, st("Tablet", 24.7, 8.9), "Read the troll tablet in the ruins just north of the Bloodscalp camp.", "The Fourth Troll Legend"),
-    B.objectivePart(207, 3, st("Tablet", 22.9, 12.0), "Read the next tablet in the ruins by the coast.", "The Third Troll Legend"),
     B.objectivePart(207, 1, st("Tablet", 29.5, 19.1), "Head southeast to the tablet on the ridge above the elder tigers.", "The First Troll Legend"),
     B.objectivePart(207, 2, st("Tablet", 24.8, 22.9), "Go back west to the coast for the last tablet at the Ruins of Aboraz.", "The Second Troll Legend"),
     objective(578, st("Stone of the Tides", 21.6, 21.8), "Swim to the Haunted Isle just off the coast and take the Stone of the Tides from its pool.",
       "Stone of the Tides"),
     finish(191, erlgadin), finish(187, ajeck), finish(194, hemet), accept(195, hemet), accept(188, ajeck), accept(192, erlgadin),
     finish(207, nimetz), finish(574, doren),
+    accept(210, st("Corporal Kaleb", 37.74, 3.3), "Corporal Kaleb has a recipe errand for Krazek in Booty Bay."),
     action("hearth", skindle, "Hearth to Booty Bay.", bootyBay),
     finish(605, crank), finish(213, kebok), finish(189, kebok), finish(201, krazek), finish(210, krazek),
-    finish(1182, revilgaz), finish(578, revilgaz), accept(601, revilgaz),
+    finish(575, drizzlik), accept(577, drizzlik, "Drizzlik now wants Snapjaw Crocolisk skins from Lake Nazferiti."),
+    finish(1182, revilgaz), accept(1183, revilgaz, "Revilgaz sends the blueprints on to Pozzik in the Shimmering Flats. Keep them: the route is back there at 40."),
+    finish(578, revilgaz), accept(601, revilgaz),
     finish(97048, st("Captain Aransas", 27.7, 76.6)), finish(97328, lozgil), finish(97331, lozgil),
     action("goto", st(nil, 36.1, 37.3), "Follow the road north out of Booty Bay toward the middle of the vale."),
-    objective(192, st(nil, 36.1, 37.3), "Shadowmaw Panthers stalk unseen in the jungle around Mistvale Valley. Watch for stealth.", "10 Shadowmaw Panthers"),
-    objective(195, st(nil, 31.4, 22.3), "Lashtail Raptors run in packs farther north near the coast.", "10 Lashtail Raptors"),
+    objective(192, st(nil, 36.1, 37.3), "Shadowmaw Panthers stalk unseen in the jungle around Mistvale Valley. Watch for stealth; a Catseye Elixir from the Auction House helps you spot them.", "10 Shadowmaw Panthers"),
+    objective(577, st(nil, 40.8, 24.3), "Ride north-east to Lake Nazferiti. Snapjaw Crocolisks line its shores.", "5 Snapjaw Crocolisk Skins"),
+    objective(195, st(nil, 31.4, 22.3), "Lashtail Raptors run in packs farther west near the coast.", "10 Lashtail Raptors"),
     objective(188, st("Sin'Dall", 32.2, 17.2), "Sin'Dall, a big white tiger, prowls on the hill above the elder tigers.", "Paw of Sin'Dall"),
     objective(601, st(nil, 21.1, 22.8), "Kill Lesser Water Elementals around the Haunted Isle for their bracers.", "6 Water Elemental Bracers"),
-    finish(195, hemet), finish(188, ajeck), finish(192, erlgadin),
-    action("goto", revilgaz, "Ride back south to Booty Bay, or hearth if it is ready."),
+    finish(195, hemet), accept(196, hemet, "Hemet's last raptor hunt is for later: the Jungle Stalkers roam farther south, a fight for 40."),
+    finish(188, ajeck),
+    finish(192, erlgadin), accept(193, erlgadin, "Erlgadin's last panther, Bhag'thera, is a level 40 elite. Keep the quest for your next Stranglethorn visit."),
+    accept(205, nimetz, "Walk north to the Rebel Camp once more. Brother Nimetz wants fetishes from the Skullsplitter trolls in the south: keep it for later."),
+    accept(202, doren, "Lieutenant Doren wants Colonel Kurzen dead. He hides in the compound's cave with his elite guard: keep it for later."),
+    B.optional(accept(93443, st("Lost Shipping Crate", 38.0, 3.1),
+      "A lost shipping crate sits by the Rebel Camp. Take it if you plan to visit the Riverglades next.")),
+    action("hearth", skindle, "Hearth to Booty Bay. If it isn't ready yet, ride south or fly from Darkshire.", bootyBay),
     finish(601, revilgaz), accept(602, revilgaz, "Keep the bracers for Archmage Ansirem in Dalaran, in the Alterac Mountains."),
+    finish(577, drizzlik),
   }, { suggest = { "riverglades-farholde" } })
 end
 
@@ -980,7 +1117,6 @@ do
   local brohann = sw("Brohann Caskbelly", 69.45, 40.4)
   local dellis = sw("Acolyte Dellis", 51.4, 73.81)
 
-  q(1260, "Morgan Stern", 38, 33)
   q(1363, "Mazen's Behest", 41, 37)
   q(1364, "Mazen's Behest", 41, 37, 1363)
   q(1448, "In Search of The Temple", 43, 38)
@@ -992,23 +1128,28 @@ do
   quest[1392].startItem = 6196
   q(1389, "Draenethyst Crystals", 35, 30)
   q(1393, "Galen's Escape", 38, 30)
+  q(93585, "This Light of Mine", nil, nil, nil, true)
 
   section("swamp-38", "Swamp of Sorrows and Nethergarde", M.swamp, 38, 39, {
     "https://www.wowhead.com/forever/zone=8/swamp-of-sorrows",
     "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
   }, {
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), "Stormwind, Elwynn", "Fly to Stormwind."),
-    accept(1260, sw("Angus Stern", 51.79, 93.64), "Angus Stern, by the Mage Quarter's south gate, has a letter for his brother in Theramore."),
     accept(1363, sw("Mazen Mac'Nadir", 51.8, 74.24), "Mazen Mac'Nadir works in the Mage Quarter's tower."),
     finish(1363, dellis, "Acolyte Dellis stands beside him."), accept(1364, dellis, "Dellis wants Khadgar's lost essays found in the swamp and taken to Nethergarde Keep."),
     accept(1448, brohann, "Brohann Caskbelly in the Dwarven District is looking for a lost temple in the swamp."),
-    accept(543, sw("Count Remington Ridgewell", 76.94, 47.83), "Count Remington Ridgewell, in Stormwind Keep, wants the Perenolde Tiara from Alterac. Keep it for later."),
+    finish(563, sw("Major Samuelson", 75.83, 36.72), "In Stormwind Keep, give Major Samuelson Farren's report from Southshore."),
+    accept(543, sw("Count Remington Ridgewell", 76.94, 47.83), "Count Remington Ridgewell, also in the keep, wants the Perenolde Tiara from Alterac. Keep it for later."),
     taxi("fly", B.at("Felicia Maline", 77.49, 44.29, 1431), "Darkshire, Duskwood", "Fly to Darkshire."),
     action("goto", sm(nil, 10.0, 54.0), "Take the east road out of Darkshire through Deadwind Pass into the Swamp of Sorrows."),
     accept(1396, biggs, "Watcher Biggs camps by the road at the swamp's western edge."),
     B.optional(accept(94929, biggs, "Biggs also has a shipment for the Riverglades. Take it if you plan to go there.")),
     withItem(6196, accept(1392, nil, "If Noboru's Cudgel dropped from the mossy giant Noboru, read it to start the quest.")),
-    accept(1389, magtoor, "Ride north to the Harborage, the draenei refuge on the swamp's northwest shore, and find Magtoor."),
+    accept(93585, sm("Father Tuttle", 22.22, 50.23), "Father Tuttle, north-west of Biggs, wants to reach the draenei refuge at the Harborage. His quest is an escort."),
+    note(objective(93585, magtoor, "Escort Father Tuttle north to the Harborage on the swamp's northwest shore. Stay close and fight off what attacks him.",
+      "Father Tuttle escorted"), "Forever quest: QuestieDB has the giver only; the escort's end and the hand-in at Magtoor come from a published guide."),
+    finish(93585, magtoor, "Magtoor waits at the Harborage."),
+    accept(1389, magtoor, "Magtoor also wants Draenethyst crystals from the Lost One villages."),
     finish(1392, magtoor),
     objective(1364, sm(nil, 15.0, 37.3), "Swampwalkers and Tangled Horrors around the western pools carry Khadgar's essays.",
       "Khadgar's Essays on Dimensional Convergence"),
@@ -1086,6 +1227,16 @@ do
   q(1451, "Rhapsody Shindigger", 43, 38, 1450)
   q(1053, "In the Name of the Light", 40, 34, 1052)
   q(1050, "Mythology of the Titans", 38, 28)
+  q(79624, "Anyone Can Cook", 40, nil, nil, true)
+  quest[79624].startItem = 213422
+  -- Picked up here for the 40-50 chapters (QuestData4050.lua hands them in).
+  q(603, "Ansirem's Key", 37, 32, 602)
+  q(669, "Sunken Treasure", 40, 35, 668)
+  q(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
+  -- Elite targets: the route asks at the pickup whether to take them (Take it / Skip).
+  B.elite(652, "Fozruk")
+  B.elite(685, "Otto and Lord Falconcrest")
+  B.elite(694, "Boulderfist Shamans")
 
   section("arathi-39", "Arathi Highlands, Alterac and Aerie Peak", M.arathi, 39, 40, {
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
@@ -1095,7 +1246,12 @@ do
     action("goto", nil, "Take the Deeprun Tram from Stormwind to Ironforge. Use Next when you arrive."),
     finish(1457, ifg("Roetten Stonehammer", 69.95, 21.26), "Give Karnitol's satchel to Roetten Stonehammer in the Hall of Explorers."),
     accept(525, ifg("Prospector Stormpike", 74.64, 11.74), "Prospector Stormpike has decoded the Syndicate letter. Take it to Southshore."),
-    action("buy", ifg("Auctioneer Lympkin", 23.8, 71.8), "Buy an Elixir of Water Breathing at the Auction House (an alchemist can make one). Faldir's Cove's wreck quest is under water."),
+    action("collect", ifg("Auctioneer Lympkin", 25.8, 75.5),
+      "Without a water breathing spell, buy an Elixir of Water Breathing at the Auction House (an alchemist can make one): Faldir's Cove's wrecks lie deep. Use Next to skip.",
+      { item = 5996, count = 1, name = "Elixir of Water Breathing" }),
+    B.optional(action("collect", ifg("Auctioneer Lympkin", 25.8, 75.5),
+      "If one is cheap, buy a Moonsteel Broadsword too: Swamp Eye Jarl in Dustwallow has a quest for it at 40. Use Next to skip.",
+      { item = 3853, count = 1, name = "Moonsteel Broadsword" })),
     taxi("fly", B.at("Cedrik Prose", 45.7, 46.1, 1417), "Refuge Pointe, Arathi", "Fly to Refuge Pointe."),
     accept(691, kryten, "Apprentice Kryten wants troll goods for Skuerto's research."),
     accept(685, ar("Wanted Board", 46.04, 47.76), "Read the wanted board: Otto and Lord Falconcrest hide in Stromgarde."),
@@ -1103,6 +1259,7 @@ do
     finish(657, kinelory), accept(660, kinelory),
     objective(660, kinelory, "Protect Kinelory while she raids the Hammerfall supply. Let her pull ahead and stay close.", "Kinelory protected"),
     finish(660, quae), accept(661, quae, "Keep Quae's report for Phin Odelic in Southshore."),
+    finish(635, ar("Shards of Myzrael", 62.5, 33.73), "Ride north to the glowing shards beside the Drywhisker Gorge path: they are the crystal from your Pendant of Myzrael."),
     accept(642, ar("Shards of Myzrael", 62.5, 33.73), "Ride north to the glowing shards beside the Drywhisker Gorge path."),
     objective(642, ar(nil, 80.0, 35.0), "Kill Drywhisker kobolds in the gorge for Motes of Myzrael.", "12 Motes of Myzrael"),
     finish(642, shards, "Bring the motes to the Iridescent Shards deep in the gorge."), accept(651, shards),
@@ -1115,15 +1272,19 @@ do
     finish(691, kryten), accept(693, skuerto),
     objective(693, ar("Kor'gresh Coldrage", 54.8, 81.9), "Kor'gresh Coldrage, an ogre mage, holds Trelane's wand in the cave south of Witherbark.",
       "Trelane's Wand of Invocation"),
+    withItem(213422, accept(79624, ar(nil, 53.8, 74.6), "If an Illegible Recipe dropped from the Boulderfist ogres by the cave, use it from your bags: an ogre who can read waits nearby.")),
+    note(finish(79624, ar("Skonk", 57.7, 74.7), "Follow the path east of the ogre camp to Skonk and give him the recipe."),
+      "Skonk and the recipe's drop have no QuestieDB record; the spots come from a published guide."),
     finish(693, skuerto), accept(694, skuerto),
     action("goto", ar(nil, 25.5, 30.1), "Ride northwest past Northfold Manor."),
     B.objectivePart(651, 1, ar("Stone of West Binding", 25.5, 30.1), "Take the Burning Key from the Stone of West Binding.", "Burning Key"),
-    objective(694, ar(nil, 20.2, 67.2), "Go south to the Boulderfist ogres near Stromgarde. A Boulderfist Shaman carries the Azure Agate.", "Azure Agate"),
-    note(objective(685, ar(nil, 26.0, 65.7), "Otto and Lord Falconcrest hide in the Stromgarde ruins with the Syndicate. Bring a partner.",
-      "Otto's Head", "Falconcrest's Head"), "Both may be guarded or elite; check in game."),
+    objective(694, ar(nil, 20.2, 67.2), "Go south to the Boulderfist ogres near Stromgarde. The Boulderfist Shamans are level 39 elites: pull one at a time until the Azure Agate drops.",
+      "Azure Agate"),
+    objective(685, ar(nil, 26.0, 65.7), "Otto and Lord Falconcrest, both elites, hide in the Stromgarde ruins with the Syndicate. Bring a group.",
+      "Otto's Head", "Falconcrest's Head"),
     finish(651, inner, "Bring the three keys to the Stone of Inner Binding on the hill east of Stromgarde."), accept(652, inner),
-    note(objective(652, ar(nil, 40.0, 70.0), "Hunt down Fozruk, the giant that wanders the hills south of the stone, for the Rod of Order.", "Rod of Order"),
-      "Fozruk walks a long path; check his level and route in game."),
+    note(objective(652, ar(nil, 44.5, 58.8), "Fozruk, a level 42 elite giant with a kobold escort, walks a long loop around Arathi. Wait for him on his path east of the stone and pull him away from the kobolds.",
+      "Rod of Order"), "Patrol line from a published guide; QuestieDB spawns him at 67.7, 37.6 near the Stone of East Binding."),
     finish(652, keystone, "Place the rod at the Keystone beside the stone."), accept(653, keystone, "Keep the message for Gerrig Bonegrip in Ironforge."),
     accept(663, ar("Lolo the Lookout", 31.78, 82.68), "Follow the coast south to Faldir's Cove. Lolo watches from the cliff."),
     finish(663, obreen), accept(662, nilzlix), accept(664, steelgut), accept(665, ar("Professor Phizzlethorpe", 33.87, 80.55)),
@@ -1136,8 +1297,9 @@ do
       662, 666),
     along(objective(666, ar(nil, 22.7, 88.6), "Wear the Goggles of Gem Hunting and gather Elven Gems from the clams on the reef.", "10 Elven Gems"), 662, 664),
     finish(662, nilzlix), finish(664, steelgut), finish(666, draxlegauge), accept(668, draxlegauge), finish(668, obreen),
+    accept(669, obreen, "Shakes O'Breen sends a sample gem to Fleet Master Seahorn in Booty Bay. Keep it: you are back there at 41."),
     finish(694, kryten), accept(695, kryten), finish(695, skuerto), finish(685, nials),
-    action("goto", hb(nil, 82.4, 39.6), "Ride west through Thoradin's Wall into Hillsbrad and on to Southshore."),
+    taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly from Refuge Pointe to Southshore."),
     finish(661, hb("Phin Odelic", 50.35, 59.05)),
     finish(1052, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh the Devout stands near the inn."),
     forDungeon(accept(1053, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh's next task is in the Scarlet Monastery: its four leaders."),
@@ -1146,7 +1308,9 @@ do
     accept(500, redpath), accept(540, dibbs),
     action("sethearth", anderson, "Bind at the Southshore inn.", southshore),
     finish(602, al("Archmage Ansirem Runeweaver", 14.2, 59.7), "Ride north and west into Alterac to Archmage Ansirem at Dalaran's walls."),
-    along(objective(543, al(nil, 40.4, 47.1), "Ride east to the Ruins of Alterac. The Perenolde Tiara is in a chest inside the ruined keep.", "Perenolde Tiara"), 540),
+    accept(603, al("Archmage Ansirem Runeweaver", 14.2, 59.7), "Ansirem's key goes to Catelyn the Blade in Booty Bay. Keep it for your next Stranglethorn visit."),
+    along(objective(543, al("Grel'borg the Miser", 35.6, 54.4), "Ride east to the Ruins of Alterac. Grel'borg the Miser, a level 39 elite ogre, walks the road between here and the ruined keep with the Perenolde Tiara. Pull him alone.",
+      "Perenolde Tiara"), 540),
     along(objective(540, al(nil, 38.4, 46.4), "Pick up Recovered Tomes from the Syndicate and ogres in the ruins. The Worn Leather Book is in the keep.",
       "5 Recovered Tomes", "Worn Leather Book"), 543, 500),
     along(objective(500, al(nil, 48.5, 40.7), "Kill Crushridge ogres east of the ruins for Dirty Knucklebones.", "9 Dirty Knucklebones"), 540),
@@ -1159,7 +1323,8 @@ do
     taxi("getfp", on.hinterlands("Guthrum Thunderfist", 11.1, 46.2), "Aerie Peak, The Hinterlands", "Learn the Aerie Peak flight path."),
     finish(1450, on.hinterlands("Gryphon Master Talonaxe", 9.75, 44.47), "Gryphon Master Talonaxe is inside the aviary."),
     accept(1451, on.hinterlands("Gryphon Master Talonaxe", 9.75, 44.47)),
-    finish(1451, on.hinterlands("Rhapsody Shindigger", 26.94, 48.59), "Follow the road east to Rhapsody Shindigger's camp. His kocktail needs Kalimdor beasts: save it for later."),
+    finish(1451, on.hinterlands("Rhapsody Shindigger", 26.94, 48.59), "Follow the road east to Rhapsody Shindigger's camp."),
+    accept(1452, on.hinterlands("Rhapsody Shindigger", 26.94, 48.59), "His kocktail needs gizzards and livers from Tanaris and Feralas beasts. Keep it for the 40s."),
     action("hearth", anderson, "Hearth to Southshore.", southshore),
     finish(500, redpath), finish(512, maleb), finish(537, maleb),
     finish(551, dibbs), accept(554, dibbs), finish(540, dibbs), accept(542, dibbs),
@@ -1184,12 +1349,18 @@ do
   local myriam = on.barrens("Myriam Moonsinger", 49.01, 94.94)
   local rfd = "dungeon-razorfen-downs"
 
+  q(1260, "Morgan Stern", 38, 33)
   q(1204, "Mudrock Soup and Bugs", 38, 33, 1260)
   q(1206, "Jarl Needs Eyes", 35, 30, 1218)
   q(1222, "Stinky's Escape", 37, 30)
   q(1177, "Hungry!", 36, 32)
   q(6626, "A Host of Evil", 35, 28)
   q(3636, "Bring the Light", 42, 39)
+  q(1258, "... and Bugs", 40, 33, 1204)
+  -- Jarl's blade quest shows only while a Moonsteel Broadsword (a blacksmith's sword, sold at the
+  -- Auction House) is in your bags.
+  q(1203, "Jarl Needs a Blade", 35, 30, 1206)
+  quest[1203].startItem = 3853
 
   section("dustwallow-40", "Dustwallow Marsh and Razorfen Downs", M.dustwallow, 40, 41, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
@@ -1197,6 +1368,7 @@ do
   }, {
     forDungeon(accept(3636, at("Archbishop Benedictus", 50.31, 45.47, M.stormwind),
       "Archbishop Benedictus, in the Cathedral of Light, wants Amnennar the Coldbringer of Razorfen Downs destroyed. Take it now if you might run the dungeon: it is only offered here."), rfd),
+    accept(1260, at("Angus Stern", 51.79, 93.64, M.stormwind), "Angus Stern, by the Mage Quarter's south gate, has a letter for his brother in Theramore."),
     taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
     action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
       { name = "Menethil Harbor - Theramore Isle" }),
@@ -1210,15 +1382,20 @@ do
     along(objective(1204, dm(nil, 60.2, 17.0), "Kill Mudrock turtles along the north shore for forked tongues.", "8 Forked Mudrock Tongues"), 1177),
     along(objective(1177, dm(nil, 57.0, 13.0), "Kill Mirefin murlocs on the same shore for their heads.", "8 Mirefin Heads"), 1204),
     finish(1206, jarl),
+    B.optional(accept(1203, jarl, "If you carry a Moonsteel Broadsword, Jarl wants it for one more quest.")),
+    B.optional(finish(1203, jarl, "Give Jarl the broadsword.")),
     action("hearth", janene, "Hearth to Theramore.", { bind = "Theramore Isle" }),
-    finish(1204, stern), finish(1222, stern),
+    finish(1204, stern), accept(1258, stern, "Morgan Stern's soup also wants crawler legs from the Swamp of Sorrows coast. Keep it for your next Swamp visit."),
+    finish(1222, stern),
     action("goto", mudcrush, "Ride west along the road toward the Barrens."),
     finish(1177, mudcrush, "Hand Mudcrush his murloc heads on the way past."),
     action("goto", myriam, "Take the road into the Barrens and ride south past Camp Taurajo's outskirts to the thorny mounds of Razorfen Downs."),
-    accept(6626, myriam, "Myriam Moonsinger waits outside Razorfen Downs."),
+    withGuide("dungeon-razorfen-downs", accept(6626, myriam, "Myriam Moonsinger waits outside Razorfen Downs.")),
     objective(6626, on.barrens(nil, 48.2, 92.3), "Kill Razorfen Battleguards, Thornweavers and Death's Head Cultists around the dungeon's entrance.",
       "8 Razorfen Battleguards", "8 Razorfen Thornweavers", "8 Death's Head Cultists"),
     finish(6626, myriam),
+    action("hearth", janene, "Hearth to Theramore: the next chapter flies on to Desolace from there. If it isn't ready, take the Great Lift into Thousand Needles and ride west to Thalanaar.",
+      { bind = "Theramore Isle" }),
   }, { suggest = { "riverglades-shroud" } })
 end
 
@@ -1243,7 +1420,8 @@ do
     action("goto", st(nil, 38.0, 3.5), "Climb to the Rebel Camp."),
     finish(215, doren), accept(203, yohwa), accept(204, yohwa), accept(200, doren),
     accept(583, st("Barnil Stonepot", 35.7, 10.8), "Walk down to Nesingwary's Expedition."),
-    finish(583, hemet), accept(185, ajeck), accept(190, erlgadin), accept(194, hemet),
+    finish(583, hemet), B.optional(finish(5762, hemet, "If you carry Kravel's crate from the Shimmering Flats, give it to Hemet.")),
+    accept(185, ajeck), accept(190, erlgadin), accept(194, hemet),
     along(objective(185, st(nil, 35.4, 12.5), "Hunt Young Stranglethorn Tigers around the camp.", "10 Young Stranglethorn Tigers"), 190),
     along(objective(190, st(nil, 41.5, 12.0), "Young Panthers prowl east of the camp, across the road.", "10 Young Panthers"), 185),
     finish(185, ajeck), finish(190, erlgadin), accept(186, ajeck), accept(191, erlgadin),
@@ -1298,8 +1476,11 @@ do
     action("goto", dm("Shady Rest Inn", 29.7, 47.8), "Follow the road southwest to the burned Shady Rest Inn."),
     accept(1284, dm("Suspicious Hoofprint", 29.7, 47.64)), accept(1252, dm("Theramore Guard Badge", 29.83, 48.24)),
     accept(1253, dm("Black Shield", 29.63, 48.62)),
-    objective(1177, dm(nil, 57.0, 13.0), "Ride to the north shore and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
+    action("goto", dm(nil, 57.0, 13.0), "Ride back north-east across the marsh to the north shore."),
+    objective(1177, dm(nil, 57.0, 13.0), "Kill Mirefin murlocs along the shore for their heads.", "8 Mirefin Heads"),
     finish(1206, jarl),
+    B.optional(accept(1203, jarl, "If you carry a Moonsteel Broadsword, Jarl wants it for one more quest.")),
+    B.optional(finish(1203, jarl, "Give Jarl the broadsword.")),
     action("hearth", janene, "Hearth to Theramore.", theramore),
     finish(1222, dm("Morgan Stern", 66.34, 45.47), "Stinky's escape ends with Morgan Stern in the inn's kitchen."),
     finish(1219, dm("Theramore Lieutenant", 67.07, 53.22)), accept(1220, dm("Theramore Lieutenant", 67.07, 53.22)),

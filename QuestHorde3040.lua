@@ -925,10 +925,12 @@ do
   need(678, "Call to Arms", 38, 30, 677)
   need(679, "Call to Arms", 40, 30, 678)
   need(680, "The Real Threat", 40, 30, 678)
+  B.elite(680, "Or'Kalar")
   need(701, "Guile of the Raptor", 37, 29, 675)
   need(702, "Guile of the Raptor", 37, 29, 701)
   need(847, "Guile of the Raptor", 37, 29, 702)
   need(673, "Foul Magics", 40, 35, 671)
+  B.elite(673, "Marez Cowl")
   need(92519, "Ward Restocking", 36, nil, 97539, true)
   -- Zinge's two errands stay inside the Undercity; the Faldir's Cove gem goes to Booty Bay in the forties.
   need(232, "Errand for Apothecary Zinge", 45, 38)
@@ -987,7 +989,7 @@ do
     action("sethearth", P.adegwa, "Bind at the Hammerfall inn.", P.hammerfall),
     finish(638, P.zengu), accept(639, P.zengu),
     accept(678, P.drumFel), accept(701, P.torgan),
-    optional(accept(673, P.torgan, "Tor'gan also wants an orb from Marez Cowl, a level 40 elite mage in Stromgarde. Take it if you have a group.")),
+    accept(673, P.torgan, "Tor'gan also wants an orb from Marez Cowl, a level 40 elite mage in Stromgarde."),
     accept(92519, P.victor),
     accept(642, ar("Shards of Myzrael", 62.5, 33.73), "Ride a short way west of Hammerfall to the glowing shards by the road."),
     objective(642, ar(nil, 78.5, 35.8), "Ride east into Drywhisker Gorge. Kill the kobolds for Motes of Myzrael.", "12 Motes of Myzrael"),
@@ -1007,17 +1009,17 @@ do
     action("hearth", P.adegwa, "Hearth to Hammerfall.", P.hammerfall),
     finish(701, P.torgan), accept(702, P.torgan), finish(702, P.gormul), accept(847, P.gormul), finish(847, P.torgan),
     finish(678, P.drumFel), accept(679, P.drumFel),
-    optional(accept(680, korinFel, "Korin Fel wants Or'Kalar, the level 40 elite who leads the ogres in western Stromgarde. Take it if you have a group.")),
+    accept(680, korinFel, "Korin Fel wants Or'Kalar, the level 40 elite who leads the ogres in western Stromgarde."),
     finish(92519, P.victor),
     action("goto", ar(nil, 25.5, 30.1), "Ride west across the highlands to the Stone of West Binding near Northfold."),
     part(651, 1, ar("Stone of West Binding", 25.5, 30.1), "Take the Burning Key at the Stone of West Binding. The Burning Exiles around it may carry it too.", "Burning Key"),
     finish(651, ar("Stone of Inner Binding", 36.23, 57.38), "Ride south to the Stone of Inner Binding on the hill east of Stromgarde and set the three keys in it."),
     action("goto", stromgarde, "Ride west into the Stromgarde ruins."),
     along(objective(639, stromgarde, "Kill Syndicate Prowlers, Conjurors and Magi in the ruins until one drops the Sigil of Strom.", "Sigil of Strom"), 673),
-    optional(note(objective(673, ar("Marez Cowl", 29.6, 63.0), "Marez Cowl, a level 40 elite Syndicate mage, carries the Befouled Bloodstone Orb.", "Befouled Bloodstone Orb"),
-      "Level 40 elite; check her guards in game.")),
+    note(objective(673, ar("Marez Cowl", 29.6, 63.0), "Marez Cowl, a level 40 elite Syndicate mage, carries the Befouled Bloodstone Orb.", "Befouled Bloodstone Orb"),
+      "Level 40 elite; check her guards in game."),
     along(objective(679, ar(nil, 19.0, 67.4), "Ride to the ogres in the western ruins. Kill Boulderfist Shamans and Lords.", "7 Boulderfist Shaman", "3 Boulderfist Lords"), 680),
-    optional(objective(680, ar("Or'Kalar", 18.9, 67.1), "Or'Kalar, a level 40 elite, leads the ogres here. Kill him for his head.", "Or'Kalar's Head")),
+    objective(680, ar("Or'Kalar", 18.9, 67.1), "Or'Kalar, a level 40 elite, leads the ogres here. Kill him for his head.", "Or'Kalar's Head"),
     accept(663, ar("Lolo the Lookout", 31.78, 82.68), "Ride south to Faldir's Cove. Lolo the Lookout stands on the cliff above it."),
     finish(663, obreen), accept(662, nilzlix), accept(664, steelgut), accept(665, phizzlethorpe),
     objective(665, phizzlethorpe, "Escort Professor Phizzlethorpe to the cave on the shore. Fight off the surge elemental there, then walk him back.", "Phizzlethorpe escorted"),
@@ -1029,7 +1031,7 @@ do
     finish(662, nilzlix), finish(664, steelgut), finish(666, draxlegauge), accept(668, draxlegauge), finish(668, obreen),
     accept(669, obreen, "Shakes O'Breen sends a sample gem to Fleet Master Seahorn in Booty Bay. Keep it for your next Booty Bay visit, in the forties."),
     action("hearth", P.adegwa, "Hearth to Hammerfall.", P.hammerfall),
-    finish(639, P.zengu), optional(finish(673, P.torgan)), finish(679, P.drumFel), optional(finish(680, korinFel)),
+    finish(639, P.zengu), finish(673, P.torgan), finish(679, P.drumFel), finish(680, korinFel),
   }, P.ucTrainers))
 end
 

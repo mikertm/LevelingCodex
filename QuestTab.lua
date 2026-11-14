@@ -511,6 +511,14 @@ local function renderStepView(current, selected, y)
       "The run stays out of your route. Guides > Dungeons can plan it later.")
     y = y + 34
   end
+  -- Elite quest ahead: the same choice as the step window's Take it / Skip (controller players act here).
+  if current and current.step.type == "elite" then
+    U.btn("Take it", 0, y, half, function() ns.chooseEliteQuest(current.step.eliteQuest, true) end, true,
+      "The quest stays on your route. Bring a group or a strong partner for " .. (current.step.elite or "the elite") .. ".")
+    U.btn("Skip it", half + 8, y, half, function() ns.moveQuestStep(false) end, false,
+      "The guide passes this quest and the quests that need it. Previous step asks again.")
+    y = y + 34
+  end
   local run = Q.readyRun()
   if run then
     U.btn("Run " .. run.title, 0, y, W, function()
@@ -588,6 +596,11 @@ local function renderSetup(y)
   y = y + 6
   label("Dungeons")
   y = y + dungeonChoices(x, y, w) + 10
+  label("Elite quests")
+  y = y + U.segments(x, y, w, Q.ELITE_LABELS, Q.eliteModeIndex(), function(i)
+    Q.setEliteMode(i)
+    ns.updateQuestSettings()
+  end, Q.ELITE_TIPS) + 10
   label("Helpers")
   local function toggle(key) return function() db[key] = not db[key]; U.refresh() end end
   U.check("Auto-accept", x, y - 1, db.questAutoAccept, toggle("questAutoAccept"),
@@ -668,8 +681,11 @@ local function render()
   U.btn("Previous step", 0, y, quarter, function() ns.moveQuestStep(true) end)
   -- On a Dungeon ahead step, Next leaves the run out, so it says Skip (like the step window's).
   local choosing = current and current.step.type == "plan"
-  U.btn(choosing and "Skip run" or "Next step", quarter + 8, y, quarter, function() ns.moveQuestStep(false) end,
-    false, choosing and "The run stays out of your route. Guides > Dungeons can plan it later." or nil)
+  local eliteAsk = current and current.step.type == "elite"
+  U.btn(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", quarter + 8, y, quarter,
+    function() ns.moveQuestStep(false) end, false,
+    choosing and "The run stays out of your route. Guides > Dungeons can plan it later."
+    or eliteAsk and "The guide passes this elite quest and the quests that need it." or nil)
   U.btn("Show on map", 2 * (quarter + 8), y, quarter, ns.showQuestStepOnMap, false,
     "Open the world map where the current step is.")
   local viewer = _G.LevelingCodexQuestViewer

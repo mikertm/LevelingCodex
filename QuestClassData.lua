@@ -1908,9 +1908,9 @@ do
   end
 
   -- Alliance, Eastern Kingdoms
-  inline("coldridge", "complete", 218, {
+  inline("coldridge", "complete", 3361, {
     part(94373, 1, at(nil, 27.5, 80.9, m.dunMorogh),
-      "Shamans with Call of Earth: the Frostmane Troll Whelps and Novices in this cave also drop Iceclaw Bear Pendants. Collect two on your way back out to Grelin.",
+      "Shamans with Call of Earth: the Frostmane Troll Whelps and Novices in this cave also drop Iceclaw Bear Pendants. Collect two on your way in to Grik'nir.",
       "2 Iceclaw Bear Pendants"),
   })
   inline("loch-modan", "turnin", 267, {
@@ -1957,9 +1957,9 @@ do
   })
 
   -- Alliance, Kalimdor (and the Westfall coast for Druids)
-  inline("darkshore", "complete", 87760, {
+  inline("darkshore", "turnin", 2078, {
     stop(272, at("Strange Lockbox", 48.87, 11.32, m.darkshore),
-      "Druids with Trial of the Sea Lion: swim on past the rock spire to the Strange Lockbox between the rock pillars to the north for the Half Pendant of Aquatic Agility."),
+      "Druids with Trial of the Sea Lion: swim west along the shore to the Strange Lockbox between the rock pillars north of the rock spire for the Half Pendant of Aquatic Agility, then go on to the spire."),
   })
   inline("westfall", "turnin", 104, {
     stop(272, at("Strange Lockbox", 17.94, 33.18, m.westfall),
@@ -1988,9 +1988,9 @@ do
       "Rogues with Destiny Calls: Sethir the Ancient is just north of the Oracle Glade, a short detour on the way to Wellspring Lake. Approach in Stealth and pickpocket Sethir's Journal.",
       "Sethir's Journal"),
   })
-  inline("ashenvale-early", "complete", 970, {
+  inline("ashenvale-early", "accept", 1010, {
     part(1738, 1, at("Heartswood", 31.53, 31.52, 1440),
-      "Warlocks with Heartswood: the Heartswood lies at the roots of the tree in these same ruins, among the Dark Strand Excavators. Loot it before you move on to Bathran's Haunt.",
+      "Warlocks with Heartswood: the Heartswood lies at the roots of the tree in the ruins north-east of the post, among the Dark Strand Excavators. Loot it as you reach the ruins.",
       "Heartswood"),
   })
 
@@ -2034,6 +2034,78 @@ do
     stop(30, at("Strange Lockbox", 29.6, 29.2, m.silverpine),
       "Druids with Trial of the Sea Lion: before heading south, go north-west from the graveyard to the coast and swim out to the bubbling fissure. Loot the Half Pendant of Aquatic Endurance from the Strange Lockbox beside it."),
   })
+end
+
+-- Class objectives the Alliance 30-60 route passes anyway (the Horde block in QuestHordeClass3060.lua
+-- does the same): copies of the class guides' objective steps, shown only to that class and only
+-- while the quest is in the log (`logOnly`), after the closest step on the same map in that chapter,
+-- or before it when that saves 50 yd or more. List: tools/audits/2026-11-14-alliance-1-60-audit.md.
+do
+  local sections = {}
+  for _, s in ipairs(route.sections) do sections[s.id] = s end
+  local plural = { WARRIOR = "Warriors", HUNTER = "Hunters", ROGUE = "Rogues", PRIEST = "Priests",
+    SHAMAN = "Shamans", MAGE = "Mages", WARLOCK = "Warlocks", DRUID = "Druids", PALADIN = "Paladins" }
+  local function classStep(quest, index)
+    for _, s in ipairs(route.sections) do
+      if s.side and s.class then
+        for _, step in ipairs(s.steps) do
+          if step.type == "complete" and step.quest == quest and step.objectiveIndex == index and step.map then
+            return step
+          end
+        end
+      end
+    end
+    error("Alliance class objectives: no class step for " .. quest .. " objective " .. tostring(index))
+  end
+  local function passing(routeId, quest, index)
+    local found = classStep(quest, index)
+    local section = assert(sections[routeId], "Alliance class objectives: no section " .. routeId)
+    local best, bestD
+    for i, step in ipairs(section.steps) do
+      if step.map == found.map and step.x and not step.logOnly then
+        local d = (step.x - found.x) ^ 2 + (step.y - found.y) ^ 2
+        if not bestD or d < bestD then best, bestD = i, d end
+      end
+    end
+    assert(best, "Alliance class objectives: " .. routeId .. " never visits that map")
+    local size = route.extents[found.map] or { 100, 100 }
+    local function yards(a, b)
+      if not (a and b and a.map == found.map and b.map == found.map and a.x and b.x) then return nil end
+      return math.sqrt(((a.x - b.x) * size[1] / 100) ^ 2 + ((a.y - b.y) * size[2] / 100) ^ 2)
+    end
+    local function detour(prev, nxt)
+      local inA, outB, direct = yards(prev, found), yards(found, nxt), yards(prev, nxt)
+      return (inA or 0) + (outB or 0) - ((inA and outB and direct) or 0)
+    end
+    -- The route's own neighbours: another class's objective placed here earlier doesn't count.
+    local function neighbour(i, d)
+      i = i + d
+      while section.steps[i] and section.steps[i].logOnly do i = i + d end
+      return section.steps[i], i
+    end
+    local here = section.steps[best]
+    local prev, prevAt = neighbour(best, -1)
+    if detour(prev, here) + 50 < detour(here, (neighbour(best, 1))) then best = prevAt end
+    local copy = {}
+    for k, v in pairs(found) do copy[k] = v end
+    copy.logOnly, copy.phase, copy.guide, copy.sticky = true, nil, nil, nil
+    local class = type(found.class) == "string" and found.class or nil
+    copy.text = (class and (plural[class] .. " with " .. found.name .. ": ") or "") .. found.text
+    table.insert(section.steps, best + 1, copy)
+  end
+  passing("stv-36", 1712, 2)           -- Warrior: Bloodscalp tusks for Cyclonian
+  passing("desolace-40", 1954, nil)   -- Mage: the Infernal Orb at Mannoroc Coven
+  passing("desolace-40", 1799, nil)   -- Warlock: Fragments of the Orb of Orahil
+  passing("desolace-40", 4962, nil)   -- Warlock: the Felhas Ruby at Mannoroc Coven
+  passing("blasted-51", 8423, nil)     -- Warrior: Helboars
+  passing("blasted-51", 8424, nil)     -- Warrior: the Shadowsworn
+  passing("azshara-53", 8153, nil)     -- Hunter: courser antlers
+  passing("azshara-53", 8255, nil)     -- Priest: courser glands
+  passing("azshara-53", 8251, nil)     -- Mage: blood elf dust
+  passing("azshara-53", 8252, nil)     -- Mage: siren coral
+  passing("azshara-53", 8234, nil)     -- Rogue: the Sealed Azure Bag
+  passing("azshara-53", 8235, nil)     -- Rogue: encoded fragments
+  passing("plaguelands-57", 8256, nil) -- Priest: Ichor of Undeath (after Azshara's glands)
 end
 
 -- What finishing a special chain or a class guide gives you, shown under its title in Quests >

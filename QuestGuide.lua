@@ -331,6 +331,8 @@ local function makeViewer()
     local row = Q.current()
     if row and row.step.type == "plan" then
       ns.planQuestRun(row.step.dungeon, true)
+    elseif row and row.step.type == "elite" then
+      ns.chooseEliteQuest(row.step.eliteQuest, true)
     elseif row and row.section.side then
       Q.returnToRoute()
       quiet = true
@@ -735,7 +737,7 @@ end
 local ACTION = { accept = "Accept", complete = "Complete", turnin = "Turn in", ["goto"] = "Travel",
   fly = "Fly", getfp = "Flight path", sethearth = "Bind hearthstone", hearth = "Hearth",
   boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note",
-  abandon = "Abandon", collect = "Collect", plan = "Dungeon ahead", boss = "Boss" }
+  abandon = "Abandon", collect = "Collect", plan = "Dungeon ahead", boss = "Boss", elite = "Elite quest" }
 
 function Q.label(step)
   if step.type == "hearth" and step.bind then return "Return to " .. step.bind end
@@ -909,6 +911,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   local out = {}
   local function add(block) out[#out + 1] = block end
   if step.type == "plan" then add({ kind = "text", text = Q.planText(step) }); return out end
+  if step.type == "elite" then add({ kind = "text", text = Q.eliteText(step) }); return out end
   local _, _, _, level = Q.rows()
   if requiredFor then add({ kind = "note", tone = "warn", text = "Required for " .. requiredFor.name .. "." }) end
   if step.type == "accept" and not Q.log(step.quest) then
@@ -1778,8 +1781,9 @@ function ns.questRefresh()
     seenCounts = newCounts
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
-    nextButton.codexLabel = choosing and "Skip" or "Next"
-    nextButton:SetLabel(choosing and "Skip run" or "Next step", true)
+    local eliteAsk = row and row.step.type == "elite"
+    nextButton.codexLabel = (choosing or eliteAsk) and "Skip" or "Next"
+    nextButton:SetLabel(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", true)
     local returnToRoute = sec.side
     if run and not announced[run.id] then
       announced[run.id] = true
@@ -1788,10 +1792,10 @@ function ns.questRefresh()
     end
     local related = Q.relatedGuide()
     local setup = ns.questSetupDue()
-    local offer = choosing or returnToRoute or run or suggestion or related or setup
+    local offer = eliteAsk or choosing or returnToRoute or run or suggestion or related or setup
     suggestionButton:SetShown(offer ~= nil and offer ~= false)
     if offer then
-      suggestionButton.codexLabel = choosing and ("Plan " .. row.step.name)
+      suggestionButton.codexLabel = eliteAsk and "Take it" or choosing and ("Plan " .. row.step.name)
         or returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
@@ -1889,6 +1893,19 @@ end
 function ns.updateQuestSettings()
   Q.update()
   ns.questRefresh()
+end
+
+-- Elite quest ahead: Take it (the quest stays on the route) or Skip (it passes, with the quests that
+-- need it). The step window's Take it and Skip, and the Quests tab's buttons, come here.
+function ns.chooseEliteQuest(id, take)
+  if not id then return end
+  local name = Q.questName(id)
+  Q.setElite(id, take)
+  Q.leaveReview()
+  if not take then
+    ns.say(Q.plain((name or "The elite quest") .. " is skipped. Back asks again."))
+  end
+  ns.updateQuestSettings()
 end
 
 -- Dungeon ahead: Plan <dungeon> (its quests join the route) or Skip.

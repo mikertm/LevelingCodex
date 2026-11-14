@@ -226,6 +226,7 @@ ns.questMobs = {
   [574] = { "Kurzen Commando", "Kurzen Headshrinker" },
   [575] = { "River Crocolisk" },
   [576] = { "Bloodsail Sea Dog", "Bloodsail Elder Magus", "Bloodsail Warlock", "Bloodsail Swashbuckler", "Bloodsail Deckhand", "Bloodsail Raider" },
+  [577] = { "Snapjaw Crocolisk" },
   [581] = { "Bloodscalp Mystic", "Bloodscalp Scout", "Bloodscalp Headhunter", "Bloodscalp Berserker", "Bloodscalp Hunter", "Bloodscalp Witch Doctor" },
   [582] = { "Bloodscalp Headhunter" },
   [584] = { "Gan'zulah", "Nezzliok the Dire" },

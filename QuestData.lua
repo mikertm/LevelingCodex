@@ -59,6 +59,13 @@ local function q(id, name, level, min, prerequisite, forever, class)
     forever = forever, class = class }
 end
 
+-- A quest whose objective needs an elite killed: `elite` = its name, on every step of the quest
+-- (call it after q() and before the steps are built). The route asks at the pickup whether to take
+-- it (Settings > Elite quests); a skip passes the quest and every quest that needs it.
+local function elite(id, name)
+  quest[id].elite = name
+end
+
 q(783, "A Threat Within", 1, 1)
 q(7, "Kobold Camp Cleanup", 2, 1, 783)
 q(5261, "Eagan Peltskinner", 2, 1, 783)
@@ -126,6 +133,7 @@ q(83, "Red Linen Goods", 9, 4)
 q(239, "Westbrook Garrison Needs Help!", 10, 6, 76)
 q(11, "Riverpaw Gnoll Bounty", 10, 6, 239)
 q(176, 'WANTED: "Hogger"', 11, 5)
+elite(176, "Hogger")
 q(109, "Report to Gryan Stoutmantle", 10, 9)
 -- Camping 101 profession intros and the skinning errand: optional (Settings > Show optional quests).
 q(97924, "Camping 101: Skinning", 6, 4, 95998, true)
@@ -598,6 +606,7 @@ quest[637].startItem = 4433
 q(98208, "Bloom of the Heavens", 29, nil, nil, true)
 q(98209, "Bloom of the Heavens", 29, nil, nil, true)
 q(98291, "Death to the Dragonmaw", 30, nil, nil, true)
+elite(98291, "the Dragonmaw at Dragonmaw Retreat")
 q(98293, "Forced Disarmament", 30, nil, nil, true)
 -- Route audit pass 2026-11-12 (tools/audits/2026-11-12-alliance-duskwood-wetlands.md).
 -- Einar Stonegrip stands by the road just north of Howin; the bundle goes to Halloran in Menethil.
@@ -797,6 +806,8 @@ local lakeshire = {
   objectiveAt(97237, sw(nil, 76.0, 30.5), "Pick the four books off the shelves around the library rooms.",
     "Trollbane Conquests", "Field Accounts of Horde Razings", "The Forsaken Ally", "Cycles of Morality"),
   finish(97237, sw("Roy Lewells", 38.84, 62.35), "Bring the books back to Roy in the park."),
+  action("buy", sw("Felicia Gump", 69.3, 71.3), "If you cook (skill 50 or more), buy Stormwind Seasoning Herbs from Felicia Gump beside the gryphons. Chef Grual in Darkshire wants them with his wolf flanks.",
+    { item = 2665, count = 1, optional = true }),
   taxi("getfp", dungar, "Stormwind, Elwynn", "Learn the Stormwind flight path at the gryphon platform if needed."),
   taxi("fly", ariena, "Lakeshire, Redridge", "Fly or hearth back to Lakeshire with the letters and horseshoes."),
   finish(119, verner), accept(122, verner), accept(124, verner), finish(121, solomon),
@@ -857,7 +868,7 @@ local dusk = {
     "Learn the flight path from Felicia Maline in Darkshire. From Lakeshire, head west to Three Corners, then south into Duskwood and east to town."),
   withGuide("legend-of-stalvan", accept(101, eva)),
   action("sethearth", trelayne, "Bind your hearthstone with Innkeeper Trelayne at the Scarlet Raven Tavern.", darkshireHearth),
-  accept(90, grual, "With Cooking 50 or higher, take Chef Grual's kabob order in the house next to the tavern. Buy Stormwind Seasoning Herbs from a cooking supplies vendor."),
+  accept(90, grual, "With Cooking 50 or higher, take Chef Grual's kabob order in the house next to the tavern. He also wants Stormwind Seasoning Herbs: Felicia Gump in Stormwind sells them, and so does the Auction House."),
   accept(96139, sirra), accept(56, althea),
   accept(163, elaine, "Elaine Carevin stands on the south side of town, on the way to the cemetery."),
   accept(164, elaine), accept(165, elaine),
@@ -1212,6 +1223,7 @@ q(96046, "Camping 101: Mining", 6, 4, 96608, true)
 q(96055, "Camping 101: Herbalism", 6, 4, 96608, true)
 for _, id in ipairs({ 96056, 96046, 96055 }) do quest[id].optional = true end
 q(314, "Protecting the Herd", 12, 6)
+elite(314, "Vagash")
 -- Deeprun Tram errands; Loch Modan reuses 6661 for players arriving by tram.
 q(6661, "Deeprun Rat Roundup", 12, 10)
 q(6662, "Me Brother, Nipsy", 12, 10, 6661)
@@ -2020,6 +2032,7 @@ q(2498, "Return to Denalan", 9, 4, 923)
 q(99050, "The Great Tree Provides", 10, 4, 99047, true)
 q(935, "Crown of the Earth", 11, 1, 7383)
 q(2499, "Oakenscowl", 9, 4, 2498)
+elite(2499, "Oakenscowl")
 q(2399, "The Sprouted Fronds", 10, 4, 931)
 q(99073, "Easing Suffering", 10, 4, 99050, true)
 q(98046, "Crown of the Earth", 11, 1, 935, true)
@@ -2271,7 +2284,7 @@ te.teldrassil = {
   accept(2399, te.t("Sprouted Frond", 60.75, 68.56), "Check the Sprouted Frond in Denalan's planter."),
   finish(2399, te.t("Sprouted Frond", 60.75, 68.56)),
   along(objectiveAt(99050, te.t(nil, 56.0, 66.6), "Loot fronds from Lasher Sproutlings on the way to Oakenscowl's cave.", "6 Dewy Lasher Fronds"), 2499),
-  along(objectiveAt(2499, te.t("Oakenscowl", 53.8, 75.1), "Kill elite Oakenscowl southwest of the lake. Bring help or use Next, then head to Gnarlpine Hold.", "Gargantuan Tumor"), 486),
+  along(objectiveAt(2499, te.t("Oakenscowl", 53.8, 75.1), "Kill elite Oakenscowl southwest of the lake, then head to Gnarlpine Hold.", "Gargantuan Tumor"), 486),
   objectiveAt(486, te.ursal, "At level 11-12, go south-west to Gnarlpine Hold. Clear nearby furbolgs and pull Ursal alone. Use Next if the pull is unsafe.", "Ursal the Mauler slain"),
   action("goto", te.denalan, "Return east along the south side of Lake Al'Ameth to Denalan."),
   finish(2499, te.denalan),
@@ -2684,6 +2697,7 @@ local ds = (function()
   q(968, "The Powers Below", 20, 10)
   quest[968].startItem = 5352
   q(2078, "Gyromast's Revenge", 20, 14, 2098)
+  elite(2078, "The Threshwackonator 4100")
   q(97926, "Making Do", 17, nil, nil, true)
   q(97894, "Business in Auberdine", 17, nil, nil, true)
   quest[97894].optional = true
@@ -3034,7 +3048,7 @@ LevelingCodexQuests = {
 -- Helpers for QuestClassData.lua, which loads next and removes this field.
 LevelingCodexQuests.build = { at = at, q = q, quest = quest, accept = accept, finish = finish,
   objective = objective, objectiveAt = objectiveAt, action = action, taxi = taxi, withItem = withItem,
-  breadcrumb = breadcrumb, withTrainers = withTrainers, forDungeon = forDungeon, along = along,
+  breadcrumb = breadcrumb, elite = elite, withTrainers = withTrainers, forDungeon = forDungeon, along = along,
   withGuide = withGuide, objectivePart = objectivePart, maps = { elwynn = elwynn, stormwind = stormwind,
   westfall = westfall, redridge = redridge, duskwood = duskwood, wetlands = wetlands, lochModan = lochModan,
   ironforge = ironforge, dunMorogh = dunMorogh, teldrassil = te.map, darnassus = te.darnassus,

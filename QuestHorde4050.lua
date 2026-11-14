@@ -617,6 +617,9 @@ do
   need(587, "Up to Snuff", 41, 37, 595)
   need(576, "Keep An Eye Out", 42, 37, 595)
   need(8551, "The Captain's Chest", 47, 40)
+  B.elite(8551, "Gorlash")
+  B.elite(208, "King Bangalash")
+  B.elite(608, "the three Bloodsail captains")
   need(624, "Cortello's Riddle", 43, 35)
   B.quest[624].startItem = B.quest[624].startItem or 4056
   need(580, "Whiskey Slim's Lost Grog", 50, 40)
@@ -635,7 +638,7 @@ do
     objective(586, st(nil, 46.7, 44.0), "Kill Skullsplitter Hunters, Headhunters and Berserkers. Ana'thek the Cruel guards the top of the ruins and wears the armor.",
       "8 Skullsplitter Hunters", "6 Skullsplitter Headhunters", "4 Skullsplitter Berserkers", "Broken Armor of Ana'thek"),
     action("goto", P.hemet, "Ride north to Nesingwary's Expedition."),
-    finish(197, P.hemet), B.optional(accept(208, P.hemet, "Hemet's last target is King Bangalash, an elite white tiger. Take it if you have a partner.")),
+    finish(197, P.hemet), accept(208, P.hemet, "Hemet's last target is King Bangalash, an elite white tiger."),
     action("goto", P.cauldron, "Ride south to Grom'gol."),
     finish(586, P.cauldron), accept(588, P.cauldron),
     finish(588, P.kinweelay), accept(589, P.kinweelay),
@@ -648,7 +651,7 @@ do
     accept(595, crazz, "First Mate Crazz, a few steps from Oglethorpe, wants the cove north of town scouted."),
     finish(95295, ruzzgot, "If you carry Friz Frazzlespark's word from the Riverglades, Caravaneer Ruzzgot is her contact."),
     accept(95322, ruzzgot, "Ruzzgot wants a Bloodsail trunk brought in from outside town."),
-    B.optional(accept(8551, smotts, "Captain Hecklebury Smotts, near the tunnel into town, lost his chest to Gorlash, an elite crocolisk. Take it if you have a partner.")),
+    accept(8551, smotts, "Captain Hecklebury Smotts, near the tunnel into town, lost his chest to Gorlash, an elite crocolisk."),
     finish(595, correspondence, "Walk north out of town to the shore camp and read the Bloodsail papers on the barrel."),
     accept(597, correspondence),
     note(objective(95322, st("Bloodsail Trunk", 29.9, 71.0), "Ruzzgot's Bloodsail trunk sits a little east of the camp. Loot it.", "Bloodsail Trunk"),
@@ -675,12 +678,12 @@ do
     finish(606, shaky, "\"Shaky\" Phillipe waits near the tunnel into town."), accept(607, shaky),
     finish(607, P.mackinley), accept(609, P.mackinley),
     finish(604, P.seahorn),
-    B.optional(accept(608, P.seahorn, "Seahorn wants the three Bloodsail captains dead, elites on their ships. Take it if you have a group.")),
+    accept(608, P.seahorn, "Seahorn wants the three Bloodsail captains dead, elites on their ships."),
     finish(576, dizzy), finish(348, fin),
     taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
     finish(571, P.mokthardin), accept(573, P.mokthardin),
-    B.optional(objective(208, st("King Bangalash", 38.2, 35.6), "King Bangalash, an elite tiger, and his panthers hold the hill south-east of Grom'gol. Kill the panthers first.",
-      "Head of Bangalash")),
+    objective(208, st("King Bangalash", 38.2, 35.6), "King Bangalash, an elite tiger, and his panthers hold the hill south-east of Grom'gol. Kill the panthers first.",
+      "Head of Bangalash"),
     objective(589, st(nil, 43.1, 47.8), "Kill Ironjaw Basilisks around the Crystalvein Mine to the south-east for Pulsing Blue Shards.",
       "3 Pulsing Blue Shard"),
     action("goto", st(nil, 37.0, 54.0), "Ride south-west to the coast across from Zanzil's islands."),
@@ -688,28 +691,28 @@ do
     part(609, 1, st("Maury \"Club Foot\" Wilkins", 35.3, 51.3), "Maury \"Club Foot\" Wilkins camps on the islet to the north-west.", "Maury's Clubbed Foot"),
     part(609, 2, st("Jon-Jon the Crow", 34.9, 51.8), "Jon-Jon the Crow stands beside Maury.", "Jon-Jon's Golden Spyglass"),
     part(609, 3, st("Chucky \"Ten Thumbs\"", 40.0, 58.2), "Chucky \"Ten Thumbs\" is on the big island to the south-east.", "Chucky's Huge Ring"),
-    B.optional(note(objective(8551, st("Gorlash", 37.0, 69.7), "Gorlash, an elite crocolisk, swims in the bay south of the islands. Kill it for Smotts' chest.",
-      "Smotts' Chest"), "QuestieDB Forever ranks Gorlash elite (level 47).")),
+    note(objective(8551, st("Gorlash", 37.0, 69.7), "Gorlash, an elite crocolisk, swims in the bay south of the islands. Kill it for Smotts' chest.",
+      "Smotts' Chest"), "QuestieDB Forever ranks Gorlash elite (level 47)."),
     action("goto", st(nil, 30.5, 88.0), "Ride south along the coast to the Bloodsail ships off Jaguero Isle."),
     withItem(4056, accept(624, st(nil, 30.7, 88.6), "If you found Cortello's Riddle on the cliffs or from a pirate, read it.")),
-    B.optional(note(objective(608, st("Fleet Master Firallon", 30.6, 90.6), "Board the three Bloodsail ships and kill Captain Stillwater, Captain Keelhaul and Fleet Master Firallon.",
-      "Captain Stillwater", "Captain Keelhaul", "Fleet Master Firallon"), "The captains are elite in the classic data; check in game.")),
+    note(objective(608, st("Fleet Master Firallon", 30.6, 90.6), "Board the three Bloodsail ships and kill Captain Stillwater, Captain Keelhaul and Fleet Master Firallon.",
+      "Captain Stillwater", "Captain Keelhaul", "Fleet Master Firallon"), "The captains are elite in the classic data; check in game."),
     action("goto", st(nil, 26.3, 62.6), "Ride north past Booty Bay to the naga beach below Mistvale Valley."),
     along(objective(573, st(nil, 26.3, 62.6), "Kill Naga Explorers on the beach and fill the vial at the holy spring in the hills above.",
       "10 Naga Explorers", "Holy Spring Water"), 617),
     along(objective(617, st(nil, 26.3, 62.6), "The naga also carry akiris reeds.", "10 Bundle of Akiris Reed"), 573),
     action("goto", P.crank, "Ride back south to Booty Bay."),
-    B.optional(finish(8551, smotts)), finish(609, P.mackinley), finish(617, bloads),
+    finish(8551, smotts), finish(609, P.mackinley), finish(617, bloads),
     note(withItem(217161, accept(95385, P.dudd, "If a Bloodsail Warlock or a Skullsplitter Mystic dropped a Torn Mystical Scroll for you, read it next to Dudd Fizzlescroll.")),
       "Drop sources and Dudd's spot from bindonforever (QuestieDB-format data) and a published Forever guide; not in the cached QuestieDB."),
     finish(95385, P.dudd, "Give Dudd the scroll."),
-    finish(587, deeg), B.optional(finish(608, P.seahorn)),
+    finish(587, deeg), finish(608, P.seahorn),
     finish(621, P.crank), accept(1119, P.crank, "Crank's stout goes to Kravel in the Shimmering Flats. You pass there at 46."),
     accept(580, slim, "Whiskey Slim's grog washed up in the Hinterlands. You go there at 48."),
     taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
     finish(573, P.mokthardin), finish(589, P.kinweelay),
     action("goto", P.hemet, "Ride north to Nesingwary's Expedition."),
-    B.optional(finish(208, P.hemet)),
+    finish(208, P.hemet),
     B.optional(action("note", barnil, "Barnil Stonepot, beside Hemet, binds the pages of The Green Hills of Stranglethorn that drop all over the jungle. "
       .. "Each chapter is a quest of its own: I takes pages 1, 4, 6 and 8; II pages 10, 11, 14 and 16; III pages 18, 20, 21 and 24; IV pages 25, 26 and 27. "
       .. "Hand in the chapters you can complete (missing pages sell at the Auction House), then use Next.", { name = "The Green Hills of Stranglethorn" })),
@@ -728,6 +731,7 @@ do
   need(2621, "The Disgraced One", 50, 45, 2784)
   need(2622, "The Missing Orders", 50, 45, 2621)
   need(2623, "The Swamp Talker", 55, 45, 2622)
+  B.elite(2623, "the Swamp Talker")
   -- The Alliance files register these with the Alliance prerequisite (2783); the game takes either.
   B.q(2801, "A Tale of Sorrow", 57, 45, 2623)
   need(1429, "The Atal'ai Exile", 44, 38, 1424)
@@ -752,7 +756,7 @@ do
     action("goto", ruag, "Ride back to Stonard."),
     finish(2621, ruag, "Dispatch Commander Ruag is in the great hall."), accept(2622, ruag),
     finish(2622, bengor, "Bengor stands beside Dar at the town's west gate."),
-    B.optional(accept(2623, bengor, "Bengor wants the Warchief's orders from the Swamp Talker, a level 50 elite. Take it if you have a group.")),
+    accept(2623, bengor, "Bengor wants the Warchief's orders from the Swamp Talker, a level 50 elite."),
     accept(1429, P.felzerul, "Fel'zerul wants the artifacts you found taken to an Atal'ai exile in the Hinterlands. You go there at 48."),
     action("goto", P.tokkar, "Ride south-east to Tok'Kar's camp at Misty Reed Strand."),
     accept(699, P.tokkar),
@@ -765,13 +769,13 @@ do
     action("goto", sw(nil, 64.5, 86.0), "Ride west along the coast to Stagalbog and its cave."),
     along(objective(1428, sw(nil, 63.1, 85.0), "Kill Marsh Inkspewers, Flesheaters and Oracles around Stagalbog and inside the cave.",
       "10 Marsh Inkspewers", "10 Marsh Flesheaters", "10 Marsh Oracles"), 2623),
-    B.optional(note(objective(2623, sw("Swamp Talker", 62.6, 88.1), "The Swamp Talker, a level 50 elite, waits at the back of Stagalbog Cave. Take the Warchief's orders from him.",
-      "Warchief's Orders"), "Elite in the classic data.")),
+    note(objective(2623, sw("Swamp Talker", 62.6, 88.1), "The Swamp Talker, a level 50 elite, waits at the back of Stagalbog Cave. Take the Warchief's orders from him.",
+      "Warchief's Orders"), "Elite in the classic data."),
     finish(1428, P.katar, "Ride back east to Katar."),
     action("goto", hero, "Ride west across the swamp to the Fallen Hero."),
-    B.optional(finish(2623, hero)), B.optional(accept(2801, hero)),
-    B.optional(objective(2801, hero, "Listen to the rest of his tale.", "Fallen Hero's tale")),
-    B.optional(finish(2801, hero)),
+    finish(2623, hero), accept(2801, hero),
+    objective(2801, hero, "Listen to the rest of his tale.", "Fallen Hero's tale"),
+    finish(2801, hero),
     finish(624, scroll, "If you carry Cortello's Riddle, ride north-west to the soggy scroll under the bridge."),
     accept(625, scroll, "The next clue is in Dustwallow Marsh. Keep it."),
     action("hearth", P.greul, "Hearth to Camp Mojache.", mojache),
@@ -997,11 +1001,13 @@ do
   need(7841, "Message to the Wildhammer", 48, 44)
   need(7842, "Another Message to the Wildhammer", 48, 44, 7841)
   need(7861, "Wanted: Vile Priestess Hexx and Her Minions", 51, 46)
+  B.elite(7861, "Vile Priestess Hexx")
   need(7862, "Job Opening: Guard Captain of Revantusk Village", 51, 46)
   need(7849, "Separation Anxiety", 50, 46)
   need(7850, "Dark Vessels", 50, 46)
   need(7845, "Kidnapped Elder Torntusk!", 51, 46)
   need(7846, "Recover the Key!", 51, 46, 7845)
+  B.elite(7846, "Hitah'ya the Keeper")
   need(7847, "Return to Primal Torntusk", 51, 46, 7846)
   need(1444, "Return to Fel'Zerul", 44, 38, 1429)
   need(485, "Find OOX-09/HL!", 48, 43)
@@ -1075,7 +1081,7 @@ do
     finish(7828, markhor), finish(7829, markhor), finish(7830, markhor),
     accept(7841, otho, "Otho Moji'ko wants the Highvale elves at Quel'Danil thinned out. You go back west for them."),
     accept(7862, callToArms, "Read the Call to Arms board in the middle of the village."),
-    B.optional(accept(7861, callToArms, "The board also wants Vile Priestess Hexx, an elite. Take it if you have a partner.")),
+    accept(7861, callToArms, "The board also wants Vile Priestess Hexx, an elite."),
     accept(7849, markhor), accept(7845, torntusk), accept(7850, torntusk),
     note(objective(7816, hl("Gammerita", 80.4, 58.2), "Ride north along the shore and kill Gammerita for Katoom's lure. She is an elite turtle that wanders the beach; bring a partner if you can.",
       "Katoom's Best Lure"), "QuestieDB has one spawn and ranks her elite (level 48); a published Forever guide searches the coast from 49 to 76."),
@@ -1100,14 +1106,14 @@ do
       "Huntsman Malkhor's Skull"),
     part(7849, 2, hl("Pile of Bones", 62.1, 75.3), "His bones are in a pile among the wolves on the terraces.", "Huntsman Malkhor's Bones"),
     finish(7845, elder, "Elder Torntusk is chained near the top of the city."),
-    B.optional(accept(7846, elder, "He needs the shackle key from Hitah'ya the Keeper, an elite. Take it if you have a partner.")),
+    accept(7846, elder, "He needs the shackle key from Hitah'ya the Keeper, an elite."),
     dungeon("zul-farrak", objective(4787, hl("Ancient Egg", 57.6, 86.8), "The ancient egg sits in a nest on the south side of the city.", "Ancient Egg")),
-    B.optional(objective(7846, hl("Hitah'ya the Keeper", 57.3, 86.6), "Kill Hitah'ya the Keeper, an elite, on the south side of the city for the shackle key.", "Shackle Key")),
-    B.optional(finish(7846, elder)), B.optional(accept(7847, elder)),
-    B.optional(note(objective(7861, hl("Vile Priestess Hexx", 59.5, 78.3), "Kill Vilebranch Aman'zasi Guards on the top terrace, then Vile Priestess Hexx at the altar.",
-      "Vile Priestess Hexx", "20 Vilebranch Aman'zasi Guards"), "QuestieDB Forever ranks Hexx elite (level 51).")),
+    objective(7846, hl("Hitah'ya the Keeper", 57.3, 86.6), "Kill Hitah'ya the Keeper, an elite, on the south side of the city for the shackle key.", "Shackle Key"),
+    finish(7846, elder), accept(7847, elder),
+    note(objective(7861, hl("Vile Priestess Hexx", 59.5, 78.3), "Kill Vilebranch Aman'zasi Guards on the top terrace, then Vile Priestess Hexx at the altar.",
+      "Vile Priestess Hexx", "20 Vilebranch Aman'zasi Guards"), "QuestieDB Forever ranks Hexx elite (level 51)."),
     action("goto", torntusk, "Ride back east to Revantusk Village."),
-    finish(7862, torntusk), B.optional(finish(7861, torntusk)), B.optional(finish(7847, torntusk)), finish(7850, torntusk), finish(7849, markhor),
+    finish(7862, torntusk), finish(7861, torntusk), finish(7847, torntusk), finish(7850, torntusk), finish(7849, markhor),
     finish(7841, otho),
     accept(7842, otho, "If you have ten Long Elegant Feathers, take Otho's next task and hand them over at once. If not, use Next twice."),
     finish(7842, otho),
@@ -1307,6 +1313,7 @@ do
   need(7724, "Fiery Menace!", 49, 45)
   need(7727, "Incendosaurs? Whateverosaur is More Like It", 49, 45)
   need(7701, "WANTED: Overseer Maltorius", 50, 45)
+  B.elite(7701, "Overseer Maltorius")
   need(3441, "Divine Retribution", 48, 40)
   need(3442, "The Flawless Flame", 48, 40, 3441)
   need(4449, "Caught!", 45, 43)
@@ -1322,7 +1329,7 @@ do
       "Check the way in from the Badlands in game."),
     taxi("getfp", grisha, "Thorium Point, Searing Gorge", "Learn the Thorium Point flight path from Grisha."),
     accept(7728, poster, "Read the board at Thorium Point."), accept(7729, poster),
-    B.optional(accept(7701, poster, "The board also wants Overseer Maltorius, an elite. Take it if you have a partner.")),
+    accept(7701, poster, "The board also wants Overseer Maltorius, an elite."),
     accept(7723, hansel), accept(7724, hansel), accept(7727, hansel),
     accept(3441, kalaran, "Kalaran Windblade stands on the ledge south of Thorium Point."),
     objective(3441, kalaran, "Listen to Kalaran's story.", "Kalaran's story"),
@@ -1337,8 +1344,8 @@ do
       7723),
     action("goto", sg(nil, 46.5, 26.0), "Climb to the Slag Pit, the cave on the Cauldron's north side."),
     objective(7727, sg(nil, 46.5, 23.7), "Kill the Incendosaurs in the Slag Pit's lava pools.", "20 Incendosaurs"),
-    B.optional(note(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius waits deep in the Slag Pit. Take his head.",
-      "Head of Overseer Maltorius"), "QuestieDB Forever ranks him elite (level 50).")),
+    note(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius waits deep in the Slag Pit. Take his head.",
+      "Head of Overseer Maltorius"), "QuestieDB Forever ranks him elite (level 50)."),
     action("goto", sg(nil, 25.7, 76.3), "Climb out of the Cauldron and ride to the south-west plateaus."),
     objective(7724, sg(nil, 25.7, 76.3), "Hunt Greater Lava Spiders around the lava pools.", "20 Greater Lava Spiders"),
     action("goto", outhouse, "Ride east to the Grimesilt dig site in the south-east."),
@@ -1348,7 +1355,7 @@ do
     finish(4449, outhouse),
     action("goto", kalaran, "Ride back north-west to Thorium Point."),
     finish(3442, kalaran),
-    finish(7729, scrange), finish(7728, scrange), B.optional(finish(7701, lolo)),
+    finish(7729, scrange), finish(7728, scrange), finish(7701, lolo),
     finish(7723, hansel), finish(7724, hansel), finish(7727, hansel),
   })
 end

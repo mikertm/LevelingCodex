@@ -20,7 +20,8 @@ local ICONS = {
   boss = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
   dungeon = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
   plan = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
-  spot = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight",
+  elite = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
+  spot ="Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight",
 }
 M.ICONS = ICONS
 
@@ -59,7 +60,7 @@ end
 -- "turnin", "kill", "collect", "travel", "dungeon" or "other".
 local KIND_OF = { accept = "accept", turnin = "turnin", collect = "collect", buy = "collect",
   ["goto"] = "travel", fly = "travel", getfp = "travel", boat = "travel", hearth = "travel", sethearth = "travel",
-  dungeon = "dungeon", boss = "dungeon", plan = "dungeon" }
+  dungeon = "dungeon", boss = "dungeon", plan = "dungeon", elite = "kill" }
 local KIND_STYLE = {
   accept = { "Accept", { 1, 0.82, 0 } }, turnin = { "Turn in", { 0.45, 0.85, 0.4 } },
   kill = { "Kill", { 0.95, 0.45, 0.4 } }, collect = { "Collect", { 0.95, 0.65, 0.25 } },
@@ -82,6 +83,7 @@ function ns.questKindStyle(kind, step)
   if style then
     local label = style[1]
     if kind == "dungeon" and step and step.type == "boss" then label = "Boss" end
+    if kind == "kill" and step and step.type == "elite" then label = "Elite" end
     if kind == "travel" and step and TRAVEL_WORD[step.type] then label = TRAVEL_WORD[step.type] end
     return { label = label, color = style[2] }
   end

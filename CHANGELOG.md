@@ -20,11 +20,32 @@
 - **Dungeons at the right moment.**
   - Zul'Farrak, Krol'dok, City of Dalaran, Razorfen Downs, Sunken Temple, Scholomance, Stratholme and Upper Blackrock Spire are offered at the steps that lead into them.
   - The Scholomance key guide works with Thunder Bluff's call to arms too.
-- **Elite quests are optional.**
-  - Quests whose target is an elite are optional steps, shown with Settings > Show optional quests or while the quest is in your log: King Bangalash, Gorlash, the Bloodsail captains, the Swamp Talker, Vile Priestess Hexx, Hitah'ya the Keeper, Overseer Maltorius, Marez Cowl and Or'Kalar.
-  - Their pickup steps say so, so you can grab a group.
+- Elite quests ask first (see Elite quests below): King Bangalash, Gorlash, the Bloodsail captains, the Swamp Talker, Vile Priestess Hexx, Hitah'ya the Keeper, Overseer Maltorius, Marez Cowl and Or'Kalar.
 - Class objectives on the route sit where they add the least walking.
 - The quest log stays at 20 or fewer with every dungeon planned.
+
+### Alliance quest guide
+
+- **Smoother loops from 1 to 60.**
+  - The whole Alliance route was checked chapter by chapter for back-and-forth walking, like the Horde's.
+  - Fixed: Brother Anton in Nijel's Point, the troll tablets in Stranglethorn, the Badlands buzzards and the Sign of the Earth, Torwa's chain in Un'Goro, the Slag Pit in the Searing Gorge, Silithus in one sweep (Bronzebeard's Encampment once), Deadwood of the North and Salfa in Felwood, Are We There, Yeti? in Winterspring.
+  - A Refuge Pointe to Southshore flight replaces a long ride; Felwood starts with a hearth to Ironforge.
+- **Chains that never showed now work.** Stranglethorn's Nesingwary hunts, Colonel Kurzen, Troll Witchery, Ansirem's Key, Sunken Treasure, ... and Bugs, Goblin Sponsorship and Rhapsody's Kalimdor Kocktail had hand-ins in the forties but no pickup. The thirties now give them. Reassignment is handed in at Stormwind Keep instead of riding in your log to 60.
+- **Riverglades fixes.** Several quests came in an order the game doesn't offer them in; the Riverglades chapters now follow the game's chains, with corrected spots and the shopping steps.
+- **Quests the guide missed.** Supply and Demand and Some Assembly Required, Hemet Nesingwary, Talk of the Town, This Light of Mine, Crystal in the Mountains, Anyone Can Cook, Parts for Kravel, Sword in the Slime, Stranglethorn Fever, the Talrendis Point quests, Alien Ecology, Lost!, Chasing A-Me 01, Better Late Than Never, Chillwind Horns, Locked Away, Are We There, Yeti? part 3 and more in Silithus.
+- **Dungeon guides:** Power Stones (Uldaman), The Ancient Egg and The God Hakkar (Sunken Temple), A Taste of Flame (Blackrock Depths), The Argent Hold (Stratholme), Gnome Improvement (Gnomeregan) and Return to the Hinterlands (Zul'Farrak). Steps that lead into a dungeon offer its guide.
+- **Buy it before you go.** Stormwind Seasoning Herbs for Chef Grual, Hillman's Cloak, water breathing, a Moonsteel Broadsword, Silk Cloth, the bloodmage parts, the Mithril Casing, Gregan's bait and more say where to get them before the trip.
+- **Class objectives on the route** for Warriors, Mages, Warlocks, Hunters, Priests and Rogues from 36 to 57 (Cyclonian's tusks, the Desolace orbs, the Blasted Lands and Azshara quests, the Ichor of Undeath), shown only to that class while the quest is in your log. Three early ones moved to where they cost the least walking.
+- The quest log stays at 20 or fewer with every dungeon planned.
+
+### Elite quests (both factions)
+
+- **The guide asks before an elite quest.** When the route reaches the pickup of a quest whose target is an elite, the step window says so and asks: **Take it** keeps the quest on your route, **Skip** passes it and the quests that need it. Back asks again.
+- The Quests tab's Step view has the same Take it and Skip it buttons, for controller players.
+- Your choice is kept for your character. If WoW: Forever doesn't load your saved settings, the guide just asks again.
+- **Settings > Elite quests** (also on the guide setup card): Ask (the default), Always take or Always skip.
+- A quest already in your log is never asked about.
+- Alliance elite quests include Hogger, Vagash, Oakenscowl, Stonewatch Keep's Tharil'zun and Gath'Ilzogg, Morbent Fel, Mor'Ladim, Fozruk, Colonel Kurzen, King Bangalash, King Mukla, Overseer Maltorius, the black dragonkin of the Burning Steppes and High Chief Winterfall.
 
 ### Step window
 

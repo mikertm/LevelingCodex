@@ -29,6 +29,7 @@ local startItems = {}
 local collectItems = {} -- item -> last count, for collect and buy steps
 local routeItems = {} -- every item a route step names (Q.routeItems: the vendor keeps them)
 local runOwn = {} -- run -> quests a route step ties to it (forDungeon): the ones that need the dungeon
+local eliteQuests, elitePrior = {}, {} -- quest -> its elite's name (leveling steps); quest -> the earlier quest with that elite
 local killed = {} -- boss row key -> true: bosses down this dungeon visit
 local inInstance, lastInstance -- the dungeon you're in now (instance ID), and the last one you entered
 local questNames = {}
@@ -207,6 +208,59 @@ function Q.planDecided(id)
   return planTable()[id] ~= nil or ns.db().questDungeons == true
 end
 
+-- Elite quests: a leveling quest whose objective needs an elite (`elite` = its name, on every step
+-- of the quest). Before its pickup the route asks whether to take it ("elite" row); skipping it
+-- passes the quest and every quest that needs it. Settings > Elite quests: Ask (default), Always
+-- take or Always skip (`db.questEliteMode`). Choices are kept per character (`charDB.questElite`);
+-- without SavedVariables the guide asks again.
+local function eliteTable()
+  local db = ns.charDB()
+  if type(db.questElite) ~= "table" then db.questElite = {} end
+  return db.questElite
+end
+
+function Q.eliteMode()
+  local mode = ns.db().questEliteMode
+  return (mode == "take" or mode == "skip") and mode or "ask"
+end
+
+-- The Elite quests choice as a row of segments (Settings and the setup card).
+Q.ELITE_LABELS = { "Ask", "Always take", "Always skip" }
+Q.ELITE_TIPS = { "At each elite quest's pickup the step window asks: Take it or Skip.",
+  "Take every elite quest without asking (bring a group).",
+  "Skip every elite quest and the quests that need it, without asking." }
+function Q.eliteModeIndex()
+  local mode = Q.eliteMode()
+  return mode == "take" and 2 or mode == "skip" and 3 or 1
+end
+function Q.setEliteMode(i)
+  ns.db().questEliteMode = i == 2 and "take" or i == 3 and "skip" or nil
+end
+
+-- true = take it, false = skip it, nil = not chosen yet (the route asks). A follow-up that needs the
+-- same elite again follows the choice made for the quest before it.
+function Q.eliteChoice(id)
+  local mode = Q.eliteMode()
+  if mode == "take" then return true elseif mode == "skip" then return false end
+  local choices, seen = eliteTable(), {}
+  while id and not seen[id] do
+    seen[id] = true
+    if choices[id] ~= nil then return choices[id] == true end
+    id = elitePrior[id]
+  end
+end
+
+function Q.setElite(id, take)
+  if id then eliteTable()[id] = take and true or false end
+end
+
+function Q.clearElite(id)
+  if id then eliteTable()[id] = nil end
+end
+
+function Q.eliteName(id) return eliteQuests[id] end
+function Q.questName(id) return questNames[id] end
+
 -- Optional steps: dungeon pickups follow the plan, the rest (profession intros, errands) a setting.
 -- `logOnly` steps (work on a quest picked up elsewhere) show only while it is in the log.
 -- An optional objective or turn-in needs the quest: one you don't have (a carried breadcrumb
@@ -252,6 +306,7 @@ local function buildRoute()
   sections, sectionsById, steps, startItems, flightHubs, collectItems = {}, {}, {}, {}, {}, {}
   routeItems = {}
   questNames, chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}, {}
+  eliteQuests, elitePrior = {}, {}
   if not route then return end
   for _, section in ipairs(route.sections) do
     -- start: nil = shared, a race token or a list; class: side sections for one class
@@ -263,6 +318,7 @@ local function buildRoute()
       for n, step in ipairs(section.steps) do
         if matches(step.class, class) and matches(step.race, race) then
           if step.quest and step.name then questNames[step.quest] = step.name end
+          if step.quest and type(step.elite) == "string" and not section.side then eliteQuests[step.quest] = step.elite end
           if step.quest then
             -- A story chain: links where a quest has exactly one prerequisite and one follow-up.
             local pre = step.chain and #step.chain == 1 and step.chain[1]
@@ -316,9 +372,31 @@ local function buildRoute()
       runOwn[s.dungeon][s.quest] = true
     end
   end
-  local asked, withChoices = {}, {}
+  -- A follow-up that needs the same elite again (its prerequisite carries the same name) follows the
+  -- choice made for that prerequisite.
   for _, row in ipairs(steps) do
     local s = row.step
+    local name = s.quest and eliteQuests[s.quest]
+    if name and s.type == "accept" and not elitePrior[s.quest] then
+      for _, pre in ipairs(s.chain or {}) do
+        if eliteQuests[pre] == name then elitePrior[s.quest] = pre end
+      end
+    end
+  end
+  local asked, withChoices = {}, {}
+  local eliteAsked = {}
+  for _, row in ipairs(steps) do
+    local s = row.step
+    -- Elite quest ahead: before a leveling pickup of an elite quest, a step asks whether to take it.
+    local eliteKey = s.type == "accept" and s.quest and eliteQuests[s.quest] and not row.section.side
+      and row.section.id .. ":elite:" .. s.quest
+    if eliteKey and not eliteAsked[eliteKey] then
+      eliteAsked[eliteKey] = true
+      withChoices[#withChoices + 1] = { section = row.section, pos = row.pos, key = eliteKey, target = row,
+        step = { type = "elite", eliteQuest = s.quest, elite = eliteQuests[s.quest], name = s.name or questNames[s.quest],
+          npc = s.npc, map = s.map, x = s.x, y = s.y, path = s.path, min = s.min,
+          text = "Elite quest ahead: take it or skip it." } }
+    end
     local run = s.dungeon
     if not run and s.type == "accept" then
       for id, quests in pairs(runOwn) do
@@ -455,6 +533,16 @@ local function gated(s)
   if s.unlessDone and turnedIn[s.unlessDone] then return "skipped" end
 end
 
+-- A skipped elite quest (Skip at its pickup, or Always skip) passes, and so does every quest that
+-- needs it, unless you have them anyway.
+local function eliteSkipped(s)
+  if eliteQuests[s.quest] and not turnedIn[s.quest] and Q.eliteChoice(s.quest) == false then return true end
+  for _, id in ipairs(s.chain or {}) do
+    if eliteQuests[id] and not turnedIn[id] and not log[id] and Q.eliteChoice(id) == false then return true end
+  end
+  return false
+end
+
 -- Items a collect or buy step wants: done once your bags hold `count` (default 1) of `item` and
 -- every `items` pair ({ itemID, count }).
 local function haveItems(s)
@@ -477,6 +565,13 @@ local function state(row, skips, blockedQuests, later, map, x, y)
     for id in pairs(runOwn[s.dungeon] or {}) do
       if turnedIn[id] then return "filtered" end
     end
+    return "pending"
+  end
+  if s.type == "elite" then
+    -- Asked until you choose (Settings > Elite quests can choose for every quest), never for a quest
+    -- you already have or have done. calculate() also hides it while its pickup isn't the next thing.
+    local id = s.eliteQuest
+    if Q.eliteChoice(id) ~= nil or log[id] or turnedIn[id] then return "filtered" end
     return "pending"
   end
   if row.section.category ~= "dungeon" and not included(s) then return "filtered" end
@@ -508,6 +603,7 @@ local function state(row, skips, blockedQuests, later, map, x, y)
     local entry = log[s.quest]
     if gameDone(s) then return "done" end
     if awaitingObjectives(s, entry) then return "blocked" end
+    if not entry and not row.section.side and eliteSkipped(s) then return "skipped" end
     local follow = s.breadcrumb
     if follow and not entry and (log[follow] or turnedIn[follow]) then return "skipped" end
     if s.startItem and not entry and not startItems[s.startItem] then
@@ -739,6 +835,13 @@ local function calculate()
   end
   markPassed()
   markGrey(grey)
+  -- An elite quest's question waits for its pickup: none while the pickup is done, skipped, missed,
+  -- grey or not for you yet.
+  for _, row in ipairs(steps) do
+    if row.step.type == "elite" and row.state ~= "filtered" and row.target and row.target.state ~= "pending" then
+      row.state = "filtered"
+    end
+  end
   reached = false
   local mainIndex, sideIndex, away
   local readySeen = {}
@@ -1350,6 +1453,10 @@ function Q.reason(row)
     if s.maxLevel and level > s.maxLevel then return "Skipped: you're past level " .. s.maxLevel .. "." end
     if s.unlessDone and turnedIn[s.unlessDone] then return "Skipped: not needed once " .. named(s.unlessDone) .. " is done." end
     if row.leadIn then return "Skipped: you're already in this zone." end
+    if s.quest and not row.section.side and eliteSkipped(s) then
+      if Q.eliteMode() == "skip" then return "Skipped: Settings > Elite quests is set to Always skip." end
+      return "Skipped: you chose Skip for this elite quest (or the one it needs)."
+    end
     return "Skipped: you passed it with Next. Back brings it back."
   elseif st == "deferred" then
     if row.grey then return "Left out: it's grey for your level. Missed quests > Outleveled lists it." end
@@ -1601,6 +1708,10 @@ function Q.next()
   elseif row.step.type == "plan" then
     Q.setPlanned(row.step.dungeon, false) -- Next on Dungeon ahead skips the run
     ns.say(Q.plain(row.step.name .. " is skipped: Quests > Guides > Dungeons can plan it later."))
+  elseif row.step.type == "elite" then
+    Q.setElite(row.step.eliteQuest, false) -- Next on an elite quest skips it and the quests that need it
+    ns.say(Q.plain((row.step.name or "The quest") .. " is skipped (" .. (row.step.elite or "an elite")
+      .. " is elite). Back asks again."))
   elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth" then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key] = true
@@ -1636,6 +1747,8 @@ function Q.back()
   if row then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key], visited[row.key] = nil, nil
+    -- Back to an elite quest's question asks it again.
+    if row.step.type == "elite" and Q.eliteMode() == "ask" then Q.clearElite(row.step.eliteQuest) end
     if not sideSection then selected = row.section end
     review = i
     calculate()
@@ -1747,7 +1860,26 @@ function Q.planText(step)
     .. "\nSkip it: the run stays out of your route. Quests > Guides > Dungeons can change this later."
 end
 
+-- The elite quest step: what the quest needs and what each choice does.
+function Q.eliteText(step)
+  local name = step.name or "This quest"
+  local after = 0
+  for _, row in ipairs(steps) do
+    local s = row.step
+    if s.type == "accept" and s.quest ~= step.eliteQuest and not row.section.side then
+      for _, id in ipairs(s.chain or {}) do
+        if id == step.eliteQuest then after = after + 1 end
+      end
+    end
+  end
+  return name .. " means fighting " .. (step.elite and (step.elite .. " (elite)") or "an elite")
+    .. ": bring a group or a strong partner."
+    .. "\nTake it: the quest stays on your route."
+    .. "\nSkip it: the guide passes it" .. (after > 0 and " and the quests that need it" or "") .. ". Back asks again."
+end
+
 function Q.text(step)
+  if step.type == "elite" then return Q.eliteText(step) end
   if step.type == "getfp" then return step.text .. " Use Next to skip this flight path." end
   if step.quest == 95998 and step.type == "complete" then
     local mining = ns.P and ns.P.MINING
