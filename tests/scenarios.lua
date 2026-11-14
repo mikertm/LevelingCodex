@@ -882,6 +882,15 @@ function S.stepSetupWindow()
   check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
   click(win(), "Compact")
   check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+  local function box(name) return findButton(win(), function(l) return l == name end) end
+  check(box("Sell junk") and box("Sell junk"):GetChecked() and box("Repair") and box("Repair"):GetChecked(),
+    "the vendor helpers start on")
+  click(win(), "Sell junk")
+  check(LevelingCodexDB.noAutoSell and not box("Sell junk"):GetChecked(), "Sell junk turns junk selling off")
+  click(win(), "Repair")
+  check(LevelingCodexDB.noAutoRepair and not box("Repair"):GetChecked(), "Repair turns repairing off")
+  click(win(), "Sell junk")
+  check(not LevelingCodexDB.noAutoSell, "and back on")
 end
 
 -- Compact mode on a step with no goals and no spot draws the title row alone.

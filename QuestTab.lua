@@ -618,6 +618,17 @@ local function renderSetup(y)
     ns.questRefresh()
     U.refresh()
   end, "Only the step's title, a thin progress bar and the buttons: for small screens.")
+  y = y + 30
+  -- the vendor helpers (Vendor.lua), the same switches as Settings
+  label("Vendor")
+  U.check("Sell junk", x, y - 1, not db.noAutoSell, function()
+    db.noAutoSell = not db.noAutoSell
+    U.refresh()
+  end, "At a vendor, sell your grey items (never quest items or the Hearthstone). Hold Alt as you open the vendor to skip it once.")
+  U.check("Repair", x + 150, y - 1, not db.noAutoRepair, function()
+    db.noAutoRepair = not db.noAutoRepair
+    U.refresh()
+  end, "At a vendor who repairs, repair everything with your own money. Hold Alt as you open the vendor to skip it once.")
   y = y + 34
   U.btn("Done", 16, y, W - 32, function()
     db.questSetupDone, setupOpen = true, false
