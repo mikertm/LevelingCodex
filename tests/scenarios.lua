@@ -284,6 +284,32 @@ function S.questObjectiveWaypoints()
   check(questText(frame, "Turn in - The State of the Mines"), "the last objective advances to the turn-in")
 end
 
+-- Duskwood: Lean Wolf Flanks for Seasoned Wolf Kabobs also drop from the Young Black Ravagers of the
+-- Ira's Dagger hunt and the wolves around the spider woods, so both steps list the kabobs.
+function S.questDuskwoodFlanks()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 23, 1431, 55.3, 63.7
+  MOCK.questLog = {
+    { questID = 96137, objectives = { { text = "Young Black Ravager slain: 2/10" }, { text = "Black Ravager slain: 0/7" } } },
+    { questID = 245, objectives = { { text = "Pygmy Venom Web Spider slain: 0/15" } } },
+    { questID = 90, objectives = { { text = "Lean Wolf Flank: 3/10" }, { text = "Stormwind Seasoning Herbs: 0/1" } } },
+  }
+  S.login()
+  slash("quests")
+  local function preview(title)
+    for _, b in ipairs(MOCK.buttons(win())) do
+      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
+    end
+    error("No route objective for " .. title)
+  end
+  local frame = questViewer()
+  preview("Ira's Dagger")
+  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Seasoned Wolf Kabobs")
+    and questText(frame, "Lean Wolf Flank 3/10"), "the ravager hunt lists the kabobs' wolf flanks")
+  preview("Eight-Legged Menaces")
+  check(questText(frame, "Seasoned Wolf Kabobs") and questText(frame, "Lean Wolf Flank 3/10"),
+    "and so does the spider step")
+end
+
 function S.questRedridgeOverlap()
   MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 19, 1433, 52.0, 76.6
   MOCK.questLog = {
