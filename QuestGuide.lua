@@ -605,14 +605,7 @@ local function arrive(key, step, caption)
   arrowArt:Hide()
   if arrivedKey == key then return end
   arrivedKey = key
-  local icon = ns.questIcon(step)
-  if icon then
-    arrow.here:SetTexture(icon)
-    arrow.here:SetSize(36, 36)
-  else
-    arrow.here:SetColorTexture(1, 0.82, 0, 1)
-    arrow.here:SetSize(12, 12)
-  end
+  ns.questMap.paintIcon(arrow.here, step, 36, 12)
   arrow.here:Show()
   if arrow.pulse and ringArt then
     arrow.pulse:Stop()
@@ -1696,9 +1689,7 @@ function ns.questRefresh()
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
-    local icon = row and ns.questIcon(row.step)
-    viewer.titleIcon:SetShown(icon ~= nil)
-    if icon then viewer.titleIcon:SetTexture(icon) end
+    viewer.titleIcon:SetShown(row and ns.questMap.setIcon(viewer.titleIcon, row.step, 16) or false)
     -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)

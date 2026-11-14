@@ -1274,7 +1274,7 @@ function S.arrowArrival()
   MOCK.advance(0.5)
   check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
   check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
-  check(arrow.here._path == "Interface\\GossipFrame\\AvailableQuestIcon", "a pickup shows the yellow !")
+  check(arrow.here._atlas == "crosshair_quest_64", "a pickup shows the yellow !")
   check(arrow.pulse:IsPlaying(), "the ring pulses")
   local low, high, jump = bobRun(arrow, 1)
   check(not arrow.pulse:IsPlaying(), "the ring pulses once")
@@ -1292,6 +1292,40 @@ function S.arrowArrival()
   MOCK.advance(0.5)
   low, high = bobRun(arrow, 1)
   check(arrow.here:IsShown() and low == 0 and high == 0, "with the animation off the icon stays still")
+end
+
+-- Step icons: the client's own crosshair art (the cursor icons without the pointer tip, drawn by
+-- Blizzard at 32, 48, 64, 96 and 128 px), the smallest drawing at least as big as the icon is on
+-- screen. Without atlases, the old 16-32 px gossip and cursor files.
+function S.questIconArt()
+  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step (a pickup)
+  S.login()
+  MOCK.advance(0.5)
+  if MOCK.minimal then -- no C_Texture (and no C_Map, so no arrival to watch)
+    local tex = UIParent:CreateTexture()
+    check(MOCK.ns.questMap.setIcon(tex, { type = "accept" }, 36) and not tex._atlas
+      and tex._path == "Interface\\GossipFrame\\AvailableQuestIcon", "a client without the atlases shows the gossip ! file")
+    return
+  end
+  local arrow, viewer = _G.LevelingCodexQuestArrow, questViewer()
+  check(arrow.here:IsShown(), "arriving shows the step's icon")
+  -- 36 px at scale 1 on a 1080p screen is 51 pixels; the step title's 16 px is 23
+  check(arrow.here._atlas == "crosshair_quest_64", "the arrival ! is the 64 px drawing: " .. tostring(arrow.here._atlas))
+  check(viewer.titleIcon._atlas == "crosshair_quest_32", "the title's ! is the 32 px one: " .. tostring(viewer.titleIcon._atlas))
+  -- on a 4K screen the same 36 px is 101 pixels
+  MOCK.screenHeight = 2160
+  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.advance(0.5)
+  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.advance(0.5)
+  check(arrow.here._atlas == "crosshair_quest_128", "on 4K the arrival ! is the 128 px one: " .. tostring(arrow.here._atlas))
+  -- a texture going back to a file loses the atlas's coordinates
+  local tex = viewer:CreateTexture()
+  MOCK.ns.questMap.setIcon(tex, { type = "accept" }, 36)
+  MOCK.ns.questMap.setIcon(tex, { type = "boss" }, 36)
+  local l, t, _, _, _, _, r, b = tex:GetTexCoord()
+  check(tex._path == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull" and l == 0 and t == 0 and r == 1 and b == 1,
+    "a step without crosshair art (a boss) shows its own file, whole")
 end
 
 -- Minimap: pins for the current and next steps, an edge arrow out of range, a dotted line.
@@ -2209,7 +2243,7 @@ function S.questFlightPlan()
     "a long trip leads to the flight master with its distance: " .. arrowCaption())
   local mini = _G.LevelingCodexMinimapPins
   check(mini and mini:IsShown() and mini.current:IsShown() and mini.current.icon
-    and mini.current.icon._path == "Interface\\GossipFrame\\TaxiGossipIcon", "the minimap leads to the flight master too")
+    and mini.current.icon._atlas == "crosshair_taxi_32", "the minimap leads to the flight master too")
   -- Reported from the game: Forever hides your speed from addons at times (a secret value), and
   -- math on it was blocked 374 times. The trip is planned at walking speed then.
   MOCK.runSpeed = MOCK.SECRET
