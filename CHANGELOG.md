@@ -1,5 +1,16 @@
 # Leveling Codex
 
+## v0.23.0
+
+### Talents
+
+- **A talent path for every spec.** Besides the Codex guide's own build, every class now has a recommended leveling path for each of its three trees, even the ones that aren't the fastest to level with: Arms and Fury Warriors, Fire and Arcane Mages, Holy and Protection Paladins, Discipline and Holy Priests, and so on. Druids get Feral Cat, Bear tank, Balance and Restoration next to the guide's Feral. They're built from the Forever guides published since launch and checked point by point against the game's own trees.
+- **Your own custom path.** Pick Custom, start from any path, from the talents you already have, or from nothing, and click the tree to place each point in level order. The Codex checks the game's rules as you go (points per row, prerequisites, ranks) and says why a talent isn't open yet. Undo and Clear are a click away.
+- **Share codes.** Copy your custom path as a short code and paste it on another character, or back in if you ever lose it.
+- **A new Talents tab.** Path cards at the top with each path's role and its split at 60, then the full game tree for all three trees side by side with your path filled in to the level you're viewing, prerequisite lines and every point in order. Click a talent for its tooltip and every point your path puts into it.
+- **Everything follows your path.** This Level, the level-up banner and chat line, the minimap tooltip and the outline in your talent window all show your path's point. The trainer list follows it too: an Arms Warrior sees Mortal Strike ranks instead of Shield Slam. Macros and tips stay with the Codex guide.
+- **Remembered per character.** Your choice is saved. If WoW: Forever doesn't load your saved settings, the Codex picks the path that the talents you've already spent follow.
+
 ## v0.22.0
 
 ### Step window
