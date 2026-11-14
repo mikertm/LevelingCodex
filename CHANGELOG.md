@@ -28,6 +28,17 @@
 - It's on whenever EllesmereUI is installed. Turn it off for the Codex in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as EllesmereUI is installed.
 - Change your accent colour in EllesmereUI and the Codex follows straight away.
 
+### Party play
+
+- **Your whole party in the step window.** Everyone in your party gets a row: on your step (with their kill or loot count), how many of your steps ahead or behind they are, in another guide, offline, or not sharing a step. The heading says when you're all on the same step, and the compact step window sums it up in one line. Party members need the Codex to share their step.
+- **Quests > Party.** A card for each party member with their guide, their step, their live count and when you last heard from them. When you're in different guides, Follow their guide switches yours in one click.
+- **Quests one of you is missing.** The Party tab lists the guide quests a party member has that you don't, with Ask to share (their Codex offers it to you), and the ones you have that they don't, with Share.
+- **Quest sharing is on by default.** A guide quest you accept is offered to party members who don't have it yet. It waits a moment, so two of you taking it together don't get each other's offer. Turn it off in Settings > Party.
+- **Catch-up cues.** The step window says when someone is 3 or more steps behind you, and a soft chime plays when the last of you reaches the same step. Settings > Party > Ping sound picks the sound (Soft chime, Party invite or Ready check) and plays it so you can hear it.
+- **Party chat lines, like Questie's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what Questie already says in party chat is left to it. Each one is off until you turn it on.
+- **Every party option in the guide setup card**, next to the same switches in Settings > Party and Quests > Party.
+- **Steadier sync.** Your step goes out again every minute, so a long kill step no longer drops you from your partner's window, and going Back to look at an earlier step no longer tells the party you're behind.
+
 ## v0.23.1
 
 ### Quest guide
