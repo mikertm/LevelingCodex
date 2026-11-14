@@ -629,3 +629,73 @@ for _, section in ipairs({
   section.web = nil
   route.sections[#route.sections + 1] = section
 end
+
+-- Cozy Sleeping Bag, the Horde way round: the Barrens watchtower first, then Westfall, Stonetalon,
+-- Loch Modan and Thoradin's Wall (the Alliance guide is in QuestSpecialData.lua). An opt-in special
+-- guide, like the Alliance one. Sources: tools/audits/2026-11-14-horde-1-60-audit.md.
+do
+  local barrens, stonetalon, stv, westfall = M.barrens, M.stonetalon, 1434, 1436
+  local lochModan, hillsbrad, arathi, durotar = 1432, 1424, 1417, 1411
+  local function uncertain(step, note)
+    step.uncertain = note
+    return step
+  end
+  -- 79192 opens from either faction's first note: on this guide it follows the Horde one.
+  local function after(step, id)
+    step.chain = { id }
+    return step
+  end
+  q(79007, "... and that note you found", 22, 14, nil, true)
+
+  local tower = at("Burned-Out Remains", 46.35, 73.89, barrens)
+  local farm = at("Burned-Out Remains", 37.42, 50.71, westfall)
+  local plank = at("Nailed Plank", 37.39, 50.77, westfall)
+  local camp = at("Pocket Litter", 40.77, 52.57, stonetalon)
+  local mound = at("Mound of Dirt", 39.62, 49.87, stonetalon)
+  local dam = at("Carved Figurine", 49.43, 12.9, lochModan)
+  local bag = at("Messenger Bag", 22.48, 24.18, arathi)
+  local satchel = at("Hastily Rolled-Up Satchel", 22.48, 24.2, arathi)
+
+  route.sections[#route.sections + 1] = {
+    id = "cozy-sleeping-bag-horde", title = "Cozy Sleeping Bag", zone = barrens, levels = { 14, 32 },
+    side = true, category = "special", verified = false,
+    reward = "A sleeping bag: rest in it for up to 3% bonus XP",
+    sources = {
+      "https://www.warcrafttavern.com/forever/guides/cozy-sleeping-bag/",
+      "https://www.wowhead.com/forever/guide/cozy-sleeping-bag-locations-rewards",
+      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    },
+    steps = {
+      accept(79007, tower, "From level 14, search the Burned-Out Remains at the burned watchtower beside the road south of Camp Taurajo. The chain crosses Alliance land: most players finish its last legs in their 30s."),
+      action("boat", at("Snurk Bucksquick", 50.7, 12.9, durotar),
+        "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+      uncertain(action("goto", at(nil, 14.6, 23.0, stv),
+        "From Grom'gol, ride north-west to the coast. Swim north along the shore into Westfall and keep clear of the naga and murlocs in the water."),
+        "Coast point from reference guide A's Horde route; the road north through Duskwood and west past Raven Hill also works."),
+      action("goto", at(nil, 37.3, 89.2, westfall),
+        "Come ashore on Westfall's south coast and ride north to Alexston Farmstead. Stay away from Sentinel Hill to the east: its guards attack Horde."),
+      finish(79007, farm, "Search the Burned-Out Remains in the burned field at Alexston Farmstead."),
+      after(accept(79192, plank, "Take the next note from the Nailed Plank beside the remains."), 79007),
+      taxi("fly", at("Tharm", 45.13, 59.85, stonetalon), "Sun Rock Retreat, Stonetalon Mountains",
+        "Hearth or take the Grom'gol zeppelin back to Kalimdor, then fly to Sun Rock Retreat."),
+      action("goto", at("Stonetalon camp trail", 50.9, 52.3, stonetalon),
+        "Leave Sun Rock by its east side and follow the road north-east. Take the narrow dirt path that climbs west from the road."),
+      uncertain(finish(79192, camp, "Follow the path west to the abandoned camp and search the Pocket Litter on a crate by the tent. Pick the 12-slot bag from the rewards."),
+        "Published lists show a Sturdy Lunchbox for the Horde here; check the reward window."),
+      accept(79980, camp, "Read the next clue in the Pocket Litter."),
+      finish(79980, mound, "Climb the slope just north of the camp and find the Mound of Dirt. Use the short ledges and check each landing before you jump."),
+      accept(79974, mound, "Take the next clue from the Mound of Dirt. The rest of the chain is in the Eastern Kingdoms."),
+      action("goto", at(nil, 43.4, 92.1, arathi),
+        "The next clue is at Loch Modan's dam, deep in Alliance land. Do it when your route takes you to Arathi or to the Badlands (about 30-39): from Hammerfall, ride south-west to Thandol Span and cross into the Wetlands."),
+      action("goto", at(nil, 25.44, 10.38, lochModan),
+        "Follow the road south through the Wetlands, then east through Dun Algaz into Loch Modan. Level 30 Ironforge Mountaineers guard the pass: stay on the road and keep moving."),
+      finish(79974, dam, "Ride east along the north shore to Stonewrought Dam. From the middle of the dam, drop onto the ledge on the Wetlands side and click the Carved Figurine."),
+      accept(79975, dam, "Read the next clue at the Carved Figurine."),
+      action("goto", at("Cart at Thoradin's Wall", 87.36, 49.62, hillsbrad),
+        "Go back north through the Wetlands and over Thandol Span, then west through Arathi to Thoradin's Wall. The cart leans against a gap in the wall on the Hillsbrad side."),
+      finish(79975, bag, "Climb the cart onto the wall and follow the top of it to the platform with the hanging Messenger Bag."),
+      accept(79976, bag, "Read the last clue at the Messenger Bag."),
+      finish(79976, satchel, "Open the satchel just below the bag. Unroll your Cozy Sleeping Bag somewhere safe and rest beside it for 1% bonus experience per minute, up to 3%."),
+    },
+  }
+end

@@ -31,7 +31,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - Missed pickups move to Missed quests.
   - Outleveled pickups leave the route, unless a later quest needs them.
   - Breadcrumbs you've already used drop out.
-  - *Also on this loop* shows the other quests you can work on during the same trip.
+  - *While you're here* shows the other quests you can work on during the same trip.
   - Steps show a quest's place in its chain ("Chain: part 2 of 5").
   - A pickup warns you when your quest log is full, and Quest log cleanup lists quests no guide uses and grey quests worth little XP.
 - **Dungeons along the way.** Ragefire Chasm, Wailing Caverns, Shadowfang Keep, Blackfathom Deeps, the Deadmines, the Stockade, Razorfen Kraul, Gnomeregan, Scarlet Monastery, and Forever's Ruins of Lordaeron, Hall of Thanes, Excavation Site and City of Dalaran.
@@ -145,7 +145,7 @@ WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zon
 | `/codex reset` | Reset the window, banner and minimap button positions |
 | `/codex debug` | List what the Codex can see, to paste into a bug report (also quest API checks and trainer requirements that differ from the profession guide) |
 
-Left-click the minimap badge to open the Codex, right-click for Settings, and drag it around the minimap edge.
+Left-click the minimap badge to open or close the Codex, right-click it to show or hide the step window, and drag it around the minimap edge.
 
 ---
 

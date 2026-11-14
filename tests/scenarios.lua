@@ -305,7 +305,7 @@ function S.questDuskwoodFlanks()
   end
   local frame = questViewer()
   preview("Ira's Dagger")
-  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Seasoned Wolf Kabobs")
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Seasoned Wolf Kabobs")
     and questText(frame, "Lean Wolf Flank 3/10"), "the ravager hunt lists the kabobs' wolf flanks")
   preview("Eight-Legged Menaces")
   check(questText(frame, "Seasoned Wolf Kabobs") and questText(frame, "Lean Wolf Flank 3/10"),
@@ -331,14 +331,14 @@ function S.questRedridgeOverlap()
   preview("Blackrock Blockade")
   local frame = questViewer()
   check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
-  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Battleworn Axe 3/10"),
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Battleworn Axe 3/10"),
     "the blockade step shows the overlapping axe objective")
   MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Blackrock Supplies 4/10"),
+  check(not questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Blackrock Supplies 4/10"),
     "completed axes leave the panel without changing the primary objective")
   preview("Redridge Goulash")
   check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
@@ -797,9 +797,25 @@ function S.questPortrait()
   MOCK.modelFails = true
   MOCK.ns.questNPCs[783].finish = 824
   MOCK.event("QUEST_LOG_UPDATE")
+  local asked = p.model._asked
   MOCK.advance(1.2)
-  check(p.icon:IsShown() and not p.model:IsShown(), "a model that doesn't load gives way to the icon")
+  check(p.icon:IsShown(), "a model still loading after a second shows the icon meanwhile")
+  MOCK.advance(2.2)
+  check(p.model._asked == asked + 1, "a model still loading is asked for once more")
   MOCK.modelFails = nil
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and not p.icon:IsShown(), "a model that loads late replaces the icon")
+  MOCK.modelFails = true
+  MOCK.ns.questNPCs[783].finish = 825
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(11)
+  check(p.icon:IsShown() and not p.model:IsShown(), "a model that never loads gives way to the icon")
+  MOCK.targetGUID = "Creature-0-1-2-3-825-0001"
+  MOCK.event("PLAYER_TARGET_CHANGED")
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and p.model._unit == "target" and not p.icon:IsShown(),
+    "targeting the step's NPC shows it from the target")
+  MOCK.targetGUID, MOCK.modelFails = nil, nil
   MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
   MOCK.event("QUEST_LOG_UPDATE")
   check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
@@ -4372,9 +4388,18 @@ function S.minimap()
   check(win():IsShown(), "left-click opens the window")
   mini:Click("LeftButton")
   check(not win():IsShown(), "left-click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   mini:Click("RightButton")
-  check(win():IsShown(), "right-click opens settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  mini:Click("RightButton")
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   for _, shape in ipairs({ "ROUND", "SQUARE" }) do
     MOCK.minimapShape = shape
     MOCK.fire(mini, "OnDragStart", "LeftButton")
@@ -4727,9 +4752,18 @@ function S.compartment()
   check(win() and win():IsShown(), "click opens the Codex")
   entry.func(entry, { buttonName = "LeftButton" })
   check(not win():IsShown(), "click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   entry.func(entry, { buttonName = "RightButton" })
-  check(win():IsShown() and MOCK.textUnder(win()):find("Minimap button"), "right-click opens Settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  entry.func(entry, { buttonName = "RightButton" })
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   local owner = CreateFrame("Button", nil, UIParent)
   entry.funcOnEnter(owner)
   local lines = table.concat(GameTooltip._lines or {}, " / ")
@@ -6305,10 +6339,18 @@ function S.profNone()
   check(chatHas("profession: Herbalism not learned"), "Herbalism not learned in debug")
   openAt(9, "Professions")
   local content = profText()
-  check(content:find("No supported professions learned", 1, true), "empty profession switch")
-  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism" }) do
-    check(content:find(name, 1, true) and not profButton(name), "only text for supported " .. name)
+  check(content:find("No supported professions learned", 1, true) and content:find("PROFESSION GUIDES", 1, true),
+    "nothing learned: the guide picker shows")
+  for _, k in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism", "Skinning", "Leatherworking",
+      "Alchemy", "Engineering", "First Aid", "Cooking", "Fishing" }) do
+    check(profButton(k), "a button for every guide: " .. k)
   end
+  check(not profButton("All guides"), "no way back needed before a guide is open")
+  click(win(), "Enchanting")
+  content = profText()
+  check(content:find("Enchanting  -  not learned", 1, true) and content:find("Runed Copper Rod", 1, true), "browsing a guide")
+  click(win(), "All guides")
+  check(profText():find("PROFESSION GUIDES", 1, true) and profButton("Fishing"), "All guides goes back to the picker")
   win():Hide()
   MOCK.level = 10
   MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
@@ -6401,7 +6443,7 @@ function S.profOpenHeadingWithClosedWeapons()
   check(profButton("Mining"), "Mining confirmed with the Professions heading open")
   MOCK.removeSkill("Mining")
   MOCK.advance(1.2)
-  check(not profButton("Mining") and profText():find("No supported professions learned", 1, true),
+  check(not profText():find("Mining 30 / 75", 1, true) and profText():find("No supported professions learned", 1, true),
     "an unrelated closed heading cannot hide an unlearned profession")
 end
 
@@ -6442,12 +6484,13 @@ function S.profTab()
   if not D() then return end
   openAt(30, "Professions")
   click(win(), "Blacksmithing")
+  click(win(), "To 300")
   local t = profText()
   check(t:find("Blacksmithing 97 / 150"), "skill header")
   check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
   check(t:find("Learn at 95"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
-  check(t:find("1882 Thorium Bar"), "shopping list counts the 140 Thorium Bars the Imperial Plate quests take")
+  check(t:find("1620 Thorium Bar"), "shopping list counts the 100 Thorium Bars the two Imperial Plate quests take")
   check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
@@ -6462,6 +6505,82 @@ function S.profTab()
   click(win(), "Mining")
   t = profText()
   check(t:find("Mining 140 / 225") and t:find("Iron Deposit") and t:find("Arathi Highlands"), "mining header, vein, zones")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- The shopping list counts to your cap first (the next cap once you're at it); To 300 counts the
+-- whole route, and the choice holds for the session.
+function S.profShopScope()
+  if not D() then return end
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  local t = profText()
+  check(t:find("SHOPPING LIST TO 150", 1, true), "the list counts to your cap first")
+  check(t:find("\n10 Green Dye", 1, true), "a step that crosses the cap counts its crafts to the cap")
+  local function shopPart(text)
+    local a = text:find("SHOPPING LIST", 1, true)
+    local b = a and text:find("CAMP OBJECTS", a, true)
+    return a and text:sub(a, b or #text) or ""
+  end
+  check(not shopPart(t):find("Thorium Bar", 1, true) and not shopPart(t):find("Mithril Bar", 1, true), "nothing past the cap")
+  check(findButton(win(), function(l) return l == "To 150 (your cap)" end), "the switch names your cap")
+  click(win(), "To 300")
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and t:find("1620 Thorium Bar", 1, true) and
+    t:find("\n25 Green Dye", 1, true), "To 300 counts the whole route")
+  click(win(), "Mining")
+  click(win(), "Blacksmithing")
+  check(profText():find("SHOPPING LIST TO 300", 1, true), "the choice holds when you come back")
+  click(win(), "To 150 (your cap)")
+  MOCK.setSkill("Blacksmithing", 150, 150); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 225", 1, true) and findButton(win(), function(l) return l == "To 225 (next cap)" end),
+    "at your cap the list counts to the next one")
+  check(shopPart(t):find("Mithril Bar", 1, true) and not shopPart(t):find("Thorium Bar", 1, true), "and stops there")
+  MOCK.setSkill("Blacksmithing", 210, 300); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and not findButton(win(), function(l) return l == "To 300" end),
+    "with a cap of 300 there's nothing to switch")
+  win():Hide()
+end
+
+-- Other guides: every guide you haven't learned, shown as if you were starting it.
+function S.profBrowse()
+  if not D() then return end
+  MOCK.faction, MOCK.race = "Alliance", "Human"
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  click(win(), "Other guides")
+  local t = profText()
+  check(t:find("OTHER PROFESSION GUIDES", 1, true), "the picker opens")
+  check(profButton("Tailoring") and profButton("Fishing") and profButton("First Aid"), "it lists the guides you haven't learned")
+  local count = 0
+  for _, b in ipairs(MOCK.buttons(win())) do if labelOf(b) == "Blacksmithing" then count = count + 1 end end
+  check(count == 1, "a learned guide keeps its own button, not a second one in the picker")
+  click(win(), "Alchemy")
+  t = profText()
+  check(t:find("Alchemy  -  not learned", 1, true) and t:find("Any Alchemy trainer", 1, true), "where to learn it")
+  check(t:find("FIRST STEP", 1, true) and t:find("Minor Arcane Elixir", 1, true), "its first step")
+  check(t:find("THE WHOLE ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
+    "its route and shopping list from 1")
+  check(not t:find("DO THIS NOW", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^90%-120") then b:Click(); break end
+  end
+  check(profText():find("STEP 90-120", 1, true) and profText():find("Elixir of Wisdom", 1, true), "a step can be opened")
+  click(win(), "Other guides")
+  click(win(), "Herbalism")
+  t = profText()
+  check(t:find("Herbalism  -  not learned", 1, true) and t:find("Peacebloom  1\n", 1, true) and
+    t:find("Elwynn Forest", 1, true), "a gathering guide lists its first nodes without colours")
+  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("Herbalism 1 / 75", 1, true) and t:find("DO THIS NOW", 1, true), "learning it turns the page into your guide")
+  click(win(), "Mining")
+  check(profText():find("Mining 140 / 225", 1, true), "your own guides are a click away")
+  MOCK.removeSkill("Herbalism"); MOCK.advance(1.2)
+  MOCK.faction, MOCK.race = nil, nil
   MOCK.staleUnder(win(), "Professions")
   win():Hide()
 end
@@ -6635,7 +6754,9 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 25, 75); MOCK.advance(1.2)
   check(profText():find("Peacebloom  1  yellow"), "Peacebloom turns yellow at 25")
   MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
-  check(profText():find("Peacebloom  1  green") and profText():find("TRAIN JOURNEYMAN"), "green and training at 50")
+  check(profText():find("Peacebloom  1  yellow") and profText():find("TRAIN JOURNEYMAN"), "still yellow, and training at 50")
+  MOCK.setSkill("Herbalism", 65, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  green"), "Forever's herbs turn green at skill + 65")
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
   check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
@@ -6729,6 +6850,10 @@ function S.alchemyTab()
   content = profText()
   check(content:find("TRAIN ARTISAN", 1, true) and content:find("Kylanna Windwhisper", 1, true) and
     content:find("Rogvar", 1, true) and content:find("level 35", 1, true), "Artisan rank unlock and trainers")
+  check(content:find("SHOPPING LIST TO 225", 1, true) and not content:find("Stonescale Oil", 1, true),
+    "to the Expert cap the oil isn't needed yet")
+  click(win(), "To 300")
+  content = profText()
   check(content:find("75 Leaded Vial (includes 43 for 86 Stonescale Oil", 1, true),
     "the shared vial row separates oil supplies from the vials for earlier recipes")
   MOCK.bags = { ["Stonescale Eel"] = 3, ["Leaded Vial"] = 1 }
@@ -6768,7 +6893,7 @@ function S.skinningLeatherworkingTab()
   click(win(), "Leatherworking")
   content = profText()
   check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
-    content:find("SHOPPING LIST TO 300"), "Leatherworking starter and shopping estimate")
+    content:find("SHOPPING LIST TO 75"), "Leatherworking starter and shopping estimate, to the Apprentice cap")
   check(content:find("125  Tanning Rack") and content:find("Runic Leather Headband"), "hotfixed camp unlock and final step")
   MOCK.setSkill("Leatherworking", 200, 225); MOCK.advance(1.2)
   check(profText():find("TRAIN ARTISAN") and profText():find("Hahrana Ironhide"), "Leatherworking Artisan trainer")
@@ -6800,6 +6925,8 @@ end
 
 -- The shopping list's text only (between its title and the cloth section).
 local function shoppingText()
+  local whole = findButton(win(), function(l) return l == "To 300" end)
+  if whole and not whole.codexOn then whole:Click() end
   local t = profText()
   local a = t:find("SHOPPING LIST TO 300", 1, true)
   local b = t:find("\nCLOTH\n", a or 1, true)
@@ -6928,7 +7055,7 @@ function S.tailorTab()
   local t = tailoring()
   check(t:find("Tailoring 150 / 225"), "Tailoring header")
   check(t:find("Earthen Vest"), "step at 150: Earthen Vest")
-  check(t:find("SHOPPING LIST TO 300") and t:find("\nCLOTH\n"), "shopping list and cloth section")
+  check(t:find("SHOPPING LIST TO 225") and t:find("\nCLOTH\n"), "shopping list (to your cap) and cloth section")
   local shop = shoppingText()
   check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
   local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
@@ -6960,7 +7087,10 @@ function S.tailorTab()
   MOCK.staleUnder(win(), "Professions")
   click(win(), "Settings")
   local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
-  check(cards and cards.tipText and cards.tipText:find("Tailoring"), "Settings: skill-up cards name Tailoring")
+  check(cards and cards.tipText and cards.tipText:find("every profession the Codex guides", 1, true),
+    "Settings: skill-up cards cover every guided profession")
+  check(findButton(win(), function(l) return l == "Show what to learn at profession trainers" end) and
+    findButton(win(), function(l) return l == "Include profession supplies" end), "Settings: the trainer and vendor switches")
   win():Hide()
 end
 
@@ -6995,8 +7125,8 @@ function S.tailorTabCases()
   check(t:find("Runecloth  %-  you need this now"), "Runecloth marked at 260")
   MOCK.setSkill("Tailoring", 285, 300)
   t = tailoring()
-  check(t:find("Runecloth Shoulders") and t:find("Venomspew Gloves") and t:find("Venomspew Cord"),
-    "Runecloth finish with vendor alternatives")
+  check(t:find("Runecloth Shoulders") and t:find("Venomspew patterns") and t:find("need a Loom"),
+    "Runecloth finish: the vendor patterns need a Loom")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
   check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
@@ -7535,6 +7665,74 @@ function S.classTrainer()
   check(not card:IsShown(), "the setting turns the card off")
 end
 
+-- A profession trainer: the card lists the next rank when you can train it and the route recipes this
+-- trainer teaches up to your cap, and names where the next one it doesn't teach comes from.
+function S.profTrainer()
+  MOCK.level = 30
+  MOCK.setSkill("Blacksmithing", 97, 150); MOCK.advance(1.2)
+  local window = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+  window:SetSize(384, 512)
+  window:Show()
+  MOCK.tradeskillTrainer = true
+  MOCK.trainer = {
+    { "Rough Bronze Leggings", "Blacksmithing", 95, category = "used" },
+    { "Heavy Grinding Stone", "Blacksmithing", 100, category = "unavailable", cost = 500 },
+    { "Iron Buckle", "Blacksmithing", 125, category = "unavailable", cost = 800 },
+    { "Bronze Warhammer", "Blacksmithing", 100, category = "unavailable", cost = 900 },
+    { "Silver Rod", "Blacksmithing", 100, cost = 300 },
+    { "Blacksmithing", "Blacksmithing", 125, rank = "Expert", category = "unavailable", cost = 10000 },
+  }
+  MOCK.money = 1000
+  MOCK.event("TRAINER_SHOW")
+  local card = _G.LevelingCodexTrainerHint
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no trainer card without the trainer APIs")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "PROFESSION TRAINER"), "a profession trainer gets its own card")
+  check(questText(card, "Nothing to learn here yet") and
+    questText(card, "Next here: Heavy Grinding Stone at 100, Bronze Warhammer at 100, Iron Buckle at 125"),
+    "before the skill is there it says what this trainer teaches next")
+  check(questText(card, "Expert Blacksmithing at skill 125 and level 20"), "and when the next rank opens")
+  check(questText(card, "Not taught here: Green Iron Bracers (learn at 140): Expert trainers: Bengus Deepforge"),
+    "and where the route's next recipe this trainer lacks comes from")
+  check(not questText(card, "Silver Rod"), "recipes off the route are left out")
+  MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "available", "available"
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (130-140)"),
+    "what to learn now for the route, and the cost")
+  check(questText(card, "You have 10s: 4s short"), "and when money is short")
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "used", "used"
+  MOCK.setSkill("Blacksmithing", 125, 150); MOCK.advance(1.2)
+  MOCK.trainer[3].category, MOCK.trainer[6].category = "available", "available"
+  MOCK.money = 100000
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-130)"),
+    "the next rank comes first")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession trainer: Blacksmithing, route items now: 2"), "/codex debug reports the profession trainer")
+  table.remove(MOCK.trainer, 6)
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Expert Blacksmithing isn't listed here: Bengus Deepforge"), "a rank this trainer doesn't teach points to one who does")
+  LevelingCodexDB.noTrainerGuide = true
+  MOCK.event("TRAINER_SHOW")
+  check(card:IsShown(), "the class trainer setting leaves the profession card alone")
+  LevelingCodexDB.noTrainerGuide, LevelingCodexDB.noProfTrainer = nil, true
+  MOCK.event("TRAINER_SHOW")
+  check(not card:IsShown(), "Settings > Trainers turns the profession card off")
+  LevelingCodexDB.noProfTrainer = nil
+  MOCK.removeSkill("Blacksmithing"); MOCK.advance(1.2)
+  MOCK.trainer = { { "Blacksmithing", nil, nil, rank = "Apprentice", cost = 10 } }
+  MOCK.event("TRAINER_SHOW")
+  check(questText(card, "Start Blacksmithing here") and questText(card, "Professions > Other guides"),
+    "a profession you don't have yet points to its guide")
+  MOCK.event("TRAINER_CLOSED")
+  check(not card:IsShown(), "closing the trainer hides the card")
+  MOCK.tradeskillTrainer = false
+end
+
 -- Vendor: greys sell one by one when a vendor opens, guide items and the Hearthstone are kept.
 function S.vendorJunk()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
@@ -7708,6 +7906,58 @@ function S.vendorShopping()
   check(MOCK.bought[1][2] == 2, "and only the stock is bought")
   MOCK.closeMerchant()
   check(not card:IsShown(), "closing the vendor hides the card")
+end
+
+-- Vendor: the shopping card also offers what your current profession steps need from this vendor:
+-- materials (a part's own materials), a tool, the rod you lack; never what a later step needs.
+function S.vendorProfSupplies()
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.setSkill("Engineering", 30, 75)
+  MOCK.advance(1.2)
+  MOCK.money = 100000
+  MOCK.bags = { ["Coarse Thread"] = 5 }
+  local thread = { id = 2320, name = "Coarse Thread", price = 10, per = 1, stock = -1, maxStack = 200 }
+  local hammer = { id = 5956, name = "Blacksmith Hammer", price = 16 }
+  MOCK.openMerchant({ items = { thread, { id = 2321, name = "Fine Thread", price = 100 }, hammer,
+    { id = 2604, name = "Red Dye", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no card without the merchant API")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "34 x Coarse Thread") and questText(card, "for Linen Belt (Tailoring)"),
+    "the card offers the thread your step's crafts still need (39, you have 5)")
+  check(questText(card, "1 x Blacksmith Hammer") and questText(card, "for Handful of Copper Bolts (Engineering)"),
+    "and the tool your Engineering step needs")
+  check(not questText(card, "Fine Thread") and not questText(card, "Red Dye"), "nothing a later step needs")
+  click(card, "Buy for 3s 56c")
+  check(#MOCK.bought == 2 and MOCK.bought[1][1] == 2320 and MOCK.bought[1][2] == 34 and MOCK.bought[2][1] == 5956,
+    "one click buys them")
+  MOCK.closeMerchant()
+  MOCK.bought, MOCK.bags = {}, { ["Coarse Thread"] = 39, ["Blacksmith Hammer"] = 1 }
+  MOCK.openMerchant({ items = { thread, hammer } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "with the thread and the hammer in your bags there's nothing to buy")
+  MOCK.closeMerchant()
+  MOCK.removeSkill("Tailoring"); MOCK.removeSkill("Engineering")
+  MOCK.setSkill("Enchanting", 12, 75); MOCK.advance(1.2)
+  MOCK.bags = {}
+  local rod = { id = 6217, name = "Copper Rod", price = 124 }
+  local mote = { id = 1245321, name = "Mote of Magic", price = 40 }
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(questText(card, "1 x Copper Rod") and questText(card, "1 x Mote of Magic") and
+    questText(card, "for Runed Copper Rod (Enchanting)"), "without the rod your step needs, the card offers its materials")
+  check(not questText(card, "9 x Mote of Magic"), "the step's own Motes are made from Strange Dust, not bought")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = true
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "Settings > Vendor > Include profession supplies turns it off")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = nil
 end
 
 -- Stats: XP, gold by source, activity and zone time, counted per level and saved.
@@ -8180,4 +8430,52 @@ function S.craftSmeltingCases()
   check(t:find("no points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
+end
+
+-- A new character's intro cinematic (or Alt+Z) hides UIParent: the step window comes back with it.
+-- Only the player's own Hide keeps it closed.
+function S.questUiHidden()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Rude Awakening"), "a fresh Undead starts at Rude Awakening")
+  UIParent:Hide()
+  check(not frame:IsVisible(), "hidden with the UI")
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(frame:IsShown() and frame:IsVisible(), "back when the UI comes back")
+  click(frame, "Hide")
+  UIParent:Hide()
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not frame:IsShown(), "a window the player hid stays hidden")
+  MOCK.faction = nil
+end
+
+-- A fresh character whose client lists flight points as known: guides it hasn't started show no %.
+function S.questFreshProgress()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  LevelingCodexCharDB = { questFlights = { ["Crossroads, The Barrens"] = true, ["Ratchet, The Barrens"] = true,
+    ["The Sepulcher, Silverpine Forest"] = true, ["Undercity, Tirisfal"] = true, ["Orgrimmar, Durotar"] = true } }
+  S.login()
+  MOCK.questLog = { { questID = 363 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 363)
+  MOCK.event("QUEST_LOG_UPDATE")
+  slash("quests")
+  for _, name in ipairs({ "The Crossroads", "Silverpine Forest", "Northern Barrens" }) do
+    check(guideButton(name), "the guide list has " .. name)
+  end
+  local function tagged(root)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r:IsShown() and type(r._text) == "string" and r._text:find("^Later %d+%%") then return r._text end
+    end
+    for _, c in ipairs({ root:GetChildren() }) do
+      local hit = c:IsShown() and tagged(c)
+      if hit then return hit end
+    end
+  end
+  local tag = tagged(win())
+  check(not tag, "no guide you haven't started shows a percentage: " .. tostring(tag))
+  MOCK.faction = nil
 end

@@ -11,6 +11,44 @@
 - **Everything follows your path.** This Level, the level-up banner and chat line, the minimap tooltip and the outline in your talent window all show your path's point. The trainer list follows it too: an Arms Warrior sees Mortal Strike ranks instead of Shield Slam. Macros and tips stay with the Codex guide.
 - **Remembered per character.** Your choice is saved. If WoW: Forever doesn't load your saved settings, the Codex picks the path that the talents you've already spent follow.
 
+### Horde quest guide
+
+- **Smoother loops from 30 to 60.**
+  - The Horde route was checked chapter by chapter for back-and-forth walking.
+  - Gadgetzan, Booty Bay, Silithus's Cenarion Hold and the Riverglades' ring fights are each one sweep now.
+  - Pickups you used to come back for are taken on the first visit: Enemies in the Water, Thundering Hearts, Super Sticky, Nafien's quest in Felwood.
+- **Quests the guide missed.**
+  - Stranglethorn's hunting quests and Weed Whacked, The Severed Head, Sunken Treasure, News for Fizzle.
+  - Noggenfogger Elixir, Fuel for the Zapping, Locked Away, the Jeremiah chain in the Plaguelands, the Riverglades side quests.
+  - A few quests started by items you find.
+- **Cozy Sleeping Bag for the Horde.** A new special guide for the chain that ends with the sleeping bag (up to 3% bonus XP): it starts at the burned watchtower south of Camp Taurajo. The Camp Taurajo chapter offers it.
+- **Ruins of Lordaeron.** The New Plague is only offered after Apothecary Renferrel's three-part A Recipe For Death, so the dungeon guide now runs that chain first.
+- **Buy it before you go.**
+  - Quests that need a bought item say so at the step before the trip: the Southshore Stout that gets you past the Syndicate in Strahnbrad, the Blasted Lands reagents, Gorilla Fangs, Silk Cloth, the Mithril Casing, Gregan's bait.
+  - Auction House items are optional steps.
+- **Dungeons at the right moment.**
+  - Zul'Farrak, Krol'dok, City of Dalaran, Razorfen Downs, Sunken Temple, Scholomance, Stratholme and Upper Blackrock Spire are offered at the steps that lead into them.
+  - The Scholomance key guide works with Thunder Bluff's call to arms too.
+- **Elite quests are optional.**
+  - Quests whose target is an elite are optional steps, shown with Settings > Show optional quests or while the quest is in your log: King Bangalash, Gorlash, the Bloodsail captains, the Swamp Talker, Vile Priestess Hexx, Hitah'ya the Keeper, Overseer Maltorius, Marez Cowl and Or'Kalar.
+  - Their pickup steps say so, so you can grab a group.
+- Class objectives on the route sit where they add the least walking.
+- The quest log stays at 20 or fewer with every dungeon planned.
+
+### Step window
+
+- **It shows up on a new character.** The intro cinematic (and Alt+Z) hides the game's interface. The step window took that as you closing it and stayed hidden until you showed it in the Quests tab; it now comes back with the interface.
+- **NPC portraits load.** A portrait used to give up after one second and show the step's icon (a "?") when the game hadn't loaded that NPC yet. It now keeps trying and shows the NPC once it loads, and targeting the NPC shows it at once.
+- "Also on this loop" is now **While you're here**.
+
+### Minimap button
+
+- **Left-click** opens or closes the Codex. **Right-click** shows or hides the step window (Settings is a tab in the Codex). The addon compartment entry works the same way.
+
+### Quests tab
+
+- A fresh character no longer sees a few percent on guides it hasn't started. Forever lists flight points as already known, and those flight path steps counted as done. A guide now counts nothing until you've done one of its quests.
+
 ## v0.22.0
 
 ### Step window

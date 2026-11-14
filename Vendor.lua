@@ -213,7 +213,8 @@ local function itemName(item, names)
   return type(name) == "string" and name or nil
 end
 
--- { { item, need, forText }, ... } in route order. names: item -> name (the vendor's list).
+-- { { item, need, forText }, ... } in route order, then your profession steps' supplies.
+-- names: item -> name (the vendor's list).
 function V.needs(names)
   local steps, quests, order, forText, counted, turnins = {}, {}, {}, {}, {}, {}
   local function note(item, text, better)
@@ -245,9 +246,24 @@ function V.needs(names)
       end
     end
   end
+  -- Profession supplies (Professions.lua) come by name: only what this vendor sells can be matched.
+  local prof, profName = {}, {}
+  if names and not ns.db().noProfShop and ns.profSupplies then
+    local idOf = {}
+    for id, name in pairs(names) do idOf[name] = id end
+    for _, row in ipairs(ns.profSupplies()) do
+      local id = idOf[row.name]
+      if id then
+        prof[id], profName[id] = (prof[id] or 0) + row.n, row.name
+        note(id, row.label)
+      end
+    end
+  end
   local out = {}
   for _, item in ipairs(order) do
-    local need = math.max(steps[item] or 0, quests[item] or 0) - Q.itemCount(item)
+    local have = Q.itemCount(item)
+    if profName[item] then have = math.max(have, Q.itemCount(profName[item])) end
+    local need = math.max(steps[item] or 0, quests[item] or 0) + (prof[item] or 0) - have
     if need > 0 then out[#out + 1] = { item = item, need = need, forText = Q.plain(forText[item]) } end
   end
   return out

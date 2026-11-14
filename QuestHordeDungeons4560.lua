@@ -965,8 +965,11 @@ do
   local krinkle = on.tanaris("Krinkle Goodsteel", 51.46, 28.81)
   local wp = on.wpl
   need(5094, "A Call to Arms: The Plaguelands!", 50, 50)
-  -- Any of the three race-town calls to arms (5093-5095) opens 5096; this guide takes the Undercity one.
+  need(5095, "A Call to Arms: The Plaguelands!", 50, 50)
+  -- Any of the three race-town calls to arms (5093-5095) opens 5096, and you can hold only one: this
+  -- guide takes the Undercity one unless you already carry Thunder Bluff's from the main route.
   B.q(5096, "Scarlet Diversions", 53, 50, 5094)
+  local function anyCall(step) step.chain = nil; return step end
   need(5098, "All Along the Watchtowers", 56, 50, 5096)
   need(838, "Scholomance", 55, 55, 5098)
   need(964, "Skeletal Fragments", 57, 55, 838)
@@ -978,10 +981,13 @@ do
     links = { "dungeon-scholomance" },
     sources = { "https://www.wowhead.com/forever/quest=5511/the-key-to-scholomance" },
     steps = {
-      accept(5094, balthazad, "In the Undercity's Trade Quarter, Harbinger Balthazad calls for help at the Bulwark."),
+      B.only(accept(5094, balthazad,
+        "In the Undercity's Trade Quarter, Harbinger Balthazad calls for help at the Bulwark. You can hold only one call to arms: use Next if you carry Thunder Bluff's."),
+        { unlessDone = 5095 }),
       action("goto", derrington, "Leave the Undercity and ride east to the Bulwark."),
-      finish(5094, derrington),
-      accept(5096, derrington, "High Executor Derrington wants the Scarlet command tent in the Plaguelands burned."),
+      B.optional(finish(5095, derrington, "If you brought Thunder Bluff's call to arms instead, hand it in here.")),
+      B.only(finish(5094, derrington), { unlessDone = 5095 }),
+      anyCall(accept(5096, derrington, "High Executor Derrington wants the Scarlet command tent in the Plaguelands burned.")),
       collect(12814, on.tirisfal("Box of Incendiaries", 83.2, 69.1), "Take a Flame in a Bottle from the Box of Incendiaries at the Bulwark."),
       uncertain(objective(5096, nil, "Ride into the Western Plaguelands to the Scarlet camp between Felstone Field and Dalson's Tears. Burn the command tent and plant the Scourge banner."),
         "The camp's exact spot: check in game."),

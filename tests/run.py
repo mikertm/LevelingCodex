@@ -986,7 +986,7 @@ def main():
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questMobTarget",
                              "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "stepButtons", "stepComfort", "stepSetupWindow", "stepCompactNote", "stepScaleButtons", "stepScaleSaved", "stepCompactDistance", "stepTitles", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
-                             "questStepTypes", "questBuyItems", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
+                             "questStepTypes", "questBuyItems", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
@@ -1027,9 +1027,11 @@ def main():
                 runs.append(("%s/full/no-art" % cls, cls, False, NOART))
         runs.append(("WARRIOR/%s/prof" % variant, "WARRIOR", minimal, PROF))
         runs.append(("WARRIOR/%s/class-trainer" % variant, "WARRIOR", minimal, ["login", "classTrainer"]))
+        runs.append(("WARRIOR/%s/prof-trainer" % variant, "WARRIOR", minimal, ["login", "profTrainer"]))
         runs.append(("WARRIOR/%s/vendor-junk" % variant, "WARRIOR", minimal, ["vendorJunk"]))
         runs.append(("WARRIOR/%s/vendor-repair" % variant, "WARRIOR", minimal, ["vendorRepair"]))
         runs.append(("WARRIOR/%s/vendor-shopping" % variant, "WARRIOR", minimal, ["vendorShopping"]))
+        runs.append(("WARRIOR/%s/vendor-prof-supplies" % variant, "WARRIOR", minimal, ["vendorProfSupplies"]))
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
@@ -1064,6 +1066,10 @@ def main():
         runs.append(("PALADIN/%s/prof-closed-heading" % variant, "PALADIN", minimal, PROF_CLOSED))
         runs.append(("MAGE/%s/prof-none" % variant, "MAGE", minimal, PROF_NONE))
         runs.append(("WARRIOR/%s/prof-learned-switch" % variant, "WARRIOR", minimal, ["login", "profLearnedSwitch"]))
+        runs.append(("WARRIOR/%s/prof-shop-scope" % variant, "WARRIOR", minimal,
+                     ["skills:BS;97;150,MI;140;225:professions", "login", "profShopScope"]))
+        runs.append(("WARRIOR/%s/prof-browse" % variant, "WARRIOR", minimal,
+                     ["skills:BS;97;150,MI;140;225:professions", "login", "profBrowse"]))
         runs.append(("WARRIOR/%s/prof-reader" % variant, "WARRIOR", minimal, ["login", "profReaderRecovery"]))
         runs.append(("WARRIOR/%s/prof-reader-open" % variant, "WARRIOR", minimal, ["login", "profReaderRecoversAfterOpen"]))
         runs.append(("WARRIOR/%s/prof-reader-closed-weapons" % variant, "WARRIOR", minimal,

@@ -1052,6 +1052,10 @@ def audit_professions(profdata, ref):
             if key == "ENGINEERING":
                 if (x.get("tools") or []) != (r.get("tools") or []):
                     add("error", f"{where}: {name} needs tools {r.get('tools')}, guide says {x.get('tools')}")
+            if key == "BLACKSMITHING":  # the Blacksmith Hammer (the reference's totem `tool`)
+                want = [r["tool"]] if r.get("tool") else []
+                if (x.get("tools") or []) != want:
+                    add("error", f"{where}: {name} needs tools {want}, guide says {x.get('tools')}")
             if key in ("ENGINEERING", "COOKING"):
                 if x.get("station") != r.get("station"):
                     add("error", f"{where}: {name} needs station {r.get('station')}, guide says {x.get('station')}")

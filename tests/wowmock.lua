@@ -60,7 +60,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
   "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
-  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -316,18 +316,26 @@ local function fire(self, script, ...)
   if fn then return fn(self, ...) end
 end
 MOCK.fire = fire
+-- Like the client: a frame that becomes visible or invisible fires OnShow/OnHide, and so does
+-- every shown child under it (hiding UIParent for a cinematic or Alt+Z reaches the addon's frames).
+local function fireTree(self, script)
+  fire(self, script)
+  for _, child in ipairs(self._children or {}) do
+    if child._shown then fireTree(child, script) end
+  end
+end
 function Region:Show()
   secureCheck(self, "Show")
   if self._shown then return end
   self._shown = true
-  if self:IsVisible() then fire(self, "OnShow") end
+  if self:IsVisible() then fireTree(self, "OnShow") end
 end
 function Region:Hide()
   secureCheck(self, "Hide")
   if not self._shown then return end
   local wasVisible = self:IsVisible()
   self._shown = false
-  if wasVisible then fire(self, "OnHide") end
+  if wasVisible then fireTree(self, "OnHide") end
 end
 function Region:SetShown(on) if on then self:Show() else self:Hide() end end
 function Region:SetAlpha(a) self._alpha = a end
@@ -701,15 +709,19 @@ function Anim:GetStartDelay() return self._delay end
 -- CreateFrame and templates
 ----------------------------------------------------------------------------
 
--- PlayerModel (the step window's portrait): SetCreature records `_creature`; GetModelFileID is 123
--- once "loaded", nil with MOCK.modelFails. The minimal client has no PlayerModel frame type.
+-- PlayerModel (the step window's portrait): SetCreature records `_creature` (and counts `_asked`),
+-- SetUnit `_unit`; GetModelFileID is 123 once "loaded", nil with MOCK.modelFails (a unit's model
+-- always loads). The minimal client has no PlayerModel frame type.
 local PlayerModel = setmetatable({}, { __index = Frame })
 PlayerModel.__index = PlayerModel
-function PlayerModel:SetCreature(id) self._creature = id end
-function PlayerModel:ClearModel() self._creature = nil end
+function PlayerModel:SetCreature(id) self._creature, self._unit = id, nil; self._asked = (self._asked or 0) + 1 end
+function PlayerModel:SetUnit(unit) self._unit = unit end
+function PlayerModel:ClearModel() self._creature, self._unit = nil, nil end
 function PlayerModel:SetPortraitZoom(z) self._zoom = z end
 function PlayerModel:SetCamera(c) self._camera = c end
-function PlayerModel:GetModelFileID() if self._creature and not MOCK.modelFails then return 123 end end
+function PlayerModel:GetModelFileID()
+  if self._unit or (self._creature and not MOCK.modelFails) then return 123 end
+end
 
 local CLASSES = { Frame = Frame, Button = Button, ScrollFrame = ScrollFrame, EditBox = EditBox, Slider = Slider,
   CheckButton = Button, StatusBar = Frame, GameTooltip = Frame, PlayerModel = PlayerModel }
@@ -1097,6 +1109,8 @@ end
 MOCK.knownSpells = {}
 function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 
+-- Your target's GUID ("Creature-0-1-2-3-<npcID>-<spawn>"): MOCK.targetGUID.
+function UnitGUID(unit) if unit == "target" then return MOCK.targetGUID end end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
