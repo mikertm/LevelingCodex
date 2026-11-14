@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.23.1
+
+### Quest guide
+
+- **A smooth arrival bounce.** When you reach a step, the arrow turns into the step's icon and bobs. It used to jump at the top of every bounce; now it rises and falls in one smooth motion.
+- **Sharper step icons.** The pickup !, the turn-in ?, the sword, the loot bag and the flight, hearth, vendor and trainer icons now use the game's own high-resolution art, picked to fit your screen, so they stay crisp from 1080p to 4K. They show on the arrow, in the step window and on the minimap and world map. Hearth and bind steps now show a hearthstone.
+- **Smoother glows.** The gold ring around your destination on the flight map pulses smoothly. The arrival ring, the minimap pin's ring and the level-up banner no longer flash as they fade out.
+
 ## v0.23.0
 
 ### Talents
