@@ -2121,6 +2121,30 @@ function S.questDanger()
   check(not questText(frame, "Watch out here"), "the setting turns the warnings off")
 end
 
+-- Party distances count the steps your own route shows (not filtered, grey or cut) between your real
+-- step and a member's: the first of yours at or past their position in the guide's data.
+local function partySteps(theirPos)
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local function shown(r) return r.state ~= "filtered" and not r.grey and not r.cut end
+  local n, i = 0, theirPos > mine.pos and at or at - 1
+  while steps[i] and steps[i].section == mine.section
+      and (theirPos > mine.pos and steps[i].pos < theirPos or theirPos < mine.pos and steps[i].pos >= theirPos) do
+    if shown(steps[i]) then n = n + 1 end
+    i = theirPos > mine.pos and i + 1 or i - 1
+  end
+  return math.max(1, n)
+end
+
+local function fromParty(name, text) MOCK.event("CHAT_MSG_ADDON", "LevCodex", text, "PARTY", name) end
+
+local function addonCount(pattern)
+  local n = 0
+  for _, m in ipairs(MOCK.addonSent or {}) do if m.text:find(pattern) then n = n + 1 end end
+  return n
+end
+
 -- In a party: your step goes out by addon message, others' steps show in the step window, and the
 -- opt-in quest sharing and flight announcements.
 function S.questParty()
@@ -2134,7 +2158,7 @@ function S.questParty()
   for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);Accept %- A Threat Within$")) or pos end
   check(pos, "the current step is told to the party")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;northshire;40;Turn in - Bounty on Garrick Padfoot", "PARTY", "Ann-Realm")
-  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot " .. (40 - pos) .. " ahead"),
+  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot " .. partySteps(40) .. " ahead"),
     "a party member's step shows with how far ahead they are")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;westfall;3;Accept - Westfall Stew", "PARTY", "Bo")
   check(questText(frame, "Bo: Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
@@ -2143,6 +2167,8 @@ function S.questParty()
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.advance(0.6)
+  check(not MOCK.pushed, "the offer waits a moment, so a member who takes it at the same time isn't offered it")
+  MOCK.advance(2)
   check(MOCK.pushed == 783, "a guide quest you accept is offered to the party")
   LevelingCodexDB.questAnnounceFlights = true
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
@@ -2156,7 +2182,8 @@ end
 
 -- Party sync: one row per party member in the step window, with their level and where they are
 -- against you (same step with their goal, N behind, N ahead, another guide, no step shared), and a
--- heading that says when everyone is on your step. The roster decides who shows.
+-- heading that says when everyone is on your step. Distances count the steps your own route shows
+-- (questPartyCatchUp checks Back). The roster decides who shows.
 function S.questPartySync()
   MOCK.party = true
   MOCK.partyMembers = { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", realm = "Elsewhere", level = 4, class = "WARRIOR" } }
@@ -2175,23 +2202,39 @@ function S.questPartySync()
   check(goal == "G;", "your goal goes out with it (none on an accept step)")
   check(questText(frame, "Ann (5) no step shared") and questText(frame, "Bo (4) no step shared"),
     "party members who haven't shared a step show with their level")
-  local function from(name, text) MOCK.event("CHAT_MSG_ADDON", "LevCodex", text, "PARTY", name) end
-  from("Ann-Realm", "S;northshire;" .. pos .. ";Accept - A Threat Within")
-  from("Ann-Realm", "G;Kobold Vermin slain: 3/10")
+  fromParty("Ann-Realm", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  fromParty("Ann-Realm", "G;Kobold Vermin slain: 3/10")
   check(questText(frame, "Ann (5): Kobold Vermin slain: 3/10 same step"), "a member on your step shows their goal")
   check(questText(frame, "PARTY") and not questText(frame, "ALL ON THIS STEP"), "not everyone is on your step yet")
-  from("Bo-Elsewhere", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  fromParty("Bo-Elsewhere", "S;northshire;" .. pos .. ";Accept - A Threat Within")
   check(questText(frame, "PARTY - ALL ON THIS STEP"), "the heading says when everyone is on your step")
-  from("Ann-Realm", "S;northshire;" .. (pos + 3) .. ";Turn in - Something")
-  check(questText(frame, "Ann (5): Turn in - Something 3 ahead"), "a member ahead of you")
+  -- a step of another class (in the guide's data, not in your route) counts from the next one you have
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local gap
+  for k = at, #steps - 1 do
+    if steps[k + 1].section ~= mine.section then break end
+    if steps[k + 1].pos > steps[k].pos + 1 then gap = k; break end
+  end
+  check(gap, "Northshire has another class's step after yours")
+  local theirs = steps[gap].pos + 1
+  fromParty("Ann-Realm", "S;northshire;" .. theirs .. ";Accept - Another class's quest")
+  check(questText(frame, "Ann (5): Accept - Another class's quest " .. partySteps(theirs) .. " ahead"),
+    "a member on a step your route doesn't have counts from the next one you do")
+  local past = steps[gap + 1].pos
+  check(partySteps(past) < past - pos, "past it, the guide's data has more steps than your route shows")
+  fromParty("Ann-Realm", "S;northshire;" .. past .. ";Turn in - Something")
+  check(questText(frame, "Ann (5): Turn in - Something " .. partySteps(past) .. " ahead"),
+    "a member ahead of you, counted in the steps your route shows")
   check(not questText(frame, "ALL ON THIS STEP"), "the heading follows")
   click(frame, "Next")
   click(frame, "Next")
   MOCK.advance(2.5)
   local now = myPos()
   check(now and now > pos, "your new step goes out after Next")
-  check(questText(frame, "Bo (4): Accept - A Threat Within " .. (now - pos) .. " behind"), "a member behind you")
-  from("Bo-Elsewhere", "S;westfall;3;Accept - Westfall Stew")
+  check(questText(frame, "Bo (4): Accept - A Threat Within " .. partySteps(pos) .. " behind"), "a member behind you")
+  fromParty("Bo-Elsewhere", "S;westfall;3;Accept - Westfall Stew")
   check(questText(frame, "Bo (4): Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
   MOCK.partyMembers = { MOCK.partyMembers[1] }
   MOCK.event("GROUP_ROSTER_UPDATE")
@@ -2199,6 +2242,120 @@ function S.questPartySync()
   MOCK.raid = true
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(not questText(frame, "Ann (5)"), "nothing in a raid")
+end
+
+-- Keeping in touch: your step goes out again every minute; a member whose Codex goes quiet for
+-- 3 minutes drops out (an older Codex, which sends no goals or heartbeat, keeps its step 15 minutes);
+-- offline and dead members are marked; the party is asked for its steps only when someone new joins.
+function S.questPartyHeartbeat()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5 }, { name = "Bo", level = 4 } }
+  S.login()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 1, "joining asks the party for their steps")
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 1, "a roster update with the same people asks nothing")
+  local pos = MOCK.ns.quests.routeRow().pos
+  fromParty("Ann", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  fromParty("Ann", "G;")
+  fromParty("Bo", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  local before = addonCount("^S;")
+  MOCK.advance(65, 0.5)
+  check(addonCount("^S;") > before, "your step goes out again every minute")
+  check(questText(frame, "Ann (5): Accept - A Threat Within same step"), "Ann still shows a minute later")
+  MOCK.advance(130, 0.5)
+  check(questText(frame, "Ann (5) no step shared"), "a Codex that goes quiet for 3 minutes drops out")
+  check(questText(frame, "Bo (4): Accept - A Threat Within same step"), "an older Codex keeps its step for 15 minutes")
+  MOCK.partyMembers[2].offline = true
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(questText(frame, "Bo (4): Accept - A Threat Within offline"), "an offline member is marked")
+  MOCK.partyMembers[2].offline, MOCK.partyMembers[2].dead = false, true
+  MOCK.advance(5.5, 0.5)
+  check(questText(frame, "Bo (4): Accept - A Threat Within same step (dead)"), "and a dead one, within 5 s")
+  check(addonCount("^HELLO$") == 1, "nobody new yet")
+  table.insert(MOCK.partyMembers, { name = "Cy", level = 6 })
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 2, "someone new joining asks again")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("party member Bo: older Codex"), "debug lists each member")
+end
+
+-- Quests > Party: each member with their guide, step, live goal and when you last heard from them;
+-- Follow <name>'s guide when they're in another guide; the quests they have that you don't (Ask to
+-- share) and the reverse (Share); the party switches.
+function S.questPartyTab()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", level = 4, class = "WARRIOR" } }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  S.login()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  fromParty("Ann", "S;westfall;3;Accept - Westfall Stew")
+  fromParty("Ann", "G;")
+  fromParty("Ann", "L;7,33,783")
+  slash("quests")
+  click(win(), "Party")
+  check(questText(win(), "Ann (5) Mage"), "the Party tab lists each member")
+  check(questText(win(), "Westfall: Accept - Westfall Stew"), "with their guide and step")
+  check(questText(win(), "heard just now"), "and when you last heard from them")
+  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"),
+    "a member without the Codex")
+  check(questText(win(), "Ann has, you don't (2)"), "the quests Ann has that you don't")
+  click(win(), "Ask Ann to share Wolves Across the Border")
+  check(addonCount("^R;33;Ann$") == 1, "asking sends Ann's Codex a share request")
+  check(not questText(win(), "You have, Ann doesn't"), "Ann has everything you have")
+  fromParty("Ann", "L;7,33")
+  check(questText(win(), "You have, Ann doesn't (1)"), "the reverse")
+  click(win(), "Share A Threat Within")
+  check(MOCK.pushed == 783, "Share offers your quest to the party")
+  click(win(), "Follow Ann's guide")
+  check(MOCK.ns.quests.current().section.id == "westfall", "following switches your guide to Ann's")
+  click(win(), "Party")
+  check(not findButton(win(), function(l) return l == "Follow Ann's guide" end), "no Follow once you're in the same guide")
+  click(win(), "Say quest items I pick up")
+  check(LevelingCodexDB.questAnnounceItems, "the party switches are in the tab too")
+  MOCK.party = false
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  click(win(), "Party")
+  check(questText(win(), "You're not in a party"), "out of a party the tab says so")
+end
+
+-- Share requests: a member's Ask to share offers them your quest (once per 10 s); one the game won't
+-- share says so to them; auto-share waits 2.5 s and leaves out a quest every member already has.
+function S.questPartyShare()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5 } }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  S.login()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^L;783$") >= 1, "your quest log goes out")
+  fromParty("Ann", "R;783;Tester")
+  check(MOCK.pushed == 783 and chatHas("Ann asked for A Threat Within"), "a share request from a party member")
+  MOCK.pushed = nil
+  fromParty("Ann", "R;783;Tester")
+  check(not MOCK.pushed, "once per 10 s")
+  MOCK.advance(11)
+  fromParty("Ann", "R;783;Someone")
+  check(not MOCK.pushed, "a request for someone else")
+  MOCK.notPushable = { [783] = true }
+  fromParty("Ann", "R;783;Tester")
+  check(not MOCK.pushed and addonCount("^N;783;Ann$") == 1, "a quest the game won't share says so")
+  fromParty("Ann", "N;33;Tester")
+  check(chatHas("Ann can't share Wolves Across the Border"), "and the asker hears it")
+  MOCK.notPushable = nil
+  LevelingCodexDB.questShareParty = true
+  fromParty("Ann", "S;northshire;1;Accept - A Threat Within")
+  fromParty("Ann", "G;")
+  fromParty("Ann", "L;33,783")
+  table.insert(MOCK.questLog, { questID = 33, title = "Wolves Across the Border" })
+  MOCK.event("QUEST_ACCEPTED", 2, 33)
+  MOCK.advance(2.6)
+  check(not MOCK.pushed, "auto-share leaves out a quest every member already has")
+  table.insert(MOCK.questLog, { questID = 7, title = "Kobold Camp Cleanup" })
+  MOCK.event("QUEST_ACCEPTED", 3, 7)
+  MOCK.advance(2.6)
+  check(MOCK.pushed == 7, "and offers one a member lacks")
 end
 
 -- Party chat announcements (Settings > Party, each off by default, said as "Codex: ..."): quest
@@ -2371,6 +2528,75 @@ function S.questPartyGoal()
   for _, m in ipairs(MOCK.said or {}) do lines[#lines + 1] = m.text end
   check(#lines == 1 and lines[1] == "Codex: A Baying of Gnolls is ready to turn in.",
     "one line for the finished kill step: " .. table.concat(lines, " | "))
+end
+
+-- Catch-up cues: a note when a member is 3 or more steps behind you, a ping (the ready-check sound)
+-- when the last member reaches your step (Settings: Ping when the party is together on my step, at
+-- most every 20 s), and the compact step window's one-line party summary.
+function S.questPartyCatchUp()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 19 }, { name = "Bo", level = 18 } }
+  redridgeBrutes()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.advance(6)
+  MOCK.sounds = {}
+  local function pings()
+    local n = 0
+    for _, s in ipairs(MOCK.sounds) do if s.id == 8960 then n = n + 1 end end
+    return n
+  end
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local here, section = mine.pos, mine.section.id
+  -- a place four of your steps back
+  local n, i = 0, at
+  while n < 4 do
+    i = i - 1
+    local r = steps[i]
+    if r.state ~= "filtered" and not r.grey and not r.cut then n = n + 1 end
+  end
+  check(steps[i].section == mine.section, "the Redridge step has four steps before it")
+  local back = steps[i].pos
+  local function to(name, p)
+    fromParty(name, "S;" .. section .. ";" .. p .. ";Somewhere")
+    fromParty(name, "G;")
+  end
+  to("Ann", here)
+  check(pings() == 0, "one member on your step isn't the whole party")
+  to("Bo", back)
+  check(questText(frame, "Bo is " .. partySteps(back) .. " steps behind you."), "a member 3+ steps behind is named")
+  check(pings() == 0, "no ping while someone is behind")
+  to("Bo", here)
+  check(pings() == 1 and not questText(frame, "steps behind you"), "the last member reaching your step pings")
+  LevelingCodexDB.questCompact = true
+  MOCK.ns.questRefresh()
+  check(questText(frame, "Party: all on this step"), "the compact window's party line")
+  LevelingCodexDB.questCompact = false
+  to("Bo", back)
+  to("Bo", here)
+  check(pings() == 1, "at most a ping every 20 s")
+  to("Bo", back)
+  MOCK.advance(21)
+  to("Bo", here)
+  check(pings() == 2, "and again after that")
+  to("Bo", back)
+  MOCK.advance(21)
+  LevelingCodexDB.noPartyPing = true
+  to("Bo", here)
+  check(pings() == 2, "the ping can be turned off")
+  -- Back shows the step before (done), but the party keeps hearing where you really are
+  local function lastStep()
+    local text
+    for _, m in ipairs(MOCK.addonSent) do if m.text:find("^S;") then text = m.text end end
+    return text and tonumber(text:match("^S;[^;]*;(%d+);"))
+  end
+  click(frame, "Back")
+  MOCK.advance(2.5)
+  check(Q.current() ~= Q.routeRow(), "Back shows an earlier step")
+  check(lastStep() == here, "going Back to look doesn't tell the party you're behind")
+  check(questText(frame, "Ann (19): Somewhere same step"), "and the rows still measure from your real step")
 end
 
 local function arrowCaption()

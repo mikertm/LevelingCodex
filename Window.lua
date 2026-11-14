@@ -1162,6 +1162,8 @@ renderers.settings = function()
     "Off by default. Each quest item you loot goes to party chat with your count, \"Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)\", and so does an item that starts a quest of your guide.")
   tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
     "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
+  tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
+    "The ready-check sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
   if ns.questie.announces("objectives") or ns.questie.announces("items") then
     y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
       28, y - 4, W - 28, "small", C.dim) + 6

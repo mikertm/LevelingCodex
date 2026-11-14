@@ -82,11 +82,13 @@ C_QuestLog = {
   AddQuestWatch = function(id) MOCK.watches = MOCK.watches or {}; MOCK.watches[id] = true end,
   RemoveQuestWatch = function(id) if MOCK.watches then MOCK.watches[id] = nil end end,
   GetQuestWatchType = function(id) return MOCK.watches and MOCK.watches[id] and 0 or nil end,
-  IsPushableQuest = function() return true end,
+  -- MOCK.notPushable[questID]: the game won't let that quest be shared
+  IsPushableQuest = function(id) return not (MOCK.notPushable and MOCK.notPushable[id]) end,
 }
 -- Parties: MOCK.party = in a party (MOCK.raid = a raid); addon messages go to MOCK.addonSent, chat to MOCK.said,
 -- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed). MOCK.partyMembers = { { name, realm, level,
--- class } } are party1..N (UnitName/UnitLevel/UnitClass, GetNumSubgroupMembers).
+-- class, offline, dead } } are party1..N (UnitName/UnitLevel/UnitClass/UnitIsConnected/UnitIsDeadOrGhost,
+-- GetNumSubgroupMembers).
 function IsInGroup() return MOCK.party or false end
 function IsInRaid() return MOCK.party and MOCK.raid or false end
 local function partyMember(unit)
@@ -95,6 +97,11 @@ local function partyMember(unit)
 end
 MOCK.partyMember = partyMember
 function GetNumSubgroupMembers() return MOCK.party and MOCK.partyMembers and #MOCK.partyMembers or 0 end
+function UnitIsConnected(unit)
+  local m = partyMember(unit)
+  if m then return not m.offline end
+  return true
+end
 C_ChatInfo = {
   RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefix = prefix; return true end,
   SendAddonMessage = function(prefix, text, channel)
@@ -1048,7 +1055,11 @@ C_Minimap = {
     MOCK.event("MINIMAP_UPDATE_TRACKING")
   end,
 }
-function UnitIsDeadOrGhost() return MOCK.dead end
+function UnitIsDeadOrGhost(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.dead or false end
+  return MOCK.dead
+end
 -- the vanilla calls (kept in the minimal client, which has no C_Minimap)
 function GetTrackingTexture()
   for _, t in ipairs(MOCK.tracking) do if t.active and t.category == "spell" then return t.texture end end
@@ -1551,7 +1562,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
-  "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
+  "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 

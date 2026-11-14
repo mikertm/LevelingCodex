@@ -1,16 +1,22 @@
 -- QuestParty.lua: playing the guide in a party. Nothing here runs in a raid.
--- Party sync: party members running the Codex tell each other their current step and its live goal
--- (addon messages), and the step window lists every party member against your step (Settings > Show
--- my party's steps). Opt-in helpers: share a guide quest with the party when you accept it, say in
--- party chat where you are flying, and Questie-like party chat lines for the steps you finish, the
--- quest items you pick up and your quest progress.
+-- Party sync: party members running the Codex tell each other their real step, its live goal and
+-- the quests in their log (addon messages); the step window lists every party member against your
+-- step (Settings > Show my party's steps) and Quests > Party shows each one in full, with the
+-- quests one of you has and the other doesn't. Opt-in helpers: share a guide quest with the party
+-- when you accept it, say in party chat where you are flying, and Questie-like party chat lines for
+-- the steps you finish, the quest items you pick up and your quest progress.
 local _, ns = ...
 local Q = ns.quests
 local try = Q.try
 local PREFIX = "LevCodex"
-local members = {}  -- name -> { section, pos, label, goal, at }
-local sent          -- the last step and goal we told the party about
-local sentAt, retrying = 0, false
+local HEARTBEAT = 60      -- your step goes out again this often, so the others know you're still there
+local QUIET = 180         -- a member whose Codex sends a heartbeat drops out after this long silent
+local QUIET_OLD = 900     -- an older Codex sends no heartbeat (nor goals): its step keeps this long
+local members = {}        -- name -> { section, pos, label, goal, live, at }: live = it sends goals
+local logs = {}           -- name -> { [questID] = true }: the quests in their log
+local sent, sentQuests    -- what we last told the party: step and goal, and the quest list
+local sentAt, retrying = -HEARTBEAT, false
+local rosterKey, rosterAt = nil, -10
 local events
 
 local function inParty()
@@ -18,6 +24,7 @@ local function inParty()
   local raid = try(IsInRaid)
   return (group == true or group == 1) and not (raid == true or raid == 1)
 end
+ns.partyInParty = inParty
 
 local function send(text)
   local api = C_ChatInfo and C_ChatInfo.SendAddonMessage or SendAddonMessage
@@ -28,6 +35,18 @@ end
 local function number(v)
   if type(issecretvalue) == "function" and issecretvalue(v) then return nil end
   return tonumber(v)
+end
+
+local function me() return try(UnitName, "player") end
+
+local function questTitle(id, entry)
+  return (entry and entry.title) or (id and Q.questName(id)) or "a quest"
+end
+
+-- Your real step: the route's own, not one you went Back to look at.
+local function myRow()
+  if Q.routeRow then return Q.routeRow() end
+  return Q.current()
 end
 
 -- Your step's live goal for the party: the first open objective ("Kobold Vermin slain: 3/10"),
@@ -47,17 +66,33 @@ local function myGoal(row)
   return ""
 end
 
--- Tell the party about the current step, "S;section;position;label" (what every Codex version
--- reads), then its goal, "G;goal" (older versions ignore it). At most every 2 s: a change sooner
--- goes out when the 2 s are up.
+-- The quests in your log, "783,33,7" (sorted, cut at a comma to fit one message).
+local function myQuests()
+  local ids = {}
+  for id in pairs(Q.logEntries()) do ids[#ids + 1] = id end
+  table.sort(ids)
+  local text = table.concat(ids, ",")
+  if #text > 240 then text = text:sub(1, 240):match("^(.*),") or "" end
+  return text
+end
+
+local function clean(text, max)
+  return (tostring(text or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("[;|]", ","):sub(1, max))
+end
+
+-- Tell the party about your step, "S;section;position;label" (what every Codex version reads), its
+-- goal, "G;goal", and, when it changed, your quests, "L;ids" (older versions ignore both). At most
+-- every 2 s: a change sooner goes out when the 2 s are up. `force` (joining, a HELLO, the heartbeat)
+-- sends at once.
 local function broadcast(force)
   if ns.db().noPartySteps or not inParty() then return end
-  local row = Q.current()
+  local row = myRow()
   local key = row and (row.section.id .. ";" .. tostring(row.pos)) or "none;0"
-  local goal = myGoal(row):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("[;|]", ","):sub(1, 80)
+  local goal = clean(myGoal(row), 80)
   local state = key .. ";" .. goal
+  local quests = myQuests()
   local now = GetTime()
-  if not force and state == sent then return end
+  if not force and state == sent and quests == sentQuests then return end
   if not force and now - sentAt < 2 then
     if not retrying then
       retrying = true
@@ -66,39 +101,17 @@ local function broadcast(force)
     return
   end
   sent, sentAt = state, now
-  local label = row and Q.plain(Q.label(row.step)):gsub("[;|]", ",") or ""
+  local label = row and clean(Q.plain(Q.label(row.step)), 200) or ""
   send(("S;" .. key .. ";" .. label):sub(1, 250))
   send("G;" .. goal)
+  if quests ~= sentQuests or force then
+    sentQuests = quests
+    send("L;" .. quests)
+  end
 end
 
-local function receive(prefix, text, channel, sender)
-  if prefix ~= PREFIX or channel ~= "PARTY" or type(text) ~= "string" or type(sender) ~= "string" then return end
-  local me = try(UnitName, "player")
-  local name = Q.plain(sender:match("^[^-]+") or sender)
-  if name == me then return end
-  if text == "HELLO" then broadcast(true); return end
-  local goal = text:match("^G;(.*)$")
-  if goal then
-    local m = members[name]
-    if m then m.goal, m.at = goal, GetTime() end
-    ns.questRefresh()
-    return
-  end
-  local section, pos, label = text:match("^S;([^;]*);([^;]*);(.*)$")
-  if not section then return end
-  local old = members[name]
-  pos = tonumber(pos)
-  if section == "none" then
-    members[name] = nil
-  else
-    -- a new step drops the old step's goal until its own arrives
-    local goalKept = old and old.section == section and old.pos == pos and old.goal or nil
-    members[name] = { section = section, pos = pos, label = label, goal = goalKept, at = GetTime() }
-  end
-  ns.questRefresh()
-end
-
--- The party from the client: party1..4 with their levels; empty without the API.
+-- The party from the client: party1..4 with level, class and whether they're online or dead;
+-- empty without the API.
 local function roster()
   local out = {}
   local count = number(try(GetNumSubgroupMembers)) or 0
@@ -107,45 +120,158 @@ local function roster()
     local name = try(UnitName, unit)
     if type(name) == "string" and name ~= "" then
       local level = number(try(UnitLevel, unit))
-      out[#out + 1] = { name = Q.plain(name), level = level and level > 0 and level or nil }
+      local className = try(UnitClass, unit)
+      out[#out + 1] = { name = Q.plain(name), level = level and level > 0 and level or nil,
+        className = type(className) == "string" and Q.plain(className) or nil,
+        offline = try(UnitIsConnected, unit) == false, dead = try(UnitIsDeadOrGhost, unit) == true }
     end
   end
   return out
 end
 
--- The step window's party rows, one per party member (the roster decides who; without one, every
--- Codex member heard from in the last 15 minutes): { name, text, where, status }. `status` is
--- "same" (your step), "behind" (they are behind you), "ahead", "other" (another guide) or "none"
--- (no step shared: no Codex, or it's turned off). Empty out of a party or with the setting off.
-function ns.partyRows()
-  if ns.db().noPartySteps or not inParty() then return {} end
-  local row = Q.current()
+local function fresh(m, now)
+  return m and now - m.at < (m.live and QUIET or QUIET_OLD)
+end
+
+-- Share a quest from your log with the party: true once offered, false when the game won't.
+local function pushQuest(id, index)
+  local L = C_QuestLog
+  if L and type(L.SetSelectedQuest) == "function" then
+    if type(L.IsPushableQuest) == "function" and try(L.IsPushableQuest, id) == false then return false end
+    try(L.SetSelectedQuest, id)
+  else
+    index = index or (Q.log(id) and Q.log(id).index)
+    if not index or type(SelectQuestLogEntry) ~= "function" then return false end
+    try(SelectQuestLogEntry, index)
+    if type(GetQuestLogPushable) == "function" and not try(GetQuestLogPushable) then return false end
+  end
+  if type(QuestLogPushQuest) ~= "function" then return false end
+  try(QuestLogPushQuest)
+  return true
+end
+
+-- A member's Ask to share: offer them that quest (once per 10 s each), or tell them it can't be.
+local asked = {}
+local function shareRequest(id, asker)
+  if not id then return end
+  local now = GetTime()
+  if asked[id] and now - asked[id] < 10 then return end
+  asked[id] = now
+  local entry = Q.log(id)
+  if entry and pushQuest(id, entry.index) then
+    ns.say(asker .. " asked for " .. Q.plain(questTitle(id, entry)) .. ": offered it to your party.")
+  else
+    send("N;" .. id .. ";" .. asker)
+  end
+end
+
+local function receive(prefix, text, channel, sender)
+  if prefix ~= PREFIX or channel ~= "PARTY" or type(text) ~= "string" or type(sender) ~= "string" then return end
+  local myName = me()
+  local name = Q.plain(sender:match("^[^-]+") or sender)
+  if name == myName then return end
+  local now = GetTime()
+  if text == "HELLO" then broadcast(true); return end
+  local m = members[name]
+  local goal = text:match("^G;(.*)$")
+  if goal then
+    if m then m.goal, m.live, m.at = goal, true, now end
+    ns.questRefresh()
+    return
+  end
+  local list = text:match("^L;(.*)$")
+  if list then
+    local set = {}
+    for id in list:gmatch("%d+") do set[tonumber(id)] = true end
+    logs[name] = set
+    if m then m.live, m.at = true, now end
+    ns.questRefresh()
+    return
+  end
+  -- "R;quest;name": name asks for a quest of yours; "N;quest;name": the one you asked can't share it
+  local kind, quest, target = text:match("^([RN]);(%d+);(.+)$")
+  if kind then
+    quest = tonumber(quest)
+    if Q.plain(target:match("^[^-]+") or target) ~= myName then return end
+    if kind == "R" then shareRequest(quest, name)
+    else ns.say(name .. " can't share " .. Q.plain(questTitle(quest)) .. ": the game won't let it be shared, or it isn't in their log.") end
+    return
+  end
+  local section, pos, label = text:match("^S;([^;]*);([^;]*);(.*)$")
+  if not section then return end
+  pos = tonumber(pos)
+  if section == "none" then
+    members[name] = nil
+  else
+    -- a new step drops the old step's goal until its own arrives
+    local goalKept = m and m.section == section and m.pos == pos and m.goal or nil
+    members[name] = { section = section, pos = pos, label = label, goal = goalKept, live = m and m.live, at = now }
+  end
+  ns.questRefresh()
+end
+
+-- How many steps a member is ahead (+) or behind (-) you, counted in your own route: the rows you
+-- see (not filtered, grey or cut) between your step and the first of yours at or past their place
+-- in the guide's data. Their step may be one your route doesn't have (another class's quest).
+local function shown(row) return row.state ~= "filtered" and not row.grey and not row.cut end
+
+local function distance(mine, at, pos)
+  if pos == mine.pos then return 0 end
+  local steps = Q.rows()
+  local ahead = pos > mine.pos
+  local n, i = 0, ahead and at or at - 1
+  while steps[i] and steps[i].section == mine.section and (ahead and steps[i].pos < pos or not ahead and steps[i].pos >= pos) do
+    if shown(steps[i]) then n = n + 1 end
+    i = ahead and i + 1 or i - 1
+  end
+  n = math.max(1, n)
+  return ahead and n or -n
+end
+
+-- One row per party member (the roster decides who; without one, every Codex member heard from
+-- lately): { name, level, className, text, where, status, label, goal, guide, section, heard,
+-- codex, steps, offline, dead }. `status` is "same" (your step), "behind" (they are behind you),
+-- "ahead", "other" (another guide), "offline" or "none" (no step shared). The step window's rows
+-- (empty out of a party or with Settings > Show my party's steps off; `all` ignores the setting).
+function ns.partyRows(all)
+  if (ns.db().noPartySteps and not all) or not inParty() then return {} end
+  local mine, at = myRow()
   local now = GetTime()
   local list = roster()
   if #list == 0 then
-    for name in pairs(members) do list[#list + 1] = { name = name } end
+    for name, m in pairs(members) do
+      if fresh(m, now) then list[#list + 1] = { name = name } end
+    end
   end
   local rows = {}
   for _, who in ipairs(list) do
     local m = members[who.name]
-    if m and now - m.at >= 900 then m = nil end
+    if not fresh(m, now) then m = nil end
     local head = who.name .. (who.level and (" (" .. who.level .. ")") or "")
-    local r = { name = who.name, text = head, status = "none", where = "no step shared" }
+    local r = { name = who.name, level = who.level, className = who.className, offline = who.offline,
+      dead = who.dead, text = head, status = "none", where = "no step shared", codex = m ~= nil }
     if m then
+      local other = Q.section(m.section)
+      r.label, r.goal, r.heard, r.live = m.label, m.goal or "", now - m.at, m.live
+      r.section, r.guide = other, other and other.title or "another guide"
       r.text = head .. ": " .. m.label
-      if row and row.section.id == m.section and m.pos and row.pos then
-        local diff = m.pos - row.pos
-        if diff == 0 then
+      if mine and mine.section.id == m.section and m.pos and mine.pos then
+        r.steps = distance(mine, at, m.pos)
+        if r.steps == 0 then
           r.status, r.where = "same", "same step"
-          if m.goal and m.goal ~= "" then r.text = head .. ": " .. m.goal end
+          if r.goal ~= "" then r.text = head .. ": " .. r.goal end
         else
-          r.status = diff > 0 and "ahead" or "behind"
-          r.where = math.abs(diff) .. (diff > 0 and " ahead" or " behind")
+          r.status = r.steps > 0 and "ahead" or "behind"
+          r.where = math.abs(r.steps) .. (r.steps > 0 and " ahead" or " behind")
         end
       else
-        local other = Q.section(m.section)
-        r.status, r.where = "other", other and other.title or "another guide"
+        r.status, r.where = "other", r.guide
       end
+    end
+    if who.offline then
+      r.status, r.where = "offline", "offline"
+    elseif who.dead then
+      r.where = r.where .. " (dead)"
     end
     r.text, r.where = Q.plain(r.text), Q.plain(r.where)
     rows[#rows + 1] = r
@@ -154,26 +280,110 @@ function ns.partyRows()
   return rows
 end
 
--- Settings > Share guide quests with my party: offer a quest of your route to the party.
-local function pushQuest(id, index)
-  local L = C_QuestLog
-  if L and type(L.SetSelectedQuest) == "function" then
-    if type(L.IsPushableQuest) == "function" and try(L.IsPushableQuest, id) == false then return end
-    try(L.SetSelectedQuest, id)
-  elseif index and type(SelectQuestLogEntry) == "function" then
-    try(SelectQuestLogEntry, index)
-    if type(GetQuestLogPushable) == "function" and not try(GetQuestLogPushable) then return end
-  else
-    return
+-- Everyone online is on your step (and at least one of them shares it).
+local function together(rows)
+  local any = false
+  for _, r in ipairs(rows) do
+    if r.status ~= "offline" then
+      if r.status ~= "same" then return false end
+      any = true
+    end
   end
-  try(QuestLogPushQuest)
+  return any
+end
+ns.partyTogether = together
+
+-- Catch-up cues for the step window: "Bo is 4 steps behind you." for each member 3 or more steps
+-- behind you in your guide.
+function ns.partyWaitLines(rows)
+  local lines = {}
+  for _, r in ipairs(rows or ns.partyRows()) do
+    if r.status == "behind" and -r.steps >= 3 then
+      lines[#lines + 1] = r.name .. " is " .. -r.steps .. " steps behind you."
+    end
+  end
+  return lines
+end
+
+-- The compact step window's party line: "Party: all on this step" or "Party: Ann same step, Bo 4 behind".
+function ns.partySummary()
+  local rows = ns.partyRows()
+  if #rows == 0 then return nil end
+  if together(rows) then return "Party: all on this step" end
+  local bits = {}
+  for _, r in ipairs(rows) do bits[#bits + 1] = r.name .. " " .. r.where end
+  return Q.plain("Party: " .. table.concat(bits, ", "))
+end
+
+-- The quests a member has that you don't (quests of your route you haven't turned in), and the
+-- quests you have that they don't: two lists of { id, title }, or nil before their log is known.
+function ns.partyQuestDiff(name)
+  local theirs = logs[name]
+  if not theirs then return nil end
+  local log = Q.logEntries()
+  local have, lack = {}, {}
+  for id in pairs(theirs) do
+    if not log[id] and Q.questName(id) and not Q.turnedIn(id) then
+      have[#have + 1] = { id = id, title = Q.plain(Q.questName(id)) }
+    end
+  end
+  for id, entry in pairs(log) do
+    if not theirs[id] then lack[#lack + 1] = { id = id, title = Q.plain(questTitle(id, entry)) } end
+  end
+  local function byTitle(a, b) return a.title < b.title end
+  table.sort(have, byTitle)
+  table.sort(lack, byTitle)
+  return have, lack
+end
+
+-- Quests > Party's buttons.
+function ns.partyAskShare(name, id)
+  send("R;" .. id .. ";" .. name)
+  ns.say("asked " .. name .. " to share " .. Q.plain(questTitle(id)) .. ".")
+end
+
+function ns.partyShare(id)
+  local entry = Q.log(id)
+  if entry and pushQuest(id, entry.index) then
+    ns.say("offered " .. Q.plain(questTitle(id, entry)) .. " to your party.")
+  else
+    ns.say("the game won't let " .. Q.plain(questTitle(id, entry)) .. " be shared.")
+  end
+end
+
+-- Switch your guide to the one a member is in.
+function ns.partyFollow(name)
+  local m = members[name]
+  local section = m and Q.section(m.section)
+  if not section then return end
+  if section.side then
+    Q.jump(section)
+    ns.showQuestViewer()
+  else
+    ns.followSuggestedQuestSection(section)
+  end
+  ns.questRefresh()
+end
+
+-- Settings > Share guide quests with my party: offer a quest of your route to the party. It waits
+-- 2.5 s (a member who takes it at the same time has said so by then) and leaves out a quest every
+-- party member's Codex already has.
+local function everyoneHas(id)
+  local list = roster()
+  if #list == 0 then return false end
+  for _, who in ipairs(list) do
+    if not (logs[who.name] and logs[who.name][id]) then return false end
+  end
+  return true
 end
 
 local function accepted(a, b)
   local id = tonumber(b) or tonumber(a)
   local index = b and tonumber(a) or nil
   if not id or not ns.db().questShareParty or not inParty() or not Q.questMatch(id) then return end
-  ns.after(0.5, function() pushQuest(id, index) end)
+  ns.after(2.5, function()
+    if inParty() and Q.log(id) and not everyoneHas(id) then pushQuest(id, index) end
+  end)
 end
 
 -- Settings > Say my flights in party chat.
@@ -232,10 +442,6 @@ local function chat(key, text, count)
   queue[#queue + 1] = { key = key, text = text }
   while #queue > 6 do table.remove(queue, 1) end
   pump()
-end
-
-local function questTitle(id, entry)
-  return (entry and entry.title) or (id and Q.questName(id)) or "a quest"
 end
 
 -- What the quest log said last time (questID -> { ready, objs = { { have, done } } }) and which of
@@ -337,6 +543,21 @@ local function announceStarters()
   end
 end
 
+-- The ping (the ready-check sound) when the last member reaches your step, or you reach theirs:
+-- not in the first 5 s after someone joins (their replies to HELLO), at most every 20 s
+-- (Settings > Ping when the party is together on my step).
+local wasTogether, pingAt = nil, -60
+local function checkTogether()
+  local now = GetTime()
+  local isTogether = together(ns.partyRows())
+  if isTogether and wasTogether == false and now - rosterAt >= 5 and now - pingAt >= 20
+      and not ns.db().noPartyPing and type(PlaySound) == "function" then
+    pingAt = now
+    pcall(PlaySound, SOUNDKIT and SOUNDKIT.READY_CHECK or 8960, "Master")
+  end
+  wasTogether = isTogether
+end
+
 -- QuestGuide's refresh hands over a step the game just finished (the step sound's moment: not
 -- Next, Back or a jump); the lines go out at the end of the same refresh.
 local finishedStep
@@ -352,6 +573,7 @@ function ns.partyStepChanged()
     chat(nil, "Done - " .. Q.plain(Q.label(step)))
   end
   broadcast(false)
+  checkTogether()
 end
 
 -- Joining a party with every announcement off says once where they are (once ever while your
@@ -363,6 +585,46 @@ local function hint()
   hinted, db.questPartyHint = true, true
   if db.questAnnounceSteps or db.questAnnounceItems or db.questAnnounceProgress then return end
   ns.say("in a party? Settings > Party can say the steps you finish, the quest items you pick up and your quest progress in party chat.")
+end
+
+-- The party changed. Only someone new joining asks everyone for their steps (HELLO): an update
+-- with the same people (a level, a zone, someone going offline) just redraws.
+local function rosterChanged()
+  if not inParty() then
+    members, logs, queue, rosterKey, wasTogether = {}, {}, {}, nil, nil
+    sentQuests = nil
+    return
+  end
+  hint()
+  local names = {}
+  for _, who in ipairs(roster()) do names[#names + 1] = who.name end
+  table.sort(names)
+  local key = table.concat(names, ",")
+  if key ~= rosterKey then
+    rosterKey, rosterAt = key, GetTime()
+    broadcast(true)
+    if not ns.db().noPartySteps then send("HELLO") end
+  end
+end
+
+-- Every 5 s: the heartbeat, and a redraw when a member goes quiet, offline, online or dies.
+local statusKey
+local function tick()
+  if not inParty() then return end
+  local now = GetTime()
+  if now - sentAt >= HEARTBEAT then broadcast(true) end
+  local bits = {}
+  for _, who in ipairs(roster()) do
+    bits[#bits + 1] = who.name .. (who.offline and "o" or "") .. (who.dead and "d" or "")
+      .. (fresh(members[who.name], now) and "f" or "")
+  end
+  for name, m in pairs(members) do bits[#bits + 1] = name .. (fresh(m, now) and "+" or "-") end
+  table.sort(bits)
+  local key = table.concat(bits, ",")
+  if key ~= statusKey then
+    statusKey = key
+    ns.questRefresh()
+  end
 end
 
 function ns.startQuestParty()
@@ -381,17 +643,12 @@ function ns.startQuestParty()
     elseif event == "QUEST_ACCEPTED" then
       accepted(a, b)
     elseif event == "GROUP_ROSTER_UPDATE" then
-      if not inParty() then
-        members, queue = {}, {}
-      else
-        hint()
-        broadcast(true)
-        if not ns.db().noPartySteps then send("HELLO") end
-      end
+      rosterChanged()
       ns.questRefresh()
     end
   end)
   if type(TakeTaxiNode) == "function" then try(hooksecurefunc, "TakeTaxiNode", announceFlight) end
+  ns.every(5, tick)
 end
 
 function ns.partyDebugLines()
@@ -402,7 +659,19 @@ function ns.partyDebugLines()
   if db.questAnnounceSteps then on[#on + 1] = "steps" end
   if db.questAnnounceItems then on[#on + 1] = "items" end
   if db.questAnnounceProgress then on[#on + 1] = "progress" end
-  return { "party: " .. (inParty() and "in a party" or "not in a party") .. ", Codex members seen: " .. count
+  local lines = { "party: " .. (inParty() and "in a party" or "not in a party") .. ", Codex members seen: " .. count
     .. ", addon messages: " .. ((C_ChatInfo and C_ChatInfo.SendAddonMessage or SendAddonMessage) and "yes" or "no")
     .. ", party chat lines: " .. (#on > 0 and table.concat(on, ", ") or "off") .. ", waiting: " .. #queue }
+  local now = GetTime()
+  for _, r in ipairs(ns.partyRows(true)) do
+    local m = members[r.name]
+    local log = logs[r.name]
+    local n = 0
+    for _ in pairs(log or {}) do n = n + 1 end
+    lines[#lines + 1] = "party member " .. r.name .. ": " .. (not m and "no step shared"
+      or ((m.live and "Codex" or "older Codex (no counts or heartbeat)") .. ", step " .. m.section .. " " .. tostring(m.pos)
+        .. ", " .. r.where .. ", heard " .. math.floor(now - m.at) .. " s ago"
+        .. (log and (", " .. n .. " quests in log") or "")))
+  end
+  return lines
 end

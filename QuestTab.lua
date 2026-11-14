@@ -1,7 +1,8 @@
 -- QuestTab.lua: the Quests tab. A fixed top (the current step with its completion bar and one row of
--- step buttons), then four sub-tabs: Step (what to do now and the step's tools), Route (this
--- guide's steps), Guides (search, guides by level band, dungeons, special and class chains) and
--- Quest log (active quests, ready turn-ins, missed and grey pickups, clean-up).
+-- step buttons), then five sub-tabs: Step (what to do now and the step's tools), Route (this
+-- guide's steps), Guides (search, guides by level band, dungeons, special and class chains),
+-- Quest log (active quests, ready turn-ins, missed and grey pickups, clean-up) and Party (each
+-- party member's step and quests, and the party switches).
 local _, ns = ...
 local Q, U, C = ns.quests, ns.ui, ns.C
 local W = U.W
@@ -14,7 +15,7 @@ local GUIDE_TAG = { current = "Current", done = "Done", outleveled = "Outleveled
 -- Leveling guides are listed by the band their first level falls in.
 local BANDS = { { 1, 11, "LEVELS 1-12: STARTING ZONES" }, { 12, 19, "LEVELS 12-20" }, { 20, 29, "LEVELS 20-30" },
   { 30, 39, "LEVELS 30-40" }, { 40, 49, "LEVELS 40-50" }, { 50, 60, "LEVELS 50-60" } }
-local SUBS = { { "step", "Step" }, { "route", "Route" }, { "guides", "Guides" }, { "log", "Quest log" } }
+local SUBS = { { "step", "Step" }, { "route", "Route" }, { "guides", "Guides" }, { "log", "Quest log" }, { "party", "Party" } }
 
 local function sectionInfo(section)
   return (section.category == "dungeon" and "Suggested levels " or "Levels ") .. section.levels[1] .. "-" .. section.levels[2]
@@ -558,6 +559,114 @@ local function renderStepView(current, selected, y)
 end
 
 ----------------------------------------------------------------------------
+-- Party: each member's guide, step, live goal and when you last heard from them, Follow their
+-- guide, the quests one of you has and the other doesn't (Ask to share / Share), and the party
+-- switches (QuestParty.lua).
+----------------------------------------------------------------------------
+
+-- Where a member is, on the parchment card: dark green on your step, dark orange behind you, the
+-- theme's accent ahead, soft ink otherwise (the step window's light colours fade on parchment).
+local STATUS_INK = { same = { 0.12, 0.45, 0.12 }, behind = { 0.62, 0.27, 0.04 } }
+
+local function heardText(seconds)
+  seconds = math.floor(seconds or 0)
+  if seconds < 10 then return "heard just now" end
+  if seconds < 60 then return "heard " .. seconds .. " s ago" end
+  return "heard " .. math.floor(seconds / 60) .. " min ago"
+end
+
+local function questLines(y, heading, list, button, tip, label, onClick)
+  if not list or #list == 0 then return y end
+  y = y + U.T(heading .. " (" .. #list .. ")", 16, y, W - 32, "label", C.inkSoft) + 4
+  for _, q in ipairs(list) do
+    U.T(q.title, 28, y + 5, W - 200, "body", C.ink)
+    U.btn(button, W - 16 - 150, y, 150, function() onClick(q.id) end, false, tip).codexLabel = label(q)
+    y = y + 28
+  end
+  return y + 2
+end
+
+local function memberCard(r, y)
+  local top = y
+  y = y + 10
+  local head = r.name .. (r.level and (" (" .. r.level .. ")") or "") .. (r.className and (" " .. r.className) or "")
+  local color = STATUS_INK[r.status] or (r.status == "ahead" and C.accent) or C.inkSoft
+  local h = U.T(head, 16, y, W - 200, "head", C.ink)
+  U.T(r.where, W - 196, y + 2, 180, "small", color, "RIGHT")
+  y = y + h + 4
+  if r.codex then
+    y = y + U.T(r.guide .. ": " .. Q.plain(r.label or ""), 16, y, W - 32, "body", C.ink) + 2
+    local note = (r.goal ~= "" and (Q.plain(r.goal) .. "  -  ") or "") .. heardText(r.heard)
+    y = y + U.T(note, 16, y, W - 32, "small", C.inkSoft) + 8
+    local mine = Q.routeRow()
+    if r.section and not (mine and mine.section == r.section) then
+      U.btn("Follow " .. r.name .. "'s guide", 16, y, W - 32, function() ns.partyFollow(r.name) end, false,
+        "Switch your guide to " .. r.guide .. ", where " .. r.name .. " is. Your own progress comes from your quest log.")
+      y = y + 32
+    end
+    local have, lack = ns.partyQuestDiff(r.name)
+    y = questLines(y, r.name .. " has, you don't", have, "Ask to share",
+      "Asks " .. r.name .. "'s Codex to offer you this quest. The game asks you to accept it.",
+      function(q) return "Ask " .. r.name .. " to share " .. q.title end,
+      function(id) ns.partyAskShare(r.name, id) end)
+    y = questLines(y, "You have, " .. r.name .. " doesn't", lack, "Share",
+      "Offers this quest to your party. If " .. r.name .. " has done it already, the game says so.",
+      function(q) return "Share " .. q.title end, ns.partyShare)
+  else
+    y = y + U.T(r.offline and (r.name .. " is offline.")
+      or (r.name .. " needs the Leveling Codex to share a step, with Settings > Show my party's steps on."),
+      16, y, W - 32, "small", C.inkSoft) + 8
+  end
+  U.box(0, top, W, y - top + 4, C.parch, C.edge)
+  return y + 14
+end
+
+local function renderParty(y)
+  local db = ns.db()
+  if ns.partyInParty() then
+    local rows = ns.partyRows(true)
+    y = y + U.sectionTitle("Party (" .. #rows .. ")", y)
+    if db.noPartySteps then
+      y = y + U.T("Show my party's steps is off: the party doesn't hear your step, and the step window leaves them out.",
+        0, y, W, "small", C.dim) + 8
+    end
+    for _, r in ipairs(rows) do y = memberCard(r, y) end
+  else
+    y = y + U.T("You're not in a party. Group up with someone running the Leveling Codex and you'll see each other's"
+      .. " steps, kill and loot counts and quests here.", 0, y, W, "body", C.dim) + 12
+  end
+  y = y + U.sectionTitle("Party settings", y)
+  local function toggle(key, fn)
+    return function()
+      db[key] = not db[key]
+      if fn then fn() end
+      U.refresh()
+    end
+  end
+  local checks = {
+    { "Show my party's steps", not db.noPartySteps, toggle("noPartySteps", ns.questRefresh),
+      "Party members who use the Codex see each other's step, counts and quests." },
+    { "Share guide quests with my party", db.questShareParty, toggle("questShareParty"),
+      "When you accept a quest from your guide, the Codex offers it to party members who don't have it." },
+    { "Say my flights in party chat", db.questAnnounceFlights, toggle("questAnnounceFlights"),
+      "Taking a flight says where you're flying in party chat." },
+    { "Say steps I finish in party chat", db.questAnnounceSteps, toggle("questAnnounceSteps"),
+      "When the game finishes a step of your guide, party chat gets \"Codex: Done - <step>\"." },
+    { "Say quest items I pick up", db.questAnnounceItems, toggle("questAnnounceItems"),
+      "Each quest item you loot goes to party chat with your count." },
+    { "Say quest progress in party chat", db.questAnnounceProgress, toggle("questAnnounceProgress"),
+      "A finished objective and a quest that's ready to turn in go to party chat." },
+    { "Ping when the party is together on my step", not db.noPartyPing, toggle("noPartyPing"),
+      "The ready-check sound when the last member reaches your step." },
+  }
+  for _, c in ipairs(checks) do
+    U.check(c[1], 0, y, c[2], c[3], c[4])
+    y = y + 28
+  end
+  return y
+end
+
+----------------------------------------------------------------------------
 -- Guide setup: pace, dungeons and helpers in one place. It shows by itself for a new character
 -- (level 5 or lower) until Done; the Setup button opens it any time.
 ----------------------------------------------------------------------------
@@ -711,8 +820,9 @@ local function render()
   end, false, "Show or hide the quest step and arrow while you play.")
   y = y + 38
 
+  local fifth = (W - 32) / #SUBS
   for i, s in ipairs(SUBS) do
-    U.btn(s[2], (i - 1) * (quarter + 8), y, quarter, function()
+    U.btn(s[2], (i - 1) * (fifth + 8), y, fifth, function()
       if s[1] == "guides" and sub == "guides" then librarySection = nil end
       show(s[1])
     end, sub == s[1])
@@ -724,6 +834,7 @@ local function render()
   if sub == "route" then y = renderRoute(rows, selected, current, y)
   elseif sub == "guides" then y = renderGuides(rows, sections, y)
   elseif sub == "log" then y = renderLog(missed, ready, y)
+  elseif sub == "party" then y = renderParty(y)
   else y = renderStepView(current, selected, y) end
   return y + 12
 end

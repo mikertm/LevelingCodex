@@ -1178,6 +1178,12 @@ function Q.current()
   return i and steps[i], i
 end
 
+-- Where you really are in the route (not a step you went Back to look at), for the party.
+function Q.routeRow() return index and steps[index], index end
+
+-- A quest of your route you have turned in.
+function Q.turnedIn(id) return turnedIn[id] == true end
+
 function Q.greyPickups() return greyRows end
 
 -- Items any step of your route names (`item`, `items`, `startItem`): the vendor never sells them.

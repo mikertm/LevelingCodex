@@ -1358,12 +1358,12 @@ local function addTracking(out)
     out[#out + 1] = { kind = "quest", text = entry.title or ("Quest " .. id) }
     addGoals(out, entry, nil, nil, true, true, 12)
   end
-  -- one row per party member against your step; the heading says when everyone is on it
+  -- one row per party member against your step; the heading says when everyone is on it, and a
+  -- note names anyone 3 or more steps behind you
   local party = ns.partyRows()
   if #party > 0 then
-    local together = true
-    for _, r in ipairs(party) do if r.status ~= "same" then together = false end end
-    out[#out + 1] = { kind = "heading", text = together and "Party - all on this step" or "Party" }
+    out[#out + 1] = { kind = "heading", text = ns.partyTogether(party) and "Party - all on this step" or "Party" }
+    for _, line in ipairs(ns.partyWaitLines(party)) do out[#out + 1] = { kind = "note", tone = "warn", text = line } end
     for _, r in ipairs(party) do out[#out + 1] = { kind = "party", text = r.text, where = r.where, status = r.status } end
   end
 end
@@ -1650,7 +1650,7 @@ local function putParty(b)
   local whereWidth = math.ceil(tonumber(try(r.where.GetStringWidth, r.where)) or 60) + 8
   r.name:SetWidth(WIDTH - 14 - whereWidth)
   r.name:SetText(Q.plain(b.text))
-  r.name:SetTextColor(ink((b.status == "other" or b.status == "none") and "dim" or "text"))
+  r.name:SetTextColor(ink((b.status == "other" or b.status == "none" or b.status == "offline") and "dim" or "text"))
   local height = math.max(12, tonumber(r.name:GetStringHeight()) or 12)
   r:SetHeight(height)
   cursor = cursor + height + 2
@@ -1845,7 +1845,14 @@ function ns.questRefresh()
     end
     cursor = cursor + 3
     if paintBar(row) then cursor = cursor + 12 end
-    if not compact then draw(blocks) else nextRows = {} end
+    if not compact then
+      draw(blocks)
+    else
+      nextRows = {}
+      -- compact: the party in one line ("Party: all on this step", "Party: Ann same step, Bo 4 behind")
+      local partyLine = ns.partySummary()
+      if partyLine then putText(partyLine, "dim") end
+    end
     seenCounts = newCounts
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
