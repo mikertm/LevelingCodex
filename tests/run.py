@@ -721,6 +721,7 @@ def tool_checks(gamedata, ref, profdata, tag):
         os.remove(path)
     if "BLACKSMITHING" not in text or "a profession row" not in text:
         errors.append("%s tools: the daily report leaves out the profession audit" % tag)
+    errors += update_audit_checks(gamedata, ref, tag)
     # recipe names the game gives to more than one spell are kept, and a step naming one is flagged
     bs = (ref.get("professions") or {}).get("Blacksmithing") or {}
     coif = (bs.get("clashes") or {}).get("Golden Scale Coif") or []
@@ -766,6 +767,45 @@ def tool_checks(gamedata, ref, profdata, tag):
     if profdata and profdata.get("HERBALISM") and ref.get("professions", {}).get("Herbalism", {}).get("gathering"):
         errors.extend(herbalism_tool_checks(gamedata, ref, profdata["HERBALISM"], tag))
     return errors
+
+
+def update_audit_checks(gamedata, ref, tag):
+    """`update` audits the reference as written to forever.json. A freshly built one keys quests.maps by
+    number (JSON turns them into strings); auditing that in the 2026-11-13 daily run made every route map
+    "unknown" and every route extent "differ from the client"."""
+    import contextlib
+    import copy
+    import io
+    import tempfile
+    built = copy.deepcopy(ref)
+    built["quests"]["maps"] = {int(key): value for key, value in built["quests"]["maps"].items()}
+    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit")
+    saved = {name: getattr(gamedata, name) for name in names}
+    audited, calls = [], []
+    fd, path = tempfile.mkstemp(suffix=".json")
+    os.close(fd)
+    argv = sys.argv
+    try:
+        saved["write_reference"](ref, path)
+        gamedata.latest_build = lambda: ref["build"]
+        gamedata.fetch = lambda build, quiet=False: None
+        gamedata.build_reference = lambda build: copy.deepcopy(built)
+        gamedata.write_reference = lambda r, p=path: saved["write_reference"](r, p)
+        gamedata.load_reference = lambda p=path: saved["load_reference"](p)
+        gamedata.full_audit = lambda r, only=None: calls.append(r) or audited.extend(saved["full_audit"](r, "QUESTS")) or audited
+        sys.argv = ["gamedata.py", "update"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            gamedata.main()
+    finally:
+        sys.argv = argv
+        for name, value in saved.items():
+            setattr(gamedata, name, value)
+        os.remove(path)
+    wrong = [m for _, lvl, m in audited if lvl == "error"]
+    if not calls or wrong:
+        return ["%s tools: update audits the freshly built reference, not the written one (%d quest errors, e.g. %s)" %
+                (tag, len(wrong), wrong[:2])]
+    return []
 
 
 def herbalism_tool_checks(gamedata, ref, guide, tag):

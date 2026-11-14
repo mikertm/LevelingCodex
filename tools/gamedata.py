@@ -1486,8 +1486,10 @@ def main():
         if a.cmd == "fetch":
             return 0
         old = load_reference() if os.path.exists(REF) else None
-        new = build_reference(build)
-        write_reference(new)
+        write_reference(build_reference(build))
+        # Compare and audit what was written, as every other reader sees it: a freshly built reference
+        # keys quests.maps by number, the JSON by string, and the route audit read every map as unknown.
+        new = load_reference()
         print("wrote %s" % os.path.relpath(REF, ROOT))
         changes = diff(old, new) if old else "first reference, nothing to compare"
         print(changes)
