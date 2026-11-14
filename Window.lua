@@ -1148,13 +1148,11 @@ renderers.settings = function()
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
   T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
-  row("-", 150, 28, false, function()
-    db.questPreview = math.max(0, (tonumber(db.questPreview) or 2) - 1); ns.questRefresh()
-  end)
-  T(tostring(tonumber(db.questPreview) or 2), 182, y + 4, 30, "body", C.gold, "CENTER")
-  row("+", 216, 28, false, function()
-    db.questPreview = math.min(5, (tonumber(db.questPreview) or 2) + 1); ns.questRefresh()
-  end, "How many of the next steps the step window lists under the current one (0-5).")
+  row("-", 150, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() - 1) end,
+    "Fewer of the next steps the step window lists under the current one.")
+  T(tostring(ns.questPreviewCount()), 182, y + 4, 30, "body", C.gold, "CENTER")
+  row("+", 216, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() + 1) end,
+    "More of the next steps the step window lists under the current one (0-10). The list runs on into the next section.")
   y = y + 36
   tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")

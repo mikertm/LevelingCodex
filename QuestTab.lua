@@ -632,6 +632,21 @@ local function renderSetup(y)
     U.refresh()
   end, "Only the step's title, a thin progress bar and the buttons: for small screens.")
   y = y + 30
+  -- how many of the next steps the step window lists; Settings has every number from 0 to 10
+  label("Steps ahead")
+  local counts, ahead = { 2, 5, 10 }, ns.questPreviewCount()
+  local lit
+  for i, n in ipairs(counts) do if n == ahead then lit = i end end
+  y = y + U.segments(x, y, w, { "2 steps", "5 steps", "10 steps" }, lit, function(i)
+    ns.setQuestPreview(counts[i])
+    U.refresh()
+  end, { "The step window lists the next 2 steps under the current one.",
+    "The step window lists the next 5 steps, on into the next guide.",
+    "The step window lists the next 10 steps, on into the next guide." }) + 4
+  if not lit then
+    y = y + U.T((ahead == 1 and "1 step" or ahead .. " steps") .. ": see Settings", x, y, w, "small", C.dim) + 4
+  end
+  y = y + 6
   -- the vendor helpers (Vendor.lua), the same switches as Settings
   label("Vendor")
   U.check("Sell junk", x, y - 1, not db.noAutoSell, function()

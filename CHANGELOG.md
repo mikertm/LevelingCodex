@@ -58,6 +58,7 @@
 
 ### Step window
 
+- **See up to 10 steps ahead.** Up next can now list up to 10 of the next steps (it was 5), and it carries on into the next guide, naming it where it starts. Before, it stopped at the end of the current guide. Pick 2, 5 or 10 on the setup card's new Steps ahead row, or any number from 0 to 10 in Settings > Steps shown ahead. The default is still 2.
 - **It shows up on a new character.** The intro cinematic (and Alt+Z) hides the game's interface. The step window took that as you closing it and stayed hidden until you showed it in the Quests tab; it now comes back with the interface.
 - **NPC portraits load.** A portrait used to give up after one second and show the step's icon (a "?") when the game hadn't loaded that NPC yet. It now keeps trying and shows the NPC once it loads, and targeting the NPC shows it at once.
 - "Also on this loop" is now **While you're here**.
