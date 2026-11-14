@@ -808,6 +808,28 @@ function S.questPortrait()
   check(not p:IsShown(), "the setting hides it")
 end
 
+-- The step window's buttons: a wide themed Next, small icon buttons with tooltips.
+function S.stepButtons()
+  S.login()
+  local frame = questViewer()
+  local nextB = findButton(frame, function(l) return l == "Next" end)
+  check(nextB and nextB.label and nextB.label._text:find("^Next step") and nextB:GetWidth() > 200, "a wide Next step")
+  for _, name in ipairs({ "Back", "Quests", "Hide" }) do
+    local b = findButton(frame, function(l) return l == name end)
+    check(b and b:GetWidth() <= 30, name .. " is an icon button")
+    MOCK.fire(b, "OnEnter")
+    check(GameTooltip._lines[1] == name, name .. " names itself on hover")
+    MOCK.fire(b, "OnLeave")
+  end
+  local before = nextB.fill._color[1]
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Codex (gold)") -- Settings' theme switch
+  check(math.abs(nextB.fill._color[1] - before) > 0.1, "a theme switch repaints Next")
+  click(frame, "Next")
+  check(findButton(frame, function(l) return l == "Back" end), "Next still moves on")
+end
+
 -- Recommended stays the lit dungeon choice as you level past some of its runs.
 function S.questSetupLevelled()
   S.login()

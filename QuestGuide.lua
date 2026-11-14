@@ -188,24 +188,36 @@ local function makeViewer()
     fade:SetDuration(0.4)
   end
 
-  local function button(label, x, width, action, bottom)
-    bottom = bottom or 9
-    local b = A.button(viewer, width, 22)
-    b:SetPoint("BOTTOMLEFT", x, bottom)
+  -- The button row: a wide Next step in the theme's colour between small icon buttons (Back, Quests,
+  -- Hide) that name themselves on hover; the offer button above is a primary button too.
+  local function icon(label, x, file, fallback, action)
+    local b = A.iconButton(viewer, file, fallback)
+    b:SetPoint("BOTTOMLEFT", x, 9)
+    b.codexLabel, b.tipTitle = label, label
+    b:SetScript("OnClick", action)
+    return b
+  end
+  local function primary(label, x, width, action, bottom)
+    local b = A.primaryButton(viewer)
+    b:SetSize(width, 24)
+    b:SetPoint("BOTTOMLEFT", x, bottom or 9)
     b:SetLabel(label)
     b.codexLabel = label
     b:SetScript("OnClick", action)
     return b
   end
   -- Keep controller focus in the Quests tab so the overlay can stay up during gameplay.
-  button("Back", 12, 72, function() ns.moveQuestStep(true) end)
-  nextButton = button("Next", 92, 72, function(_, mouse)
+  viewer.buttons = {
+    icon("Back", 12, A.FILES.prevUp, "<", function() ns.moveQuestStep(true) end),
+    icon("Quests", 270, A.FILES.questBook, "Q", function() ns.openQuestStep() end),
+    icon("Hide", 302, A.FILES.minusUp, "x", ns.hideQuestViewer),
+  }
+  nextButton = primary("Next", 44, 222, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  button("Quests", 172, 86, function() ns.openQuestStep() end)
-  button("Hide", 266, 72, ns.hideQuestViewer)
-  suggestionButton = button("", 16, 318, function()
+  nextButton:SetLabel("Next step", true)
+  suggestionButton = primary("", 16, 318, function()
     local row = Q.current()
     if row and row.step.type == "plan" then
       ns.planQuestRun(row.step.dungeon, true)
@@ -1524,6 +1536,9 @@ function ns.questRefresh()
       -- Ink only on the flat parchment; the dialog art is dark, so it needs light text.
       onDark = backdrop and true or false
       title:SetTextColor(ns.rgba(C.gold))
+      for _, b in ipairs(viewer.buttons) do b:Repaint() end
+      nextButton:Repaint()
+      suggestionButton:Repaint()
       theme = ns.themeVersion
     end
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
@@ -1616,7 +1631,7 @@ function ns.questRefresh()
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
     nextButton.codexLabel = choosing and "Skip" or "Next"
-    nextButton:SetLabel(nextButton.codexLabel)
+    nextButton:SetLabel(choosing and "Skip run" or "Next step", true)
     local returnToRoute = sec.side
     if run and not announced[run.id] then
       announced[run.id] = true
