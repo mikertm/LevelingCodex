@@ -629,6 +629,92 @@ function S.questReward()
   LevelingCodexDB.noRewardHint = true
   MOCK.event("QUEST_COMPLETE")
   check(not mark:IsShown(), "the setting turns the mark off")
+  LevelingCodexDB.noRewardHint = nil
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("reward mark: 3 choices %(Mail Vest 4s 50c, Cloth Gloves 13s, Rough Arrow x200 2s%), 2 reads; "
+    .. "marked Cloth Gloves on QuestInfoRewardsFrameQuestInfoItem2"), "debug says what the last reward window read")
+end
+
+local function rewardLines()
+  local n = 0
+  for _, line in ipairs(MOCK.chat) do if line:find("sells for the most") then n = n + 1 end end
+  return n
+end
+
+-- A price still loading when the quest window closes or opens again: no late line, no second line.
+function S.questRewardStale()
+  S.login()
+  for i = 1, 2 do CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, UIParent) end
+  MOCK.questChoices = 2
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, nil } }
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(4)
+  check(rewardLines() == 0, "a closed quest window gets no reward line")
+  local mark = _G.LevelingCodexRewardMark
+  check(not (mark and mark:IsShown()), "and no mark")
+  slash("debug")
+  check(chatHas("reward mark: 2 choices %(Mail Vest 4s 50c, Cloth Gloves price not loaded%), 1 read; "
+    .. "the window closed while waiting for a price"), "debug says the read stopped with the window")
+  MOCK.rewardChoices[2][3] = nil
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(0.3)
+  MOCK.event("QUEST_FINISHED")
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(4)
+  check(rewardLines() == 1, "reopening the window says it once (said " .. rewardLines() .. ")")
+end
+
+-- A slow price is waited for; one that never loads is named, so the line never claims too much.
+function S.questRewardSlowPrice()
+  S.login()
+  local buttons = {}
+  for i = 1, 3 do buttons[i] = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, UIParent) end
+  MOCK.questChoices = 3
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, nil }, { "Rough Arrow", 200, 1 } }
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(2)
+  check(rewardLines() == 0, "still waits for a price after 2 s")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(0.6)
+  check(chatHas("Cloth Gloves sells for the most %(13s%)%.$"), "then names the best reward")
+  check(_G.LevelingCodexRewardMark:GetParent() == buttons[2], "and marks it")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.chat = {}
+  MOCK.rewardChoices[2][3] = nil
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(5)
+  check(chatHas("Mail Vest sells for the most %(4s 50c%), but the price of Cloth Gloves didn't load%."),
+    "a price that never loads is named")
+  check(_G.LevelingCodexRewardMark:GetParent() == buttons[1], "the best known reward is marked")
+  check(rewardLines() == 1, "said once")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.chat = {}
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, 450 }, { "Rough Arrow", 200, 1 } }
+  MOCK.event("QUEST_COMPLETE")
+  check(chatHas("Mail Vest sells for the most %(4s 50c%), tied with Cloth Gloves%."), "a tie says so")
+end
+
+-- The mark goes on the button QuestInfo tagged with that choice, even when the buttons start with
+-- a fixed reward.
+function S.questRewardButtons()
+  S.login()
+  local frame = CreateFrame("Frame", "QuestInfoRewardsFrame", UIParent)
+  frame.RewardButtons = {}
+  local kinds = { { "reward", 1 }, { "choice", 1 }, { "choice", 2 } }
+  for i, k in ipairs(kinds) do
+    local b = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, frame)
+    b.type = k[1]
+    b:SetID(k[2])
+    frame.RewardButtons[i] = b
+  end
+  MOCK.questChoices = 2
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, 1300 } }
+  MOCK.event("QUEST_COMPLETE")
+  check(_G.LevelingCodexRewardMark:GetParent() == frame.RewardButtons[3], "the second choice's own button is marked")
 end
 
 function S.questMobTarget()

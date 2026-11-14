@@ -71,6 +71,13 @@
 
 - A fresh character no longer sees a few percent on guides it hasn't started. Forever lists flight points as already known, and those flight path steps counted as done. A guide now counts nothing until you've done one of its quests.
 
+### Quest rewards
+
+- **The best-selling reward waits for slow prices.** When the game hadn't loaded a reward's price yet, the Codex gave up on it after a second and a half, so the coin could land on a cheaper reward. It now waits up to 3 seconds. If a price still hasn't loaded, chat names that reward instead of saying the marked one sells for the most.
+- **Ties say so:** "Mail Vest sells for the most (4s 50c), tied with Cloth Gloves."
+- Closing the quest window while a price was still loading no longer prints the line afterwards, and opening it again quickly no longer prints it twice.
+- `/codex debug` shows what the last reward choice read: each reward's price and which one got the coin.
+
 ## v0.22.0
 
 ### Step window

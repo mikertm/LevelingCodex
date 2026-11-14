@@ -1567,6 +1567,7 @@ local ALLOWED_GLOBALS = {
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
+ALLOWED_GLOBALS.QuestInfoRewardsFrame = true
 ALLOWED_GLOBALS.ClassTrainerFrame = true
 ALLOWED_GLOBALS.TaxiFrame = true
 for i = 1, 4 do ALLOWED_GLOBALS["TaxiButton" .. i] = true end

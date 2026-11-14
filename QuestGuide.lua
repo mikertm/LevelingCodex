@@ -2040,37 +2040,82 @@ local function interact(event)
 end
 
 -- The quest reward that sells for the most gets a coin mark and a chat line (Settings > Mark
--- the best-selling quest reward). The Codex never picks a reward for you.
+-- the best-selling quest reward). The Codex never picks a reward for you. A price comes from the
+-- item cache: an uncached reward is read again every 0.5 s for 3 s, then the line names the best
+-- of the others and says which price didn't load. Every quest window event starts a new run, so
+-- a read still waiting for a price stops when the window closes or opens again.
 local rewardMark
+local rewardRun, rewardSeen = 0, nil
+local REWARD_READS = 7 -- the first read and six more, 0.5 s apart
 
+-- Choice i's button: the one QuestInfo tagged as that choice (its type and ID), else by name.
 local function rewardButton(i)
   local list = type(QuestInfoRewardsFrame) == "table" and QuestInfoRewardsFrame.RewardButtons
+  if type(list) == "table" then
+    for _, b in ipairs(list) do
+      if type(b) == "table" and b.type == "choice" and try(b.GetID, b) == i and try(b.IsShown, b) then return b end
+    end
+  end
   return _G["QuestInfoRewardsFrameQuestInfoItem" .. i] or (type(list) == "table" and list[i])
     or _G["QuestRewardItem" .. i]
 end
 
-local function markReward(tries)
+local function nameList(names)
+  if #names < 2 then return names[1] or "" end
+  return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
+end
+
+local function readRewards(choices, reads)
+  local seen = { choices = choices, reads = reads, rows = {}, missing = {} }
+  for i = 1, choices do
+    local name, _, count = try(GetQuestItemInfo, "choice", i)
+    local link = try(GetQuestItemLink, "choice", i)
+    local price = tonumber(link and select(11, ns.itemInfo(link)))
+    local label = Q.plain(name or "") -- Q.plain drops non-ASCII: a name in another alphabet comes out empty
+    local row = { name = label ~= "" and label or ("Reward " .. i), count = math.max(1, tonumber(count) or 1) }
+    if price then row.value = price * row.count else seen.missing[#seen.missing + 1] = row.name end
+    seen.rows[i] = row
+  end
+  return seen
+end
+
+local function markReward(run, reads)
+  if run ~= rewardRun then return end -- the quest window closed or opened again
+  reads = (reads or 0) + 1
   if rewardMark then rewardMark:Hide() end
   if ns.db().noRewardHint then return end
   local choices = tonumber(try(GetNumQuestChoices)) or 0
   if choices < 2 then return end
-  local best, bestValue, bestName, missing = nil, 0, nil, false
-  for i = 1, choices do
-    local name, _, count = try(GetQuestItemInfo, "choice", i)
-    local link = try(GetQuestItemLink, "choice", i)
-    local price = link and select(11, ns.itemInfo(link))
-    if price == nil then missing = true end
-    local value = (tonumber(price) or 0) * math.max(1, tonumber(count) or 1)
-    if value > bestValue then best, bestValue, bestName = i, value, name end
-  end
-  if missing and (tries or 0) < 3 then
-    ns.after(0.5, function() markReward((tries or 0) + 1) end) -- item info still loading
+  local seen = readRewards(choices, reads)
+  rewardSeen = seen
+  if #seen.missing > 0 and reads < REWARD_READS then
+    seen.result = "waiting for a price"
+    ns.after(0.5, function() markReward(run, reads) end) -- item info still loading
     return
   end
-  if not best then return end
-  ns.say(Q.plain((bestName or ("Reward " .. best)) .. " sells for the most (" .. ns.money(bestValue) .. ")."))
+  local best, tied = nil, {}
+  for i, row in ipairs(seen.rows) do
+    if (row.value or 0) > 0 then
+      if not best or row.value > seen.rows[best].value then best, tied = i, {}
+      elseif row.value == seen.rows[best].value then tied[#tied + 1] = row.name end
+    end
+  end
+  if not best then
+    seen.result = #seen.missing > 0 and "no price loaded" or "nothing sells"
+    return
+  end
+  local row = seen.rows[best]
+  local line = row.name .. " sells for the most (" .. ns.money(row.value) .. ")"
+  if #tied > 0 then line = line .. ", tied with " .. nameList(tied) end
+  if #seen.missing == 1 then line = line .. ", but the price of " .. seen.missing[1] .. " didn't load"
+  elseif #seen.missing > 1 then line = line .. ", but the prices of " .. nameList(seen.missing) .. " didn't load" end
+  ns.say(line .. ".")
   local button = rewardButton(best)
-  if type(button) ~= "table" or type(button.GetFrameLevel) ~= "function" then return end
+  if type(button) ~= "table" or type(button.GetFrameLevel) ~= "function" then
+    seen.result = "no button for " .. row.name
+    return
+  end
+  seen.result = "marked " .. row.name .. " on " .. Q.plain(try(button.GetName, button) or "an unnamed button")
   if not rewardMark then
     rewardMark = CreateFrame("Frame", "LevelingCodexRewardMark", button)
     rewardMark:SetSize(18, 18)
@@ -2224,10 +2269,14 @@ local function handle(event, a, b, c, d, e)
     return
   end
   if event == "QUEST_DETAIL" or event == "QUEST_PROGRESS" or event == "QUEST_COMPLETE" or event == "QUEST_FINISHED" then
+    rewardRun = rewardRun + 1
+    if rewardSeen and rewardSeen.result == "waiting for a price" then
+      rewardSeen.result = "the window closed while waiting for a price"
+    end
     if rewardMark then rewardMark:Hide() end
     if event == "QUEST_FINISHED" then return end
     interact(event)
-    if event == "QUEST_COMPLETE" then markReward() end
+    if event == "QUEST_COMPLETE" then markReward(rewardRun) end
     return
   end
   if event == "GOSSIP_SHOW" or event == "QUEST_GREETING" then
@@ -2392,6 +2441,19 @@ function ns.questDebugLines()
     frames[#frames + 1] = (_G[name] and "+" or "-") .. name
   end
   lines[#lines + 1] = "Reward buttons: " .. table.concat(frames, " ")
+  local seen = rewardSeen
+  if seen then
+    local bits = {}
+    for i, row in ipairs(seen.rows) do
+      bits[i] = row.name .. (row.count > 1 and (" x" .. row.count) or "") .. " "
+        .. (row.value and ns.money(row.value) or "price not loaded")
+    end
+    lines[#lines + 1] = "reward mark: " .. seen.choices .. " choices (" .. table.concat(bits, ", ") .. "), "
+      .. seen.reads .. (seen.reads == 1 and " read; " or " reads; ") .. tostring(seen.result)
+      .. (ns.db().noRewardHint and " (now turned off)" or "")
+  else
+    lines[#lines + 1] = "reward mark: no reward choice seen this session" .. (ns.db().noRewardHint and " (turned off)" or "")
+  end
   local known, probed = Q.flightDebug()
   lines[#lines + 1] = "Known flight paths: " .. known .. (probed and (" (" .. probed .. " from C_TaxiMap)") or " (no C_TaxiMap)")
     .. ". Hearth: " .. Q.plain(Q.bindLocation() or "unknown") .. ". Arrow art: " .. tostring(arrowFile or "text only")
