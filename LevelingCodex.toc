@@ -58,6 +58,7 @@ Disenchant.lua
 Macros.lua
 Banner.lua
 Window.lua
+TalentTab.lua
 ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua

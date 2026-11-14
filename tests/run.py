@@ -35,7 +35,7 @@ MAIN = ["makeTalentWindow:name", "talentBeforeLogin", "login", "talentBeforeLogi
         "bannerMouse", "bannerTest", "browse", "everyButton", "settings", "minimap", "compartment", "slash", "macros",
         "macroAutoUpdate", "combatLevelUp", "ownMacroSameName", "talentByName", "talentGuideOff", "talentFinderCost",
         "talentPooledButtons", "talentCloseDirect", "talentPoints", "talentShape", "copyMacro", "scrollMemory",
-        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "traitLayoutTree", "macroMockups",
+        "gamepadClose", "binding", "debugReport", "artUsed", "talentTree", "talentTreeLayout", "talentPathPick", "macroMockups",
         "tabGlow", "keycapsLight", "bannerBuiltIn", "talentHintOnScreen", "talentTraceThemed", "controllerSides", "bannerFindsDisplay", "noFalseLostNote"]
 ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "talentFinderCost", "talentCloseDirect",
         "talentPoints", "talentShape", "lateTalentUI"]
@@ -69,7 +69,7 @@ HERBALISM = ["skills:HE;1;75:professions:Alliance:Human", "login"]
 # The controller: Forever's navigation, the Codex's own as a backup.
 PAD = ["login", "gamepadClose", "padForever", "padThemeRebuild", "padTabs", "padCombatOpen", "padPickUp", "padBackup", "padBackupScroll",
        "padBackupCombat", "padCopyBox", "padForeverCombat", "padTalents", "padForeverFocus", "padForeverActive",
-       "padStickKeepsFocus"]
+       "padStickKeepsFocus", "padTalentPaths"]
 # The crafting window: classic trade skill calls, or retail's C_TradeSkillUI.
 CRAFT = ["makeCraftWindow", "login", "craftTrace", "craftEventFirst", "craftNotLearned", "craftFiltered", "craftClassicStubs", "craftGrey",
          "craftScrolled", "craftHandsOff", "craftRowBackoff", "craftOnHide", "craftHintClearsBar", "craftGuideOff", "craftSmelting", "craftSmeltingCases", "craftTailoring", "craftEnchanting", "debugReport"]
@@ -670,7 +670,13 @@ def talent_tree_checks():
         keys = [(x.tab, x.row, x.col) for x in talents]
         if keys != sorted(keys):
             errors.append("talent tree %s: talents not sorted by tab, row, column" % cls)
+        rows = {x.name: x.row for x in talents}
         for x in talents:
+            # the game's edges run both ways (Hunter: Bestial Wrath "opens" Intimidation, two rows up);
+            # a prerequisite in a later row can never come first
+            for pn in x.prereq.values():
+                if rows.get(pn, 0) > x.row:
+                    errors.append("talent tree %s: %s lists %s (a later row) as a prerequisite" % (cls, x.name, pn))
             if any(ord(c) > 126 for c in (x.tip or "") + x.name):
                 errors.append("talent tree %s: %s has non-ASCII text" % (cls, x.name))
             if not x.icon or not x.max:

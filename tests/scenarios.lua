@@ -4329,6 +4329,8 @@ function S.everyButton()
     end
   end
   slash("minimap"); slash("minimap") -- re-apply the minimap setting
+  -- the path cards were clicked too: back to the Codex guide's path
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
 end
 
 -- Settings: both themes, all pad names, banner move/lock, sizes, window position.
@@ -5588,6 +5590,48 @@ function S.talentTree()
     local snippet = future.why:match("^[A-Za-z0-9 ,%.']+") or "" -- not %w: it takes UTF-8 bytes on Windows
     if #snippet > 8 then check(text:find(snippet, 1, true), "detail shows why " .. future.name) end
   end
+  -- the whole game tree is drawn: a talent the guide never takes shows greyed at 0
+  local tree = MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  local inPlan = {}
+  for _, p in ipairs(D().plan) do inPlan[p.name] = true end
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not inPlan[t.name] then
+      local node = iconsTitled(t.name)[1]
+      check(node and node.tipTitle == t.name .. "  0/" .. t.max and node.tex._desat == true,
+        t.name .. " (not in the plan) is drawn greyed at 0")
+      break
+    end
+  end
+  win():Hide()
+end
+
+-- Nodes sit at the game's rows and columns (TalentTreeData.lua): the trees side by side, a talent under
+-- a prerequisite in its column.
+function S.talentTreeLayout()
+  local tree = D() and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  if not tree then return end
+  openAt(30, "Talents")
+  local function spot(name)
+    local node = iconsTitled(name)[1]
+    check(node, "tree node for " .. name)
+    local _, _, _, x, y = node:GetPoint(1)
+    return x, y
+  end
+  local byName = {}
+  for _, t in ipairs(tree.talents) do byName[t.name] = t end
+  local maxX1, minX2 = -1e9, 1e9
+  for _, t in ipairs(tree.talents) do
+    local x, y = spot(t.name)
+    if t.tab == 1 then maxX1 = math.max(maxX1, x) elseif t.tab == 2 then minX2 = math.min(minX2, x) end
+    for _, pn in ipairs(t.prereq) do
+      local o = byName[pn]
+      if o and o.tab == t.tab and o.col == t.col then
+        local px, py = spot(pn)
+        check(px == x and py > y, t.name .. " sits under its prerequisite " .. pn)
+      end
+    end
+  end
+  check(maxX1 < minX2, "the first tree sits left of the second")
   win():Hide()
 end
 
@@ -5732,6 +5776,74 @@ function S.talentPathApi()
   MOCK.traitNodes = {}
   MOCK.event("TRAIT_CONFIG_UPDATED", 7)
   LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The Talents tab's path cards: click one to follow it (saved), the tree and every-point list follow.
+function S.talentPathPick()
+  if not D() then return end
+  local ns = MOCK.ns
+  local paths = ns.talentPaths()
+  local p = paths[2]
+  if not p or p.custom then return end
+  openAt(30, "Talents")
+  click(win(), "Path: " .. p.spec)
+  check(LevelingCodexCharDB.talentPath == p.key, "clicking a card chooses its path")
+  local text = MOCK.textUnder(win())
+  check(text:find("Chosen", 1, true), "the chosen card says so")
+  check(text:find("Macros and tips follow the " .. D().spec .. " guide.", 1, true), "macros and tips stay the guide's")
+  local hit, rank = ns.talentAt(30)
+  local node = iconsTitled(hit.name)[1]
+  check(node and node.tipTitle == hit.name .. "  " .. rank .. "/" .. hit.max, "the tree shows " .. hit.name .. " " .. rank .. "/" .. hit.max)
+  local row
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle == "Level 30: " .. hit.name .. " " .. rank .. "/" .. hit.max then row = b end
+  end
+  check(row, "every point in order follows the path at 30")
+  -- a talent the guide takes at 30 but this path never does: greyed at 0
+  local inPath = {}
+  for _, e in ipairs(p.plan) do inPath[e.name] = true end
+  for _, e in ipairs(D().plan) do
+    if not inPath[e.name] then
+      local n = iconsTitled(e.name)[1]
+      check(n and n.tipTitle == e.name .. "  0/" .. e.max and n.tex._desat == true, e.name .. " greyed on " .. p.spec)
+      break
+    end
+  end
+  click(win(), "Path: " .. paths[1].spec)
+  check(LevelingCodexCharDB.talentPath == "guide", "the guide's card chooses it again")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- The controller reaches the path cards and the tree (the Codex's own navigation), and A chooses a path.
+function S.padTalentPaths()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  LevelingCodexDB.padNative = false
+  openAt(30, "Talents")
+  local guideLabel = "Path: " .. MOCK.ns.talentPaths()[1].spec
+  local card
+  for _ = 1, 40 do
+    local t = LevelingCodexPadFocus.target
+    local l = t and t.codexLabel or ""
+    if l:find("^Path: ") and l ~= guideLabel then card = l; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(card, "the D-pad reaches a path card")
+  pad(win(), "PAD1")
+  local want
+  for _, p in ipairs(MOCK.ns.talentPaths()) do if "Path: " .. p.spec == card then want = p.key end end
+  check(LevelingCodexCharDB.talentPath == want, "A on a card chooses its path")
+  local node
+  for _ = 1, 80 do
+    local t = LevelingCodexPadFocus.target
+    if t and (t.tipTitle or ""):find("%d/%d") and t:GetScript("OnClick") then node = t; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(node, "the D-pad reaches a tree node")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+  LevelingCodexCharDB.talentPath = nil
 end
 
 -- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the

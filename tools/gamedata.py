@@ -910,6 +910,9 @@ def talentdata_text(ref):
             if sp and sp[0].get("talent"):
                 ranks = sorted({(r["rank"], r["level"]) for r in sp if r.get("rank") and r["rank"] >= 2 and r.get("level")})
             pre = list(t.get("prereq") or []) + [x for x in (t.get("requires") or []) if x not in (t.get("prereq") or [])]
+            # the game's edges run both ways (Hunter: Bestial Wrath "opens" Intimidation two rows up):
+            # a prerequisite in a later row can never come first, so it isn't one
+            pre = [x for x in pre if x in R["talents"] and R["talents"][x]["row"] <= t["row"]]
             rows.append((tabs.index(t["tab"]) + 1, t["row"], t["col"], name, t, pre, ranks))
         rows.sort(key=lambda r: (r[0], r[1], r[2], r[3]))
         out.append("  %s = { tabs = { %s }, talents = {" % (cls, ", ".join(_lua_str(x) for x in tabs)))

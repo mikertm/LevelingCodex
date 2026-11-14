@@ -134,7 +134,7 @@ ns.talentTrees = {
       tip = "Command a hawk to dive-bomb your targeted enemy, dealing {32+($rap*(5/100))} Physical damage and continuing its assault for 18 sec. Only 2 hawks can be active at once. Summon Hawk shares its cooldown with Arcane Shot." },
     { name = "Spirit Bond", tab = 1, row = 5, col = 1, max = 2, req = 20, icon = "ability_druid_demoralizingroar", prereq = {}, spell = {},
       tip = "While your pet is active, you and your pet will regenerate 1% of total health every 5 sec." },
-    { name = "Intimidation", tab = 1, row = 5, col = 2, max = 1, req = 20, icon = "ability_devour", prereq = { "Bestial Swiftness", "Bestial Wrath" }, spell = {},
+    { name = "Intimidation", tab = 1, row = 5, col = 2, max = 1, req = 20, icon = "ability_devour", prereq = { "Bestial Swiftness" }, spell = {},
       tip = "Command your pet to Stun the target for 3 sec on its next successful attack, which also gains 100% increased critical strike chance. Generates high threat." },
     { name = "Bestial Discipline", tab = 1, row = 5, col = 4, max = 2, req = 20, icon = "spell_nature_abolishmagic", prereq = {}, spell = {},
       tip = "Increases the Focus regeneration of your pets by 20% and allows 50% of your Mana regeneration to continue while casting." },
