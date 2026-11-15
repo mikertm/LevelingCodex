@@ -1,6 +1,6 @@
 # Leveling Codex
 
-## Unreleased
+## v0.25.0
 
 ### Horde quest guide, levels 30-60
 
