@@ -87,27 +87,52 @@ local function previewGuide(section, from)
   U.refreshTop()
 end
 
--- The current step's card, with the guide's completion bar under the step text.
+-- The step buttons (Previous / Next / Show on map / Hide step window), one row at y inside the
+-- step card (x 16 to W - 16), or on their own when there is no step.
+local function stepButtons(current, x, y, w)
+  local each = (w - 24) / 4
+  U.btn("Previous step", x, y, each, function() ns.moveQuestStep(true) end)
+  -- On a Dungeon ahead step, Next leaves the run out, so it says Skip (like the step window's).
+  local choosing = current and current.step.type == "plan"
+  local eliteAsk = current and current.step.type == "elite"
+  U.btn(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", x + each + 8, y, each,
+    function() ns.moveQuestStep(false) end, false,
+    choosing and "The run stays out of your route. Guides > Dungeons can plan it later."
+    or eliteAsk and "The guide passes this elite quest and the quests that need it." or nil)
+  U.btn("Show on map", x + 2 * (each + 8), y, each, ns.showQuestStepOnMap, false,
+    "Open the world map where the current step is.")
+  local viewer = _G.LevelingCodexQuestViewer
+  local shown = viewer and viewer:IsShown()
+  U.btn(shown and "Hide step window" or "Show step window", x + 3 * (each + 8), y, each, function()
+    if shown then ns.hideQuestViewer() else ns.showQuestViewer() end
+    U.refresh()
+  end, false, "Show or hide the quest step and arrow while you play.")
+  return 22
+end
+
+-- The current step's card: the guide and its progress on top, the step, what to do (smaller), and
+-- the step buttons along the bottom.
 local function stepCard(row, y)
   local top = y
-  y = y + 13
+  y = y + 12
   local label = Q.autoStep() and "CURRENT STEP" or "STEP PREVIEW"
   local heading = U.T(label, 16, y, 128, "label", C.inkSoft)
-  local section = U.T(row.section.title, 148, y, W - 164, "small", C.inkSoft, "RIGHT")
-  y = y + math.max(heading, section) + 6
-  y = y + U.T(Q.label(row.step), 16, y, W - 32, "head", C.ink) + 4
-  y = y + U.T(Q.detail(row.step, row.requiredFor, row == Q.current()), 16, y, W - 32, "body", C.ink) + 10
   local passed, total = Q.stepProgress(row.section)
-  if total > 0 and not ns.db().noStepBar then
-    local track = W - 32 - 48
-    U.rect(16, y + 3, track, 6, C.edgeSoft)
-    if passed > 0 then U.rect(16, y + 3, math.max(1, math.floor(track * passed / total)), 6, C.accent) end
-    U.T(math.floor(passed * 100 / total) .. "%", W - 16 - 44, y, 44, "small", C.inkSoft, "RIGHT")
-    y = y + 16
+  local bar = total > 0 and not ns.db().noStepBar
+  local guide = Q.plain(row.section.title) .. (bar and ("  -  " .. math.floor(passed * 100 / total) .. "%") or "")
+  local section = U.T(guide, 148, y, W - 164, "small", C.inkSoft, "RIGHT")
+  y = y + math.max(heading, section) + 2
+  if bar then
+    -- a thin bar under the heading row: how far into this guide you are
+    U.rect(16, y + 2, W - 32, 3, C.edgeSoft)
+    if passed > 0 then U.rect(16, y + 2, math.max(1, math.floor((W - 32) * passed / total)), 3, C.accent) end
   end
-  y = y + 4
+  y = y + 10
+  y = y + U.T(Q.label(row.step), 16, y, W - 32, "head", C.ink) + 3
+  y = y + U.T(Q.detail(row.step, row.requiredFor, row == Q.current()), 16, y, W - 32, "small", C.ink) + 10
+  y = y + stepButtons(row, 16, y, W - 32) + 12
   U.box(0, top, W, y - top, C.parch, C.edge)
-  return y + 12
+  return y + 10
 end
 
 local function openStep(row, follow)
@@ -545,12 +570,14 @@ local function renderCleanup(y)
   y = y + 6 + U.sectionTitle("Quest log cleanup", y + 6)
   y = y + U.T("Quests no guide of yours uses, and grey quests that give little XP. Abandoning one frees log space.",
     0, y, W, "small", C.dim) + 6
-  local buttonWidth = math.floor(W * 0.46)
   for _, quest in ipairs(unused) do
     local name = Q.plain(quest.title)
-    U.T(name .. "\n" .. quest.reason, 0, y + 1, W - buttonWidth - 8, "small", C.light)
+    U.rect(0, y, W, 36, C.wash)
+    U.rect(0, y + 35, W, 1, C.edgeSoft, "border")
+    U.T(name, 12, y + 4, W - 190, "body", C.light)
+    U.T(quest.reason, 12, y + 20, W - 190, "small", C.dim)
     local armed = confirmAbandon == quest.id and GetTime() - (confirmAt or 0) < 5
-    U.btn(armed and "Click again to abandon" or ("Abandon " .. name), W - buttonWidth, y, buttonWidth, function()
+    local b = U.btn(armed and "Click again" or "Abandon", W - 164, y + 7, 160, function()
       if confirmAbandon == quest.id and GetTime() - (confirmAt or 0) < 5 then
         confirmAbandon = nil
         if Q.abandon(quest.id) then ns.say("abandoned " .. name .. ".")
@@ -560,7 +587,8 @@ local function renderCleanup(y)
       end
       U.refresh()
     end, armed, "Abandon this quest. Click twice to confirm.")
-    y = y + 32
+    b.codexLabel = armed and "Click again to abandon" or ("Abandon " .. name)
+    y = y + 38
   end
   return y
 end
@@ -573,25 +601,32 @@ local function renderActive(y)
   local count, max = Q.logCapacity()
   y = y + U.sectionTitle("Active quests" .. (max and (" (" .. count .. "/" .. max .. ")") or ""), y)
   if #active == 0 then return y + U.T("Your quest log is empty.", 0, y, W, "body", C.dim) + 8 end
-  local buttonWidth = math.floor(W * 0.46)
+  -- One quest-log row per quest: its name and state, then small Show and Track buttons (their
+  -- codexLabels keep the quest name: "Show X", "Track X" / "Untrack X").
   for _, id in ipairs(active) do
     local entry = Q.log(id)
     local row = Q.questMatch(id)
     local name = Q.plain(entry.title or (row and row.step.name) or ("Quest " .. id))
+    local open = Q.incomplete(id)
+    U.rect(0, y, W, 30, pinned[id] and C.panel or C.wash)
+    U.rect(0, y + 29, W, 1, C.edgeSoft, "border")
+    if pinned[id] then U.rect(0, y, 3, 30, C.accent) end
+    local state = not open and "Ready" or pinned[id] and "Tracked" or not row and "Not in your guide" or nil
+    local _, title = U.T(name, 12, y + 8, W - 300, "body", row and C.light or C.dim)
+    if title.SetWordWrap then title:SetWordWrap(false) end
+    if state then U.T(state, W - 286, y + 9, 110, "small", not open and C.green or C.dim, "RIGHT") end
     if row then
-      U.btn("Show " .. name, 0, y, W - buttonWidth - 8, function()
+      U.btn("Show", W - 168, y + 4, 76, function()
         Q.followQuest(row)
         ns.showQuestViewer()
-      end, false, "Follow the matching guide step.")
-    else
-      U.T(name, 0, y + 4, W - buttonWidth - 8, "small", C.dim)
+      end, false, "Follow the matching guide step.").codexLabel = "Show " .. name
     end
-    if Q.incomplete(id) then
-      U.btn((pinned[id] and "Untrack " or "Track ") .. name, W - buttonWidth, y, buttonWidth, function()
+    if open then
+      U.btn(pinned[id] and "Untrack" or "Track", W - 84, y + 4, 80, function()
         if Q.togglePin(id) then ns.questRefresh() else ns.say("you can track up to three quests.") end
-      end, pinned[id], "Keep this quest's progress in the step window.")
+      end, pinned[id], "Keep this quest's progress in the step window.").codexLabel = (pinned[id] and "Untrack " or "Track ") .. name
     end
-    y = y + 28
+    y = y + 32
   end
   return y + 8
 end
@@ -935,38 +970,25 @@ local function render()
 
   if current then
     y = stepCard(current, y)
-  elseif not selected then
-    y = y + U.T("No route covers level " .. tostring(level) .. ". Choose a guide under Guides.",
-      0, y, W, "body", C.dim) + 12
+  else
+    if not selected then
+      y = y + U.T("No route covers level " .. tostring(level) .. ". Choose a guide under Guides.",
+        0, y, W, "body", C.dim) + 8
+    end
+    y = y + stepButtons(nil, 0, y, W) + 14
   end
 
-  local quarter = (W - 24) / 4
-  U.btn("Previous step", 0, y, quarter, function() ns.moveQuestStep(true) end)
-  -- On a Dungeon ahead step, Next leaves the run out, so it says Skip (like the step window's).
-  local choosing = current and current.step.type == "plan"
-  local eliteAsk = current and current.step.type == "elite"
-  U.btn(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", quarter + 8, y, quarter,
-    function() ns.moveQuestStep(false) end, false,
-    choosing and "The run stays out of your route. Guides > Dungeons can plan it later."
-    or eliteAsk and "The guide passes this elite quest and the quests that need it." or nil)
-  U.btn("Show on map", 2 * (quarter + 8), y, quarter, ns.showQuestStepOnMap, false,
-    "Open the world map where the current step is.")
-  local viewer = _G.LevelingCodexQuestViewer
-  local shown = viewer and viewer:IsShown()
-  U.btn(shown and "Hide step window" or "Show step window", 3 * (quarter + 8), y, quarter, function()
-    if shown then ns.hideQuestViewer() else ns.showQuestViewer() end
-    U.refresh()
-  end, false, "Show or hide the quest step and arrow while you play.")
-  y = y + 38
-
-  local fifth = (W - 32) / #SUBS
+  -- The sub-tabs as one row of choices: the open one lit (A.segment), the others flat.
+  local labels, lit = {}, 1
   for i, s in ipairs(SUBS) do
-    U.btn(s[2], (i - 1) * (fifth + 8), y, fifth, function()
-      if s[1] == "guides" and (sub == "guides" or pageFrom == "route") then librarySection, pageFrom = nil, nil end
-      show(s[1])
-    end, sub == s[1])
+    labels[i] = s[2]
+    if sub == s[1] then lit = i end
   end
-  y = y + 30
+  y = y + U.segments(0, y, W, labels, lit, function(i)
+    local key = SUBS[i][1]
+    if key == "guides" and (sub == "guides" or pageFrom == "route") then librarySection, pageFrom = nil, nil end
+    show(key)
+  end) + 8
   U.goldRuleAt(y)
   y = y + 12
 

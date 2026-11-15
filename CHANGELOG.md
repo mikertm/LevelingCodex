@@ -15,6 +15,10 @@
 - **Quest log clean-up.** At 30, 46 and 48 the guide reminds you to drop grey dungeon quests you never ran.
 - The new guides are not yet tested in game. Steps that need a check carry a note.
 
+### Quests tab
+
+- **A tidier Quests tab.** The step card is shorter (its instructions use the smaller font) and holds the Previous, Next, Show on map and Hide buttons along its bottom, with the guide's progress on its top line. The Step, Route, Guides, Quest log and Party tabs are one row of choices, so the open one stands out. The Quest log lists your quests as rows with small Show and Track buttons instead of two columns of long buttons, and the clean-up list does the same with a small Abandon button.
+
 ### Fixes
 
 - **Picking a route asks first.** Clicking a guide under Quests > Guides used to switch to it at once, with nothing to say so. It now opens the guide's page, and **Start this route** switches to it and says so in chat. The Route tab starts with a **You are on this route** card (with a **Change route** button, and a short "Started" line right after you switch). The other routes for your level sit below it as guide rows with their levels and progress, so they no longer look like a choice you still have to make. A route's page lists its steps, says how it fits your level (not started yet, outleveled, or how far along you are), and clicking one of its steps no longer moves your step window before you start it.
