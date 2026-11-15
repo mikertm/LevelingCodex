@@ -315,7 +315,7 @@ do
     }, {
       finish(1486, nalpak), finish(1487, ebru),
       finish(1491, mebok), finish(959, bigglefuzz),
-      objective(6981, sputtervalve, "Show the shard to Sputtervalve on the Ratchet docks.", "Speak with someone in Ratchet"),
+      objective(6981, sputtervalve, "Talk to Sputtervalve by Ratchet's flight master and choose his dialogue about the Glowing Shard until the objective completes.", "Speak with someone in Ratchet"),
       finish(6981, falla, "Find Falla Sagewind on the ridge above the caverns."),
       accept(3370, falla, "Take the Nightmare Shard delivery to Darnassus."),
       finish(3370, mathrengyl, "Find Mathrengyl in the Cenarion Enclave."),

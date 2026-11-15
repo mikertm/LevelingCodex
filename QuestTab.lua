@@ -249,6 +249,26 @@ end
 
 local function renderRoute(rows, selected, current, y)
   y = followingCard(selected, current, y)
+  local _, _, _, level = Q.rows()
+  local place = current and current.section or selected
+  local prepHeading
+  for _, dungeon in ipairs(Q.dungeons()) do
+    local _, left = Q.runReadiness(dungeon)
+    if place and left > 0 and level >= dungeon.levels[1] - 5 and level <= dungeon.levels[2]
+        and (Q.planned(dungeon.id) or dungeon.zone == place.zone) then
+      if not prepHeading then
+        y = y + U.sectionTitle("DUNGEON PREPARATION", y)
+        y = y + U.T("Gather quests and finish outdoor chains while leveling. Choose when to run the dungeon.", 0, y, W, "small", C.dim) + 6
+        prepHeading = true
+      end
+      U.btn("Prepare: " .. dungeon.title, 0, y, W, function()
+        Q.setPlanned(dungeon.id, true)
+        Q.jump(dungeon, nil, "prepareOnly")
+        ns.showQuestViewer()
+      end, false, left .. " outdoor pickups remain. Suggested run levels " .. dungeon.levels[1] .. "-" .. dungeon.levels[2] .. ".")
+      y = y + 30
+    end
+  end
   -- Other routes for your level (alternates and the next zone) as guide rows: each opens its page,
   -- where Start this route switches to it.
   local choices = Q.suggestions(true)
@@ -388,6 +408,13 @@ local function renderLibrarySection(rows, section, y)
     end, planned, "Planned runs add their quest pickups to your leveling route and say when you're ready to find a group.")
     y = y + 30
     y = y + U.T(runInfo(section), 0, y, W, "small", C.dim)
+    y = y + 24
+    U.btn("Prepare quests", 0, y, W, function()
+      Q.setPlanned(section.id, true)
+      followGuide(section, "prepareOnly")
+    end, false, "Follow outdoor pickups and prerequisite chains now, then return to leveling. Dungeon entry waits until you choose to run it.")
+    y = y + 30
+    y = y + U.T("Prepare while leveling; run when your group is ready. " .. sectionInfo(section) .. ".", 0, y, W, "small", C.dim)
   end
   y = y + 34
   for _, id in ipairs(section.links or {}) do

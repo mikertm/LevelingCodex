@@ -162,6 +162,7 @@ function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
 function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
 function TaxiNodeGetType(i) return MOCK.taxiNodes[i][2] end
 function TakeTaxiNode(i) MOCK.tookTaxi = i end
+function TaxiNodeOnButtonEnter(button) MOCK.taxiHovered = button end
 -- Blizzard's popups belong to the Blizzard UI. Confirming an NPC interaction from addon code is
 -- blocked (Forever's ADDON_ACTION_FORBIDDEN dialog), and StaticPopup_Hide from addon code taints the
 -- popup system, so the next protected popup button (the Spirit Healer's Accept) is blocked and

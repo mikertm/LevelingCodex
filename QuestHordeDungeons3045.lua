@@ -118,8 +118,7 @@ do
   fromItem(2945, 9326, "Grime-Encrusted Ring", 34, 28)
   H.need(2949, "Return of the Ring", 34, 28, 2945)
   H.need(2950, "Nogg's Ring Redo", 35, 28, 2949)
-  local sovikStep = accept(2842, sovik, "Sovik works beside Nogg. He only offers his errand to Booty Bay while Rig Wars is in your log.")
-  sovikStep.ifOnQuest = 2841
+  local sovikStep = accept(2842, sovik, "Sovik stands beside Nogg. Choose his gossip option 'What else do you have to say?' to receive Chief Engineer Scooty; it may accept automatically. If it does not appear, talk again and retry; take Nogg's Rig Wars if needed. Confirm Chief Engineer Scooty is in your quest log before leaving Orgrimmar.")
   add({ id = "dungeon-gnomeregan", title = name, zone = M.dunMorogh, levels = { 30, 38 }, instanceID = 90,
     instance = name, bosses = H.bosses("dungeon-gnomeregan"),
     sources = { "https://questing.wiki/wow-forever/dungeons/gnomeregan/quests/",
@@ -540,7 +539,7 @@ do
       part(2339, 2, nil, "Sapphire: Grimlok at the end of the Stone Vault carries it.", "Shattered Necklace Sapphire"),
       part(2339, 4, nil, "Power source: wake and defeat Archaedas in the Hall of the Crafters.", "Shattered Necklace Power Source"),
       accept(2278, nil, "In the room behind Archaedas, use the Discs of Norgannon."),
-      objective(2278, nil, "Speak to the Lore Keeper of Norgannon and hear what it knows.", "Lore of the stone watcher"),
+      objective(2278, nil, "Talk to the Lore Keeper of Norgannon beside the discs. Ask about the Earthen and follow every dialogue page until the lore objective completes.", "Lore of the stone watcher"),
       finish(2278, nil, "Use the Discs of Norgannon again."),
       accept(2280, nil, "Take the miniature discs for the sages of Thunder Bluff."),
       action("goto", rigglefuzz, "Leave Uldaman and ride south to Rigglefuzz's camp."),
@@ -658,7 +657,7 @@ do
       objective(3527, nil, "Theka the Martyr carries the first Mosh'aru tablet; Hydromancer Velratha, by the pool south-east of the pyramid, the second.",
         "First Mosh'aru Tablet", "Second Mosh'aru Tablet"),
       objective(2865, nil, "Kill scarabs for their shells. Most are in Theka's room.", "5 Uncracked Scarab Shells"),
-      objective(2768, nil, "On the pyramid, kill the Sandfury Executioner for his key and free Sergeant Bly's band. Hold the stairs through the waves; once Nekrum is dead, Bly turns on you. Kill him for the rod.",
+      objective(2768, nil, "On the pyramid, kill the Sandfury Executioner for his key and open a Troll Cage to free Sergeant Bly's band. Hold the stairs through the waves. After Nekrum dies, talk to Bly and demand the rod through his dialogue to start the fight. Kill him and loot it.",
         "Divino-matic Rod"),
       objective(2846, nil, "Hydromancer Velratha also carries the Tiara of the Deep.", "Tiara of the Deep"),
       uncertain(objective(2770, nil, "Clear the pool, then use the Mallet of Zul'Farrak at the gong to summon Gahz'rilla. Loot her scale.",

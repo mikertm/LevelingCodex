@@ -399,7 +399,7 @@ local south = (function()
       "South of the oasis, kill Sunscale raptors for feathers and use one at each of the blue, red and yellow nests.",
       "Visit Blue Raptor Nest", "Visit Yellow Raptor Nest", "Visit Red Raptor Nest"), 865),
     objectiveAt(4921, ba("Beaten Corpse", 49.33, 50.32),
-      "Follow the road south-west to a beaten corpse by the roadside and look it over.", "Find Mankrik's Wife"),
+      "Follow the road south-west to the Beaten Corpse by the roadside. Click it, then choose the dialogue to inspect the body further.", "Find Mankrik's Wife"),
     action("goto", p.byula, "Follow the road south to Camp Taurajo."),
     action("sethearth", p.byula, "Bind your hearthstone with Innkeeper Byula.", taurajoBind),
     taxi("getfp", p.omusa, "Camp Taurajo, The Barrens", "Learn the flight path from Omusa Thunderhorn."),

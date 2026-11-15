@@ -303,8 +303,7 @@ do
   need(2843, "Gnomer-gooooone!", 35, 20, 2842)
   need(95697, "Changing Tastes", 31, 24, nil, true)
   local sovik = dungeon("gnomeregan", accept(2842, on.orgrimmar("Sovik", 75.49, 25.36),
-    "Sovik, beside Nogg, has an errand for Chief Engineer Scooty in Booty Bay. Take it only if you plan to run Gnomeregan: you reach Booty Bay at 36."))
-  sovik.ifOnQuest = 2841
+    "Sovik stands beside Nogg. Choose his gossip option 'What else do you have to say?' to receive Chief Engineer Scooty; it may accept automatically. If it does not appear, talk again and retry; take Nogg's Rig Wars if needed. Confirm Chief Engineer Scooty is in your quest log before leaving Orgrimmar. This is for Gnomeregan; the route reaches Booty Bay at 36."))
 
   local cleanup = action("note", nil, "Clean out your quest log. If you are not going to run Wailing Caverns, Shadowfang Keep or Blackfathom Deeps, abandon their quests now: the thirties need the room.",
     { name = "Quest log", drop = { 914, 962, 1014, 1098, 6563, 6921 } })
@@ -613,7 +612,7 @@ do
       "QuestieDB has no giver for this Forever quest; Gurda takes in the totems before it."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
     action("goto", graveyard, "Ride west from Smeed's camp down into the Kodo Graveyard."),
-    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each tamed kodo back to Smeed.",
+    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")), 5501),
     along(objective(5501, graveyard, "Pick up Kodo Bones from the ground in the graveyard.", "10 Kodo Bones"), 5561),
     finish(5561, smeed),
@@ -632,7 +631,7 @@ do
     action("goto", naga, "Walk north along the coast to the Slitherblade naga."),
     along(objective(6143, ds(nil, 34.2, 23.5), "Kill Slitherblade Naga, Sorceresses and Myrmidons up the coast.", "7 Slitherblade Myrmidons",
       "7 Slitherblade Naga", "5 Slitherblade Sorceresses"), 6142, 1482, 6161),
-    along(objective(6142, naga, "The naga carry Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143, 6161),
+    along(objective(6142, naga, "Loot the naga and gather Giant Softshell Clams from the sea floor. Open the clams in your bags for Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143, 6161),
     objective(1482, ds("Slitherblade Oracle", 32.7, 12.9), "Slitherblade Oracles stand farther north. Kill one for its crystal.", "Oracle Crystal"),
     part(6161, 2, ds(nil, 32.4, 7.3), "One of the naga at the northern shore carries Rackmore's Golden Key.", "Rackmore's Golden Key"),
     finish(6161, ds("Rackmore's Chest", 30.0, 8.71), "Swim to the small isle off the coast and open Rackmore's Chest."),
@@ -1268,7 +1267,7 @@ do
     finish(93225, gurda), note(accept(94873, gurda, "Take the Totem Tote to the Gelkis quartermaster."),
       "QuestieDB has no giver for this Forever quest; Gurda takes in the totems before it."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
-    withItem(13892, objective(5561, ds(nil, 52.5, 58.3), "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each tamed kodo back to Smeed.",
+    withItem(13892, objective(5561, ds(nil, 52.5, 58.3), "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")),
     finish(5561, smeed),
     action("goto", uthek, "Ride south-west to the Gelkis village."),
@@ -1281,7 +1280,7 @@ do
     action("goto", naga, "Ride north along the coast road to the Slitherblade naga below Ethel Rethor."),
     along(objective(6143, ds(nil, 34.2, 23.5), "Kill Slitherblade Naga, Sorceresses and Myrmidons up the coast.", "7 Slitherblade Myrmidons",
       "7 Slitherblade Naga", "5 Slitherblade Sorceresses"), 6142, 1482),
-    along(objective(6142, naga, "The naga carry Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143),
+    along(objective(6142, naga, "Loot the naga and gather Giant Softshell Clams from the sea floor. Open the clams in your bags for Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143),
     objective(1482, ds("Slitherblade Oracle", 32.7, 12.9), "Slitherblade Oracles stand farther north. Kill one for its crystal.", "Oracle Crystal"),
     action("goto", takata, "Ride south-east across Desolace to Ghost Walker Post."),
     finish(1482, maurin), accept(1484, maurin), finish(1484, takata),
