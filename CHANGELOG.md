@@ -18,6 +18,7 @@
 ### Quests tab
 
 - **A tidier Quests tab.** The step card is shorter (its instructions use the smaller font) and holds the Previous, Next, Show on map and Hide buttons along its bottom, with the guide's progress on its top line. The Step, Route, Guides, Quest log and Party tabs are one row of choices, so the open one stands out. The Quest log lists your quests as rows with small Show and Track buttons instead of two columns of long buttons, and the clean-up list does the same with a small Abandon button.
+- **Guides opens on your level.** Instead of one long list of every guide, Guides now has five views: **Your level** (the guide you're on, the others that fit your level, what's coming up next, dungeons at your level and class quests you can do), **All levels** (every leveling guide by level band), **Dungeons**, **Special** and **Class**. The Guides tab always opens the list, and the search works in every view.
 
 ### Fixes
 

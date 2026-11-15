@@ -85,17 +85,32 @@ local function questQueue(name)
 end
 
 -- A guide's button under Quests > Guides, opening folded level bands ("+ LEVELS ...") until it shows.
+-- Guides opens on Your level; each view (All levels, Dungeons, Special, Class) shows one list.
 local function guideButton(name)
   click(win(), "Guides")
   local function find() return findButton(win(), function(l) return l == name end) end
   local b = find()
-  while not b do
-    local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
-    if not folded then break end
-    folded:Click()
-    b = find()
+  for _, view in ipairs({ "Your level", "All levels", "Dungeons", "Special", "Class" }) do
+    if b then break end
+    local tab = findButton(win(), function(l) return l == view end)
+    if tab then
+      tab:Click()
+      b = find()
+      while not b do
+        local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
+        if not folded then break end
+        folded:Click()
+        b = find()
+      end
+    end
   end
   return b
+end
+
+-- Quests > Guides, then one of its views ("Your level", "All levels", "Dungeons", "Special", "Class").
+local function guidesView(name)
+  click(win(), "Guides")
+  click(win(), name)
 end
 
 -- A button under Quests > Step (Resume active quest, Return to leveling, ...).
@@ -1137,7 +1152,7 @@ function S.questSetupLevelled()
   MOCK.level = 30
   MOCK.event("PLAYER_LEVEL_UP", 30)
   slash("quests")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   local rec = findButton(win(), function(l) return l == "Recommended" end)
   check(rec and rec.codexOn, "Recommended is still lit at level 30")
   check(not findButton(win(), function(l) return l:find("^Your picks") end), "not your picks")
@@ -1589,7 +1604,7 @@ function S.guideRowsFade()
   MOCK.race, MOCK.level = "Human", 40
   S.login()
   slash("quests")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   local function find(f, text)
     for _, r in ipairs({ f:GetRegions() }) do if r._text == text and r:IsShown() then return r end end
     for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c, text); if hit then return hit end end
@@ -1615,6 +1630,7 @@ function S.guideRowsLong()
   end
   local fs = find(win())
   check(fs and fs:GetWidth() <= row:GetWidth() - 190, "the title keeps clear of the range and the tag")
+  guidesView("All levels")
   check(findButton(win(), function(l) return l:find("^%- LEVELS 30%-40: %d+ guides") end),
     "an open band keeps its label")
 end
@@ -1684,10 +1700,12 @@ function S.guideRewards()
   MOCK.race, MOCK.level = "Human", 20
   S.login()
   slash("quests")
-  click(win(), "Guides")
+  guidesView("Special")
   local reward = "A sleeping bag: rest in it for up to 3% bonus XP"
   check(questText(win(), reward), "a special chain says what you get")
+  click(win(), "Class")
   check(questText(win(), "Teaches Defensive Stance, Taunt and Sunder Armor"), "a class guide says what it teaches")
+  click(win(), "Special")
   click(win(), "Cozy Sleeping Bag")
   check(questText(win(), "You get: " .. reward), "and so does its page")
 end
@@ -1821,6 +1839,10 @@ function S.questTabViews()
   click(win(), "Step")
   check(findButton(win(), function(l) return l == "Resume active quest" end), "Step has the step's tools")
   click(win(), "Guides")
+  local yourLevel = findButton(win(), function(l) return l == "Your level" end)
+  check(yourLevel and yourLevel.codexOn and questText(win(), "LEVELING GUIDES FOR LEVEL"),
+    "Guides opens on the guides for your level")
+  click(win(), "All levels")
   check(findButton(win(), function(l) return l == "Search" end)
     and findButton(win(), function(l) return l:find("^%- LEVELS 1%-12") end),
     "Guides has the search and the level bands")
@@ -1836,6 +1858,7 @@ function S.questTabViews()
   local before = band30()
   folded:Click()
   check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
+  click(win(), "Dungeons")
   check(findButton(win(), function(l) return l == "Recommended" end), "dungeons live under Guides")
   click(win(), "Quest log")
   check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
@@ -4393,7 +4416,7 @@ function S.questDetourLibrary()
   click(win(), "Settings")
   click(win(), "Show class quests")
   click(win(), "Quests")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   click(win(), "Test Dungeon")
   check(questText(win(), "BEFORE YOU GO") and questText(win(), "INSIDE") and questText(win(), "AFTER THE RUN"), "dungeon stages are shown")
   check(questText(win(), "Requires level 15"), "shows the actual level gate")
@@ -4428,7 +4451,7 @@ function S.questDungeonContent()
   MOCK.questDone[96392], MOCK.questDone[96390], MOCK.questDone[96391] = true, true, true
   S.login()
   slash("quests")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   click(win(), "Hall of Thanes")
   check(questText(win(), "Old Ironforge Incursion") and questText(win(), "The Treaty of Understanding"),
     "Hall of Thanes has both outdoor unlock and inside starter")
@@ -4440,7 +4463,7 @@ function S.questDungeonContent()
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - An Ancient Grudge"), "reopening inside starts with the first obtainable inside quest")
   click(questViewer(), "Return to leveling")
-  click(win(), "Guides")
+  guidesView("Special")
   click(win(), "Cozy Sleeping Bag")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - ... and that note you found") and questText(questViewer(), "Alexston Farmstead"),
@@ -4734,9 +4757,10 @@ function S.questGrey()
   clickGuide("Test grey route")
   local frame = questViewer()
   check(questText(frame, "Accept - Grey Prerequisite"), "a grey pickup leaves the route unless a later quest needs it")
-  click(win(), "Guides")
-  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end)
-    and questText(win(), "Current"),
+  guidesView("Your level")
+  check(questText(win(), "Current"), "the guide you're on leads Your level")
+  click(win(), "All levels")
+  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end),
     "guides are grouped by level band with progress and status")
   check(not questText(win(), "% done"), "guides are rows with a tag, not buttons with a % done line")
   questQueue("Missed quests")
@@ -4782,7 +4806,7 @@ function S.questDungeonPlan()
   MOCK.event("QUEST_ACCEPTED", 1, 999201)
   check(not questText(frame, "Plan Dungeon Pickup") and not questText(frame, "Plan Optional Errand"),
     "unplanned dungeon pickups and optional errands stay hidden")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   check(findButton(win(), function(l) return l == "Recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
@@ -4806,7 +4830,7 @@ function S.questDungeonPlan()
   check(questText(frame, "Quests > Quest log lists ones you can drop"), "it points to where the clean-up list is")
   C_QuestLog.GetMaxNumQuestsCanAccept = nil
   click(win(), "Quests")
-  click(win(), "Guides")
+  guidesView("Dungeons")
   click(win(), "None")
   check(not findButton(frame, function(l) return l == "Run Test Plan Dungeon" end), "dropping the plan removes the run prompt")
 end

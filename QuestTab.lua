@@ -444,53 +444,106 @@ local function guideRows(y, list, suggestedSet)
   return y
 end
 
-local function renderGuides(rows, sections, y)
-  y = y + U.T("Search by guide, quest name or quest ID", 0, y, W, "small", C.dim) + 5
-  local function search()
-    query, librarySection = draft, nil
-    U.refreshTop()
+-- Guides opens on Your level: the guides that fit you now and the next few, not every guide at
+-- once. All levels (the bands), Dungeons, Special and Class each show one list. Kept this session.
+local guideView = "level"
+local VIEWS = { { "level", "Your level" }, { "all", "All levels" }, { "dungeon", "Dungeons" },
+  { "special", "Special" }, { "class", "Class" } }
+local VIEW_TIPS = {
+  level = "The guides that fit your level now, and the next ones.",
+  all = "Every leveling guide, by level band.",
+  dungeon = "Dungeon guides, and which runs you plan.",
+  special = "Special quest chains: attunements, keys and rewards.",
+  class = "Your class quests.",
+}
+
+-- A small gold heading with a count, for the lists under a view.
+local function listHeading(text, y, note)
+  local h = U.T(text, 0, y, W, "label", C.gold) + 2
+  if note then h = h + U.T(note, 0, y + h, W, "small", C.dim) + 2 end
+  return y + h + 4
+end
+
+local function dungeonRow(y, section, suggestedSet)
+  local status, done, total = Q.sectionStatus(section, suggestedSet)
+  local planned = Q.planned(section.id)
+  if status ~= "current" and status ~= "done" and status ~= "outleveled" then
+    status = planned and "suggested" or "open"
   end
-  U.questSearch(8, y, W - 100, draft, function(value) draft = value end, search)
-  U.btn("Search", W - 80, y, 80, search)
-  y = y + 34
-  if librarySection then return renderLibrarySection(rows, librarySection, y) end
-  if query:find("%S") then
-    U.btn("Clear search", 0, y, 160, function()
-      query, draft = "", ""
-      U.refreshTop()
-    end)
-    y = y + 34
-    local guides, matches = Q.find(query)
-    y = y + U.sectionTitle("Search results", y)
-    if #guides + #matches == 0 then return y + U.T("No matching guides or quests.", 0, y, W, "body", C.dim) end
-    for _, guide in ipairs(guides) do
-      U.btn(guide.title, 0, y, W, function() showGuide(guide) end)
-      y = y + 28
+  return guideRow(y, section, status, done, total, planned and "Planned" or "Not planned",
+    function() showGuide(section) end, runInfo(section) .. ". View steps and quest readiness.")
+end
+
+local function specialRow(y, section, suggestedSet)
+  local status, done, total = Q.sectionStatus(section, suggestedSet)
+  return guideRow(y, section, status, done, total, guideTag(section, status, done, total),
+    function() showGuide(section) end, "View steps and quest readiness.")
+end
+
+-- Your level: leveling guides you're on, suggested or in range; then coming up (the next five
+-- levels); dungeons in their range; class quests you can do now.
+local function renderYourLevel(groups, level, suggestedSet, y)
+  local rank = { current = 1, suggested = 2 }
+  local now, soon, runs, classes = {}, {}, {}, {}
+  for _, section in ipairs(groups.leveling) do
+    local status = Q.sectionStatus(section, suggestedSet)
+    if status ~= "done" then
+      if status == "current" or status == "suggested"
+          or (level >= section.levels[1] - 1 and level <= section.levels[2]) then
+        now[#now + 1] = { section = section, rank = rank[status] or 3 }
+      elseif section.levels[1] > level and section.levels[1] <= level + 5 then
+        soon[#soon + 1] = section
+      end
     end
-    for i, row in ipairs(matches) do
-      if i > 35 then return y + U.T("Narrow your search to see more results.", 0, y, W, "small", C.dim) end
-      y = drawRow(row, y, row.step.name, STATUS[row.state] or "Details",
-        row.section.title .. "\n" .. Q.questStatus(row), 160, false, Q.detail(row.step))
-    end
-    return y
+  end
+  table.sort(now, function(a, b)
+    if a.rank ~= b.rank then return a.rank < b.rank end
+    return a.section.levels[1] < b.section.levels[1]
+  end)
+  table.sort(soon, function(a, b) return a.levels[1] < b.levels[1] end)
+  for _, section in ipairs(groups.dungeon) do
+    local status = Q.sectionStatus(section, suggestedSet)
+    if status ~= "done" and level >= section.levels[1] and level <= section.levels[2] then runs[#runs + 1] = section end
+  end
+  for _, section in ipairs(groups.class) do
+    local status = Q.sectionStatus(section, suggestedSet)
+    if status ~= "done" and status ~= "outleveled" and level >= section.levels[1] then classes[#classes + 1] = section end
   end
 
-  -- Leveling guides by level band: yours and the next one open, the others folded to one line.
-  local _, _, _, level = Q.rows()
-  local choices = Q.suggestions(true)
-  local suggestedSet = {}
-  for _, section in ipairs(choices) do suggestedSet[section] = true end
-  local bands, classes = {}, {}
+  if #now == 0 then
+    y = y + U.T("No leveling guide fits level " .. level .. ". All levels lists every guide.", 0, y, W, "body", C.dim) + 10
+  else
+    y = listHeading("LEVELING GUIDES FOR LEVEL " .. level .. " (" .. #now .. ")", y,
+      "Click one to see its steps. You stay on your route until you press Start on its page.")
+    local list = {}
+    for i, entry in ipairs(now) do list[i] = entry.section end
+    y = guideRows(y, list, suggestedSet) + 10
+  end
+  if #soon > 0 then
+    y = listHeading("COMING UP", y)
+    local list = {}
+    for i = 1, math.min(4, #soon) do list[i] = soon[i] end
+    y = guideRows(y, list, suggestedSet) + 10
+  end
+  if #runs > 0 then
+    y = listHeading("DUNGEONS AT YOUR LEVEL (" .. #runs .. ")", y)
+    for _, section in ipairs(runs) do y = dungeonRow(y, section, suggestedSet) end
+    y = y + 10
+  end
+  if #classes > 0 and not ns.db().noClassQuests then
+    y = listHeading("CLASS QUESTS YOU CAN DO (" .. #classes .. ")", y)
+    y = guideRows(y, classes, suggestedSet) + 10
+  end
+  return y + U.T("All levels, Dungeons, Special and Class list every guide.", 0, y, W, "small", C.dim) + 4
+end
+
+-- All levels: the leveling guides by level band, yours and the next one open, the others folded.
+local function renderBands(groups, level, suggestedSet, y)
+  local bands = {}
   for _, band in ipairs(BANDS) do bands[band] = {} end
-  for _, section in ipairs(sections) do
-    if not section.category then
-      if section.side then
-        classes[#classes + 1] = section
-      else
-        for _, band in ipairs(BANDS) do
-          if section.levels[1] <= band[2] then table.insert(bands[band], section); break end
-        end
-      end
+  for _, section in ipairs(groups.leveling) do
+    for _, band in ipairs(BANDS) do
+      if section.levels[1] <= band[2] then table.insert(bands[band], section); break end
     end
   end
   local yours
@@ -523,38 +576,79 @@ local function renderGuides(rows, sections, y)
       if open then y = guideRows(y, list, suggestedSet) + 4 end
     end
   end
+  return y
+end
 
-  for _, group in ipairs({ { "dungeon", "Dungeons" }, { "special", "Special quest chains" } }) do
-    local count = 0
-    for _, section in ipairs(sections) do
-      if section.category == group[1] then
-        if count == 0 then
-          y = y + 6 + U.sectionTitle(group[2], y + 6)
-          if group[1] == "dungeon" then
-            y = y + U.T("Plan the runs you mean to do: their pickups join your route, and the step window says when to find a group.",
-              0, y, W, "small", C.dim) + 6
-            y = y + dungeonChoices(0, y, W) + 10
-          end
-        end
-        local status, done, total = Q.sectionStatus(section, suggestedSet)
-        local tag, tip = guideTag(section, status, done, total), "View steps and quest readiness."
-        if section.category == "dungeon" then
-          local planned = Q.planned(section.id)
-          tag, tip = planned and "Planned" or "Not planned", runInfo(section) .. ". View steps and quest readiness."
-          if status ~= "current" and status ~= "done" and status ~= "outleveled" then
-            status = planned and "suggested" or "open"
-          end
-        end
-        y = guideRow(y, section, status, done, total, tag, function() showGuide(section) end, tip)
-        count = count + 1
-      end
+local function renderGuides(rows, sections, y)
+  if librarySection then return renderLibrarySection(rows, librarySection, y) end
+
+  local _, _, _, level = Q.rows()
+  local groups = { leveling = {}, class = {}, dungeon = {}, special = {} }
+  for _, section in ipairs(sections) do
+    local key = section.category or (section.side and "class" or "leveling")
+    if groups[key] then table.insert(groups[key], section) end
+  end
+  local views, labels, tips, lit = {}, {}, {}, 1
+  for _, v in ipairs(VIEWS) do
+    local key = v[1]
+    local empty = (key == "class" and (ns.db().noClassQuests or #groups.class == 0))
+      or ((key == "dungeon" or key == "special") and #groups[key] == 0)
+    if not empty then
+      views[#views + 1], labels[#labels + 1], tips[#tips + 1] = key, v[2], VIEW_TIPS[key]
+      if key == guideView then lit = #views end
     end
   end
-  if not ns.db().noClassQuests and #classes > 0 then
-    y = y + 6 + U.sectionTitle("Class quests", y + 6)
-    y = guideRows(y, classes, suggestedSet)
+  guideView = views[lit]
+  y = y + U.segments(0, y, W, labels, lit, function(i)
+    guideView, query, draft = views[i], "", ""
+    U.refreshTop()
+  end, tips) + 10
+
+  local function search()
+    query, librarySection = draft, nil
+    U.refreshTop()
   end
-  return y
+  U.questSearch(8, y, W - 100, draft, function(value) draft = value end, search)
+  local find = U.btn("Search", W - 80, y, 80, search, false, "Search every guide by its title, a quest name or a quest ID.")
+  find.tipTitle = "Search"
+  y = y + 34
+  if query:find("%S") then
+    U.btn("Clear search", 0, y, 160, function()
+      query, draft = "", ""
+      U.refreshTop()
+    end)
+    y = y + 34
+    local guides, matches = Q.find(query)
+    y = y + U.sectionTitle("Search results", y)
+    if #guides + #matches == 0 then return y + U.T("No matching guides or quests.", 0, y, W, "body", C.dim) end
+    for _, guide in ipairs(guides) do
+      U.btn(guide.title, 0, y, W, function() showGuide(guide) end)
+      y = y + 28
+    end
+    for i, row in ipairs(matches) do
+      if i > 35 then return y + U.T("Narrow your search to see more results.", 0, y, W, "small", C.dim) end
+      y = drawRow(row, y, row.step.name, STATUS[row.state] or "Details",
+        row.section.title .. "\n" .. Q.questStatus(row), 160, false, Q.detail(row.step))
+    end
+    return y
+  end
+
+  local suggestedSet = {}
+  for _, section in ipairs(Q.suggestions(true)) do suggestedSet[section] = true end
+  if guideView == "level" then return renderYourLevel(groups, level, suggestedSet, y) end
+  if guideView == "all" then return renderBands(groups, level, suggestedSet, y) end
+  if guideView == "dungeon" then
+    y = y + U.T("Plan the runs you mean to do: their pickups join your route, and the step window says when to find a group.",
+      0, y, W, "small", C.dim) + 6
+    y = y + dungeonChoices(0, y, W) + 10
+    for _, section in ipairs(groups.dungeon) do y = dungeonRow(y, section, suggestedSet) end
+    return y
+  end
+  if guideView == "special" then
+    for _, section in ipairs(groups.special) do y = specialRow(y, section, suggestedSet) end
+    return y
+  end
+  return guideRows(y, groups.class, suggestedSet)
 end
 
 ----------------------------------------------------------------------------
@@ -986,7 +1080,7 @@ local function render()
   end
   y = y + U.segments(0, y, W, labels, lit, function(i)
     local key = SUBS[i][1]
-    if key == "guides" and (sub == "guides" or pageFrom == "route") then librarySection, pageFrom = nil, nil end
+    if key == "guides" then librarySection, pageFrom = nil, nil end -- the Guides tab opens the list
     show(key)
   end) + 8
   U.goldRuleAt(y)
