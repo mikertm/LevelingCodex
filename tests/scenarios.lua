@@ -4214,21 +4214,41 @@ function S.questRoutePick()
   check(not questText(frame, "Levels 12-20"), "clicking a guide row doesn't switch routes")
   check(findButton(win(), function(l) return l == "Start this route" end), "its page offers Start this route")
   check(questText(win(), "until you start this one"), "the page says which route you stay on")
+  check(questText(win(), "STEPS ("), "the page lists the route's steps under a heading")
+  -- a step row of a route you're only previewing doesn't move the step window
+  local stepRow
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() and type(b.tipTitle) == "string" and b.tipTitle:find("^Accept %- ") then stepRow = b; break end
+  end
+  check(stepRow, "the preview lists Darkshore's pickups", 2)
+  stepRow:Click()
+  check(questText(frame, "Levels 11-18") and not questText(frame, "Levels 12-20"),
+    "clicking a step of a previewed route keeps the step window on yours")
   click(win(), "Start this route")
   check(questText(frame, "Levels 12-20"), "Start this route switches the step window")
   check(chatHas("Now following Darkshore"), "starting a route says so in chat")
   check(questText(win(), "YOU ARE ON THIS ROUTE") and findButton(win(), function(l) return l == "Show all steps" end),
     "Start shows the Route sub-tab of the new route")
+  check(questText(win(), "Started. The step window and arrow follow it now."), "the route card confirms the start")
+  MOCK.advance(31)
+  click(win(), "Route")
+  check(not questText(win(), "Started. The step window"), "the confirmation goes after half a minute")
   clickGuide("Darkshore")
   check(questText(win(), "You are on this route."), "the page of the route you're on says so")
   click(win(), "Route")
   local preview = findButton(win(), function(l) return l:find("^Preview ") ~= nil end)
-  if preview then
-    preview:Click()
-    check(questText(frame, "Levels 12-20"), "previewing another route keeps you on yours")
-    click(win(), "Back to the route")
-    check(questText(win(), "YOU ARE ON THIS ROUTE"), "Back returns to the Route sub-tab")
-  end
+  check(preview, "the Route sub-tab lists other routes for your level", 2)
+  preview:Click()
+  check(questText(frame, "Levels 12-20"), "previewing another route keeps you on yours")
+  click(win(), "Back to the route")
+  check(questText(win(), "YOU ARE ON THIS ROUTE"), "Back returns to the Route sub-tab")
+  click(win(), "Change route")
+  check(guideButton("Darkshore"), "Change route opens the guide list")
+  -- a route above your level says so on its page
+  local later = guideButton("Duskwood")
+  check(later, "Duskwood is listed under Guides", 2)
+  later:Click()
+  check(questText(win(), "It starts at level 21; you are 12."), "a later route's page says when it starts")
 end
 
 local function hillsbradNote()

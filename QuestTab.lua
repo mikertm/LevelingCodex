@@ -115,7 +115,8 @@ local function openStep(row, follow)
   ns.showQuestViewer()
 end
 
-local function drawRow(row, y, title, status, secondary, secondaryWidth, active, tip, follow)
+-- `still`: a step of a route you're only looking at (its page): hovering shows it, clicking does nothing.
+local function drawRow(row, y, title, status, secondary, secondaryWidth, active, tip, follow, still)
   local titleWidth = W - 94 - (secondary and secondaryWidth + 12 or 0)
   local done = row.state == "done"
   local marker = active and C.gold or done and C.green or C.dim
@@ -130,7 +131,7 @@ local function drawRow(row, y, title, status, secondary, secondaryWidth, active,
   U.rect(0, y, W, height, active and C.panel or C.wash)
   U.rect(0, y + height - 1, W, 1, C.edgeSoft, "border")
   if active then U.rect(0, y, 3, height, C.edge, "border") end
-  U.hit(0, y, W, height, title, tip or row.step.text, function() openStep(row, follow) end)
+  U.hit(0, y, W, height, title, tip or row.step.text, not still and function() openStep(row, follow) end or nil)
   return y + height + 3
 end
 
@@ -145,44 +146,101 @@ local function renderQueue(y, title, list, status, empty, tip)
   return y + 8
 end
 
+-- A guide as a quest-log row (36 px): a 3 px edge (gold current, teal suggested), the title on one
+-- line, its levels, a step progress bar under the title and one tag at the right. A guide with a
+-- `reward` (special and class quests) adds what you get under the bar (48 px).
+local TRACK = { 0.14, 0.21, 0.23, 1 }
+local function guideRow(y, section, status, done, total, tag, onClick, tip, label)
+  local current, suggested = status == "current", status == "suggested"
+  local height = section.reward and 48 or 36
+  if current then U.rect(0, y, W, height, { C.accent[1], C.accent[2], C.accent[3], 0.12 }) end
+  if current or suggested then U.rect(0, y, 3, height, current and C.gold or C.accent) end
+  local faded = status == "done" or status == "outleveled" or status == "later"
+  local _, title = U.T(Q.plain(section.title), 12, y + 5, W - 200, "body",
+    current and C.gold or faded and C.dim or C.light)
+  if title.SetWordWrap then title:SetWordWrap(false) end
+  U.T("Levels " .. section.levels[1] .. "-" .. section.levels[2], W - 186, y + 7, 90, "small", C.dim, "RIGHT")
+  U.rect(12, y + 22, W - 212, 4, TRACK)
+  if total > 0 and done > 0 then U.rect(12, y + 22, math.max(1, (W - 212) * done / total), 4, C.accent) end
+  if section.reward then
+    local _, line = U.T(Q.plain(section.reward), 12, y + 30, W - 106, "small", C.dim)
+    if line.SetWordWrap then line:SetWordWrap(false) end
+  end
+  if tag then
+    U.plate(W - 90, y + 7, 84, 20, { 0, 0, 0, 0.35 }, { C.edge[1], C.edge[2], C.edge[3], 0.6 })
+    U.T(tag, W - 90, y + 11, 84, "small", current and C.gold or suggested and C.accent or faded and C.dim or C.light,
+      "CENTER")
+  end
+  U.hit(0, y, W, height, Q.plain(section.title), tip, onClick, label or section.title)
+  return y + height + 2
+end
+
+-- A guide's tag: Current, Suggested, Side (an alternate route), Later, Done or Outleveled, with
+-- its percentage for Current, Side and Later once you've started it.
+local function guideTag(section, status, done, total)
+  local tag = GUIDE_TAG[status]
+  if section.alternate and (status == "open" or status == "later") then tag = "Side" end
+  local pct = total > 0 and math.floor(done * 100 / total) or 0
+  if pct > 0 and (tag == "Current" or tag == "Side" or tag == "Later") then tag = tag .. " " .. pct .. "%" end
+  return tag
+end
+
 ----------------------------------------------------------------------------
 -- Route
 ----------------------------------------------------------------------------
 
 -- The guide you're on, first thing on the Route sub-tab, so the other routes under it don't read
 -- as a choice you still have to make.
+-- The route you just started (Start this route), confirmed on its card for half a minute.
+local started
+local function startedRecently(section)
+  local now = tonumber(GetTime and GetTime())
+  return started and started.section == section and now and now - started.at < 30
+end
+
 local function followingCard(selected, current, y)
   local on = current and current.section or selected
   if not on then return y end
   local top = y
+  local route = not on.side
   y = y + 10
-  y = y + U.T("YOU ARE ON THIS ROUTE", 16, y, W - 32, "label", C.inkSoft) + 4
-  y = y + U.T(Q.plain(on.title), 16, y, W - 32, "head", C.ink) + 2
+  U.btn("Change route", W - 148, y - 2, 132, function()
+    librarySection, pageFrom = nil, nil
+    show("guides")
+  end, false, "Pick another route under Guides. Nothing changes until you press Start on its page.")
+  y = y + U.T(route and "YOU ARE ON THIS ROUTE" or "YOU ARE FOLLOWING THIS GUIDE", 16, y, W - 180, "label", C.inkSoft) + 4
+  y = y + U.T(Q.plain(on.title), 16, y, W - 180, "head", C.ink) + 2
   local info = on.levels and ("Levels " .. on.levels[1] .. "-" .. on.levels[2]) or ""
   local passed, total = Q.stepProgress(on)
   if total > 0 then info = info .. (info ~= "" and ", " or "") .. math.floor(passed * 100 / total) .. "% done" end
-  if on ~= selected and selected then info = info .. ". Your leveling route: " .. Q.plain(selected.title) end
-  if info ~= "" then y = y + U.T(info, 16, y, W - 32, "small", C.inkSoft) + 2 end
-  y = y + 8
+  if info ~= "" then y = y + U.T(info, 16, y, W - 180, "small", C.inkSoft) + 2 end
+  if startedRecently(on) then
+    y = y + 2 + U.T("Started. The step window and arrow follow it now.", 16, y + 2, W - 32, "small", C.green) + 2
+  end
+  y = math.max(y, top + 40) + 8
   U.box(0, top, W, y - top, C.parch, C.edge)
   return y + 12
 end
 
 local function renderRoute(rows, selected, current, y)
   y = followingCard(selected, current, y)
-  -- Other routes for your level (alternates and the next zone): each opens its page, where
-  -- Start this route switches to it.
+  -- Other routes for your level (alternates and the next zone) as guide rows: each opens its page,
+  -- where Start this route switches to it.
   local choices = Q.suggestions(true)
   if #choices > 0 then
     y = y + U.T("OTHER ROUTES FOR YOUR LEVEL", 0, y, W, "label", C.gold) + 4
-    y = y + U.T("Preview one to see its steps; Start this route on its page switches to it.", 0, y, W, "small", C.dim) + 6
+    y = y + U.T("Click one to see its steps. You stay on your route until you press Start on its page.",
+      0, y, W, "small", C.dim) + 6
+    local suggestedSet = {}
+    for _, section in ipairs(choices) do suggestedSet[section] = true end
+    for _, section in ipairs(choices) do
+      local status, done, total = Q.sectionStatus(section, suggestedSet)
+      y = guideRow(y, section, status, done, total, guideTag(section, status, done, total),
+        function() previewGuide(section) end,
+        "See this route's steps. You stay on your current route until you start it.", "Preview " .. section.title)
+    end
+    y = y + 10
   end
-  for _, suggested in ipairs(choices) do
-    U.btn("Preview " .. suggested.title, 0, y, W, function() previewGuide(suggested) end, false,
-      "See this route's steps. You stay on your current route until you start it.")
-    y = y + 34
-  end
-  if #choices > 0 then y = y + 6 end
   if not selected then
     return y + U.T("No guide is selected. Pick one under Guides.", 0, y, W, "body", C.dim)
   end
@@ -190,7 +248,7 @@ local function renderRoute(rows, selected, current, y)
     allSteps = not allSteps
     U.refresh()
   end, allSteps, "Toggle finished, earlier and skipped steps in this section.")
-  local h = U.T(selected.title .. " route", 0, y + 1, W - 154, "head", C.gold)
+  local h = U.T(allSteps and "ALL STEPS" or "STEPS TO DO", 0, y + 5, W - 154, "label", C.gold)
   y = y + math.max(22, h) + 9
   U.goldRuleAt(y)
   y = y + 10
@@ -232,7 +290,10 @@ local function startGuide(section)
   ns.showQuestViewer()
   local now = Q.current()
   if now and now.section == section then
-    if not (before and before.section == section) then ns.say("Now following " .. Q.plain(section.title) .. ".") end
+    if not (before and before.section == section) then
+      ns.say("Now following " .. Q.plain(section.title) .. ".")
+      started = { section = section, at = tonumber(GetTime and GetTime()) or 0 }
+    end
     sub, librarySection, pageFrom = "route", nil, nil
   end
   U.refreshTop()
@@ -254,12 +315,15 @@ local function renderLibrarySection(rows, section, y)
   local col = math.floor((W - 16) / 3)
   local minimum = Q.guideMinimum(section)
   local current = Q.current()
+  local status, done, total = Q.sectionStatus(section)
+  local onIt = status == "current"
+  local preview = not section.category and not onIt
   if minimum then
     U.T("Available at level " .. minimum, 0, y + 4, W, "body", C.dim)
   elseif not section.category then
     -- A leveling route or class guide: nothing switches until you press Start.
     local route = not section.side
-    if current and current.section == section then
+    if onIt then
       U.T(route and "You are on this route." or "You are following this guide.", 0, y + 4, W - 376, "body", C.gold)
       U.btn("First open step", W - 368, y, 200, function() startGuide(section) end, false,
         "Go back to the first step of this " .. (route and "route" or "guide") .. " you haven't done (after Back or a skip).")
@@ -271,6 +335,19 @@ local function renderLibrarySection(rows, section, y)
       local now = current and current.section
       U.T(now and ("You are on " .. Q.plain(now.title) .. " until you start this one.")
         or "Start it to follow it in the step window.", 212, y + 4, W - 212, "small", C.dim)
+    end
+    -- How the guide fits you now, under the buttons.
+    local _, _, _, lvl = Q.rows()
+    local fit
+    if status == "done" then fit = "You have done every step of it."
+    elseif status == "outleveled" then fit = "You have outleveled it (levels " .. section.levels[1] .. "-" .. section.levels[2]
+      .. "): its quests give little XP now."
+    elseif status == "later" then fit = "It starts at level " .. section.levels[1] .. "; you are " .. tostring(lvl) .. "."
+    elseif total > 0 and done > 0 then fit = done .. " of " .. total .. " steps done."
+    end
+    if fit then
+      y = y + 30
+      U.T(fit, 0, y + 4, W, "small", (status == "later" or status == "outleveled") and C.gold or C.dim)
     end
   else
     U.btn("Follow this guide", 0, y, col, function() followGuide(section) end)
@@ -304,6 +381,16 @@ local function renderLibrarySection(rows, section, y)
   end
   local headers = { prepare = "BEFORE YOU GO", inside = "INSIDE", after = "AFTER THE RUN" }
   local lastPhase
+  if not section.category then
+    local count = 0
+    for _, row in ipairs(rows) do
+      if row.section == section and row.state ~= "filtered" then count = count + 1 end
+    end
+    y = y + U.sectionTitle("STEPS (" .. count .. ")", y)
+    if preview then
+      y = y + U.T("Hover a step to read it. Start this route to follow them in the step window.", 0, y, W, "small", C.dim) + 6
+    end
+  end
   for _, row in ipairs(rows) do
     if row.section == section and row.state ~= "filtered" then
       local s = row.step
@@ -312,55 +399,16 @@ local function renderLibrarySection(rows, section, y)
         y = y + U.sectionTitle(headers[phase], y)
         lastPhase = phase
       end
-      local status = s.quest and Q.questStatus(row) or STATUS[row.state]
       local tip = Q.detail(s)
-      y = drawRow(row, y, Q.label(s), STATUS[row.state], status ~= STATUS[row.state] and status or nil,
-        150, false, tip)
+      local quest = s.quest and Q.questStatus(row) or STATUS[row.state]
+      y = drawRow(row, y, Q.label(s), STATUS[row.state], quest ~= STATUS[row.state] and quest or nil,
+        150, false, tip, nil, preview)
     end
   end
   return y
 end
 
--- A guide as a quest-log row (36 px): a 3 px edge (gold current, teal suggested), the title on one
--- line, its levels, a step progress bar under the title and one tag at the right. A guide with a
--- `reward` (special and class quests) adds what you get under the bar (48 px).
-local TRACK = { 0.14, 0.21, 0.23, 1 }
-local function guideRow(y, section, status, done, total, tag, onClick, tip)
-  local current, suggested = status == "current", status == "suggested"
-  local height = section.reward and 48 or 36
-  if current then U.rect(0, y, W, height, { C.accent[1], C.accent[2], C.accent[3], 0.12 }) end
-  if current or suggested then U.rect(0, y, 3, height, current and C.gold or C.accent) end
-  local faded = status == "done" or status == "outleveled" or status == "later"
-  local _, title = U.T(Q.plain(section.title), 12, y + 5, W - 200, "body",
-    current and C.gold or faded and C.dim or C.light)
-  if title.SetWordWrap then title:SetWordWrap(false) end
-  U.T("Levels " .. section.levels[1] .. "-" .. section.levels[2], W - 186, y + 7, 90, "small", C.dim, "RIGHT")
-  U.rect(12, y + 22, W - 212, 4, TRACK)
-  if total > 0 and done > 0 then U.rect(12, y + 22, math.max(1, (W - 212) * done / total), 4, C.accent) end
-  if section.reward then
-    local _, line = U.T(Q.plain(section.reward), 12, y + 30, W - 106, "small", C.dim)
-    if line.SetWordWrap then line:SetWordWrap(false) end
-  end
-  if tag then
-    U.plate(W - 90, y + 7, 84, 20, { 0, 0, 0, 0.35 }, { C.edge[1], C.edge[2], C.edge[3], 0.6 })
-    U.T(tag, W - 90, y + 11, 84, "small", current and C.gold or suggested and C.accent or faded and C.dim or C.light,
-      "CENTER")
-  end
-  U.hit(0, y, W, height, Q.plain(section.title), tip, onClick, section.title)
-  return y + height + 2
-end
-
--- A guide's tag: Current, Suggested, Side (an alternate route), Later, Done or Outleveled, with
--- its percentage for Current, Side and Later once you've started it.
-local function guideTag(section, status, done, total)
-  local tag = GUIDE_TAG[status]
-  if section.alternate and (status == "open" or status == "later") then tag = "Side" end
-  local pct = total > 0 and math.floor(done * 100 / total) or 0
-  if pct > 0 and (tag == "Current" or tag == "Side" or tag == "Later") then tag = tag .. " " .. pct .. "%" end
-  return tag
-end
-
--- Leveling guides (and class quests) as rows: clicking one follows it in the step window.
+-- Leveling guides (and class quests) as rows: clicking one opens its page (Start is there).
 local function guideRows(y, list, suggestedSet)
   for _, section in ipairs(list) do
     local status, done, total = Q.sectionStatus(section, suggestedSet)
