@@ -4284,7 +4284,7 @@ function S.questWetlands()
   S.login()
   local frame = questViewer()
   check((questText(frame, "Wetlands") and questText(frame, "Levels 26-30")), "a level 28 in the Wetlands follows the Wetlands section")
-  check(questText(frame, "Accept - Razormaw Needling"), "the trip there is skipped once you are in the Wetlands")
+  check(questText(frame, "Accept - Tramping Paws"), "the trip there is skipped once you are in the Wetlands: " .. allText(frame))
 
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
     if section.id == "wetlands" then
@@ -4324,6 +4324,83 @@ function S.questWetlandsTravel()
   check(questText(frame, "Deeprun Tram"), "the tram step follows the Stormwind pickup")
 end
 
+local function wetlandsRidgeQuests()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 28, 1437, 63, 41.8
+  local keep = { [98245] = true, [98246] = true, [98072] = true, [98283] = true }
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not keep[step.quest] then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = {
+    { questID = 98245, objectives = { { text = "Razormaw Incisor: 3/10" } } },
+    { questID = 98246, objectives = { { text = "Perfect Razormaw Egg: 4/12" } } },
+    { questID = 98072, objectives = { { text = "Pristine Crimson Scale: 5/8" } } },
+    { questID = 98283, objectives = { { text = "Malignant Rotclaw Flesh: 0/1" }, { text = "Carnage's Head: 0/1" } } },
+  }
+end
+
+function S.questWetlandsRidgeLoop()
+  wetlandsRidgeQuests()
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  for _, text in ipairs({ "Razormaw Incisor", "Perfect Razormaw Egg", "Pristine Crimson Scale", "Malignant Rotclaw Flesh" }) do
+    check(questText(frame, text), "the ridge loop tracks all overlapping objectives: " .. text .. " / " .. allText(frame))
+  end
+  check(questText(frame, "whelps") and questText(frame, "Raptor Ridge"), "loop instructions connect the slope and ridge")
+end
+
+function S.questWetlandsCarnageChoice()
+  wetlandsRidgeQuests()
+  MOCK.questDone = {}
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 98283 then break end
+        if step.quest and step.quest ~= 98072 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { MOCK.questLog[3], { questID = 275, isComplete = true } }
+  MOCK.questDone[98245], MOCK.questDone[98246] = true, true
+  MOCK.questDone[275] = nil
+  MOCK.questX, MOCK.questY = 56.37, 40.4
+  S.login()
+  local frame = questViewer()
+  slash("quests")
+  stepTool("Resume active quest")
+  check(questText(frame, "Turn in - Blisters on The Land"), "Rethiel takes the preceding quest first: " .. allText(frame))
+  table.remove(MOCK.questLog, 2)
+  MOCK.questDone[275] = true
+  MOCK.event("QUEST_TURNED_IN", 275)
+  check(questText(frame, "Elite quest - Carnage") and hasButton(frame, "Take it") and hasButton(frame, "Skip"),
+    "Carnage is offered at Rethiel through the elite choice: " .. allText(frame))
+  click(frame, "Skip")
+  check(LevelingCodexCharDB.questElite[98283] == false and questText(frame, "Pristine Crimson Scale"),
+    "skipping Carnage keeps the shared whelp loop available")
+end
+
+function S.questWetlandsCarnageSummon()
+  wetlandsRidgeQuests()
+  for _, id in ipairs({ 98245, 98246, 98072 }) do MOCK.questDone[id] = true end
+  MOCK.questLog = { { questID = 98283, objectives = {
+    { text = "Malignant Rotclaw Flesh: 1/1", finished = true }, { text = "Carnage's Head: 0/1" },
+  } } }
+  MOCK.bags[280331] = 1
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Offering Stone") and questText(frame, "69.5, 34.7"), "Carnage's instructions identify the cave entrance and summon point")
+  local item, target = LevelingCodexQuestItem, LevelingCodexQuestTarget
+  check(item and item:IsShown() and item:GetAttribute("item") == "item:280331", "Carnage has a usable flesh button")
+  check(target and target:GetAttribute("macrotext") == "/targetexact Carnage", "the summon step targets Carnage rather than the bait bears")
+end
+
 function S.questWetlandsEarly()
   -- The 20-25 Wetlands chapter starts in Menethil Harbor, where the Auberdine ship lands, and
   -- takes Fitzsimmons' Greenwarden breadcrumb as a normal step (it is optional in the 26-30 route).
@@ -4355,10 +4432,10 @@ function S.questWetlandsAfterEarly()
   MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 49.4, 42.2
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Accept - Razormaw Needling"), "standing at Howin, his pickup is the step: " .. allText(frame))
+  check(questText(frame, "Accept - Blisters on The Land"), "after the early chapter, the Greenwarden chain continues before the coast: " .. allText(frame))
   slash("quests")
   questQueue("Missed quests")
-  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "Blisters on The Land", "War Banners", "Apprentice's Duties" }) do
+  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "War Banners", "Apprentice's Duties" }) do
     check(not questText(win(), name), name .. " is still on the route, not missed: " .. allText(win()))
   end
 end

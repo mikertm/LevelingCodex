@@ -561,6 +561,8 @@ q(98461, "Unrequited Love", 21, nil, nil, true)
 quest[98461].optional = true
 q(277, "Fire Taboo", 23, 20, 276)
 q(275, "Blisters on The Land", 26, 20, 277)
+q(98283, "Carnage", 30, 22, 275, true)
+elite(98283, "Carnage")
 q(294, "Ormer's Revenge", 24, 22)
 q(295, "Ormer's Revenge", 27, 22, 294)
 q(296, "Ormer's Revenge", 29, 22, 295)
@@ -962,16 +964,27 @@ local valstag = wl("Valstag Ironjaw", 10.1, 56.9)
 local stoutfist = wl("Captain Stoutfist", 9.86, 57.49)
 local tarrel = wl("Tarrel Rockweaver", 11.5, 52.17)
 local menethilHearth = { bind = "Menethil Harbor" }
+local wetFleet = accept(270, sw("Bishop Farthing", 49.95, 46.0),
+  "If you brought Jitters' journal to Bishop Farthing, he has orders for Menethil Harbor. Find him in the Cathedral of Light, or use Next.")
+wetFleet.skipOn = { wetlands } -- This pickup belongs to the journey north, before arriving here.
+local wetCarnageFlesh = along(objectivePart(98283, 1, wl("Maddened Rotclaw", 62.2, 40.2),
+  "Loot Malignant Rotclaw Flesh from Maddened Rotclaws below Raptor Ridge. Gather whelp scales between bears and find a group before entering Carnage's cave.",
+  "Malignant Rotclaw Flesh"), 98072, 98245, 98246)
+wetCarnageFlesh.mobs = { "Maddened Rotclaw" }
+local wetCarnageHead = withItem(280331, withPath(objectivePart(98283, 2, wl("Carnage", 69.5, 29.0),
+  "With your group, enter the Raptor Ridge cave at 69.5, 34.7. At the Offering Stone inside, use Malignant Rotclaw Flesh to summon Carnage. Kill the level 30 elite and loot his head; clear nearby raptors first because he calls for help.",
+  "Carnage's Head"), { { 69.5, 34.7 } }))
+wetCarnageHead.mobs = { "Carnage" }
 
--- Up to 30 in the Wetlands: the Green Belt and Raptor Ridge first, then Menethil Harbor's
+-- Up to 30 in the Wetlands: the Green Belt first, then Menethil Harbor's
 -- coast and both wrecks, then one sweep back east past the dig site, Angerfang, Dun Modr,
--- Dragonmaw Retreat and Thelgen Rock, and the south bay last. Ends with the Ironforge and
+-- the whelps/Rotclaws/Raptor Ridge together, Dragonmaw Retreat and Thelgen Rock,
+-- and the south bay last. Ends with the Ironforge and
 -- Stormwind turn-ins and the ship to Auberdine. Gap notes: tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md;
 -- loop and gap pass: tools/audits/2026-11-12-alliance-duskwood-wetlands.md.
 local wet = {
   taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
-  accept(270, sw("Bishop Farthing", 49.95, 46.0),
-    "If you brought Jitters' journal to Bishop Farthing, he has orders for Menethil Harbor. Find him in the Cathedral of Light, or use Next."),
+  wetFleet,
   -- The Keep after the Cathedral, not between two Cathedral visits: the tram is beside the Keep.
   finish(343, sw("Milton Sheaf", 77.07, 30.21), "Bring Brother Kristoff's request to Milton Sheaf in the Royal Library of Stormwind Keep."),
   finish(337, sw("Milton Sheaf", 77.07, 30.21), "Return the history book to Milton Sheaf in the Royal Library of Stormwind Keep."),
@@ -985,23 +998,14 @@ local wet = {
   taxi("getfp", at("Gryth Thurden", 55.5, 47.7, ironforge), "Ironforge, Dun Morogh", "Learn the Ironforge flight path from Gryth Thurden."),
   taxi("getfp", at("Thorgrum Borrelson", 33.9, 51.0, lochModan), "Thelsamar, Loch Modan",
     "Leave Ironforge and follow the road east through Dun Morogh into Loch Modan. Learn the Thelsamar flight path."),
-  accept(98245, howin, "Take the road north through Dun Algaz into the Wetlands. Howin Kindfeather camps beside the road."),
-  accept(98246, howin),
   accept(469, wl("Einar Stonegrip", 49.92, 39.37),
-    "Einar Stonegrip, a few steps north of Howin by the road, has a bundle of skins for the tanner in Menethil Harbor. Use Next if he has nothing for you."),
+    "Take the road north through Dun Algaz into the Wetlands. Einar Stonegrip, by the crossroads north of Howin, has a bundle of skins for the tanner in Menethil Harbor. Use Next if he has nothing for you."),
   finish(463, rethiel, "If you took First Mate Fitzsimmons' note in Menethil, give it to Rethiel the Greenwarden among the trees east of Howin."),
   accept(276, rethiel, "Rethiel the Greenwarden stands among the trees east of Howin."),
   objectiveAt(276, wl(nil, 63, 66.1), "Kill Mosshide Gnolls and Mongrels at the camps to the south-east.", "15 Mosshide Gnolls", "10 Mosshide Mongrels"),
   finish(276, rethiel), accept(277, rethiel),
   objectiveAt(277, wl(nil, 62.8, 57.1), "Loot Crude Flint from the Mosshide Fenrunners south-east of Rethiel.", "9 Crude Flint"),
   finish(277, rethiel), accept(275, rethiel),
-  along(objectiveAt(98246, wl(nil, 68.3, 33.0), "Gather eggs at Raptor Ridge. Pull Highland and Elder Razormaws one at a time and loot their incisors.",
-    "12 Perfect Razormaw Eggs"), 98245),
-  along(objectiveAt(98245, wl(nil, 67.4, 30.8), "Loot any remaining incisors from Razormaws. Check the ground for eggs between pulls.",
-    "10 Razormaw Incisors"), 98246),
-  finish(98245, howin), finish(98246, howin),
-  accept(98291, howin, "Howin also wants Dragonmaw Retreat, south-east of Rethiel, cleared. You go there at the end of your eastern loop."),
-
   accept(294, ormer, "Follow the road west to the Whelgar Excavation Site."), accept(299, whelgar),
   objectiveAt(294, wl(nil, 26.3, 46.1), "Kill Mottled Raptors and Screechers in the fields west of the site.", "10 Mottled Raptors", "10 Mottled Screechers"),
   objectiveAt(275, wl(nil, 25.3, 34.3), "Kill Fen Creepers in the marsh north of the raptors.", "Fen Creepers"),
@@ -1044,7 +1048,7 @@ local wet = {
   finish(98189, stoutfist), accept(98190, stoutfist),
   finish(289, fitz), accept(290, fitz),
   finish(471, wl("James Halloran", 8.51, 55.71)),
-  accept(98072, wl("James Halloran", 8.51, 55.71), "Halloran also wants scales from the red whelps east of the Green Belt. You pass them on the last eastern loop."),
+  accept(98072, wl("James Halloran", 8.51, 55.71), "Take Halloran's whelp-scale order before leaving town. Do it with the Rotclaws, raptor teeth and eggs on the eastern Raptor Ridge loop."),
   forDungeon(accept(98815, wl("James Halloran", 8.51, 55.71), "Ask Halloran about Highland Hides for the Excavation Site."), "dungeon-excavation-site"),
   accept(472, wl("Harlo Barnaby", 10.85, 55.9), "Harlo Barnaby, north of the keep, has a message for Longbraid at Dun Modr on your eastern loop."),
   objectiveAt(290, wl("Captain Halyndor", 15.45, 23.61), "Go north past the cursed wreck to the Intrepid. Climb the rudder and kill Captain Halyndor for his key. He reflects spells for a few seconds at a time.",
@@ -1076,6 +1080,10 @@ local wet = {
   along(objectivePart(98221, 2, wl(nil, 49.46, 46.81), "Burn the Thelsamar attack plan at the east end of the camp.", "Attack Plan: Thelsamar"), 464),
   along(objectiveAt(464, wl(nil, 45.3, 45.0), "Loot any remaining War Banners from Dragonmaw Raiders and Swamprunners around Angerfang.",
     "8 Dragonmaw War Banners"), 98221),
+  -- Pick these up after the coast, when the crocolisk chain has unlocked the whelps;
+  -- carrying them on the first Menethil trip also wastes two scarce quest-log slots.
+  accept(98245, howin, "Howin camps beside the road north of Angerfang. Pick up both raptor tasks now; combine them with Halloran's whelp scales and Rethiel's Carnage errand on the eastern loop."),
+  accept(98246, howin),
   objectiveAt(470, wl(nil, 44.9, 26.1), "Kill the oozes at Ironbeard's Tomb to the north until one drops Sida's bag.", "Sida's Bag"),
   finish(472, wl("Longbraid the Grim", 49.8, 18.26), "Follow the road north to the dwarf camp outside Dun Modr and give Longbraid Harlo's message."),
   accept(631, wl("Rhag Garmason", 49.92, 18.21), "Rhag Garmason, in the same camp, wants news of Ol' Rustlocke on the Thandol Span."),
@@ -1093,12 +1101,22 @@ local wet = {
   finish(633, wl("Rhag Garmason", 49.92, 18.21), "Swim back under the bridge and return to Rhag. Plea To The Alliance, his next quest, goes into Arathi; leave it for later."),
   finish(275, rethiel, "Follow the road back south to Rethiel in the Green Belt."),
   forDungeon(accept(95646, rethiel, "Take Rethiel's task for the Highland Horror inside the Excavation Site."), "dungeon-excavation-site"),
+  accept(98283, rethiel, "Group quest: take Carnage if you want the level 30 elite fight. Collect bait from Maddened Rotclaws while gathering whelp scales, then summon him inside Raptor Ridge's cave. Skip leaves the scales, teeth and eggs on your route."),
+  along(objectiveAt(98072, wl(nil, 63.0, 41.8), "Work north-east through the red whelps below Raptor Ridge for Pristine Crimson Scales. Kill Maddened Rotclaws here for Carnage's bait if you took it, then continue up the ridge for raptor teeth and eggs.",
+    "8 Pristine Crimson Scales"), 98283, 98245, 98246),
+  wetCarnageFlesh,
+  along(objectiveAt(98246, wl(nil, 68.3, 33.0), "Continue north to Raptor Ridge. Gather Perfect Razormaw Eggs from the ground and loot incisors from Highland and Elder Razormaws. Keep Carnage's bait for the cave ahead.",
+    "12 Perfect Razormaw Eggs"), 98245, 98072, 98283),
+  along(objectiveAt(98245, wl(nil, 67.4, 30.8), "Finish any missing Razormaw Incisors while checking the ridge for eggs. The whelps and Rotclaws are on the slope to the south; finish any missing scales or bait before leaving this loop.",
+    "10 Razormaw Incisors"), 98246, 98072, 98283),
+  wetCarnageHead,
+  finish(98283, rethiel, "Bring Carnage's head to Rethiel on the way west to Howin."),
+  finish(98245, howin), finish(98246, howin),
+  accept(98291, howin, "Howin's follow-up is at Dragonmaw Retreat, south-east of Rethiel. Take it now, then clear the retreat before Thelgen Rock."),
   accept(98293, wl("Dragonmaw Armaments", 58.8, 45.1), "Pick up the Dragonmaw Armaments lying at the west edge of Dragonmaw Retreat, south-east of Rethiel."),
   along(objectiveAt(98291, wl(nil, 64.5, 46.3), "Work east through Dragonmaw Retreat. Kill Reclaimers, Soulbinders and Infiltrators and pull them one at a time.",
-    "8 Dragonmaw Reclaimers", "5 Dragonmaw Soulbinders", "3 Dragonmaw Infiltrators"), 98293, 98072),
-  along(objectiveAt(98293, wl(nil, 63.5, 45.8), "Pick up the armaments lying around the camp between fights.", "30 Dragonmaw Armaments"), 98291, 98072),
-  along(objectiveAt(98072, wl(nil, 63.0, 41.8), "Kill the red whelps on the slope north of the retreat for Pristine Crimson Scales.", "8 Pristine Crimson Scales"),
-    98291, 98293),
+    "8 Dragonmaw Reclaimers", "5 Dragonmaw Soulbinders", "3 Dragonmaw Infiltrators"), 98293),
+  along(objectiveAt(98293, wl(nil, 63.5, 45.8), "Pick up the armaments lying around the camp between fights.", "30 Dragonmaw Armaments"), 98291),
   -- After the retreat, not before it: Thelgen Rock is on the road back north to Howin.
   withPath(objectiveAt(98282, wl(nil, 48.7, 62.4),
     "Head south-west to the road and enter Thelgen Rock by its mouth beside the road. Kill Leech and Cave Stalkers inside until one drops the gland.",

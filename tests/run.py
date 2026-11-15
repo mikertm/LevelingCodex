@@ -1076,7 +1076,7 @@ def main():
                              "questEliteChain", "questEliteFresh", "questSovikDungeon", "questSovikRoute", "questSovikWithoutRigWars",
                              "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",
                              "questHearthModernCooldown", "questFlightRouteInitialization", "questCompletedSet",
-                             "questDungeonPreparation", "questDungeonIncompletePreparation", "questPartyPolishedChat",
+                             "questDungeonPreparation", "questDungeonIncompletePreparation", "questWetlandsRidgeLoop", "questWetlandsCarnageChoice", "questWetlandsCarnageSummon", "questPartyPolishedChat",
                              "questPartyAnnouncementPreview", "questPartyAnnouncementBudget", "questPartyQuestieAnnounce"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
