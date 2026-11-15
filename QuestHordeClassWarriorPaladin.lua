@@ -89,7 +89,7 @@ do
         "5 Twitching Antennae"),
       finish(1824, ruga),
       accept(1825, ruga),
-      B.taxi("fly", at("Omusa Thunderhorn", 44.45, 59.15, M.barrens), "Crossroads, The Barrens",
+      B.taxi("fly", at("Devrak", 51.5, 30.34, M.barrens), "Crossroads, The Barrens",
         "Fly from Camp Taurajo to the Crossroads."),
       finish(1825, thungrim, "Climb the hills east of the Crossroads to Thun'grim Firegaze."),
     } })

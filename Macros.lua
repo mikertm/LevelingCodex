@@ -75,16 +75,20 @@ local function macroBody(index)
   if ok then return body end
 end
 
+-- A body the Codex made under this name: any version in any of your class's macro sets (the guide's and
+-- every talent path's, so switching paths still updates them), or one an older Codex shipped.
 local function matchesGuideBody(name, body)
   if not body or not ns.D then return false end
   body = trim(body)
-  for _, m in ipairs(ns.D.macros) do
-    if m.name == name and trim(m.body) == body then return true end
+  for _, set in ipairs(ns.classMacroSets()) do
+    for _, m in ipairs(set) do
+      if m.name == name and trim(m.body) == body then return true end
+    end
   end
   local legacy = ns.D == LevelingCodexData.WARRIOR and warriorLegacyBodies[name]
-  if legacy then
-    for _, oldBody in ipairs(legacy) do
-      if oldBody == body then return true end
+  for _, list in ipairs({ legacy or {}, ns.oldMacroBodies(name) or {} }) do
+    for _, oldBody in ipairs(list) do
+      if trim(oldBody) == body then return true end
     end
   end
   return false
@@ -98,15 +102,17 @@ local function isOurs(index, name)
 end
 ns.isOurMacro = isOurs
 
--- How many of the guide's macros exist with a current or previous Codex body.
+-- How many of your class's macros (any path) exist with a current or previous Codex body.
 function ns.countOurMacros()
   if not ns.D then return 0 end
   local n, seen = 0, {}
-  for _, m in ipairs(ns.D.macros) do
-    if not seen[m.name] then
-      seen[m.name] = true
-      local i = macroIndex(m.name)
-      if i > 0 and matchesGuideBody(m.name, macroBody(i)) then n = n + 1 end
+  for _, set in ipairs(ns.classMacroSets()) do
+    for _, m in ipairs(set) do
+      if not seen[m.name] then
+        seen[m.name] = true
+        local i = macroIndex(m.name)
+        if i > 0 and matchesGuideBody(m.name, macroBody(i)) then n = n + 1 end
+      end
     end
   end
   return n

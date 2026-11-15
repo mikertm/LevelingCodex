@@ -150,9 +150,17 @@ do
   local morbin = uc("Morbin Lightbane", 58.08, 89.51)
   local oran = uc("Oran Snakewrithe", 73.06, 32.85)
   local othmar = uc("Unfinished Abomination", 45.88, 61.7)
+  local renferrel = B.at("Apothecary Renferrel", 42.8, 40.86, m.silverpine)
+  local faranell = uc("Master Apothecary Faranell", 48.82, 69.28)
+  local function sp(name, x, y) return B.at(name, x, y, m.silverpine) end
   q(92422, "The Wrath of Rath'mael", 22, 15, nil, true)
   q(92401, "A Frightened Request", 22, 15, nil, true)
-  q(95216, "The New Plague", 22, 16, nil, true)
+  -- Griffs only offers The New Plague after the three-part A Recipe For Death (sources in
+  -- tools/audits/2026-11-14-horde-1-60-audit.md).
+  q(447, "A Recipe For Death", 12, 9)
+  q(450, "A Recipe For Death", 15, 9, 447)
+  q(451, "A Recipe For Death", 18, 9, 450)
+  q(95216, "The New Plague", 22, 16, 451, true)
   q(92421, "Light's Justice", 22, 15, nil, true)
   fromItem(95204, 275521, "Crest of Lordaeron", 22, 16, nil, true)
   fromItem(97288, 280438, "Unending Torment", 21, 15, nil, true)
@@ -181,12 +189,31 @@ do
       "https://wowforeverinfo.com/guides/ruins-of-lordaeron/" } }, {
       note("Getting there", "From Kalimdor, ride the zeppelin from the tower north of Orgrimmar to Tirisfal Glades. The ruined capital sits right above the Undercity."),
       accept(92422, kristof, "Find Deathguard Kristof in Brill, east of the Undercity."),
-      accept(95216, griffs, "In the Undercity, find Theodore Griffs in the Apothecarium."),
       accept(92421, morbin, "Morbin Lightbane waits in the Royal Quarter at the back of the city."),
-      taxi("fly", ucFlights, "The Sepulcher, Silverpine Forest",
-        "Fly to the Sepulcher from the bat handler in the Trade Quarter. Without that flight path, ride south-west out of Tirisfal."),
+      taxi("fly", sepulcherFlights, "The Sepulcher, Silverpine Forest",
+        "Theodore Griffs's quest needs Renferrel's three-part A Recipe For Death first. Fly to the Sepulcher from the bat handler in the Trade Quarter; without that flight path, ride south-west out of Tirisfal."),
       accept(92401, tabitha, "Tabitha Heartweaver is worried about her son. Find her at the Sepulcher."),
-      taxi("fly", sepulcherFlights, "Undercity, Tirisfal", "Fly back to the Undercity."),
+      accept(447, renferrel, "Apothecary Renferrel, at the Sepulcher, wants bear hearts and spider blood."),
+      part(447, 2, sp(nil, 35.4, 14.5), "Ride north to the webbed woods near the coast. Kill Moss Stalkers and Mist Creepers for Skittering Blood.",
+        "Skittering Blood"),
+      part(447, 1, sp(nil, 37.5, 16.4), "Kill Giant and Ferocious Grizzled Bears in the same woods and on the way back south for their hearts.",
+        "Grizzled Bear Heart"),
+      taxi("fly", ucFlights, "Undercity, Tirisfal", "Fly to the Undercity."),
+      finish(447, faranell, "Master Apothecary Faranell works in the Apothecarium."),
+      accept(450, faranell),
+      taxi("fly", sepulcherFlights, "The Sepulcher, Silverpine Forest", "Fly back to the Sepulcher."),
+      objective(450, sp("Berard's Bookshelf", 43.0, 73.2),
+        "Ride south to Pyrewood Village. Berard's journal is on a bookshelf in one of the houses. Bring a friend if the houses are crowded.",
+        "Berard's Journal"),
+      finish(450, renferrel, "Back at the Sepulcher, give Renferrel the journal."),
+      accept(451, renferrel),
+      part(451, 3, sp(nil, 56.9, 24.9), "Ride east to the Lordamere shore. Kill Vile Fin murlocs until one drops a Hardened Tumor.",
+        "Hardened Tumor"),
+      part(451, 1, sp(nil, 71.7, 35.7), "Follow the shore east and kill Lake Skulkers for their moss.", "Lake Skulker Moss"),
+      part(451, 2, sp(nil, 76.4, 22.4), "Go north along the lake to the Lake Creepers. They are level 17-19.", "Lake Creeper Moss"),
+      taxi("fly", ucFlights, "Undercity, Tirisfal", "Fly to the Undercity."),
+      finish(451, faranell),
+      accept(95216, griffs, "Theodore Griffs works in the Apothecarium, near Faranell."),
       enter(name, uc("Ruins of Lordaeron portal", 71.4, 11.5),
         "Take an elevator up to the ruined city, pass through the outer gate and climb the stairs left of the keep to the portal."),
     }, {
@@ -222,7 +249,7 @@ do
         "Go upstairs above Othmar's body and use the Hissing Serum on the pipes there.", "Inject the Hissing Serum")),
       finish(97292, faranell),
       finish(92421, morbin),
-      taxi("fly", ucFlights, "The Sepulcher, Silverpine Forest", "Fly to the Sepulcher with news of Edward."),
+      taxi("fly", sepulcherFlights, "The Sepulcher, Silverpine Forest", "Fly to the Sepulcher with news of Edward."),
       finish(92401, tabitha),
     })
 end
@@ -280,7 +307,7 @@ do
         "Ride north-west to the Forgotten Pools and wade into the water to look around.", "Explore the Forgotten Pools"),
       finish(870, tonga),
       accept(877, tonga),
-      taxi("fly", crossroadsFlights, "Ratchet, The Barrens", "Fly to Ratchet on the east coast."),
+      taxi("fly", ratchetFlights, "Ratchet, The Barrens", "Fly to Ratchet on the east coast."),
       accept(865, mebok, "Mebok Mizzyrix stands near the inn in Ratchet."),
       accept(959, bigglefuzz, "Bigglefuzz runs the crane on the Ratchet docks."),
       objective(877, ba("The Stagnant Oasis", 55.61, 42.75),
@@ -294,16 +321,16 @@ do
         "Kill Oasis Snapjaws in the Lushwater Oasis south-west of the Crossroads for their shells.", "8 Altered Snapjaw Shells"),
       finish(880, tonga),
       accept(1489, tonga),
-      taxi("fly", crossroadsFlights, "Ratchet, The Barrens", "Fly back to Ratchet."),
+      taxi("fly", ratchetFlights, "Ratchet, The Barrens", "Fly back to Ratchet."),
       finish(865, mebok),
       accept(1491, mebok),
-      taxi("fly", ratchetFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
+      taxi("fly", tbFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
       accept(962, zamah, "Apothecary Zamah works in the Pools of Vision, under Spirit Rise."),
       finish(1489, hamuul, "Cross to Elder Rise and find Hamuul Runetotem."),
       accept(1490, hamuul),
       finish(1490, nara, "Nara Wildmane is a few steps from Hamuul."),
       accept(914, nara),
-      taxi("fly", tbFlights, "Crossroads, The Barrens", "Fly back to the Crossroads and ride west to the Wailing Caverns."),
+      taxi("fly", crossroadsFlights, "Crossroads, The Barrens", "Fly back to the Crossroads and ride west to the Wailing Caverns."),
       action("goto", ba("Hill trail", 50.32, 35.44), "Take the path up the hill above the skull-shaped cave mouth. The disciples camp in the upper cave."),
       accept(1486, nalpak),
       accept(1487, ebru),
@@ -331,10 +358,10 @@ do
       finish(1491, mebok),
       finish(959, bigglefuzz),
       objective(6981, sputtervalve, "Show the shard to Sputtervalve on the docks.", "Speak with someone in Ratchet"),
-      taxi("fly", ratchetFlights, "Crossroads, The Barrens", "Fly to the Crossroads and ride back toward the caverns."),
+      taxi("fly", crossroadsFlights, "Crossroads, The Barrens", "Fly to the Crossroads and ride back toward the caverns."),
       finish(6981, falla, "Falla Sagewind waits on the ridge above the Wailing Caverns."),
       accept(3369, falla),
-      taxi("fly", crossroadsFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
+      taxi("fly", tbFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
       finish(914, nara),
       finish(3369, hamuul),
       finish(962, zamah),
@@ -373,7 +400,7 @@ do
     sources = { "https://questing.wiki/wow-forever/dungeons/shadowfang-keep/quests/",
       "https://www.zockify.com/forever/dungeons/shadowfang-keep/" } }, {
       accept(1013, belDugur, "Find Keeper Bel'dugur in the Apothecarium in the Undercity."),
-      taxi("fly", ucFlights, "The Sepulcher, Silverpine Forest", "Fly to the Sepulcher."),
+      taxi("fly", sepulcherFlights, "The Sepulcher, Silverpine Forest", "Fly to the Sepulcher."),
       accept(1098, hadrec, "High Executor Hadrec stands inside the Sepulcher."),
       accept(1014, dalar),
       enter(name, B.at("Shadowfang Keep", 45.4, 67.6, m.silverpine),
@@ -386,7 +413,7 @@ do
       objective(1014, nil, "Climb to the top of the keep, defeat Archmage Arugal and take his head.", "Head of Arugal"),
     }, {
       finish(1014, dalar, "Back at the Sepulcher, give Arugal's head to Dalar Dawnweaver."),
-      taxi("fly", sepulcherFlights, "Undercity, Tirisfal", "Fly to the Undercity."),
+      taxi("fly", ucFlights, "Undercity, Tirisfal", "Fly to the Undercity."),
       finish(1013, belDugur),
     })
 end
@@ -488,10 +515,10 @@ do
       accept(1109, faranell, "At level 30, take Faranell's guano errand in the Apothecarium before leaving the Undercity."),
       action("boat", tirisfalTower, "Take the zeppelin to Durotar and travel on to Thunder Bluff."),
       accept(1102, auld, "Find Auld Stonespire west of the inn on Thunder Bluff's central mesa."),
-      taxi("fly", tbFlights, "Ratchet, The Barrens", "Fly to Ratchet."),
+      taxi("fly", ratchetFlights, "Ratchet, The Barrens", "Fly to Ratchet."),
       accept(1221, mebok),
       note("Snufflenose kit", "Take the Crate With Holes, the Command Stick and the Owner's Manual from beside Mebok, and read the manual before leaving."),
-      taxi("fly", ratchetFlights, "Camp Taurajo, The Barrens", "Fly to Camp Taurajo. Without that flight path, ride south-west from Ratchet."),
+      taxi("fly", ba("Omusa Thunderhorn", 44.45, 59.15), "Camp Taurajo, The Barrens", "Fly to Camp Taurajo. Without that flight path, ride south-west from Ratchet."),
       enter(name, ba("Razorfen Kraul approach", 42.9, 90.2),
         "Ride south from Camp Taurajo to the far end of the Barrens. West of the road, the thorny Razorfen path leads down to the Kraul portal."),
     }, {
@@ -507,7 +534,7 @@ do
     }, {
       action("goto", mebok, "Travel back to Ratchet. Fly from Camp Taurajo or the Crossroads if you have the flight path."),
       finish(1221, mebok),
-      taxi("fly", ratchetFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
+      taxi("fly", tbFlights, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
       finish(1102, auld),
       action("goto", faranell, "Travel to the Undercity: zeppelin from Durotar to Tirisfal Glades."),
       finish(1109, faranell),

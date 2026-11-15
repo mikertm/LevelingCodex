@@ -64,6 +64,7 @@ do
   local satchel = at("Hastily Rolled-Up Satchel", 22.48, 24.2, arathi)
 
   special({ id = "cozy-sleeping-bag", title = "Cozy Sleeping Bag", zone = m.westfall, levels = { 14, 32 },
+    reward = "A sleeping bag: rest in it for up to 3% bonus XP",
     sources = {
       "https://www.wowhead.com/forever/guide/cozy-sleeping-bag-locations-rewards",
       "https://oraclenewsnetwork.com/guides/cozy-sleeping-bag",

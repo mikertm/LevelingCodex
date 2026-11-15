@@ -5,14 +5,30 @@ local try = Q.try
 local viewer, arrow, header, headerArt, title, arrowText, arrowArt, flatBackground, levels, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
-local nextButton, suggestionButton
+local nextButton, suggestionButton, bar
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local announced = {} -- dungeon runs whose "find a group" note was said this session
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
 local events = CreateFrame("Frame")
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
+local BAR_TEXTURE = "Interface\\TargetingFrame\\UI-StatusBar"
+local BAR_TRACK = 282 -- the bar's track width (the percent sits to its right)
+local RING_TEXTURE = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
+local ringArt -- the ring file exists (else the arrival shows the icon alone)
 local COMPASS = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }
+
+-- The arrow's tint by how far off course you face (0 to pi): green within 20 degrees of the step,
+-- blending to the art's own gold (no tint) with the step 90 degrees to your side, then to red
+-- from 160 degrees (behind you). db.noArrowColor keeps the gold.
+local ON_COURSE, BEHIND = { 0.35, 1, 0.35 }, { 1, 0.3, 0.25 }
+local function courseTint(off)
+  local deg = math.deg(off)
+  local c, t
+  if deg <= 90 then c, t = ON_COURSE, 1 - math.max(0, math.min(1, (deg - 20) / 70))
+  else c, t = BEHIND, math.max(0, math.min(1, (deg - 90) / 70)) end
+  return 1 + (c[1] - 1) * t, 1 + (c[2] - 1) * t, 1 + (c[3] - 1) * t
+end
 
 local function turnArrow()
   if not arrowBearing then return end
@@ -20,11 +36,34 @@ local function turnArrow()
   if facing == arrowFacing then return end
   arrowFacing = facing
   -- The bearing increases clockwise. Facing and texture rotation increase counterclockwise.
-  local rotated = type(facing) == "number" and arrowFile ~= nil
-    and type(arrowArt.SetRotation) == "function" and pcall(arrowArt.SetRotation, arrowArt, -arrowBearing - facing)
+  local turn = type(facing) == "number" and -arrowBearing - facing
+  local rotated = turn and arrowFile ~= nil
+    and type(arrowArt.SetRotation) == "function" and pcall(arrowArt.SetRotation, arrowArt, turn)
   arrowArt:SetShown(rotated)
+  if rotated then
+    if ns.db().noArrowColor then arrowArt:SetVertexColor(1, 1, 1)
+    else arrowArt:SetVertexColor(courseTint(math.abs((turn + math.pi) % (2 * math.pi) - math.pi))) end
+  end
   local compass = COMPASS[(math.floor(arrowBearing / (math.pi / 4) + 0.5) % 8) + 1]
   arrowText:SetText(rotated and arrowCaption or (compass .. (arrowCaption ~= "" and " - " .. arrowCaption or "")))
+end
+
+-- The arrival icon's bob, placed from the clock every frame (the arrow's OnUpdate): a cosine
+-- 8 px high, 0.8 s a loop, so it has no seam. A Translation looping BOUNCE jumped in game where
+-- it turned. bobStart = when this arrival began (nil = no icon); db.noArrowBounce keeps it still.
+local BOB_HEIGHT, BOB_PERIOD = 8, 0.8
+local bobStart, bobY
+local function bob()
+  if not bobStart then return end
+  local y = 0
+  if not ns.db().noArrowBounce then
+    local phase = ((GetTime() - bobStart) / BOB_PERIOD) % 1
+    y = BOB_HEIGHT * (1 - math.cos(2 * math.pi * phase)) / 2
+  end
+  if y ~= bobY then
+    bobY = y
+    arrow.here:SetPoint("CENTER", 0, y)
+  end
 end
 
 -- A saved position wins; without one the window sits beside Questie's tracker (built some
@@ -76,15 +115,18 @@ end
 
 -- The banner shows the guide's short name (the part before a colon; the Quests tab has the full
 -- title). The dialog header art's plate is about 45% of the texture's width, so the art widens
--- with the name, Morpheus drops to 12 for long names, and anything longer still is cut off.
-local HEADER_FONT, PLATE = "Fonts\\MORPHEUS.TTF", 0.45
+-- with the name, Morpheus (the EllesmereUI font in its theme) drops to 12 for long names, and anything
+-- longer still is cut off.
+local PLATE = 0.45
 local function fitHeader(text)
   header:SetText(Q.plain(text))
-  try(header.SetFont, header, HEADER_FONT, 14, "")
+  header.codexHead = 14
+  try(header.SetFont, header, ns.headFont(), 14, "")
   try(header.SetWidth, header, 0)
   local width = tonumber(try(header.GetStringWidth, header)) or 0
   if width > 150 then
-    try(header.SetFont, header, HEADER_FONT, 12, "")
+    header.codexHead = 12
+    try(header.SetFont, header, ns.headFont(), 12, "")
     width = tonumber(try(header.GetStringWidth, header)) or width
   end
   local fits = math.min(width, 190)
@@ -93,6 +135,59 @@ local function fitHeader(text)
     headerArt:SetWidth(math.max(300, (fits + 44) / PLATE))
   end
 end
+
+-- Window comfort: its size (Settings, the setup card, Ctrl+wheel over it; 50% to 150% for small
+-- screens), the background's opacity, fading to 30% in combat (the mouse over it brings it back)
+-- and compact mode (db.questCompact: the title row, the bar and the buttons).
+local FADED, FADE_TIME = 0.3, 0.3
+local inCombat, comfortPending = false, false
+
+-- The arrow's room above the window (clamp inset) is 76 px on screen, so 76 / scale window units.
+local function arrowRoom() return 76 / (tonumber(viewer and viewer:GetScale()) or 1) end
+
+local function applyComfort()
+  if not viewer then return end
+  local db = ns.db()
+  local scale = math.max(0.5, math.min(1.5, tonumber(db.questViewerScale) or 1))
+  local old = tonumber(viewer:GetScale()) or 1
+  if math.abs(scale - old) > 0.001 then
+    -- In combat the secure item and target buttons beside the window can't move, so a new size
+    -- waits for PLAYER_REGEN_ENABLED.
+    if try(InCombatLockdown) then
+      comfortPending = true
+    else
+      comfortPending = false
+      -- a dragged window keeps its spot on screen: its offsets are in its own (scaled) units
+      local p = db.questPosition
+      if type(p) == "table" and tonumber(p[3]) and tonumber(p[4]) then
+        p[3], p[4] = p[3] * old / scale, p[4] * old / scale
+        placedBy = nil
+      end
+      viewer:SetScale(scale)
+      if not placedBy then place() end
+      if not db.questArrowPos then try(viewer.SetClampRectInsets, viewer, 0, 0, arrowRoom(), 0) end
+      updateItemButton()
+    end
+  end
+  local a = math.max(0.2, math.min(1, tonumber(db.questViewerAlpha) or 1))
+  viewer.background:SetAlpha(a)
+  if viewer.euiSkin then viewer.euiSkin:SetAlpha(a) end -- the EllesmereUI panel behind it
+  if type(viewer.SetBackdropColor) == "function" then
+    local r, g, b = ns.rgba(C.parch)
+    pcall(viewer.SetBackdropColor, viewer, r, g, b, a)
+    local er, eg, eb = ns.rgba(C.edge)
+    pcall(viewer.SetBackdropBorderColor, viewer, er, eg, eb, a)
+  end
+end
+
+local function nudge(key, step, low, high)
+  local db = ns.db()
+  if type(LevelingCodexDB) ~= "table" then return end
+  db[key] = math.floor(math.max(low, math.min(high, (tonumber(db[key]) or 1) + step)) * 10 + 0.5) / 10
+  applyComfort()
+end
+function ns.setQuestViewerScale(step) nudge("questViewerScale", step, 0.5, 1.5) end
+function ns.setQuestViewerAlpha(step) nudge("questViewerAlpha", step, 0.2, 1) end
 
 local function makeViewer()
   viewer = A.frame("Frame", "LevelingCodexQuestViewer", UIParent)
@@ -114,40 +209,157 @@ local function makeViewer()
     placedBy = nil -- the next refresh anchors the saved spot to UIParent
     updateItemButton()
   end)
-  viewer:HookScript("OnHide", function()
-    if not painting then dismissed = true end
+  -- Closed by the player (Esc, another addon) = dismissed until they show it again. A hidden parent
+  -- isn't a close: a new character's intro cinematic and Alt+Z hide UIParent, and the window must
+  -- come back with it.
+  viewer:HookScript("OnHide", function(self)
+    local parent = self:GetParent()
+    if not painting and not (parent and not parent:IsVisible()) then dismissed = true end
+    if arrow then arrow:Hide() end
+  end)
+  viewer:HookScript("OnShow", function()
+    if not painting and not dismissed then ns.questRefresh() end
   end)
   viewer:Hide()
   place()
   flatBackground = viewer:CreateTexture(nil, "BACKGROUND")
   flatBackground:SetAllPoints()
+  viewer.background = flatBackground
+  -- In combat the window fades to 30% unless the mouse is over it; Ctrl held over it lets the wheel
+  -- resize it (otherwise the wheel stays the camera's).
+  try(viewer.EnableMouseWheel, viewer, false)
+  viewer:HookScript("OnEnter", function(self) self.hoverFlag = true end)
+  viewer:HookScript("OnLeave", function(self) self.hoverFlag = false end)
+  viewer:SetScript("OnMouseWheel", function(_, delta)
+    if not try(IsControlKeyDown) then return end
+    ns.setQuestViewerScale((tonumber(delta) or 0) > 0 and 0.1 or -0.1)
+  end)
+  viewer:HookScript("OnUpdate", function(self, elapsed)
+    local hovered = self.hoverFlag or (type(self.IsMouseOver) == "function" and self:IsMouseOver() == true)
+    local goal = (inCombat and not ns.db().noQuestFade and not hovered) and FADED or 1
+    local a = tonumber(self:GetAlpha()) or 1
+    if a ~= goal then
+      local move = (tonumber(elapsed) or 0) / FADE_TIME * (1 - FADED)
+      self:SetAlpha(a < goal and math.min(goal, a + move) or math.max(goal, a - move))
+    end
+    local wheel = hovered and try(IsControlKeyDown) and true or false
+    if wheel ~= self.wheelOn then
+      self.wheelOn = wheel
+      try(self.EnableMouseWheel, self, wheel)
+    end
+  end)
+  -- Compact mode's switch in the top-right corner.
+  viewer.compactButton = A.iconButton(viewer, A.FILES.minusUp, "-")
+  viewer.compactButton:SetSize(16, 16)
+  if viewer.compactButton.icon then viewer.compactButton.icon:SetSize(16, 16) end
+  viewer.compactButton:SetPoint("TOPRIGHT", -7, -7)
+  viewer.compactButton:SetScript("OnClick", function()
+    if type(LevelingCodexDB) ~= "table" then return end
+    LevelingCodexDB.questCompact = not LevelingCodexDB.questCompact
+    ns.questRefresh()
+  end)
   headerArt, header = A.header(viewer, "Quest Guide", 300)
   try(header.SetWordWrap, header, false)
   levels = viewer:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   levels:SetPoint("TOPRIGHT", -16, -30)
   title = font(viewer, 28, 318, "GameFontNormal")
+  -- The step's icon before its title (QuestMap.lua's icons).
+  viewer.titleIcon = viewer:CreateTexture(nil, "OVERLAY")
+  viewer.titleIcon:SetSize(16, 16)
+  viewer.titleIcon:SetPoint("TOPLEFT", 16, -27)
+  viewer.titleIcon:Hide()
+  -- The step's kind (QuestMap.lua): a stripe down the left edge and a chip before the title.
+  viewer.stripe = viewer:CreateTexture(nil, "ARTWORK")
+  viewer.stripe:SetPoint("TOPLEFT", 5, -5)
+  viewer.stripe:SetPoint("BOTTOMLEFT", 5, 5)
+  viewer.stripe:SetWidth(3)
+  viewer.chip = CreateFrame("Frame", nil, viewer)
+  viewer.chip:SetSize(40, 14)
+  viewer.chip.plate = viewer.chip:CreateTexture(nil, "ARTWORK")
+  viewer.chip.plate:SetAllPoints()
+  viewer.chip.text = viewer.chip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.chip.text:SetPoint("CENTER", 0, 0)
+  viewer.chip:Hide()
+  -- The step's NPC (QuestPortrait.lua), left of the title for pickups, turn-ins and kills.
+  viewer.portrait = ns.makeQuestPortrait(viewer)
+  viewer.portrait:SetPoint("TOPLEFT", 12, -26)
+  -- A turn-in's XP under the title: a purple chip "+N XP", then "levels you up" when it would.
+  viewer.xp = CreateFrame("Frame", nil, viewer)
+  viewer.xp:SetSize(60, 14)
+  viewer.xp.plate = viewer.xp:CreateTexture(nil, "ARTWORK")
+  viewer.xp.plate:SetAllPoints()
+  viewer.xp.plate:SetColorTexture(0.23, 0.16, 0.37, 0.9)
+  viewer.xp.text = viewer.xp:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.xp.text:SetPoint("CENTER", 0, 0)
+  viewer.xp.text:SetTextColor(0.84, 0.78, 1)
+  viewer.xp.note = viewer.xp:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  viewer.xp.note:SetPoint("LEFT", viewer.xp, "RIGHT", 6, 0)
+  viewer.xp.note:SetTextColor(0.84, 0.78, 1)
+  viewer.xp:Hide()
+  -- A step the game finishes: the window's edge glows once (gold lines inside the border, fading).
+  local glow = CreateFrame("Frame", nil, viewer)
+  glow:SetAllPoints()
+  glow:SetAlpha(0)
+  local glowEdges = {}
+  viewer.glowEdge = function(c) -- gold, or the accent in the EllesmereUI theme
+    for _, t in ipairs(glowEdges) do t:SetColorTexture(c[1], c[2], c[3], 0.9) end
+  end
+  local function edge(a, b, w, h)
+    local t = glow:CreateTexture(nil, "OVERLAY")
+    glowEdges[#glowEdges + 1] = t
+    t:SetColorTexture(1, 0.82, 0.25, 0.9)
+    try(t.SetBlendMode, t, "ADD")
+    t:SetPoint(a, 4 * (a:find("LEFT") and 1 or -1), 4 * (a:find("TOP") and -1 or 1))
+    t:SetPoint(b, 4 * (b:find("LEFT") and 1 or -1), 4 * (b:find("TOP") and -1 or 1))
+    if w then t:SetWidth(w) else t:SetHeight(h) end
+  end
+  edge("TOPLEFT", "TOPRIGHT", nil, 2)
+  edge("BOTTOMLEFT", "BOTTOMRIGHT", nil, 2)
+  edge("TOPLEFT", "BOTTOMLEFT", 2, nil)
+  edge("TOPRIGHT", "BOTTOMRIGHT", 2, nil)
+  if type(glow.CreateAnimationGroup) == "function" then
+    viewer.glowAnim = glow:CreateAnimationGroup()
+    local fade = viewer.glowAnim:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.4)
+  end
 
-  local function button(label, x, width, action, bottom)
-    bottom = bottom or 9
-    local b = A.button(viewer, width, 22)
-    b:SetPoint("BOTTOMLEFT", x, bottom)
+  -- The button row: a wide Next step in the theme's colour between small icon buttons (Back, Quests,
+  -- Hide) that name themselves on hover; the offer button above is a primary button too.
+  local function icon(label, x, file, fallback, action)
+    local b = A.iconButton(viewer, file, fallback)
+    b:SetPoint("BOTTOMLEFT", x, 9)
+    b.codexLabel, b.tipTitle = label, label
+    b:SetScript("OnClick", action)
+    return b
+  end
+  local function primary(label, x, width, action, bottom)
+    local b = A.primaryButton(viewer)
+    b:SetSize(width, 24)
+    b:SetPoint("BOTTOMLEFT", x, bottom or 9)
     b:SetLabel(label)
     b.codexLabel = label
     b:SetScript("OnClick", action)
     return b
   end
   -- Keep controller focus in the Quests tab so the overlay can stay up during gameplay.
-  button("Back", 12, 72, function() ns.moveQuestStep(true) end)
-  nextButton = button("Next", 92, 72, function(_, mouse)
+  viewer.buttons = {
+    icon("Back", 12, A.FILES.prevUp, "<", function() ns.moveQuestStep(true) end),
+    icon("Quests", 270, A.FILES.questBook, "Q", function() ns.openQuestStep() end),
+    icon("Hide", 302, A.FILES.closeUp, "x", ns.hideQuestViewer), -- the close art: minus is compact's
+  }
+  nextButton = primary("Next", 44, 222, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-  button("Quests", 172, 86, function() ns.openTab("quests") end)
-  button("Hide", 266, 72, ns.hideQuestViewer)
-  suggestionButton = button("", 16, 318, function()
+  nextButton:SetLabel("Next step", true)
+  suggestionButton = primary("", 16, 318, function()
     local row = Q.current()
     if row and row.step.type == "plan" then
       ns.planQuestRun(row.step.dungeon, true)
+    elseif row and row.step.type == "elite" then
+      ns.chooseEliteQuest(row.step.eliteQuest, true)
     elseif row and row.section.side then
       Q.returnToRoute()
       quiet = true
@@ -166,22 +378,174 @@ local function makeViewer()
     end
   end, 35)
 
+  -- The completion bar under the step's title: a thin track, the fill in the theme's accent and the
+  -- percent at its end. A new value slides in over 0.5 s (ease-out); hover for the counts, click
+  -- for the route.
+  bar = CreateFrame("Button", "LevelingCodexQuestBar", viewer)
+  bar:SetSize(318, 10)
+  bar.edge = bar:CreateTexture(nil, "BACKGROUND", nil, -1)
+  bar.edge:SetPoint("LEFT", 0, 0)
+  bar.edge:SetSize(BAR_TRACK + 2, 8)
+  bar.track = bar:CreateTexture(nil, "BACKGROUND")
+  bar.track:SetPoint("LEFT", 1, 0)
+  bar.track:SetSize(BAR_TRACK, 6)
+  bar.track:SetColorTexture(0, 0, 0, 0.6)
+  bar.fill = bar:CreateTexture(nil, "ARTWORK")
+  bar.fill:SetPoint("LEFT", bar.track, "LEFT", 0, 0)
+  bar.fill:SetSize(0.01, 6)
+  bar.fillArt = A.hasFile(BAR_TEXTURE)
+  if bar.fillArt then bar.fill:SetTexture(BAR_TEXTURE) end
+  bar.pct = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.pct:SetPoint("RIGHT", 0, 0)
+  bar.pct:SetJustifyH("RIGHT")
+  bar:SetScript("OnClick", function() ns.openQuestRoute() end)
+  bar:SetScript("OnEnter", function(self)
+    local row = Q.current()
+    if not (GameTooltip and row) then return end
+    local passed, total = Q.stepProgress(row.section)
+    local done, quests = Q.turninProgress(row.section)
+    local pct = total > 0 and math.floor(passed * 100 / total) or 0
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+    GameTooltip:SetText(Q.plain(row.section.title .. ": " .. passed .. " of " .. total .. " steps done (" .. pct .. "%)"))
+    GameTooltip:AddLine(done .. " of " .. quests .. " quests turned in", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Click to see the route.", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  bar:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+  bar:Hide()
+
   -- No box: a rotating arrow over the world with the distance under it, like the game's own pointers.
-  arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", viewer)
-  arrow:SetSize(320, 70)
-  arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 6)
+  -- It has its own spot once dragged (db.questArrowPos); until then it sits above the step window.
+  -- Only the 48 px arrow takes the mouse, so the camera still turns around it, and it takes the
+  -- wheel only while Ctrl is held over it (to resize it): otherwise the wheel zooms the camera.
+  arrow = CreateFrame("Frame", "LevelingCodexQuestArrow", UIParent)
+  arrow:SetSize(48, 48)
+  arrow:SetFrameStrata("MEDIUM")
+  arrow:SetMovable(true)
+  arrow:SetClampedToScreen(true)
+  arrow:EnableMouse(true)
+  arrow:RegisterForDrag("LeftButton")
+  try(arrow.EnableMouseWheel, arrow, false)
+  arrow:Hide()
   arrowArt = arrow:CreateTexture(nil, "ARTWORK")
-  arrowArt:SetSize(48, 48)
-  arrowArt:SetPoint("TOP", 0, 0)
+  arrowArt:SetAllPoints()
   if A.hasFile(ARROW_TEXTURE) then arrowFile = ARROW_TEXTURE; arrowArt:SetTexture(arrowFile) end
   arrowText = arrow:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  arrowText:SetPoint("BOTTOM", 0, 0)
+  arrowText:SetPoint("TOP", arrow, "BOTTOM", 0, -2)
   arrowText:SetWidth(320)
   arrowText:SetJustifyH("CENTER")
   arrowText:SetWordWrap(true)
   try(arrowText.SetShadowColor, arrowText, 0, 0, 0, 1)
   try(arrowText.SetShadowOffset, arrowText, 1, -1)
-  arrow:SetScript("OnUpdate", turnArrow)
+  -- Arrival: the step's icon bobs over a gold ring that pulses once (Settings > Animate the arrow).
+  arrow.here = arrow:CreateTexture(nil, "ARTWORK")
+  arrow.here:SetSize(36, 36)
+  arrow.here:SetPoint("CENTER")
+  -- Between whole pixels too, or the slow top and bottom of the bob step a pixel at a time.
+  try(arrow.here.SetSnapToPixelGrid, arrow.here, false)
+  try(arrow.here.SetTexelSnappingBias, arrow.here, 0)
+  arrow.here:Hide()
+  arrow.ring = arrow:CreateTexture(nil, "BACKGROUND")
+  arrow.ring:SetSize(72, 72)
+  arrow.ring:SetPoint("CENTER")
+  arrow.ring:Hide()
+  ringArt = A.hasFile(RING_TEXTURE)
+  if ringArt then
+    arrow.ring:SetTexture(RING_TEXTURE)
+    try(arrow.ring.SetBlendMode, arrow.ring, "ADD")
+    arrow.ring:SetVertexColor(1, 0.82, 0.25)
+  end
+  if type(arrow.ring.CreateAnimationGroup) == "function" then
+    arrow.pulse = arrow.ring:CreateAnimationGroup()
+    local grow = arrow.pulse:CreateAnimation("Scale")
+    if type(grow.SetScaleFrom) == "function" then
+      try(grow.SetScaleFrom, grow, 0.6, 0.6)
+      try(grow.SetScaleTo, grow, 1.4, 1.4)
+    else
+      try(grow.SetScale, grow, 1.4, 1.4)
+    end
+    grow:SetDuration(0.6)
+    local fade = arrow.pulse:CreateAnimation("Alpha")
+    fade:SetFromAlpha(1)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.6)
+    -- ends faded out (no frame back at full alpha before OnFinished hides it); arrive() resets it
+    try(arrow.pulse.SetToFinalAlpha, arrow.pulse, true)
+    arrow.pulse:SetScript("OnFinished", function() arrow.ring:Hide() end)
+  end
+  -- The wheel is the arrow's only while Ctrl is held over it.
+  local wheel = false
+  arrow:SetScript("OnUpdate", function()
+    local want = arrow.hovered and try(IsControlKeyDown) and true or false
+    if want ~= wheel then
+      wheel = want
+      try(arrow.EnableMouseWheel, arrow, want)
+    end
+    turnArrow()
+    bob()
+  end)
+  arrow:SetScript("OnDragStart", function(self)
+    if not ns.db().questArrowLocked then self:StartMoving() end
+  end)
+  arrow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    if not ns.db().questArrowLocked then ns.saveQuestArrowSpot() end
+    ns.placeQuestArrow()
+  end)
+  arrow:SetScript("OnMouseWheel", function(_, delta)
+    if not try(IsControlKeyDown) then return end
+    local db = ns.db()
+    -- a moved arrow grows and shrinks around its centre: keep that spot in screen units first
+    if type(db.questArrowPos) == "table" then ns.saveQuestArrowSpot() end
+    local scale = (tonumber(db.questArrowScale) or 1) + ((tonumber(delta) or 0) > 0 and 0.1 or -0.1)
+    db.questArrowScale = math.floor(math.max(0.6, math.min(2, scale)) * 10 + 0.5) / 10
+    ns.placeQuestArrow()
+  end)
+  arrow:SetScript("OnEnter", function(self)
+    self.hovered = true
+    if not GameTooltip then return end
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Quest arrow")
+    GameTooltip:AddLine("Drag to move it. Ctrl+mouse wheel changes its size.", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  arrow:SetScript("OnLeave", function(self)
+    self.hovered = false
+    wheel = false
+    try(self.EnableMouseWheel, self, false)
+    if GameTooltip then GameTooltip:Hide() end
+  end)
+  ns.placeQuestArrow()
+end
+
+-- Save where the arrow's centre is, in UIParent units (its own units times its scale), so a later
+-- size change keeps that centre: { "CENTER", "BOTTOMLEFT", x, y, true }. An older save without the
+-- fifth field holds the anchor and offsets as dragged, in the arrow's own units.
+function ns.saveQuestArrowSpot()
+  if not arrow then return end
+  local x, y = arrow:GetCenter()
+  local scale = tonumber(arrow:GetScale()) or 1
+  if type(x) == "number" and type(y) == "number" then ns.db().questArrowPos = { "CENTER", "BOTTOMLEFT", x * scale, y * scale, true } end
+end
+
+-- The arrow's spot: the saved one (and then the step window no longer keeps room above itself for
+-- it), else above the step window; its size from db.questArrowScale (60-200%).
+function ns.placeQuestArrow()
+  if not arrow then return end
+  local db = ns.db()
+  local p = db.questArrowPos
+  local scale = math.max(0.6, math.min(2, tonumber(db.questArrowScale) or 1))
+  arrow:ClearAllPoints()
+  arrow:SetScale(scale)
+  if type(p) == "table" and type(p[1]) == "string" then
+    local x, y = tonumber(p[3]) or 0, tonumber(p[4]) or 0
+    if p[5] then x, y = x / scale, y / scale end
+    arrow:SetPoint(p[1], UIParent, type(p[2]) == "string" and p[2] or p[1], x, y)
+    try(viewer.SetClampRectInsets, viewer, 0, 0, 0, 0)
+  else
+    arrow:SetPoint("BOTTOM", viewer, "TOP", 0, 28)
+    try(viewer.SetClampRectInsets, viewer, 0, 0, arrowRoom(), 0)
+  end
 end
 
 -- The flight timer: where you're flying (the node TakeTaxiNode took), how long you've flown and,
@@ -220,6 +584,7 @@ local function tickFlight()
     flight.start = flight.start or GetTime()
   elseif flight.start then
     if flight.from and flight.to then flightTimes()[flight.from .. ">" .. flight.to] = GetTime() - flight.start end
+    if ns.stats then ns.stats.flightTime(GetTime() - flight.start) end
     -- The hub flight never sends you straight back while the step is in the zone you left (Q.hubFlight).
     Q.lastFlight = flight.from and { from = flight.from, map = flight.map } or nil
     flight = {}
@@ -242,6 +607,39 @@ local function eta(yards)
   return ""
 end
 
+-- Arrival: the arrow becomes the step's icon (a gold dot when the client lacks its file), bobbing,
+-- and the ring pulses once. `key` tells a new arrival (another step or path point) from the same one.
+local arrivedKey
+local function arrive(key, step, caption)
+  arrowText:SetText(caption)
+  arrowBearing = nil
+  arrowArt:Hide()
+  if arrivedKey == key then return end
+  arrivedKey = key
+  ns.questMap.paintIcon(arrow.here, step, 36, 12)
+  arrow.here:Show()
+  if arrow.pulse and ringArt then
+    arrow.pulse:Stop()
+    arrow.ring:SetAlpha(1)
+    arrow.ring:Show()
+    arrow.pulse:Play()
+  end
+  bobStart = bobStart or GetTime() -- one arrival straight after another bobs on without a jump
+  bob()
+end
+
+local function leave()
+  if not arrivedKey then return end
+  arrivedKey = nil
+  arrow.here:Hide()
+  arrow.ring:Hide()
+  bobStart, bobY = nil, nil
+  arrow.here:SetPoint("CENTER", 0, 0)
+  if arrow.pulse then arrow.pulse:Stop() end
+end
+
+local CORPSE = { type = "spot" }
+
 -- As a ghost the arrow leads back to your corpse instead of the step.
 local function paintCorpse(corpse)
   arrow:Show()
@@ -249,8 +647,11 @@ local function paintCorpse(corpse)
   local map, x, y = Q.position()
   local bearing, yards = Q.vector(corpse, map, x, y)
   if yards and yards <= Q.arrived() then
-    arrowText:SetText("Your corpse is here")
-  elseif bearing then
+    arrive("corpse", CORPSE, "Your corpse is here")
+    return
+  end
+  leave()
+  if bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, "Your corpse - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   else
@@ -258,37 +659,68 @@ local function paintCorpse(corpse)
   end
 end
 
+-- What the arrow leads to, for the minimap (QuestMap.lua): { spot, step, kind = "step" / "spawn" /
+-- "leg" / "corpse", caption, key }, or nil (no step, in flight, the window hidden). Kept up to date
+-- with the arrow turned off too.
+local arrowGoal
+function ns.questArrowGoal() return arrowGoal end
+
 local function paintArrow()
-  if not viewer or not viewer:IsShown() then return end
+  arrowGoal = nil
+  if not viewer or not viewer:IsShown() then
+    if arrow then arrow:Hide() end
+    return
+  end
   local row = Q.current()
   local goal = row and row.step
   arrowBearing = nil
-  local corpse = not ns.db().noQuestArrow and Q.corpse()
+  local off = ns.db().noQuestArrow
+  local corpse = Q.corpse()
   if corpse then
-    paintCorpse(corpse)
+    arrowGoal = { spot = corpse, step = CORPSE, kind = "corpse", caption = "Your corpse", key = "corpse" }
+    if off then
+      leave()
+      arrow:Hide()
+    else
+      paintCorpse(corpse)
+    end
     return
   end
-  if ns.db().noQuestArrow or not goal then
+  if not goal then
+    leave()
     arrow:Hide()
     return
   end
   if Q.inFlight() then
+    leave()
+    if off then arrow:Hide(); return end
     arrow:Show()
     arrowArt:Hide()
     arrowText:SetText(flightText())
     return
   end
   if not goal.map or not (goal.x or goal.points) then
+    leave()
     arrow:Hide()
     return
   end
-  arrow:Show()
   local map, x, y = Q.position()
   local spot, point, count, kind = Q.waypoint(goal)
   local step, travel = Q.destination(spot, map)
   -- QuestieDB's nearest spawn leads the last mile of a kill or collect step (QuestieSupport.lua).
   local spawn, spawnName
   if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
+  local key = row.key .. ":" .. tostring(point or "")
+  if spawn or step then
+    arrowGoal = { spot = spawn or step, step = goal, kind = spawn and "spawn" or travel and "leg" or "step",
+      caption = spawnName or travel, key = spawn and (key .. ":" .. spawnName) or key }
+  end
+  if off then
+    leave()
+    arrow:Hide()
+    return
+  end
+  arrow:Show()
   local bearing, yards = Q.vector(spawn or step, map, x, y)
   -- A flight master or flight path on the way can be across a zone border.
   if not bearing and not spawn and step and (step.leg or step.world or Q.continentMap(map)) then
@@ -297,12 +729,19 @@ local function paintArrow()
   local which = point and not travel and (" (" .. kind .. " " .. point .. " of " .. count .. ")") or ""
   arrowArt:Hide()
   if spawn and yards and yards <= Q.arrived() then
-    arrowText:SetText(spawnName .. " nearby")
-  elseif spawn and bearing then
+    arrive(key .. ":" .. spawnName, goal, spawnName .. " nearby")
+    return
+  elseif yards and yards <= Q.arrived() and not travel then
+    local npc = which == "" and type(goal.npc) == "string" and Q.plain(goal.npc) or nil
+    arrive(key, goal, (npc and (npc .. "\n") or "") .. "Arrived" .. which)
+    return
+  end
+  leave()
+  if spawn and bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   elseif yards and yards <= Q.arrived() then
-    arrowText:SetText(travel or ("Arrived" .. which))
+    arrowText:SetText(travel)
   elseif bearing then
     arrowBearing, arrowFacing = bearing, false
     local distance = yards and (math.floor(yards + 0.5) .. " yd" .. eta(yards)) or ""
@@ -320,7 +759,7 @@ end
 local ACTION = { accept = "Accept", complete = "Complete", turnin = "Turn in", ["goto"] = "Travel",
   fly = "Fly", getfp = "Flight path", sethearth = "Bind hearthstone", hearth = "Hearth",
   boat = "Boat", train = "Train", buy = "Buy", use = "Use", grind = "Level up", dungeon = "Dungeon", note = "Note",
-  abandon = "Abandon", collect = "Collect", plan = "Dungeon ahead", boss = "Boss" }
+  abandon = "Abandon", collect = "Collect", plan = "Dungeon ahead", boss = "Boss", elite = "Elite quest" }
 
 function Q.label(step)
   if step.type == "hearth" and step.bind then return "Return to " .. step.bind end
@@ -410,10 +849,21 @@ local function grindLines(step, level)
   return lines
 end
 
--- Collect and buy steps: what your bags hold of what the step wants.
+-- Collect and buy steps: what your bags hold of what the step wants (with `items`, the first one
+-- still short).
 local function itemCounts(step)
-  if not ((step.type == "collect" or step.type == "buy") and step.item) then return end
-  return Q.itemCount(step.item), step.count or 1
+  if not (step.type == "collect" or step.type == "buy") then return end
+  if step.item then
+    local have, need = Q.itemCount(step.item), step.count or 1
+    if have < need or not step.items then return have, need end
+  end
+  local last
+  for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
+    local have, need = Q.itemCount(pair[1]), pair[2] or 1
+    if have < need then return have, need end
+    last = { have, need }
+  end
+  if last then return last[1], last[2] end
 end
 
 local function itemGoal(text, have, need, small, flat)
@@ -483,13 +933,14 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   local out = {}
   local function add(block) out[#out + 1] = block end
   if step.type == "plan" then add({ kind = "text", text = Q.planText(step) }); return out end
+  if step.type == "elite" then add({ kind = "text", text = Q.eliteText(step) }); return out end
   local _, _, _, level = Q.rows()
   if requiredFor then add({ kind = "note", tone = "warn", text = "Required for " .. requiredFor.name .. "." }) end
   if step.type == "accept" and not Q.log(step.quest) then
     local count, max = Q.logCapacity()
     if max and count >= max then
       add({ kind = "note", tone = "warn", text = "Your quest log is full (" .. count .. "/" .. max .. ")."
-        .. " Turn in or abandon a quest first: Quests > Guide library lists ones you can drop." })
+        .. " Turn in or abandon a quest first: Quests > Quest log lists ones you can drop." })
     end
   end
   if step.min and level < step.min then add({ kind = "note", tone = "warn", text = "Requires level " .. step.min .. "." }) end
@@ -506,7 +957,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   for _, id in ipairs(step.also or {}) do
     local entry = Q.incomplete(id)
     if entry and entry.title then
-      if not alsoShown then add({ kind = "heading", text = "Also on this loop" }); alsoShown = true end
+      if not alsoShown then add({ kind = "heading", text = "While you're here" }); alsoShown = true end
       add({ kind = "quest", text = entry.title })
       addGoals(out, entry, nil, nil, true, true, 12)
     end
@@ -516,7 +967,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   if part then
     add({ kind = "chain", text = "Chain: part " .. part .. " of " .. length .. (run and (", leads to " .. run.title) or "") .. "." })
   end
-  if step.uncertain then add({ kind = "note", tone = "dim", text = "Check in game: " .. step.uncertain }) end
+  -- step.uncertain (a verification note) stays in the data for us; players never see it.
   return out
 end
 
@@ -527,13 +978,23 @@ function Q.detail(step, requiredFor, withStickies)
   return Q.plain(table.concat(lines, "\n"))
 end
 
--- A step the game finished (not Next/Back or a jump) plays the map ping, like a quest objective.
+-- A step the game finished (not Next/Back or a jump) plays the map ping, like a quest objective,
+-- on the Master channel so a low effects volume doesn't hide it. Counted for /codex debug.
+local sounds = { n = 0 }
 local function completionSound(row)
   local done = lastRow and row ~= lastRow and not quiet and lastRow.state == "done"
+  local finished = lastRow
   lastRow, quiet = row, false
-  if done and not ns.db().questNoSound and type(PlaySound) == "function" then
-    pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175)
+  if done and viewer and viewer.glowAnim then
+    viewer.glowAnim:Stop()
+    viewer.glowAnim:Play()
   end
+  if done and not ns.db().questNoSound and type(PlaySound) == "function" then
+    sounds.n, sounds.last = sounds.n + 1, Q.plain(Q.label(finished.step))
+    pcall(PlaySound, SOUNDKIT and SOUNDKIT.MAP_PING or 3175, "Master")
+  end
+  -- Settings > Say steps I finish in party chat (said at the end of this refresh)
+  if done then ns.partyStepDone(finished.step) end
 end
 
 -- The use-item button: a secure button beside the step window that uses the current
@@ -688,7 +1149,9 @@ local function updateTargetButton()
   local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
   targetButton:ClearAllPoints()
   if left and top then
-    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left - 10, top - 72)
+    -- the window's edges are in its own units: times its scale for UIParent's
+    local s = tonumber(viewer:GetScale()) or 1
+    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 10, (top - 72) * s)
   else
     targetButton:SetPoint("CENTER", UIParent, "CENTER", -260, 30)
   end
@@ -723,7 +1186,8 @@ updateItemButton = function()
   local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
   itemButton:ClearAllPoints()
   if left and top then
-    itemButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left - 6, top - 26)
+    local s = tonumber(viewer:GetScale()) or 1
+    itemButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 6, (top - 26) * s)
   else
     itemButton:SetPoint("CENTER", UIParent, "CENTER", -260, 80)
   end
@@ -747,6 +1211,36 @@ local function userWaypoint()
   if type(x) == "number" and type(y) == "number" then return point.uiMapID, x, y end
 end
 
+-- The waypoint the Codex set ({ map, x, y } in 0-1), while it's still the game's user waypoint and
+-- the game's arrow tracks it (where the client can say): the minimap leaves the rim to that arrow.
+function ns.questMapPinSpot()
+  if not pinned then return end
+  local ST = C_SuperTrack
+  if type(ST) == "table" and type(ST.IsSuperTrackingUserWaypoint) == "function"
+      and try(ST.IsSuperTrackingUserWaypoint) == false then return end
+  local map, x, y = userWaypoint()
+  if map and samePoint(pinned, map, x, y) then return { map = pinned.map, x = pinned.x, y = pinned.y } end
+end
+
+-- A waypoint on a spot of your route (a step, its way in or its points) is one the Codex set,
+-- perhaps before a /reload made it forget: the game keeps user waypoints, the Codex doesn't.
+local routeSpot = { key = nil, hit = false } -- the last waypoint checked, and the answer
+local function onRoute(map, x, y)
+  local key = map .. ":" .. x .. ":" .. y
+  if routeSpot.key == key then return routeSpot.hit end
+  local hit = false
+  local function near(m, px, py) return m == map and px and math.abs(px / 100 - x) < 0.0005 and math.abs(py / 100 - y) < 0.0005 end
+  for _, row in ipairs((Q.rows())) do
+    local s = row.step
+    if near(s.map, s.x, s.y) then hit = true end
+    for _, p in ipairs(s.path or {}) do if near(p[3] or s.map, p[1], p[2]) then hit = true end end
+    for _, p in ipairs(s.points or {}) do if near(s.map, p[1], p[2]) then hit = true end end
+    if hit then break end
+  end
+  routeSpot.key, routeSpot.hit = key, hit
+  return hit
+end
+
 local function updateMapPin()
   local M = C_Map
   if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
@@ -754,7 +1248,7 @@ local function updateMapPin()
   local step = row and Q.waypoint(row.step)
   local want = not ns.db().noQuestMapPin and step and step.map and step.x and step.y
   local map, x, y = userWaypoint()
-  local ours = pinned and map and samePoint(pinned, map, x, y)
+  local ours = map and (pinned and samePoint(pinned, map, x, y) or not pinned and onRoute(map, x, y))
   if map and not ours then pinned = nil; return end -- the player's own waypoint
   if not want then
     if ours then try(M.ClearUserWaypoint) end
@@ -827,9 +1321,23 @@ function ns.showQuestStepOnMap()
   end
 end
 
--- The steps after this one (Settings > Steps shown ahead, 0-5, default 2), as UP NEXT.
+-- How many of the next steps the step window lists (the setup card and Settings, 0-10, default 2).
+local PREVIEW_MAX = 10
+
+function ns.questPreviewCount()
+  local count = math.floor(tonumber(ns.db().questPreview) or 2)
+  return math.max(0, math.min(PREVIEW_MAX, count))
+end
+
+function ns.setQuestPreview(count)
+  ns.db().questPreview = math.max(0, math.min(PREVIEW_MAX, math.floor(tonumber(count) or 2)))
+  ns.questRefresh()
+end
+
+-- The steps after this one, as UP NEXT. The list runs on into the next sections of the route,
+-- each one named where it starts; a side guide (dungeon, special) stops at its own end.
 local function addPreview(out, row, i)
-  local count = math.max(0, math.min(5, tonumber(ns.db().questPreview) or 2))
+  local count = ns.questPreviewCount()
   local upcoming = Q.upcoming(i, math.max(1, count))
   local nextRow = upcoming[1]
   if not nextRow then
@@ -841,15 +1349,15 @@ local function addPreview(out, row, i)
   end
   if count == 0 then return end
   out[#out + 1] = { kind = "heading", text = "Up next" }
-  if nextRow.section ~= row.section then
-    out[#out + 1] = { kind = "note", tone = "dim", text = "Next section: " .. nextRow.section.title }
+  -- one row per step: its icon, its label and how far it is
+  local section = row.section
+  for n, ahead in ipairs(upcoming) do
+    if ahead.section ~= section then
+      section = ahead.section
+      out[#out + 1] = { kind = "note", tone = "dim", gap = n > 1 and 3 or nil, text = "Next section: " .. section.title }
+    end
+    out[#out + 1] = { kind = "upnext", step = ahead.step, text = Q.label(ahead.step) }
   end
-  local labels = { Q.label(nextRow.step) }
-  for n = 2, #upcoming do
-    if upcoming[n].section ~= nextRow.section then break end
-    labels[#labels + 1] = Q.label(upcoming[n].step)
-  end
-  out[#out + 1] = { kind = "next", text = table.concat(labels, "\n") }
 end
 
 -- Quests pinned in the Quests tab, with their open goals, then the party's steps.
@@ -861,10 +1369,13 @@ local function addTracking(out)
     out[#out + 1] = { kind = "quest", text = entry.title or ("Quest " .. id) }
     addGoals(out, entry, nil, nil, true, true, 12)
   end
-  local party = ns.partyLines()
+  -- one row per party member against your step; the heading says when everyone is on it, and a
+  -- note names anyone 3 or more steps behind you
+  local party = ns.partyRows()
   if #party > 0 then
-    out[#out + 1] = { kind = "heading", text = "Party" }
-    out[#out + 1] = { kind = "note", tone = "dim", text = table.concat(party, "\n") }
+    out[#out + 1] = { kind = "heading", text = ns.partyTogether(party) and "Party - all on this step" or "Party" }
+    for _, line in ipairs(ns.partyWaitLines(party)) do out[#out + 1] = { kind = "note", tone = "warn", text = line } end
+    for _, r in ipairs(party) do out[#out + 1] = { kind = "party", text = r.text, where = r.where, status = r.status } end
   end
 end
 
@@ -905,6 +1416,39 @@ end
 
 function makers.rule() return viewer:CreateTexture(nil, "ARTWORK") end
 
+-- An UP NEXT row: the step's icon, its label and, at the right, how far it is.
+function makers.upnext()
+  local r = CreateFrame("Frame", nil, viewer)
+  r.icon = r:CreateTexture(nil, "OVERLAY")
+  r.icon:SetPoint("TOPLEFT", 0, 0)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.name:SetJustifyH("LEFT")
+  r.name:SetWordWrap(false)
+  r.name:SetPoint("TOPLEFT", 16, 0)
+  r.dist = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.dist:SetJustifyH("RIGHT")
+  r.dist:SetPoint("TOPRIGHT", 0, 0)
+  return r
+end
+
+-- A PARTY row: a dot in the member's status colour, "Name (level): their step or goal", and at the
+-- right where they are against you ("same step", "2 behind", the other guide).
+function makers.party()
+  local r = CreateFrame("Frame", nil, viewer)
+  r.dot = r:CreateTexture(nil, "OVERLAY")
+  r.dot:SetSize(7, 7)
+  r.dot:SetPoint("TOPLEFT", 2, -3)
+  r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.name:SetJustifyH("LEFT")
+  r.name:SetWordWrap(true)
+  r.name:SetPoint("TOPLEFT", 14, 0)
+  r.where = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  r.where:SetJustifyH("RIGHT")
+  r.where:SetWordWrap(false)
+  r.where:SetPoint("TOPRIGHT", 0, 0)
+  return r
+end
+
 function makers.row(template)
   local r = CreateFrame("Frame", nil, viewer)
   r.edge = r:CreateTexture(nil, "ARTWORK")
@@ -918,6 +1462,23 @@ function makers.row(template)
   r.count = r:CreateFontString(nil, "OVERLAY", template)
   r.count:SetJustifyH("RIGHT")
   r.count:SetPoint("TOPRIGHT", 0, 0)
+  -- the goal's bar under its text: a dark track and the share done
+  r.track = r:CreateTexture(nil, "ARTWORK")
+  r.bar = r:CreateTexture(nil, "OVERLAY")
+  -- A rising count flashes the row gold for a moment.
+  r.flash = r:CreateTexture(nil, "BACKGROUND")
+  r.flash:SetPoint("TOPLEFT", -4, 2)
+  r.flash:SetPoint("BOTTOMRIGHT", 4, -2)
+  r.flash:SetColorTexture(1, 0.82, 0, 0.35)
+  r.flash:SetAlpha(0)
+  r.flash._isFlash = true
+  if type(r.flash.CreateAnimationGroup) == "function" then
+    r.flashAnim = r.flash:CreateAnimationGroup()
+    local fade = r.flashAnim:CreateAnimation("Alpha")
+    fade:SetFromAlpha(0.6)
+    fade:SetToAlpha(0)
+    fade:SetDuration(0.5)
+  end
   return r
 end
 
@@ -972,13 +1533,20 @@ local function putHeading(text)
   cursor = cursor + 15
 end
 
+-- Goal counts drawn for the step on screen: a count that rose since the last draw flashes its row.
+local seenCounts, newCounts, countsRow = {}, {}, nil
+-- Goal bars: the current step kind's colour (set by the refresh), the loop's other quests in orange,
+-- a finished goal green and full.
+local goalColor
+local LOOP_COLOR, DONE_COLOR, TRACK_COLOR = { 0.95, 0.65, 0.25 }, { 0.45, 0.85, 0.4 }, { 0.1, 0.13, 0.15, 0.9 }
+
 local function putGoal(b)
   local small, indent = b.small, b.indent or 0
   local r = take("row", small and "GameFontHighlightSmall" or "GameFontHighlight")
   local width, line = WIDTH - indent, small and 12 or 14
   r:SetPoint("TOPLEFT", LEFT + indent, -cursor)
   r:SetWidth(width)
-  r.count:SetText(b.count or "")
+  r.count:SetText(b.count and (b.done and "done" or b.count) or "")
   r.count:SetShown(b.count ~= nil)
   local countWidth = b.count and math.ceil(tonumber(try(r.count.GetStringWidth, r.count)) or 30) + 8 or 0
   r.name:SetWidth(width - 16 - countWidth)
@@ -1009,12 +1577,98 @@ local function putGoal(b)
     r.tick:SetSize(size - 4, size - 4)
     r.tick:SetColorTexture(ink("done"))
   end
+  local have = type(b.count) == "string" and tonumber(b.count:match("^(%d+)"))
+  if have then
+    local before = seenCounts[b.text]
+    if before and have > before and r.flashAnim then
+      r.flashAnim:Stop()
+      r.flashAnim:Play()
+    end
+    newCounts[b.text] = have
+  end
   local height = math.max(line, tonumber(r.name:GetStringHeight()) or line)
+  local need = type(b.count) == "string" and tonumber(b.count:match("/(%d+)$"))
+  r.track:SetShown(need ~= nil)
+  r.bar:SetShown(need ~= nil)
+  if need then
+    local barWidth = width - 16
+    r.track:ClearAllPoints()
+    r.track:SetPoint("TOPLEFT", 16, -(height + 1))
+    r.track:SetSize(barWidth, 4)
+    r.track:SetColorTexture(ns.rgba(TRACK_COLOR))
+    local share = b.done and 1 or (need > 0 and math.min(1, (have or 0) / need) or 0)
+    local color = b.done and DONE_COLOR or (small and LOOP_COLOR or goalColor or C.accent)
+    r.bar:ClearAllPoints()
+    r.bar:SetPoint("TOPLEFT", r.track, "TOPLEFT", 0, 0)
+    r.bar:SetSize(math.max(0.01, barWidth * share), 4)
+    r.bar:SetColorTexture(color[1], color[2], color[3], 1)
+    height = height + 6
+  end
   r:SetHeight(height)
   cursor = cursor + height + (small and 1 or 2)
 end
 
+-- How far an up-next step is: "N yd" on your map, its zone's name on another, else nothing.
+local nextRows = {} -- the up-next rows drawn now, for the tick to update their distances
+local compactStep -- compact mode: the step whose distance the title row shows (the tick updates it)
+local function nextDistance(step)
+  local spot = step and Q.waypoint(step)
+  if not (spot and spot.map) then return "" end
+  local map, x, y = Q.position()
+  if spot.map == map then
+    local _, yards = Q.vector(spot, map, x, y)
+    return yards and (math.floor(yards + 0.5) .. " yd") or ""
+  end
+  local info = try(C_Map and C_Map.GetMapInfo, spot.map)
+  return type(info) == "table" and type(info.name) == "string" and Q.plain(info.name) or ""
+end
+
+function ns.questNextDistances()
+  for _, r in ipairs(nextRows) do
+    if r:IsShown() and r.step then r.dist:SetText(nextDistance(r.step)) end
+  end
+  if compactStep and levels and viewer and viewer:IsShown() then levels:SetText(nextDistance(compactStep)) end
+end
+
+local function putNext(b)
+  local r = take("upnext")
+  r:SetPoint("TOPLEFT", LEFT, -cursor)
+  r:SetSize(WIDTH, 13)
+  ns.questMap.paintIcon(r.icon, b.step, 12, 6)
+  r.step = b.step
+  r.dist:SetText(nextDistance(b.step))
+  r.dist:SetTextColor(ink("dim"))
+  local distWidth = math.ceil(tonumber(try(r.dist.GetStringWidth, r.dist)) or 40) + 8
+  r.name:SetWidth(WIDTH - 16 - distWidth)
+  r.name:SetText(Q.plain(b.text))
+  r.name:SetTextColor(ink("dim"))
+  nextRows[#nextRows + 1] = r
+  cursor = cursor + 14
+end
+
+-- Party rows: green on your step, orange behind you (wait for them), the theme's accent ahead,
+-- dim in another guide or with no step shared.
+local function putParty(b)
+  local r = take("party")
+  r:SetPoint("TOPLEFT", LEFT, -cursor)
+  r:SetWidth(WIDTH)
+  r.where:SetText(Q.plain(b.where or ""))
+  local tone = b.status == "same" and "done" or b.status == "behind" and "warn" or nil
+  local cr, cg, cb = ink(tone or "dim")
+  if b.status == "ahead" then cr, cg, cb = ns.rgba(C.accent) end
+  r.dot:SetColorTexture(cr, cg, cb, 1)
+  r.where:SetTextColor(cr, cg, cb)
+  local whereWidth = math.ceil(tonumber(try(r.where.GetStringWidth, r.where)) or 60) + 8
+  r.name:SetWidth(WIDTH - 14 - whereWidth)
+  r.name:SetText(Q.plain(b.text))
+  r.name:SetTextColor(ink((b.status == "other" or b.status == "none" or b.status == "offline") and "dim" or "text"))
+  local height = math.max(12, tonumber(r.name:GetStringHeight()) or 12)
+  r:SetHeight(height)
+  cursor = cursor + height + 2
+end
+
 local function draw(blocks)
+  nextRows = {}
   local last
   for _, b in ipairs(blocks) do
     if b.gap then cursor = cursor + b.gap end
@@ -1025,10 +1679,43 @@ local function draw(blocks)
     elseif b.kind == "text" then putText(b.text, "text", nil, 0, 2)
     elseif b.kind == "note" then putText(b.text, b.tone)
     elseif b.kind == "danger" then cursor = cursor + 3; putText(b.text, "danger")
-    elseif b.kind == "next" then putText(b.text, "dim", nil, 0, 1)
+    elseif b.kind == "upnext" then putNext(b)
+    elseif b.kind == "party" then putParty(b)
     elseif b.kind ~= "chain" then putText(b.text, "text") end
     last = b.kind
   end
+end
+
+-- The bar's fill slides from where it is to the new share over 0.5 s, easing out.
+local function slideBar(self)
+  local t = math.min(1, (GetTime() - self.t0) / 0.5)
+  self.width = self.from + (self.to - self.from) * (1 - (1 - t) ^ 3)
+  self.fill:SetWidth(math.max(0.01, self.width))
+  self.fill:SetShown(self.width >= 1)
+  if t >= 1 then self:SetScript("OnUpdate", nil) end
+end
+
+local function paintBar(row)
+  local passed, total = 0, 0
+  if row and not ns.db().noStepBar then passed, total = Q.stepProgress(row.section) end
+  if total == 0 then bar:Hide(); return false end
+  bar:ClearAllPoints()
+  bar:SetPoint("TOPLEFT", LEFT, -cursor)
+  bar.edge:SetColorTexture(ns.rgba(onDark and C.edge or C.inkSoft))
+  if bar.fillArt then bar.fill:SetVertexColor(ns.rgba(C.accent)) else bar.fill:SetColorTexture(ns.rgba(C.accent)) end
+  bar.pct:SetText(math.floor(passed * 100 / total) .. "%")
+  bar.pct:SetTextColor(ink("dim"))
+  local target = BAR_TRACK * passed / total
+  if bar.to == nil or not bar:IsShown() then
+    bar.from, bar.to, bar.width = target, target, target
+    bar.fill:SetWidth(math.max(0.01, target))
+    bar.fill:SetShown(target >= 1)
+  elseif math.abs(target - bar.to) >= 0.5 then
+    bar.from, bar.to, bar.t0 = bar.width or bar.to, target, GetTime()
+    bar:SetScript("OnUpdate", slideBar)
+  end
+  bar:Show()
+  return true
 end
 
 function ns.questRefresh()
@@ -1043,11 +1730,17 @@ function ns.questRefresh()
     place()
     if theme ~= ns.themeVersion then
       local backdrop = A.backdrop(viewer, "dialog", C.parch, C.edge)
+      -- the EllesmereUI theme: its panel on a backing frame (never on the window, Ellesmere.lua)
+      local skinned = ns.ellesmere.backing(viewer, "Panel")
       flatBackground:SetColorTexture(ns.rgba(C.parch))
-      flatBackground:SetShown(not backdrop)
-      -- Ink only on the flat parchment; the dialog art is dark, so it needs light text.
-      onDark = backdrop and true or false
+      flatBackground:SetShown(not backdrop and not skinned)
+      -- Ink only on the flat parchment; the dialog art and EllesmereUI's panel are dark: light text.
+      onDark = (backdrop or skinned) and true or false
+      viewer.glowEdge(C.eui and C.accent or { 1, 0.82, 0.25 })
       title:SetTextColor(ns.rgba(C.gold))
+      for _, b in ipairs(viewer.buttons) do b:Repaint() end
+      nextButton:Repaint()
+      suggestionButton:Repaint()
       theme = ns.themeVersion
     end
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
@@ -1055,8 +1748,59 @@ function ns.questRefresh()
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
+    viewer.titleIcon:SetShown(row and ns.questMap.setIcon(viewer.titleIcon, row.step, 16) or false)
+    -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
+    local kind = row and ns.questStepKind(row.step)
+    local style = kind and ns.questKindStyle(kind, row.step)
+    goalColor = style and style.color or nil
+    local compact = ns.db().questCompact and true or false
+    local cb = viewer.compactButton
+    cb.codexLabel = compact and "Expand" or "Compact"
+    cb.tipTitle = compact and "Expand" or "Compact"
+    local fold = compact and A.FILES.plusUp or A.FILES.minusUp
+    if cb.icon and A.hasFile(fold) then cb.icon:SetTexture(fold)
+    elseif cb.label then cb.label:SetText(compact and "+" or "-") end
+    local portrait = viewer.portrait:ShowFor(not compact and row and row.step or nil, kind)
+    if portrait then viewer.titleIcon:Hide() end
+    local x = portrait and 64 or (icon and 36 or 16)
+    viewer.stripe:SetShown(style ~= nil)
+    viewer.chip:SetShown(style ~= nil)
+    if style then
+      local r, g, b = style.color[1], style.color[2], style.color[3]
+      viewer.stripe:SetColorTexture(r, g, b, 1)
+      viewer.chip.plate:SetColorTexture(r * 0.3, g * 0.3, b * 0.3, 0.9)
+      viewer.chip.text:SetText(style.label)
+      viewer.chip.text:SetTextColor(r + (1 - r) * 0.5, g + (1 - g) * 0.5, b + (1 - b) * 0.5)
+      local chipWidth = math.ceil(tonumber(try(viewer.chip.text.GetStringWidth, viewer.chip.text)) or 36) + 10
+      viewer.chip:SetSize(chipWidth, 14)
+      viewer.chip:ClearAllPoints()
+      viewer.chip:SetPoint("TOPLEFT", x, -28)
+      x = x + chipWidth + 6
+    end
+    title:ClearAllPoints()
+    title:SetPoint("TOPLEFT", x, -28)
+    title:SetWidth(334 - x - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
+    if row ~= countsRow then seenCounts, countsRow = {}, row end
+    newCounts = {}
     if row then
-      title:SetText(Q.label(row.step))
+      -- the chip says what to do, the title names it (a quest, a flight point); a step without a name
+      -- takes the first sentence of its text; the full label stays the title's codexLabel
+      local s = row.step
+      local label = Q.label(s)
+      local name = not (s.type == "hearth" and s.bind) and (s.name or s.flight) or nil
+      if not name and type(s.text) == "string" and not (s.type == "hearth" and s.bind) then
+        local text = Q.plain(s.text)
+        name = text:match("^(.-[%.!?])%s") or text
+        if #name > 70 then name = name:sub(1, 67) .. "..." end
+        if name == "" then name = nil end
+      end
+      title:SetText(Q.plain(name or label))
+      title.codexLabel = Q.plain(label)
+      if style then
+        -- on the light parchment (no dialog art) a darker shade keeps the title readable
+        local shade = onDark and 1 or 0.55
+        title:SetTextColor(style.color[1] * shade, style.color[2] * shade, style.color[3] * shade)
+      end
       -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
       if run then
         blocks[1] = { kind = "note", tone = "gold", text = "Find a group for " .. run.title .. ": " .. runCount
@@ -1065,23 +1809,70 @@ function ns.questRefresh()
       for _, b in ipairs(Q.detailBlocks(row.step, row.requiredFor, true)) do blocks[#blocks + 1] = b end
       addPreview(blocks, row, i)
     else
+      title.codexLabel = nil
+      title:SetTextColor(ns.rgba(C.gold))
       title:SetText(sec.alternate and "End of the alternate route" or "End of the leveling guide")
       blocks[1] = { kind = "text", text = suggestion and "Try the suggested section below, or open Quests to choose another."
         or "Open Quests to revisit a section or check for missed quests." }
     end
     addTracking(blocks)
+    compactStep = nil
+    if compact then
+      -- compact: at the right of the title, the first unfinished goal's count, else how far the step
+      -- is (kept live by the tick); the title is sized after it, so a long zone name can't overlap
+      local right = ""
+      for _, b in ipairs(blocks) do
+        if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
+      end
+      if right == "" and row then
+        right = nextDistance(row.step)
+        compactStep = row.step
+      end
+      levels:SetText(right)
+      title:SetWidth(334 - x - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 0) - 10)
+    end
     releaseAll()
     cursor = 28 + math.max(14, title:GetStringHeight()) + 2
-    -- A story chain's place sits right under the step's name.
-    for _, b in ipairs(blocks) do
-      if b.kind == "chain" then putText(b.text, "dim") end
+    local xpX, xpY = LEFT, nil
+    if portrait then xpX, xpY = 64, cursor end
+    -- a turn-in's XP, when the game says how much (the quest must be in your log)
+    local xp = not compact and row and kind == "turnin" and row.step.quest and Q.log(row.step.quest)
+      and tonumber((try(GetQuestLogRewardXP, row.step.quest))) or 0
+    viewer.xp:SetShown(xp > 0)
+    if xp > 0 then
+      viewer.xp.text:SetText("+" .. ns.thousands(xp) .. " XP")
+      viewer.xp:SetSize(math.ceil(tonumber(try(viewer.xp.text.GetStringWidth, viewer.xp.text)) or 50) + 10, 14)
+      local cur, max = tonumber((try(UnitXP, "player"))), tonumber((try(UnitXPMax, "player")))
+      local levelsUp = cur and max and max > 0 and cur + xp >= max and (UnitLevel("player") or 1) < 60
+      viewer.xp.note:SetText(levelsUp and "levels you up" or "")
+      viewer.xp:ClearAllPoints()
+      viewer.xp:SetPoint("TOPLEFT", xpX, -(xpY or cursor))
+      if not xpY then cursor = cursor + 17 end
+    end
+    -- the detail starts below the portrait
+    if portrait then cursor = math.max(cursor, 74) end
+    if not compact then
+      -- A story chain's place sits right under the step's name.
+      for _, b in ipairs(blocks) do
+        if b.kind == "chain" then putText(b.text, "dim") end
+      end
     end
     cursor = cursor + 3
-    draw(blocks)
+    if paintBar(row) then cursor = cursor + 12 end
+    if not compact then
+      draw(blocks)
+    else
+      nextRows = {}
+      -- compact: the party in one line ("Party: all on this step", "Party: Ann same step, Bo 4 behind")
+      local partyLine = ns.partySummary()
+      if partyLine then putText(partyLine, "dim") end
+    end
+    seenCounts = newCounts
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
-    nextButton.codexLabel = choosing and "Skip" or "Next"
-    nextButton:SetLabel(nextButton.codexLabel)
+    local eliteAsk = row and row.step.type == "elite"
+    nextButton.codexLabel = (choosing or eliteAsk) and "Skip" or "Next"
+    nextButton:SetLabel(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", true)
     local returnToRoute = sec.side
     if run and not announced[run.id] then
       announced[run.id] = true
@@ -1090,15 +1881,17 @@ function ns.questRefresh()
     end
     local related = Q.relatedGuide()
     local setup = ns.questSetupDue()
-    local offer = choosing or returnToRoute or run or suggestion or related or setup
+    local offer = eliteAsk or choosing or returnToRoute or run or suggestion or related or setup
     suggestionButton:SetShown(offer ~= nil and offer ~= false)
     if offer then
-      suggestionButton.codexLabel = choosing and ("Plan " .. row.step.name)
+      suggestionButton.codexLabel = eliteAsk and "Take it" or choosing and ("Plan " .. row.step.name)
         or returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
-    viewer:SetHeight(math.max(140, cursor + (offer and 64 or 38)))
+    viewer:SetHeight(compact and (cursor + (offer and 64 or 38)) or math.max(140, cursor + (offer and 64 or 38)))
+    applyComfort()
+    ns.ellesmere.fonts(viewer) -- the theme's fonts, for rows made this time too (each string once)
     viewer:Show()
     painting = false
     paintArrow()
@@ -1109,6 +1902,7 @@ function ns.questRefresh()
   end
   updateItemButton()
   updateMapPin()
+  ns.questMap.refresh()
   updateQuestWatch()
   ns.partyStepChanged()
   ns.refreshQuestTab()
@@ -1175,9 +1969,33 @@ function ns.hideQuestViewer()
   ns.questRefresh()
 end
 
+-- The minimap button's right-click: show or hide the step window. With nothing to show (no guide
+-- for your level yet), the Quests tab says why.
+function ns.toggleQuestViewer()
+  if viewer and viewer:IsShown() then
+    ns.hideQuestViewer()
+    return
+  end
+  ns.showQuestViewer()
+  if not (viewer and viewer:IsShown()) then ns.openQuestRoute() end
+end
+
 function ns.updateQuestSettings()
   Q.update()
   ns.questRefresh()
+end
+
+-- Elite quest ahead: Take it (the quest stays on the route) or Skip (it passes, with the quests that
+-- need it). The step window's Take it and Skip, and the Quests tab's buttons, come here.
+function ns.chooseEliteQuest(id, take)
+  if not id then return end
+  local name = Q.questName(id)
+  Q.setElite(id, take)
+  Q.leaveReview()
+  if not take then
+    ns.say(Q.plain((name or "The elite quest") .. " is skipped. Back asks again."))
+  end
+  ns.updateQuestSettings()
 end
 
 -- Dungeon ahead: Plan <dungeon> (its quests join the route) or Skip.
@@ -1187,7 +2005,7 @@ function ns.planQuestRun(id, on)
   Q.leaveReview()
   if run then
     ns.say(Q.plain(run.title .. (on and " is planned: the run joins your route, and the guide says when to find a group."
-      or " is skipped: Quests > Guide library > Dungeons can plan it later.")))
+      or " is skipped: Quests > Guides > Dungeons can plan it later.")))
   end
   ns.updateQuestSettings()
 end
@@ -1298,37 +2116,82 @@ local function interact(event)
 end
 
 -- The quest reward that sells for the most gets a coin mark and a chat line (Settings > Mark
--- the best-selling quest reward). The Codex never picks a reward for you.
+-- the best-selling quest reward). The Codex never picks a reward for you. A price comes from the
+-- item cache: an uncached reward is read again every 0.5 s for 3 s, then the line names the best
+-- of the others and says which price didn't load. Every quest window event starts a new run, so
+-- a read still waiting for a price stops when the window closes or opens again.
 local rewardMark
+local rewardRun, rewardSeen = 0, nil
+local REWARD_READS = 7 -- the first read and six more, 0.5 s apart
 
+-- Choice i's button: the one QuestInfo tagged as that choice (its type and ID), else by name.
 local function rewardButton(i)
   local list = type(QuestInfoRewardsFrame) == "table" and QuestInfoRewardsFrame.RewardButtons
+  if type(list) == "table" then
+    for _, b in ipairs(list) do
+      if type(b) == "table" and b.type == "choice" and try(b.GetID, b) == i and try(b.IsShown, b) then return b end
+    end
+  end
   return _G["QuestInfoRewardsFrameQuestInfoItem" .. i] or (type(list) == "table" and list[i])
     or _G["QuestRewardItem" .. i]
 end
 
-local function markReward(tries)
+local function nameList(names)
+  if #names < 2 then return names[1] or "" end
+  return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
+end
+
+local function readRewards(choices, reads)
+  local seen = { choices = choices, reads = reads, rows = {}, missing = {} }
+  for i = 1, choices do
+    local name, _, count = try(GetQuestItemInfo, "choice", i)
+    local link = try(GetQuestItemLink, "choice", i)
+    local price = tonumber(link and select(11, ns.itemInfo(link)))
+    local label = Q.plain(name or "") -- Q.plain drops non-ASCII: a name in another alphabet comes out empty
+    local row = { name = label ~= "" and label or ("Reward " .. i), count = math.max(1, tonumber(count) or 1) }
+    if price then row.value = price * row.count else seen.missing[#seen.missing + 1] = row.name end
+    seen.rows[i] = row
+  end
+  return seen
+end
+
+local function markReward(run, reads)
+  if run ~= rewardRun then return end -- the quest window closed or opened again
+  reads = (reads or 0) + 1
   if rewardMark then rewardMark:Hide() end
   if ns.db().noRewardHint then return end
   local choices = tonumber(try(GetNumQuestChoices)) or 0
   if choices < 2 then return end
-  local best, bestValue, bestName, missing = nil, 0, nil, false
-  for i = 1, choices do
-    local name, _, count = try(GetQuestItemInfo, "choice", i)
-    local link = try(GetQuestItemLink, "choice", i)
-    local price = link and select(11, try(GetItemInfo, link))
-    if price == nil then missing = true end
-    local value = (tonumber(price) or 0) * math.max(1, tonumber(count) or 1)
-    if value > bestValue then best, bestValue, bestName = i, value, name end
-  end
-  if missing and (tries or 0) < 3 then
-    ns.after(0.5, function() markReward((tries or 0) + 1) end) -- item info still loading
+  local seen = readRewards(choices, reads)
+  rewardSeen = seen
+  if #seen.missing > 0 and reads < REWARD_READS then
+    seen.result = "waiting for a price"
+    ns.after(0.5, function() markReward(run, reads) end) -- item info still loading
     return
   end
-  if not best then return end
-  ns.say(Q.plain((bestName or ("Reward " .. best)) .. " sells for the most (" .. ns.money(bestValue) .. ")."))
+  local best, tied = nil, {}
+  for i, row in ipairs(seen.rows) do
+    if (row.value or 0) > 0 then
+      if not best or row.value > seen.rows[best].value then best, tied = i, {}
+      elseif row.value == seen.rows[best].value then tied[#tied + 1] = row.name end
+    end
+  end
+  if not best then
+    seen.result = #seen.missing > 0 and "no price loaded" or "nothing sells"
+    return
+  end
+  local row = seen.rows[best]
+  local line = row.name .. " sells for the most (" .. ns.money(row.value) .. ")"
+  if #tied > 0 then line = line .. ", tied with " .. nameList(tied) end
+  if #seen.missing == 1 then line = line .. ", but the price of " .. seen.missing[1] .. " didn't load"
+  elseif #seen.missing > 1 then line = line .. ", but the prices of " .. nameList(seen.missing) .. " didn't load" end
+  ns.say(line .. ".")
   local button = rewardButton(best)
-  if type(button) ~= "table" or type(button.GetFrameLevel) ~= "function" then return end
+  if type(button) ~= "table" or type(button.GetFrameLevel) ~= "function" then
+    seen.result = "no button for " .. row.name
+    return
+  end
+  seen.result = "marked " .. row.name .. " on " .. Q.plain(try(button.GetName, button) or "an unnamed button")
   if not rewardMark then
     rewardMark = CreateFrame("Frame", "LevelingCodexRewardMark", button)
     rewardMark:SetSize(18, 18)
@@ -1482,10 +2345,14 @@ local function handle(event, a, b, c, d, e)
     return
   end
   if event == "QUEST_DETAIL" or event == "QUEST_PROGRESS" or event == "QUEST_COMPLETE" or event == "QUEST_FINISHED" then
+    rewardRun = rewardRun + 1
+    if rewardSeen and rewardSeen.result == "waiting for a price" then
+      rewardSeen.result = "the window closed while waiting for a price"
+    end
     if rewardMark then rewardMark:Hide() end
     if event == "QUEST_FINISHED" then return end
     interact(event)
-    if event == "QUEST_COMPLETE" then markReward() end
+    if event == "QUEST_COMPLETE" then markReward(rewardRun) end
     return
   end
   if event == "GOSSIP_SHOW" or event == "QUEST_GREETING" then
@@ -1508,6 +2375,11 @@ local function handle(event, a, b, c, d, e)
       updateItemButton()
     end
     return
+  end
+  if event == "PLAYER_REGEN_DISABLED" then inCombat = true; return end
+  if event == "PLAYER_REGEN_ENABLED" then
+    inCombat = false
+    if comfortPending then applyComfort() end
   end
   if event == "PLAYER_REGEN_ENABLED" and itemPending then
     updateItemButton()
@@ -1582,7 +2454,8 @@ function ns.startQuestGuide()
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED",
-    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL" }) do
+    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL",
+    "PLAYER_REGEN_DISABLED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)
@@ -1594,6 +2467,7 @@ function ns.startQuestGuide()
       local row = Q.current()
       flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin, map = row and row.step.map }
       if recorder then flightTarget = Q.plain(try(TaxiNodeName, node)) end
+      if ns.stats then ns.stats.count("flights") end
     end)
   end
   ns.startQuestParty()
@@ -1601,7 +2475,7 @@ function ns.startQuestGuide()
     tickFlight()
     recordFlight()
     followTracker()
-    if Q.checkPosition() then ns.questRefresh() else paintArrow(); updateMapPin() end
+    if Q.checkPosition() then ns.questRefresh() else paintArrow(); updateMapPin(); ns.questNextDistances() end
   end)
 end
 
@@ -1619,6 +2493,7 @@ function ns.questDebugLines()
     { "Death", _G, "UnitIsGhost" },
     { "XP", _G, "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP" },
     { "Rewards", _G, "GetQuestItemInfo", "GetQuestItemLink", "GetItemInfo" },
+    { "C_Item", C_Item, "GetItemInfo" },
     { "C_DeathInfo", C_DeathInfo, "GetCorpseMapPosition" },
     { "Tracker", C_QuestLog, "AddQuestWatch", "RemoveQuestWatch", "GetQuestWatchType" },
     { "Classic tracker and map", _G, "AddQuestWatch", "RemoveQuestWatch", "IsQuestWatched", "OpenWorldMap", "ToggleWorldMap" },
@@ -1643,8 +2518,23 @@ function ns.questDebugLines()
     frames[#frames + 1] = (_G[name] and "+" or "-") .. name
   end
   lines[#lines + 1] = "Reward buttons: " .. table.concat(frames, " ")
+  local seen = rewardSeen
+  if seen then
+    local bits = {}
+    for i, row in ipairs(seen.rows) do
+      bits[i] = row.name .. (row.count > 1 and (" x" .. row.count) or "") .. " "
+        .. (row.value and ns.money(row.value) or "price not loaded")
+    end
+    lines[#lines + 1] = "reward mark: " .. seen.choices .. " choices (" .. table.concat(bits, ", ") .. "), "
+      .. seen.reads .. (seen.reads == 1 and " read; " or " reads; ") .. tostring(seen.result)
+      .. (ns.db().noRewardHint and " (now turned off)" or "")
+  else
+    lines[#lines + 1] = "reward mark: no reward choice seen this session" .. (ns.db().noRewardHint and " (turned off)" or "")
+  end
   local known, probed = Q.flightDebug()
   lines[#lines + 1] = "Known flight paths: " .. known .. (probed and (" (" .. probed .. " from C_TaxiMap)") or " (no C_TaxiMap)")
     .. ". Hearth: " .. Q.plain(Q.bindLocation() or "unknown") .. ". Arrow art: " .. tostring(arrowFile or "text only")
+  lines[#lines + 1] = "step sound: " .. (ns.db().questNoSound and "off, " or "") .. "played " .. sounds.n
+    .. (sounds.n == 1 and " time" or " times") .. " this session" .. (sounds.last and (", last for " .. sounds.last) or "")
   return lines
 end

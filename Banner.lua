@@ -15,11 +15,13 @@ function ns.levelUpMessage(level)
   local hit, rank, text = ns.talentAt(level)
   if hit then
     ns.say("level " .. level .. " - talent: " .. WHITE .. hit.name .. " " .. rank .. "/" .. hit.max .. "|r (" .. hit.tree .. "). " .. plain(text))
+  elseif ns.talentUnplanned(level) then
+    ns.say("level " .. level .. " - talent point: plan it in " .. WHITE .. "/codex talents|r (your custom path has none for this level).")
   end
   local t = ns.trainAt(level)
   if t then ns.say("new spells at your trainer: " .. plain(table.concat(t.spells, ", ")) .. ".") end
   local changed = {}
-  for _, m in ipairs(D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if m.lo == level then changed[#changed + 1] = m.name end
   end
   if #changed > 0 then
@@ -94,7 +96,9 @@ local function noteBuiltInSpot(name)
 end
 local TOAST_W = 480
 local MAX_ROWS = 5
-local HOLD = 8 -- seconds on screen before it fades (paused while your mouse is over it)
+-- seconds on screen before it fades, always: the cursor doesn't hold it (a controller parks the hidden
+-- cursor in the middle of the screen, where the banner sits, and the banner never went away)
+local HOLD = 8
 
 function ns.getToast() return toast end
 
@@ -204,7 +208,9 @@ local function makeToast()
   local r = toast:CreateTexture(nil, "BACKGROUND")
   r:SetPoint("TOPLEFT", mid, "TOPRIGHT"); r:SetPoint("BOTTOMRIGHT", 0, 0)
   ns.fade(r, "HORIZONTAL", C.band[1], C.band[2], C.band[3], 0.7, 0)
-  -- gold lines along the top and bottom of the band, fading out at the ends (the game's level-up look)
+  -- gold lines along the top and bottom of the band, fading out at the ends (the game's level-up look;
+  -- the accent in the EllesmereUI theme)
+  local line = C.eui and C.accent or { 1, 0.82, 0.25 }
   for _, edge in ipairs({ "TOP", "BOTTOM" }) do
     for side = 1, 2 do
       local g = toast:CreateTexture(nil, "BORDER")
@@ -212,11 +218,11 @@ local function makeToast()
       if side == 1 then
         g:SetPoint(edge .. "LEFT", toast, edge .. "LEFT", 20, edge == "TOP" and -34 or 0)
         g:SetPoint(edge .. "RIGHT", toast, edge, 0, edge == "TOP" and -34 or 0)
-        ns.fade(g, "HORIZONTAL", 1, 0.82, 0.25, 0, 0.95)
+        ns.fade(g, "HORIZONTAL", line[1], line[2], line[3], 0, 0.95)
       else
         g:SetPoint(edge .. "LEFT", toast, edge, 0, edge == "TOP" and -34 or 0)
         g:SetPoint(edge .. "RIGHT", toast, edge .. "RIGHT", -20, edge == "TOP" and -34 or 0)
-        ns.fade(g, "HORIZONTAL", 1, 0.82, 0.25, 0.95, 0)
+        ns.fade(g, "HORIZONTAL", line[1], line[2], line[3], 0.95, 0)
       end
     end
   end
@@ -231,10 +237,12 @@ local function makeToast()
 
   toast.title = toast:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   toast.title:SetPoint("TOP", toast.header, "BOTTOM", 0, -3)
-  if toast.title:SetFont("Fonts\\MORPHEUS.TTF", 26, "OUTLINE") == false then
+  if toast.title:SetFont(ns.headFont(), 26, "OUTLINE") == false then
     toast.title:SetFontObject("GameFontNormalLarge")
+  else
+    toast.title.codexHead, toast.title.codexHeadFlags = 26, "OUTLINE"
   end
-  toast.title:SetTextColor(1, 0.82, 0)
+  if C.eui then toast.title:SetTextColor(rgba(C.toastTitle)) else toast.title:SetTextColor(1, 0.82, 0) end
   toast.title:SetShadowColor(0, 0, 0, 1)
   toast.title:SetShadowOffset(1, -1)
 
@@ -265,18 +273,16 @@ local function makeToast()
   -- exit
   toast.leave = toast:CreateAnimationGroup()
   alphaAnim(toast.leave, 1, 0, 1.0, 1)
+  -- ends faded out (no frame back at full alpha before OnFinished hides it); every Show sets alpha 1
+  if toast.leave.SetToFinalAlpha then toast.leave:SetToFinalAlpha(true) end
   toast.leave:SetScript("OnFinished", function()
     toast:Hide()
   end)
 
   toast:SetScript("OnUpdate", function(self, elapsed)
     if self.unlocked or self.testing or not self.holding then return end
-    if self:IsMouseOver() then return end
     self.holding = self.holding - elapsed
     if self.holding <= 0 then self.holding = nil; self.leave:Play() end
-  end)
-  toast:SetScript("OnEnter", function(self)
-    if self.leave:IsPlaying() then self.leave:Stop(); self:SetAlpha(1); self.holding = 2 end
   end)
   toast:SetScript("OnDragStart", function(self) if self.unlocked or self.testing then self:StartMoving() end end)
   toast:SetScript("OnDragStop", function(self)
@@ -293,6 +299,7 @@ local function makeToast()
     self.holding = nil; self.leave:Play()
     if mouseButton ~= "RightButton" then (self.onClick or ns.toggleWindow)() end
   end)
+  ns.ellesmere.fonts(toast) -- the EllesmereUI font in its theme (the title is a heading)
   ns.placeToast()
 end
 
@@ -309,6 +316,8 @@ local function unlocksAt(level)
   local hit, rank = ns.talentAt(level)
   if hit then
     rows[#rows + 1] = { hit.icon, "TALENT POINT", hit.name .. "  " .. rank .. "/" .. hit.max }
+  elseif ns.talentUnplanned(level) then
+    rows[#rows + 1] = { ns.ADDON_ICON, "TALENT POINT", "Plan it in /codex talents" }
   end
   local t = ns.trainAt(level)
   if t then
@@ -318,10 +327,11 @@ local function unlocksAt(level)
   end
   -- profession training this level opens, next to the class trainer (the banner holds 5 rows)
   for _, r in ipairs(ns.profLevelRows and ns.profLevelRows(level) or {}) do rows[#rows + 1] = r end
-  for _, m in ipairs(ns.D.macros) do
+  local macros = ns.pathMacros()
+  for _, m in ipairs(macros) do
     if m.lo == level then
       local older = false
-      for _, o in ipairs(ns.D.macros) do
+      for _, o in ipairs(macros) do
         if o.name == m.name and o.lo < m.lo then older = true end
       end
       rows[#rows + 1] = { m.icon, older and "MACRO UPDATED" or "NEW MACRO", m.name .. "  -  /codex macros" }

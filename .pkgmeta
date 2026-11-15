@@ -2,15 +2,17 @@ package-as: LevelingCodex
 
 enable-nolib-creation: no
 
-# The release workflow writes RELEASE_NOTES.html (tools/release_notes.py) from the tag's
-# section of CHANGELOG.md, so CurseForge shows only this version's notes, as HTML.
+# The release workflow writes RELEASE_NOTES.md (tools/release_notes.py) from the tag's
+# section of CHANGELOG.md, so CurseForge shows only this version's notes. Markdown, not HTML:
+# CurseForge's author console edits changelogs as Markdown and garbled the HTML ones.
 manual-changelog:
-  filename: RELEASE_NOTES.html
-  markup-type: html
+  filename: RELEASE_NOTES.md
+  markup-type: markdown
 
 ignore:
   - README.md
   - CURSEFORGE_DESCRIPTION.md
+  - RELEASE_NOTES.md
   - RELEASE_NOTES.html
   - RELEASING.md
   - CLAUDE.md

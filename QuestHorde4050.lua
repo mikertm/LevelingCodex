@@ -62,6 +62,7 @@ local P = {
   crank = on.stv("Crank Fizzlebub", 27.12, 77.21),
   seahorn = on.stv("Fleet Master Seahorn", 27.17, 77.01),
   mackinley = on.stv("\"Sea Wolf\" MacKinley", 27.78, 77.07),
+  dudd = on.stv("Dudd Fizzlescroll", 28.3, 76.3),
   bootyPier = on.stv(nil, 25.8, 73.1),
   gromgolZeppelin = on.stv("Nez'raz", 31.4, 29.9),
   orgrimmarZeppelin = on.durotar("Snurk Bucksquick", 50.7, 12.9),
@@ -113,9 +114,10 @@ do
   local aggrogosh = st("Commander Aggro'gosh", 32.2, 28.9)
   local nimboya = st("Nimboya", 32.16, 27.72)
 
-  -- A Threat in Feralas (2981, Belgrom Rockmaul in Orgrimmar) is only a pointer to Camp Mojache;
-  -- the route skips it to keep a log slot free and hands it in there if you carry it.
+  -- A Threat in Feralas (2981, Belgrom Rockmaul in Orgrimmar) is only a pointer to Camp Mojache: an
+  -- optional pickup at the level 40 Orgrimmar stop, handed in at Camp Mojache at 43.
   need(2981, "A Threat in Feralas", 43, 38)
+  B.quest[2981].optional = true
   need(572, "Mok'thardin's Enchantment", 41, 33, 570)
   need(1240, "The Troll Witchdoctor", 35, 30, 1239)
   need(584, "Bloodscalp Clan Heads", 41, 30, 582)
@@ -127,6 +129,10 @@ do
   need(1261, "Marg Speaks", 40, 30, 1240)
   need(78823, "Terror of the Desert Skies", 40, nil, nil, true)
   B.quest[78823].startItem = B.quest[78823].startItem or 211269
+  -- Forever item-started quest (ItemSparse 213127 starts it); Skullsplitter Mystics drop the notes
+  -- and Dudd Fizzlescroll in Booty Bay takes them (bindonforever.com/quest/95384, item/213127).
+  need(95384, "Partial Mystical Notes", 40, 32, nil, true)
+  B.quest[95384].startItem = B.quest[95384].startItem or 213127
 
   H.chapter("stv-40", "Stranglethorn: Grom'gol and the Bloodscalp Heads", M.stv, 40, 41, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
@@ -134,23 +140,20 @@ do
     "https://www.wowhead.com/forever/quest=95773",
     qdb,
   }, { "swamp-41", "dustwallow-40" }, cat({
-    taxi("fly", on.badlands("Gorrik", 4.0, 44.8), "Grom'gol, Stranglethorn", "Fly from Kargath to Grom'gol Base Camp."),
+    taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly from Kargath to Grom'gol Base Camp."),
     taxi("getfp", P.thysta, "Grom'gol, Stranglethorn", "If you came by zeppelin instead, learn the Grom'gol flight path from Thysta."),
     action("sethearth", P.thulbek, "Bind at the Grom'gol inn, the long hut beside the zeppelin tower.", gromgol),
     finish(1240, P.kinweelay, "Give Kin'weelay the head Nazeer sent from Dustwallow."),
+    accept(95748, P.kinweelay, "Kin'weelay also wants a rubbing of the troll legends on a tablet in the Ruins of Zul'Kunda."),
     accept(584, nimboya, "Nimboya wants the heads of the two Bloodscalp leaders."),
-    accept(95773, aggrogosh, "Commander Aggro'gosh wants the naga off Grom'gol's coast taught a lesson."),
     action("boat", P.gromgolZeppelin, "Level 40 means new spells and your first mount. Take the zeppelin from the tower beside Grom'gol to Orgrimmar. Use Next when you land.",
       { name = "Grom'gol - Orgrimmar" }),
   }, train(orgrimmarTrainers, 40), {
+    accept(2981, og("Belgrom Rockmaul", 75.23, 34.24), "Belgrom Rockmaul in the Valley of Honor has word for Camp Mojache in Feralas. Take it if you pass him; you get there at 43."),
     action("note", nil, "Learn riding now if you can afford it. Orcs train with Kildar in the Valley of Honor, Trolls at Sen'jin Village, Tauren in Bloodhoof Village, Undead in Brill. Druids and paladins train their spells in Thunder Bluff; you pass it at 42.",
       { name = "Riding at 40" }),
     action("boat", P.orgrimmarZeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower to the north. Take the zeppelin back to Grom'gol.",
       { name = "Orgrimmar - Grom'gol" }),
-    along(objective(95773, st(nil, 23.4, 25.3), "Swim west to the Vile Reef. Kill Brinescale Skirmishers for their tridents.",
-      "10 Brinescale Trident"), 628),
-    objective(628, st(nil, 29.6, 23.9), "Elder Saltwater Crocolisks sun on the beach north of the reef. Kill one for Drizzlik's skin.",
-      "Elder Crocolisk Skin"),
     action("goto", st(nil, 24.0, 11.5), "Follow the coast north to the Ruins of Zul'Kunda."),
     note(objective(95748, st(nil, 23.0, 12.0), "Find the tablet named Fall of Gurubashi in the ruins and make a rubbing of the third legend.",
       "Third Troll Legend"), "Tablet spot from a published Forever guide; check it in game."),
@@ -160,7 +163,6 @@ do
     finish(584, P.cauldron, "Drop both heads into the bubbling cauldron beside Nimboya."),
     accept(585, P.cauldron),
     finish(95748, P.kinweelay), accept(95770, P.kinweelay, "Kin'weelay wants to know where the drowned city from the legend lies."),
-    finish(95773, aggrogosh),
     accept(572, P.mokthardin, "Far Seer Mok'thardin wants feathers from the jungle stalkers to the south."),
     accept(598, P.kinweelay, "Kin'weelay wants necklaces from the Skullsplitter trolls in the east."),
     note(objective(95770, st(nil, 21.4, 27.8), "Swim west past the Vile Reef and find the underwater cavern called Sunken Hollow.",
@@ -204,9 +206,6 @@ do
   local krazek = st("Krazek", 26.94, 77.21)
   local kebok = st("Kebok", 27.0, 77.13)
   local revilgaz = st("Baron Revilgaz", 27.23, 76.87)
-  local drizzlik = st("Drizzlik", 28.29, 77.59)
-  local mebok = on.barrens("Mebok Mizzyrix", 62.37, 37.62)
-  local bragok = on.barrens("Bragok", 63.1, 37.2)
 
   need(1372, "Nothing But The Truth", 42, 37)
   need(698, "Lack of Surplus", 40, 35)
@@ -229,6 +228,7 @@ do
     "https://www.wowhead.com/forever/zone=8/swamp-of-sorrows",
     "https://www.wowhead.com/forever/quest=93663",
     "https://www.wowhead.com/forever/quest=93430",
+    "https://bindonforever.com/quest/95384",
     qdb,
   }, { "desolace-41", "dustwallow-40" }, cat({
     action("goto", st(nil, 40.6, 3.5), "Ride north from Nesingwary's camp up the road into Duskwood."),
@@ -267,7 +267,7 @@ do
     finish(698, P.tokkar, "Tok'Kar's camp is at Misty Reed Strand in the south-east. Bring him the flanks."),
     action("goto", P.felzerul, "Ride back west to Stonard."),
     finish(1424, P.felzerul),
-    taxi("fly", P.breyk, "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
+    taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
     taxi("getfp", P.gringer, "Booty Bay, Stranglethorn", "Learn the Booty Bay flight path from Gringer if you rode in."),
     finish(1116, krazek, "Krazek is upstairs in the Booty Bay inn."),
     accept(1117, krazek), accept(2864, krazek, "Krazek also has word for Tran'rek in Gadgetzan."),
@@ -276,9 +276,11 @@ do
     accept(1183, revilgaz, "Baron Revilgaz, near Seahorn, sponsors a racer in the Shimmering Flats."),
     finish(600, P.crank, "Crank Fizzlebub is in the inn too."),
     accept(2872, P.mackinley, "\"Sea Wolf\" MacKinley wants a debt collected in Tanaris."),
-    finish(628, drizzlik),
+    note(withItem(213127, accept(95384, P.dudd, "If a Skullsplitter Mystic dropped Partial Mystical Notes for you, read them next to Dudd Fizzlescroll.")),
+      "Drop source and Dudd's spot from bindonforever (QuestieDB-format data) and a published Forever guide; not in the cached QuestieDB."),
+    finish(95384, P.dudd, "Give Dudd the notes."),
     action("boat", P.bootyPier, "Take the boat from the Booty Bay pier to Ratchet. Use Next when you land.", { name = "Booty Bay - Ratchet" }),
-    taxi("fly", bragok, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
+    taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
   }, train(bluffTrainers, 42), {
     accept(1205, tb("Melor Stonehoof", 61.54, 80.92), "Melor Stonehoof wants Deadmire's tooth from Dustwallow Marsh."),
     finish(1049, tb("Sage Truthseeker", 34.4, 46.87), "Bring the Compendium from the Scarlet Monastery to Sage Truthseeker."),
@@ -307,7 +309,7 @@ do
     "https://www.wowhead.com/forever/zone=405/desolace",
     qdb,
   }, { "tanaris-41", "dustwallow-40" }, {
-    taxi("fly", P.tal, "Shadowprey Village, Desolace", "Fly from Thunder Bluff to Shadowprey Village."),
+    taxi("fly", B.at("Thalon", 21.6, 74.1, 1443), "Shadowprey Village, Desolace", "Fly from Thunder Bluff to Shadowprey Village."),
     accept(5581, taiga, "Taiga Wisemane in Shadowprey Village gives you the box for banishing the Mannoroc portals."),
     finish(1373, uthek, "Ride east to the Gelkis village and give Uthek the Wise Ongeku's shard."),
     accept(1374, uthek),
@@ -378,7 +380,7 @@ do
     "https://www.wowhead.com/forever/quest=98192",
     qdb,
   }, { "feralas-43", "dustwallow-40" }, {
-    note(taxi("fly", P.thalon, "Gadgetzan, Tanaris", "Fly from Shadowprey Village to Gadgetzan."),
+    note(taxi("fly", B.at("Bulkrek Ragefist", 51.6, 25.4, 1446), "Gadgetzan, Tanaris", "Fly from Shadowprey Village to Gadgetzan."),
       "Without the Gadgetzan flight path, fly to Freewind Post and ride south through the Shimmering Flats."),
     taxi("getfp", P.bulkrek, "Gadgetzan, Tanaris", "Learn the Gadgetzan flight path from Bulkrek Ragefist by the north gate if you rode in."),
     finish(2864, P.tranrek, "Give Tran'rek Krazek's message."),
@@ -407,7 +409,7 @@ do
     accept(1194, plans), finish(1194, pozzik),
     accept(1118, kravel, "Keep Kravel's scheme for Booty Bay. You go back there at 44."),
     action("hearth", P.fizzgrimble, "Hearth to Gadgetzan.", gadgetzan),
-    note(taxi("fly", P.bulkrek, "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village."),
+    note(taxi("fly", B.at("Shardi", 35.6, 31.9, 1445), "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village."),
       "Assumes you learned the Brackenwall flight path in your 30s."),
     taxi("getfp", P.shardi, "Brackenwall Village, Dustwallow Marsh", "Learn the Brackenwall flight path from Shardi if you rode in."),
     note(accept(98192, krak, "Krak, a skinner in Brackenwall, wants intact raptor hides."), "A Forever quest; the giver's spot needs an in-game check."),
@@ -433,7 +435,7 @@ do
     finish(1169, P.drazzilb), finish(1166, P.mokmorokk), finish(98192, krak), finish(1168, tharg),
     finish(1261, nazeer, "Give Nazeer Bloodpike Marg's pendant."),
     accept(1262, nazeer, "Nazeer sends the pendant on to Zor Lonetree in Orgrimmar. You go there at 45."),
-    taxi("fly", P.shardi, "Gadgetzan, Tanaris", "Fly back to Gadgetzan."),
+    taxi("fly", B.at("Bulkrek Ragefist", 51.6, 25.4, 1446), "Gadgetzan, Tanaris", "Fly back to Gadgetzan."),
     withItem(8524, accept(654, nil, "Use the power source Bilgewhizzle gave you to start the field tests.")),
     note(objective(654, tn(nil, 52.0, 36.0), "Use the testing kit on basilisks, hyenas and scorpids in the dunes south of Gadgetzan.",
       "8 Acceptable Basilisk Sample", "8 Acceptable Hyena Sample", "8 Acceptable Scorpid Sample"), "The kit runs on a timer; finish before it runs out."),
@@ -492,7 +494,7 @@ do
     "https://www.wowhead.com/forever/quest=92878",
     qdb,
   }, { "stv-44", "searing-45", "dustwallow-40" }, cat({
-    note(taxi("fly", P.bulkrek, "Camp Mojache, Feralas", "Fly from Gadgetzan to Camp Mojache."),
+    note(taxi("fly", B.at("Shyn", 75.5, 44.4, 1444), "Camp Mojache, Feralas", "Fly from Gadgetzan to Camp Mojache."),
       "Without that flight path, fly to Shadowprey Village, ride south into Feralas and east along the road."),
     taxi("getfp", P.shyn, "Camp Mojache, Feralas", "Learn the Camp Mojache flight path from Shyn if you rode in."),
     finish(2981, rok, "If you carry Belgrom's message, give it to Rok Orhan."),
@@ -548,10 +550,10 @@ do
     finish(7730, hadoken), finish(7731, hadoken), accept(7732, hadoken),
     accept(3121, P.uzeri, "Witch Doctor Uzer'i wants a shrunken head taken to Neeru Fireblade in Orgrimmar."),
     finish(2822, P.jangdor),
-    taxi("fly", P.shyn, "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
+    taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
     finish(1205, tb("Melor Stonehoof", 61.54, 80.92), "Bring Melor Stonehoof Deadmire's tooth."),
   }, train(bluffOnly, 44), {
-    taxi("fly", P.tal, "Orgrimmar, Durotar", "Fly to Orgrimmar."),
+    taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly to Orgrimmar."),
   }, train(orgrimmarTrainers, 44), {
     finish(3002, uthelnay, "Uthel'nay is in the Darkbriar Lodge in the Valley of Spirits."),
     dungeon("maraudon", accept(7068, uthelnay, "Uthel'nay also wants shadowshard fragments from Maraudon. Take it if you plan that dungeon.")),
@@ -560,6 +562,8 @@ do
     finish(7732, og("Zilzibin Drumlore", 56.26, 46.68), "Zilzibin Drumlore is in the Drag."),
     finish(3121, og("Neeru Fireblade", 49.47, 50.59), "Neeru Fireblade is in the Cleft of Shadow."),
     accept(3122, og("Neeru Fireblade", 49.47, 50.59), "Neeru's herb pouch goes back to Uzer'i. You see him again at 46."),
+    action("collect", og("Auctioneer Thathung", 55.9, 62.71), "Buy 10 Gorilla Fangs at the Auction House if they are cheap: Witch Doctor Unbagwa in Stranglethorn wants them at 44. Use Next to skip and loot them from the Mistvale gorillas instead.",
+      { item = 2799, count = 10, name = "Gorilla Fangs" }),
     finish(2976, og("Belgrom Rockmaul", 75.23, 34.24), "Belgrom Rockmaul is in the Valley of Honor."),
     action("boat", P.orgrimmarZeppelin, "Leave Orgrimmar and take the zeppelin to Grom'gol.", { name = "Orgrimmar - Grom'gol" }),
   }))
@@ -580,6 +584,19 @@ do
   local shaky = st("\"Shaky\" Phillipe", 26.9, 73.59)
   local slim = st("Whiskey Slim", 27.14, 77.45)
   local unbagwa = st("Witch Doctor Unbagwa", 35.27, 60.41)
+  local ruzzgot = st("Caravaneer Ruzzgot", 27.4, 74.1)
+  local barnil = st("Barnil Stonepot", 35.66, 10.53)
+
+  -- Friz Frazzlespark's breadcrumb from the Riverglades (riverglades-eastsea) and its follow-up:
+  -- shown only if you carry it (bindonforever.com/quest/95295, /95322; the follow-up order from a
+  -- published Forever guide).
+  need(95295, "I Know a Guy", 40, 36, nil, true)
+  need(95322, "Get the Goods", 40, 36, nil, true)
+  B.quest[95322].optional, B.quest[95322].ifDone = true, 95295
+  -- Forever item-started quest (ItemSparse 217161): Bloodsail Warlocks and Skullsplitter Mystics drop
+  -- the scroll, Dudd Fizzlescroll takes it (bindonforever.com/quest/95385, item/217161).
+  need(95385, "Torn Mystical Scroll", 43, nil, nil, true)
+  B.quest[95385].startItem = B.quest[95385].startItem or 217161
 
   need(586, "Speaking with Gan'zulah", 46, 30, 584)
   need(571, "Mok'thardin's Enchantment", 41, 33, 572)
@@ -600,6 +617,9 @@ do
   need(587, "Up to Snuff", 41, 37, 595)
   need(576, "Keep An Eye Out", 42, 37, 595)
   need(8551, "The Captain's Chest", 47, 40)
+  B.elite(8551, "Gorlash")
+  B.elite(208, "King Bangalash")
+  B.elite(608, "the three Bloodsail captains")
   need(624, "Cortello's Riddle", 43, 35)
   B.quest[624].startItem = B.quest[624].startItem or 4056
   need(580, "Whiskey Slim's Lost Grog", 50, 40)
@@ -607,6 +627,8 @@ do
 
   H.chapter("stv-44", "Stranglethorn: Booty Bay and the Southern Jungle", M.stv, 44, 45, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
+    "https://bindonforever.com/quest/95385",
+    "https://bindonforever.com/quest/95322",
     qdb,
   }, { "swamp-45", "searing-45" }, {
     accept(586, P.cauldron, "The bubbling cauldron in Grom'gol speaks again: it wants more Skullsplitters dead and Ana'thek's armor."),
@@ -616,25 +638,30 @@ do
     objective(586, st(nil, 46.7, 44.0), "Kill Skullsplitter Hunters, Headhunters and Berserkers. Ana'thek the Cruel guards the top of the ruins and wears the armor.",
       "8 Skullsplitter Hunters", "6 Skullsplitter Headhunters", "4 Skullsplitter Berserkers", "Broken Armor of Ana'thek"),
     action("goto", P.hemet, "Ride north to Nesingwary's Expedition."),
-    finish(197, P.hemet), accept(208, P.hemet, "Hemet's last target is King Bangalash, the white tiger."),
+    finish(197, P.hemet), accept(208, P.hemet, "Hemet's last target is King Bangalash, an elite white tiger."),
     action("goto", P.cauldron, "Ride south to Grom'gol."),
     finish(586, P.cauldron), accept(588, P.cauldron),
     finish(588, P.kinweelay), accept(589, P.kinweelay),
-    taxi("fly", P.thysta, "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
+    taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
     accept(617, bloads, "Privateer Bloads wants akiris reeds."),
-    finish(2767, oglethorpe, "If you escorted OOX-22/FE, report to Oglethorpe Obnoticus, the gnome who built it."),
     finish(1118, P.crank, "Give Crank Fizzlebub Kravel's scheme."),
     accept(621, P.crank),
     accept(606, P.mackinley), accept(348, fin, "Fin Fizracket wants the heart of a savage gorilla."),
-    accept(595, crazz, "First Mate Crazz wants the cove north of town scouted."),
-    accept(8551, smotts, "Captain Hecklebury Smotts, near the tunnel into town, lost his chest to a crocolisk."),
+    finish(2767, oglethorpe, "If you escorted OOX-22/FE, report to Oglethorpe Obnoticus, the gnome who built it."),
+    accept(595, crazz, "First Mate Crazz, a few steps from Oglethorpe, wants the cove north of town scouted."),
+    finish(95295, ruzzgot, "If you carry Friz Frazzlespark's word from the Riverglades, Caravaneer Ruzzgot is her contact."),
+    accept(95322, ruzzgot, "Ruzzgot wants a Bloodsail trunk brought in from outside town."),
+    accept(8551, smotts, "Captain Hecklebury Smotts, near the tunnel into town, lost his chest to Gorlash, an elite crocolisk."),
     finish(595, correspondence, "Walk north out of town to the shore camp and read the Bloodsail papers on the barrel."),
     accept(597, correspondence),
-    action("goto", crazz, "Go back into Booty Bay."),
+    note(objective(95322, st("Bloodsail Trunk", 29.9, 71.0), "Ruzzgot's Bloodsail trunk sits a little east of the camp. Loot it.", "Bloodsail Trunk"),
+      "Trunk spot from a published Forever guide's route; not in the cached QuestieDB."),
+    finish(95322, ruzzgot, "Go back into Booty Bay and give Ruzzgot the trunk."),
+    action("goto", crazz, "Go back to First Mate Crazz."),
     finish(597, crazz), accept(599, crazz),
+    accept(576, dizzy, "Dizzy One-Eye, next to Crazz, lost his glass eye to the pirates."),
     accept(587, deeg, "Deeg, in the inn, wants Bloodsail snuff."),
     finish(599, P.seahorn), accept(604, P.seahorn),
-    accept(576, dizzy, "Dizzy One-Eye lost his glass eye to the pirates."),
     action("goto", st(nil, 27.5, 82.0), "Leave town by the south tunnel to the Wild Shore."),
     along(objective(604, st(nil, 27.1, 83.1), "Kill Bloodsail Swashbucklers along the Wild Shore. The charts and orders lie in the pirates' camp.",
       "10 Bloodsail Swashbucklers", "Bloodsail Charts", "Bloodsail Orders"), 587, 576),
@@ -643,16 +670,19 @@ do
     action("goto", st(nil, 33.0, 65.3), "Go back through Booty Bay and ride north up the road to Mistvale Valley."),
     along(objective(606, st(nil, 33.0, 65.3), "Kill Elder Mistvale Gorillas for their giblets.", "5 Mistvale Giblets"), 571, 348),
     along(objective(571, st(nil, 33.0, 65.3), "The same gorillas give the aged sinew.", "Aged Gorilla Sinew"), 606),
-    note(objective(348, unbagwa, "Bring 10 Gorilla Fangs from the gorillas to Witch Doctor Unbagwa in the valley. He calls out Mokk the Savage; kill him for his heart.",
-      "Heart of Mokk"), "The classic fang hand-in is not in the Forever client; check how Unbagwa calls Mokk."),
+    action("collect", st(nil, 33.0, 65.3), "Keep killing gorillas until you have 10 Gorilla Fangs for Witch Doctor Unbagwa, unless you bought them in Orgrimmar.",
+      { item = 2799, count = 10, name = "Gorilla Fangs" }),
+    note(objective(348, unbagwa, "Give Witch Doctor Unbagwa in the valley your 10 Gorilla Fangs. He calls three waves of gorillas and then Mokk the Savage; kill Mokk for his heart. Bring a partner if you can.",
+      "Heart of Mokk"), "The fang hand-in (349) is not in the client's quest list, but published Forever guides still hand Unbagwa the fangs; check in game."),
     action("goto", shaky, "Ride back to Booty Bay."),
     finish(606, shaky, "\"Shaky\" Phillipe waits near the tunnel into town."), accept(607, shaky),
     finish(607, P.mackinley), accept(609, P.mackinley),
-    finish(604, P.seahorn), accept(608, P.seahorn, "Seahorn wants the three Bloodsail captains dead. Bring a group for their ships."),
+    finish(604, P.seahorn),
+    accept(608, P.seahorn, "Seahorn wants the three Bloodsail captains dead, elites on their ships."),
     finish(576, dizzy), finish(348, fin),
-    taxi("fly", P.gringer, "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
+    taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
     finish(571, P.mokthardin), accept(573, P.mokthardin),
-    objective(208, st("King Bangalash", 38.2, 35.6), "King Bangalash and his panthers hold the hill south-east of Grom'gol. Kill the panthers first.",
+    objective(208, st("King Bangalash", 38.2, 35.6), "King Bangalash, an elite tiger, and his panthers hold the hill south-east of Grom'gol. Kill the panthers first.",
       "Head of Bangalash"),
     objective(589, st(nil, 43.1, 47.8), "Kill Ironjaw Basilisks around the Crystalvein Mine to the south-east for Pulsing Blue Shards.",
       "3 Pulsing Blue Shard"),
@@ -661,24 +691,31 @@ do
     part(609, 1, st("Maury \"Club Foot\" Wilkins", 35.3, 51.3), "Maury \"Club Foot\" Wilkins camps on the islet to the north-west.", "Maury's Clubbed Foot"),
     part(609, 2, st("Jon-Jon the Crow", 34.9, 51.8), "Jon-Jon the Crow stands beside Maury.", "Jon-Jon's Golden Spyglass"),
     part(609, 3, st("Chucky \"Ten Thumbs\"", 40.0, 58.2), "Chucky \"Ten Thumbs\" is on the big island to the south-east.", "Chucky's Huge Ring"),
-    note(objective(8551, st("Gorlash", 37.0, 69.7), "Gorlash, a big crocolisk, swims in the bay south of the islands. Kill it for Smotts' chest.",
-      "Smotts' Chest"), "Gorlash is level 47; check whether it is elite in Forever."),
+    note(objective(8551, st("Gorlash", 37.0, 69.7), "Gorlash, an elite crocolisk, swims in the bay south of the islands. Kill it for Smotts' chest.",
+      "Smotts' Chest"), "QuestieDB Forever ranks Gorlash elite (level 47)."),
     action("goto", st(nil, 30.5, 88.0), "Ride south along the coast to the Bloodsail ships off Jaguero Isle."),
     withItem(4056, accept(624, st(nil, 30.7, 88.6), "If you found Cortello's Riddle on the cliffs or from a pirate, read it.")),
-    note(objective(608, st("Fleet Master Firallon", 30.6, 90.6), "Board the three Bloodsail ships and kill Captain Stillwater, Captain Keelhaul and Fleet Master Firallon. Use Next if you have no group.",
+    note(objective(608, st("Fleet Master Firallon", 30.6, 90.6), "Board the three Bloodsail ships and kill Captain Stillwater, Captain Keelhaul and Fleet Master Firallon.",
       "Captain Stillwater", "Captain Keelhaul", "Fleet Master Firallon"), "The captains are elite in the classic data; check in game."),
     action("goto", st(nil, 26.3, 62.6), "Ride north past Booty Bay to the naga beach below Mistvale Valley."),
     along(objective(573, st(nil, 26.3, 62.6), "Kill Naga Explorers on the beach and fill the vial at the holy spring in the hills above.",
       "10 Naga Explorers", "Holy Spring Water"), 617),
     along(objective(617, st(nil, 26.3, 62.6), "The naga also carry akiris reeds.", "10 Bundle of Akiris Reed"), 573),
     action("goto", P.crank, "Ride back south to Booty Bay."),
-    finish(8551, smotts), finish(609, P.mackinley), finish(617, bloads), finish(587, deeg), finish(608, P.seahorn),
+    finish(8551, smotts), finish(609, P.mackinley), finish(617, bloads),
+    note(withItem(217161, accept(95385, P.dudd, "If a Bloodsail Warlock or a Skullsplitter Mystic dropped a Torn Mystical Scroll for you, read it next to Dudd Fizzlescroll.")),
+      "Drop sources and Dudd's spot from bindonforever (QuestieDB-format data) and a published Forever guide; not in the cached QuestieDB."),
+    finish(95385, P.dudd, "Give Dudd the scroll."),
+    finish(587, deeg), finish(608, P.seahorn),
     finish(621, P.crank), accept(1119, P.crank, "Crank's stout goes to Kravel in the Shimmering Flats. You pass there at 46."),
     accept(580, slim, "Whiskey Slim's grog washed up in the Hinterlands. You go there at 48."),
-    taxi("fly", P.gringer, "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
+    taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
     finish(573, P.mokthardin), finish(589, P.kinweelay),
     action("goto", P.hemet, "Ride north to Nesingwary's Expedition."),
     finish(208, P.hemet),
+    B.optional(action("note", barnil, "Barnil Stonepot, beside Hemet, binds the pages of The Green Hills of Stranglethorn that drop all over the jungle. "
+      .. "Each chapter is a quest of its own: I takes pages 1, 4, 6 and 8; II pages 10, 11, 14 and 16; III pages 18, 20, 21 and 24; IV pages 25, 26 and 27. "
+      .. "Hand in the chapters you can complete (missing pages sell at the Auction House), then use Next.", { name = "The Green Hills of Stranglethorn" })),
   })
 end
 
@@ -694,6 +731,7 @@ do
   need(2621, "The Disgraced One", 50, 45, 2784)
   need(2622, "The Missing Orders", 50, 45, 2621)
   need(2623, "The Swamp Talker", 55, 45, 2622)
+  B.elite(2623, "the Swamp Talker")
   -- The Alliance files register these with the Alliance prerequisite (2783); the game takes either.
   B.q(2801, "A Tale of Sorrow", 57, 45, 2623)
   need(1429, "The Atal'ai Exile", 44, 38, 1424)
@@ -710,14 +748,15 @@ do
     "https://www.wowhead.com/forever/zone=8/swamp-of-sorrows",
     qdb,
   }, { "tanaris-46", "searing-45" }, {
-    taxi("fly", P.thysta, "Stonard, Swamp of Sorrows", "Fly from Grom'gol to Stonard."),
+    taxi("fly", B.at("Breyk", 46.1, 54.8, 1435), "Stonard, Swamp of Sorrows", "Fly from Grom'gol to Stonard."),
     action("goto", hero, "Ride south-west out of Stonard to the Fallen Hero of the Horde, who waits at the edge of the swamp near the Blasted Lands road."),
     accept(2784, hero),
     objective(2784, hero, "Listen to the Fallen Hero's story.", "Fallen Hero's story"),
     finish(2784, hero), accept(2621, hero),
     action("goto", ruag, "Ride back to Stonard."),
     finish(2621, ruag, "Dispatch Commander Ruag is in the great hall."), accept(2622, ruag),
-    finish(2622, bengor, "Bengor stands beside Dar at the town's west gate."), accept(2623, bengor),
+    finish(2622, bengor, "Bengor stands beside Dar at the town's west gate."),
+    accept(2623, bengor, "Bengor wants the Warchief's orders from the Swamp Talker, a level 50 elite."),
     accept(1429, P.felzerul, "Fel'zerul wants the artifacts you found taken to an Atal'ai exile in the Hinterlands. You go there at 48."),
     action("goto", P.tokkar, "Ride south-east to Tok'Kar's camp at Misty Reed Strand."),
     accept(699, P.tokkar),
@@ -730,8 +769,8 @@ do
     action("goto", sw(nil, 64.5, 86.0), "Ride west along the coast to Stagalbog and its cave."),
     along(objective(1428, sw(nil, 63.1, 85.0), "Kill Marsh Inkspewers, Flesheaters and Oracles around Stagalbog and inside the cave.",
       "10 Marsh Inkspewers", "10 Marsh Flesheaters", "10 Marsh Oracles"), 2623),
-    note(objective(2623, sw("Swamp Talker", 62.6, 88.1), "The Swamp Talker, a level 50 elite, waits at the back of Stagalbog Cave. Bring a group for him and take the Warchief's orders.",
-      "Warchief's Orders"), "Elite in the classic data; use Next if you have no group."),
+    note(objective(2623, sw("Swamp Talker", 62.6, 88.1), "The Swamp Talker, a level 50 elite, waits at the back of Stagalbog Cave. Take the Warchief's orders from him.",
+      "Warchief's Orders"), "Elite in the classic data."),
     finish(1428, P.katar, "Ride back east to Katar."),
     action("goto", hero, "Ride west across the swamp to the Fallen Hero."),
     finish(2623, hero), accept(2801, hero),
@@ -815,23 +854,23 @@ do
     action("note", nil, "Clean out your quest log. If you never ran the Scarlet Monastery or Razorfen Downs, abandon their quests now: both runs are grey at 46 and Tanaris fills the log.",
       { name = "Quest log", drop = { 1048, 3341 } }),
     accept(3380, P.uzeri, "Before you leave Camp Mojache, Witch Doctor Uzer'i sends you to Marvon Rivetseeker in Tanaris."),
-    taxi("fly", P.shyn, "Gadgetzan, Tanaris", "Fly from Camp Mojache to Gadgetzan."),
+    taxi("fly", B.at("Bulkrek Ragefist", 51.6, 25.4, 1446), "Gadgetzan, Tanaris", "Fly from Camp Mojache to Gadgetzan."),
     action("goto", fl(nil, 77.5, 80.0), "Ride north out of Gadgetzan to the Mirage Raceway in the Shimmering Flats."),
     finish(1119, kravel, "Give Kravel Koalbeard Crank's stout."), accept(1120, kravel),
     finish(1120, pitBoss, "Hand the stout to the gnome pit boss."),
     finish(1187, razzeric, "Give Razzeric his Seaforium Booster."), accept(1188, razzeric),
     dungeon("zul-farrak", accept(2770, wizzle, "Wizzle Brassbolts wants a scale from Gahz'rilla in Zul'Farrak. Take it if you plan that dungeon.")),
     action("goto", P.tranrek, "Ride back south to Gadgetzan."),
-    finish(1188, shreev, "Give Shreev the booster."),
-    accept(3362, P.tranrek), accept(992, P.fizzledowser, "Senior Surveyor Fizzledowser stands by the water tower."),
-    action("sethearth", P.fizzgrimble, "Bind at the Gadgetzan inn.", gadgetzan),
-    accept(2875, poster, "Read the wanted poster by the inn."),
-    accept(2605, marin, "Marin Noggenfogger, the town's boss, wants a dew gland."),
+    accept(3362, P.tranrek),
+    accept(2875, poster, "Read the wanted poster a few steps from Tran'rek."),
     accept(5863, andi, "Andi Lynn wants the Dunemaul ogres cleared."),
-    accept(864, P.bilgewhizzle, "Bilgewhizzle sends your sealed testing kit back to Apothecary Zinge in the Undercity. You go there at 48."),
+    action("sethearth", P.fizzgrimble, "Bind at the Gadgetzan inn.", gadgetzan),
+    accept(2605, marin, "Marin Noggenfogger, the town's boss, wants a dew gland."),
+    finish(1188, shreev, "Give Shreev the booster."),
+    accept(992, P.fizzledowser, "Senior Surveyor Fizzledowser stands on the west side of town, on your way out."),
     objective(992, tn(nil, 39.0, 29.2), "Ride west to the pool at Sandsorrow Watch and use the dowsing widget beside it.", "Tapped Dowsing Widget"),
     finish(992, P.fizzledowser, "Ride back to Gadgetzan."), accept(82, P.fizzledowser),
-    action("goto", P.stoley, "Ride north-east to Steamwheedle Port."),
+    action("goto", modiste, "Ride north-east to Steamwheedle Port."),
     accept(8365, modiste, "Haughty Modiste wants pirate hats."), accept(8366, chief), accept(2873, P.stoley),
     action("goto", tn(nil, 72.0, 46.0), "Ride south along the coast to Lost Rigger Cove."),
     along(objective(8366, tn(nil, 73.3, 46.0), "Work through the Southsea pirates in the cove.",
@@ -863,6 +902,7 @@ do
     finish(8365, modiste), finish(3520, P.yehkinya),
     dungeon("zul-farrak", accept(3527, P.yehkinya, "Yeh'kinya wants two tablets from Zul'Farrak. Take it if you plan that dungeon.")),
     action("hearth", P.fizzgrimble, "Hearth to Gadgetzan.", gadgetzan),
+    accept(864, P.bilgewhizzle, "If you did the field tests, Bilgewhizzle by the water tower sends your sealed testing kit back to Apothecary Zinge in the Undercity. You go there at 48."),
     finish(2605, marin), accept(2606, marin), finish(2606, sprinkle), accept(2641, sprinkle, "Sprinkle's violet tragan grows in the Hinterlands. Keep it for 48."),
     finish(82, P.pestlezugg, "Give Alchemist Pestlezugg the insect parts."),
     accept(10, P.fizzledowser),
@@ -878,7 +918,8 @@ do
     action("goto", P.fizzledowser, "Ride back to Gadgetzan."),
     finish(10, P.fizzledowser), accept(110, P.fizzledowser),
     finish(110, P.pestlezugg), accept(113, P.pestlezugg),
-    finish(113, P.fizzledowser), accept(32, P.fizzledowser, "The report goes to Zilzibin Drumlore in Orgrimmar."),
+    finish(113, P.fizzledowser),
+    B.withGuide("dungeon-zul-farrak", accept(32, P.fizzledowser, "The report goes to Zilzibin Drumlore in Orgrimmar. Gadgetzan's Zul'Farrak quests come next if you plan the dungeon.")),
     dungeon("zul-farrak", accept(3042, trenton, "Trenton Lighthammer wants troll temper from Zul'Farrak's trolls.")),
     dungeon("zul-farrak", accept(2768, P.bilgewhizzle, "Bilgewhizzle wants his divino-matic rod back from Sergeant Bly in Zul'Farrak.")),
     dungeon("zul-farrak", accept(2865, P.tranrek, "Tran'rek wants uncracked scarab shells from Zul'Farrak.")),
@@ -888,7 +929,7 @@ do
     dungeon("zul-farrak", finish(3527, P.yehkinya, "Ride to Steamwheedle Port with Theka's and Velratha's tablets.")),
     dungeon("zul-farrak", accept(4787, P.yehkinya, "Yeh'kinya now wants an ancient egg from Jintha'alor in the Hinterlands. You go there at 48.")),
     dungeon("zul-farrak", finish(2770, wizzle, "Ride north to the Shimmering Flats with Gahz'rilla's scale.")),
-    taxi("fly", P.bulkrek, "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village."),
+    taxi("fly", B.at("Shardi", 35.6, 31.9, 1445), "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village."),
     accept(1170, P.drazzilb), finish(1170, P.mokmorokk), accept(1171, P.mokmorokk),
     finish(1171, P.drazzilb), accept(1172, P.drazzilb),
     finish(625, musty, "If you carry Cortello's Riddle, ride south to the musty scroll in the south-west of the marsh."),
@@ -902,10 +943,10 @@ do
     note(objective(1173, P.mokmorokk, "Challenge Overlord Mok'Morokk and beat him in a fair fight.", "Mok'Morokk defeated"),
       "He is level 45 with a lot of health; check in game."),
     finish(1173, P.drazzilb),
-    only(taxi("fly", P.shardi, "Thunder Bluff, Mulgore", "Druids and paladins: fly to Thunder Bluff to train."), { class = bluff }),
+    only(taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Druids and paladins: fly to Thunder Bluff to train."), { class = bluff }),
   }, train(bluffOnly, 48), {
-    only(taxi("fly", P.tal, "Orgrimmar, Durotar", "Fly on to Orgrimmar."), { class = bluff }),
-    only(taxi("fly", P.shardi, "Orgrimmar, Durotar", "Fly to Orgrimmar."), { class = others }),
+    only(taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly on to Orgrimmar."), { class = bluff }),
+    only(taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly to Orgrimmar."), { class = others }),
   }))
 end
 
@@ -937,6 +978,8 @@ do
   local exile = hl("Atal'ai Exile", 33.75, 75.21)
   local treasure = hl("Cortello's Treasure", 80.79, 46.82)
   local ooxRobot = hl("Homing Robot OOX-09/HL", 49.35, 37.66)
+  local sprinkle = on.tanaris("Sprinkle", 51.06, 26.87)
+  local marin = on.tanaris("Marin Noggenfogger", 51.81, 28.66)
 
   need(649, "Ripple Recovery", 48, 42)
   need(650, "Ripple Recovery", 48, 42, 649)
@@ -958,16 +1001,25 @@ do
   need(7841, "Message to the Wildhammer", 48, 44)
   need(7842, "Another Message to the Wildhammer", 48, 44, 7841)
   need(7861, "Wanted: Vile Priestess Hexx and Her Minions", 51, 46)
+  B.elite(7861, "Vile Priestess Hexx")
   need(7862, "Job Opening: Guard Captain of Revantusk Village", 51, 46)
   need(7849, "Separation Anxiety", 50, 46)
   need(7850, "Dark Vessels", 50, 46)
   need(7845, "Kidnapped Elder Torntusk!", 51, 46)
   need(7846, "Recover the Key!", 51, 46, 7845)
+  B.elite(7846, "Hitah'ya the Keeper")
   need(7847, "Return to Primal Torntusk", 51, 46, 7846)
   need(1444, "Return to Fel'Zerul", 44, 38, 1429)
   need(485, "Find OOX-09/HL!", 48, 43)
   B.quest[485].startItem = B.quest[485].startItem or 8704
   need(836, "Rescue OOX-09/HL!", 48, 43, 485)
+  -- Gammerita needs Snapjaws turned in (QuestieDB), so it is a side trip from the second visit.
+  need(7816, "Gammerita, Mon!", 48, 44, 7815)
+  B.quest[7816].optional = true
+  -- Lydon's next step in the Spider God chain (Zul'Farrak's dungeon guide carries it on).
+  need(2935, "Consult Master Gadrin", 45, 40, 2934)
+  need(2661, "Delivery for Marin", 49, 44, 2641)
+  need(2662, "Noggenfogger Elixir", 49, 44, 2661)
 
   H.chapter("hinterlands-48", "The Hinterlands: Revantusk Village and Jintha'alor", M.hinterlands, 48, 49, {
     "https://www.wowhead.com/forever/zone=47/the-hinterlands",
@@ -985,7 +1037,7 @@ do
     finish(864, zinge, "Apothecary Zinge is in the Apothecarium."),
     action("collect", uc("Auctioneer Rhyker", 60.5, 46.4), "Buy 10 Long Elegant Feathers at the Auction House for a Revantusk quest, if they are cheap. Use Next to skip and loot them from Witherbark Hideskinners instead.",
       { item = 4589, count = 10, name = "Long Elegant Feathers" }),
-    taxi("fly", garrett, "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
+    taxi("fly", B.at("Zarise", 60.14, 18.62, 1424), "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
     action("goto", on.hillsbrad(nil, 86.4, 32.0), "Ride east out of Tarren Mill and take the north-east pass into the Hinterlands."),
     finish(650, P.gilveradin, "Gilveradin Sunchaser camps just inside the Hinterlands."),
     accept(77, P.gilveradin),
@@ -1004,11 +1056,11 @@ do
     objective(580, hl(nil, 77.7, 74.2), "Walk north along the shore to the Pupellyverbos Port wreck and gather Whiskey Slim's bottles.",
       "12 Pupellyverbos Port"),
     objective(7815, hl(nil, 77.6, 65.6), "Kill Saltwater Snapjaws along the coast to the north.", "15 Saltwater Snapjaws"),
-    note(objective(7840, hl(nil, 81.0, 60.0), "Lard left his lunch on the island off the coast. The Vilebranch kidnappers there took it.",
-      "Lard's Lunch"), "Kidnapper spots are not in the quest data; check the island in game."),
     finish(2742, secret, "Climb the Overlook Cliffs to the east and find Rin'ji's secret on the cliff top."),
     accept(2782, secret, "Rin'ji's tablet goes to Oran Snakewrithe in the Undercity."),
-    finish(626, treasure, "If you carry Cortello's last riddle, follow the coast north to his treasure. A strong guardian may appear; use Next if it's too much."),
+    note(objective(7840, hl("Lard's Picnic Basket", 84.47, 41.22), "Follow the coast north to Lard's picnic basket and open it. The Vilebranch Kidnappers who come for it carry his lunch.",
+      "Lard's Lunch"), "The basket is QuestieDB's object spot; how the kidnappers appear needs an in-game check."),
+    finish(626, treasure, "If you carry Cortello's last riddle, ride a little south-west to his treasure. A strong guardian may appear; use Next if it's too much."),
     action("goto", hl(nil, 70.0, 47.0), "Ride west to the Vilebranch temples of Shaol'watha and Agol'watha."),
     along(objective(7839, hl("Slagtree's Lost Tools", 71.0, 48.7), "Slagtree's tools lie at one of the temples.", "Slagtree's Lost Tools"), 7844),
     objective(7844, hl(nil, 69.5, 47.0), "Kill Vilebranch Scalpers and Soothsayers around the temples.", "30 Vilebranch Scalpers", "15 Vilebranch Soothsayers"),
@@ -1023,12 +1075,18 @@ do
     action("goto", hl(nil, 79.3, 61.3), "Walk east with the robot to the shore. Fight off the ambushes."),
     objective(836, hl(nil, 79.3, 61.3), "Keep the robot alive until it reaches the shore.", "Escort OOX-09/HL"),
     action("goto", slagtree, "Ride back south to Revantusk Village."),
-    finish(7839, slagtree), finish(7840, lard), finish(7815, katoom), finish(7844, yayojin),
+    finish(7839, slagtree), finish(7840, lard), finish(7815, katoom),
+    accept(7816, katoom, "Katoom also wants his best lure back from Gammerita, an elite turtle on the coast north of the village. You fetch it after the other pickups here."),
+    finish(7844, yayojin),
     finish(7828, markhor), finish(7829, markhor), finish(7830, markhor),
     accept(7841, otho, "Otho Moji'ko wants the Highvale elves at Quel'Danil thinned out. You go back west for them."),
-    accept(7861, callToArms, "Read the Call to Arms board in the middle of the village."), accept(7862, callToArms),
+    accept(7862, callToArms, "Read the Call to Arms board in the middle of the village."),
+    accept(7861, callToArms, "The board also wants Vile Priestess Hexx, an elite."),
     accept(7849, markhor), accept(7845, torntusk), accept(7850, torntusk),
-    taxi("fly", gorkas, "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
+    note(objective(7816, hl("Gammerita", 80.4, 58.2), "Ride north along the shore and kill Gammerita for Katoom's lure. She is an elite turtle that wanders the beach; bring a partner if you can.",
+      "Katoom's Best Lure"), "QuestieDB has one spawn and ranks her elite (level 48); a published Forever guide searches the coast from 49 to 76."),
+    finish(7816, katoom, "Ride back to Katoom with his lure."),
+    taxi("fly", B.at("Zarise", 60.14, 18.62, 1424), "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
     finish(2933, lydon, "Give Apothecary Lydon the venom bottle."), accept(2934, lydon),
     action("goto", P.gilveradin, "Ride back east through the pass into the Hinterlands."),
     finish(77, P.gilveradin, "Give Gilveradin the honey."), accept(81, P.gilveradin, "The barrel goes to Dran Droffers in Orgrimmar."),
@@ -1047,23 +1105,31 @@ do
     part(7849, 1, hl("Pile of Skulls", 58.6, 64.8), "Search the pile of skulls by the ooze pools north of the city for Malkhor's skull.",
       "Huntsman Malkhor's Skull"),
     part(7849, 2, hl("Pile of Bones", 62.1, 75.3), "His bones are in a pile among the wolves on the terraces.", "Huntsman Malkhor's Bones"),
-    finish(7845, elder, "Elder Torntusk is chained near the top of the city."), accept(7846, elder),
+    finish(7845, elder, "Elder Torntusk is chained near the top of the city."),
+    accept(7846, elder, "He needs the shackle key from Hitah'ya the Keeper, an elite."),
     dungeon("zul-farrak", objective(4787, hl("Ancient Egg", 57.6, 86.8), "The ancient egg sits in a nest on the south side of the city.", "Ancient Egg")),
-    objective(7846, hl("Hitah'ya the Keeper", 57.3, 86.6), "Kill Hitah'ya the Keeper on the south side of the city for the shackle key.", "Shackle Key"),
+    objective(7846, hl("Hitah'ya the Keeper", 57.3, 86.6), "Kill Hitah'ya the Keeper, an elite, on the south side of the city for the shackle key.", "Shackle Key"),
     finish(7846, elder), accept(7847, elder),
-    note(objective(7861, hl("Vile Priestess Hexx", 59.5, 78.3), "Kill Vilebranch Aman'zasi Guards on the top terrace, then Vile Priestess Hexx at the altar. Bring a partner for Hexx.",
-      "Vile Priestess Hexx", "20 Vilebranch Aman'zasi Guards"), "Check whether Hexx is elite in Forever."),
+    note(objective(7861, hl("Vile Priestess Hexx", 59.5, 78.3), "Kill Vilebranch Aman'zasi Guards on the top terrace, then Vile Priestess Hexx at the altar.",
+      "Vile Priestess Hexx", "20 Vilebranch Aman'zasi Guards"), "QuestieDB Forever ranks Hexx elite (level 51)."),
     action("goto", torntusk, "Ride back east to Revantusk Village."),
     finish(7862, torntusk), finish(7861, torntusk), finish(7847, torntusk), finish(7850, torntusk), finish(7849, markhor),
     finish(7841, otho),
     accept(7842, otho, "If you have ten Long Elegant Feathers, take Otho's next task and hand them over at once. If not, use Next twice."),
     finish(7842, otho),
-    taxi("fly", gorkas, "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
+    taxi("fly", B.at("Zarise", 60.14, 18.62, 1424), "Tarren Mill, Hillsbrad", "Fly to Tarren Mill."),
     finish(2934, lydon),
-    taxi("fly", zarise, "Undercity, Tirisfal", "Fly to the Undercity."),
+    dungeon("zul-farrak", accept(2935, lydon, "Lydon sends you on to Master Gadrin in Sen'jin Village. Take it if you still plan Zul'Farrak: its guide takes you there before the run.")),
+    taxi("fly", B.at("Michael Garrett", 63.25, 48.56, 1458), "Undercity, Tirisfal", "Fly to the Undercity."),
+    B.optional(action("collect", uc("Auctioneer Rhyker", 60.5, 46.4), "If you have gold to spare, buy the Blasted Lands beast parts here: 5 Snickerfang Jowls, 6 Blasted Boar Lungs, 6 Scorpok Pincers, "
+      .. "11 Basilisk Brains and 14 Vulture Gizzards cover all five Bloodmage quests at 50. Use Next to skip; they also drop there.",
+      { items = { { 8391, 5 }, { 8392, 6 }, { 8393, 6 }, { 8394, 11 }, { 8396, 14 } }, name = "Blasted Lands parts" })),
     finish(2995, oran), finish(2782, oran), accept(8273, oran), finish(8273, oran, "Oran thanks you at once."),
     action("hearth", P.fizzgrimble, "Hearth to Gadgetzan.", gadgetzan),
-    finish(2641, on.tanaris("Sprinkle", 51.06, 26.87), "Give Sprinkle the violet tragan."),
+    finish(2641, sprinkle, "Give Sprinkle the violet tragan."),
+    accept(2661, sprinkle, "Sprinkle sends the violet powder on to Marin Noggenfogger."),
+    finish(2661, marin), accept(2662, marin),
+    finish(2662, marin, "Wait a moment while Marin brews, then talk to him again for your elixirs."),
     dungeon("zul-farrak", finish(4787, P.yehkinya, "Ride to Steamwheedle Port and give Yeh'kinya the ancient egg.")),
   }))
 end
@@ -1093,6 +1159,7 @@ do
   need(3128, "Natural Materials", 50, 40)
   need(3129, "Weapons of Spirit", 50, 40, { 3127, 3128 })
   need(7003, "Zapped Giants", 48, 45)
+  need(7721, "Fuel for the Zapping", 48, 45)
   -- The Alliance files register this with the Alliance prerequisite (3445); the game takes either.
   B.q(3444, "The Stone Circle", 51, 46, 3380)
   need(4290, "The Fare of Lar'korwi", 53, 48)
@@ -1101,13 +1168,16 @@ do
   need(3845, "It's a Secret to Everybody", 52, 47, 3844)
   need(3884, "Williden's Journal", 50, 48)
   B.quest[3884].startItem = B.quest[3884].startItem or 11116
+  -- Pickups for the 50-60 chapters (their objectives and hand-ins are in QuestHorde5060.lua).
+  need(3908, "It's a Secret to Everybody", 52, 47, 3845)
+  need(4502, "Volcanic Activity", 55, 49)
 
   H.chapter("feralas-49", "Feralas and Un'Goro: The Muisek Vessel", M.feralas, 49, 50, {
     "https://www.wowhead.com/forever/zone=357/feralas",
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
     qdb,
   }, nil, {
-    taxi("fly", P.bulkrek, "Camp Mojache, Feralas", "Fly from Gadgetzan to Camp Mojache."),
+    taxi("fly", B.at("Shyn", 75.5, 44.4, 1444), "Camp Mojache, Feralas", "Fly from Gadgetzan to Camp Mojache."),
     accept(3063, talo, "Talo Thornhoof wants the Northspring harpies punished."), accept(3062, talo),
     accept(7734, P.jangdor),
     finish(3123, P.uzeri, "Give Uzer'i the wildkin muiseks."), accept(3124, P.uzeri), accept(3128, P.uzeri),
@@ -1137,14 +1207,17 @@ do
     finish(7734, P.jangdor), finish(3063, talo), finish(3062, talo),
     action("goto", zorbin, "Ride west along the road to the Forgotten Coast docks."),
     accept(7003, zorbin, "Zorbin Fandazzle lends you an ultra-shrinker for the giants to the north."),
+    accept(7721, zorbin, "He also wants cores from the sea elementals on the shore to power it."),
     action("goto", fe(nil, 38.5, 22.6), "Ride north to the giants along the Forgotten Coast."),
     along(objective(3127, fe(nil, 38.5, 22.6), "Kill Land Walkers and Cliff Giants and capture them with the vessel.", "7 Mountain Giant Muisek"), 7003),
     objective(7003, fe(nil, 38.5, 22.6), "Zap giants with Zorbin's shrinker, kill the shrunken ones and loot their residue.", "15 Miniaturization Residue"),
-    finish(7003, zorbin),
+    objective(7721, fe(nil, 36.9, 35.0), "On the way back south, kill Sea Elementals and Sea Sprays on the beach for Water Elemental Cores.",
+      "10 Water Elemental Core"),
+    finish(7003, zorbin), finish(7721, zorbin),
     action("goto", P.uzeri, "Ride back east to Camp Mojache."),
     finish(3127, P.uzeri), finish(3128, P.uzeri), accept(3129, P.uzeri),
     finish(3129, P.uzeri, "Wait while Uzer'i prepares your weapon, then take it."),
-    taxi("fly", P.shyn, "Gadgetzan, Tanaris", "Fly to Gadgetzan."),
+    taxi("fly", B.at("Bulkrek Ragefist", 51.6, 25.4, 1446), "Gadgetzan, Tanaris", "Fly to Gadgetzan."),
     accept(3444, P.marvon, "Ride south to Marvon Rivetseeker. He needs a stone circle from his workshop in Ratchet."),
     action("goto", ug(nil, 70.0, 80.0), "Ride west across the desert and down the ramp into Un'Goro Crater."),
     accept(4290, torwa, "Torwa Pathfinder waits just inside the crater's eastern entrance."),
@@ -1160,13 +1233,15 @@ do
     withItem(11116, accept(3884, nil, "If a crater beast dropped a mangled journal, read it.")),
     action("goto", linken, "Ride north through the crater to Marshal's Refuge."),
     finish(3845, linken, "Give Linken his things."),
+    accept(3908, linken, "Linken has one more task: his old sword goes to Donova Snowden in Winterspring. Keep it for the 50s."),
     finish(3884, williden),
     taxi("getfp", gryfe, "Marshal's Refuge, Un'Goro Crater", "Learn the Marshal's Refuge flight path from Gryfe."),
-    taxi("fly", gryfe, "Crossroads, The Barrens", "Fly to the Crossroads."),
+    taxi("fly", B.at("Devrak", 51.5, 30.34, 1413), "Crossroads, The Barrens", "Fly to the Crossroads."),
     action("sethearth", boorand, "Bind at the Crossroads inn.", { bind = "The Crossroads" }),
-    taxi("fly", devrak, "Ratchet, The Barrens", "Fly to Ratchet."),
+    taxi("fly", B.at("Bragok", 63.09, 37.16, 1413), "Ratchet, The Barrens", "Fly to Ratchet."),
     objective(3444, on.barrens("Marvon's Chest", 62.5, 38.5), "Open Marvon's chest in his workshop in Ratchet and take the stone circle. Keep it for when you are back in Tanaris.",
       "Stone Circle"),
+    accept(4502, on.barrens("Liv Rizzlefix", 62.45, 38.73), "Liv Rizzlefix, in the same workshop, wants ash from Un'Goro's fire elementals. Keep it for your next Un'Goro visit."),
     action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from the Ratchet dock to Booty Bay. Use Next when you land.", { name = "Ratchet - Booty Bay" }),
   })
 end
@@ -1185,7 +1260,7 @@ do
     "https://www.wowhead.com/forever/quest=98192",
     qdb,
   }, { "feralas-43", "tanaris-41" }, {
-    taxi("fly", P.doras, "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village in Dustwallow Marsh."),
+    taxi("fly", B.at("Shardi", 35.6, 31.9, 1445), "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village in Dustwallow Marsh."),
     taxi("getfp", P.shardi, "Brackenwall Village, Dustwallow Marsh", "Learn the Brackenwall flight path from Shardi if you rode in."),
     note(accept(98192, krak, "Krak, a skinner in Brackenwall, wants intact raptor hides."), "A Forever quest; the giver's spot needs an in-game check."),
     accept(1166, P.mokmorokk, "Overlord Mok'Morokk lost his grog, snuff and strongbox in the south of the marsh."),
@@ -1216,7 +1291,7 @@ do
     note(objective(1173, P.mokmorokk, "Challenge Overlord Mok'Morokk and beat him in a fair fight.", "Mok'Morokk defeated"),
       "He is level 45 with a lot of health; check in game."),
     finish(1173, P.drazzilb),
-    taxi("fly", P.shardi, "Ratchet, The Barrens", "Fly to Ratchet."),
+    taxi("fly", B.at("Bragok", 63.09, 37.16, 1413), "Ratchet, The Barrens", "Fly to Ratchet."),
     finish(1270, mebok, "Tell Mebok Mizzyrix that Stinky made it out."),
   })
 end
@@ -1238,6 +1313,7 @@ do
   need(7724, "Fiery Menace!", 49, 45)
   need(7727, "Incendosaurs? Whateverosaur is More Like It", 49, 45)
   need(7701, "WANTED: Overseer Maltorius", 50, 45)
+  B.elite(7701, "Overseer Maltorius")
   need(3441, "Divine Retribution", 48, 40)
   need(3442, "The Flawless Flame", 48, 40, 3441)
   need(4449, "Caught!", 45, 43)
@@ -1246,11 +1322,14 @@ do
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
     qdb,
   }, { "hinterlands-48", "feralas-49", "ungoro-48" }, {
-    taxi("fly", P.breyk, "Kargath, Badlands", "Fly to Kargath in the Badlands (from Stonard, Grom'gol or the Undercity)."),
+    action("collect", nil, "Bring 15 Silk Cloth: the prisoner in the Grimesilt outhouse wants it. If your bags are short, buy it at an Auction House before you fly out, or use Next.",
+      { item = 4306, count = 15, name = "Silk Cloth" }),
+    taxi("fly", B.at("Gorrik", 4, 44.8, 1418), "Kargath, Badlands", "Fly to Kargath in the Badlands (from Stonard, Grom'gol or the Undercity)."),
     note(action("goto", grisha, "Take the road west out of Kargath into the Searing Gorge and climb to Thorium Point on the north-west rim."),
       "Check the way in from the Badlands in game."),
     taxi("getfp", grisha, "Thorium Point, Searing Gorge", "Learn the Thorium Point flight path from Grisha."),
-    accept(7728, poster, "Read the board at Thorium Point."), accept(7729, poster), accept(7701, poster),
+    accept(7728, poster, "Read the board at Thorium Point."), accept(7729, poster),
+    accept(7701, poster, "The board also wants Overseer Maltorius, an elite."),
     accept(7723, hansel), accept(7724, hansel), accept(7727, hansel),
     accept(3441, kalaran, "Kalaran Windblade stands on the ledge south of Thorium Point."),
     objective(3441, kalaran, "Listen to Kalaran's story.", "Kalaran's story"),
@@ -1265,8 +1344,8 @@ do
       7723),
     action("goto", sg(nil, 46.5, 26.0), "Climb to the Slag Pit, the cave on the Cauldron's north side."),
     objective(7727, sg(nil, 46.5, 23.7), "Kill the Incendosaurs in the Slag Pit's lava pools.", "20 Incendosaurs"),
-    note(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius waits deep in the Slag Pit. Bring a partner and take his head.",
-      "Head of Overseer Maltorius"), "Elite in the classic data; check in game."),
+    note(objective(7701, sg("Overseer Maltorius", 40.8, 35.9), "Overseer Maltorius waits deep in the Slag Pit. Take his head.",
+      "Head of Overseer Maltorius"), "QuestieDB Forever ranks him elite (level 50)."),
     action("goto", sg(nil, 25.7, 76.3), "Climb out of the Cauldron and ride to the south-west plateaus."),
     objective(7724, sg(nil, 25.7, 76.3), "Hunt Greater Lava Spiders around the lava pools.", "20 Greater Lava Spiders"),
     action("goto", outhouse, "Ride east to the Grimesilt dig site in the south-east."),
@@ -1297,7 +1376,7 @@ do
     "https://www.wowhead.com/forever/zone=4/blasted-lands",
     qdb,
   }, { "feralas-49", "ungoro-48" }, {
-    taxi("fly", P.thysta, "Stonard, Swamp of Sorrows", "Fly to Stonard."),
+    taxi("fly", B.at("Breyk", 46.1, 54.8, 1435), "Stonard, Swamp of Sorrows", "Fly to Stonard."),
     action("goto", on.swamp(nil, 34.2, 66.4), "Ride south-west out of Stonard and take the road south into the Blasted Lands."),
     accept(2581, drazial, "The Bloodmages Drazial and Lynnore camp at the edge of the Dreadmaul hills, north of the Blasted Lands' center."),
     accept(2583, drazial), accept(2585, drazial), accept(2601, lynnore), accept(2603, lynnore),
@@ -1343,7 +1422,7 @@ do
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
     qdb,
   }, { "feralas-49" }, {
-    taxi("fly", P.doras, "Gadgetzan, Tanaris", "Fly to Gadgetzan."),
+    taxi("fly", B.at("Bulkrek Ragefist", 51.6, 25.4, 1446), "Gadgetzan, Tanaris", "Fly to Gadgetzan."),
     action("goto", ug(nil, 70.0, 80.0), "Ride west across the desert and down the ramp into Un'Goro Crater."),
     accept(4290, torwa, "Torwa Pathfinder waits just inside the crater's eastern entrance."),
     accept(3844, raft, "Search the wrecked raft by the lake to the north-west."),
@@ -1358,15 +1437,16 @@ do
     withItem(11116, accept(3884, nil, "If a crater beast dropped a mangled journal, read it.")),
     action("goto", linken, "Ride north through the crater to Marshal's Refuge."),
     finish(3845, linken, "Give Linken his things."),
-    finish(3884, williden),
+    accept(4145, larion, "Larion, just east of Linken, wants the bloodpetal plants thinned."),
     taxi("getfp", gryfe, "Marshal's Refuge, Un'Goro Crater", "Learn the Marshal's Refuge flight path from Gryfe."),
+    finish(3884, williden),
     accept(3881, williden), accept(3883, holanyee), accept(3882, spark), accept(4503, shizzle),
-    accept(4145, larion, "Larion wants the bloodpetal plants thinned."), accept(4243, karna, "Karna Remtravel lost track of her robot, A-Me 01."),
+    accept(4243, karna, "Karna Remtravel lost track of her robot, A-Me 01."),
     finish(4243, ame, "Ride east along the crater's north wall. A-Me 01 hides among the rocks."),
-    along(part(4145, 1, ug(nil, 65.7, 32.8), "Kill Bloodpetal Lashers in the eastern hills.", "5 Bloodpetal Lashers"), 3881),
-    part(4145, 4, ug(nil, 65.6, 34.7), "Bloodpetal Threshers grow beside them.", "5 Bloodpetal Threshers"),
+    along(part(4145, 1, ug(nil, 65.7, 32.8), "Kill Bloodpetal Lashers in the eastern hills.", "5 Bloodpetal Lashers"), 3881, 4503),
+    part(4503, 1, ug(nil, 63.9, 35.2), "Young Diemetradons graze just west of them. Take their scales.", "8 Webbed Diemetradon Scale"),
+    part(4145, 4, ug(nil, 65.6, 34.7), "Bloodpetal Threshers grow back east, beside the lashers.", "5 Bloodpetal Threshers"),
     part(3881, 1, ug("Crate of Foodstuffs", 68.5, 36.5), "The expedition's crate of foodstuffs lies in the same hills.", "Crate of Foodstuffs"),
-    part(4503, 1, ug(nil, 63.9, 35.2), "Young Diemetradons graze nearby. Take their scales.", "8 Webbed Diemetradon Scale"),
     part(4503, 2, ug(nil, 78.3, 59.2), "Ride south-east and kill Fledgling Pterrordaxes on the eastern cliffs for scales.", "8 Webbed Pterrordax Scale"),
     note(objective(3883, ug(nil, 48.0, 80.0), "Ride south-west to the Gorishi hive. Use the scraping vial on a hive wall in a hatchery chamber with hanging larvae.",
       "Hive Wall Sample"), "The hatchery spot is not in the quest data."),

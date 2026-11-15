@@ -248,6 +248,50 @@ function ns.traitLayout()
   return layoutCache
 end
 
+-- The talents you have now: lower(name) -> points in it, from the trait nodes (each node's active
+-- entry, else its first). nil when the client can't tell us (no trait API, or no nodes yet).
+local function plainNumber(v)
+  if issecretvalue and issecretvalue(v) then return nil end
+  return tonumber(v)
+end
+function ns.traitRanks()
+  if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits and C_Traits.GetConfigInfo
+    and C_Traits.GetTreeNodes and C_Traits.GetNodeInfo and C_Traits.GetEntryInfo and C_Traits.GetDefinitionInfo) then
+    return nil
+  end
+  local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+  if not (ok and configID) then return nil end
+  local iok, info = pcall(C_Traits.GetConfigInfo, configID)
+  if not (iok and type(info) == "table" and type(info.treeIDs) == "table") then return nil end
+  local out, seen = {}, 0
+  for _, treeID in ipairs(info.treeIDs) do
+    local nok, nodes = pcall(C_Traits.GetTreeNodes, treeID)
+    if nok and type(nodes) == "table" then
+      for i = 1, math.min(#nodes, 400) do
+        local gok, node = pcall(C_Traits.GetNodeInfo, configID, nodes[i])
+        if gok and type(node) == "table" then
+          seen = seen + 1
+          local rank = plainNumber(node.ranksPurchased) or plainNumber(node.currentRank) or 0
+          local entryID = (type(node.activeEntry) == "table" and node.activeEntry.entryID)
+            or (type(node.entryIDs) == "table" and node.entryIDs[1])
+          if rank > 0 and entryID then
+            local eok, entry = pcall(C_Traits.GetEntryInfo, configID, entryID)
+            local defID = eok and type(entry) == "table" and entry.definitionID
+            local dok, def = false, nil
+            if defID then dok, def = pcall(C_Traits.GetDefinitionInfo, defID) end
+            if dok and type(def) == "table" then
+              local name = (def.overrideName and def.overrideName ~= "" and def.overrideName) or spellNameOf(def.spellID or def.overriddenSpellID)
+              if name then out[lower(name)] = (out[lower(name)] or 0) + rank end
+            end
+          end
+        end
+      end
+    end
+  end
+  if seen == 0 then return nil end
+  return out
+end
+
 -- The plan level of the next point to spend: with 2 points left at 30, that's level 29's.
 local function nextPlanLevel(level, unspent)
   if not unspent then return level end
@@ -396,12 +440,10 @@ local function makeTrace()
   t.tag = ns.art.frame("Frame", nil, t)
   t.tag:SetSize(10, 22)
   t.tag:SetPoint("BOTTOM", t, "TOP", 0, 8)
-  t.tag.blizz = ns.art.backdrop(t.tag, "tooltip")
-  if not t.tag.blizz then
-    t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
-    t.tag.line = t.tag:CreateTexture(nil, "BORDER")
-    t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
-  end
+  -- the flat look's fill and underline (shown without the tooltip border and EllesmereUI's panel)
+  t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
+  t.tag.line = t.tag:CreateTexture(nil, "BORDER")
+  t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
   t.tag.text = t.tag:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   t.tag.text:SetPoint("CENTER", 0, 0)
 
@@ -451,13 +493,22 @@ local function paintTrace(t)
   t.shapeGlow:SetVertexColor(a[1], a[2], a[3]); t.shapeLine:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
   t.disc:SetVertexColor(a[1], a[2], a[3])
   t.spark:SetVertexColor(C.gem[1], C.gem[2], C.gem[3]); t.spark2:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
-  if t.tag.blizz then
-    t.tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
-    t.tag:SetBackdropBorderColor(rgba(C.edge))
-  else
-    t.tag.bg:SetColorTexture(rgba(C.panel)); t.tag.line:SetColorTexture(rgba(C.edge))
+  -- the tag's frame, again after a theme switch: the tooltip border, the flat look or EllesmereUI's panel
+  local tag = t.tag
+  if tag.chromeFor ~= ns.themeVersion then
+    tag.chromeFor = ns.themeVersion
+    local skinned = ns.ellesmere.backing(tag, "Panel")
+    tag.blizz = ns.art.backdrop(tag, "tooltip")
+    tag.bg:SetShown(not skinned and not tag.blizz); tag.line:SetShown(not skinned and not tag.blizz)
+    ns.ellesmere.fonts(tag)
   end
-  t.tag.text:SetTextColor(rgba(C.titleInk))
+  if tag.blizz then
+    tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
+    tag:SetBackdropBorderColor(rgba(C.edge))
+  else
+    tag.bg:SetColorTexture(rgba(C.panel)); tag.line:SetColorTexture(rgba(C.edge))
+  end
+  tag.text:SetTextColor(rgba(C.titleInk))
 end
 
 -- Fit the trace to the button: copy its border when we can read it, else a box or a disc.
@@ -500,16 +551,7 @@ local function makeHint()
   h:SetClampedToScreen(true)
   h:EnableMouse(false)
   h:Hide()
-  h.blizz = A.backdrop(h, "tooltip")
-  if not h.blizz then
-    h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
-    h.edges = {}
-    for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
-    h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
-    h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
-    h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
-    h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
-  end
+  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")
@@ -522,7 +564,8 @@ local function makeHint()
   h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, 1)
   h.name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   h.name:SetPoint("TOPLEFT", h.label, "BOTTOMLEFT", 0, -2)
-  h.name:SetFont("Fonts\\MORPHEUS.TTF", 18, "")
+  h.name:SetFont(ns.headFont(), 18, "")
+  h.name.codexHead = 18
   h.name:SetShadowOffset(1, -1)
   h.next = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   h.next:SetPoint("TOPLEFT", h.name, "BOTTOMLEFT", 0, -2)
@@ -531,15 +574,8 @@ local function makeHint()
 end
 
 local function paintHint(h)
-  if h.blizz then
-    h:SetBackdropColor(0.03, 0.03, 0.05, 0.94)
-    h:SetBackdropBorderColor(rgba(C.edge))
-  else
-    h.bg:SetColorTexture(rgba(C.bg))
-    for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
-  end
-  ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
-  h.label:SetTextColor(1, 0.82, 0); h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
+  ns.art.paintCard(h)
+  h.name:SetTextColor(rgba(C.titleInk)); h.next:SetTextColor(rgba(C.dim))
 end
 
 hideGuide = function()
@@ -547,6 +583,28 @@ hideGuide = function()
   if guide.hint then guide.hint:Hide() end
   guide.open = false
   guide.edgeRoot = nil -- look for bars around the window again on the next open
+end
+
+-- A custom path with no point for this level: the card says to plan it, nothing is traced.
+local function showUnplanned(root, planLevel)
+  local key = "unplanned:" .. planLevel
+  if guide.open and guide.root == root and guide.key == key and guide.theme == ns.themeVersion then
+    if guide.hint and guide.hint:IsShown() and ns.windowEdgesDue(guide) then ns.placeByWindow(guide.hint, root, guide) end
+    return
+  end
+  guide.open, guide.root, guide.theme, guide.key = true, root, ns.themeVersion, key
+  guide.talent, guide.button, guide.traced = nil, nil, false
+  guide.trace = guide.trace or makeTrace()
+  guide.hint = guide.hint or makeHint()
+  paintTrace(guide.trace); paintHint(guide.hint)
+  local h = guide.hint
+  ns.setIcon(h.icon, ns.ADDON_ICON)
+  h.label:SetText("LEVELING CODEX  -  LEVEL " .. planLevel)
+  h.name:SetText("No point planned")
+  h.next:SetText("Plan it in /codex talents.")
+  guide.trace:Hide()
+  ns.placeByWindow(h, root, guide)
+  h:Show()
 end
 
 -- Runs every 0.25 s. Cheap once the talent is traced: one name check on the cached button.
@@ -569,6 +627,7 @@ local function talentGuideTick()
   local planLevel = nextPlanLevel(level, unspent)
   local hit, rank = ns.talentAt(planLevel)
   if not hit then
+    if ns.talentUnplanned(planLevel) then return showUnplanned(root, planLevel) end
     if guide.open then hideGuide() end
     return
   end
@@ -648,7 +707,7 @@ end
 
 -- For /codex debug: what the talent guide can see right now.
 function ns.talentDebugLines()
-  local out = {}
+  local out = ns.talentPathDebugLines and ns.talentPathDebugLines() or {}
   local root = shownTalentRoot()
   local rname = root and root.GetName and select(2, pcall(root.GetName, root)) or nil
   out[#out + 1] = "talent window: " .. (root and tostring(rname or "(unnamed)") or "not open")

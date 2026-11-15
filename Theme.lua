@@ -50,10 +50,15 @@ ns.THEMES = {
 local C = {}
 ns.C = C
 
+-- A third theme, "ellesmere", exists while EllesmereUI lends the Codex its look (Ellesmere.lua); its
+-- palette carries eui = true, which the other two leave out (a key a theme doesn't name is cleared).
 ns.themeVersion = 0 -- bumped on every switch, so long-lived frames know to repaint
 function ns.useTheme(name)
-  local t = ns.THEMES[name] or ns.THEMES.forever
+  local key = ns.THEMES[name] and name or "forever"
+  local t = ns.THEMES[key]
+  for k in pairs(C) do if t[k] == nil then C[k] = nil end end
   for k, v in pairs(t) do C[k] = v end
+  ns.themeKey = key
   ns.themeVersion = ns.themeVersion + 1
 end
 ns.useTheme("forever")
@@ -69,6 +74,21 @@ function ns.charDB() return LevelingCodexCharDB or {} end
 function ns.try(fn, ...)
   if type(fn) ~= "function" then return false end
   return pcall(fn, ...)
+end
+
+-- GetItemInfo's returns (name, link, quality, ..., sellPrice 11th, classID 12th): C_Item.GetItemInfo
+-- where the client has it (WoW: Forever, like retail, reads item info there: asking only the old
+-- global left every grey without a price), else the classic global; nil while the item isn't cached,
+-- on an error or without either call.
+local function okValues(ok, ...) if ok then return ... end end
+function ns.itemInfoAPI()
+  if type(C_Item) == "table" and type(C_Item.GetItemInfo) == "function" then return C_Item.GetItemInfo end
+  if type(GetItemInfo) == "function" then return GetItemInfo end
+end
+function ns.itemInfo(item)
+  local get = ns.itemInfoAPI()
+  if not get or item == nil then return nil end
+  return okValues(pcall(get, item))
 end
 
 -- Timers: C_Timer when the client has it, else a small OnUpdate scheduler.
@@ -139,6 +159,26 @@ function ns.padText(s)
   s = s:gsub("(mash%a*) ([ABXY])%f[%W]", "%1 \2%2"):gsub("(works) ([ABXY]) and ([ABXY])%f[%W]", "%1 \2%2 and \2%3")
   s = s:gsub("\1([LR])", function(k) return P[k] end):gsub("\2([ABXY])", function(k) return P[k] end)
   return s
+end
+
+-- Copper as "1g 20s 5c" with each part in its coin's colour (colour codes are ASCII).
+function ns.coins(copper)
+  copper = math.max(0, math.floor(tonumber(copper) or 0))
+  local parts = {}
+  local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+  if g > 0 then parts[#parts + 1] = "|cffffd100" .. g .. "g|r" end
+  if s > 0 then parts[#parts + 1] = "|cffc7c7cf" .. s .. "s|r" end
+  if c > 0 or #parts == 0 then parts[#parts + 1] = "|cffeda55f" .. c .. "c|r" end
+  return table.concat(parts, " ")
+end
+
+-- A whole number with thousands separators: 21400 -> "21,400".
+function ns.thousands(n)
+  n = math.floor((tonumber(n) or 0) + 0.5)
+  local digits = tostring(math.abs(n))
+  local out = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+  if out:sub(1, 1) == "," then out = out:sub(2) end
+  return (n < 0 and "-" or "") .. out
 end
 
 -- Copper as "1g 20s 5c" (ASCII, no coin icons).

@@ -58,7 +58,9 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
-  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED" }) do
+  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
+  "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -80,12 +82,26 @@ C_QuestLog = {
   AddQuestWatch = function(id) MOCK.watches = MOCK.watches or {}; MOCK.watches[id] = true end,
   RemoveQuestWatch = function(id) if MOCK.watches then MOCK.watches[id] = nil end end,
   GetQuestWatchType = function(id) return MOCK.watches and MOCK.watches[id] and 0 or nil end,
-  IsPushableQuest = function() return true end,
+  -- MOCK.notPushable[questID]: the game won't let that quest be shared
+  IsPushableQuest = function(id) return not (MOCK.notPushable and MOCK.notPushable[id]) end,
 }
--- Parties: MOCK.party = in a party; addon messages go to MOCK.addonSent, chat to MOCK.said,
--- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed).
+-- Parties: MOCK.party = in a party (MOCK.raid = a raid); addon messages go to MOCK.addonSent, chat to MOCK.said,
+-- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed). MOCK.partyMembers = { { name, realm, level,
+-- class, offline, dead } } are party1..N (UnitName/UnitLevel/UnitClass/UnitIsConnected/UnitIsDeadOrGhost,
+-- GetNumSubgroupMembers).
 function IsInGroup() return MOCK.party or false end
-function IsInRaid() return false end
+function IsInRaid() return MOCK.party and MOCK.raid or false end
+local function partyMember(unit)
+  local n = type(unit) == "string" and tonumber(unit:match("^party(%d)$"))
+  return n and MOCK.party and MOCK.partyMembers and MOCK.partyMembers[n] or nil
+end
+MOCK.partyMember = partyMember
+function GetNumSubgroupMembers() return MOCK.party and MOCK.partyMembers and #MOCK.partyMembers or 0 end
+function UnitIsConnected(unit)
+  local m = partyMember(unit)
+  if m then return not m.offline end
+  return true
+end
 C_ChatInfo = {
   RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefix = prefix; return true end,
   SendAddonMessage = function(prefix, text, channel)
@@ -102,7 +118,12 @@ function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
 function OpenWorldMap(map) MOCK.openedMap = map end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
-  GetMapInfo = function(id) return id == 1433 and { name = "Redridge Mountains" } or nil end,
+  -- MOCK.mapInfo[id] = { name, mapType, parentMapID } (opt-in: other names change "Travel to" captions)
+  GetMapInfo = function(id)
+    local m = MOCK.mapInfo and MOCK.mapInfo[id]
+    if m then return m end
+    return id == 1433 and { name = "Redridge Mountains" } or nil
+  end,
   GetMapWorldSize = function(id)
     local size = MOCK.mapSizes and MOCK.mapSizes[id]
     if size then return size[1], size[2] end
@@ -116,7 +137,8 @@ C_Map = {
   ClearUserWaypoint = function() MOCK.userWaypoint = nil end,
   CanSetUserWaypointOnMap = function(map) return not (MOCK.noWaypointMaps and MOCK.noWaypointMaps[map]) end,
 }
-C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end }
+C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end,
+  IsSuperTrackingUserWaypoint = function() return MOCK.superTracked and true or false end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
 function GetInstanceInfo()
@@ -270,6 +292,7 @@ function Region:SetPoint(point, rel, relPoint, x, y)
     if p[1] == point then table.remove(self._points, i); break end
   end
   self._points[#self._points + 1] = { point, rel or self._parent, relPoint, x or 0, y or 0 }
+  self._pointSets = (self._pointSets or 0) + 1 -- lets tests see whether something was moved
 end
 function Region:SetAllPoints(rel) self:ClearAllPoints(); self:SetPoint("TOPLEFT", rel or self._parent); self:SetPoint("BOTTOMRIGHT", rel or self._parent) end
 function Region:ClearAllPoints() self._points = {} end
@@ -284,8 +307,13 @@ function Region:SetHeight(h) self._h = h end
 function Region:GetWidth() return self._w end
 function Region:GetHeight() return self._h end
 function Region:GetSize() return self._w, self._h end
-function Region:GetCenter() return self._cx or 500, self._cy or 500 end
-function Region:GetLeft() return 0 end
+function Region:GetCenter()
+  -- a frame placed by its centre from the screen's bottom left is where it says (its own units)
+  local p = self._points[1]
+  if p and p[1] == "CENTER" and p[2] == UIParent and p[3] == "BOTTOMLEFT" then return p[4], p[5] end
+  return self._cx or 500, self._cy or 500
+end
+function Region:GetLeft() return self._left or 0 end
 function Region:GetTop() return self._top or 700 end
 function Region:GetBottom() return self._bottom or 100 end
 function Region:IsShown() return self._shown end
@@ -302,18 +330,26 @@ local function fire(self, script, ...)
   if fn then return fn(self, ...) end
 end
 MOCK.fire = fire
+-- Like the client: a frame that becomes visible or invisible fires OnShow/OnHide, and so does
+-- every shown child under it (hiding UIParent for a cinematic or Alt+Z reaches the addon's frames).
+local function fireTree(self, script)
+  fire(self, script)
+  for _, child in ipairs(self._children or {}) do
+    if child._shown then fireTree(child, script) end
+  end
+end
 function Region:Show()
   secureCheck(self, "Show")
   if self._shown then return end
   self._shown = true
-  if self:IsVisible() then fire(self, "OnShow") end
+  if self:IsVisible() then fireTree(self, "OnShow") end
 end
 function Region:Hide()
   secureCheck(self, "Hide")
   if not self._shown then return end
   local wasVisible = self:IsVisible()
   self._shown = false
-  if wasVisible then fire(self, "OnHide") end
+  if wasVisible then fireTree(self, "OnHide") end
 end
 function Region:SetShown(on) if on then self:Show() else self:Hide() end end
 function Region:SetAlpha(a) self._alpha = a end
@@ -366,7 +402,11 @@ function Texture:SetColorTexture(r, g, b, a)
   if self._grad then self._gradStale = true end
   if self._rot and self._rot ~= 0 then self._rotStale = true end
 end
-function Texture:SetVertexColor() end
+function Texture:SetVertexColor(r, g, b, a) self._vertex = { r or 1, g or 1, b or 1, a or 1 } end
+function Texture:GetVertexColor()
+  local v = self._vertex or { 1, 1, 1, 1 }
+  return v[1], v[2], v[3], v[4]
+end
 function Texture:SetBlendMode(m) if m ~= "ADD" and m ~= "BLEND" and m ~= "ALPHAKEY" and m ~= "DISABLE" and m ~= "MOD" then error("bad blend mode", 2) end end
 function Texture:SetDrawLayer(layer, sub)
   if sub and (sub < -8 or sub > 7) then error("SetDrawLayer: sublevel out of range", 2) end
@@ -401,8 +441,13 @@ function FontString:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 function FontString:SetFontObject(o)
   if self._font then self._fontStale = true end
 end
-function FontString:SetTextColor(r, g, b)
+function FontString:SetTextColor(r, g, b, a)
   if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then error("SetTextColor: bad color", 2) end
+  self._color = { r, g, b, a or 1 }
+end
+function FontString:GetTextColor()
+  local c = self._color or { 1, 1, 1, 1 }
+  return c[1], c[2], c[3], c[4]
 end
 function FontString:SetShadowColor() end
 function FontString:SetShadowOffset() end
@@ -471,12 +516,27 @@ function Frame:RegisterEvent(ev)
   MOCK.events[ev] = MOCK.events[ev] or {}
   MOCK.events[ev][self] = true
 end
+-- A unit event for the units named only: MOCK.unitEvents[ev][frame] = { units }.
+MOCK.unitEvents = {}
+function Frame:RegisterUnitEvent(ev, ...)
+  if not MOCK.knownEvents[ev] then error('Attempt to register unknown event "' .. tostring(ev) .. '"', 2) end
+  if eventForbidden(ev, "RegisterUnitEvent") then return end
+  if MOCK.events[ev] then MOCK.events[ev][self] = nil end
+  MOCK.unitEvents[ev] = MOCK.unitEvents[ev] or {}
+  MOCK.unitEvents[ev][self] = { ... }
+end
 function Frame:UnregisterEvent(ev)
   if eventForbidden(ev, "UnregisterEvent") then return end
   if MOCK.events[ev] then MOCK.events[ev][self] = nil end
+  if MOCK.unitEvents[ev] then MOCK.unitEvents[ev][self] = nil end
 end
-function Frame:UnregisterAllEvents() for _, set in pairs(MOCK.events) do set[self] = nil end end
-function Frame:IsEventRegistered(ev) return MOCK.events[ev] and MOCK.events[ev][self] or false end
+function Frame:UnregisterAllEvents()
+  for _, set in pairs(MOCK.events) do set[self] = nil end
+  for _, set in pairs(MOCK.unitEvents) do set[self] = nil end
+end
+function Frame:IsEventRegistered(ev)
+  return (MOCK.events[ev] and MOCK.events[ev][self]) or (MOCK.unitEvents[ev] and MOCK.unitEvents[ev][self] and true) or false
+end
 function Frame:SetFrameStrata(s) self._strata = s end
 function Frame:GetFrameStrata() return self._strata or "MEDIUM" end
 function Frame:SetFrameLevel(l) self._level = l end
@@ -491,7 +551,11 @@ function Frame:IsMouseEnabled()
   if self._mouse ~= nil then return self._mouse end
   return self._type == "Button" or self._type == "CheckButton"
 end
-function Frame:EnableMouseWheel() end
+function Frame:EnableMouseWheel(on) self._wheel = on and true or false end
+function Frame:IsMouseWheelEnabled() return self._wheel or false end
+-- Mouse motion (OnEnter/OnLeave) and clicks apart: a click-through frame still gets its tooltip.
+function Frame:SetMouseClickEnabled(on) self._mouseClick = on and true or false end
+function Frame:SetMouseMotionEnabled(on) self._mouseMotion = on and true or false end
 function Frame:EnableKeyboard() end
 function Frame:SetPropagateKeyboardInput() end
 function Frame:SetClampedToScreen() end
@@ -520,6 +584,7 @@ function Frame:IsUserPlaced() return false end
 -- modern clients: only frames made with BackdropTemplate have backdrops
 function Frame:SetBackdrop(b)
   if BackdropTemplateMixin and not self._backdropTemplate then error("SetBackdrop needs BackdropTemplate", 2) end
+  if b == nil then self._backdrop = nil; return end -- like the client: nil takes the backdrop off
   if type(b) ~= "table" or type(b.edgeFile) ~= "string" then error("SetBackdrop: bad backdrop", 2) end
   self._backdrop = b
 end
@@ -659,11 +724,26 @@ function Anim:GetStartDelay() return self._delay end
 -- CreateFrame and templates
 ----------------------------------------------------------------------------
 
+-- PlayerModel (the step window's portrait): SetCreature records `_creature` (and counts `_asked`),
+-- SetUnit `_unit`; GetModelFileID is 123 once "loaded", nil with MOCK.modelFails (a unit's model
+-- always loads). The minimal client has no PlayerModel frame type.
+local PlayerModel = setmetatable({}, { __index = Frame })
+PlayerModel.__index = PlayerModel
+function PlayerModel:SetCreature(id) self._creature, self._unit = id, nil; self._asked = (self._asked or 0) + 1 end
+function PlayerModel:SetUnit(unit) self._unit = unit end
+function PlayerModel:ClearModel() self._creature, self._unit = nil, nil end
+function PlayerModel:SetPortraitZoom(z) self._zoom = z end
+function PlayerModel:SetCamera(c) self._camera = c end
+function PlayerModel:GetModelFileID()
+  if self._unit or (self._creature and not MOCK.modelFails) then return 123 end
+end
+
 local CLASSES = { Frame = Frame, Button = Button, ScrollFrame = ScrollFrame, EditBox = EditBox, Slider = Slider,
-  CheckButton = Button, StatusBar = Frame, GameTooltip = Frame }
+  CheckButton = Button, StatusBar = Frame, GameTooltip = Frame, PlayerModel = PlayerModel }
 
 function CreateFrame(kind, name, parent, template)
   local class = CLASSES[kind]
+  if kind == "PlayerModel" and MOCK.minimal then class = nil end
   if not class then error("CreateFrame: unknown frame type " .. tostring(kind), 2) end
   if parent == nil and UIParent and kind ~= "GameTooltip" then parent = nil end
   local f = new(class, kind, parent, name)
@@ -688,7 +768,16 @@ function CreateFrame(kind, name, parent, template)
         f:SetSize(32, 32)
       elseif t == "SecureActionButtonTemplate" then
         f._secure = true
-      elseif t == "InputBoxTemplate" or t == "UIPanelButtonTemplate" then
+      elseif t == "UIPanelButtonTemplate" then
+        -- the red panel art in three pieces and the label's font string (GetFontString; the
+        -- button's own text stays in `_text`), like the client's template
+        for _, k in ipairs({ "Left", "Middle", "Right" }) do
+          f[k] = f:CreateTexture(nil, "BACKGROUND")
+          f[k]:SetTexture("Interface\\Buttons\\UI-Panel-Button-Up")
+        end
+        f._fs = f:CreateFontString(nil, "OVERLAY")
+        f._fs:SetPoint("CENTER", f, "CENTER", 0, 0)
+      elseif t == "InputBoxTemplate" then
         -- nothing extra needed
       else
         error("CreateFrame: unknown template " .. t, 2)
@@ -710,6 +799,35 @@ WorldFrame = CreateFrame("Frame", "WorldFrame")
 Minimap = CreateFrame("Frame", "Minimap", UIParent)
 Minimap:SetSize(140, 140)
 Minimap._cx, Minimap._cy = 1780, 940
+-- Zoom level (MOCK.minimapZoom, 0-5), indoors (MOCK.indoors), console variables (MOCK.cvars).
+function Minimap:GetZoom() return MOCK.minimapZoom or 0 end
+function IsIndoors() return MOCK.indoors or false end
+MOCK.cvars = {}
+function GetCVar(name) return MOCK.cvars and MOCK.cvars[name] end
+
+-- The world map: a canvas (ScrollContainer.Child, 1002 x 668) showing MOCK.worldMapID.
+WorldMapFrame = CreateFrame("Frame", "WorldMapFrame", UIParent)
+WorldMapFrame:Hide()
+WorldMapFrame.ScrollContainer = CreateFrame("Frame", nil, WorldMapFrame)
+WorldMapFrame.ScrollContainer.Child = CreateFrame("Frame", nil, WorldMapFrame.ScrollContainer)
+WorldMapFrame.ScrollContainer.Child:SetSize(1002, 668)
+-- The map's zoom: the canvas (Child) is drawn this many times larger (MOCK.canvasScale).
+function WorldMapFrame.ScrollContainer:GetCanvasScale() return MOCK.canvasScale or 1 end
+-- The map's pin frame levels (its art draws above the canvas's own level): a known pin type gets
+-- its level, an unknown one errors like the client's manager.
+local pinLevels = { PIN_FRAME_LEVEL_AREA_POI = 2000 }
+function WorldMapFrame:GetPinFrameLevelsManager()
+  return { GetValidFrameLevel = function(_, kind)
+    return pinLevels[kind] or error("unknown pin frame level type " .. tostring(kind))
+  end }
+end
+function WorldMapFrame:GetMapID() return MOCK.worldMapID end
+function WorldMapFrame:OnMapChanged() end
+
+-- The vendor window (MOCK.openMerchant shows it).
+MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
+MerchantFrame:SetSize(336, 447)
+MerchantFrame:Hide()
 
 GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
 GameTooltip:Hide()
@@ -751,14 +869,30 @@ end
 
 function GetTime() return MOCK.time end
 function time() return 1700000000 + math.floor(MOCK.time) end
-function UnitLevel(unit) return MOCK.level end
-function UnitName() return "Tester" end
+function UnitLevel(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.level end
+  return MOCK.level
+end
+function UnitName(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.name, m.realm end
+  return "Tester"
+end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
   PALADIN = "Paladin", SHAMAN = "Shaman", WARLOCK = "Warlock", DRUID = "Druid" }
-function UnitClass(unit) return CLASS_NAMES[MOCK.class] or MOCK.class, MOCK.class end
+function UnitClass(unit)
+  local m = MOCK.partyMember(unit)
+  local class = m and m.class or MOCK.class
+  return CLASS_NAMES[class] or class, class
+end
 function InCombatLockdown() return MOCK.combat end
 function GetCursorPosition() return MOCK.cursor[1], MOCK.cursor[2] end
-function PlaySound() end
+-- MOCK.sounds records { id, channel } for each sound played.
+function PlaySound(id, channel)
+  MOCK.sounds = MOCK.sounds or {}
+  MOCK.sounds[#MOCK.sounds + 1] = { id = id, channel = channel }
+end
 SOUNDKIT = { LEVEL_UP = 888 }
 function ReloadUI() error("ReloadUI is protected in Forever", 2) end
 function CreateColor(r, g, b, a) return { r = r, g = g, b = b, a = a } end
@@ -767,10 +901,17 @@ function IsShiftKeyDown() return MOCK.shift or false end
 function IsControlKeyDown() return MOCK.ctrl or false end
 
 -- Questie (opt-in, made by scenarios): its settings and its tracker frame.
--- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx }
+-- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
+--   announce = { channel = "party", objectives, items, shutUp } }
 function MOCK.makeQuestie(opts)
   opts = opts or {}
   local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
+  if opts.announce then
+    profile.questAnnounceChannel = opts.announce.channel or "party"
+    profile.questAnnounceObjectives = opts.announce.objectives == true
+    profile.questAnnounceItems = opts.announce.items == true
+    profile.questieShutUp = opts.announce.shutUp == true
+  end
   if opts.legacyAccept then profile.autoaccept = true else profile.autoAccept = { enabled = opts.autoAccept == true } end
   Questie = { db = { profile = profile } }
   local tracker = _G.Questie_BaseFrame
@@ -819,6 +960,86 @@ function MOCK.makeQuestieDB(opts)
   }
 end
 
+-- EllesmereUI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
+-- the .toc lists as an optional dependency). Its public skin API (SKINNING_API.md, apiVersion 4):
+-- EllesmereUI.RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
+-- else hears it (EllesmereUI loads first), or at MOCK.euiDispatch() with opts.manual; never with
+-- opts.off (the player turned third-party skins off). The facade records each call in MOCK.eui.calls
+-- and, like the real engine, fades every texture of a frame it skins. Shell, Panel, Inset and Button
+-- keep the frame for MOCK.euiRestrip(), which fades them all again (EllesmereUI does that when some
+-- Blizzard windows open), sparing only the textures the facade made itself. MOCK.euiLooks(accent)
+-- changes the accent colour and calls every OnLooksChanged callback.
+-- MOCK.makeEllesmere{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
+function MOCK.makeEllesmere(opts)
+  opts = opts or {}
+  local E = { calls = {}, skinned = {}, restrip = {}, own = {}, looks = {}, registry = {}, fired = {},
+    accent = opts.accent or { 0.047, 0.824, 0.616 }, style = opts.style or "eui", off = opts.off,
+    font = "Interface\\AddOns\\EllesmereUI\\media\\fonts\\Expressway.ttf" }
+  MOCK.eui = E
+  local function fade(frame)
+    for _, r in ipairs({ frame:GetRegions() }) do
+      if r:IsObjectType("Texture") and not E.own[r] then r:SetAlpha(0) end
+    end
+  end
+  local function skin(kind, keep)
+    return function(frame, o)
+      E.calls[#E.calls + 1] = { kind, frame, o }
+      if type(frame) ~= "table" or E.skinned[frame] then return end -- idempotent, like the real one
+      E.skinned[frame] = kind
+      fade(frame)
+      if keep then E.restrip[frame] = true end
+      local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+      bg:SetColorTexture(0.08, 0.08, 0.08, 0.92)
+      bg:SetAllPoints(frame)
+      E.own[bg] = true
+    end
+  end
+  local S = { apiVersion = 4 }
+  for _, k in ipairs({ "Shell", "Panel", "Inset", "Button" }) do S[k] = skin(k, true) end
+  for _, k in ipairs({ "CloseButton", "Checkbox", "EditBox", "ScrollBar", "PageButton", "Tab" }) do S[k] = skin(k, false) end
+  function S.Font(fs)
+    E.calls[#E.calls + 1] = { "Font", fs }
+    local _, size, flags = fs:GetFont()
+    fs:SetFont(E.font, size or 12, flags or "")
+  end
+  function S.IsEnabled() return not E.off end
+  function S.GetStyle() return E.style end
+  function S.GetAccentColor() return E.accent[1], E.accent[2], E.accent[3] end
+  function S.GetPanelColor() return 0.08, 0.08, 0.08, 0.92 end
+  function S.GetFont() return E.font, "" end
+  function S.OnLooksChanged(fn) E.looks[#E.looks + 1] = fn end
+  E.S = S
+  local function dispatch(entry)
+    if E.fired[entry.name] or E.off then return end
+    E.fired[entry.name] = true
+    local ok, err = pcall(entry.apply, S)
+    if not ok then problem("lua", "EllesmereUI skin callback: " .. tostring(err)) end
+  end
+  EllesmereUI = {
+    RegisterSkin = function(name, fn)
+      local entry = { name = name, apply = fn }
+      E.registry[#E.registry + 1] = entry
+      if E.loginDone then dispatch(entry) end
+    end,
+  }
+  function MOCK.euiDispatch()
+    E.loginDone = true
+    for _, entry in ipairs(E.registry) do dispatch(entry) end
+  end
+  function MOCK.euiRestrip() for frame in pairs(E.restrip) do fade(frame) end end
+  function MOCK.euiLooks(accent)
+    E.accent = accent
+    for _, fn in ipairs(E.looks) do fn() end
+  end
+  if not opts.manual then
+    local event = MOCK.event
+    MOCK.event = function(name, ...)
+      if name == "PLAYER_LOGIN" and not E.loginDone then MOCK.euiDispatch() end
+      return event(name, ...)
+    end
+  end
+end
+
 function MOCK.fileID(path)
   local k = path:lower()
   if not MOCK.fileIDs[k] then MOCK.fileIDs[k] = MOCK.nextFileID; MOCK.nextFileID = MOCK.nextFileID + 1 end
@@ -837,6 +1058,15 @@ C_Texture = { GetAtlasInfo = function(name) if MOCK.atlases[name] then return { 
 for _, a in ipairs({ "talents-node-circle-yellow", "talents-node-square-yellow", "talents-node-choice-yellow",
     "talents-node-circle-mask", "talents-node-square-mask", "talents-node-choice-mask" }) do
   MOCK.atlases[a] = true
+end
+-- The client's crosshair cursors (the cursor art without its pointer), 32 to 128 px.
+for _, icon in ipairs({ "quest", "questturnin", "attack", "lootall", "taxi", "innkeeper", "buy", "trainer" }) do
+  for _, size in ipairs({ 32, 48, 64, 96, 128 }) do MOCK.atlases["crosshair_" .. icon .. "_" .. size] = true end
+end
+-- The screen in pixels (MOCK.screenHeight, 1080 unless a scenario sets it).
+function GetPhysicalScreenSize()
+  local h = MOCK.screenHeight or 1080
+  return math.floor(h * 16 / 9 + 0.5), h
 end
 function SetPortraitToTexture(tex, path)
   if type(path) ~= "string" and type(path) ~= "number" then error("SetPortraitToTexture: bad texture", 2) end
@@ -858,7 +1088,8 @@ C_Traits = {
   end,
 }
 function UnitCharacterPoints(unit) return unspentNow() end
--- the tree's layout: MOCK.traitNodes[nodeID] = { posX, posY, spellID } (empty = no layout yet)
+-- the tree's layout: MOCK.traitNodes[nodeID] = { posX, posY, spellID, rank } (empty = no layout yet;
+-- rank = points you have in it, read as the node's ranksPurchased)
 MOCK.traitNodes = {}
 C_Traits.GetTreeNodes = function(treeID)
   local ids = {}
@@ -868,7 +1099,10 @@ C_Traits.GetTreeNodes = function(treeID)
 end
 C_Traits.GetNodeInfo = function(configID, nodeID)
   local n = MOCK.traitNodes[nodeID]
-  if n then return { ID = nodeID, posX = n.posX, posY = n.posY, entryIDs = { nodeID } } end
+  if n then
+    return { ID = nodeID, posX = n.posX, posY = n.posY, entryIDs = { nodeID }, activeEntry = { entryID = nodeID },
+      ranksPurchased = n.rank or 0, currentRank = n.rank or 0 }
+  end
 end
 C_Traits.GetEntryInfo = function(configID, entryID) return { definitionID = entryID } end
 C_Traits.GetDefinitionInfo = function(defID)
@@ -883,6 +1117,8 @@ MOCK.tracking = {}
 MOCK.trackCalls = {}
 MOCK.dead = false
 C_Minimap = {
+  -- The minimap's view radius in yards (MOCK.viewRadius; nil = the client doesn't say).
+  GetViewRadius = function() return MOCK.viewRadius end,
   GetNumTrackingTypes = function() return #MOCK.tracking end,
   GetTrackingInfo = function(i)
     local t = MOCK.tracking[i]
@@ -900,7 +1136,11 @@ C_Minimap = {
     MOCK.event("MINIMAP_UPDATE_TRACKING")
   end,
 }
-function UnitIsDeadOrGhost() return MOCK.dead end
+function UnitIsDeadOrGhost(unit)
+  local m = MOCK.partyMember(unit)
+  if m then return m.dead or false end
+  return MOCK.dead
+end
 -- the vanilla calls (kept in the minimal client, which has no C_Minimap)
 function GetTrackingTexture()
   for _, t in ipairs(MOCK.tracking) do if t.active and t.category == "spell" then return t.texture end end
@@ -996,6 +1236,8 @@ end
 MOCK.knownSpells = {}
 function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 
+-- Your target's GUID ("Creature-0-1-2-3-<npcID>-<spawn>"): MOCK.targetGUID.
+function UnitGUID(unit) if unit == "target" then return MOCK.targetGUID end end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
@@ -1006,14 +1248,39 @@ function GetItemCooldown(id)
   return 0, 0, 1
 end
 
--- Bag contents for the disenchanting list: MOCK.bagItems = { { name, quality, level (required), itemLevel, class
--- = "Armor"|"Weapon"|"Trade Goods", loaded (false = GetItemInfo not cached yet) } } in bag 0.
+-- Bag contents for the disenchanting list and the vendor: MOCK.bagItems = { { name, id, quality, level (required),
+-- itemLevel, class = "Armor"|"Weapon"|"Trade Goods", sell (copper each, 0 = no value), count, locked, loaded (false =
+-- GetItemInfo not cached yet) } } in bag 0; { empty = true } is an empty slot (a sold item leaves one).
 MOCK.bagItems = {}
-local function bagLink(i) return "|cff1eff00|Hitem:" .. (90000 + i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
+local function bagID(i) return MOCK.bagItems[i].id or (90000 + i) end
+local function bagLink(i) return "|cff1eff00|Hitem:" .. bagID(i) .. "::::::::|h[" .. MOCK.bagItems[i].name .. "]|h|r" end
+-- A vendor (MOCK.openMerchant): MOCK.merchant = { items = { { id, name, price, per = 1, stock = -1, maxStack = 20 } },
+-- canRepair, repairCost }. Sales land in MOCK.sold ({ id, count }), purchases in MOCK.bought ({ id, n }),
+-- a repair in MOCK.repaired; money moves through MOCK.setMoney (PLAYER_MONEY).
+MOCK.sold, MOCK.bought = {}, {}
+function MOCK.setMoney(copper)
+  MOCK.money = copper
+  MOCK.event("PLAYER_MONEY")
+end
+-- MOCK.serverDelay = seconds: money and bought items arrive after a server round trip, like the
+-- real client (a sold item leaves the bag at once; its money comes later).
+local function fromServer(fn)
+  if MOCK.serverDelay then C_Timer.After(MOCK.serverDelay, fn) else fn() end
+end
 C_Container = {
   GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or 0 end,
   GetContainerItemInfo = function(bag, slot)
-    if bag == 0 and MOCK.bagItems[slot] then return { itemID = 90000 + slot, hyperlink = bagLink(slot), stackCount = 1 } end
+    local it = bag == 0 and MOCK.bagItems[slot]
+    if not it or it.empty then return end
+    return { itemID = bagID(slot), hyperlink = bagLink(slot), stackCount = it.count or 1, quality = it.quality,
+      hasNoValue = it.sell == 0, isLocked = it.locked or false }
+  end,
+  UseContainerItem = function(bag, slot)
+    local it = bag == 0 and MOCK.bagItems[slot]
+    if not it or it.empty or not (MerchantFrame and MerchantFrame:IsShown()) then return end
+    table.insert(MOCK.sold, { bagID(slot), it.count or 1 })
+    MOCK.bagItems[slot] = { empty = true }
+    fromServer(function() MOCK.setMoney((MOCK.money or 0) + (it.sell or 1) * (it.count or 1)) end)
   end,
 }
 function GetItemInfo(link)
@@ -1025,12 +1292,76 @@ function GetItemInfo(link)
     end
   end
   for _, it in ipairs(MOCK.bagItems) do
-    if it.name == name then
+    if not it.empty and (it.name == name or (it.id and it.id == link)) then
       if it.loaded == false then return nil end
       local classID = ({ Armor = 4, Weapon = 2 })[it.class] or 7
-      return it.name, link, it.quality, it.itemLevel or it.level + 5, it.level, it.class, "", 1, "", 134400, 1, classID
+      return it.name, link, it.quality, it.itemLevel or it.level + 5, it.level, it.class, "", 1, "", 134400,
+        it.sell or 1, classID
     end
   end
+end
+-- Modern clients (retail, and WoW: Forever by every add-on written for it) read item info through
+-- C_Item.GetItemInfo; scenario noGlobalItemInfo drops the old global, the minimal client drops C_Item.
+C_Item = { GetItemInfo = GetItemInfo }
+
+local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
+function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end
+function GetMerchantItemID(i) local m = merchantItem(i); return m and m.id end
+function GetMerchantItemLink(i)
+  local m = merchantItem(i)
+  return m and ("|cffffffff|Hitem:" .. m.id .. "::::::::|h[" .. m.name .. "]|h|r")
+end
+function GetMerchantItemInfo(i)
+  local m = merchantItem(i)
+  if m then return m.name, 134400, m.price, m.per or 1, m.stock or -1, true, true, m.extended or false end
+end
+function GetMerchantItemMaxStack(i) local m = merchantItem(i); return m and (m.maxStack or 20) end
+-- MOCK.buyFails: the game refuses the purchase (full bags): nothing arrives, no money moves.
+function BuyMerchantItem(i, n)
+  local m = merchantItem(i)
+  if not m or MOCK.buyFails then return end
+  local per = m.per or 1
+  n = n or per
+  if m.stock and m.stock ~= -1 then n = math.min(n, m.stock); m.stock = m.stock - n end
+  table.insert(MOCK.bought, { m.id, n })
+  fromServer(function()
+    MOCK.bags[m.id] = (MOCK.bags[m.id] or 0) + n
+    MOCK.setMoney((MOCK.money or 0) - math.ceil(n / per) * m.price)
+    if MOCK.serverDelay then MOCK.event("BAG_UPDATE_DELAYED") end
+  end)
+end
+function CanMerchantRepair() return MOCK.merchant and MOCK.merchant.canRepair or false end
+function GetRepairAllCost()
+  local cost = MOCK.merchant and MOCK.merchant.repairCost or 0
+  return cost, cost > 0
+end
+function RepairAllItems()
+  local cost = MOCK.merchant and MOCK.merchant.repairCost or 0
+  MOCK.repaired = cost
+  MOCK.merchant.repairCost = 0
+  fromServer(function() MOCK.setMoney((MOCK.money or 0) - cost) end)
+end
+-- MOCK.merchantLate = s: Forever's order, MERCHANT_SHOW first and the vendor window s seconds
+-- later (Zygor's Forever build waits for it too); closing before then keeps it hidden.
+local merchantVisit = 0
+function MOCK.openMerchant(m)
+  MOCK.merchant = m
+  merchantVisit = merchantVisit + 1
+  if MOCK.merchantLate and MerchantFrame then
+    local visit = merchantVisit
+    MOCK.event("MERCHANT_SHOW")
+    C_Timer.After(MOCK.merchantLate, function()
+      if visit == merchantVisit then MerchantFrame:Show() end
+    end)
+    return
+  end
+  if MerchantFrame then MerchantFrame:Show() end
+  MOCK.event("MERCHANT_SHOW")
+end
+function MOCK.closeMerchant()
+  merchantVisit = merchantVisit + 1
+  if MerchantFrame then MerchantFrame:Hide() end
+  MOCK.event("MERCHANT_CLOSED")
 end
 
 -- Forever's controller UI (Blizzard_GamepadSharedUtility / Blizzard_GamepadSmartNavigation):
@@ -1184,10 +1515,14 @@ end
 ----------------------------------------------------------------------------
 
 function MOCK.event(name, ...)
-  local set = MOCK.events[name]
-  if not set then return 0 end
+  local set, units = MOCK.events[name], MOCK.unitEvents[name]
+  if not set and not units then return 0 end
   local list = {}
-  for f in pairs(set) do list[#list + 1] = f end
+  for f in pairs(set or {}) do list[#list + 1] = f end
+  local unit = ...
+  for f, names in pairs(units or {}) do
+    for _, u in ipairs(names) do if u == unit then list[#list + 1] = f; break end end
+  end
   for _, f in ipairs(list) do fire(f, "OnEvent", name, ...) end
   return #list
 end
@@ -1298,6 +1633,7 @@ end
 
 -- Remove the APIs a careful addon must not rely on.
 local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
+  "GetPhysicalScreenSize",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",
@@ -1307,8 +1643,9 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
-  "IsInGroup", "IsInRaid", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
-  "debugstack" }
+  "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
+  "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
+  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -1323,6 +1660,9 @@ function MOCK.setup(opts)
     Frame.EnableGamePadButton = nil
     Frame.SetPropagateGamePadInput = nil
     Frame.EnableGamePadStick = nil
+    Frame.RegisterUnitEvent = nil
+    Frame.SetMouseClickEnabled = nil
+    Frame.SetMouseMotionEnabled = nil
     -- an old-style client: no Blizzard button/check templates, no backdrops at all
     Frame.SetBackdrop = nil
     for _, t in ipairs({ "UIPanelButtonTemplate", "UICheckButtonTemplate", "BackdropTemplate" }) do
@@ -1351,10 +1691,11 @@ local ALLOWED_GLOBALS = {
   TradeSkillFrame_Update = true, TRADE_SKILLS_DISPLAYED = true,
   GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
-  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true,
+  Questie = true, Questie_BaseFrame = true, LibQuestieDB = true, EllesmereUI = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end
+ALLOWED_GLOBALS.QuestInfoRewardsFrame = true
 ALLOWED_GLOBALS.ClassTrainerFrame = true
 ALLOWED_GLOBALS.TaxiFrame = true
 for i = 1, 4 do ALLOWED_GLOBALS["TaxiButton" .. i] = true end

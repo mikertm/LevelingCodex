@@ -3,17 +3,18 @@
 
 local _, ns = ...
 
--- The talent point for a level: the plan entry, its rank after this point, and the reason text.
+-- The talent point for a level on the path you follow (Talents.lua): the plan entry, its rank after
+-- this point, and the reason text. nil before 10, and on a custom path's unplanned levels.
 function ns.talentAt(level)
-  local D = ns.D
-  if not D then return end
+  if not ns.D then return end
+  local plan = ns.talentPlan()
   local rank = 0
   local hit
-  for _, p in ipairs(D.plan) do
+  for _, p in ipairs(plan) do
     if level >= p.from and level <= p.to then hit = p end
   end
   if not hit then return end
-  for _, p in ipairs(D.plan) do
+  for _, p in ipairs(plan) do
     if p.name == hit.name then
       local top = math.min(p.to, level)
       if top >= p.from then rank = rank + (top - p.from + 1) end
@@ -23,9 +24,10 @@ function ns.talentAt(level)
   return hit, rank, text
 end
 
+-- Trainer visits follow the talent path too (ns.trainVisits: its talent spells' ranks).
 function ns.trainAt(level)
   if not ns.D then return end
-  for _, t in ipairs(ns.D.train) do
+  for _, t in ipairs(ns.trainVisits()) do
     if t.level == level then return t end
   end
 end
@@ -33,7 +35,7 @@ end
 function ns.nextTrain(level)
   if not ns.D then return end
   local best
-  for _, t in ipairs(ns.D.train) do
+  for _, t in ipairs(ns.trainVisits()) do
     if t.level > level and (not best or t.level < best.level) then best = t end
   end
   return best
@@ -49,10 +51,11 @@ function ns.bracketFor(level)
   return best
 end
 
+-- Macros follow the talent path you follow (ns.pathMacros, Talents.lua).
 function ns.macrosFor(level)
   local list = {}
   if not ns.D then return list end
-  for _, m in ipairs(ns.D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if level >= m.lo and level <= m.hi then list[#list + 1] = m end
   end
   return list
@@ -62,7 +65,7 @@ end
 function ns.comingMacros(level)
   local list, seen = {}, {}
   if not ns.D then return list end
-  for _, m in ipairs(ns.D.macros) do
+  for _, m in ipairs(ns.pathMacros()) do
     if m.lo > level and not seen[m.name .. m.lo] then
       seen[m.name .. m.lo] = true
       list[#list + 1] = m

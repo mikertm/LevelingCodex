@@ -16,8 +16,9 @@ TRAVEL_TYPES = {"goto", "fly", "getfp", "sethearth", "hearth", "boat"}
 STEP_TYPES = QUEST_TYPES | TRAVEL_TYPES | {"train", "buy", "use", "grind", "dungeon", "note", "abandon", "collect"}
 STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name", "npc", "map", "x", "y", "level", "min", "text",
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
-               "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "skipOn", "maxLevel",
-               "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop"}
+               "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "items", "skipOn", "maxLevel",
+               "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop",
+               "elite"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -58,6 +59,11 @@ def audit(data, ref, cap=20):
     if not game:
         return [("QUESTS", "error", "client reference is missing quest data")]
     ids, maps, flights = set(game["ids"]), game["maps"], set(game["flights"])
+    # Neutral hubs (Gadgetzan, Everlook, Thorium Point...) have an Alliance and a Horde flight point
+    # under one name: keep both and pick the route's faction below.
+    nodes = {}
+    for node in (game.get("taxi") or {}).values():
+        nodes.setdefault(node["name"], []).append(node)
     for faction, route in data.items():
         # Empty Lua tables load as lists: read them as empty maps.
         route = {key: ({} if value == [] else value) for key, value in route.items()}
@@ -185,6 +191,9 @@ def audit(data, ref, cap=20):
                     fail(where, "startItem must be a positive item ID on a quest step")
                 if kind in ("sethearth", "hearth") and not step.get("bind"):
                     warn(where, f"{kind} step has no bind town (GetBindLocation name)")
+                # An elite quest: the leveling route asks at the pickup whether to take it (the elite's name).
+                if "elite" in step and (not quest or not ascii_text(step["elite"]) or not step["elite"].strip()):
+                    fail(where, "elite must be the elite's name (printable ASCII) on a quest step")
                 for key in ("name", "npc", "flight", "dungeon", "bind"):
                     if key in step and not ascii_text(step[key]):
                         fail(where, f"{key} must be printable ASCII")
@@ -216,7 +225,12 @@ def audit(data, ref, cap=20):
                     fail(where, "an abandon step needs its quest")
                 if kind in ("collect", "buy") and "count" in step and (type(step["count"]) is not int or step["count"] < 1):
                     fail(where, "count must be a positive integer")
-                if kind == "collect" and not item:
+                items = step.get("items")
+                if items is not None and (kind not in ("collect", "buy") or not isinstance(items, list) or not items or any(
+                        not isinstance(pair, list) or len(pair) != 2 or type(pair[0]) is not int or pair[0] < 1
+                        or type(pair[1]) is not int or pair[1] < 1 for pair in items)):
+                    fail(where, "items must be a list of { itemID, count } pairs on a collect or buy step")
+                if kind == "collect" and not item and not items:
                     fail(where, "a collect step needs its item")
                 for key in ("maxLevel", "skill"):
                     if key in step and (type(step[key]) is not int or not 1 <= step[key] <= 300):
@@ -250,6 +264,21 @@ def audit(data, ref, cap=20):
                     continue
                 if kind in {"fly", "getfp"} and step.get("flight") not in flights:
                     fail(where, f"unknown flight path {step.get('flight')!r}")
+                # A Fly step sits at the destination's flight master (Q.flightStep keeps it current
+                # until you land there), and a getfp step at the flight master it teaches.
+                candidates = nodes.get(step.get("flight")) if kind in {"fly", "getfp"} else None
+                ours = [n for n in candidates or [] if faction[0] in n.get("faction", "AH")]
+                node = (ours or candidates or [None])[0]
+                if node and step.get("x") is not None:
+                    extent = maps.get(str(node["map"]), {})
+                    off = None
+                    if step.get("map") == node["map"] and extent.get("width"):
+                        off = math.hypot((step["x"] - node["x"]) * extent["width"] / 100,
+                                         (step["y"] - node["y"]) * extent["height"] / 100)
+                    if step.get("map") != node["map"] or (off is not None and off > 60):
+                        fail(where, f"{kind} {step.get('flight')!r} must sit at that flight master "
+                                    f"(map {node['map']} {node['x']}, {node['y']}), not map {step.get('map')} "
+                                    f"{step.get('x')}, {step.get('y')}")
                 map_id = step.get("map")
                 if map_id is not None and str(map_id) not in maps:
                     fail(where, f"unknown map {map_id}")
@@ -295,13 +324,31 @@ def audit(data, ref, cap=20):
                     values.add(rule)
         # A dungeon pickup on the route is handed in inside its dungeon guide; once the route is past
         # that dungeon's run window (its last level + 3, as Q.readyRun uses) it no longer holds a slot.
+        # Elite quests on the leveling route (asked at the pickup) and the quests that need them: a skip
+        # passes them together, so the plain pass leaves them out and the optional/dungeon pass takes them.
+        elite = {s.get("quest") for sec, s, _ in rows if s.get("elite") and not sec.get("side")}
+        grown = True
+        while grown:
+            grown = False
+            for sec, s, _ in rows:
+                if (not sec.get("side") and s.get("quest") and s["quest"] not in elite
+                        and any(c in elite for c in s.get("chain") or [])):
+                    elite.add(s["quest"])
+                    grown = True
         dungeon_end = {s["id"]: s["levels"][1] + 3 for s in sections if s.get("category") == "dungeon"}
         dungeon_pick = {s.get("quest"): dungeon_end.get(s.get("dungeon")) for _, s, _ in rows
                         if s["type"] == "accept" and s.get("dungeon") in dungeon_end}
+        # A class quest the route picks up and a class guide hands in (the Skyborne druid's Moonglade call,
+        # done with Teleport: Moonglade): past that guide's last level + 3 it no longer holds a slot either.
+        for s in sections:
+            if s.get("side") and s.get("class") and not s.get("category"):
+                for st in s["steps"]:
+                    if st.get("type") == "turnin" and st.get("quest") and st["quest"] not in dungeon_pick:
+                        dungeon_pick[st["quest"]] = s["levels"][1] + 3
         for race in sorted(races or {""}):
             for class_ in sorted(classes, key=lambda token: token or ""):
                 for path, dungeons in product([main_rows, *alternates.values()], (False, True)):
-                    active, finished = set(), set()
+                    active, finished, retired = set(), set(), set()
                     # An optional turn-in for a quest picked up in another guide (a carried breadcrumb), and
                     # a logOnly step (work on a quest from another guide): the guide shows them only while
                     # the quest is in your log, so they need no accept here.
@@ -309,9 +356,11 @@ def audit(data, ref, cap=20):
                               and matches(sec.get("start"), race) and matches(s.get("race"), race)
                               and matches(sec.get("class"), class_) and matches(s.get("class"), class_)}
                     for section, step, where in path:
+                        # Elite quests (asked at the pickup) count as taken in the optional/dungeon pass.
                         if not (matches(section.get("start"), race) and matches(step.get("race"), race)
                                 and matches(section.get("class"), class_) and matches(step.get("class"), class_)) or (
-                                step.get("optional") and not dungeons and section.get("category") != "dungeon") or (
+                                (step.get("optional") or step.get("quest") in elite and not section.get("side"))
+                                and not dungeons and section.get("category") != "dungeon") or (
                                 step.get("optional") and step["type"] in {"complete", "turnin"}
                                 and step.get("quest") not in picked) or step.get("logOnly"):
                             continue
@@ -319,8 +368,10 @@ def audit(data, ref, cap=20):
                         # A clean-up note: quests the player abandons here if they still hold them.
                         active.difference_update(step.get("drop", []))
                         if not section.get("category"):
-                            active.difference_update({q for q in active if dungeon_pick.get(q) is not None
-                                                      and section["levels"][0] > dungeon_pick[q]})
+                            gone = {q for q in active if dungeon_pick.get(q) is not None
+                                    and section["levels"][0] > dungeon_pick[q]}
+                            active.difference_update(gone)
+                            retired.update(gone)
                         if kind == "accept":
                             for required in step.get("chain", []):
                                 if required not in finished:
@@ -331,7 +382,7 @@ def audit(data, ref, cap=20):
                             if len(active) > cap:
                                 fail(where, f"quest log has {len(active)} quests (cap {cap})")
                         elif kind in {"complete", "turnin"}:
-                            if quest not in active:
+                            if quest not in active and quest not in retired:
                                 fail(where, f"{kind} for quest {quest} before its accept")
                             if kind == "turnin":
                                 active.discard(quest)

@@ -26,7 +26,8 @@ NEAR, AREA = 45, 150
 TRAVEL = {"fly", "boat", "hearth"}
 
 
-def check(route, race, class_):
+def check(route, race, class_, only=None):
+    """Walk the main route, or with `only` (a section ID) that one section, such as an alternate."""
     extents = {int(k): v for k, v in route["extents"].items()}
 
     def dist(a, b):
@@ -35,9 +36,22 @@ def check(route, race, class_):
         width, height = extents[a[0]]
         return math.hypot((a[1] - b[1]) * width / 100, (a[2] - b[2]) * height / 100)
 
+    def to_leg(p, a, b):
+        """Yards from spot p to the straight walk from a to b (all on one map), else None."""
+        if dist(p, a) is None or dist(p, b) is None:
+            return None
+        width, height = extents[a[0]]
+        ax, ay, bx, by = a[1] * width / 100, a[2] * height / 100, b[1] * width / 100, b[2] * height / 100
+        px, py = p[1] * width / 100, p[2] * height / 100
+        length = (bx - ax) ** 2 + (by - ay) ** 2
+        t = 0 if length == 0 else max(0, min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / length))
+        return math.hypot(px - (ax + t * (bx - ax)), py - (ay + t * (by - ay)))
+
     rows = []
     for section in route["sections"]:
-        if section.get("side") or section.get("alternate") or not matches(section.get("start"), race):
+        if only is not None and section["id"] != only:
+            continue
+        if only is None and (section.get("side") or section.get("alternate")) or not matches(section.get("start"), race):
             continue
         # Optional steps and item-started quests (shown only with the item) are not part of the walk.
         steps = [s for s in section["steps"] if matches(s.get("race"), race) and matches(s.get("class"), class_)
@@ -57,11 +71,12 @@ def check(route, race, class_):
             last_complete[quest] = k
 
     visits, current = [], None
-    walked, previous = {}, None
+    walked, previous, legs = {}, None, []
     for k, (section_id, _, step, _) in enumerate(rows):
         pos = (step.get("map"), step.get("x"), step.get("y")) if step.get("x") is not None else None
         if pos and previous and step["type"] not in TRAVEL and dist(previous, pos) is not None:
             walked[section_id] = walked.get(section_id, 0) + dist(previous, pos)
+            legs.append((k, previous, pos))
         if step["type"] in TRAVEL or not pos:
             previous = None if step["type"] in TRAVEL else previous
             if current:
@@ -112,6 +127,36 @@ def check(route, race, class_):
                     findings.append(f'{"zig-zag" if zigzag else "hub"}: {first[0]} step {first[1]} ({what}) '
                                     f'could be done at {seen[0]} step {seen[1]}; {round(extra)} yd extra')
             break
+
+    # Late pickups: an accept the route could have taken at an earlier visit to the same spot,
+    # when the walk in between passes the quest's objective area without the quest.
+    goals = {}
+    for k, (_, _, step, _) in enumerate(rows):
+        if step["type"] == "complete" and step.get("x") is not None:
+            goals.setdefault(step.get("quest"), []).append((step.get("map"), step.get("x"), step.get("y")))
+    for index, visit in enumerate(visits):
+        for k in visit["rows"]:
+            step = rows[k][2]
+            quest = step.get("quest")
+            if step["type"] != "accept" or quest not in goals:
+                continue
+            for earlier in visits[:index]:
+                gap = dist(earlier["pos"], visit["pos"])
+                at = earlier["rows"][-1] + 1
+                level = rows[earlier["rows"][-1]][3]
+                # The level estimate is a straight line across the section, so allow one level of slack.
+                if gap is None or gap > NEAR or not possible(k, at, level + 1):
+                    continue
+                passed = [(goal, leg) for leg in legs if at <= leg[0] <= visit["rows"][0] for goal in goals[quest]
+                          if (to_leg(goal, leg[1], leg[2]) or AREA + 1) <= AREA]
+                if passed:
+                    seen = rows[earlier["rows"][-1]]
+                    goal = passed[0][0]
+                    note = "" if possible(k, at, level) else f" (needs level {step.get('min')}; about {level:.0f} expected there)"
+                    findings.append(f'late pickup: {rows[k][0]} step {rows[k][1]} (accept {quest}) could be taken at '
+                                    f'{seen[0]} step {seen[1]}; the route passes its objective at {goal[1]}, {goal[2]} '
+                                    f'in between{note}')
+                break
     return walked, findings
 
 
@@ -130,6 +175,14 @@ def main():
                 print(f"   {section_id}: {round(yards)} yd")
             for finding in findings:
                 print("   " + finding)
+            # Each alternate chapter is its own walk (a player takes it instead of the main route there).
+            for section in route["sections"]:
+                if section.get("alternate") and not section.get("side") and matches(section.get("start"), race):
+                    walked, findings = check(route, race, class_, section["id"])
+                    if findings:
+                        print(f"   -- alternate {section['id']}: {round(sum(walked.values()))} yd walked")
+                        for finding in findings:
+                            print("      " + finding)
 
 
 if __name__ == "__main__":

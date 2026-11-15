@@ -32,6 +32,11 @@ A.FILES = {
   classCircles = "Interface\\TargetingFrame\\UI-Classes-Circles",
   circle      = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", -- a white disc
   parchment   = "Interface\\QuestFrame\\QuestBG",
+  checkTick   = "Interface\\Buttons\\UI-CheckBox-Check",
+  plusUp      = "Interface\\Buttons\\UI-PlusButton-Up",
+  minusUp     = "Interface\\Buttons\\UI-MinusButton-Up",
+  questBook   = "Interface\\QuestFrame\\UI-QuestLog-BookIcon",
+  closeUp     = "Interface\\Buttons\\UI-Panel-MinimizeButton-Up",
 }
 
 -- Does the client have this file? (cached; probed on a hidden texture)
@@ -93,8 +98,18 @@ local BACKDROPS = {
     insets = { left = 4, right = 4, top = 4, bottom = 4 } },
 }
 
--- Returns true when the Blizzard border was applied.
+-- The EllesmereUI theme (Ellesmere.lua) draws no Blizzard art: the Codex's flat look in its colours,
+-- with EllesmereUI's own pieces on the windows' backing frames.
+local function eui() return ns.ellesmere and ns.ellesmere.on() end
+
+-- Returns true when the Blizzard border was applied. In the EllesmereUI theme it takes off a border
+-- it put on earlier (a frame made before a theme switch) and returns false.
 function A.backdrop(f, kind, bg, edge)
+  if eui() then
+    if f.codexBackdrop and f.SetBackdrop then pcall(f.SetBackdrop, f, nil) end
+    f.codexBackdrop = nil
+    return false
+  end
   local b = BACKDROPS[kind]
   if not (b and f.SetBackdrop and A.hasFile(b.edgeFile) and A.hasFile(b.bgFile)) then
     note("backdrop " .. kind, "missing")
@@ -106,15 +121,71 @@ function A.backdrop(f, kind, bg, edge)
   end
   if bg and f.SetBackdropColor then f:SetBackdropColor(rgba(bg)) end
   if edge and f.SetBackdropBorderColor then f:SetBackdropBorderColor(rgba(edge)) end
+  f.codexBackdrop = kind
   note("backdrop " .. kind, "ok")
   return true
 end
 
--- The gold title banner across the top edge of a dialog, with its title text.
+-- A card's frame (the trainer, talent, crafting and vendor cards, the talent trace's tag): the tooltip
+-- border, else a flat fill with 1 px edges (h.bg, h.edges: always made, so painting them is safe); in
+-- the EllesmereUI theme its panel on a backing frame instead. Call it again before each paint: it
+-- follows a theme switch (h.blizz = the tooltip border is on) and puts the card's text in the theme's
+-- fonts (a heading marks itself with fs.codexHead = its size).
+function A.cardChrome(h)
+  if h.chromeFor ~= ns.themeVersion then
+    h.chromeFor = ns.themeVersion
+    local skinned = ns.ellesmere.backing(h, "Panel")
+    h.blizz = A.backdrop(h, "tooltip")
+    if not h.bg then
+      h.bg = h:CreateTexture(nil, "BACKGROUND"); h.bg:SetAllPoints()
+      h.edges = {}
+      for i = 1, 4 do h.edges[i] = h:CreateTexture(nil, "BORDER") end
+      h.edges[1]:SetPoint("TOPLEFT"); h.edges[1]:SetPoint("TOPRIGHT"); h.edges[1]:SetHeight(1)
+      h.edges[2]:SetPoint("BOTTOMLEFT"); h.edges[2]:SetPoint("BOTTOMRIGHT"); h.edges[2]:SetHeight(1)
+      h.edges[3]:SetPoint("TOPLEFT"); h.edges[3]:SetPoint("BOTTOMLEFT"); h.edges[3]:SetWidth(1)
+      h.edges[4]:SetPoint("TOPRIGHT"); h.edges[4]:SetPoint("BOTTOMRIGHT"); h.edges[4]:SetWidth(1)
+    end
+    local flat = not h.blizz and not skinned
+    h.bg:SetShown(flat)
+    for _, e in ipairs(h.edges) do e:SetShown(flat) end
+  end
+  ns.ellesmere.fonts(h)
+end
+
+-- Paint a card in the theme (A.cardChrome first): its border or flat edges, the theme's glow along the
+-- top (h.glow), the gold rim round its icon (h.ring) and its kicker (h.label). The EllesmereUI theme:
+-- its panel, no glow, a black icon edge, the kicker in the accent. `fill`: the tooltip border's fill.
+function A.paintCard(h, fill)
+  A.cardChrome(h)
+  if h.blizz then
+    h:SetBackdropColor(rgba(fill or { 0.03, 0.03, 0.05, 0.94 }))
+    h:SetBackdropBorderColor(rgba(C.edge))
+  else
+    h.bg:SetColorTexture(rgba(C.bg))
+    for _, e in ipairs(h.edges) do e:SetColorTexture(rgba(C.edge)) end
+  end
+  if h.glow then
+    h.glow:SetShown(not C.eui)
+    ns.fade(h.glow, "VERTICAL", C.glow[1], C.glow[2], C.glow[3], 0, 0.25)
+  end
+  if h.ring then
+    if C.eui then h.ring:SetColorTexture(0, 0, 0, 1) else h.ring:SetColorTexture(0.72, 0.58, 0.3, 0.95) end
+  end
+  if h.label then
+    if C.eui then h.label:SetTextColor(rgba(C.accent)) else h.label:SetTextColor(1, 0.82, 0) end
+  end
+end
+
+-- The gold title banner across the top edge of a dialog, with its title text. In the EllesmereUI
+-- theme: no banner, the title in white in the window's top bar.
 function A.header(parent, text, width)
   local h = parent:CreateTexture(nil, "ARTWORK")
   local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  if A.set(h, "header") then
+  if eui() then
+    h:Hide()
+    fs:SetPoint("TOP", 0, -6)
+    fs:SetTextColor(1, 1, 1)
+  elseif A.set(h, "header") then
     h:SetSize(width or 320, 64)
     h:SetPoint("TOP", 0, 12)
     fs:SetPoint("TOP", h, "TOP", 0, -14)
@@ -163,22 +234,27 @@ function A.flatButton(b)
   b.edges[2]:SetPoint("BOTTOMLEFT"); b.edges[2]:SetPoint("BOTTOMRIGHT"); b.edges[2]:SetHeight(1)
   b.edges[3]:SetPoint("TOPLEFT"); b.edges[3]:SetPoint("BOTTOMLEFT"); b.edges[3]:SetWidth(1)
   b.edges[4]:SetPoint("TOPRIGHT"); b.edges[4]:SetPoint("BOTTOMRIGHT"); b.edges[4]:SetWidth(1)
-  local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints(); hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16)
+  -- EllesmereUI's buttons: a subtle white hover, a white label
+  local hl = b:CreateTexture(nil, "HIGHLIGHT"); hl:SetAllPoints()
+  if C.eui then hl:SetColorTexture(1, 1, 1, 0.1) else hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16) end
   b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   b.label:SetPoint("CENTER")
   b.SetLabel = function(self, s) self.label:SetText(s) end
   b.SetLook = function(self, on)
     self.bg:SetColorTexture(rgba(on and C.btnOn or C.btnOff))
     for _, e in ipairs(self.edges) do e:SetColorTexture(rgba(C.edge)) end
-    self.label:SetTextColor(rgba(on and C.btnOnInk or C.gold))
+    self.label:SetTextColor(rgba(on and C.btnOnInk or (C.eui and C.light or C.gold)))
   end
   b:SetLook(false)
+  ns.ellesmere.fonts(b)
   return b
 end
 
--- The red Blizzard panel button. SetLabel(text); SetLook(on) keeps a chosen option lit.
+-- The red Blizzard panel button (the flat button in the EllesmereUI theme). SetLabel(text);
+-- SetLook(on) keeps a chosen option lit.
 function A.button(parent, w, h)
-  local ok, b = pcall(CreateFrame, "Button", nil, parent, "UIPanelButtonTemplate")
+  local ok, b = false, nil
+  if not eui() then ok, b = pcall(CreateFrame, "Button", nil, parent, "UIPanelButtonTemplate") end
   if ok and b then
     note("panel button", "ok")
     b.SetLabel = function(self, s) self:SetText(s) end
@@ -190,7 +266,7 @@ function A.button(parent, w, h)
       end
     end
   else
-    note("panel button", "fallback")
+    note("panel button", eui() and "EllesmereUI" or "fallback")
     b = A.flatButton(CreateFrame("Button", nil, parent))
   end
   b:SetSize(w or 100, h or 22)
@@ -198,10 +274,149 @@ function A.button(parent, w, h)
   return b
 end
 
--- Spellbook page arrows (prev / next), or a small panel button with < / >.
+-- One choice in a row of segments (Window.lua's U.segments). SetLook(true): the red panel button,
+-- kept lit, with a 1 px gold inner edge, a gold label and the check box's tick at its left;
+-- SetLook(false): a flat dim plate (C.btnOff) with a soft grey label, so it never reads as a
+-- disabled button. Where the template has no Left/Middle/Right art to hide, unlit is dimmed.
+function A.segment(parent)
+  local b = A.button(parent, 100, 24)
+  local base = b.SetLook
+  b.panelArt = {}
+  for _, k in ipairs({ "Left", "Middle", "Right" }) do
+    if type(b[k]) == "table" and b[k].SetAlpha then b.panelArt[#b.panelArt + 1] = b[k] end
+  end
+  if #b.panelArt > 0 then
+    b.plate = b:CreateTexture(nil, "BACKGROUND", nil, 1)
+    b.plate:SetPoint("TOPLEFT", 1, -1)
+    b.plate:SetPoint("BOTTOMRIGHT", -1, 1)
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16)
+  elseif b.bg then
+    b.plate = b.bg -- the flat button: its fill is the plate (C.btnOff unlit, C.btnOn lit)
+  end
+  -- the lit choice's inner edge and label: gold, or the accent in the EllesmereUI theme (no tick there)
+  local litInk = C.eui and { C.accent[1], C.accent[2], C.accent[3], 1 } or { 1, 0.82, 0, 1 }
+  b.goldEdges = {}
+  for i = 1, 4 do
+    local e = b:CreateTexture(nil, "OVERLAY")
+    e:SetColorTexture(rgba(litInk))
+    e:Hide()
+    b.goldEdges[i] = e
+  end
+  local e = b.goldEdges
+  e[1]:SetPoint("TOPLEFT", 2, -2); e[1]:SetPoint("TOPRIGHT", -2, -2); e[1]:SetHeight(1)
+  e[2]:SetPoint("BOTTOMLEFT", 2, 2); e[2]:SetPoint("BOTTOMRIGHT", -2, 2); e[2]:SetHeight(1)
+  e[3]:SetPoint("TOPLEFT", 2, -2); e[3]:SetPoint("BOTTOMLEFT", 2, 2); e[3]:SetWidth(1)
+  e[4]:SetPoint("TOPRIGHT", -2, -2); e[4]:SetPoint("BOTTOMRIGHT", -2, 2); e[4]:SetWidth(1)
+  if not C.eui and A.hasFile(A.FILES.checkTick) then
+    b.tick = b:CreateTexture(nil, "OVERLAY")
+    b.tick:SetSize(14, 14)
+    b.tick:SetPoint("LEFT", 4, 0)
+    b.tick:SetTexture(A.FILES.checkTick)
+    b.tick:Hide()
+  end
+  b.SetLook = function(self, on)
+    base(self, on)
+    if #self.panelArt > 0 then
+      for _, t in ipairs(self.panelArt) do t:SetAlpha(on and 1 or 0) end
+      self.plate:SetColorTexture(rgba(C.btnOff))
+      self.plate:SetShown(not on)
+      self:SetAlpha(1)
+    else
+      self:SetAlpha((on or self.plate) and 1 or 0.6)
+    end
+    local fs = self.label or (self.GetFontString and self:GetFontString())
+    if fs then
+      if on then fs:SetTextColor(litInk[1], litInk[2], litInk[3]) else fs:SetTextColor(0.75, 0.75, 0.75) end
+      -- clear of the tick, which sits at the left edge of a lit choice
+      if fs.ClearAllPoints and fs.SetPoint then
+        fs:ClearAllPoints()
+        fs:SetPoint("CENTER", self, "CENTER", (on and self.tick) and 9 or 0, 0)
+      end
+    end
+    for _, edge in ipairs(self.goldEdges) do edge:SetShown(on and true or false) end
+    if self.tick then self.tick:SetShown(on and true or false) end
+  end
+  b:SetLook(false)
+  return b
+end
+
+-- The step window's buttons, in the theme's colours (Repaint() after a theme switch); no outlines.
+-- A small icon button: Blizzard's art alone (it has its own frame) with a hover glow; without the
+-- art, a short label on a flat dark plate.
+-- In the EllesmereUI theme the back arrow and the close art are EllesmereUI's page and close buttons.
+function A.iconButton(parent, file, fallback)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(28, 24)
+  local skin = eui() and ((file == A.FILES.prevUp and "PageButton") or (file == A.FILES.closeUp and "CloseButton"))
+  if skin and ns.ellesmere.call(skin, b, "<") then
+    hoverTips(b)
+    b.Repaint = function() end
+    return b
+  end
+  if A.hasFile(file) then
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetSize(18, 18)
+    b.icon:SetPoint("CENTER")
+    b.icon:SetTexture(file)
+  else
+    b.bg = b:CreateTexture(nil, "BACKGROUND")
+    b.bg:SetAllPoints()
+    b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    b.label:SetPoint("CENTER")
+    b.label:SetText(fallback)
+  end
+  local hl = b:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(1, 1, 1, 0.12)
+  b.Repaint = function(self)
+    if self.bg then self.bg:SetColorTexture(rgba(C.btnOff)) end
+    if self.label then self.label:SetTextColor(rgba(C.gold)) end
+  end
+  b:Repaint()
+  hoverTips(b)
+  return b
+end
+
+-- The primary button (the step window's Next step and its offers): the theme's button colour with its
+-- ink; SetLabel(text, arrow) adds a ">" after the text when arrow is true.
+function A.primaryButton(parent)
+  local b = CreateFrame("Button", nil, parent)
+  b:SetSize(120, 24)
+  b.fill = b:CreateTexture(nil, "BACKGROUND")
+  b.fill:SetAllPoints()
+  b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  b.label:SetPoint("CENTER")
+  local hl = b:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(1, 1, 1, 0.15)
+  b.SetLabel = function(self, text, arrow) self.label:SetText(arrow and (text .. " >") or text) end
+  b.Repaint = function(self)
+    self.fill:SetColorTexture(rgba(C.btnOn))
+    self.label:SetTextColor(rgba(C.btnOnInk))
+    ns.ellesmere.fonts(self)
+  end
+  b:Repaint()
+  hoverTips(b)
+  return b
+end
+
+-- Spellbook page arrows (prev / next), or a small panel button with < / >; EllesmereUI's page buttons
+-- in its theme.
 function A.arrow(parent, dir)
   local up, down = A.FILES[dir .. "Up"], A.FILES[dir .. "Down"]
-  if A.hasFile(up) and A.hasFile(down) then
+  if eui() then
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(26, 22)
+    if ns.ellesmere.call("PageButton", b, dir == "prev" and "<" or ">") then
+      b.codexLabel = dir == "prev" and "<" or ">"
+      note("page arrows", "EllesmereUI")
+      hoverTips(b)
+      return b
+    end
+    b:Hide()
+  elseif A.hasFile(up) and A.hasFile(down) then
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(28, 28)
     b.tex = b:CreateTexture(nil, "ARTWORK"); b.tex:SetAllPoints(); b.tex:SetTexture(up)
@@ -231,13 +446,14 @@ function A.check(parent)
       if type(cb[k]) == "table" and cb[k].SetText then cb[k]:SetText("") end
     end
     cb.SetLook = function(self, on) self:SetChecked(on and true or false) end
+    if eui() then ns.ellesmere.call("Checkbox", cb) end -- its dark box and accent tick
   else
     note("check box", "fallback")
     cb = CreateFrame("CheckButton", nil, parent)
     cb.box = cb:CreateTexture(nil, "BACKGROUND"); cb.box:SetPoint("TOPLEFT", 4, -4); cb.box:SetPoint("BOTTOMRIGHT", -4, 4)
     cb.box:SetColorTexture(rgba(C.btnOff))
     cb.mark = cb:CreateTexture(nil, "ARTWORK"); cb.mark:SetPoint("TOPLEFT", 8, -8); cb.mark:SetPoint("BOTTOMRIGHT", -8, 8)
-    cb.mark:SetColorTexture(rgba(C.btnOn))
+    cb.mark:SetColorTexture(rgba(C.eui and C.accent or C.btnOn))
     cb.SetLook = function(self, on)
       if self.SetChecked then self:SetChecked(on and true or false) end
       self.mark:SetShown(on and true or false)
@@ -250,6 +466,7 @@ function A.check(parent)
     self.label:SetText(s)
     if self.SetHitRectInsets then pcall(self.SetHitRectInsets, self, 0, -(self.label:GetStringWidth() + 8), 0, 0) end
   end
+  ns.ellesmere.fonts(cb)
   hoverTips(cb)
   return cb
 end
@@ -267,7 +484,26 @@ function A.tab(parent, text)
   local w = math.max(64, b.label:GetStringWidth() + 36)
   b:SetWidth(w)
   local art = A.hasFile(A.FILES.tabActive) and A.hasFile(A.FILES.tabInactive)
-  if art then
+  if eui() then
+    -- EllesmereUI's tab: a flat plate, the accent underlined under the chosen one, a white hover
+    note("tabs", "EllesmereUI")
+    ns.ellesmere.fonts(b)
+    b.plate = b:CreateTexture(nil, "BACKGROUND")
+    b.plate:SetPoint("TOPLEFT", 1, -6); b.plate:SetPoint("BOTTOMRIGHT", -1, 0)
+    b.plate:SetColorTexture(rgba(C.btnOff))
+    b.line = b:CreateTexture(nil, "ARTWORK")
+    b.line:SetPoint("BOTTOMLEFT", 1, 0); b.line:SetPoint("BOTTOMRIGHT", -1, 0); b.line:SetHeight(2)
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetPoint("TOPLEFT", 1, -6); hl:SetPoint("BOTTOMRIGHT", -1, 0)
+    hl:SetColorTexture(1, 1, 1, 0.08)
+    b.SetSelected = function(self, on)
+      self.line:SetColorTexture(rgba(C.accent))
+      self.line:SetShown(on and true or false)
+      self.plate:SetAlpha(on and 1 or 0.75)
+      self.label:ClearAllPoints(); self.label:SetPoint("CENTER", self, "CENTER", 0, -3)
+      self.label:SetTextColor(rgba(on and C.light or C.dim))
+    end
+  elseif art then
     note("tabs", "ok")
     b.parts = {}
     for i = 1, 3 do b.parts[i] = b:CreateTexture(nil, "BACKGROUND") end

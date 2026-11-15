@@ -26,6 +26,17 @@ function M.autoComplete()
   return p ~= nil and p.autocomplete == true
 end
 
+-- Questie's own party chat lines: "objectives" (an objective finished) or "items" (an item that
+-- starts a quest), said in a party when its announce channel is "party" or "both" and it isn't shut up.
+local ANNOUNCE = { objectives = "questAnnounceObjectives", items = "questAnnounceItems" }
+
+function M.announces(kind)
+  local p = profile()
+  if not p or p.questieShutUp == true or not ANNOUNCE[kind] then return false end
+  local channel = p.questAnnounceChannel
+  return (channel == "party" or channel == "both") and p[ANNOUNCE[kind]] == true
+end
+
 local KEYS = { shift = { "Shift", "IsShiftKeyDown" }, ctrl = { "Ctrl", "IsControlKeyDown" }, alt = { "Alt", "IsAltKeyDown" } }
 
 local function key()

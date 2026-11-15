@@ -195,13 +195,13 @@ function ns.profNext(key, skill)
   end
 end
 
--- Expected crafts from a skill to the step's end: one per point below yellow, then the game's
--- chance (grey - skill) / (grey - yellow). math.huge if the recipe goes grey first; nil for a
--- step that isn't a craft (Mining).
-function ns.expectedCrafts(step, fromSkill)
+-- Expected crafts from a skill to the step's end (or toSkill when that comes first): one per point
+-- below yellow, then the game's chance (grey - skill) / (grey - yellow). math.huge if the recipe
+-- goes grey first; nil for a step that isn't a craft (Mining).
+function ns.expectedCrafts(step, fromSkill, toSkill)
   if not (step and step.yellow and step.grey) then return nil end
   local total = 0
-  for s = math.max(fromSkill or step.from, step.from), step.to - 1 do
+  for s = math.max(fromSkill or step.from, step.from), math.min(step.to, toSkill or step.to) - 1 do
     if s >= step.grey then return math.huge end
     total = total + ((s < step.yellow) and 1 or (step.grey - step.yellow) / (step.grey - s))
   end
@@ -209,10 +209,25 @@ function ns.expectedCrafts(step, fromSkill)
 end
 
 -- "about N" as the guide says it (whole crafts, rounded up).
-function ns.craftsLeft(step, fromSkill)
-  local n = ns.expectedCrafts(step, fromSkill)
+function ns.craftsLeft(step, fromSkill, toSkill)
+  local n = ns.expectedCrafts(step, fromSkill, toSkill)
   if not n or n == math.huge then return nil end
   return math.ceil(n - 1e-9)
+end
+
+-- Where the shopping list's "To your cap" stops: your cap, or the next tier's once you're at it
+-- (nil when that is 300 anyway or the skill is unknown), and whether that is your cap or the next.
+function ns.profShopLimit(key, skill, cap)
+  local P = ns.P and ns.P[key]
+  if not (P and skill) then return nil end
+  local trained, i = ns.profTier(key, skill, cap)
+  local limit, which = cap or (trained and trained.cap), "cap"
+  if limit and skill >= limit then
+    local nextTier = P.tiers[(i or #P.tiers) + 1]
+    limit, which = nextTier and nextTier.cap, "next"
+  end
+  if not limit or limit >= 300 then return nil end
+  return limit, which
 end
 
 -- Every material from this skill to 300: { { item, count }, ... }, most first. Things the route
@@ -220,7 +235,9 @@ end
 -- extra (the Thorium Bars a quest takes for its plan) counts until that step starts. Parts never
 -- show: what's still needed is counted as their materials, and those rows carry
 -- via = { part = name, n = parts still to make, raw = units of this material used for them }.
-function ns.profShopping(key, skill, cap)
+-- upto (optional) stops the count at that skill: steps past it drop out, a step that crosses it
+-- counts its crafts to it, and a tier's materials count when that tier opens by then.
+function ns.profShopping(key, skill, cap, upto)
   local P = ns.P and ns.P[key]
   local list = {}
   if not P then return list end
@@ -236,8 +253,8 @@ function ns.profShopping(key, skill, cap)
     byItem[item][2] = byItem[item][2] + n
   end
   for _, s in ipairs(P.steps) do
-    if s.to > (skill or 0) and s.mats then
-      local n = ns.craftsLeft(s, skill) or 0
+    if s.to > (skill or 0) and s.mats and (not upto or s.from < upto) then
+      local n = ns.craftsLeft(s, skill, upto) or 0
       for _, m in ipairs(s.mats) do
         local need = n * m[2]
         local own = math.min(made[m[1]] or 0, need)
@@ -257,7 +274,9 @@ function ns.profShopping(key, skill, cap)
   -- Rank quest materials stay on the list until the skill cap rises.
   local _, trained = ns.profTier(key, skill, cap)
   for i = trained + 1, #P.tiers do
-    for _, m in ipairs(P.tiers[i].mats or {}) do add(m[1], m[2]) end
+    if not upto or P.tiers[i].skill <= upto then
+      for _, m in ipairs(P.tiers[i].mats or {}) do add(m[1], m[2]) end
+    end
   end
   -- A part that uses another part must come first so its demand reaches the later recipe.
   for _, p in ipairs(P.parts or {}) do
@@ -286,6 +305,52 @@ function ns.profShopping(key, skill, cap)
   return list
 end
 
+-- What your current step in each profession you have still needs, for the vendor's shopping card:
+-- { { name, n, label = "Linen Belt (Tailoring)" } } in profession order, each name once. The step's
+-- materials (a part's own materials instead of the part: bolts as cloth, oil as eel and vial), its
+-- tools (one each), and the rod's materials while you lack the rod. Bags are counted by the card.
+function ns.profSupplies()
+  local out, byName = {}, {}
+  local function add(name, n, label, tool)
+    if n <= 0 then return end
+    local row = byName[name]
+    if not row then
+      row = { name = name, n = 0, label = label }
+      byName[name], out[#out + 1] = row, row
+    elseif not row.label:find(label, 1, true) and not row.more then
+      row.label, row.more = row.label .. " and " .. label, true
+    end
+    row.n = tool and math.max(row.n, n) or row.n + n
+  end
+  local snapshot = ns.profSkillSnapshot()
+  for _, key in ipairs(ns.PROF_ORDER) do
+    local P, reading = ns.P and ns.P[key], snapshot[key]
+    local step = P and reading and reading.rank and ns.profStep(key, reading.rank)
+    if step and step.mats then
+      local label = step.name .. " (" .. P.name .. ")"
+      local n = ns.craftsLeft(step, reading.rank) or 0
+      local makesRod = false -- the rod's own step: its Mote can't be made yet
+      for _, r in ipairs(P.rods or {}) do if r.name == step.name then makesRod = true end end
+      for _, m in ipairs(step.mats) do
+        local part = not makesRod and ns.profPart(key, m[1])
+        if part then
+          local short = math.max(n * m[2] - (bagCount(m[1]) or 0), 0)
+          local crafts = math.ceil(short / (part.makes[2] or 1))
+          for _, pm in ipairs(part.mats or {}) do add(pm[1], crafts * pm[2], label) end
+        else
+          add(m[1], n * m[2], label)
+        end
+      end
+      for _, tool in ipairs(step.tools or {}) do add(tool, 1, label, true) end
+      local rod = ns.profRod(key, step)
+      if rod and ns.profHasRod(key, rod) == false then
+        for _, m in ipairs(rod.mats or {}) do add(m[1], m[2], rod.name .. " (" .. P.name .. ")") end
+      end
+    end
+  end
+  return out
+end
+
 -- The tier you've trained: the one with your cap when the client tells it, else the lowest
 -- tier that allows your skill.
 function ns.profTier(key, skill, cap)
@@ -312,12 +377,13 @@ function ns.profTierDue(key, skill, cap, level)
   if skill >= trained.cap then return "cap", nextTier end
 end
 
--- Herbs specify their own cutoffs. Veins use the standard mining intervals.
+-- Herbs specify their own cutoffs. Veins use Forever's gathering intervals: orange to +25, yellow to
+-- +65 (Forever moved green later than Classic's +50), green to +100.
 function ns.profNodeColor(node, skill)
   skill = skill or 0
   if skill < node.skill then return "red" end
   if skill < (node.yellow or node.skill + 25) then return "orange" end
-  if skill < (node.green or node.skill + 50) then return "yellow" end
+  if skill < (node.green or node.skill + 65) then return "yellow" end
   if skill < (node.grey or node.skill + 100) then return "green" end
   return "grey"
 end

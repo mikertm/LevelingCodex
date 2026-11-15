@@ -22,7 +22,8 @@ local function start()
   LevelingCodexDB = LevelingCodexDB or {}
   LevelingCodexCharDB = LevelingCodexCharDB or {}
   LevelingCodexDB.v = 1 -- so a table that comes back next session is told apart from a lost one
-  ns.useTheme(LevelingCodexDB.theme)
+  ns.ellesmere.register() -- EllesmereUI loaded after us after all: its callback comes at once or soon
+  ns.useTheme(ns.themeName())
   local localized, token = UnitClass("player")
   if not token then return end -- try again at PLAYER_ENTERING_WORLD
   ns.started = true
@@ -41,7 +42,9 @@ local function start()
   ns.startProfessions()
   ns.startCraftGuide()
   ns.startTrainerGuide()
+  ns.startVendor()
   ns.startPace()
+  ns.startStats()
 end
 
 local events = CreateFrame("Frame")
@@ -212,12 +215,16 @@ function ns.debugLines()
     (#missing > 0 and (", missing: " .. table.concat(missing, ", ")) or "")
   local used = A.reportLines()
   if #used > 0 then out[#out + 1] = "art used: " .. table.concat(used, "; ") end
+  out[#out + 1] = ns.ellesmere.debugLine()
   for _, line in ipairs(ns.talentDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trackingDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.questMapDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questieDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.partyDebugLines()) do out[#out + 1] = line end

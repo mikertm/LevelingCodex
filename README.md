@@ -2,9 +2,9 @@
 
 # Leveling Codex
 
-In-game companion for **The Leveling Codex** WoW: Forever leveling guides. It traces the talent to take each level, reminds you what to train, and sets up smart macros in one click. The Professions tab has 1–300 guides for Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning, Leatherworking, Alchemy, Engineering, First Aid, Cooking, and Fishing, with a crafting window trace for guided recipes. Open it with `/codex` or the minimap book.
+In-game companion for **The Leveling Codex** WoW: Forever leveling guides. It traces the talent to take each level (on the Codex guide's path, a recommended path for any spec, or a custom path you build), reminds you what to train, and sets up smart macros in one click. The Professions tab has 1–300 guides for Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning, Leatherworking, Alchemy, Engineering, First Aid, Cooking, and Fishing, with a crafting window trace for guided recipes. Open it with `/codex` or the minimap book.
 
-It works side by side with Questie: Questie's auto-accept and hold-back key take precedence, the step window sits beside Questie's tracker, and with QuestieDB installed the quest arrow finds the nearest objective once you reach a camp.
+It works side by side with Questie: Questie's auto-accept and hold-back key take precedence, the step window sits beside Questie's tracker, and with QuestieDB installed the quest arrow finds the nearest objective once you reach a camp. With EllesmereUI installed, the Codex takes on its look (window frame, dark panels, accent colour and font) through EllesmereUI's skinning API.
 
 See [CURSEFORGE_DESCRIPTION.md](CURSEFORGE_DESCRIPTION.md) for the full feature list and [RELEASING.md](RELEASING.md) for how releases are published.
 

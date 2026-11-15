@@ -1,14 +1,24 @@
-"""Write the release notes CurseForge shows for one version, as HTML.
+"""Write the release notes CurseForge shows for one version.
 
-    python tools/release_notes.py v0.20.0 > RELEASE_NOTES.html
+    python tools/release_notes.py v0.20.0 > RELEASE_NOTES.md          (Markdown, what the release uploads)
+    python tools/release_notes.py --html v0.20.0 > RELEASE_NOTES.html (the same notes as HTML)
     python tools/release_notes.py --check     (every version section converts cleanly)
 
-Takes that version's section of CHANGELOG.md (from its "## v0.20.0" heading to the next "## ")
-and converts its Markdown to HTML: "###" headings, "-" bullets (nested by two spaces, with
-indented continuation lines), paragraphs, **bold**, *italic*, `code` and [links](url). Everything
-else is escaped, so text like "<dungeon>" stays visible. The release workflow runs it before
-the packager and fails when the changelog has no section for the tag. Uploading only this
-version's notes as HTML keeps CurseForge from showing the whole changelog as one run-on block.
+Takes that version's section of CHANGELOG.md (from its "## v0.20.0" heading to the next "## ").
+The release workflow runs it before the packager and fails when the changelog has no section for
+the tag; only this version's notes are uploaded, never the whole changelog.
+
+Markdown (the default) is the format CurseForge's author console edits in. Uploaded as HTML
+(v0.20.1 to v0.23.0) the public page was fine, but the console's changelog editor turned the HTML
+into Markdown and then showed that Markdown as plain text ("### Talents * **A talent path...**"
+on one line, every mark escaped), and saving the file there kept the mess. The Markdown written
+here is normalised so any Markdown reader agrees on it: "###" headings, "-" bullets nested by four
+spaces, each bullet and paragraph on one line (indented continuation lines joined), a blank line
+between blocks, and "<" written as &lt; so text like "<dungeon>" never reads as an HTML tag.
+
+The HTML (--html) has "###" headings, "-" bullets (nested by two spaces, with indented
+continuation lines), paragraphs, **bold**, *italic*, `code` and [links](url); everything else
+is escaped.
 """
 import html
 import re
@@ -100,15 +110,61 @@ def convert(lines):
     return "\n".join(out) + "\n"
 
 
-def notes(version):
+def markdown(lines):
+    """The section as normalised Markdown (see the module notes)."""
+    blocks = []   # each a list of lines; blocks are joined by a blank line
+    para = []
+    items = None  # the open list's lines
+    depth = 0     # the last bullet's nesting (0 = top level)
+
+    def flush_para():
+        if para:
+            blocks.append([" ".join(para).replace("<", "&lt;")])
+            para.clear()
+
+    def close_list():
+        nonlocal items, depth
+        if items:
+            blocks.append(items)
+        items, depth = None, 0
+
+    for raw in lines:
+        line = raw.rstrip()
+        bullet = re.match(r"^( *)[-*] +(.*)$", line)
+        if not line.strip():
+            flush_para()
+            continue
+        if line.startswith("#"):
+            flush_para()
+            close_list()
+            level = min(6, len(line) - len(line.lstrip("#")))
+            blocks.append(["#" * level + " " + line.lstrip("#").strip().replace("<", "&lt;")])
+        elif bullet:
+            flush_para()
+            want = len(bullet.group(1)) // 2
+            depth = 0 if items is None else min(want, depth + 1)
+            if items is None:
+                items = []
+            items.append("    " * depth + "- " + bullet.group(2).strip().replace("<", "&lt;"))
+        elif items is not None and line.startswith(" "):
+            items[-1] += " " + line.strip().replace("<", "&lt;")  # a bullet's continuation line
+        else:
+            close_list()
+            para.append(line.strip())
+    flush_para()
+    close_list()
+    return "\n\n".join("\n".join(b) for b in blocks) + "\n"
+
+
+def notes(version, html_out=False):
     found = sections(CHANGELOG.read_text(encoding="utf-8"))
     if version not in found:
         raise SystemExit("CHANGELOG.md has no '## %s' section: add the release notes before tagging." % version)
-    return convert(found[version])
+    return convert(found[version]) if html_out else markdown(found[version])
 
 
 def check():
-    """Every version section converts with no Markdown left over."""
+    """Every version section converts: the HTML with no Markdown left over, the Markdown normalised."""
     problems = []
     for version, lines in sections(CHANGELOG.read_text(encoding="utf-8")).items():
         text = convert(lines)
@@ -118,18 +174,31 @@ def check():
                 problems.append("%s: '%s' left in the notes" % (version, mark.strip()))
         if "<li>" not in text and "<p>" not in text:
             problems.append("%s: no notes" % version)
+        md = markdown(lines)
+        if "<" in md:
+            problems.append("%s: a raw '<' in the Markdown notes" % version)
+        for line in md.split("\n"):
+            indent = len(line) - len(line.lstrip(" "))
+            if indent % 4 or (indent and not line.lstrip().startswith("- ")):
+                problems.append("%s: Markdown line indented by %d: %s" % (version, indent, line.strip()[:40]))
+        if not md.strip():
+            problems.append("%s: no Markdown notes" % version)
     return problems
 
 
 def main():
-    if sys.argv[1:] == ["--check"]:
+    args = sys.argv[1:]
+    if args == ["--check"]:
         problems = check()
         for p in problems:
             print(p)
         return 1 if problems else 0
-    if len(sys.argv) != 2:
+    html_out = bool(args) and args[0] == "--html"
+    if html_out:
+        args = args[1:]
+    if len(args) != 1:
         raise SystemExit(__doc__)
-    sys.stdout.write(notes(sys.argv[1]))
+    sys.stdout.write(notes(args[0], html_out))
     return 0
 
 

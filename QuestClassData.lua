@@ -1908,9 +1908,9 @@ do
   end
 
   -- Alliance, Eastern Kingdoms
-  inline("coldridge", "complete", 218, {
+  inline("coldridge", "complete", 3361, {
     part(94373, 1, at(nil, 27.5, 80.9, m.dunMorogh),
-      "Shamans with Call of Earth: the Frostmane Troll Whelps and Novices in this cave also drop Iceclaw Bear Pendants. Collect two on your way back out to Grelin.",
+      "Shamans with Call of Earth: the Frostmane Troll Whelps and Novices in this cave also drop Iceclaw Bear Pendants. Collect two on your way in to Grik'nir.",
       "2 Iceclaw Bear Pendants"),
   })
   inline("loch-modan", "turnin", 267, {
@@ -1957,9 +1957,9 @@ do
   })
 
   -- Alliance, Kalimdor (and the Westfall coast for Druids)
-  inline("darkshore", "complete", 87760, {
+  inline("darkshore", "turnin", 2078, {
     stop(272, at("Strange Lockbox", 48.87, 11.32, m.darkshore),
-      "Druids with Trial of the Sea Lion: swim on past the rock spire to the Strange Lockbox between the rock pillars to the north for the Half Pendant of Aquatic Agility."),
+      "Druids with Trial of the Sea Lion: swim west along the shore to the Strange Lockbox between the rock pillars north of the rock spire for the Half Pendant of Aquatic Agility, then go on to the spire."),
   })
   inline("westfall", "turnin", 104, {
     stop(272, at("Strange Lockbox", 17.94, 33.18, m.westfall),
@@ -1988,9 +1988,9 @@ do
       "Rogues with Destiny Calls: Sethir the Ancient is just north of the Oracle Glade, a short detour on the way to Wellspring Lake. Approach in Stealth and pickpocket Sethir's Journal.",
       "Sethir's Journal"),
   })
-  inline("ashenvale-early", "complete", 970, {
+  inline("ashenvale-early", "accept", 1010, {
     part(1738, 1, at("Heartswood", 31.53, 31.52, 1440),
-      "Warlocks with Heartswood: the Heartswood lies at the roots of the tree in these same ruins, among the Dark Strand Excavators. Loot it before you move on to Bathran's Haunt.",
+      "Warlocks with Heartswood: the Heartswood lies at the roots of the tree in the ruins north-east of the post, among the Dark Strand Excavators. Loot it as you reach the ruins.",
       "Heartswood"),
   })
 
@@ -2034,4 +2034,191 @@ do
     stop(30, at("Strange Lockbox", 29.6, 29.2, m.silverpine),
       "Druids with Trial of the Sea Lion: before heading south, go north-west from the graveyard to the coast and swim out to the bubbling fissure. Loot the Half Pendant of Aquatic Endurance from the Strange Lockbox beside it."),
   })
+end
+
+-- Class objectives the Alliance 30-60 route passes anyway (the Horde block in QuestHordeClass3060.lua
+-- does the same): copies of the class guides' objective steps, shown only to that class and only
+-- while the quest is in the log (`logOnly`), after the closest step on the same map in that chapter,
+-- or before it when that saves 50 yd or more. List: tools/audits/2026-11-14-alliance-1-60-audit.md.
+do
+  local sections = {}
+  for _, s in ipairs(route.sections) do sections[s.id] = s end
+  local plural = { WARRIOR = "Warriors", HUNTER = "Hunters", ROGUE = "Rogues", PRIEST = "Priests",
+    SHAMAN = "Shamans", MAGE = "Mages", WARLOCK = "Warlocks", DRUID = "Druids", PALADIN = "Paladins" }
+  local function classStep(quest, index)
+    for _, s in ipairs(route.sections) do
+      if s.side and s.class then
+        for _, step in ipairs(s.steps) do
+          if step.type == "complete" and step.quest == quest and step.objectiveIndex == index and step.map then
+            return step
+          end
+        end
+      end
+    end
+    error("Alliance class objectives: no class step for " .. quest .. " objective " .. tostring(index))
+  end
+  local function passing(routeId, quest, index)
+    local found = classStep(quest, index)
+    local section = assert(sections[routeId], "Alliance class objectives: no section " .. routeId)
+    local best, bestD
+    for i, step in ipairs(section.steps) do
+      if step.map == found.map and step.x and not step.logOnly then
+        local d = (step.x - found.x) ^ 2 + (step.y - found.y) ^ 2
+        if not bestD or d < bestD then best, bestD = i, d end
+      end
+    end
+    assert(best, "Alliance class objectives: " .. routeId .. " never visits that map")
+    local size = route.extents[found.map] or { 100, 100 }
+    local function yards(a, b)
+      if not (a and b and a.map == found.map and b.map == found.map and a.x and b.x) then return nil end
+      return math.sqrt(((a.x - b.x) * size[1] / 100) ^ 2 + ((a.y - b.y) * size[2] / 100) ^ 2)
+    end
+    local function detour(prev, nxt)
+      local inA, outB, direct = yards(prev, found), yards(found, nxt), yards(prev, nxt)
+      return (inA or 0) + (outB or 0) - ((inA and outB and direct) or 0)
+    end
+    -- The route's own neighbours: another class's objective placed here earlier doesn't count.
+    local function neighbour(i, d)
+      i = i + d
+      while section.steps[i] and section.steps[i].logOnly do i = i + d end
+      return section.steps[i], i
+    end
+    local here = section.steps[best]
+    local prev, prevAt = neighbour(best, -1)
+    if detour(prev, here) + 50 < detour(here, (neighbour(best, 1))) then best = prevAt end
+    local copy = {}
+    for k, v in pairs(found) do copy[k] = v end
+    copy.logOnly, copy.phase, copy.guide, copy.sticky = true, nil, nil, nil
+    local class = type(found.class) == "string" and found.class or nil
+    copy.text = (class and (plural[class] .. " with " .. found.name .. ": ") or "") .. found.text
+    table.insert(section.steps, best + 1, copy)
+  end
+  passing("stv-36", 1712, 2)           -- Warrior: Bloodscalp tusks for Cyclonian
+  passing("desolace-40", 1954, nil)   -- Mage: the Infernal Orb at Mannoroc Coven
+  passing("desolace-40", 1799, nil)   -- Warlock: Fragments of the Orb of Orahil
+  passing("desolace-40", 4962, nil)   -- Warlock: the Felhas Ruby at Mannoroc Coven
+  passing("blasted-51", 8423, nil)     -- Warrior: Helboars
+  passing("blasted-51", 8424, nil)     -- Warrior: the Shadowsworn
+  passing("azshara-53", 8153, nil)     -- Hunter: courser antlers
+  passing("azshara-53", 8255, nil)     -- Priest: courser glands
+  passing("azshara-53", 8251, nil)     -- Mage: blood elf dust
+  passing("azshara-53", 8252, nil)     -- Mage: siren coral
+  passing("azshara-53", 8234, nil)     -- Rogue: the Sealed Azure Bag
+  passing("azshara-53", 8235, nil)     -- Rogue: encoded fragments
+  passing("plaguelands-57", 8256, nil) -- Priest: Ichor of Undeath (after Azshara's glands)
+end
+
+-- What finishing a special chain or a class guide gives you, shown under its title in Quests >
+-- Guides and on its page. In our own words, from each guide's final steps, the audit notes and the
+-- game reference: tools/audits/2026-11-13-guide-rewards.md (UNKNOWN there = no line). A guide's
+-- own `reward` wins. ASCII, at most 60 characters, no closing period (the harness checks).
+do
+  local REWARDS = {
+    ["seeking-caitlin"] = "Leads to Caitlin's Excavation Site dungeon quest",
+    ["onyxia-attunement"] = "The Drakefire Amulet: opens Onyxia's Lair",
+    ["ubrs-seal"] = "The Seal of Ascension: opens Upper Blackrock Spire",
+    ["molten-core-attunement"] = "Opens Molten Core; Lothos can teleport you straight in",
+    ["scholomance-key"] = "The Skeleton Key: opens Scholomance",
+    ["shadowforge-key"] = "The Shadowforge Key: opens doors deep in Blackrock Depths",
+    ["attunement-onyxia-horde"] = "The Drakefire Amulet: opens Onyxia's Lair",
+    ["ubrs-seal-horde"] = "The Seal of Ascension: opens Upper Blackrock Spire",
+    ["molten-core-attunement-horde"] = "Opens Molten Core; Lothos can teleport you straight in",
+    ["shadowforge-key-horde"] = "The Shadowforge Key: opens doors deep in Blackrock Depths",
+    ["scholomance-key-horde"] = "The Skeleton Key: opens Scholomance",
+    ["warrior-defense-human"] = "Teaches Defensive Stance, Taunt and Sunder Armor",
+    ["warrior-haggards-weapon"] = "A weapon of your choice from Marshal Haggard",
+    ["warrior-defense-ironforge"] = "Teaches Defensive Stance, Taunt and Sunder Armor",
+    ["warrior-grey-iron-weapons"] = "A weapon of your choice from Tormus Deepforge",
+    ["warrior-defense-nightelf"] = "Teaches Defensive Stance, Taunt and Sunder Armor",
+    ["warrior-weapons-of-elunite"] = "An Elunite weapon of your choice",
+    ["warrior-furens-favor"] = "Furen's Favor, a shield; opens Fire Hardened Mail",
+    ["warrior-fire-hardened-mail"] = "Fire Hardened Hauberk (mail chest); opens more armor",
+    ["warrior-fire-hardened-coif"] = "The Fire Hardened Coif, a mail helm",
+    ["warrior-fire-hardened-gauntlets"] = "The Fire Hardened Gauntlets, mail gloves",
+    ["warrior-fire-hardened-leggings"] = "The Fire Hardened Leggings, mail leg armor",
+    ["warrior-berserker-stance"] = "Teaches Berserker Stance and Intercept",
+    ["paladin-redemption-human"] = "Teaches Redemption: bring a dead player back to life",
+    ["paladin-redemption-dwarf"] = "Teaches Redemption: bring a dead player back to life",
+    ["paladin-sense-undead"] = "Teaches Sense Undead, plus the Bastion of Stormwind shield",
+    ["paladin-verigans-fist"] = "Verigan's Fist, a two-handed mace",
+    ["paladin-divine-storm-cloak"] = "The Cloak of the Divine Storm",
+    ["hunter-taming-dwarf"] = "Teaches Tame Beast and the basic pet commands",
+    ["hunter-taming-human"] = "Teaches Tame Beast and the basic pet commands",
+    ["rogue-blade-human"] = "The Blade of Cunning, a dagger",
+    ["rogue-blade-dun-morogh"] = "The Blade of Cunning, a dagger",
+    ["rogue-blade-night-elf"] = "The Blade of Cunning, a dagger",
+    ["rogue-poisons"] = "Teaches Poisons and Thistle Tea; cures Touch of Zanzil",
+    ["rogue-horn-of-xelthos"] = "The Pyrewood Signet Ring; opens The Eye of Bhossca",
+    ["rogue-eye-of-bhossca"] = "The Ruby-Adorned Blade, a one-hand sword",
+    ["priest-garments-elwynn"] = "Friar's Robes of the Light, a cloth robe",
+    ["priest-garments-dun-morogh"] = "Friar's Robes of the Light, a cloth robe",
+    ["priest-divine-grace"] = "Teaches Divine Grace: instant heal for an ally under 50%",
+    ["priest-feedback"] = "Teaches Feedback: spells cast at you burn the caster's mana",
+    ["priest-desperate-prayer"] = "Teaches Desperate Prayer: an instant self-heal",
+    ["priest-chastise"] = "Teaches Chastise: Holy damage, roots a humanoid briefly",
+    ["priest-confounding-flash"] = "Teaches Confounding Flash: briefly confuses enemies",
+    ["priest-contingency-plan"] = "Teaches Contingency Plan: shields an ally who drops low",
+    ["priest-elunes-grace"] = "Teaches Elune's Grace: fewer melee and ranged hits on you",
+    ["mage-mirror-lake"] = "A weapon or off-hand of your choice",
+    ["mage-gizmonitor"] = "A weapon or off-hand of your choice",
+    ["mage-manaweave-robe"] = "The Manaweave Robe, a cloth robe",
+    ["mage-research-access"] = "Teaches Study: research at a library for scrolls",
+    ["mage-astral-knot"] = "Astral Knot Robe or Blouse (cloth), your choice",
+    ["mage-wand"] = "A wand of your choice from Tabetha",
+    ["warlock-voidwalker"] = "Teaches Summon Voidwalker",
+    ["warlock-sayaad"] = "Teaches Summon Succubus and Summon Incubus",
+    ["warlock-felhunter"] = "Teaches Summon Felhunter",
+    ["warlock-orb-of-soranruk"] = "The Orb or the Staff of Soran'ruk, your choice",
+    ["warlock-dread-mage-hat"] = "The Dread Mage Hat, a cloth hat",
+    ["druid-bear-form"] = "Teaches Bear Form",
+    ["druid-aquatic-form"] = "Teaches Aquatic Form: swim faster, breathe underwater",
+    ["shaman-earth-totem"] = "Your Earth Totem item",
+    ["shaman-fire-totem"] = "Your Fire Totem item",
+    ["shaman-water-totem"] = "Your Water Totem item",
+    ["druid-cure-poison"] = "Teaches Cure Poison",
+    ["druid-cat-night-elf"] = "Teaches Cat Form",
+    ["druid-cat-skyborne"] = "Teaches Cat Form",
+    ["shaman-air-totem"] = "Your Air Totem item",
+    ["warrior-whirlwind-weapon"] = "A two-handed Whirlwind Axe, Sword or Warhammer",
+    ["warlock-orb-of-orahil"] = "The Orb of Dar'Orahil, an off-hand orb",
+    ["warrior-defense-barrens"] = "Teaches Defensive Stance",
+    ["warrior-forged-steel"] = "A weapon of your choice from Thun'grim",
+    ["warrior-agamand-heirlooms"] = "An Heirloom weapon of your choice",
+    ["warrior-field-of-giants"] = "Opens Thun'grim's Brutal Armor quests",
+    ["warrior-brutal-hauberk"] = "Brutal Hauberk (mail chest); opens more Brutal armor",
+    ["warrior-brutal-gauntlets"] = "The Brutal Gauntlets, mail gloves",
+    ["warrior-brutal-helm"] = "The Brutal Helm, a mail helm",
+    ["warrior-brutal-legguards"] = "The Brutal Legguards, mail leg armor",
+    ["paladin-redemption-undead"] = "Teaches Redemption: bring a dead player back to life",
+    ["paladin-lumina-windsinger"] = "Opens the Wolfsbane weapon quests",
+    ["paladin-wolfsbane"] = "The Moonsilver Blade (two-hand sword), then Wolfsbane",
+    ["rogue-poisons-horde"] = "Teaches Poisons and Thistle Tea; cures Touch of Zanzil",
+    ["rogue-horn-of-xelthos-horde"] = "The Pyrewood Signet Ring; opens The Eye of Bhossca",
+    ["rogue-eye-of-bhossca-horde"] = "The Ruby-Adorned Blade, a one-hand sword",
+    ["mage-ju-ju-heaps"] = "An orb or a staff of your choice",
+    ["mage-study-horde"] = "Teaches Study: research at a library for scrolls",
+    ["mage-spellfire-robes"] = "The Lesser Spellfire Robes, a cloth robe",
+    ["mage-nether-lace"] = "Nether-lace Robe or Tunic (cloth), your choice",
+    ["mage-wand-horde"] = "A wand of your choice from Tabetha",
+    ["warlock-sayaad-horde"] = "Teaches Summon Succubus and Summon Incubus",
+    ["warlock-orb-horde"] = "The Orb or the Staff of Soran'ruk, your choice",
+    ["warlock-felhunter-horde"] = "Teaches Summon Felhunter",
+    ["druid-bear-form-tauren"] = "Teaches Bear Form",
+    ["druid-cure-poison-horde"] = "Teaches Cure Poison",
+    ["druid-aquatic-form-horde"] = "Teaches Aquatic Form: swim faster, breathe underwater",
+    ["druid-cat-form-tauren"] = "Teaches Cat Form",
+    ["druid-cat-form-skyborne-horde"] = "Teaches Cat Form",
+    ["shaman-fire-totem-horde"] = "Your Fire Totem item",
+    ["shaman-water-totem-horde"] = "Your Water Totem item",
+    ["shaman-air-totem-horde"] = "Your Air Totem item",
+    ["warrior-whirlwind-weapon-horde"] = "A two-handed Whirlwind Axe, Sword or Warhammer",
+    ["warlock-felsteed-horde"] = "Teaches Summon Felsteed",
+    ["warlock-orb-of-orahil-horde"] = "The Orb of Dar'Orahil, an off-hand orb",
+    ["shaman-tempests-weapons-horde"] = "Rage of the Storm, Lightning's Grasp or Tidebringer's Claw",
+  }
+  for _, faction in ipairs({ "ALLIANCE", "HORDE" }) do
+    for _, section in ipairs(LevelingCodexQuests[faction].sections) do
+      section.reward = section.reward or REWARDS[section.id]
+    end
+  end
 end

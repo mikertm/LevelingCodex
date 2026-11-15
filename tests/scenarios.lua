@@ -55,6 +55,8 @@ local function questText(root, value)
   local texts = {}
   for _, child in ipairs({ root:GetRegions() }) do
     if child:IsShown() and child._text and child._text:find(value, 1, true) then return true end
+    -- the step title shows the name; its full label ("Accept - X") is its codexLabel
+    if child:IsShown() and type(child.codexLabel) == "string" and child.codexLabel:find(value, 1, true) then return true end
     if child:IsShown() and child._text and child._text ~= "" then texts[#texts + 1] = child._text end
   end
   -- A checklist row in the step window shows its goal and its count apart: "Kobold Vermin" "4/10".
@@ -76,12 +78,36 @@ local function questTextStarts(root, value)
   return false
 end
 
+-- The Quests tab's Quest log sub-tab, with this queue's heading ("Missed quests (2)").
 local function questQueue(name)
-  local button = findButton(win(), function(label)
-    return label:match("^" .. name .. " %(%d+%)$")
-  end)
-  check(button, "quest view is available: " .. name)
-  button:Click()
+  click(win(), "Quest log")
+  check(questText(win(), name .. " ("), "quest view is available: " .. name, 2)
+end
+
+-- A guide's button under Quests > Guides, opening folded level bands ("+ LEVELS ...") until it shows.
+local function guideButton(name)
+  click(win(), "Guides")
+  local function find() return findButton(win(), function(l) return l == name end) end
+  local b = find()
+  while not b do
+    local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
+    if not folded then break end
+    folded:Click()
+    b = find()
+  end
+  return b
+end
+
+-- A button under Quests > Step (Resume active quest, Return to leveling, ...).
+local function stepTool(name)
+  click(win(), "Step")
+  return click(win(), name)
+end
+
+local function clickGuide(name)
+  local b = guideButton(name)
+  check(b, "no guide button '" .. name .. "'", 2)
+  b:Click()
 end
 
 function S.questStart()
@@ -132,9 +158,9 @@ function S.questPastRoute()
   S.login()
   slash("quests")
   check(questText(win(), "Darkshire: Mor'Ladim and the Worgen"), "level 31 lists the Darkshire chapter")
-  click(win(), "Wetlands")
+  clickGuide("Wetlands")
   check(questText(questViewer(), "Wetlands"), "the Wetlands section is listed")
-  click(win(), "Elwynn Forest")
+  clickGuide("Elwynn Forest")
   check(questText(questViewer(), "Elwynn Forest"), "can jump to the nearest available section")
 end
 
@@ -176,7 +202,7 @@ function S.questTravelArrow()
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Redridge Brutes 4/10"), "following the active Redridge objective")
   local arrow = LevelingCodexQuestArrow
@@ -242,7 +268,7 @@ function S.questObjectiveWaypoints()
   MOCK.questLog = { { questID = 92745, objectives = { diggers, miners } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame, arrow = questViewer(), LevelingCodexQuestArrow
   check(questText(frame, "Jangolode Mine") and questText(arrow, "Arrived"), "first mine objective points to Jangolode")
 
@@ -258,6 +284,32 @@ function S.questObjectiveWaypoints()
   miners.text, miners.finished = "Riverpaw Miners 6/6", true
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Turn in - The State of the Mines"), "the last objective advances to the turn-in")
+end
+
+-- Duskwood: Lean Wolf Flanks for Seasoned Wolf Kabobs also drop from the Young Black Ravagers of the
+-- Ira's Dagger hunt and the wolves around the spider woods, so both steps list the kabobs.
+function S.questDuskwoodFlanks()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 23, 1431, 55.3, 63.7
+  MOCK.questLog = {
+    { questID = 96137, objectives = { { text = "Young Black Ravager slain: 2/10" }, { text = "Black Ravager slain: 0/7" } } },
+    { questID = 245, objectives = { { text = "Pygmy Venom Web Spider slain: 0/15" } } },
+    { questID = 90, objectives = { { text = "Lean Wolf Flank: 3/10" }, { text = "Stormwind Seasoning Herbs: 0/1" } } },
+  }
+  S.login()
+  slash("quests")
+  local function preview(title)
+    for _, b in ipairs(MOCK.buttons(win())) do
+      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
+    end
+    error("No route objective for " .. title)
+  end
+  local frame = questViewer()
+  preview("Ira's Dagger")
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Seasoned Wolf Kabobs")
+    and questText(frame, "Lean Wolf Flank 3/10"), "the ravager hunt lists the kabobs' wolf flanks")
+  preview("Eight-Legged Menaces")
+  check(questText(frame, "Seasoned Wolf Kabobs") and questText(frame, "Lean Wolf Flank 3/10"),
+    "and so does the spider step")
 end
 
 function S.questRedridgeOverlap()
@@ -279,14 +331,14 @@ function S.questRedridgeOverlap()
   preview("Blackrock Blockade")
   local frame = questViewer()
   check(questText(frame, "Blackrock Supplies 4/10"), "the primary objective keeps its live progress")
-  check(questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Battleworn Axe 3/10"),
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Battleworn Axe 3/10"),
     "the blockade step shows the overlapping axe objective")
   MOCK.questLog[1].objectives[1].text = "Battleworn Axe 5/10"
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Battleworn Axe 5/10"), "the overlapping objective updates live")
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
-  check(not questText(frame, "ALSO ON THIS LOOP") and questText(frame, "Blackrock Supplies 4/10"),
+  check(not questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Blackrock Supplies 4/10"),
     "completed axes leave the panel without changing the primary objective")
   preview("Redridge Goulash")
   check(questText(frame, "Great Goretusk Snout 2/5") and questText(frame, "Underbelly Whelp Scale 1/6"),
@@ -302,7 +354,7 @@ function S.questSkyborne()
   check(questText(questViewer(), "Lakeshire"), "level 19 Skyborne starts in Lakeshire with an older Westfall quest")
   slash("quests")
   check(not findButton(win(), function(l) return l == "Northshire Valley" end), "Human start stays race filtered")
-  check(findButton(win(), function(l) return l == "Westfall" end), "the shared Westfall section remains available")
+  check(guideButton("Westfall"), "the shared Westfall section remains available")
 end
 
 function S.questLayout()
@@ -310,7 +362,7 @@ function S.questLayout()
   MOCK.questLog = { { questID = 3741, isComplete = true }, { questID = 246 } }
   S.login()
   slash("quests")
-  local opener = findButton(win(), function(label) return label == "Show step window" end)
+  local opener = findButton(win(), function(label) return label == "Show step window" or label == "Hide step window" end)
   check(opener, "step window control is visible")
   local _, content = opener:GetPoint(1)
   local function checkBounds()
@@ -344,7 +396,7 @@ function S.questLayout()
   questQueue("Missed quests")
   check(questText(win(), "Missed quests"), "missed view has its own heading")
   checkBounds()
-  click(win(), "Westfall")
+  clickGuide("Westfall")
   check(questText(win(), "The Defias Brotherhood"), "switching sections returns to its route")
   checkBounds()
 end
@@ -354,6 +406,9 @@ function S.questBind()
   S.login()
   local frame = questViewer()
   check(questText(frame, "Flight path - Lakeshire, Redridge"), "Lakeshire starts at its flight path")
+  click(frame, "Next")
+  -- Deputy Feldon stands beside the gryphon master: his pickup comes before the walk to the inn.
+  check(questText(frame, "Accept - Show of Force"), "Feldon's pickup follows the flight path")
   click(frame, "Next")
   check(questText(frame, "Bind hearthstone"), "bind step follows the flight path")
   check(questText(frame, "Your hearthstone is set to Goldshire"), "bind step names the current bind")
@@ -448,6 +503,8 @@ function S.questTravelBind()
   check(MOCK.gossipOption == 4, "a flight path step opens the flight master's map")
   MOCK.gossipOption = nil
   click(frame, "Next")
+  check(questText(frame, "Accept - Show of Force"), "Feldon's pickup beside the flight master comes next")
+  click(frame, "Next")
   check(questText(frame, "Bind hearthstone"), "the bind step follows")
   MOCK.event("GOSSIP_SHOW")
   check(MOCK.gossipOption == nil, "no bind option picked away from the step's inn")
@@ -541,7 +598,7 @@ function S.questCleanup()
     { questID = 7, title = "Kobold Camp Cleanup", level = 2, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   check(questText(win(), "Quest log cleanup"), "the library lists quests to clean up")
   check(questText(win(), "Stray Errand\nNot in your guides") and questText(win(), "A Threat Within\nGrey"),
     "each quest says why it is listed")
@@ -572,6 +629,92 @@ function S.questReward()
   LevelingCodexDB.noRewardHint = true
   MOCK.event("QUEST_COMPLETE")
   check(not mark:IsShown(), "the setting turns the mark off")
+  LevelingCodexDB.noRewardHint = nil
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("reward mark: 3 choices %(Mail Vest 4s 50c, Cloth Gloves 13s, Rough Arrow x200 2s%), 2 reads; "
+    .. "marked Cloth Gloves on QuestInfoRewardsFrameQuestInfoItem2"), "debug says what the last reward window read")
+end
+
+local function rewardLines()
+  local n = 0
+  for _, line in ipairs(MOCK.chat) do if line:find("sells for the most") then n = n + 1 end end
+  return n
+end
+
+-- A price still loading when the quest window closes or opens again: no late line, no second line.
+function S.questRewardStale()
+  S.login()
+  for i = 1, 2 do CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, UIParent) end
+  MOCK.questChoices = 2
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, nil } }
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(4)
+  check(rewardLines() == 0, "a closed quest window gets no reward line")
+  local mark = _G.LevelingCodexRewardMark
+  check(not (mark and mark:IsShown()), "and no mark")
+  slash("debug")
+  check(chatHas("reward mark: 2 choices %(Mail Vest 4s 50c, Cloth Gloves price not loaded%), 1 read; "
+    .. "the window closed while waiting for a price"), "debug says the read stopped with the window")
+  MOCK.rewardChoices[2][3] = nil
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(0.3)
+  MOCK.event("QUEST_FINISHED")
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(4)
+  check(rewardLines() == 1, "reopening the window says it once (said " .. rewardLines() .. ")")
+end
+
+-- A slow price is waited for; one that never loads is named, so the line never claims too much.
+function S.questRewardSlowPrice()
+  S.login()
+  local buttons = {}
+  for i = 1, 3 do buttons[i] = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, UIParent) end
+  MOCK.questChoices = 3
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, nil }, { "Rough Arrow", 200, 1 } }
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(2)
+  check(rewardLines() == 0, "still waits for a price after 2 s")
+  MOCK.rewardChoices[2][3] = 1300
+  MOCK.advance(0.6)
+  check(chatHas("Cloth Gloves sells for the most %(13s%)%.$"), "then names the best reward")
+  check(_G.LevelingCodexRewardMark:GetParent() == buttons[2], "and marks it")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.chat = {}
+  MOCK.rewardChoices[2][3] = nil
+  MOCK.event("QUEST_COMPLETE")
+  MOCK.advance(5)
+  check(chatHas("Mail Vest sells for the most %(4s 50c%), but the price of Cloth Gloves didn't load%."),
+    "a price that never loads is named")
+  check(_G.LevelingCodexRewardMark:GetParent() == buttons[1], "the best known reward is marked")
+  check(rewardLines() == 1, "said once")
+  MOCK.event("QUEST_FINISHED")
+  MOCK.chat = {}
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, 450 }, { "Rough Arrow", 200, 1 } }
+  MOCK.event("QUEST_COMPLETE")
+  check(chatHas("Mail Vest sells for the most %(4s 50c%), tied with Cloth Gloves%."), "a tie says so")
+end
+
+-- The mark goes on the button QuestInfo tagged with that choice, even when the buttons start with
+-- a fixed reward.
+function S.questRewardButtons()
+  S.login()
+  local frame = CreateFrame("Frame", "QuestInfoRewardsFrame", UIParent)
+  frame.RewardButtons = {}
+  local kinds = { { "reward", 1 }, { "choice", 1 }, { "choice", 2 } }
+  for i, k in ipairs(kinds) do
+    local b = CreateFrame("Button", "QuestInfoRewardsFrameQuestInfoItem" .. i, frame)
+    b.type = k[1]
+    b:SetID(k[2])
+    frame.RewardButtons[i] = b
+  end
+  MOCK.questChoices = 2
+  MOCK.rewardChoices = { { "Mail Vest", 1, 450 }, { "Cloth Gloves", 1, 1300 } }
+  MOCK.event("QUEST_COMPLETE")
+  check(_G.LevelingCodexRewardMark:GetParent() == frame.RewardButtons[3], "the second choice's own button is marked")
 end
 
 function S.questMobTarget()
@@ -619,6 +762,1077 @@ function S.questMapPin()
   LevelingCodexDB.noQuestMapPin = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(MOCK.userWaypoint == nil, "the setting clears the Codex's waypoint")
+end
+
+-- The step sound: the game finishing a step (an accept, a turn-in) plays it; Next doesn't.
+function S.stepSound()
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - A Threat Within"), "Northshire starts with A Threat Within")
+  MOCK.sounds = {}
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(#MOCK.sounds == 1, "accepting the step's quest plays the step sound (" .. #MOCK.sounds .. ")")
+  check(MOCK.sounds[1].channel == "Master", "on the Master channel, so a low effects volume doesn't hide it")
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(#MOCK.sounds == 2, "turning it in plays it again (" .. #MOCK.sounds .. ")")
+  click(frame, "Next")
+  check(#MOCK.sounds == 2, "Next is quiet")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("step sound: played 2 times this session, last for Turn in %- A Threat Within"),
+    "debug says when the step sound played")
+end
+
+-- The step window colours each step by kind: a chip, the title in that colour, a stripe down the left.
+function S.stepKinds()
+  local kind = MOCK.ns.questStepKind
+  check(kind({ type = "accept" }) == "accept" and kind({ type = "turnin" }) == "turnin"
+    and kind({ type = "fly" }) == "travel" and kind({ type = "boss" }) == "dungeon"
+    and kind({ type = "note" }) == "other" and kind({ type = "buy" }) == "collect", "step kinds")
+  check(MOCK.ns.questKindStyle("other", { type = "train" }).label == "Train", "other kinds use the step's word")
+  check(MOCK.ns.questKindStyle("dungeon", { type = "boss" }).label == "Boss", "a boss step's chip")
+  S.login()
+  local frame = questViewer()
+  local function shown(text)
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do if r:IsShown() and r._text == text then return true end end
+      for _, c in ipairs({ f:GetChildren() }) do if c:IsShown() and walk(c) then return true end end
+    end
+    return walk(frame)
+  end
+  local function near(c, r, g, b) return c and math.abs(c[1] - r) < 0.01 and math.abs(c[2] - g) < 0.01 and math.abs(c[3] - b) < 0.01 end
+  check(frame.chip and frame.chip.text._text == "Accept" and shown("A Threat Within") and not shown("Accept - A Threat Within"),
+    "an accept step: the chip says Accept, the title shows the name alone")
+  check(near(frame.stripe._color, 1, 0.82, 0), "the stripe is gold for a pickup")
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(frame.chip.text._text == "Turn in" and near(frame.stripe._color, 0.45, 0.85, 0.4), "a turn-in step: green")
+end
+
+-- Up next rows: the step's icon and how far it is, updating as you move.
+function S.stepUpNext()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 3, { type = "goto", text = "Look in on Stormwind.", map = 1453, x = 50, y = 50 })
+  MOCK.mapInfo = { [1453] = { name = "Stormwind City", mapType = 3, parentMapID = 1415 } }
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  local frame = questViewer()
+  local function dist()
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsShown() and type(r._text) == "string" and r._text:match("^%d+ yd$") then return r._text end
+      end
+      for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and walk(c); if hit then return hit end end
+    end
+    return walk(frame)
+  end
+  local before = dist()
+  check(before, "an up-next row shows its distance")
+  check(questText(frame, "Stormwind City"), "a step on another map shows its zone")
+  MOCK.questX = 47
+  MOCK.advance(0.5)
+  check(dist() and dist() ~= before, "and it updates as you move")
+  MOCK.questX, MOCK.questY = nil, nil -- no position (an instance)
+  MOCK.advance(0.5)
+  check(not dist(), "no position: no distances, no error")
+end
+
+-- A turn-in step shows the XP it gives, and when it levels you up.
+function S.stepXP()
+  MOCK.xp, MOCK.xpMax = 100, 400
+  MOCK.rewardXP = { [783] = 350 }
+  S.login()
+  local frame = questViewer()
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  if MOCK.minimal then check(not questText(frame, " XP"), "no XP API: no chip"); return end
+  check(questText(frame, "+350 XP") and questText(frame, "levels you up"), "the turn-in's XP chip")
+  MOCK.rewardXP[783] = 100
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "+100 XP") and not questText(frame, "levels you up"), "not enough to level")
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "+100 XP"), "the next step has no chip")
+end
+
+-- A small 3D portrait of the step's NPC, the step's icon when the model can't show.
+function S.questPortrait()
+  MOCK.ns.questNPCs[783] = { start = 197, finish = 823 }
+  S.login()
+  local frame = questViewer()
+  local p = frame.portrait
+  if MOCK.minimal then
+    check(p and p:IsShown() and p.icon:IsShown() and not (p.model and p.model:IsShown()), "no models: the icon")
+    return
+  end
+  check(p:IsShown() and p.creature == 197 and p.model:IsShown(), "an accept step shows its giver")
+  MOCK.questLog = { { questID = 783 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p.creature == 823, "a turn-in shows its finisher")
+  MOCK.modelFails = true
+  MOCK.ns.questNPCs[783].finish = 824
+  MOCK.event("QUEST_LOG_UPDATE")
+  local asked = p.model._asked
+  MOCK.advance(1.2)
+  check(p.icon:IsShown(), "a model still loading after a second shows the icon meanwhile")
+  MOCK.advance(2.2)
+  check(p.model._asked == asked + 1, "a model still loading is asked for once more")
+  MOCK.modelFails = nil
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and not p.icon:IsShown(), "a model that loads late replaces the icon")
+  MOCK.modelFails = true
+  MOCK.ns.questNPCs[783].finish = 825
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(11)
+  check(p.icon:IsShown() and not p.model:IsShown(), "a model that never loads gives way to the icon")
+  MOCK.targetGUID = "Creature-0-1-2-3-825-0001"
+  MOCK.event("PLAYER_TARGET_CHANGED")
+  MOCK.advance(0.5)
+  check(p.model:IsShown() and p.model._unit == "target" and not p.icon:IsShown(),
+    "targeting the step's NPC shows it from the target")
+  MOCK.targetGUID, MOCK.modelFails = nil, nil
+  MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
+  LevelingCodexDB.noQuestPortrait = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not p:IsShown(), "the setting hides it")
+end
+
+-- The step window's buttons: a wide themed Next, small icon buttons with tooltips.
+function S.stepButtons()
+  S.login()
+  local frame = questViewer()
+  local nextB = findButton(frame, function(l) return l == "Next" end)
+  check(nextB and nextB.label and nextB.label._text:find("^Next step") and nextB:GetWidth() > 200, "a wide Next step")
+  for _, name in ipairs({ "Back", "Quests", "Hide" }) do
+    local b = findButton(frame, function(l) return l == name end)
+    check(b and b:GetWidth() <= 30, name .. " is an icon button")
+    MOCK.fire(b, "OnEnter")
+    check(GameTooltip._lines[1] == name, name .. " names itself on hover")
+    MOCK.fire(b, "OnLeave")
+  end
+  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact", "Next" }) do
+    local b = findButton(frame, function(l) return l == name end)
+    check(b and not b.edgeLines, name .. " has no outline")
+    if b.icon then check(not (b.bg and b.bg:IsShown()), name .. " is just its art") end
+  end
+  local hide = findButton(frame, function(l) return l == "Hide" end)
+  local compactB = findButton(frame, function(l) return l == "Compact" end)
+  if hide.icon then
+    check(hide.icon._path == "Interface\\Buttons\\UI-Panel-MinimizeButton-Up"
+      and not (compactB.icon and compactB.icon._path == hide.icon._path),
+      "Hide is the close button, not the compact switch's minus")
+  else
+    check(hide.label._text ~= (compactB.label and compactB.label._text), "Hide and the compact switch read differently")
+  end
+  local before = nextB.fill._color[1]
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Codex (gold)") -- Settings' theme switch
+  check(math.abs(nextB.fill._color[1] - before) > 0.1, "a theme switch repaints Next")
+  click(frame, "Next")
+  check(findButton(frame, function(l) return l == "Back" end), "Next still moves on")
+end
+
+-- Step window comfort: size (down to half for small screens, Ctrl+wheel), background, fading in
+-- combat, compact mode.
+function S.stepComfort()
+  S.login()
+  local frame = questViewer()
+  slash("")
+  click(win(), "Settings")
+  for _ = 1, 2 do click(win(), "Step window size +") end
+  check(math.abs(frame:GetScale() - 1.2) < 0.001, "the size stepper scales the window")
+  for _ = 1, 10 do click(win(), "Step window size -") end
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "down to half size for small screens")
+  local textAlpha = frame:GetAlpha() or 1
+  for _ = 1, 3 do click(win(), "Step window background -") end
+  check(frame.background and math.abs((frame.background:GetAlpha() or 1) - 0.7) < 0.01
+    and (frame:GetAlpha() or 1) == textAlpha, "the background stepper fades the background only")
+  check(not frame:IsMouseWheelEnabled(), "the wheel stays the camera's")
+  MOCK.fire(frame, "OnEnter"); MOCK.ctrl = true; MOCK.advance(0.1)
+  check(frame:IsMouseWheelEnabled(), "Ctrl over the window takes the wheel")
+  MOCK.fire(frame, "OnMouseWheel", 1)
+  check(math.abs(frame:GetScale() - 0.6) < 0.001, "and the wheel resizes it")
+  MOCK.ctrl = false; MOCK.fire(frame, "OnLeave"); MOCK.advance(0.1)
+  check(not frame:IsMouseWheelEnabled(), "letting go gives the wheel back")
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 0.3) < 0.01, "combat fades the window")
+  MOCK.fire(frame, "OnEnter"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "the mouse brings it back")
+  MOCK.fire(frame, "OnLeave"); MOCK.advance(0.5)
+  check((frame:GetAlpha() or 1) < 0.5, "leaving fades it again")
+  MOCK.event("PLAYER_REGEN_ENABLED"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "after combat it's back")
+  LevelingCodexDB.noQuestFade = true
+  MOCK.event("PLAYER_REGEN_DISABLED"); MOCK.advance(0.5)
+  check(math.abs((frame:GetAlpha() or 1) - 1) < 0.01, "with the setting off nothing fades")
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  local tall = frame:GetHeight()
+  click(frame, "Compact")
+  check(frame:GetHeight() < tall and not questText(frame, "UP NEXT") and findButton(frame, function(l) return l == "Expand" end),
+    "compact mode keeps only the title row, the bar and the buttons")
+  click(frame, "Expand")
+  check(questText(frame, "UP NEXT"), "and expands again")
+end
+
+-- The guide setup card offers the step window's size and compact mode (laptops meet them on first run).
+function S.stepSetupWindow()
+  S.login()
+  slash("quests")
+  local frame = questViewer()
+  click(win(), "Step window size -")
+  check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
+  click(win(), "Compact")
+  check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+  local function box(name) return findButton(win(), function(l) return l == name end) end
+  check(box("Sell junk") and box("Sell junk"):GetChecked() and box("Repair") and box("Repair"):GetChecked(),
+    "the vendor helpers start on")
+  click(win(), "Sell junk")
+  check(LevelingCodexDB.noAutoSell and not box("Sell junk"):GetChecked(), "Sell junk turns junk selling off")
+  click(win(), "Repair")
+  check(LevelingCodexDB.noAutoRepair and not box("Repair"):GetChecked(), "Repair turns repairing off")
+  click(win(), "Sell junk")
+  check(not LevelingCodexDB.noAutoSell, "and back on")
+end
+
+-- Compact mode on a step with no goals and no spot draws the title row alone.
+function S.stepCompactNote()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "note", text = "Read this first." })
+  LevelingCodexDB = { questCompact = true }
+  S.login()
+  local frame = questViewer()
+  check(frame:IsShown() and frame.chip.text._text == "Note" and not questText(frame, " yd"),
+    "a compact note step: chip and title, no count or distance")
+end
+
+-- At any size the target button sits beside the window (in UIParent units), the arrow keeps its room
+-- above it, and in combat a new size waits (the secure buttons beside it can't move then).
+function S.stepScaleButtons()
+  S.login()
+  local frame = questViewer()
+  frame._left, frame._top = 400, 600 -- the window's edges in its own units
+  slash("")
+  click(win(), "Settings")
+  for _ = 1, 5 do click(win(), "Step window size -") end
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "half size")
+  local target = _G.LevelingCodexQuestTarget
+  local _, _, _, x, y = target:GetPoint()
+  check(target:IsShown() and math.abs(x - (400 * 0.5 - 10)) < 0.01 and math.abs(y - (600 * 0.5 - 72 * 0.5)) < 0.01,
+    "the target button sits beside the half-size window (" .. tostring(x) .. ", " .. tostring(y) .. ")")
+  check(frame._clampInsets and math.abs(frame._clampInsets[3] - 152) < 0.01, "the arrow keeps its room above the window")
+  MOCK.combat = true
+  click(win(), "Step window size +")
+  check(math.abs(frame:GetScale() - 0.5) < 0.001, "in combat the new size waits")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(math.abs(frame:GetScale() - 0.6) < 0.001, "and applies after combat")
+end
+
+-- A dragged window keeps its spot on screen when it's resized (Ctrl+wheel stays under the cursor).
+function S.stepScaleSaved()
+  LevelingCodexDB = { questPosition = { "CENTER", "CENTER", 100, 50 } }
+  S.login()
+  local frame = questViewer()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Step window size -")
+  local _, _, _, x, y = frame:GetPoint()
+  check(math.abs(x * frame:GetScale() - 100) < 0.01 and math.abs(y * frame:GetScale() - 50) < 0.01,
+    "a dragged window keeps its spot when resized (" .. tostring(x) .. ", " .. tostring(y) .. ")")
+end
+
+-- Compact mode's distance on the title row stays live as you move.
+function S.stepCompactDistance()
+  LevelingCodexDB = { questCompact = true }
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  local frame = questViewer()
+  local function dist()
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsShown() and type(r._text) == "string" and r._text:match("^%d+ yd$") then return r._text end
+      end
+      for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and walk(c); if hit then return hit end end
+    end
+    return walk(frame)
+  end
+  local before = dist()
+  check(before, "compact shows how far the step is")
+  MOCK.questX = 46
+  MOCK.advance(0.5)
+  check(dist() and dist() ~= before, "and it updates as you move (" .. tostring(before) .. " then " .. tostring(dist()) .. ")")
+end
+
+-- Titles keep their meaning: a travel chip says the step's own verb, and a step without a name takes
+-- the first sentence of its text as its title (not "Travel" twice).
+function S.stepTitles()
+  local style = MOCK.ns.questKindStyle
+  check(style("travel", { type = "fly" }).label == "Fly" and style("travel", { type = "getfp" }).label == "Flight path"
+    and style("travel", { type = "boat" }).label == "Boat" and style("travel", { type = "goto" }).label == "Travel",
+    "travel chips say the step's own verb")
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave. Mind the kobolds.",
+    map = 1429, x = 52, y = 47 })
+  S.login()
+  local frame = questViewer()
+  local function shown(text)
+    local function walk(f)
+      for _, r in ipairs({ f:GetRegions() }) do if r:IsShown() and r._text == text then return true end end
+      for _, c in ipairs({ f:GetChildren() }) do if c:IsShown() and walk(c) then return true end end
+    end
+    return walk(frame)
+  end
+  check(frame.chip.text._text == "Travel" and shown("Go down the tunnel to the cave."),
+    "a nameless step's title is the first sentence of its text")
+end
+
+-- Recommended stays the lit dungeon choice as you level past some of its runs.
+function S.questSetupLevelled()
+  S.login()
+  slash("quests")
+  click(win(), "Recommended")
+  MOCK.level = 30
+  MOCK.event("PLAYER_LEVEL_UP", 30)
+  slash("quests")
+  click(win(), "Guides")
+  local rec = findButton(win(), function(l) return l == "Recommended" end)
+  check(rec and rec.codexOn, "Recommended is still lit at level 30")
+  check(not findButton(win(), function(l) return l:find("^Your picks") end), "not your picks")
+end
+
+-- A dungeon run done before the guide knew about it: every quest of the guide is turned in, but
+-- the guide never saw you enter. Steps after the entry are done, so the entry is too.
+function S.dungeonDoneBefore()
+  MOCK.level = 25
+  local guide
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "dungeon-deadmines" then guide = s end end
+  for _, step in ipairs(guide.steps) do if step.quest then MOCK.questDone[step.quest] = true end end
+  S.login()
+  slash("quests")
+  clickGuide("The Deadmines")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(not questText(frame, "Dungeon - The Deadmines"), "the entry step isn't left to do")
+  check(not questText(frame, "Deadmines"), "a finished guide hands back to leveling: " .. MOCK.textUnder(frame))
+end
+
+-- After a /reload the game keeps the waypoint the Codex set, but the Codex has forgotten it set it:
+-- one on a step of your route is still the Codex's and follows the step; the player's own stays.
+function S.questMapPinReload()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  local old
+  for _, s in ipairs(northshire.steps) do
+    if s.map == 1429 and s.x and math.abs(s.x - 48.17) > 1 then old = s; break end
+  end
+  MOCK.userWaypoint = { uiMapID = 1429, position = { x = old.x / 100, y = old.y / 100 } }
+  S.login()
+  local w = MOCK.userWaypoint
+  check(w and math.abs(w.position.x - 0.4817) < 0.0001 and math.abs(w.position.y - 0.4294) < 0.0001,
+    "the waypoint left on an earlier step moves to the current step")
+  MOCK.userWaypoint = { uiMapID = 1429, position = { x = 0.1, y = 0.1 } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(MOCK.userWaypoint.position.x == 0.1, "a waypoint off the route is the player's and stays")
+end
+
+-- The quest arrow: drag it anywhere, Ctrl+wheel resizes it, lock and reset; it hides with the window.
+function S.arrowMove()
+  LevelingCodexDB = { questArrowScale = 9 }
+  S.login()
+  local arrow, frame = _G.LevelingCodexQuestArrow, questViewer()
+  check(arrow:GetParent() == UIParent and arrow:IsShown(), "the arrow lives on its own")
+  check(math.abs(arrow:GetScale() - 2) < 0.001, "a saved scale out of bounds is held at 200%")
+  -- The wheel zooms the camera unless Ctrl is held over the arrow.
+  check(not arrow:IsMouseWheelEnabled(), "the arrow leaves the mouse wheel to the camera")
+  MOCK.fire(arrow, "OnEnter")
+  MOCK.advance(0.1)
+  check(not arrow:IsMouseWheelEnabled(), "hovering alone still leaves the wheel to the camera")
+  MOCK.ctrl = true
+  MOCK.advance(0.1)
+  check(arrow:IsMouseWheelEnabled(), "Ctrl held over the arrow takes the wheel to resize it")
+  MOCK.ctrl = false
+  MOCK.advance(0.1)
+  check(not arrow:IsMouseWheelEnabled(), "letting go of Ctrl gives it back")
+  MOCK.ctrl = true
+  MOCK.advance(0.1)
+  MOCK.fire(arrow, "OnLeave")
+  check(not arrow:IsMouseWheelEnabled(), "and so does moving off the arrow")
+  MOCK.ctrl = false
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Reset arrow")
+  win():Hide()
+  local _, rel = arrow:GetPoint()
+  check(rel == frame and math.abs(arrow:GetScale() - 1) < 0.001, "unmoved, it sits above the step window at 100%")
+  check(select(3, frame:GetClampRectInsets()) >= 76, "the window keeps room for it on screen")
+  MOCK.drag(arrow, 100, 50)
+  local p = LevelingCodexDB.questArrowPos
+  _, rel = arrow:GetPoint()
+  check(p and rel == UIParent, "dragging puts it anywhere and saves the spot")
+  check(select(3, frame:GetClampRectInsets()) == 0, "a moved arrow no longer pads the window")
+  -- where its centre is on screen: the anchor offset in the arrow's own (scaled) units times its scale
+  local function centre()
+    local point, _, _, x, y = arrow:GetPoint()
+    return point, x * arrow:GetScale(), y * arrow:GetScale()
+  end
+  local _, cx, cy = centre()
+  MOCK.ctrl = true
+  MOCK.fire(arrow, "OnMouseWheel", 1)
+  check(math.abs(arrow:GetScale() - 1.1) < 0.001 and LevelingCodexDB.questArrowScale, "Ctrl+wheel resizes it")
+  local point, cx2, cy2 = centre()
+  check(point == "CENTER" and math.abs(cx2 - cx) < 0.01 and math.abs(cy2 - cy) < 0.01,
+    "resizing a moved arrow keeps its centre where it was")
+  MOCK.fire(arrow, "OnMouseWheel", -1)
+  MOCK.ctrl = false
+  MOCK.fire(arrow, "OnMouseWheel", 1)
+  check(math.abs(arrow:GetScale() - 1) < 0.001, "the wheel alone leaves the size")
+  LevelingCodexDB.questArrowLocked = true
+  local x = p[3]
+  MOCK.drag(arrow, 30, 30)
+  check(LevelingCodexDB.questArrowPos[3] == x, "a locked arrow stays put")
+  click(frame, "Hide")
+  check(not arrow:IsShown(), "it hides with the step window")
+end
+
+-- The arrow's colour says how far off course you face: green heading for the step, its own gold with
+-- the step to your side, red with it behind you; Settings turns it off.
+function S.arrowColor()
+  MOCK.questX, MOCK.questY, MOCK.facing = 60, 60, 0 -- away from Deputy Willem, the first step
+  S.login()
+  local art = _G.LevelingCodexQuestArrow:GetRegions()
+  check(art:IsShown() and art._rot, "the arrow points at the step")
+  local ahead = art._rot -- facing this way puts the step straight ahead
+  local function tint(facing)
+    MOCK.facing = facing
+    MOCK.advance(0.3)
+    return art:GetVertexColor()
+  end
+  local r, g, b = tint(ahead)
+  check(math.abs(art._rot) < 0.01 and g == 1 and r < 0.5 and b < 0.5, "heading for the step: green")
+  r, g, b = tint(ahead + math.rad(10))
+  check(g == 1 and r < 0.5, "a little off is still green")
+  r, g, b = tint(ahead + math.pi / 2)
+  check(math.abs(r - 1) < 0.01 and math.abs(g - 1) < 0.01 and math.abs(b - 1) < 0.01,
+    "the step to your side: the arrow's own gold")
+  local r2, g2 = tint(ahead - math.rad(55))
+  check(g2 == 1 and r2 > 0.4 and r2 < 1, "turning toward it blends to green")
+  r, g, b = tint(ahead + math.pi)
+  check(r == 1 and g < 0.5 and b < 0.5, "the step behind you: red")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Colour the arrow by direction")
+  win():Hide()
+  check(LevelingCodexDB.noArrowColor, "Settings turns it off")
+  r, g, b = tint(ahead + math.pi - 0.01)
+  check(r == 1 and g == 1 and b == 1, "and the arrow stays gold")
+end
+
+-- The icon's height over the arrow's centre, sampled every frame at 60 fps for `seconds`:
+-- the lowest and highest it went and the biggest move from one frame to the next.
+local function bobRun(arrow, seconds)
+  local function lift()
+    local point, _, _, _, y = arrow.here:GetPoint()
+    return point == "CENTER" and y or nil
+  end
+  local low, high, jump, last = math.huge, -math.huge, 0, lift() or 0
+  for _ = 1, math.floor(seconds * 60 + 0.5) do
+    MOCK.advance(1 / 60, 1 / 60)
+    local y = lift() or 1000 -- an icon off its centre anchor counts as a jump
+    low, high = math.min(low, y), math.max(high, y)
+    jump = math.max(jump, math.abs(y - last))
+    last = y
+  end
+  return low, high, jump
+end
+
+-- The arrow on arrival: the step's icon bobs over a gold ring that pulses once; leaving brings it back.
+-- In game the bob (a Translation looping BOUNCE) jumped where it turned: it is now drawn from the
+-- clock every frame, so it rises and falls 8 px with no step at the turns or where it loops.
+function S.arrowArrival()
+  MOCK.questX, MOCK.questY = 60, 60 -- away from Deputy Willem (the default spot is next to him)
+  S.login()
+  local arrow = _G.LevelingCodexQuestArrow
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "away from the step the arrow points")
+  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step
+  MOCK.advance(0.5)
+  check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
+  check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
+  check(arrow.here._atlas == "crosshair_quest_64", "a pickup shows the yellow !")
+  check(arrow.pulse:IsPlaying(), "the ring pulses")
+  local low, high, jump = bobRun(arrow, 1)
+  check(not arrow.pulse:IsPlaying(), "the ring pulses once")
+  check(low > -0.01 and low < 0.5 and high > 7.5 and high < 8.01,
+    "the icon bobs 8 px (went from " .. low .. " to " .. high .. ")")
+  low, high, jump = bobRun(arrow, 2.5) -- three more loops
+  check(high > 7.5 and jump < 0.6, "the bob goes on smoothly, also at its turns (biggest step " .. jump .. " px)")
+  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.advance(0.5)
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "leaving the spot brings the arrow back")
+  local _, _, _, _, y = arrow.here:GetPoint()
+  check(y == 0, "and the icon is back on its centre for the next arrival")
+  LevelingCodexDB.noArrowBounce = true
+  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.advance(0.5)
+  low, high = bobRun(arrow, 1)
+  check(arrow.here:IsShown() and low == 0 and high == 0, "with the animation off the icon stays still")
+end
+
+-- Step icons: the client's own crosshair art (the cursor icons without the pointer tip, drawn by
+-- Blizzard at 32, 48, 64, 96 and 128 px), the smallest drawing at least as big as the icon is on
+-- screen. Without atlases, the old 16-32 px gossip and cursor files.
+function S.questIconArt()
+  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step (a pickup)
+  S.login()
+  MOCK.advance(0.5)
+  if MOCK.minimal then -- no C_Texture (and no C_Map, so no arrival to watch)
+    local tex = UIParent:CreateTexture()
+    check(MOCK.ns.questMap.setIcon(tex, { type = "accept" }, 36) and not tex._atlas
+      and tex._path == "Interface\\GossipFrame\\AvailableQuestIcon", "a client without the atlases shows the gossip ! file")
+    return
+  end
+  local arrow, viewer = _G.LevelingCodexQuestArrow, questViewer()
+  check(arrow.here:IsShown(), "arriving shows the step's icon")
+  -- 36 px at scale 1 on a 1080p screen is 51 pixels; the step title's 16 px is 23
+  check(arrow.here._atlas == "crosshair_quest_64", "the arrival ! is the 64 px drawing: " .. tostring(arrow.here._atlas))
+  check(viewer.titleIcon._atlas == "crosshair_quest_32", "the title's ! is the 32 px one: " .. tostring(viewer.titleIcon._atlas))
+  -- on a 4K screen the same 36 px is 101 pixels
+  MOCK.screenHeight = 2160
+  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.advance(0.5)
+  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.advance(0.5)
+  check(arrow.here._atlas == "crosshair_quest_128", "on 4K the arrival ! is the 128 px one: " .. tostring(arrow.here._atlas))
+  -- a texture going back to a file loses the atlas's coordinates
+  local tex = viewer:CreateTexture()
+  MOCK.ns.questMap.setIcon(tex, { type = "accept" }, 36)
+  MOCK.ns.questMap.setIcon(tex, { type = "boss" }, 36)
+  local l, t, _, _, _, _, r, b = tex:GetTexCoord()
+  check(tex._path == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull" and l == 0 and t == 0 and r == 1 and b == 1,
+    "a step without crosshair art (a boss) shows its own file, whole")
+end
+
+-- Minimap: pins for the current and next steps, an edge arrow out of range, a dotted line.
+function S.minimapPins()
+  S.login()
+  local pins = _G.LevelingCodexMinimapPins
+  if MOCK.minimal then
+    MOCK.advance(0.5)
+    check(not (pins and pins:IsShown()), "no map API: no pins, no error")
+    return
+  end
+  MOCK.viewRadius = 200
+  -- Five percent south of Deputy Willem: about 116 yd (Elwynn is 2314.6 yd tall), 40 px out.
+  MOCK.questX, MOCK.questY = 48.17, 47.94
+  MOCK.advance(0.2)
+  check(pins and pins:IsShown() and pins.current:IsShown(), "the current step gets a minimap pin")
+  local _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(x) < 0.5 and y > 0, "north is up")
+  check(#pins.next >= 1 and pins.next[1]:IsShown(), "the next steps get small pins")
+  local function dots()
+    local n = 0
+    for _, d in ipairs(pins.dots) do if d:IsShown() then n = n + 1 end end
+    return n
+  end
+  check(dots() > 0, "a dotted line leads to the step")
+  local pinSets, dotSets = pins.current._pointSets, pins.dots[1]._pointSets
+  MOCK.advance(1)
+  check(pins.current._pointSets == pinSets and pins.dots[1]._pointSets == dotSets,
+    "standing still, nothing on the minimap is moved again")
+  MOCK.questY = 47.5
+  MOCK.advance(0.2)
+  check(pins.current._pointSets > pinSets, "moving moves the pins")
+  MOCK.questY = 47.94
+  MOCK.advance(0.2)
+  MOCK.cvars = { rotateMinimap = "1" }
+  MOCK.facing = math.pi / 2 -- facing west: north is to the right
+  MOCK.advance(0.2)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(x > 0 and math.abs(y) < 0.5, "a rotating minimap turns the pins with you")
+  MOCK.cvars, MOCK.facing = {}, 0
+  MOCK.questY = 60 -- 394 yd south of Willem: off the minimap, no trip
+  MOCK.advance(0.2)
+  check(not pins.edge:IsShown() and not pins.current:IsShown() and dots() > 0,
+    "the game's own waypoint arrow marks the rim, so ours stays off; the dots still run there")
+  MOCK.superTracked = false -- you track something else: the game's arrow points there instead
+  MOCK.advance(0.2)
+  check(pins.edge:IsShown(), "while the game's arrow tracks something else, ours shows")
+  MOCK.superTracked = true
+  MOCK.advance(0.2)
+  check(not pins.edge:IsShown(), "and gives way again once it tracks the Codex's waypoint")
+  LevelingCodexDB.noQuestMapPin = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.2)
+  check(pins.edge:IsShown(), "without the map pin, our edge arrow shows")
+  MOCK.questY = 80
+  MOCK.advance(0.2)
+  check(not pins.current:IsShown() and pins.edge:IsShown(), "out of range the pin becomes an edge arrow")
+  _, _, _, x, y = pins.edge:GetPoint()
+  check(math.abs(math.sqrt(x * x + y * y) - 66.5) < 0.6, "on the rim of a round minimap")
+  MOCK.minimapShape = "SQUARE"
+  MOCK.advance(0.2)
+  _, _, _, x, y = pins.edge:GetPoint()
+  check(math.abs(math.max(math.abs(x), math.abs(y)) - 66.5) < 0.6, "on the edge of a square minimap")
+  LevelingCodexDB.noQuestMapPin = nil
+  MOCK.minimapShape, MOCK.viewRadius = nil, 0
+  MOCK.minimapZoom = 9 -- no zoom table entry either
+  MOCK.advance(0.2)
+  check(not pins.current:IsShown() and not pins.edge:IsShown(), "no usable scale: no pins")
+  MOCK.viewRadius, MOCK.minimapZoom = 200, nil
+  LevelingCodexDB.noMinimapLine = true
+  MOCK.questY = 47.94
+  MOCK.advance(0.2)
+  check(pins.current:IsShown() and dots() == 0, "the line can be turned off")
+  LevelingCodexDB.noMinimapSteps = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(0.2)
+  check(not pins:IsShown(), "and the pins")
+end
+
+-- Minimap route: the dots run to the current step (no second line past it); they fade
+-- toward the rim and stop on arrival, where the pin pulses; pins name their step on hover and let
+-- clicks through; next steps off the minimap wait on the rim; a ghost's line leads to the corpse.
+function S.minimapRoute()
+  S.login()
+  if MOCK.minimal then return end
+  local pins = _G.LevelingCodexMinimapPins
+  local function shown(list)
+    local out = {}
+    for _, d in ipairs(list or {}) do if d:IsShown() then out[#out + 1] = d end end
+    return out
+  end
+  local function brightest(list, from, to)
+    local a = 0
+    for i = from, to do if list[i] then a = math.max(a, list[i]:GetAlpha() or 0) end end
+    return a
+  end
+  local function tooltipHas(text)
+    for _, line in ipairs(GameTooltip._lines or {}) do
+      if type(line) == "string" and line:find(text, 1, true) then return true end
+    end
+    return false
+  end
+  -- 100 yd across half the minimap: Deputy Willem 46 yd north (32 px), then Marshal McBride
+  -- about 28 px further on, then Willem again.
+  MOCK.viewRadius = 100
+  MOCK.questX, MOCK.questY = 48.17, 44.94
+  MOCK.advance(0.3)
+  local line = shown(pins.dots)
+  check(pins.ahead == nil, "no second line")
+  check(#line > 0, "the dots run to the current step")
+
+  -- Willem 116 yd north is off the minimap: the line runs to the rim and fades out there.
+  MOCK.questY = 47.94
+  MOCK.advance(0.3)
+  line = shown(pins.dots)
+  check(#line >= 5 and line[#line]:GetAlpha() < 0.6 * brightest(line, 1, #line - 2),
+    "the line fades out toward the rim")
+
+  -- At the step (30 yd out, inside the 35 yd arrival; 52 px at 40 yd across, room for a line):
+  -- no line, and the pin pulses its ring once.
+  MOCK.viewRadius, MOCK.questY = 40, 44.24
+  MOCK.advance(0.3)
+  check(#shown(pins.dots) == 0, "on arrival the line stops")
+  check(pins.current:IsShown() and pins.current.pulse and pins.current.pulse:IsPlaying(), "and the pin pulses")
+  MOCK.advance(1)
+  check(not pins.current.pulse:IsPlaying(), "once")
+
+  MOCK.fire(pins.current, "OnEnter")
+  check(tooltipHas("A Threat Within") and tooltipHas(" yd"), "hovering a pin names its step and how far it is")
+  MOCK.fire(pins.current, "OnLeave")
+  check(pins.current._mouseClick == false and pins.current._mouseMotion == true, "clicks go through to the minimap")
+
+  -- 20 yd across: Marshal McBride, 66 yd away, waits on the rim, faded.
+  MOCK.viewRadius = 20
+  MOCK.advance(0.3)
+  local n = pins.next[1]
+  local _, _, _, x, y = n:GetPoint()
+  check(n:IsShown() and math.abs(math.sqrt(x * x + y * y) - 66.5) < 0.6 and n:GetAlpha() < 0.6,
+    "a next step off the minimap waits on its rim, faded")
+  MOCK.fire(n, "OnEnter")
+  check(tooltipHas("Marshal McBride") or tooltipHas("A Threat Within"), "and names its step on hover")
+  MOCK.fire(n, "OnLeave")
+
+  -- A ghost: the pin and the line lead to the corpse, 46 yd east.
+  MOCK.viewRadius = 100
+  MOCK.ghost, MOCK.corpse = true, { 1429, 49.5, 44.24 }
+  MOCK.advance(0.5)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(x > 20 and math.abs(y) < 1, "as a ghost the minimap leads to your corpse (" .. x .. ", " .. y .. ")")
+  MOCK.ghost = false
+end
+
+-- Pace: kill XP lines with rested or group text and in the client's own words; the debug line.
+function S.paceKills()
+  S.login()
+  if MOCK.minimal then return end
+  local st, lvl = LevelingCodexCharDB.stats, MOCK.level
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 1,250 experience. (+625 exp Rested bonus)")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 40 experience. (+8 exp Group bonus)")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "You gain 300 experience.")
+  check(st.levels[lvl].killXP == 1290 and st.levels[lvl].kills == 2, "rested and group lines count, a plain gain doesn't")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas('pace: last XP line "You gain 300 experience." %-> not counted'), "debug names the last XP line")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Worker dies, you gain 40 experience.")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas('pace: last XP line "Kobold Worker dies, you gain 40 experience." %-> kill 40 XP'),
+    "and what a kill line counted")
+end
+
+-- Pace: the kill line in another client language.
+function S.paceKillsLocale()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%s stirbt, Ihr bekommt %d Erfahrung."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold stirbt, Ihr bekommt 75 Erfahrung.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l.killXP == 75 and l.kills == 1, "the client's own wording counts")
+end
+
+-- Pace: a kill line with the client's grammar codes (|1a;b; picks a particle, |4 a plural) counts.
+function S.paceKillsGrammar()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%s|1i;ga; jugeossseumnida. gyeongheomchi %d|4jeom:jeom; hoekdeuk."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold ga jugeossseumnida. gyeongheomchi 75jeom hoekdeuk.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l and l.killXP == 75 and l.kills == 1, "a line with grammar codes counts")
+end
+
+-- Pace: a kill line that puts the number before the creature's name.
+function S.paceKillsNumberFirst()
+  COMBATLOG_XPGAIN_FIRSTPERSON = "%2$d XP: %1$s stirbt."
+  S.login()
+  if MOCK.minimal then COMBATLOG_XPGAIN_FIRSTPERSON = nil; return end
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "75 XP: Kobold stirbt.")
+  local l = LevelingCodexCharDB.stats.levels[MOCK.level]
+  COMBATLOG_XPGAIN_FIRSTPERSON = nil
+  check(l and l.killXP == 75 and l.kills == 1, "a number-first line counts")
+end
+
+-- Stats: a level first counted partway in remembers where counting began.
+function S.statsFromPct()
+  MOCK.level, MOCK.xp, MOCK.xpMax = 5, 400, 1000
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.advance(2)
+  local st = LevelingCodexCharDB.stats
+  check(st.levels[5].fromPct == 40, "level 5 counted from 40%")
+  MOCK.level, MOCK.xp = 6, 50
+  MOCK.event("PLAYER_LEVEL_UP", 6)
+  MOCK.advance(2)
+  check(st.levels[6] and st.levels[6].fromPct == nil, "a level reached by levelling up has no mark")
+  check(MOCK.ns.thousands(21400) == "21,400" and MOCK.ns.thousands(999) == "999"
+    and MOCK.ns.thousands(1234567) == "1,234,567", "thousands")
+  local earlier = MOCK.ns.stats.earlierLevels(6, 3)
+  check(#earlier == 1 and earlier[1].level == 5 and earlier[1].record == st.levels[5], "earlier levels, newest first")
+  check(MOCK.ns.stats.levelRecord(6) == st.levels[6] and MOCK.ns.stats.levelRecord(7) == nil
+    and st.levels[7] == nil, "a level's record, never made by asking")
+  MOCK.xp = 500
+  slash("")
+  click(win(), "Stats")
+  click(win(), "Reset stats")
+  click(win(), "Click again to reset")
+  MOCK.advance(2)
+  local again = LevelingCodexCharDB.stats.levels[6]
+  check(again and again.fromPct == 50, "after Reset stats, a level counted from partway in is marked again")
+end
+
+-- An outleveled dungeon's row fades like an outleveled guide's.
+function S.guideRowsFade()
+  MOCK.race, MOCK.level = "Human", 40
+  S.login()
+  slash("quests")
+  click(win(), "Guides")
+  local function find(f, text)
+    for _, r in ipairs({ f:GetRegions() }) do if r._text == text and r:IsShown() then return r end end
+    for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c, text); if hit then return hit end end
+  end
+  local title = find(win(), "The Deadmines")
+  local dim = MOCK.ns.C.dim
+  local r, g, b = title:GetTextColor()
+  check(math.abs(r - dim[1]) < 0.01 and math.abs(g - dim[2]) < 0.01 and math.abs(b - dim[3]) < 0.01,
+    "the outleveled Deadmines row is dimmed")
+end
+
+-- A long guide title stays on one line inside its row.
+function S.guideRowsLong()
+  MOCK.race, MOCK.level = "Human", 32
+  S.login()
+  slash("quests")
+  local title = "Stranglethorn Early: Rebel Camp and Nesingwary"
+  local row = guideButton(title)
+  check(row and row._type == "Button" and not row.SetLook, "a guide is a row, not a panel button")
+  local function find(f)
+    for _, r in ipairs({ f:GetRegions() }) do if r._text == title and r:IsShown() then return r end end
+    for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c); if hit then return hit end end
+  end
+  local fs = find(win())
+  check(fs and fs:GetWidth() <= row:GetWidth() - 190, "the title keeps clear of the range and the tag")
+  check(findButton(win(), function(l) return l:find("^%- LEVELS 30%-40: %d+ guides") end),
+    "an open band keeps its label")
+end
+
+-- Minimap: the line bends through a step's way-in points to the step itself.
+function S.minimapPath()
+  -- the questEntrancePath step: tunnel points (48, 43) and (50, 45), the cave at (52, 47)
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave.", map = 1429,
+    x = 52, y = 47, path = { { 48, 43 }, { 50, 45 } } })
+  MOCK.questX, MOCK.questY, MOCK.viewRadius = 44, 41, 400
+  S.login()
+  if MOCK.minimal then return end
+  local pins = _G.LevelingCodexMinimapPins
+  MOCK.advance(0.5)
+  local function shown(list) local n = 0; for _, t in ipairs(list) do if t:IsShown() then n = n + 1 end end; return n end
+  check(shown(pins.bends) == 2, "a bend dot at the second tunnel point and at the cave")
+  local _, _, _, px, py = pins.current:GetPoint()
+  local far = 0
+  for _, d in ipairs(pins.dots) do
+    if d:IsShown() then local _, _, _, x, y = d:GetPoint(); far = math.max(far, math.sqrt(x * x + y * y)) end
+  end
+  check(far > math.sqrt(px * px + py * py) + 5, "dots go on past the pin, through the tunnel")
+  MOCK.questX, MOCK.questY = 48, 43
+  MOCK.advance(0.5)
+  check(shown(pins.bends) == 1, "past the first point, one bend is left")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1415, 46.02, 70.09 -- on the continent map
+  MOCK.advance(0.5) -- an error in the minimap's OnUpdate fails the scenario here
+end
+
+-- World map: numbered pins for the current and next steps on the map the world map shows.
+function S.worldMapPins()
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.worldMapID = 1429
+  WorldMapFrame:Show()
+  local pins = _G.LevelingCodexWorldMapPins
+  check(pins and pins:IsShown() and pins.current:IsShown(), "the current step shows on the world map")
+  local _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(x - 482.66) < 1 and math.abs(y + 286.84) < 1, "at the step's spot on the map")
+  check(pins.next[1]:IsShown(), "the next step gets a numbered pin")
+  -- Zoomed in, the canvas is drawn twice as large: the pins keep their size and stay on their spot.
+  MOCK.canvasScale = 2
+  MOCK.advance(0.1)
+  _, _, _, x, y = pins.current:GetPoint()
+  check(math.abs(pins.current:GetScale() - 0.5) < 0.001 and math.abs(x - 965.32) < 2 and math.abs(y + 573.68) < 2,
+    "zooming the map keeps the pins' size and spot (scale " .. tostring(pins.current:GetScale()) .. ", x " .. x .. ")")
+  MOCK.canvasScale = nil
+  MOCK.advance(0.1)
+  _, _, _, x = pins.current:GetPoint()
+  check(math.abs(pins.current:GetScale() - 1) < 0.001 and math.abs(x - 482.66) < 1, "zooming back out")
+  MOCK.fire(pins.current, "OnEnter")
+  check(GameTooltip._lines[1] and GameTooltip._lines[1]:find("A Threat Within", 1, true), "hovering names the step")
+  MOCK.fire(pins.current, "OnLeave")
+  MOCK.worldMapID = 1453
+  WorldMapFrame:OnMapChanged()
+  check(not pins.current:IsShown(), "another map hides the pins")
+  MOCK.worldMapID = 1429
+  LevelingCodexDB.noWorldMapSteps = true
+  WorldMapFrame:OnMapChanged()
+  check(not pins:IsShown(), "the setting turns them off")
+end
+
+-- Special and class guides say what you get from them, in their row and on their page.
+function S.guideRewards()
+  MOCK.race, MOCK.level = "Human", 20
+  S.login()
+  slash("quests")
+  click(win(), "Guides")
+  local reward = "A sleeping bag: rest in it for up to 3% bonus XP"
+  check(questText(win(), reward), "a special chain says what you get")
+  check(questText(win(), "Teaches Defensive Stance, Taunt and Sunder Armor"), "a class guide says what it teaches")
+  click(win(), "Cozy Sleeping Bag")
+  check(questText(win(), "You get: " .. reward), "and so does its page")
+end
+
+-- World map: a dotted route line from you, through a step's way-in points, to the step.
+function S.worldMapLine()
+  local northshire
+  for _, s in ipairs(LevelingCodexQuests.ALLIANCE.sections) do if s.id == "northshire" then northshire = s end end
+  table.insert(northshire.steps, 1, { type = "goto", text = "Go down the tunnel to the cave.", map = 1429,
+    x = 52, y = 47, path = { { 48, 43 }, { 50, 45 } } })
+  MOCK.questX, MOCK.questY = 44, 41
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.worldMapID = 1429
+  WorldMapFrame:Show()
+  local pins = _G.LevelingCodexWorldMapPins
+  local function dots()
+    local list = {}
+    for _, d in ipairs(pins.dots or {}) do if d:IsShown() then list[#list + 1] = d end end
+    return list
+  end
+  local line = dots()
+  check(#line > 5, "a dotted line runs on the world map (" .. #line .. " dots)")
+  check(line[1].edge and line[1].edge:IsShown(), "each dot has a dark edge, so it reads on the parchment map")
+  check(pins:GetFrameLevel() >= 2000 and pins.line:GetFrameLevel() >= 2000 and pins.current:GetFrameLevel() >= 2000,
+    "the pins and the line draw at the map's own pin level, above its art (" .. pins:GetFrameLevel() .. ")")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("world map line: %d+ dots from you to the step"), "debug says what the line drew")
+  local far = 0
+  for _, d in ipairs(line) do local _, _, _, x = d:GetPoint(); far = math.max(far, x) end
+  check(far > 0.5 * 1002 and far <= 0.52 * 1002 + 1, "through the tunnel points to the cave (" .. far .. ")")
+  MOCK.canvasScale = 2
+  MOCK.advance(0.1)
+  local farZoomed = 0
+  for _, d in ipairs(dots()) do local _, _, _, x = d:GetPoint(); farZoomed = math.max(farZoomed, x) end
+  check(math.abs(pins.line:GetScale() - 0.5) < 0.001 and farZoomed > 2 * 0.5 * 1002 and farZoomed <= 2 * 0.52 * 1002 + 2,
+    "zoomed in, the line keeps its dot size and its spots (" .. farZoomed .. ")")
+  MOCK.canvasScale = nil
+  MOCK.advance(0.1)
+  local _, _, _, x1 = line[1]:GetPoint()
+  MOCK.questX = 46
+  MOCK.advance(0.5)
+  local _, _, _, x2 = dots()[1]:GetPoint()
+  check(x2 > x1, "moving with the map open moves the line's start")
+  MOCK.worldMapID = 1453
+  WorldMapFrame:OnMapChanged()
+  check(#dots() == 0, "a map you're not on has no line")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("world map line: none, the map shows 1453 and you're on 1429"), "and debug says why")
+  MOCK.worldMapID = 1429
+  WorldMapFrame:OnMapChanged()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Route line on the world map")
+  check(LevelingCodexDB.noWorldMapLine and #dots() == 0, "Settings turns it off")
+  click(win(), "Route line on the world map")
+  check(#dots() > 0, "and on again")
+end
+
+-- The step window's completion bar: steps you're past out of the guide's steps, sliding to its value.
+function S.stepProgress()
+  S.login()
+  local bar, frame = _G.LevelingCodexQuestBar, questViewer()
+  check(bar and bar:IsShown() and questText(bar, "0%"), "a fresh guide starts at 0%")
+  click(frame, "Next")
+  click(frame, "Next")
+  MOCK.advance(0.1)
+  local mid = bar.fill:GetWidth()
+  MOCK.advance(0.6)
+  check(bar.fill:GetWidth() > mid and not questText(bar, "0%"), "skipped steps fill the bar, sliding")
+  MOCK.fire(bar, "OnEnter")
+  local l = GameTooltip._lines
+  check(l[1] and l[1]:find(" steps done (", 1, true) and l[2] and l[2]:find(" quests turned in", 1, true)
+    and l[3] == "Click to see the route.", "the tooltip counts steps, then turn-ins: " .. tostring(l[1]))
+  MOCK.fire(bar, "OnLeave")
+  local pct = MOCK.textUnder(bar):match("(%d+)%%")
+  bar:Click()
+  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
+    "clicking opens the route")
+  click(win(), "Guides")
+  check(pct and (questText(win(), "Current " .. pct .. "%") or (pct == "0" and questText(win(), "Current"))),
+    "the guide list shows the bar's percentage: " .. tostring(pct))
+  LevelingCodexDB.noStepBar = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not bar:IsShown(), "the bar can be turned off")
+end
+
+-- The step window: the step's icon before its title, a flash on a rising count, a glow on completion.
+function S.stepPolish()
+  -- The questProgress setup: Kobold Vermin (quest 7) in progress after the first Northshire quests.
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", numFulfilled = 4 } } } }
+  S.login()
+  local frame = questViewer()
+  -- the kill's target in the portrait (QuestNPCData.lua: Kobold Vermin, 6), the small icon hidden
+  check(frame.portrait:IsShown() and frame.portrait.creature == 6 and not frame.titleIcon:IsShown(),
+    "a kill step shows its target before its title")
+  local row
+  for _, c in ipairs({ frame:GetChildren() }) do
+    if c.count and c.count._text == "4/10" and c:IsShown() then row = c end
+  end
+  check(row and row.bar and row.bar:IsShown() and row.track:IsShown()
+    and math.abs(row.bar:GetWidth() - 0.4 * row.track:GetWidth()) < 1, "a 4/10 goal fills 40% of its bar")
+  local c = row.bar._color
+  check(c and math.abs(c[1] - 0.95) < 0.01 and math.abs(c[2] - 0.45) < 0.01, "in the kill step's red")
+  local function flashing()
+    for g in pairs(MOCK.anims) do if g._owner and g._owner._isFlash and g:IsPlaying() then return true end end
+    return false
+  end
+  check(not flashing(), "nothing flashes before progress")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin 5/10", numFulfilled = 5 }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(flashing(), "a rising count flashes its row")
+  MOCK.questLog[1].objectives[1] = { text = "Kobold Vermin 10/10", numFulfilled = 10, finished = true }
+  MOCK.questLog[1].isComplete = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(frame.glowAnim and frame.glowAnim:IsPlaying(), "a step the game finished makes the window's edge glow")
+  check(MOCK.sounds and #MOCK.sounds > 0, "and plays a sound")
+end
+
+-- The Quests tab: a fixed step card and button row, then Step, Route, Guides and Quest log sub-tabs.
+function S.questTabViews()
+  S.login()
+  slash("quests")
+  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Quest log" }) do
+    check(findButton(win(), function(l) return l == name end), "the Quests tab has " .. name)
+  end
+  check(findButton(win(), function(l) return l == "Show all steps" end), "Route, the guide's steps, opens first")
+  click(win(), "Step")
+  check(findButton(win(), function(l) return l == "Resume active quest" end), "Step has the step's tools")
+  click(win(), "Guides")
+  check(findButton(win(), function(l) return l == "Search" end)
+    and findButton(win(), function(l) return l:find("^%- LEVELS 1%-12") end),
+    "Guides has the search and the level bands")
+  local folded = findButton(win(), function(l) return l:find("^%+ LEVELS 30%-40") end)
+  check(folded, "a band far from your level is folded")
+  local function band30() -- guide buttons starting in the 30s (class quests can be among them)
+    local n = 0
+    for line in (MOCK.textUnder(win()) .. "\n"):gmatch("(.-)\n") do
+      if line:find("^Levels 3%d%-%d+$") then n = n + 1 end
+    end
+    return n
+  end
+  local before = band30()
+  folded:Click()
+  check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
+  check(findButton(win(), function(l) return l == "Recommended" end), "dungeons live under Guides")
+  click(win(), "Quest log")
+  check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
+  click(win(), "Step")
+  check(findButton(win(), function(l) return l == "Report this step" end), "the step tools sit under Step")
+end
+
+-- A buy step that lists several items waits until the bags hold every one of them.
+function S.questBuyItems()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "buy", items = { { 2320, 1 }, { 3713, 2 } }, name = "Thread and spices",
+        text = "Buy Fine Thread and two Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.bags[2320] = 1
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Buy - Thread and spices"), "a buy step with two items waits for both")
+  check(questText(frame, "In your bags 0/2"), "it counts the item still missing")
+  MOCK.bags[3713] = 2
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(not questText(frame, "Buy - Thread and spices"), "it ticks off once the bags hold every item")
 end
 
 -- Step types and gates: collect/buy by bag count, abandon, skipOn, profession, maxLevel, sticky goals.
@@ -714,7 +1928,7 @@ function S.questWindowExtras()
   check(skipped and skipped.tipText:find("Skipped: you passed it with Next", 1, true), "the route list says why a step was skipped")
   click(win(), "Show on map")
   check(MOCK.openedMap == 1433, "Show on map opens the world map at the step")
-  click(win(), "Report this step")
+  stepTool("Report this step")
   local copy = _G.LevelingCodexCopy
   local report = copy and copy:IsShown() and copy.edit:GetText() or ""
   check(report:find("Guide: lakeshire", 1, true) and report:find("Position: 1433", 1, true)
@@ -778,18 +1992,130 @@ function S.questSetup()
   local frame = questViewer()
   click(frame, "Set up the guide")
   check(questText(win(), "SET UP YOUR GUIDE"), "the step window opens the guide setup")
+  local function seg(name) return findButton(win(), function(l) return l == name end) end
+  check(seg("Fastest").codexOn and not seg("Every quest").codexOn, "a fresh setup lights Fastest")
+  check(seg("Recommended") and seg("All") and seg("None"), "dungeons are three choices")
+  local off, on = seg("Every quest"), seg("Fastest")
+  check(off:GetAlpha() == 1 and off.plate and off.plate:IsShown(), "an unlit choice is a flat plate, not a dimmed button")
+  if on.Left then
+    check(off.Left:GetAlpha() == 0 and on.Left:GetAlpha() == 1 and not on.plate:IsShown(),
+      "the panel button's art shows on the lit choice only")
+  end
+  local onLabel, offLabel = on.GetFontString and on:GetFontString(), off.GetFontString and off:GetFontString()
+  if on.tick and onLabel and offLabel then
+    local _, _, _, x = onLabel:GetPoint()
+    local _, _, _, ox = offLabel:GetPoint()
+    check(x and x >= 8 and ox == 0, "the lit label moves right of its tick; an unlit one stays centred")
+  end
+  click(win(), "None")
+  check(seg("None").codexOn and not seg("Recommended").codexOn, "None lights once nothing is planned")
+  click(win(), "Recommended")
+  check(seg("Recommended").codexOn, "Recommended lights the recommended plan")
+  click(win(), "All")
+  check(seg("All").codexOn and LevelingCodexDB.questDungeons, "All plans every run")
+  click(win(), "Recommended")
+  check(seg("Recommended").codexOn and not LevelingCodexDB.questDungeons, "and back")
+  LevelingCodexDB.questKeepGrey, LevelingCodexDB.questOptional = true, false
+  slash("quests")
+  check(not seg("Fastest").codexOn and not seg("Every quest").codexOn and questText(win(), "Custom: see Settings"),
+    "a mixed pace lights neither and says so")
+  local accept = seg("Auto-accept")
+  check(accept and accept.GetChecked and not accept:GetChecked(), "helpers are check boxes")
   click(win(), "Every quest")
   check(LevelingCodexDB.questKeepGrey and LevelingCodexDB.questOptional, "Every quest keeps grey and side quests")
+  check(seg("Every quest").codexOn and not questText(win(), "Custom: see Settings"), "and lights")
   click(win(), "Auto-accept")
   check(LevelingCodexDB.questAutoAccept, "the setup turns helpers on")
+  check(seg("Auto-accept"):GetChecked(), "and ticks the box")
   click(win(), "Fastest")
   check(not LevelingCodexDB.questKeepGrey and not LevelingCodexDB.questOptional, "Fastest drops them again")
+  check(seg("Minimap"):GetChecked() and seg("World map"):GetChecked(), "both route lines start on")
+  click(win(), "World map")
+  check(LevelingCodexDB.noWorldMapLine and not seg("World map"):GetChecked(), "the setup turns the world map line off")
+  click(win(), "Minimap")
+  check(LevelingCodexDB.noMinimapLine, "and the minimap line")
+  -- the party: every party sync option, with quest sharing on by default and the chat lines off
+  check(seg("Party steps"):GetChecked() and seg("Share quests"):GetChecked() and seg("Ping together"):GetChecked(),
+    "party sync, quest sharing and the together ping start on")
+  check(not seg("Steps done"):GetChecked() and not seg("Quest items"):GetChecked() and not seg("Progress"):GetChecked()
+    and not seg("Flights"):GetChecked(), "the party chat lines start off")
+  click(win(), "Share quests")
+  check(LevelingCodexDB.questShareParty == false and not seg("Share quests"):GetChecked(), "the setup turns quest sharing off")
+  click(win(), "Share quests")
+  check(LevelingCodexDB.questShareParty == true and seg("Share quests"):GetChecked(), "and back on")
+  click(win(), "Party steps")
+  click(win(), "Ping together")
+  check(LevelingCodexDB.noPartySteps and LevelingCodexDB.noPartyPing, "party steps and the ping turn off")
+  for _, name in ipairs({ "Steps done", "Quest items", "Progress", "Flights" }) do click(win(), name) end
+  check(LevelingCodexDB.questAnnounceSteps and LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress
+    and LevelingCodexDB.questAnnounceFlights and seg("Flights"):GetChecked(), "the setup turns each party chat line on")
+  LevelingCodexDB.questDungeons = false
+  LevelingCodexDB.questDungeonPlan = { ["dungeon-deadmines"] = true }
+  slash("quests")
+  check(seg("Your picks (1)") and seg("Your picks (1)").codexOn, "a hand-made plan shows as your picks")
   click(win(), "Done")
   check(LevelingCodexDB.questSetupDone and not questText(win(), "SET UP YOUR GUIDE"), "Done closes the setup")
   local offer = findButton(frame, function(l) return l == "Set up the guide" end)
   check(not (offer and offer:IsShown()), "the step window stops offering the setup")
-  click(win(), "Guide setup")
+  click(win(), "Setup")
   check(questText(win(), "SET UP YOUR GUIDE"), "Guide setup opens it again")
+end
+
+-- Steps shown ahead (the setup card and Settings, 0-10): the list runs on into the next section.
+function S.questPreviewAhead()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 22, 1433, "Lakeshire"
+  local order, seen = {}, {}
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "lakeshire" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not seen[step.quest] then seen[step.quest], order[#order + 1] = true, step.quest end
+      end
+    end
+  end
+  local last, before = order[#order], order[#order - 1]
+  for _, id in ipairs(order) do
+    if id ~= last and id ~= before then MOCK.questDone[id] = true end
+  end
+  MOCK.questLog = { { questID = before, isComplete = true }, { questID = last, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  LevelingCodexDB.questPreview = 8
+  MOCK.event("QUEST_LOG_UPDATE")
+  local Q = MOCK.ns.quests
+  local row, i = Q.current()
+  local ahead = row and Q.upcoming(i, 8) or {}
+  check(row and row.section.id == "lakeshire" and #ahead == 8 and ahead[1].section.id == "lakeshire"
+    and ahead[8].section.id == "duskwood", "the test starts a few steps before the end of Lakeshire")
+  for n, r in ipairs(ahead) do
+    check(questText(frame, Q.label(r.step)), "8 steps ahead lists step " .. n .. ": " .. Q.label(r.step))
+  end
+  check(questText(frame, "Next section: Duskwood"), "the list names the next section where it starts")
+
+  local function seg(name) return findButton(win(), function(l) return l == name end) end
+  click(win(), "Setup")
+  check(not seg("2 steps").codexOn and questText(win(), "8 steps: see Settings"),
+    "the setup card says when the count is one Settings set")
+  click(win(), "10 steps")
+  check(LevelingCodexDB.questPreview == 10 and seg("10 steps").codexOn, "the setup card can show 10 steps ahead")
+  click(win(), "2 steps")
+  check(LevelingCodexDB.questPreview == 2 and seg("2 steps").codexOn and not questText(frame, Q.label(ahead[8].step)),
+    "and back to 2")
+  click(win(), "Settings")
+  local function stepsButton(label)
+    for _, b in ipairs(MOCK.buttons(win())) do
+      if labelOf(b) == label and b.tipText and b.tipText:find("steps the step window lists", 1, true) then return b end
+    end
+    check(false, "Settings has a '" .. label .. "' button for the steps shown ahead", 2)
+  end
+  LevelingCodexDB.questPreview = 9
+  stepsButton("+"):Click()
+  check(LevelingCodexDB.questPreview == 10, "Settings goes up to 10 steps ahead")
+  stepsButton("+"):Click()
+  check(LevelingCodexDB.questPreview == 10, "Settings stops at 10 steps ahead")
+  stepsButton("-"):Click()
+  check(LevelingCodexDB.questPreview == 9, "Settings can show fewer steps ahead")
 end
 
 -- Hostile elites and rares near the current step are named until you outlevel them.
@@ -810,6 +2136,30 @@ function S.questDanger()
   check(not questText(frame, "Watch out here"), "the setting turns the warnings off")
 end
 
+-- Party distances count the steps your own route shows (not filtered, grey or cut) between your real
+-- step and a member's: the first of yours at or past their position in the guide's data.
+local function partySteps(theirPos)
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local function shown(r) return r.state ~= "filtered" and not r.grey and not r.cut end
+  local n, i = 0, theirPos > mine.pos and at or at - 1
+  while steps[i] and steps[i].section == mine.section
+      and (theirPos > mine.pos and steps[i].pos < theirPos or theirPos < mine.pos and steps[i].pos >= theirPos) do
+    if shown(steps[i]) then n = n + 1 end
+    i = theirPos > mine.pos and i + 1 or i - 1
+  end
+  return math.max(1, n)
+end
+
+local function fromParty(name, text) MOCK.event("CHAT_MSG_ADDON", "LevCodex", text, "PARTY", name) end
+
+local function addonCount(pattern)
+  local n = 0
+  for _, m in ipairs(MOCK.addonSent or {}) do if m.text:find(pattern) then n = n + 1 end end
+  return n
+end
+
 -- In a party: your step goes out by addon message, others' steps show in the step window, and the
 -- opt-in quest sharing and flight announcements.
 function S.questParty()
@@ -819,20 +2169,26 @@ function S.questParty()
   MOCK.event("GROUP_ROSTER_UPDATE")
   local last = MOCK.addonSent and MOCK.addonSent[#MOCK.addonSent]
   check(MOCK.addonPrefix == "LevCodex" and last and last.channel == "PARTY", "the Codex talks to the party by addon message")
-  local told
-  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^S;northshire;%d+;Accept %- A Threat Within$") then told = true end end
-  check(told, "the current step is told to the party")
+  local pos
+  for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);Accept %- A Threat Within$")) or pos end
+  check(pos, "the current step is told to the party")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;northshire;40;Turn in - Bounty on Garrick Padfoot", "PARTY", "Ann-Realm")
-  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot (") and questText(frame, "ahead)"),
+  check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot " .. partySteps(40) .. " ahead"),
     "a party member's step shows with how far ahead they are")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;westfall;3;Accept - Westfall Stew", "PARTY", "Bo")
-  check(questText(frame, "Bo: Accept - Westfall Stew (Westfall)"), "a member in another guide shows that guide")
-  check(not MOCK.pushed, "quest sharing is off by default")
-  LevelingCodexDB.questShareParty = true
+  check(questText(frame, "Bo: Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.advance(0.6)
-  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party")
+  check(not MOCK.pushed, "the offer waits a moment, so a member who takes it at the same time isn't offered it")
+  MOCK.advance(2)
+  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party (on by default)")
+  LevelingCodexDB.questShareParty = false
+  MOCK.pushed = nil
+  MOCK.questLog = { { questID = 783 }, { questID = 7 } }
+  MOCK.event("QUEST_ACCEPTED", 2, 7)
+  MOCK.advance(2.6)
+  check(not MOCK.pushed, "turned off, quest sharing stays off")
   LevelingCodexDB.questAnnounceFlights = true
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   TakeTaxiNode(2)
@@ -841,6 +2197,304 @@ function S.questParty()
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(not questText(frame, "Ann:"), "leaving the party clears the party's steps")
+end
+
+-- Party sync: one row per party member in the step window, with their level and where they are
+-- against you (same step with their goal, N behind, N ahead, another guide, no step shared), and a
+-- heading that says when everyone is on your step. Distances count the steps your own route shows
+-- (questPartyCatchUp checks Back). The roster decides who shows.
+function S.questPartySync()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", realm = "Elsewhere", level = 4, class = "WARRIOR" } }
+  S.login()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function myPos()
+    local pos
+    for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);")) or pos end
+    return pos
+  end
+  local pos = myPos()
+  check(pos, "your step goes out")
+  local goal
+  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^G;") then goal = m.text end end
+  check(goal == "G;", "your goal goes out with it (none on an accept step)")
+  check(questText(frame, "Ann (5) no step shared") and questText(frame, "Bo (4) no step shared"),
+    "party members who haven't shared a step show with their level")
+  fromParty("Ann-Realm", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  fromParty("Ann-Realm", "G;Kobold Vermin slain: 3/10")
+  check(questText(frame, "Ann (5): Kobold Vermin slain: 3/10 same step"), "a member on your step shows their goal")
+  check(questText(frame, "PARTY") and not questText(frame, "ALL ON THIS STEP"), "not everyone is on your step yet")
+  fromParty("Bo-Elsewhere", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  check(questText(frame, "PARTY - ALL ON THIS STEP"), "the heading says when everyone is on your step")
+  -- a step of another class (in the guide's data, not in your route) counts from the next one you have
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local gap
+  for k = at, #steps - 1 do
+    if steps[k + 1].section ~= mine.section then break end
+    if steps[k + 1].pos > steps[k].pos + 1 then gap = k; break end
+  end
+  check(gap, "Northshire has another class's step after yours")
+  local theirs = steps[gap].pos + 1
+  fromParty("Ann-Realm", "S;northshire;" .. theirs .. ";Accept - Another class's quest")
+  check(questText(frame, "Ann (5): Accept - Another class's quest " .. partySteps(theirs) .. " ahead"),
+    "a member on a step your route doesn't have counts from the next one you do")
+  local past = steps[gap + 1].pos
+  check(partySteps(past) < past - pos, "past it, the guide's data has more steps than your route shows")
+  fromParty("Ann-Realm", "S;northshire;" .. past .. ";Turn in - Something")
+  check(questText(frame, "Ann (5): Turn in - Something " .. partySteps(past) .. " ahead"),
+    "a member ahead of you, counted in the steps your route shows")
+  check(not questText(frame, "ALL ON THIS STEP"), "the heading follows")
+  click(frame, "Next")
+  click(frame, "Next")
+  MOCK.advance(2.5)
+  local now = myPos()
+  check(now and now > pos, "your new step goes out after Next")
+  check(questText(frame, "Bo (4): Accept - A Threat Within " .. partySteps(pos) .. " behind"), "a member behind you")
+  fromParty("Bo-Elsewhere", "S;westfall;3;Accept - Westfall Stew")
+  check(questText(frame, "Bo (4): Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
+  MOCK.partyMembers = { MOCK.partyMembers[1] }
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(questText(frame, "Ann (5)") and not questText(frame, "Bo (4)"), "a member who left the party is gone")
+  MOCK.raid = true
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(not questText(frame, "Ann (5)"), "nothing in a raid")
+end
+
+-- Keeping in touch: your step goes out again every minute; a member whose Codex goes quiet for
+-- 3 minutes drops out (an older Codex, which sends no goals or heartbeat, keeps its step 15 minutes);
+-- offline and dead members are marked; the party is asked for its steps only when someone new joins.
+function S.questPartyHeartbeat()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5 }, { name = "Bo", level = 4 } }
+  S.login()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 1, "joining asks the party for their steps")
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 1, "a roster update with the same people asks nothing")
+  local pos = MOCK.ns.quests.routeRow().pos
+  fromParty("Ann", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  fromParty("Ann", "G;")
+  fromParty("Bo", "S;northshire;" .. pos .. ";Accept - A Threat Within")
+  local before = addonCount("^S;")
+  MOCK.advance(65, 0.5)
+  check(addonCount("^S;") > before, "your step goes out again every minute")
+  check(questText(frame, "Ann (5): Accept - A Threat Within same step"), "Ann still shows a minute later")
+  MOCK.advance(130, 0.5)
+  check(questText(frame, "Ann (5) no step shared"), "a Codex that goes quiet for 3 minutes drops out")
+  check(questText(frame, "Bo (4): Accept - A Threat Within same step"), "an older Codex keeps its step for 15 minutes")
+  MOCK.partyMembers[2].offline = true
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(questText(frame, "Bo (4): Accept - A Threat Within offline"), "an offline member is marked")
+  MOCK.partyMembers[2].offline, MOCK.partyMembers[2].dead = false, true
+  MOCK.advance(5.5, 0.5)
+  check(questText(frame, "Bo (4): Accept - A Threat Within same step (dead)"), "and a dead one, within 5 s")
+  check(addonCount("^HELLO$") == 1, "nobody new yet")
+  table.insert(MOCK.partyMembers, { name = "Cy", level = 6 })
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^HELLO$") == 2, "someone new joining asks again")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("party member Bo: older Codex"), "debug lists each member")
+end
+
+-- Quests > Party: each member with their guide, step, live goal and when you last heard from them;
+-- Follow <name>'s guide when they're in another guide; the quests they have that you don't (Ask to
+-- share) and the reverse (Share); the party switches.
+function S.questPartyTab()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", level = 4, class = "WARRIOR" } }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  S.login()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  fromParty("Ann", "S;westfall;3;Accept - Westfall Stew")
+  fromParty("Ann", "G;")
+  fromParty("Ann", "L;7,33,783")
+  slash("quests")
+  click(win(), "Party")
+  check(questText(win(), "Ann (5) Mage"), "the Party tab lists each member")
+  check(questText(win(), "Westfall: Accept - Westfall Stew"), "with their guide and step")
+  check(questText(win(), "heard just now"), "and when you last heard from them")
+  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"),
+    "a member without the Codex")
+  check(questText(win(), "Ann has, you don't (2)"), "the quests Ann has that you don't")
+  click(win(), "Ask Ann to share Wolves Across the Border")
+  check(addonCount("^R;33;Ann$") == 1, "asking sends Ann's Codex a share request")
+  check(not questText(win(), "You have, Ann doesn't"), "Ann has everything you have")
+  fromParty("Ann", "L;7,33")
+  check(questText(win(), "You have, Ann doesn't (1)"), "the reverse")
+  click(win(), "Share A Threat Within")
+  check(MOCK.pushed == 783, "Share offers your quest to the party")
+  click(win(), "Follow Ann's guide")
+  check(MOCK.ns.quests.current().section.id == "westfall", "following switches your guide to Ann's")
+  click(win(), "Party")
+  check(not findButton(win(), function(l) return l == "Follow Ann's guide" end), "no Follow once you're in the same guide")
+  click(win(), "Say quest items I pick up")
+  check(LevelingCodexDB.questAnnounceItems, "the party switches are in the tab too")
+  MOCK.party = false
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  click(win(), "Party")
+  check(questText(win(), "You're not in a party"), "out of a party the tab says so")
+end
+
+-- Share requests: a member's Ask to share offers them your quest (once per 10 s); one the game won't
+-- share says so to them; auto-share waits 2.5 s and leaves out a quest every member already has.
+function S.questPartyShare()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 5 } }
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  S.login()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(addonCount("^L;783$") >= 1, "your quest log goes out")
+  fromParty("Ann", "R;783;Tester")
+  check(MOCK.pushed == 783 and chatHas("Ann asked for A Threat Within"), "a share request from a party member")
+  MOCK.pushed = nil
+  fromParty("Ann", "R;783;Tester")
+  check(not MOCK.pushed, "once per 10 s")
+  MOCK.advance(11)
+  fromParty("Ann", "R;783;Someone")
+  check(not MOCK.pushed, "a request for someone else")
+  MOCK.notPushable = { [783] = true }
+  fromParty("Ann", "R;783;Tester")
+  check(not MOCK.pushed and addonCount("^N;783;Ann$") == 1, "a quest the game won't share says so")
+  fromParty("Ann", "N;33;Tester")
+  check(chatHas("Ann can't share Wolves Across the Border"), "and the asker hears it")
+  MOCK.notPushable = nil
+  LevelingCodexDB.questShareParty = true
+  fromParty("Ann", "S;northshire;1;Accept - A Threat Within")
+  fromParty("Ann", "G;")
+  fromParty("Ann", "L;33,783")
+  table.insert(MOCK.questLog, { questID = 33, title = "Wolves Across the Border" })
+  MOCK.event("QUEST_ACCEPTED", 2, 33)
+  MOCK.advance(2.6)
+  check(not MOCK.pushed, "auto-share leaves out a quest every member already has")
+  table.insert(MOCK.questLog, { questID = 7, title = "Kobold Camp Cleanup" })
+  MOCK.event("QUEST_ACCEPTED", 3, 7)
+  MOCK.advance(2.6)
+  check(MOCK.pushed == 7, "and offers one a member lacks")
+end
+
+-- Party chat announcements (Settings > Party, each off by default, said as "Codex: ..."): quest
+-- items you pick up (each new count; a route item that starts a quest) and quest progress (an
+-- objective finished, a quest ready to turn in). Nothing for what's in your log at login, at most a
+-- line a second (a newer count of the same item replaces a waiting one), nothing in a raid, and
+-- what Questie already says in party chat is left to it.
+function S.questPartyChat()
+  MOCK.party = true
+  local function goal(text, kind, have, need)
+    return { text = text .. ": " .. have .. "/" .. need, type = kind, numFulfilled = have, numRequired = need,
+      finished = have >= need }
+  end
+  local meat = goal("Tough Wolf Meat", "item", 2, 8)
+  local vermin, worker = goal("Kobold Vermin slain", "monster", 9, 10), goal("Kobold Worker slain", "monster", 0, 10)
+  MOCK.questLog = { { questID = 33, title = "Wolves Across the Border", objectives = { meat } },
+    { questID = 7, title = "Kobold Camp Cleanup", objectives = { vermin, worker } } }
+  S.login()
+  MOCK.advance(5) -- the quest log can fill in over the first seconds: nothing is said for it
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function hints()
+    local n = 0
+    for _, line in ipairs(MOCK.chat) do if line:find("Settings > Party", 1, true) then n = n + 1 end end
+    return n
+  end
+  check(hints() == 1, "joining a party says once where the chat announcements are")
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(hints() == 1, "only once a session")
+  local function set(obj, have)
+    obj.numFulfilled, obj.finished = have, have >= obj.numRequired
+    obj.text = obj.text:gsub("%d+/", have .. "/")
+    MOCK.event("QUEST_LOG_UPDATE")
+  end
+  local function said(text)
+    local n = 0
+    for _, m in ipairs(MOCK.said or {}) do if m.channel == "PARTY" and m.text == text then n = n + 1 end end
+    return n
+  end
+  set(meat, 3)
+  check(not MOCK.said, "announcements are off by default")
+  slash("quests")
+  click(win(), "Settings")
+  click(win(), "Say quest items I pick up")
+  click(win(), "Say quest progress in party chat")
+  check(LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress, "Settings turns them on")
+  check(not MOCK.said, "nothing for what was already in your log")
+  set(meat, 4)
+  check(said("Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)") == 1, "a quest item you pick up is said in party chat")
+  set(meat, 5)
+  set(meat, 6)
+  check(#MOCK.said == 1, "a line a second at most")
+  MOCK.advance(1.1)
+  check(#MOCK.said == 2 and said("Codex: Tough Wolf Meat: 6/8 (Wolves Across the Border)") == 1,
+    "a newer count replaces the waiting one")
+  set(worker, 5)
+  MOCK.advance(1.1)
+  check(#MOCK.said == 2, "kills are said when the objective is finished, not each one")
+  set(vermin, 10)
+  MOCK.advance(1.1)
+  check(said("Codex: Kobold Vermin slain: 10/10 (Kobold Camp Cleanup)") == 1, "a finished objective")
+  set(worker, 10)
+  MOCK.advance(1.1)
+  check(said("Codex: Kobold Camp Cleanup is ready to turn in.") == 1
+    and said("Codex: Kobold Worker slain: 10/10 (Kobold Camp Cleanup)") == 0, "the last objective says the quest is ready instead")
+  MOCK.bagItems = { { id = 1307, name = "Gold Pickup Schedule", level = 1, quality = 1 } }
+  MOCK.bags[1307] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.advance(1.1)
+  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1, "a route item that starts a quest")
+  -- Questie says finished objectives and quest-starting items itself: the Codex leaves those to it.
+  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  MOCK.bags[1307] = 0
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.bags[1307] = 1
+  MOCK.event("BAG_UPDATE_DELAYED")
+  local bandana, thug = goal("Red Burlap Bandana", "item", 5, 12), goal("Defias Thug slain", "monster", 9, 10)
+  table.insert(MOCK.questLog, { questID = 18, title = "Brotherhood of Thieves", objectives = { bandana, thug } })
+  MOCK.event("QUEST_LOG_UPDATE")
+  set(thug, 10)
+  MOCK.advance(1.1)
+  set(bandana, 6)
+  MOCK.advance(1.1)
+  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1
+    and said("Codex: Defias Thug slain: 10/10 (Brotherhood of Thieves)") == 0, "what Questie says is left to it")
+  check(said("Codex: Red Burlap Bandana: 6/12 (Brotherhood of Thieves)") == 1, "item counts still go out")
+  click(win(), "Settings")
+  check(questText(win(), "leaves those to Questie"), "Settings says so")
+  MOCK.raid = true
+  set(bandana, 7)
+  MOCK.advance(1.1)
+  check(said("Codex: Red Burlap Bandana: 7/12 (Brotherhood of Thieves)") == 0, "nothing in a raid")
+end
+
+-- Settings > Say steps I finish in party chat: a step the game finished (not Next or Back) goes out
+-- as "Codex: Done - <step>".
+function S.questPartyChatSteps()
+  MOCK.party = true
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  check(not chatHas("Settings > Party"), "no hint once an announcement is on")
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  MOCK.event("QUEST_LOG_UPDATE")
+  local last = MOCK.said and MOCK.said[#MOCK.said]
+  check(last and last.text == "Codex: Done - Accept - A Threat Within" and last.channel == "PARTY", "a step the game finished is said")
+  MOCK.advance(1.1)
+  MOCK.questLog = {}
+  MOCK.questDone[783] = true
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  MOCK.event("QUEST_LOG_UPDATE")
+  last = MOCK.said[#MOCK.said]
+  check(last.text == "Codex: Done - Turn in - A Threat Within", "and the next one")
+  local n = #MOCK.said
+  MOCK.advance(1.1)
+  click(frame, "Next")
+  MOCK.advance(1.1)
+  check(#MOCK.said == n, "Next isn't a finished step")
 end
 
 -- Trips through flight masters (QuestTravel.lua): the arrow leads to a flight master when flying
@@ -859,10 +2513,124 @@ local function redridgeBrutes(x, y)
   MOCK.questLog = { { questID = 124, objectives = { { text = "Redridge Brutes 4/10" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Redridge Brutes 4/10"), "following the Redridge objective")
   MOCK.questX, MOCK.questY = x or 32.5, y or 31.5
   MOCK.advance(0.3)
+end
+
+-- Party sync sends your step's live goal ("G;Redridge Brutes 4/10") with your step, and a new count
+-- within 2 s. With every announcement on, a kill step whose quest is just ready says "ready to turn
+-- in" once, not "Done" as well.
+function S.questPartyGoal()
+  MOCK.party = true
+  redridgeBrutes()
+  MOCK.advance(5)
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local function sent(text)
+    for _, m in ipairs(MOCK.addonSent or {}) do if m.text == text then return true end end
+    return false
+  end
+  check(sent("G;Redridge Brutes 4/10"), "your step's goal goes out to the party")
+  LevelingCodexDB.questAnnounceSteps, LevelingCodexDB.questAnnounceItems = true, true
+  LevelingCodexDB.questAnnounceProgress = true
+  MOCK.questLog[1].objectives[1].text = "Redridge Brutes 5/10"
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not sent("G;Redridge Brutes 5/10"), "at most every 2 s")
+  MOCK.advance(2.1)
+  check(sent("G;Redridge Brutes 5/10"), "a new count goes out once the 2 s are up")
+  check(not MOCK.said, "a kill that doesn't finish the objective isn't said")
+  MOCK.questLog[1].objectives[1] = { text = "Redridge Brutes 10/10", finished = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1.1)
+  local lines = {}
+  for _, m in ipairs(MOCK.said or {}) do lines[#lines + 1] = m.text end
+  check(#lines == 1 and lines[1] == "Codex: A Baying of Gnolls is ready to turn in.",
+    "one line for the finished kill step: " .. table.concat(lines, " | "))
+end
+
+-- Catch-up cues: a note when a member is 3 or more steps behind you, a ping when the last member
+-- reaches your step (Settings: Ping when the party is together on my step, at most every 20 s; a
+-- soft chime on the Sound Effects channel by default, Settings > Ping sound picks another and plays
+-- it), and the compact step window's one-line party summary.
+function S.questPartyCatchUp()
+  MOCK.party = true
+  MOCK.partyMembers = { { name = "Ann", level = 19 }, { name = "Bo", level = 18 } }
+  redridgeBrutes()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.advance(6)
+  MOCK.sounds = {}
+  local function pings(id)
+    local n = 0
+    for _, s in ipairs(MOCK.sounds) do if s.id == (id or 18019) and s.channel == "SFX" then n = n + 1 end end
+    return n
+  end
+  local Q = MOCK.ns.quests
+  local steps = Q.rows()
+  local mine, at = Q.routeRow()
+  local here, section = mine.pos, mine.section.id
+  -- a place four of your steps back
+  local n, i = 0, at
+  while n < 4 do
+    i = i - 1
+    local r = steps[i]
+    if r.state ~= "filtered" and not r.grey and not r.cut then n = n + 1 end
+  end
+  check(steps[i].section == mine.section, "the Redridge step has four steps before it")
+  local back = steps[i].pos
+  local function to(name, p)
+    fromParty(name, "S;" .. section .. ";" .. p .. ";Somewhere")
+    fromParty(name, "G;")
+  end
+  to("Ann", here)
+  check(pings() == 0, "one member on your step isn't the whole party")
+  to("Bo", back)
+  check(questText(frame, "Bo is " .. partySteps(back) .. " steps behind you."), "a member 3+ steps behind is named")
+  check(pings() == 0, "no ping while someone is behind")
+  to("Bo", here)
+  check(pings() == 1 and not questText(frame, "steps behind you"),
+    "the last member reaching your step pings: a soft chime your Sound Effects volume sets")
+  check(pings(8960) == 0, "not the ready-check sound")
+  LevelingCodexDB.questCompact = true
+  MOCK.ns.questRefresh()
+  check(questText(frame, "Party: all on this step"), "the compact window's party line")
+  LevelingCodexDB.questCompact = false
+  to("Bo", back)
+  to("Bo", here)
+  check(pings() == 1, "at most a ping every 20 s")
+  to("Bo", back)
+  MOCK.advance(21)
+  to("Bo", here)
+  check(pings() == 2, "and again after that")
+  to("Bo", back)
+  MOCK.advance(21)
+  LevelingCodexDB.noPartyPing = true
+  to("Bo", here)
+  check(pings() == 2, "the ping can be turned off")
+  -- Back shows the step before (done), but the party keeps hearing where you really are
+  local function lastStep()
+    local text
+    for _, m in ipairs(MOCK.addonSent) do if m.text:find("^S;") then text = m.text end end
+    return text and tonumber(text:match("^S;[^;]*;(%d+);"))
+  end
+  click(frame, "Back")
+  MOCK.advance(2.5)
+  check(Q.current() ~= Q.routeRow(), "Back shows an earlier step")
+  check(lastStep() == here, "going Back to look doesn't tell the party you're behind")
+  check(questText(frame, "Ann (19): Somewhere same step"), "and the rows still measure from your real step")
+  -- Settings > Ping sound: picking one plays it, and the next ping uses it
+  slash("quests")
+  click(win(), "Settings")
+  local count = #MOCK.sounds
+  click(win(), "Party invite")
+  check(LevelingCodexDB.partyPingSound == 2 and #MOCK.sounds == count + 1 and pings(880) == 1,
+    "picking a ping sound plays it so you can hear it")
+  LevelingCodexDB.noPartyPing = false
+  to("Bo", back)
+  MOCK.advance(21)
+  to("Bo", here)
+  check(pings(880) == 2, "the next ping uses it")
 end
 
 local function arrowCaption()
@@ -915,11 +2683,24 @@ function S.questFlightPlan()
   local _, onto = glow:GetPoint(1)
   check(glow:IsShown() and onto == _G.TaxiButton3, "the guide's flight master lights up on the map")
   check(not glow:IsMouseEnabled(), "the light lets the click through to the flight master")
+  -- Its ring pulses from the clock, like the arrival bob: no jump where it turns (an Alpha looping
+  -- BOUNCE could step there in game).
+  local low, high, jump, last = math.huge, -math.huge, 0, glow.ring:GetAlpha() or 1
+  for _ = 1, 240 do -- 4 s at 60 fps
+    MOCK.advance(1 / 60, 1 / 60)
+    local a = glow.ring:GetAlpha() or 1
+    low, high, jump, last = math.min(low, a), math.max(high, a), math.max(jump, math.abs(a - last)), a
+  end
+  check(low < 0.4 and high > 0.95 and jump < 0.05,
+    "the ring pulses smoothly (" .. low .. " to " .. high .. ", biggest step " .. jump .. ")")
   check(MOCK.tookTaxi == nil, "the flight is only marked while travel automation is off")
   TaxiFrame:Hide()
   walkTo(1436, 56.0, 50.0)
   check(arrowSays("Fly to Lakeshire from Sentinel Hill") and arrowSays(" yd"),
     "a long trip leads to the flight master with its distance: " .. arrowCaption())
+  local mini = _G.LevelingCodexMinimapPins
+  check(mini and mini:IsShown() and mini.current:IsShown() and mini.current.icon
+    and mini.current.icon._atlas == "crosshair_taxi_32", "the minimap leads to the flight master too")
   -- Reported from the game: Forever hides your speed from addons at times (a secret value), and
   -- math on it was blocked 374 times. The trip is planned at walking speed then.
   MOCK.runSpeed = MOCK.SECRET
@@ -998,7 +2779,7 @@ function S.questFlightHub()
   taxiMap(nodes)
   TaxiFrame:Hide()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   MOCK.advance(0.3)
   check(questText(questViewer(), "Digging Through the Ooze"), "following the ooze in the Wetlands")
   check(arrowSays("Fly to Menethil Harbor"), "the arrow sends you to Menethil Harbor: " .. arrowCaption())
@@ -1044,7 +2825,7 @@ function S.questFlightBack()
   taxiMap(nodes)
   TaxiFrame:Hide()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   MOCK.advance(0.3)
   check(questText(questViewer(), "Sven"), "following the way to Sven's Camp")
   -- Walked into Westfall: the hub flight still offers Darkshire (mountains can block a straight walk).
@@ -1093,7 +2874,7 @@ function S.questDungeonChoice()
   for id in pairs(open) do MOCK.questLog[#MOCK.questLog + 1] = { questID = id } end
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - "), "resumes at Sprite's turn-in")
   table.remove(MOCK.questLog, 1)
@@ -1107,6 +2888,9 @@ function S.questDungeonChoice()
     and findButton(frame, function(l) return l == "Skip" end), "the step window offers Plan and Skip")
   check(findButton(win(), function(l) return l == "Plan The Deadmines" end)
     and findButton(win(), function(l) return l == "Skip this run" end), "the Quests tab offers both for controllers")
+  check(findButton(win(), function(l) return l == "Skip run" end)
+    and not findButton(win(), function(l) return l == "Next step" end),
+    "the Quests tab's Next step says it skips the run, like the step window's")
 
   click(frame, "Skip")
   check(LevelingCodexDB.questDungeonPlan["dungeon-deadmines"] == false and chatHas("The Deadmines is skipped"),
@@ -1126,6 +2910,179 @@ function S.questDungeonChoice()
   check(questText(frame, "Find a group for The Deadmines: ") and questText(frame, " of its quests are in your log"),
     "a ready run leads the step text: " .. allText(frame))
   check(findButton(frame, function(l) return l == "Run The Deadmines" end), "and offers Run The Deadmines")
+end
+
+-- The quests a section's route takes before the step `stop` matches: turned in before it (MOCK.questDone)
+-- or still open (returned as a set, for the quest log).
+local function routeUpTo(sectionId, stop)
+  local open = {}
+  local route = LevelingCodexQuests[MOCK.faction == "Horde" and "HORDE" or "ALLIANCE"]
+  for _, section in ipairs(route.sections) do
+    if section.id == sectionId then
+      for _, step in ipairs(section.steps) do
+        if stop(step) then break end
+        if step.type == "accept" and step.quest then open[step.quest] = true end
+        if step.type == "turnin" and step.quest then open[step.quest] = nil; MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  return open
+end
+
+local function hasButton(root, label)
+  return findButton(root, function(l) return l == label end) ~= nil
+end
+
+-- A Human at Deputy Rainer in Elwynn with Westbrook Garrison Needs Help! (239) ready, Hogger's poster next.
+local function eliteAtHogger(hoggerInLog)
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 11, 1429, 24.3, 74.5
+  local open = routeUpTo("elwynn", function(s) return s.quest == 239 and s.type == "turnin" end)
+  open[239] = nil
+  MOCK.questLog = { { questID = 239, isComplete = true } }
+  for id in pairs(open) do MOCK.questLog[#MOCK.questLog + 1] = { questID = id } end
+  if hoggerInLog then MOCK.questLog[#MOCK.questLog + 1] = { questID = 176 } end
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Westbrook Garrison Needs Help!"), "resumes at Rainer's turn-in: " .. allText(frame), 2)
+  table.remove(MOCK.questLog, 1)
+  MOCK.questDone[239] = true
+  MOCK.event("QUEST_TURNED_IN", 239)
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 11 }
+  MOCK.event("QUEST_ACCEPTED", 1, 11)
+  return frame
+end
+
+-- An elite quest's pickup asks first: Take it keeps it, Skip passes it (Back asks again), and the
+-- Quests tab offers the same choice for controller players.
+function S.questEliteAsk()
+  local frame = eliteAtHogger()
+  check(questText(frame, 'Elite quest - WANTED: "Hogger"') and questText(frame, "Hogger (elite)")
+    and questText(frame, "bring a group"), "the route asks before Hogger's poster: " .. allText(frame))
+  check(hasButton(frame, "Take it") and hasButton(frame, "Skip") and not hasButton(frame, "Next"),
+    "the step window offers Take it, and Next says Skip")
+  click(win(), "Step")
+  check(hasButton(win(), "Take it") and hasButton(win(), "Skip it"), "the Quests tab's Step view offers both")
+  check(hasButton(win(), "Skip") and not hasButton(win(), "Next step"), "and its Next step button says Skip")
+
+  click(frame, "Skip")
+  check(LevelingCodexCharDB.questElite[176] == false and chatHas('WANTED: "Hogger" is skipped'),
+    "Skip remembers the choice for this character")
+  check(not questText(frame, "Elite quest") and not questText(frame, 'Accept - WANTED: "Hogger"')
+    and questText(frame, "Complete - Riverpaw Gnoll Bounty"), "the route passes Hogger and goes on: " .. allText(frame))
+  click(frame, "Next")
+  check(not questText(frame, 'WANTED: "Hogger"'), "Hogger's own objective is passed too: " .. allText(frame))
+  click(frame, "Back")
+  click(frame, "Back")
+  check(questText(frame, 'Elite quest - WANTED: "Hogger"') and LevelingCodexCharDB.questElite[176] == nil,
+    "Back to the question asks again: " .. allText(frame))
+  click(frame, "Take it")
+  check(LevelingCodexCharDB.questElite[176] == true and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "Take it goes on to the pickup: " .. allText(frame))
+end
+
+-- A quest you already have (or have done) never asks.
+function S.questEliteInLog()
+  local frame = eliteAtHogger(true)
+  check(not questText(frame, "Elite quest") and questText(frame, "Complete - Riverpaw Gnoll Bounty"),
+    "with Hogger in the log there's no question: " .. allText(frame))
+  check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil, "and nothing is saved")
+end
+
+-- Settings > Elite quests: Ask (default), Always take, Always skip.
+function S.questEliteModes()
+  LevelingCodexDB = { questEliteMode = "take" }
+  local frame = eliteAtHogger()
+  check(not questText(frame, "Elite quest") and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "Always take goes straight to the pickup: " .. allText(frame))
+  click(win(), "Settings")
+  local function lit(label)
+    local b = findButton(win(), function(l) return l == label end)
+    return b and b.codexOn
+  end
+  check(lit("Always take") and not lit("Ask"), "Settings lights the mode in use")
+  click(win(), "Always skip")
+  check(LevelingCodexDB.questEliteMode == "skip" and lit("Always skip"), "Always skip is saved")
+  check(not questText(frame, "Elite quest") and not questText(frame, 'Accept - WANTED: "Hogger"')
+    and questText(frame, "Complete - Riverpaw Gnoll Bounty"), "Always skip passes the quest without asking: " .. allText(frame))
+  click(win(), "Ask")
+  check(LevelingCodexDB.questEliteMode == nil and questText(frame, 'Elite quest - WANTED: "Hogger"'),
+    "Ask brings the question back: " .. allText(frame))
+  check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil,
+    "the modes don't save a choice for the quest")
+  click(win(), "Quests")
+  click(win(), "Setup")
+  check(hasButton(win(), "Ask") and hasButton(win(), "Always take") and hasButton(win(), "Always skip"),
+    "the guide setup card has the same three choices")
+  click(win(), "Always take")
+  check(LevelingCodexDB.questEliteMode == "take" and questText(frame, 'Accept - WANTED: "Hogger"'),
+    "the setup card sets the mode too")
+end
+
+-- Skipping an elite quest passes the quests that need it; the Quests tab's Take it and Skip it work too.
+local function eliteChainFixture()
+  local function step(kind, id, name, y, chain, elite)
+    return { type = kind, quest = id, name = name, text = "Test elite chain.", map = 1430, x = 50, y = y,
+      level = 33, min = 30, chain = chain, elite = elite }
+  end
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  sections[#sections + 1] = { id = "test-elite", title = "Test Elite Chain", zone = 1430, levels = { 32, 34 },
+    alternate = true, verified = false, steps = {
+      step("accept", 999201, "Test Bounty", 50, nil, "Test Brute"),
+      step("complete", 999201, "Test Bounty", 60, nil, "Test Brute"),
+      step("turnin", 999201, "Test Bounty", 50, nil, "Test Brute"),
+      step("accept", 999202, "Test Follow-up", 50, { 999201 }),
+      step("turnin", 999202, "Test Follow-up", 50, { 999201 }),
+      step("accept", 999203, "Test Errand", 52),
+      step("turnin", 999203, "Test Errand", 52),
+    } }
+end
+
+function S.questEliteChain()
+  eliteChainFixture()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 33, 1430, 50, 50
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Elite quest - Test Bounty") and questText(frame, "the quests that need it"),
+    "the fixture's elite pickup asks, naming its follow-ups: " .. allText(frame))
+  slash("quests")
+  stepTool("Skip it")
+  check(LevelingCodexCharDB.questElite[999201] == false and questText(frame, "Accept - Test Errand"),
+    "the Quests tab's Skip it passes the quest and its follow-up: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Elite quest - Test Bounty"), "Back asks again: " .. allText(frame))
+  stepTool("Take it")
+  check(LevelingCodexCharDB.questElite[999201] == true and questText(frame, "Accept - Test Bounty"),
+    "the Quests tab's Take it goes on to the pickup: " .. allText(frame))
+  MOCK.questLog = { { questID = 999201, isComplete = true } }
+  MOCK.event("QUEST_ACCEPTED", 1, 999201)
+  check(questText(frame, "Turn in - Test Bounty"), "the taken quest goes on as usual: " .. allText(frame))
+end
+
+-- The same choice with no quest log or map APIs (the minimal client) and nothing saved: an elite
+-- pickup put first in Northshire asks at login; Skip, Back and the Quests tab's Take it work.
+function S.questEliteFresh()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "accept", quest = 999301, name = "Test Elite Bounty", elite = "Test Brute",
+        text = "Test elite pickup.", map = 1429, x = 48.9, y = 41.6, level = 1, min = 1 })
+      table.insert(section.steps, 2, { type = "turnin", quest = 999301, name = "Test Elite Bounty", elite = "Test Brute",
+        text = "Test elite hand-in.", map = 1429, x = 48.9, y = 41.6 })
+    end
+  end
+  LevelingCodexDB, LevelingCodexCharDB = nil, nil
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Elite quest - Test Elite Bounty") and questText(frame, "Test Brute (elite)"),
+    "a fresh character is asked at the elite pickup: " .. allText(frame))
+  click(frame, "Skip")
+  check(questText(frame, "Accept - A Threat Within"), "Skip passes the pickup and its hand-in: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Elite quest - Test Elite Bounty"), "Back asks again: " .. allText(frame))
+  slash("quests")
+  stepTool("Take it")
+  check(questText(frame, "Accept - Test Elite Bounty"), "the Quests tab's Take it goes on to the pickup: " .. allText(frame))
 end
 
 -- Inside a dungeon: zoning in opens its guide (Settings > Open a dungeon's guide when you enter
@@ -1201,30 +3158,42 @@ end
 
 -- The pace card: XP per hour, time to level, where this level's XP came from, finished levels.
 function S.paceCard()
-  MOCK.level, MOCK.xp, MOCK.xpMax = 5, 100, 1000
+  MOCK.level, MOCK.xp, MOCK.xpMax, MOCK.rested = 5, 400, 1000, 150
+  local function rec(seconds, xp, q, k, quests, kills)
+    return { seconds = seconds, xp = xp, questXP = q, killXP = k, rested = 0, quests = quests, kills = kills, deaths = 0,
+      goldIn = {}, goldOut = {} }
+  end
+  -- what an earlier session (or a /reload) saved
+  LevelingCodexCharDB = { stats = { version = 1, zones = {}, totals = { goldIn = {}, goldOut = {} },
+    levels = { [3] = rec(0, 0, 0, 0, 0, 0), [4] = rec(3900, 900, 600, 250, 4, 9), [5] = rec(1800, 300, 200, 100, 2, 3) } } }
+  LevelingCodexCharDB.stats.levels[5].rested = 1200
   S.login()
-  MOCK.advance(60)
   MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 50 experience.")
-  MOCK.xp = 150
-  MOCK.event("PLAYER_XP_UPDATE", "player")
-  MOCK.event("QUEST_TURNED_IN", 783, 300, 0)
   MOCK.xp = 450
   MOCK.event("PLAYER_XP_UPDATE", "player")
-  MOCK.event("PLAYER_DEAD")
-  if not (win() and win():IsShown()) then slash("") end
+  slash("")
   click(win(), "This Level")
-  if MOCK.minimal then
-    check(not questText(win(), "XP per hour"), "no XP rate without the XP calls")
-    return
-  end
-  check(questText(win(), "YOUR PACE"), "the This Level tab has the pace card")
-  check(questText(win(), "300 XP, 1 quest") and questText(win(), "50 XP, 1 kill"), "quest and kill XP are split")
-  check(questText(win(), "(this session)") and questText(win(), "at this pace"), "XP per hour and the time to level")
-  MOCK.level, MOCK.xp = 6, 40
-  MOCK.event("PLAYER_LEVEL_UP", 6)
-  MOCK.event("PLAYER_XP_UPDATE", "player")
+  if MOCK.minimal then check(questText(win(), "YOUR PACE"), "the card shows without the XP calls"); return end
+  check(questText(win(), "Level 5: 450 / 1,000 XP") and questText(win(), "Level 6 in about"), "the XP bar's figures")
+  check(questText(win(), "30 min on this level (all sessions)"), "time on the level survives a reload")
+  check(questText(win(), "XP per hour this session, 1,200 rested XP on this level"), "the rested figure says what it counts")
+  check(questText(win(), "Quests 200 XP, 2 turned in") and questText(win(), "Kills 150 XP, 4 kills"), "XP by source")
+  check(questText(win(), "Level 4") and questText(win(), "1 h 5 min, 4 quests, 9 kills"), "the last levels")
+  click(win(), ">")
+  check(questText(win(), "Level 4") and not questText(win(), "Level 5"),
+    "above your level, the last levels are still the ones you finished")
+  click(win(), "<")
+  click(win(), "<")
+  click(win(), "<")
+  check(questText(win(), "0 min on this level"), "an empty record draws without dividing by zero")
+  click(win(), "<")
+  check(questText(win(), "No stats for level 2 yet."), "a level without stats says so")
+end
+
+function S.paceCardLost()
+  slash("")
   click(win(), "This Level")
-  check(questText(win(), "1 min (part), 1 quest, 1 kill, 1 death"), "a finished level is listed with its counts")
+  check(questText(win(), "since you logged in"), "without saved data the card says what it counts")
 end
 
 function S.questCorpse()
@@ -1549,7 +3518,7 @@ function S.questQuestieNearestPart()
     { text = "Kobold Diggers 0/4", finished = false }, { text = "Riverpaw Miners 0/6", finished = false } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   MOCK.advance(0.25)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "Kobold Digger - 42 yd") and not questText(arrow, "Riverpaw"),
@@ -1733,7 +3702,7 @@ function S.questDuskwoodHandoff()
   MOCK.questLog = { { questID = 133, objectives = { { text = "Ghoul Ribs 6/7" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Ghoul Ribs 6/7"), "resume the final Duskwood quest")
   MOCK.questDone[133], MOCK.questLog = true, {}
@@ -1756,7 +3725,7 @@ function S.questLakeshireHandoff()
   MOCK.questLog = { { questID = 20, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Blackrock Menace"), "resume at the last Lakeshire turn-in")
   check(questText(frame, "Next section: Duskwood"), "the last Lakeshire step names the next section")
@@ -1781,7 +3750,7 @@ function S.questDuskwoodZoneEntry()
   local frame = questViewer()
   -- Select the section so its return-to-town step is current before turning in.
   slash("quests")
-  click(win(), "Lakeshire")
+  clickGuide("Lakeshire")
   check(questText(frame, "Return to Lakeshire"), "the guide is still on the Lakeshire hearth step")
 
   MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 77.7, 44.4
@@ -1868,9 +3837,7 @@ function S.questPassed()
   check(not questText(frame, "Accept - Report to Gryan Stoutmantle"), "a pickup you moved past is not the current step")
   check(questText(frame, "Accept - Westfall Stew"), "a pickup a later quest still needs stays current")
   slash("quests")
-  local missed = findButton(win(), function(l) return l:match("^Missed quests %((%d+)%)$") end)
-  check(missed, "missed view exists")
-  missed:Click()
+  questQueue("Missed quests")
   check(questText(win(), "The Forgotten Heirloom"), "passed pickups are listed under Missed quests")
 end
 
@@ -1886,6 +3853,25 @@ function S.questBreadcrumb()
   local frame = questViewer()
   check(not questText(frame, "Report to Gryan Stoutmantle"), "a breadcrumb drops off once its follow-up is in the log")
   check(questText(frame, "Accept - The Forgotten Heirloom"), "the route continues with the next pickup")
+end
+
+-- Verification notes (`uncertain`) are for us, not players: the owner doesn't want "Check in game"
+-- notes in the step window or the route list (2026-11-13), like the old Unverified label.
+function S.questNoCheckNotes()
+  MOCK.race, MOCK.level = "Human", 1
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      for _, step in ipairs(section.steps) do step.uncertain = "Confirm this NPC's spot." end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Northshire"), "the Northshire step is shown: " .. allText(frame))
+  check(not questText(frame, "Check in game") and not questText(frame, "Confirm this NPC's spot"),
+    "no verification note in the step window: " .. allText(frame))
+  slash("quests")
+  check(not questText(win(), "Check in game") and not questText(win(), "Confirm this NPC's spot"),
+    "no verification note on the Quests tab")
 end
 
 function S.questWetlands()
@@ -1909,7 +3895,7 @@ function S.questWetlands()
   MOCK.questX, MOCK.questY = 38.46, 46.02
   MOCK.event("QUEST_LOG_UPDATE")
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(frame, "Ironforge 0/1") and questText(LevelingCodexQuestArrow, "Arrived"),
     "Angerfang starts at the western Ironforge plan even though it is fourth in the quest log")
   check(questText(frame, "Dragonmaw War Banners 3/8"), "show banner progress during the plan sweep")
@@ -1949,6 +3935,29 @@ function S.questWetlandsEarly()
   check(questText(frame, "Accept - The Greenwarden"), "the Greenwarden breadcrumb is a normal step in the early chapter")
 end
 
+function S.questWetlandsAfterEarly()
+  -- The 26-30 Wetlands route after the 20-25 chapter (2026-11-12 audit): the early chapter turns in
+  -- many quests the 26-30 route also has. Those turn-ins say nothing about the 26-30 route's own
+  -- earlier pickups, so Howin's quests and the rest must not go to Missed quests.
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 27, "Menethil Harbor"
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "duskwood" or section.id == "wetlands-early" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not step.optional then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 49.4, 42.2
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - Razormaw Needling"), "standing at Howin, his pickup is the step: " .. allText(frame))
+  slash("quests")
+  questQueue("Missed quests")
+  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "Blisters on The Land", "War Banners", "Apprentice's Duties" }) do
+    check(not questText(win(), name), name .. " is still on the route, not missed: " .. allText(win()))
+  end
+end
+
 function S.questStranglethornRoad()
   -- A 30-60 map: the arrow knows its size, and from Duskwood it names the road south.
   MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 38.5, 5.0
@@ -1965,7 +3974,7 @@ function S.questStranglethornRoad()
   MOCK.questLog = { { questID = 203, objectives = { { text = "Kurzen Jungle Fighters 3/15" } } } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Stranglethorn") and questText(frame, "Levels 36-38"), "Stranglethorn resumes its 36-38 guide")
   local arrow = LevelingCodexQuestArrow
@@ -2000,8 +4009,14 @@ function S.questStepChecklist()
   MOCK.questLog[1].objectives = { { text = "Kobold Vermin slain: 10/10", finished = true },
     { text = "Kobold Worker slain: 2/10" } }
   MOCK.event("QUEST_LOG_UPDATE")
-  check(questText(frame, "Kobold Vermin slain 10/10") and questText(frame, "Kobold Worker slain 2/10"),
-    "the classic 'goal: 2/10' style splits the same way: " .. allText(frame))
+  check(questText(frame, "Kobold Vermin slain done") and questText(frame, "Kobold Worker slain 2/10"),
+    "the classic 'goal: 2/10' style splits the same way; a finished goal says done: " .. allText(frame))
+  local doneRow
+  for _, c in ipairs({ frame:GetChildren() }) do
+    if c.count and c.count._text == "done" and c:IsShown() then doneRow = c end
+  end
+  check(doneRow and doneRow.bar:IsShown() and math.abs(doneRow.bar:GetWidth() - doneRow.track:GetWidth()) < 1
+    and math.abs(doneRow.bar._color[2] - 0.85) < 0.01, "with a full green bar")
   check(shownTexture(frame, TICK), "a finished goal is ticked")
   click(frame, "Quests")
   check(questText(win(), "Kobold Vermin slain: 10/10") and questText(win(), "Kobold Worker slain: 2/10"),
@@ -2052,7 +4067,7 @@ function S.questWetlandsEnd()
   MOCK.questLog = { { questID = 98209, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Bloom of the Heavens"), "resume at the final Wetlands turn-in")
   check(not questText(frame, "Last step in this guide"), "the Wetlands turn-in is no longer the end of the route")
@@ -2068,7 +4083,7 @@ function S.questRouteEnd()
   MOCK.questLog = { { questID = 1185, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Under the Chitin Was..."), "resume at the last turn-in of the route")
   check(questText(frame, "Last step in this guide"), "the final turn-in identifies itself as the last step")
@@ -2093,7 +4108,7 @@ for name, start in pairs({ Dwarf = "Coldridge Valley", Gnome = "Coldridge Valley
     check(questText(questViewer(), start), name .. " starts in " .. start)
     slash("quests")
     check(not findButton(win(), function(l) return l == "Northshire Valley" end), name .. " doesn't see the Human start")
-    check(findButton(win(), function(l) return l == "Westfall" end), name .. " joins the shared route at Westfall")
+    check(guideButton("Westfall"), name .. " joins the shared route at Westfall")
   end
 end
 
@@ -2161,7 +4176,7 @@ function S.questHordeRouteEnd()
   MOCK.questLog = { { questID = 4511, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(questText(frame, "Turn in - Calm Before the Storm") and questText(frame, "Last step in this guide"),
     "the Horde route's last step is the Calm Before the Storm hand-in")
@@ -2202,15 +4217,15 @@ function S.questClassSide()
   S.login()
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "class quests do not interrupt the route")
   slash("quests")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   check(questText(questViewer(), "Accept - First class quest"), "selecting the side section follows its quest")
   click(questViewer(), "Next")
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "skipping the chain returns to leveling")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   check(questText(questViewer(), "Accept - First class quest"), "reopening a class guide restores unfinished quests")
-  click(win(), "Return to leveling")
+  stepTool("Return to leveling")
   check(questText(questViewer(), "Accept - Report to Gryan Stoutmantle"), "you can leave a class guide early")
-  click(win(), "Warrior: Test Chain")
+  clickGuide("Warrior: Test Chain")
   MOCK.questLog = { { questID = 999001 } }
   MOCK.event("QUEST_ACCEPTED", 1, 999001)
   check(questText(questViewer(), "Complete - Find first item"), "the side guide advances on quest events")
@@ -2245,7 +4260,7 @@ function S.questDetourLibrary()
   click(win(), "Settings")
   click(win(), "Show class quests")
   click(win(), "Quests")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Test Dungeon")
   check(questText(win(), "BEFORE YOU GO") and questText(win(), "INSIDE") and questText(win(), "AFTER THE RUN"), "dungeon stages are shown")
   check(questText(win(), "Requires level 15"), "shows the actual level gate")
@@ -2259,11 +4274,12 @@ function S.questDetourLibrary()
   click(win(), "After the run")
   check(questText(questViewer(), "Turn in - Dungeon Test Inside") and not questText(questViewer(), "Turn in - Dungeon Test Pickup"),
     "the after-run phase skips unfinished turn-ins")
-  click(win(), "Return to leveling")
+  stepTool("Return to leveling")
   check(questText(questViewer(), "Report to Gryan Stoutmantle"), "return restores the leveling step")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   click(win(), "Track Dungeon Test Pickup")
   check(questText(questViewer(), "TRACKING") and questText(questViewer(), "Dungeon Test Pickup"), "pinned quests stay visible across guides")
+  click(win(), "Guides")
   local search = _G.LevelingCodexQuestSearch
   check(search and search:IsShown(), "search field is available")
   search:SetText("Dungeon Test Inside")
@@ -2279,7 +4295,7 @@ function S.questDungeonContent()
   MOCK.questDone[96392], MOCK.questDone[96390], MOCK.questDone[96391] = true, true, true
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Hall of Thanes")
   check(questText(win(), "Old Ironforge Incursion") and questText(win(), "The Treaty of Understanding"),
     "Hall of Thanes has both outdoor unlock and inside starter")
@@ -2291,7 +4307,7 @@ function S.questDungeonContent()
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - An Ancient Grudge"), "reopening inside starts with the first obtainable inside quest")
   click(questViewer(), "Return to leveling")
-  click(win(), "Guide library")
+  click(win(), "Guides")
   click(win(), "Cozy Sleeping Bag")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - ... and that note you found") and questText(questViewer(), "Alexston Farmstead"),
@@ -2309,10 +4325,10 @@ function S.questAlternateSharedPickup()
   MOCK.level, MOCK.questMap = 13, 1436
   S.login()
   slash("quests")
-  click(win(), "Alternate First")
+  clickGuide("Alternate First")
   check(questText(questViewer(), "Accept - Shared Alternate Pickup"), "the first alternate offers the quest")
   click(questViewer(), "Next")
-  click(win(), "Alternate Second")
+  clickGuide("Alternate Second")
   check(questText(questViewer(), "Accept - Shared Alternate Pickup"), "manual skips stay in their own alternate")
   MOCK.questDone[999020] = true
   MOCK.event("QUEST_TURNED_IN", 999020)
@@ -2324,7 +4340,7 @@ function S.questPinCapacity()
   for i = 1, 4 do MOCK.questLog[i] = { questID = 999030 + i, title = "Pin test " .. i } end
   S.login()
   slash("quests")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   for i = 1, 3 do click(win(), "Track Pin test " .. i) end
   MOCK.questLog[1].isComplete = true
   MOCK.event("QUEST_LOG_UPDATE")
@@ -2351,9 +4367,9 @@ function S.questLibraryResume()
   }
   S.login()
   slash("quests")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Complete - Local Active Quest"), "the local active quest takes precedence")
-  click(win(), "Guide library")
+  click(win(), "Quest log")
   click(win(), "Show Earlier Active Quest")
   check(questText(questViewer(), "Complete - Earlier Active Quest") and questText(questViewer(), "Widgets 1/20"),
     "the library follows an unfinished objective from an earlier section")
@@ -2373,10 +4389,10 @@ function S.questHunterGuides()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
   S.login()
   slash("quests")
-  check(findButton(win(), function(l) return l == "Hunter: Taming in Dun Morogh" end), "Dwarves get their tame guide")
+  check(guideButton("Hunter: Taming in Dun Morogh"), "Dwarves get their tame guide")
   check(not findButton(win(), function(l) return l == "Hunter: Taming in Elwynn" end), "Human taming is race filtered")
   check(not questText(win(), "Warrior: Defensive Stance"), "another class's guides are hidden")
-  click(win(), "Hunter: Taming in Dun Morogh")
+  clickGuide("Hunter: Taming in Dun Morogh")
   check(questText(questViewer(), "Accept - Taming the Beast"), "the guide starts at the Dwarf taming pickup")
 end
 
@@ -2393,8 +4409,8 @@ function S.questHordeShaman()
   MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Tauren", 20, 1413
   S.login()
   slash("quests")
-  check(findButton(win(), function(l) return l == "Shaman: Water Totem" end), "Tauren Shamans get the Horde Water Totem guide")
-  click(win(), "Shaman: Water Totem")
+  check(guideButton("Shaman: Water Totem"), "Tauren Shamans get the Horde Water Totem guide")
+  clickGuide("Shaman: Water Totem")
   check(questText(questViewer(), "Call of Water"), "the Water Totem guide opens at its first step")
   MOCK.faction = nil
 end
@@ -2403,7 +4419,7 @@ function S.questShamanGuides()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 30, 1455
   S.login()
   slash("quests")
-  click(win(), "Shaman: Air Totem")
+  clickGuide("Shaman: Air Totem")
   check(questText(questViewer(), "Accept - Call of Air"), "the Air Totem quest is in the class guide at 30")
 end
 
@@ -2582,11 +4598,14 @@ function S.questGrey()
   MOCK.level, MOCK.questMap = 20, 1436
   S.login()
   slash("quests")
-  click(win(), "Test grey route")
+  clickGuide("Test grey route")
   local frame = questViewer()
   check(questText(frame, "Accept - Grey Prerequisite"), "a grey pickup leaves the route unless a later quest needs it")
-  check(questText(win(), "LEVELS 12-20") and questText(win(), "0% done") and questText(win(), "Current"),
+  click(win(), "Guides")
+  check(findButton(win(), function(l) return l:find("LEVELS 12-20", 1, true) ~= nil end)
+    and questText(win(), "Current"),
     "guides are grouped by level band with progress and status")
+  check(not questText(win(), "% done"), "guides are rows with a tag, not buttons with a % done line")
   questQueue("Missed quests")
   check(questText(win(), "Outleveled (grey)") and questText(win(), "Grey Errand"), "the grey pickup is listed as outleveled")
   click(win(), "Settings")
@@ -2622,7 +4641,7 @@ function S.questDungeonPlan()
   MOCK.level, MOCK.questMap = 14, 1436
   S.login()
   slash("quests")
-  click(win(), "Test plan route")
+  clickGuide("Test plan route")
   local frame = questViewer()
   check(questText(frame, "Accept - Plan Outdoor Errand"), "the plan fixture starts at its first pickup")
   check(questText(frame, "Chain: part 1 of 3"), "a story chain shows its position")
@@ -2630,8 +4649,8 @@ function S.questDungeonPlan()
   MOCK.event("QUEST_ACCEPTED", 1, 999201)
   check(not questText(frame, "Plan Dungeon Pickup") and not questText(frame, "Plan Optional Errand"),
     "unplanned dungeon pickups and optional errands stay hidden")
-  click(win(), "Guide library")
-  check(findButton(win(), function(l) return l == "Plan recommended" end) and questText(win(), "Not planned"),
+  click(win(), "Guides")
+  check(findButton(win(), function(l) return l == "Recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
   check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page lists boss tips")
@@ -2651,10 +4670,11 @@ function S.questDungeonPlan()
   C_QuestLog.GetMaxNumQuestsCanAccept = function() return 3 end
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Your quest log is full (3/3)"), "a full log warns before a pickup")
+  check(questText(frame, "Quests > Quest log lists ones you can drop"), "it points to where the clean-up list is")
   C_QuestLog.GetMaxNumQuestsCanAccept = nil
   click(win(), "Quests")
-  click(win(), "Guide library")
-  click(win(), "Plan none")
+  click(win(), "Guides")
+  click(win(), "None")
   check(not findButton(frame, function(l) return l == "Run Test Plan Dungeon" end), "dropping the plan removes the run prompt")
 end
 
@@ -2670,7 +4690,7 @@ function S.questCatchup()
   slash("quests")
   questQueue("Ready to turn in")
   check(questText(win(), "Hilary's Necklace"), "ready quests have their own list")
-  click(win(), "Resume active quest")
+  stepTool("Resume active quest")
   check(questText(questViewer(), "Accept - The Price of Shoes"), "catch-up retains a prerequisite for later quests")
   MOCK.questDone[118] = true
   MOCK.event("QUEST_TURNED_IN", 118)
@@ -2717,7 +4737,7 @@ function S.questDetour()
   MOCK.level, MOCK.questMap = 15, 1436
   S.login()
   slash("quests")
-  click(win(), "Test outbound")
+  clickGuide("Test outbound")
   local frame = questViewer()
   click(frame, "Try Test detour")
   check(questText(frame, "Accept - Detour objective"), "suggestion switches to the optional route")
@@ -2738,8 +4758,8 @@ function S.questCrossZoneResume()
   MOCK.questLog = { { questID = 999102, objectives = { { text = "Detour progress 2/5" } } } }
   S.login()
   slash("quests")
-  click(win(), "Test outbound")
-  click(win(), "Resume active quest")
+  clickGuide("Test outbound")
+  stepTool("Resume active quest")
   local frame = questViewer()
   check(not questText(frame, "Choose a detour"), "resume switches away from the selected guide")
   check(questText(frame, "Detour progress 2/5"), "resume starts with the objective in your zone")
@@ -2813,7 +4833,7 @@ function S.questAlternateRoutes()
   check(not LevelingCodexCharDB.questFlights["Thelsamar, Loch Modan"], "skipping does not record a flight path as learned")
   slash("quests")
   check(findButton(win(), function(label) return label == "Try Darkshore" end), "other suitable routes are offered away from checkpoints")
-  click(win(), "Darkshore")
+  clickGuide("Darkshore")
   check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
   MOCK.questMap = 1439
   MOCK.event("ZONE_CHANGED_NEW_AREA")
@@ -2956,7 +4976,7 @@ function S.questController(mode)
   local frame = questViewer()
   local manager = GamepadMode.FrameControlsManager
   slash("quests")
-  click(win(), "Show step window")
+  click(win(), "Step")
   check(manager:GetActiveFrame() == win(), "the Codex has native controller focus")
   if mode == "backup" then MOCK.padNoFocus = true end
   win().padChrome.close:Click()
@@ -3004,7 +5024,8 @@ S.talent = talent
 
 -- mode "name": buttons answer GetDefinitionInfo() with a spellID (C_Traits style)
 -- mode "icon": buttons only carry an icon texture
-function S.makeTalentWindow(mode, frameName)
+-- all = "all": a button for every talent of the class tree, not only the guide plan's
+function S.makeTalentWindow(mode, frameName, all)
   if not D() then return end
   local root = CreateFrame("Frame", frameName or "PlayerSpellsFrame", UIParent)
   root:SetSize(800, 600)
@@ -3045,6 +5066,10 @@ function S.makeTalentWindow(mode, frameName)
   for i = 1, 25 do addButton("Decoy", "Decoy Talent " .. i, "inv_misc_questionmark_decoy" .. i) end
   for _, p in ipairs(D().plan) do
     if not talent.byName[p.name] then talent.byName[p.name] = addButton(p.tree, p.name, p.icon) end
+  end
+  local tree = all == "all" and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not talent.byName[t.name] then talent.byName[t.name] = addButton(tree.tabs[t.tab], t.name, t.icon) end
   end
   ToggleTalentFrame_Mock = function() if root:IsShown() then root:Hide() else root:Show() end end
   return root
@@ -3094,7 +5119,9 @@ function S.levelups()
   end
 end
 
--- Hovering keeps the banner up; leaving lets it fade; click opens the window.
+-- The banner always closes by itself, even with the cursor on it (a controller leaves the hidden
+-- cursor in the middle of the screen, where the banner sits: the owner's banner never went away);
+-- click opens the window.
 function S.bannerMouse()
   if not D() then return end
   MOCK.level = 20
@@ -3103,10 +5130,8 @@ function S.bannerMouse()
   local t = toast()
   MOCK.mouseOver[t] = true
   MOCK.advance(12)
-  check(t:IsShown(), "banner stays while hovered")
+  check(not t:IsShown(), "banner fades by itself with the cursor on it")
   MOCK.mouseOver[t] = nil
-  MOCK.advance(12)
-  check(not t:IsShown(), "banner fades after mouse leaves")
   MOCK.event("PLAYER_LEVEL_UP", 20)
   MOCK.advance(4.5)
   MOCK.fire(t, "OnMouseUp", "LeftButton")
@@ -3141,7 +5166,7 @@ function S.bannerTest()
   end
 end
 
-local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Settings" }
+local TABS = { "This Level", "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }
 
 local function openAt(level, tab)
   MOCK.level = level
@@ -3205,6 +5230,8 @@ function S.everyButton()
     end
   end
   slash("minimap"); slash("minimap") -- re-apply the minimap setting
+  -- the path cards were clicked too: back to the Codex guide's path
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
 end
 
 -- Settings: both themes, all pad names, banner move/lock, sizes, window position.
@@ -3246,9 +5273,18 @@ function S.minimap()
   check(win():IsShown(), "left-click opens the window")
   mini:Click("LeftButton")
   check(not win():IsShown(), "left-click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   mini:Click("RightButton")
-  check(win():IsShown(), "right-click opens settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  mini:Click("RightButton")
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   for _, shape in ipairs({ "ROUND", "SQUARE" }) do
     MOCK.minimapShape = shape
     MOCK.fire(mini, "OnDragStart", "LeftButton")
@@ -3601,9 +5637,18 @@ function S.compartment()
   check(win() and win():IsShown(), "click opens the Codex")
   entry.func(entry, { buttonName = "LeftButton" })
   check(not win():IsShown(), "click again closes it")
+  local function viewerShown() local v = _G.LevelingCodexQuestViewer; return v and v:IsShown() end
+  local before = viewerShown()
   entry.func(entry, { buttonName = "RightButton" })
-  check(win():IsShown() and MOCK.textUnder(win()):find("Minimap button"), "right-click opens Settings")
-  win():Hide()
+  if before then
+    check(not viewerShown() and not win():IsShown(), "right-click hides the step window, not the Codex")
+  else
+    check(viewerShown() or win():IsShown(), "right-click shows the step window (or the Quests tab without a step)")
+  end
+  if win():IsShown() then win():Hide() end
+  entry.func(entry, { buttonName = "RightButton" })
+  check(viewerShown() == before, "right-click again puts it back")
+  if win():IsShown() then win():Hide() end
   local owner = CreateFrame("Button", nil, UIParent)
   entry.funcOnEnter(owner)
   local lines = table.concat(GameTooltip._lines or {}, " / ")
@@ -4028,7 +6073,8 @@ function S.lostSavedVariables()
     MOCK.level = level
     MOCK.event("PLAYER_LEVEL_UP", level)
     MOCK.advance(1.5)
-    for _, m in ipairs(D().macros) do
+    -- the set your path gives (the class runs spend a spec path's talents first: that path's macros)
+    for _, m in ipairs(MOCK.ns.pathMacros()) do
       if level >= m.lo and level <= m.hi then
         local i = GetMacroIndexByName(m.name)
         if i > 0 then check(MOCK.macros[i].body == m.body, m.name .. " follows level " .. level .. " without saved variables") end
@@ -4464,6 +6510,57 @@ function S.talentTree()
     local snippet = future.why:match("^[A-Za-z0-9 ,%.']+") or "" -- not %w: it takes UTF-8 bytes on Windows
     if #snippet > 8 then check(text:find(snippet, 1, true), "detail shows why " .. future.name) end
   end
+  -- the whole game tree is drawn: a talent the guide never takes shows greyed at 0
+  local tree = MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  local inPlan = {}
+  for _, p in ipairs(D().plan) do inPlan[p.name] = true end
+  for _, t in ipairs(tree and tree.talents or {}) do
+    if not inPlan[t.name] then
+      local node = iconsTitled(t.name)[1]
+      check(node and node.tipTitle == t.name .. "  0/" .. t.max and node.tex._desat == true,
+        t.name .. " (not in the plan) is drawn greyed at 0")
+      break
+    end
+  end
+  win():Hide()
+end
+
+-- Nodes sit at the game's rows and columns (TalentTreeData.lua): the trees side by side, a talent under
+-- a prerequisite in its column.
+function S.talentTreeLayout()
+  local tree = D() and MOCK.ns.talentTrees and MOCK.ns.talentTrees[MOCK.class]
+  if not tree then return end
+  openAt(30, "Talents")
+  local function spot(name)
+    local node = iconsTitled(name)[1]
+    check(node, "tree node for " .. name)
+    local _, _, _, x, y = node:GetPoint(1)
+    return x, y
+  end
+  local byName = {}
+  for _, t in ipairs(tree.talents) do byName[t.name] = t end
+  local maxX1, minX2 = -1e9, 1e9
+  for _, t in ipairs(tree.talents) do
+    local x, y = spot(t.name)
+    if t.tab == 1 then maxX1 = math.max(maxX1, x) elseif t.tab == 2 then minX2 = math.min(minX2, x) end
+    for _, pn in ipairs(t.prereq) do
+      local o = byName[pn]
+      if o and o.tab == t.tab and o.col == t.col then
+        local px, py = spot(pn)
+        check(px == x and py > y, t.name .. " sits under its prerequisite " .. pn)
+      end
+    end
+  end
+  check(maxX1 < minX2, "the first tree sits left of the second")
+  -- every node sits inside the trees, above the talent detail card under them (Affliction has 9 rows)
+  local bottom, detailTop = 0, nil
+  for _, b in ipairs(MOCK.buttons(win())) do
+    local _, _, _, _, by = b:GetPoint(1)
+    if by and b.tipTitle and b.tipTitle:find("  %d+/%d+$") then bottom = math.max(bottom, -by + (b:GetWidth() or 0)) end
+    if by and b.tipTitle and byName[b.tipTitle] and b:GetWidth() == 40 then detailTop = -by end
+  end
+  check(detailTop, "the talent detail card under the trees")
+  check(bottom < detailTop, "every node sits above the detail card (" .. bottom .. " < " .. tostring(detailTop) .. ")")
   win():Hide()
 end
 
@@ -4493,6 +6590,511 @@ function S.traitLayoutTree()
   end
   check(not MOCK.textUnder(win()):find("Open your talent window once", 1, true), "no layout note once the game's layout is known")
   win():Hide()
+end
+
+----------------------------------------------------------------------------
+-- Talent paths (Talents.lua): the spec paths, Custom, the rules, share codes, the trainer list
+----------------------------------------------------------------------------
+
+-- A spec path of this class by key (TalentPaths.lua).
+local function specPath(key)
+  for _, p in ipairs((MOCK.ns.TALENT_PATHS or {})[MOCK.class] or {}) do
+    if p.key == key then return p end
+  end
+end
+
+-- The talents a plan has after its first n points, as the game's trait nodes would report them.
+local function seedTraitRanks(plan, n)
+  local ranks, order = {}, {}
+  local points = {}
+  for _, p in ipairs(plan) do
+    for l = p.from, p.to do points[#points + 1] = { level = l, name = p.name } end
+  end
+  table.sort(points, function(a, b) return a.level < b.level end)
+  for i = 1, math.min(n, #points) do
+    local name = points[i].name
+    if not ranks[name] then order[#order + 1] = name end
+    ranks[name] = (ranks[name] or 0) + 1
+  end
+  MOCK.traitNodes = {}
+  for i, name in ipairs(order) do
+    MOCK.spells[60000 + i] = name
+    MOCK.traitNodes[800 + i] = { posX = i * 100, posY = 0, spellID = 60000 + i, rank = ranks[name] }
+  end
+end
+
+local function listHas(list, value)
+  for _, v in ipairs(list or {}) do if v == value then return true end end
+  return false
+end
+
+function S.talentPathApi()
+  local ns = MOCK.ns
+  if not D() then
+    check(#ns.talentPaths() == 0, "no talent paths without a guide")
+    check(ns.talentAt(20) == nil, "no talent point without a guide")
+    return
+  end
+  MOCK.level = 40
+  if MOCK.class == "DRUID" then
+    check(#ns.talentPaths() == 6, "Druid: the guide, four spec paths and Custom (got " .. #ns.talentPaths() .. ")")
+    return
+  end
+  local key, how = ns.talentPathKey()
+  check(key == "guide" and how == "default", "the Codex guide by default, got " .. tostring(key) .. " " .. tostring(how))
+  ns.setTalentPath("arms")
+  check(ns.talentAt(40).name == "Mortal Strike", "Arms puts level 40 into Mortal Strike")
+  check(LevelingCodexCharDB.talentPath == "arms", "the choice is saved for the character")
+  check(select(2, ns.talentPathKey()) == "saved", "a chosen path counts as saved")
+  -- the trainer list swaps talent spells: Shield Slam ranks go, Mortal Strike ranks come
+  local v48 = ns.trainAt(48)
+  check(v48 and listHas(v48.spells, "Mortal Strike (Rank 2)"), "Arms trains Mortal Strike (Rank 2) at 48")
+  check(not listHas(v48.spells, "Shield Slam (Rank 2)"), "Arms has no Shield Slam ranks")
+  check(#v48.spells == #v48.icons and #v48.spells == #v48.notes, "trainer spells, notes and icons stay parallel")
+  ns.setTalentPath("guide")
+  check(listHas(ns.trainAt(48).spells, "Shield Slam (Rank 2)"), "the guide path keeps its Shield Slam ranks")
+  -- custom: the game's rules
+  ns.setTalentPath("custom")
+  ns.customClear()
+  local ok, why = ns.customAdd("Mortal Strike")
+  check(not ok and why == "Needs 30 points in Arms (has 0)", "Mortal Strike needs 30 Arms points, got " .. tostring(why))
+  check(select(2, ns.customAdd("Bogus Talent")) == "Not a talent", "an unknown talent is refused")
+  check(ns.customFrom("arms"), "a custom path starts from Arms")
+  check(#ns.customPoints() == 51, "Arms copied in full")
+  check(select(2, ns.customAdd("Deflection")) == "All 51 points placed", "no 52nd point")
+  for _ = 1, 11 do ns.customUndo() end
+  check(#ns.customPoints() == 40, "undo removes the last points")
+  check(ns.talentAt(49) and not ns.talentUnplanned(49), "level 49 still planned")
+  check(ns.talentAt(50) == nil and ns.talentUnplanned(50), "level 50 not planned yet")
+  check(not ns.talentUnplanned(9), "no point to plan before 10")
+  -- share codes
+  local code = ns.talentCode()
+  check(code:find("^LC1%-WARRIOR%-%w%w%w%w%-"), "a share code: " .. code)
+  ns.customClear()
+  check(#ns.customPoints() == 0, "clear empties the custom path")
+  check(ns.readTalentCode("  " .. code:lower() .. "\n"), "a pasted code with spaces and lower case reads")
+  check(#ns.customPoints() == 40, "the code brings back 40 points")
+  local ok2, r2 = ns.readTalentCode((code:gsub("WARRIOR", "MAGE")))
+  check(not ok2 and r2 == "This code is for a Mage", "another class's code is refused, got " .. tostring(r2))
+  local ok3, r3 = ns.readTalentCode((code:gsub("^(LC1%-WARRIOR%-)%w%w%w%w", "%1ZZZZ")))
+  check(not ok3 and r3 == "This code was made for other talent trees", "another tree version is refused, got " .. tostring(r3))
+  local ok4, r4 = ns.readTalentCode("hello")
+  check(not ok4 and r4 == "Not a Leveling Codex talent code", "a non-code is refused")
+  check(#ns.customPoints() == 40, "a refused code changes nothing")
+  -- a save from before a game patch: cut at the first point that no longer fits
+  LevelingCodexCharDB.customTalents = { "Improved Rend", "Bogus", "Improved Rend" }
+  ns.setTalentPath("custom")
+  check(#ns.customPoints() == 1, "a stale custom path is cut at its first bad point")
+  -- a saved key that no longer exists
+  LevelingCodexCharDB.talentPath = "gone"
+  check(ns.talentPathKey() == "guide", "an unknown saved path falls back to the guide")
+  LevelingCodexCharDB.talentPath = nil
+  if MOCK.minimal then
+    check(ns.talentPathKey() == "guide", "no trait API: the guide")
+    check(not ns.customFromLive(), "no trait API: no current talents to copy")
+    return
+  end
+  -- no saved path: the spec path your spent talents follow
+  seedTraitRanks(specPath("arms").plan, 12)
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  local k2, h2 = ns.talentPathKey()
+  check(k2 == "arms" and h2 == "matched", "spent Arms talents pick Arms, got " .. tostring(k2) .. " " .. tostring(h2))
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  check(ns.customFromLive(), "your current talents copy into a custom path")
+  check(#ns.customPoints() == 12, "all 12 spent points copied")
+  -- ranks that still read 0 at login (the trees loading) are read again a few seconds later
+  seedTraitRanks(specPath("arms").plan, 12)
+  for _, n in pairs(MOCK.traitNodes) do n.saved, n.rank = n.rank, 0 end
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  check(ns.talentPathKey() == "guide", "no ranks yet: the guide")
+  for _, n in pairs(MOCK.traitNodes) do n.rank = n.saved end
+  MOCK.advance(6)
+  check(ns.talentPathKey() == "arms", "ranks that arrive later are matched")
+  MOCK.traitNodes = {}
+  MOCK.event("TRAIT_CONFIG_UPDATED", 7)
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The Talents tab's path cards: click one to follow it (saved), the tree and every-point list follow.
+function S.talentPathPick()
+  if not D() then return end
+  local ns = MOCK.ns
+  local paths = ns.talentPaths()
+  local p = paths[2]
+  if not p or p.custom then return end
+  openAt(30, "Talents")
+  -- the guide card's tags fit their line (every guide card shows both by default)
+  local function fontString(root, value)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r._text == value and r:IsShown() then return r end
+    end
+    for _, k in ipairs({ root:GetChildren() }) do
+      local f = fontString(k, value)
+      if f then return f end
+    end
+  end
+  local tag = fontString(win(), "Codex guide  -  Chosen")
+  check(tag and (tag:GetWidth() or 0) >= tag:GetStringWidth(), "the guide card's tags fit their line")
+  click(win(), "Path: " .. p.spec)
+  check(LevelingCodexCharDB.talentPath == p.key, "clicking a card chooses its path")
+  local text = MOCK.textUnder(win())
+  check(text:find("Chosen", 1, true), "the chosen card says so")
+  local own = ((ns.PATH_MACROS or {})[MOCK.class] or {})[p.key]
+  check(text:find(own and ("Macros follow this path; tips follow the " .. D().spec .. " guide.")
+    or ("Macros and tips follow the " .. D().spec .. " guide."), 1, true), "the card says what follows the path")
+  local hit, rank = ns.talentAt(30)
+  local node = iconsTitled(hit.name)[1]
+  check(node and node.tipTitle == hit.name .. "  " .. rank .. "/" .. hit.max, "the tree shows " .. hit.name .. " " .. rank .. "/" .. hit.max)
+  local row
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle == "Level 30: " .. hit.name .. " " .. rank .. "/" .. hit.max then row = b end
+  end
+  check(row, "every point in order follows the path at 30")
+  -- a talent the guide takes at 30 but this path never does: greyed at 0
+  local inPath = {}
+  for _, e in ipairs(p.plan) do inPath[e.name] = true end
+  for _, e in ipairs(D().plan) do
+    if not inPath[e.name] then
+      local n = iconsTitled(e.name)[1]
+      check(n and n.tipTitle == e.name .. "  0/" .. e.max and n.tex._desat == true, e.name .. " greyed on " .. p.spec)
+      break
+    end
+  end
+  click(win(), "Path: " .. paths[1].spec)
+  check(LevelingCodexCharDB.talentPath == "guide", "the guide's card chooses it again")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- The controller reaches the path cards and the tree (the Codex's own navigation), and A chooses a path.
+function S.padTalentPaths()
+  if not D() or not GamepadMode then return end
+  MOCK.gamepadUI = true
+  LevelingCodexDB.padNative = false
+  openAt(30, "Talents")
+  local guideLabel = "Path: " .. MOCK.ns.talentPaths()[1].spec
+  local card
+  for _ = 1, 40 do
+    local t = LevelingCodexPadFocus.target
+    local l = t and t.codexLabel or ""
+    if l:find("^Path: ") and l ~= guideLabel then card = l; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(card, "the D-pad reaches a path card")
+  pad(win(), "PAD1")
+  local want
+  for _, p in ipairs(MOCK.ns.talentPaths()) do if "Path: " .. p.spec == card then want = p.key end end
+  check(LevelingCodexCharDB.talentPath == want, "A on a card chooses its path")
+  local node
+  for _ = 1, 80 do
+    local t = LevelingCodexPadFocus.target
+    if t and (t.tipTitle or ""):find("%d/%d") and t:GetScript("OnClick") then node = t; break end
+    pad(win(), "PADDDOWN")
+  end
+  check(node, "the D-pad reaches a tree node")
+  win():Hide()
+  LevelingCodexDB.padNative, MOCK.gamepadUI = nil, nil
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- The custom path editor: start from a path, undo, clear (two clicks), place points by clicking the
+-- tree, the game's rules refusing a point with the reason.
+function S.talentCustom()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  local function has(label) return findButton(win(), function(l) return l == label end) ~= nil end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  check(LevelingCodexCharDB.talentPath == "custom", "the Custom card chooses Custom")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "an empty custom path counts 0 of 51")
+  check(has("Start from: Arms") and has("Start from: Protection") and has("Start empty"), "start from a path or empty")
+  check(not has("Start from: My current talents"), "no current talents to copy here (nothing readable)")
+  click(win(), "Start from: Arms")
+  check(text():find("Points placed: 51 of 51", 1, true), "Arms copied in full")
+  check(not has("Start from: Arms"), "the start row goes once the path has points")
+  click(win(), "Undo")
+  check(text():find("Points placed: 50 of 51 - next point is level 60", 1, true), "undo takes the last point back")
+  check(text():find("Lv 59", 1, true), "the last point placed is marked with its level")
+  check(has("Done"), "starting from a path opens the editor")
+  iconsTitled("Mortal Strike")[1]:Click()
+  check(text():find("Points placed: 50 of 51", 1, true), "a refused point changes nothing")
+  check(text():find("Can't place it: Already taken", 1, true), "the editor says why a point was refused")
+  click(win(), "Clear")
+  check(text():find("Points placed: 50 of 51", 1, true), "one click on Clear only asks")
+  click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51 - next point is level 10", 1, true), "a second click clears")
+  iconsTitled("Improved Rend")[1]:Click()
+  check(text():find("Points placed: 1 of 51 - next point is level 11", 1, true), "clicking a talent places the next point")
+  check(text():find("Lv 10", 1, true), "the point just placed is marked")
+  check(iconsTitled("Mortal Strike")[1].tipText:find("^Needs 30 points in Arms"), "a closed talent's tooltip says why")
+  click(win(), "Done")
+  check(has("Edit path"), "Done closes the editor")
+  check(MOCK.ns.talentAt(10).name == "Improved Rend", "the custom point is level 10's talent")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- Share codes: copy one out, paste one back (a bad one says why and changes nothing).
+function S.talentCode()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local function text() return MOCK.textUnder(win()) end
+  openAt(60, "Talents")
+  click(win(), "Path: Custom")
+  click(win(), "Start from: Fury")
+  click(win(), "Share code")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown() and copy.edit:GetText():find("^LC1%-WARRIOR%-"), "Share code shows the code")
+  local code = copy.edit:GetText()
+  copy:Hide()
+  click(win(), "Clear"); click(win(), "Clear")
+  check(text():find("Points placed: 0 of 51", 1, true), "cleared")
+  click(win(), "Paste code")
+  check(copy:IsShown() and copy.edit:GetText() == "", "Paste code opens an empty box")
+  copy.edit:SetText("nonsense")
+  click(copy, "Use this code")
+  check(copy:IsShown() and copy.count:GetText() == "Not a Leveling Codex talent code", "a bad code says why")
+  check((copy.count:GetWidth() or 0) > 0 and copy.count:GetWidth() <= 210, "the reason wraps clear of the buttons")
+  check(text():find("Points placed: 0 of 51", 1, true), "a bad code changes nothing")
+  copy.edit:SetText(code)
+  click(copy, "Use this code")
+  check(not copy:IsShown(), "a good code closes the box")
+  check(text():find("Points placed: 51 of 51", 1, true), "the code brings the path back")
+  win():Hide()
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- A saved path comes back next session (the persisted run saves "fury": Warrior has it, Mage doesn't).
+function S.talentPathSaved()
+  if not D() then return end
+  local key, how = MOCK.ns.talentPathKey()
+  local want = MOCK.class == "WARRIOR" and "fury" or "guide"
+  check(key == want, "the saved path comes back: " .. tostring(key))
+  check(how == (MOCK.class == "WARRIOR" and "saved" or "default"), "how it was picked: " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  local chosen
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.codexLabel and b.codexLabel:find("^Path: ") and (b.tipText or ""):find("You follow this path.", 1, true) then
+      chosen = b.codexLabel
+    end
+  end
+  check(chosen == (MOCK.class == "WARRIOR" and "Path: Fury" or "Path: " .. MOCK.ns.talentPaths()[1].spec),
+    "the chosen card: " .. tostring(chosen))
+  win():Hide()
+end
+
+-- Before login in a lost-SavedVariables run: the talents of the class's first spec path's first 15
+-- points are spent (the run starts at 25).
+function S.talentSeed()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if paths and paths[2] then seedTraitRanks(paths[2].plan, 15) end
+end
+
+-- SavedVariables didn't load: the path your spent talents follow is picked (and not saved).
+function S.talentPathLost()
+  local paths = (MOCK.ns.TALENT_PATHS or {})[MOCK.class]
+  if not D() or not paths or not paths[2] then return end
+  local key, how = MOCK.ns.talentPathKey()
+  check(key == paths[2].key and how == "matched", "spent talents pick " .. paths[2].key .. ", got " .. tostring(key) .. " " .. tostring(how))
+  openAt(MOCK.level, "Talents")
+  check(MOCK.textUnder(win()):find("Picked from the talents you have spent. Choose one to keep it.", 1, true), "the tab says why")
+  check(LevelingCodexCharDB.talentPath == nil, "a matched path isn't saved")
+  click(win(), "Path: " .. paths[2].spec)
+  check(LevelingCodexCharDB.talentPath == paths[2].key, "choosing it keeps it")
+  check(not MOCK.textUnder(win()):find("Picked from the talents", 1, true), "no note once chosen")
+  win():Hide()
+end
+
+-- The chosen path drives every talent display: chat, banner, This Level, the minimap tooltip and the
+-- trace in the talent window; a custom path's unplanned point says to plan it.
+function S.talentPathFollow()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  local ns = MOCK.ns
+  ns.setTalentPath("arms")
+  local function levelUp(level)
+    MOCK.chat = {}
+    MOCK.level = level
+    MOCK.event("PLAYER_LEVEL_UP", level, 10, 0, 0, 0, 0, 0)
+    MOCK.advance(4.5)
+  end
+  levelUp(40)
+  check(chatHas("Mortal Strike 1/1"), "chat names the Arms point at 40")
+  check(MOCK.textUnder(toast()):find("Mortal Strike  1/1", 1, true), "banner names the Arms point at 40")
+  MOCK.advance(10)
+  openAt(40, "This Level")
+  check(MOCK.textUnder(win()):find("Mortal Strike", 1, true), "This Level shows the Arms point")
+  win():Hide()
+  local mini = _G.LevelingCodexMinimapButton
+  MOCK.fire(mini, "OnEnter")
+  check((GameTooltip._lines[2] or ""):find("^Arms"), "minimap tooltip names the path: " .. tostring(GameTooltip._lines[2]))
+  check(table.concat(GameTooltip._lines, " "):find("Mortal Strike", 1, true), "minimap tooltip: the talent now")
+  MOCK.fire(mini, "OnLeave")
+  MOCK.unspent = 1
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local trace = _G.LevelingCodexTalentTrace
+  local _, on = trace:GetPoint(1)
+  check(trace:IsShown() and on == talent.byName["Mortal Strike"], "the trace is on Mortal Strike")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  -- a custom path that stops at 49
+  ns.customFrom("arms")
+  for _ = 1, 11 do ns.customUndo() end
+  ns.setTalentPath("custom")
+  levelUp(50)
+  check(chatHas("plan it in .-/codex talents.- %(your custom path has none for this level%)"), "chat: plan the point")
+  check(MOCK.textUnder(toast()):find("Plan it in /codex talents", 1, true), "banner: plan the point")
+  MOCK.advance(10)
+  openAt(50, "This Level")
+  check(MOCK.textUnder(win()):find("Your custom path has no point for level 50 yet. Plan it on the Talents tab.", 1, true),
+    "This Level: plan the point")
+  win():Hide()
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  local hint = _G.LevelingCodexTalentHint
+  check(hint:IsShown() and hint.name:GetText() == "No point planned", "hint card: no point planned")
+  check(hint.next:GetText() == "Plan it in /codex talents.", "hint card: plan it")
+  check(not trace:IsShown(), "nothing traced without a planned point")
+  ToggleTalentFrame()
+  MOCK.advance(0.8)
+  MOCK.unspent = nil
+  slash("debug")
+  check(chatHas("talent path: custom %(saved%), custom points: 40"), "debug names the path")
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+end
+
+-- The trainer list and the Macros tab under another spec's path.
+function S.talentTrainerPath()
+  if not D() or MOCK.class ~= "WARRIOR" then return end
+  MOCK.ns.setTalentPath("arms")
+  openAt(48, "Trainer")
+  local text = MOCK.textUnder(win())
+  check(text:find("Mortal Strike (Rank 2)", 1, true), "Arms trains Mortal Strike (Rank 2)")
+  check(not text:find("Shield Slam (Rank 2)", 1, true), "no Shield Slam ranks for Arms")
+  click(win(), "Macros")
+  check(MOCK.textUnder(win()):find("Built for the Arms path.", 1, true), "the Macros tab names the path")
+  MOCK.ns.setTalentPath("guide")
+  click(win(), "Trainer")
+  check(MOCK.textUnder(win()):find("Shield Slam (Rank 2)", 1, true), "the guide path trains Shield Slam")
+  click(win(), "Macros")
+  check(not MOCK.textUnder(win()):find("These macros are built for", 1, true), "no note on the guide path")
+  win():Hide()
+  LevelingCodexCharDB.talentPath = nil
+end
+
+-- Every spec path has its own macro set (PathMacros.lua): choosing the path gives its macros at every
+-- level (Set up macros makes exactly that set's versions, the Macros tab names the path), switching path
+-- moves the macros the Codex made to the new path's versions in place, and a custom path takes the set
+-- of the path that shares the most points with it.
+function S.pathMacros()
+  if not D() then return end
+  local ns = MOCK.ns
+  local sets = (ns.PATH_MACROS or {})[MOCK.class] or {}
+  local specPaths = 0
+  for _, p in ipairs(ns.talentPaths()) do
+    if not p.guide and not p.custom then
+      specPaths = specPaths + 1
+      local set = sets[p.key]
+      check(set, p.key .. " has its own macros")
+      if set then
+        ns.setTalentPath(p.key)
+        check(ns.pathMacros() == set, p.key .. ": the macros follow the path")
+        MOCK.macros, MOCK.chat = {}, {}
+        local levels = { 60 }
+        for _, m in ipairs(set) do levels[#levels + 1] = m.lo end
+        for _, level in ipairs(levels) do
+          MOCK.level = level
+          slash("macros")
+          for _, m in ipairs(set) do
+            if level >= m.lo and level <= m.hi then
+              check(installedMacroBody(m.name) == m.body, p.key .. " " .. m.name .. " at " .. level)
+            end
+          end
+        end
+        check(not chatHas("couldn't make"), p.key .. ": every macro fits the character slots")
+        openAt(40, "Macros")
+        check(MOCK.textUnder(win()):find("Built for the " .. p.spec .. " path.", 1, true), p.key .. ": the Macros tab names the path")
+        for _, m in ipairs(ns.macrosFor(40)) do
+          check(#iconsTitled(m.name) > 0, p.key .. ": " .. m.name .. " shows on the Macros tab")
+        end
+        win():Hide()
+      end
+    end
+  end
+  check(specPaths > 0, "the class has spec paths")
+  -- switching path: a macro the Codex made under a name both sets use takes the new path's body
+  MOCK.macros, MOCK.chat = {}, {}
+  MOCK.level = 60
+  ns.setTalentPath("guide")
+  slash("macros")
+  local moved
+  for _, p in ipairs(ns.talentPaths()) do
+    local set = sets[p.key]
+    if set and not moved then
+      for _, m in ipairs(set) do
+        if 60 >= m.lo and 60 <= m.hi and installedMacroBody(m.name) and installedMacroBody(m.name) ~= m.body then
+          moved = { p = p, m = m }
+          break
+        end
+      end
+    end
+  end
+  if moved then
+    MOCK.chat = {}
+    ns.setTalentPath(moved.p.key)
+    check(installedMacroBody(moved.m.name) == moved.m.body, moved.m.name .. " switches to the " .. moved.p.key .. " version")
+    check(chatHas("your macros now follow the " .. moved.p.spec .. " path"), "chat says the macros follow the new path")
+    -- recognising a body needs GetMacroInfo, which the minimal client lacks (it goes by charDB.made there)
+    if not MOCK.minimal then check(ns.countOurMacros() > 0, "macros made on another path still count as the Codex's") end
+  end
+  -- a custom path gets the set of the path closest to its points
+  for _, p in ipairs(ns.talentPaths()) do
+    if sets[p.key] then
+      ns.setTalentPath("custom")
+      ns.customFrom(p.key)
+      local mp = ns.macroPath()
+      check(mp and mp.key == p.key, "a custom path started from " .. p.key .. " uses its macros")
+      openAt(30, "Macros")
+      check(MOCK.textUnder(win()):find("Your custom path uses the " .. p.spec .. " macros", 1, true), "the Macros tab says which set")
+      win():Hide()
+      break
+    end
+  end
+  ns.customClear()
+  check(ns.macroPath() and ns.macroPath().guide, "an empty custom path uses the guide's macros")
+  LevelingCodexCharDB.talentPath, LevelingCodexCharDB.customTalents = nil, nil
+  ns.talentVersion = ns.talentVersion + 1
+  MOCK.macros = {}
+end
+
+-- A macro an older Codex made (a body it no longer ships, PathMacros.lua's OLD_MACRO_BODIES) is still the
+-- Codex's own without saved variables: the next level-up moves it to the current version.
+function S.oldMacroBodies()
+  if not D() or MOCK.minimal then return end
+  local ns = MOCK.ns
+  local old = (ns.OLD_MACRO_BODIES or {})[MOCK.class]
+  if not old then return end
+  local names = {}
+  for name in pairs(old) do names[#names + 1] = name end
+  table.sort(names)
+  local tried = 0
+  for _, name in ipairs(names) do
+    local want
+    for _, m in ipairs(ns.pathMacros()) do
+      if m.name == name and m.lo > 1 and not want then want = m end
+    end
+    if want then
+      MOCK.macros = { { name = name, icon = 134400, body = old[name][1], perChar = true } }
+      LevelingCodexCharDB.made = {}
+      MOCK.level = want.lo
+      MOCK.event("PLAYER_LEVEL_UP", want.lo)
+      MOCK.advance(1.5)
+      check(MOCK.macros[1].body == want.body, name .. ": an old Codex body is updated at level " .. want.lo)
+      tried = tried + 1
+      MOCK.advance(10)
+    end
+    if tried >= 3 then break end
+  end
+  MOCK.macros = {}
 end
 
 -- Macros tab: each macro on its controller button and its key, drawn as glyphs and keycaps.
@@ -4741,10 +7343,18 @@ function S.profNone()
   check(chatHas("profession: Herbalism not learned"), "Herbalism not learned in debug")
   openAt(9, "Professions")
   local content = profText()
-  check(content:find("No supported professions learned", 1, true), "empty profession switch")
-  for _, name in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism" }) do
-    check(content:find(name, 1, true) and not profButton(name), "only text for supported " .. name)
+  check(content:find("No supported professions learned", 1, true) and content:find("PROFESSION GUIDES", 1, true),
+    "nothing learned: the guide picker shows")
+  for _, k in ipairs({ "Blacksmithing", "Mining", "Tailoring", "Enchanting", "Herbalism", "Skinning", "Leatherworking",
+      "Alchemy", "Engineering", "First Aid", "Cooking", "Fishing" }) do
+    check(profButton(k), "a button for every guide: " .. k)
   end
+  check(not profButton("All guides"), "no way back needed before a guide is open")
+  click(win(), "Enchanting")
+  content = profText()
+  check(content:find("Enchanting  -  not learned", 1, true) and content:find("Runed Copper Rod", 1, true), "browsing a guide")
+  click(win(), "All guides")
+  check(profText():find("PROFESSION GUIDES", 1, true) and profButton("Fishing"), "All guides goes back to the picker")
   win():Hide()
   MOCK.level = 10
   MOCK.event("PLAYER_LEVEL_UP", 10, 10, 0, 0, 0, 0, 0)
@@ -4837,7 +7447,7 @@ function S.profOpenHeadingWithClosedWeapons()
   check(profButton("Mining"), "Mining confirmed with the Professions heading open")
   MOCK.removeSkill("Mining")
   MOCK.advance(1.2)
-  check(not profButton("Mining") and profText():find("No supported professions learned", 1, true),
+  check(not profText():find("Mining 30 / 75", 1, true) and profText():find("No supported professions learned", 1, true),
     "an unrelated closed heading cannot hide an unlearned profession")
 end
 
@@ -4878,12 +7488,13 @@ function S.profTab()
   if not D() then return end
   openAt(30, "Professions")
   click(win(), "Blacksmithing")
+  click(win(), "To 300")
   local t = profText()
   check(t:find("Blacksmithing 97 / 150"), "skill header")
   check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
   check(t:find("Learn at 95"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
-  check(t:find("1882 Thorium Bar"), "shopping list counts the 140 Thorium Bars the Imperial Plate quests take")
+  check(t:find("1620 Thorium Bar"), "shopping list counts the 100 Thorium Bars the two Imperial Plate quests take")
   check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
@@ -4898,6 +7509,82 @@ function S.profTab()
   click(win(), "Mining")
   t = profText()
   check(t:find("Mining 140 / 225") and t:find("Iron Deposit") and t:find("Arathi Highlands"), "mining header, vein, zones")
+  MOCK.staleUnder(win(), "Professions")
+  win():Hide()
+end
+
+-- The shopping list counts to your cap first (the next cap once you're at it); To 300 counts the
+-- whole route, and the choice holds for the session.
+function S.profShopScope()
+  if not D() then return end
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  local t = profText()
+  check(t:find("SHOPPING LIST TO 150", 1, true), "the list counts to your cap first")
+  check(t:find("\n10 Green Dye", 1, true), "a step that crosses the cap counts its crafts to the cap")
+  local function shopPart(text)
+    local a = text:find("SHOPPING LIST", 1, true)
+    local b = a and text:find("CAMP OBJECTS", a, true)
+    return a and text:sub(a, b or #text) or ""
+  end
+  check(not shopPart(t):find("Thorium Bar", 1, true) and not shopPart(t):find("Mithril Bar", 1, true), "nothing past the cap")
+  check(findButton(win(), function(l) return l == "To 150 (your cap)" end), "the switch names your cap")
+  click(win(), "To 300")
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and t:find("1620 Thorium Bar", 1, true) and
+    t:find("\n25 Green Dye", 1, true), "To 300 counts the whole route")
+  click(win(), "Mining")
+  click(win(), "Blacksmithing")
+  check(profText():find("SHOPPING LIST TO 300", 1, true), "the choice holds when you come back")
+  click(win(), "To 150 (your cap)")
+  MOCK.setSkill("Blacksmithing", 150, 150); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 225", 1, true) and findButton(win(), function(l) return l == "To 225 (next cap)" end),
+    "at your cap the list counts to the next one")
+  check(shopPart(t):find("Mithril Bar", 1, true) and not shopPart(t):find("Thorium Bar", 1, true), "and stops there")
+  MOCK.setSkill("Blacksmithing", 210, 300); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("SHOPPING LIST TO 300", 1, true) and not findButton(win(), function(l) return l == "To 300" end),
+    "with a cap of 300 there's nothing to switch")
+  win():Hide()
+end
+
+-- Other guides: every guide you haven't learned, shown as if you were starting it.
+function S.profBrowse()
+  if not D() then return end
+  MOCK.faction, MOCK.race = "Alliance", "Human"
+  openAt(30, "Professions")
+  click(win(), "Blacksmithing")
+  click(win(), "Other guides")
+  local t = profText()
+  check(t:find("OTHER PROFESSION GUIDES", 1, true), "the picker opens")
+  check(profButton("Tailoring") and profButton("Fishing") and profButton("First Aid"), "it lists the guides you haven't learned")
+  local count = 0
+  for _, b in ipairs(MOCK.buttons(win())) do if labelOf(b) == "Blacksmithing" then count = count + 1 end end
+  check(count == 1, "a learned guide keeps its own button, not a second one in the picker")
+  click(win(), "Alchemy")
+  t = profText()
+  check(t:find("Alchemy  -  not learned", 1, true) and t:find("Any Alchemy trainer", 1, true), "where to learn it")
+  check(t:find("FIRST STEP", 1, true) and t:find("Minor Arcane Elixir", 1, true), "its first step")
+  check(t:find("THE WHOLE ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
+    "its route and shopping list from 1")
+  check(not t:find("DO THIS NOW", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b.tipTitle and b.tipTitle:find("^90%-120") then b:Click(); break end
+  end
+  check(profText():find("STEP 90-120", 1, true) and profText():find("Elixir of Wisdom", 1, true), "a step can be opened")
+  click(win(), "Other guides")
+  click(win(), "Herbalism")
+  t = profText()
+  check(t:find("Herbalism  -  not learned", 1, true) and t:find("Peacebloom  1\n", 1, true) and
+    t:find("Elwynn Forest", 1, true), "a gathering guide lists its first nodes without colours")
+  MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
+  t = profText()
+  check(t:find("Herbalism 1 / 75", 1, true) and t:find("DO THIS NOW", 1, true), "learning it turns the page into your guide")
+  click(win(), "Mining")
+  check(profText():find("Mining 140 / 225", 1, true), "your own guides are a click away")
+  MOCK.removeSkill("Herbalism"); MOCK.advance(1.2)
+  MOCK.faction, MOCK.race = nil, nil
   MOCK.staleUnder(win(), "Professions")
   win():Hide()
 end
@@ -5071,7 +7758,9 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 25, 75); MOCK.advance(1.2)
   check(profText():find("Peacebloom  1  yellow"), "Peacebloom turns yellow at 25")
   MOCK.setSkill("Herbalism", 50, 75); MOCK.advance(1.2)
-  check(profText():find("Peacebloom  1  green") and profText():find("TRAIN JOURNEYMAN"), "green and training at 50")
+  check(profText():find("Peacebloom  1  yellow") and profText():find("TRAIN JOURNEYMAN"), "still yellow, and training at 50")
+  MOCK.setSkill("Herbalism", 65, 75); MOCK.advance(1.2)
+  check(profText():find("Peacebloom  1  green"), "Forever's herbs turn green at skill + 65")
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
   check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
@@ -5165,6 +7854,10 @@ function S.alchemyTab()
   content = profText()
   check(content:find("TRAIN ARTISAN", 1, true) and content:find("Kylanna Windwhisper", 1, true) and
     content:find("Rogvar", 1, true) and content:find("level 35", 1, true), "Artisan rank unlock and trainers")
+  check(content:find("SHOPPING LIST TO 225", 1, true) and not content:find("Stonescale Oil", 1, true),
+    "to the Expert cap the oil isn't needed yet")
+  click(win(), "To 300")
+  content = profText()
   check(content:find("75 Leaded Vial (includes 43 for 86 Stonescale Oil", 1, true),
     "the shared vial row separates oil supplies from the vials for earlier recipes")
   MOCK.bags = { ["Stonescale Eel"] = 3, ["Leaded Vial"] = 1 }
@@ -5204,7 +7897,7 @@ function S.skinningLeatherworkingTab()
   click(win(), "Leatherworking")
   content = profText()
   check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
-    content:find("SHOPPING LIST TO 300"), "Leatherworking starter and shopping estimate")
+    content:find("SHOPPING LIST TO 75"), "Leatherworking starter and shopping estimate, to the Apprentice cap")
   check(content:find("125  Tanning Rack") and content:find("Runic Leather Headband"), "hotfixed camp unlock and final step")
   MOCK.setSkill("Leatherworking", 200, 225); MOCK.advance(1.2)
   check(profText():find("TRAIN ARTISAN") and profText():find("Hahrana Ironhide"), "Leatherworking Artisan trainer")
@@ -5236,6 +7929,8 @@ end
 
 -- The shopping list's text only (between its title and the cloth section).
 local function shoppingText()
+  local whole = findButton(win(), function(l) return l == "To 300" end)
+  if whole and not whole.codexOn then whole:Click() end
   local t = profText()
   local a = t:find("SHOPPING LIST TO 300", 1, true)
   local b = t:find("\nCLOTH\n", a or 1, true)
@@ -5364,7 +8059,7 @@ function S.tailorTab()
   local t = tailoring()
   check(t:find("Tailoring 150 / 225"), "Tailoring header")
   check(t:find("Earthen Vest"), "step at 150: Earthen Vest")
-  check(t:find("SHOPPING LIST TO 300") and t:find("\nCLOTH\n"), "shopping list and cloth section")
+  check(t:find("SHOPPING LIST TO 225") and t:find("\nCLOTH\n"), "shopping list (to your cap) and cloth section")
   local shop = shoppingText()
   check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
   local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
@@ -5396,7 +8091,10 @@ function S.tailorTab()
   MOCK.staleUnder(win(), "Professions")
   click(win(), "Settings")
   local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
-  check(cards and cards.tipText and cards.tipText:find("Tailoring"), "Settings: skill-up cards name Tailoring")
+  check(cards and cards.tipText and cards.tipText:find("every profession the Codex guides", 1, true),
+    "Settings: skill-up cards cover every guided profession")
+  check(findButton(win(), function(l) return l == "Show what to learn at profession trainers" end) and
+    findButton(win(), function(l) return l == "Include profession supplies" end), "Settings: the trainer and vendor switches")
   win():Hide()
 end
 
@@ -5431,8 +8129,8 @@ function S.tailorTabCases()
   check(t:find("Runecloth  %-  you need this now"), "Runecloth marked at 260")
   MOCK.setSkill("Tailoring", 285, 300)
   t = tailoring()
-  check(t:find("Runecloth Shoulders") and t:find("Venomspew Gloves") and t:find("Venomspew Cord"),
-    "Runecloth finish with vendor alternatives")
+  check(t:find("Runecloth Shoulders") and t:find("Venomspew patterns") and t:find("need a Loom"),
+    "Runecloth finish: the vendor patterns need a Loom")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
   check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
@@ -5971,6 +8669,539 @@ function S.classTrainer()
   check(not card:IsShown(), "the setting turns the card off")
 end
 
+-- A profession trainer: the card lists the next rank when you can train it and the route recipes this
+-- trainer teaches up to your cap, and names where the next one it doesn't teach comes from.
+function S.profTrainer()
+  MOCK.level = 30
+  MOCK.setSkill("Blacksmithing", 97, 150); MOCK.advance(1.2)
+  local window = CreateFrame("Frame", "ClassTrainerFrame", UIParent)
+  window:SetSize(384, 512)
+  window:Show()
+  MOCK.tradeskillTrainer = true
+  MOCK.trainer = {
+    { "Rough Bronze Leggings", "Blacksmithing", 95, category = "used" },
+    { "Heavy Grinding Stone", "Blacksmithing", 100, category = "unavailable", cost = 500 },
+    { "Iron Buckle", "Blacksmithing", 125, category = "unavailable", cost = 800 },
+    { "Bronze Warhammer", "Blacksmithing", 100, category = "unavailable", cost = 900 },
+    { "Silver Rod", "Blacksmithing", 100, cost = 300 },
+    { "Blacksmithing", "Blacksmithing", 125, rank = "Expert", category = "unavailable", cost = 10000 },
+  }
+  MOCK.money = 1000
+  MOCK.event("TRAINER_SHOW")
+  local card = _G.LevelingCodexTrainerHint
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no trainer card without the trainer APIs")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "PROFESSION TRAINER"), "a profession trainer gets its own card")
+  check(questText(card, "Nothing to learn here yet") and
+    questText(card, "Next here: Heavy Grinding Stone at 100, Bronze Warhammer at 100, Iron Buckle at 125"),
+    "before the skill is there it says what this trainer teaches next")
+  check(questText(card, "Expert Blacksmithing at skill 125 and level 20"), "and when the next rank opens")
+  check(questText(card, "Not taught here: Green Iron Bracers (learn at 140): Expert trainers: Bengus Deepforge"),
+    "and where the route's next recipe this trainer lacks comes from")
+  check(not questText(card, "Silver Rod"), "recipes off the route are left out")
+  MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "available", "available"
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (130-140)"),
+    "what to learn now for the route, and the cost")
+  check(questText(card, "You have 10s: 4s short"), "and when money is short")
+  MOCK.trainer[2].category, MOCK.trainer[4].category = "used", "used"
+  MOCK.setSkill("Blacksmithing", 125, 150); MOCK.advance(1.2)
+  MOCK.trainer[3].category, MOCK.trainer[6].category = "available", "available"
+  MOCK.money = 100000
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-130)"),
+    "the next rank comes first")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("profession trainer: Blacksmithing, route items now: 2"), "/codex debug reports the profession trainer")
+  table.remove(MOCK.trainer, 6)
+  MOCK.event("TRAINER_UPDATE")
+  check(questText(card, "Expert Blacksmithing isn't listed here: Bengus Deepforge"), "a rank this trainer doesn't teach points to one who does")
+  LevelingCodexDB.noTrainerGuide = true
+  MOCK.event("TRAINER_SHOW")
+  check(card:IsShown(), "the class trainer setting leaves the profession card alone")
+  LevelingCodexDB.noTrainerGuide, LevelingCodexDB.noProfTrainer = nil, true
+  MOCK.event("TRAINER_SHOW")
+  check(not card:IsShown(), "Settings > Trainers turns the profession card off")
+  LevelingCodexDB.noProfTrainer = nil
+  MOCK.removeSkill("Blacksmithing"); MOCK.advance(1.2)
+  MOCK.trainer = { { "Blacksmithing", nil, nil, rank = "Apprentice", cost = 10 } }
+  MOCK.event("TRAINER_SHOW")
+  check(questText(card, "Start Blacksmithing here") and questText(card, "Professions > Other guides"),
+    "a profession you don't have yet points to its guide")
+  MOCK.event("TRAINER_CLOSED")
+  check(not card:IsShown(), "closing the trainer hides the card")
+  MOCK.tradeskillTrainer = false
+end
+
+-- Vendor: greys sell one by one when a vendor opens, guide items and the Hearthstone are kept.
+function S.vendorJunk()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "collect", item = 3301, count = 1, name = "Kept Fang", text = "Keep it." })
+    end
+  end
+  S.login()
+  MOCK.money = 0
+  MOCK.bagItems = {
+    { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 12, count = 3 },
+    { name = "Linen Cloth", id = 2589, quality = 1, level = 1, sell = 13 },
+    { name = "Kept Fang", id = 3301, quality = 0, level = 1, sell = 5 },
+    { name = "Hearthstone", id = 6948, quality = 0, level = 1, sell = 5 },
+    { name = "Odd Rag", id = 3302, quality = 0, level = 1, sell = 4, loaded = false },
+    { name = "Torn Ear", id = 3303, quality = 0, level = 1, sell = 0 },
+    { name = "Chipped Claw", id = 3304, quality = 0, level = 1, sell = 7 },
+  }
+  MOCK.openMerchant({ items = {} })
+  if MOCK.minimal then
+    MOCK.advance(2)
+    check(#MOCK.sold == 0, "no selling without the container APIs")
+    return
+  end
+  MOCK.advance(0.2)
+  check(#MOCK.sold == 1 and MOCK.sold[1][1] == 3300, "the first grey sells right after the vendor opens")
+  MOCK.bagItems[7] = { name = "Silk Cloth", id = 4306, quality = 1, level = 1, sell = 150 }
+  MOCK.advance(2)
+  check(#MOCK.sold == 1, "a slot that changed since the scan is skipped (Silk Cloth stays)")
+  check(MOCK.money == 36 and chatHas("Sold 1 grey item for 36c%."), "one chat line with the total")
+  MOCK.closeMerchant()
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 12 },
+    { name = "Chipped Claw", id = 3304, quality = 0, level = 1, sell = 7 } }
+  MOCK.sold = {}
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(0.2)
+  MOCK.closeMerchant()
+  MOCK.advance(2)
+  check(#MOCK.sold == 1 and chatHas("the vendor closed"), "closing the vendor stops the run and says so")
+  MOCK.sold, MOCK.alt = {}, true
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(2)
+  check(#MOCK.sold == 0, "Alt holds selling back")
+  MOCK.alt = false
+  MOCK.closeMerchant()
+  LevelingCodexDB.noAutoSell = true
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(2)
+  check(#MOCK.sold == 0, "Settings can turn selling off")
+end
+
+-- The owner's report "auto sell junk did not" (the repair worked): WoW: Forever, like retail, reads
+-- item info through C_Item.GetItemInfo, and the junk scan only asked the old global GetItemInfo, so
+-- no grey had a price. The scenarios after this one run without the global.
+function S.noGlobalItemInfo()
+  GetItemInfo = nil
+end
+
+-- Vendor: repairs with your own money once the junk money is in, or says it's short.
+function S.vendorRepair()
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.money = 150
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(2)
+  check(MOCK.repaired == 210 and chatHas("Repaired for 2s 10c%."), "repairs after the junk money comes in")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.money, MOCK.bagItems = nil, 100, {}
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired and chatHas("Not enough money to repair %(2s 10c%)%."), "says when money is short")
+  MOCK.closeMerchant()
+  MOCK.money, MOCK.alt = 1000, true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired, "Alt holds repairing back")
+  MOCK.alt = false
+  MOCK.closeMerchant()
+  LevelingCodexDB.noAutoRepair = true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(not MOCK.repaired, "Settings can turn repairing off")
+end
+
+-- Vendor, the owner's report "auto repair didn't work": Forever fires MERCHANT_SHOW before the
+-- vendor window shows (MOCK.merchantLate). The greys still sell and the repair still runs once the
+-- window is there, and /codex debug says what the last visit did.
+function S.vendorLateWindow()
+  S.login()
+  MOCK.money, MOCK.merchantLate = 150, 0.4
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(3)
+  check(#MOCK.sold == 1 and MOCK.sold[1][1] == 3300, "the grey sells once the late window shows")
+  check(MOCK.repaired == 210 and chatHas("Repaired for 2s 10c%."), "and the repair follows")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("vendor: last visit: window .* after MERCHANT_SHOW; sold 1 grey item for 1s; repaired for 2s 10c"),
+    "debug says what the last visit did")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.money, MOCK.bagItems = nil, 1000, {}
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  check(MOCK.repaired == 210, "with nothing to sell the repair runs once the window shows")
+  MOCK.closeMerchant()
+  MOCK.repaired, MOCK.sold = nil, {}
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(0.2)
+  MOCK.closeMerchant()
+  MOCK.advance(2)
+  check(#MOCK.sold == 0 and not MOCK.repaired, "a vendor closed before its window showed gets nothing")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("vendor: last visit: closed before its window showed"), "and debug says so")
+  MOCK.money, MOCK.alt = 1000, true
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(1)
+  MOCK.chat = {}
+  slash("debug")
+  check(not MOCK.repaired and chatHas("vendor: last visit: .*held back %(Alt%)"), "debug names what held it back")
+  MOCK.alt, MOCK.merchantLate = false, nil
+  MOCK.closeMerchant()
+end
+
+-- Vendor: a card lists what your coming steps need from this vendor, with one Buy button.
+function S.vendorShopping()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+      table.insert(section.steps, 3, { type = "buy", item = 159, count = 5, name = "Refreshing Spring Water",
+        text = "Buy 5 Refreshing Spring Water.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  if MOCK.minimal then
+    MOCK.openMerchant({ items = {} })
+    MOCK.advance(1)
+    check(not (_G.LevelingCodexShopCard and _G.LevelingCodexShopCard:IsShown()), "no card without the merchant API")
+    return
+  end
+  MOCK.money = 1000
+  local spices = { id = 3713, name = "Soothing Spices", price = 50, per = 1, stock = -1, maxStack = 20 }
+  MOCK.openMerchant({ items = { { id = 4540, name = "Tough Hunk of Bread", price = 5 }, spices } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown() and questText(card, "3 x Soothing Spices"), "the card lists a coming step's item")
+  check(not questText(card, "Hunk of Bread"), "items no step needs are left out")
+  click(card, "Buy for 1s 50c")
+  check(#MOCK.bought == 1 and MOCK.bought[1][1] == 3713 and MOCK.bought[1][2] == 3, "Buy buys the count")
+  check(chatHas("Bought 3 Soothing Spices for 1s 50c%."), "chat says what it bought")
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(not card:IsShown(), "the card hides once nothing is left to buy")
+  MOCK.closeMerchant()
+  -- The water step: 5 at 25c is 1s 25c.
+  local water = { id = 159, name = "Refreshing Spring Water", price = 25, per = 1, stock = -1 }
+  MOCK.bought, MOCK.money = {}, 100
+  MOCK.openMerchant({ items = { water } })
+  MOCK.advance(0.5)
+  check(findButton(card, function(l) return l == "Need 25c more" end), "short of gold: the button says how much")
+  click(card, "Need 25c more")
+  check(#MOCK.bought == 0, "and buys nothing")
+  MOCK.closeMerchant()
+  water.stock, MOCK.money = 2, 1000
+  MOCK.openMerchant({ items = { water } })
+  MOCK.advance(0.5)
+  check(questText(card, "only 2 in stock"), "limited stock is noted")
+  click(card, "Buy for 50c")
+  check(MOCK.bought[1][2] == 2, "and only the stock is bought")
+  MOCK.closeMerchant()
+  check(not card:IsShown(), "closing the vendor hides the card")
+end
+
+-- Vendor: the shopping card also offers what your current profession steps need from this vendor:
+-- materials (a part's own materials), a tool, the rod you lack; never what a later step needs.
+function S.vendorProfSupplies()
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.setSkill("Engineering", 30, 75)
+  MOCK.advance(1.2)
+  MOCK.money = 100000
+  MOCK.bags = { ["Coarse Thread"] = 5 }
+  local thread = { id = 2320, name = "Coarse Thread", price = 10, per = 1, stock = -1, maxStack = 200 }
+  local hammer = { id = 5956, name = "Blacksmith Hammer", price = 16 }
+  MOCK.openMerchant({ items = { thread, { id = 2321, name = "Fine Thread", price = 100 }, hammer,
+    { id = 2604, name = "Red Dye", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no card without the merchant API")
+    return
+  end
+  check(card and card:IsShown() and questText(card, "34 x Coarse Thread") and questText(card, "for Linen Belt (Tailoring)"),
+    "the card offers the thread your step's crafts still need (39, you have 5)")
+  check(questText(card, "1 x Blacksmith Hammer") and questText(card, "for Handful of Copper Bolts (Engineering)"),
+    "and the tool your Engineering step needs")
+  check(not questText(card, "Fine Thread") and not questText(card, "Red Dye"), "nothing a later step needs")
+  click(card, "Buy for 3s 56c")
+  check(#MOCK.bought == 2 and MOCK.bought[1][1] == 2320 and MOCK.bought[1][2] == 34 and MOCK.bought[2][1] == 5956,
+    "one click buys them")
+  MOCK.closeMerchant()
+  MOCK.bought, MOCK.bags = {}, { ["Coarse Thread"] = 39, ["Blacksmith Hammer"] = 1 }
+  MOCK.openMerchant({ items = { thread, hammer } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "with the thread and the hammer in your bags there's nothing to buy")
+  MOCK.closeMerchant()
+  MOCK.removeSkill("Tailoring"); MOCK.removeSkill("Engineering")
+  MOCK.setSkill("Enchanting", 12, 75); MOCK.advance(1.2)
+  MOCK.bags = {}
+  local rod = { id = 6217, name = "Copper Rod", price = 124 }
+  local mote = { id = 1245321, name = "Mote of Magic", price = 40 }
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(questText(card, "1 x Copper Rod") and questText(card, "1 x Mote of Magic") and
+    questText(card, "for Runed Copper Rod (Enchanting)"), "without the rod your step needs, the card offers its materials")
+  check(not questText(card, "9 x Mote of Magic"), "the step's own Motes are made from Strange Dust, not bought")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = true
+  MOCK.openMerchant({ items = { rod, mote } })
+  MOCK.advance(0.5)
+  check(not card:IsShown(), "Settings > Vendor > Include profession supplies turns it off")
+  MOCK.closeMerchant()
+  LevelingCodexDB.noProfShop = nil
+end
+
+-- Stats: XP, gold by source, activity and zone time, counted per level and saved.
+local STATS_MAPS = { [1429] = { name = "Elwynn Forest", mapType = 3, parentMapID = 1415 },
+  [12] = { name = "Northshire", mapType = 5, parentMapID = 1429 } }
+
+function S.statsCounters()
+  MOCK.mapInfo = STATS_MAPS
+  LevelingCodexCharDB = { stats = "x" } -- a broken saved shape is replaced, not used
+  S.login()
+  if MOCK.minimal then MOCK.advance(2); return end
+  local lvl = MOCK.level
+  local st = LevelingCodexCharDB.stats
+  check(type(st) == "table" and st.version == 1, "broken saved stats start fresh")
+  local function L() return st.levels[lvl] end
+  MOCK.setMoney(1000)
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.setMoney(1500)
+  check(L().goldIn.quest == 500 and L().quests == 1 and L().questXP == 120, "a turn-in: quest gold, count and XP")
+  MOCK.event("LOOT_OPENED"); MOCK.setMoney(1600); MOCK.event("LOOT_CLOSED")
+  check(L().goldIn.loot == 100, "money while looting is loot")
+  MOCK.event("TRAINER_SHOW"); MOCK.setMoney(1400); MOCK.event("TRAINER_CLOSED")
+  check(L().goldOut.training == 200, "money spent at a trainer is training")
+  MOCK.setMoney(1350)
+  check(L().goldOut.other == 50, "anything else is other")
+  MOCK.event("CHAT_MSG_COMBAT_XP_GAIN", "Kobold Vermin dies, you gain 45 experience.")
+  check(L().killXP == 45 and L().kills == 1, "a kill's XP and count")
+  MOCK.event("PLAYER_DEAD")
+  check(L().deaths == 1 and st.totals.deaths == 1, "a death")
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-1", 8690)
+  check(st.totals.hearths == 1, "a hearthstone use")
+  check(not next(MOCK.events.UNIT_SPELLCAST_SUCCEEDED or {}),
+    "spell casts are watched for you only, not every unit around you")
+  check(MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party1", "cast-2", 8690) == 0 and st.totals.hearths == 1,
+    "a party member's hearthstone doesn't reach the Codex")
+  MOCK.event("TIME_PLAYED_MSG", 3600, 600)
+  check(st.played.total == 3600 and st.played.level == 600, "/played is remembered")
+  local before = L().seconds
+  MOCK.advance(3)
+  check(L().seconds >= before + 3 and st.zones[1429] and st.zones[1429].seconds >= 3, "time goes to the level and the zone")
+  MOCK.questMap = 12
+  local elwynn = st.zones[1429].seconds
+  MOCK.advance(2)
+  check(st.zones[1429].seconds >= elwynn + 2 and not st.zones[12], "a subzone map rolls up to its zone")
+  MOCK.questMap = 1429
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 40 } }
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(1)
+  MOCK.closeMerchant()
+  check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+end
+
+-- Stats: a turn-in that levels you up keeps its gold with the level you turned it in at, whichever
+-- comes first, the reward's money or the level-up.
+function S.statsLevelUp()
+  MOCK.money = 1000 -- known at login: no early gain to move around
+  S.login()
+  if MOCK.minimal then return end
+  local st, lvl = LevelingCodexCharDB.stats, MOCK.level
+  local function gold(level, key)
+    local l = st.levels[level]
+    return l and l.goldIn[key] or 0
+  end
+  -- the turn-in, the level-up, then its money
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.level = lvl + 1
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 1)
+  MOCK.setMoney(1500)
+  check(gold(lvl, "quest") == 500 and gold(lvl + 1, "quest") == 0,
+    "the reward stays with the level it was earned at (" .. gold(lvl, "quest") .. " / " .. gold(lvl + 1, "quest") .. ")")
+  -- the money, the level-up, then the turn-in
+  MOCK.setMoney(1800)
+  MOCK.level = lvl + 2
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 2)
+  MOCK.event("QUEST_TURNED_IN", 33, 100, 300)
+  check(gold(lvl + 1, "quest") == 300 and gold(lvl + 1, "other") == 0 and gold(lvl + 2, "other") == 0
+    and gold(lvl + 2, "quest") == 0, "money that came first moves to quest rewards at its own level")
+  -- the level-up its XP caused, then the turn-in, then its money
+  MOCK.advance(3)
+  MOCK.level, MOCK.xp = lvl + 3, 40
+  MOCK.event("PLAYER_LEVEL_UP", lvl + 3)
+  MOCK.event("QUEST_TURNED_IN", 18, 200, 700)
+  MOCK.setMoney(2500)
+  check(gold(lvl + 2, "quest") == 700 and gold(lvl + 3, "quest") == 0,
+    "a level-up just before its own turn-in still files the reward at the level it finished")
+end
+
+-- The Stats tab: tiles, level splits with bars, gold earned and spent, activity tiles and zones, a
+-- session/character switch; two clicks reset.
+function S.statsTab()
+  MOCK.mapInfo, MOCK.money = STATS_MAPS, 1000 -- money known at login, so the reward's change is filed
+  LevelingCodexCharDB = { stats = { version = 1, zones = {}, totals = { goldIn = {}, goldOut = {} },
+    levels = { [MOCK.level + 1] = { seconds = 0, xp = 0, questXP = 0, killXP = 0, rested = 0, quests = 0, kills = 0,
+      deaths = 0, goldIn = {}, goldOut = {} } } } } -- an empty record: drawn without dividing by zero
+  S.login()
+  MOCK.event("QUEST_TURNED_IN", 783, 120, 500)
+  MOCK.setMoney(1500)
+  MOCK.advance(2)
+  slash("")
+  click(win(), "Stats")
+  for _, head in ipairs({ "LEVEL SPLITS", "GOLD EARNED", "GOLD SPENT", "ACTIVITY", "ZONES", "XP per hour",
+      "Next level in", "Gold per hour" }) do
+    check(questText(win(), head), "the Stats tab has " .. head)
+  end
+  local function seg(name) return findButton(win(), function(l) return l == name end) end
+  if not MOCK.minimal then
+    check(seg("This character") and seg("This character").codexOn, "the character's figures by default")
+  end
+  check((MOCK.minimal or questText(win(), "Quest rewards")) and not questText(win(), "Repairs"),
+    "only sources that moved money (the minimal client has no GetMoney)")
+  check(not MOCK.minimal or questText(win(), "Nothing yet."), "an empty column says so")
+  local split = findButton(win(), function(l) return l == "Level " .. MOCK.level end)
+  check(split, "each level split is hoverable")
+  MOCK.fire(split, "OnEnter")
+  -- (the minimal client counts nothing here, like statsCounters: only the line's shape is checked)
+  check(GameTooltip._lines and GameTooltip._lines[2]
+    and GameTooltip._lines[2]:find(MOCK.minimal and "Quest XP " or "Quest XP 120", 1, true),
+    "hovering a split gives its XP by source")
+  MOCK.fire(split, "OnLeave")
+  check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
+  click(win(), "This session")
+  check(seg("This session").codexOn and not findButton(win(), function(l) return l == "Level " .. (MOCK.level + 1) end),
+    "this session's figures leave out levels from saved sessions")
+  click(win(), "This character")
+  click(win(), "Reset stats")
+  click(win(), "Click again to reset")
+  check(LevelingCodexCharDB.stats.totals.quests == 0, "two clicks reset the saved stats")
+end
+
+-- Nine tabs fit along the bottom of the window (they shrink when the labels are too wide).
+function S.tabRowFits()
+  S.login()
+  slash("")
+  local frame, tabs, left, right = win(), {}, nil, nil
+  for _, b in ipairs({ frame:GetChildren() }) do
+    if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
+  end
+  check(#tabs == 9, "nine tabs (" .. #tabs .. ")")
+  local total = 0
+  for _, b in ipairs(tabs) do total = total + b:GetWidth() end
+  total = total - 12 * (#tabs - 1)
+  check(total <= frame:GetWidth() - 32 + 0.5, "the tab row fits under the window: " .. total .. " of " .. frame:GetWidth())
+end
+
+-- Without saved data the tab says it counts from login.
+function S.statsTabLost()
+  slash("")
+  click(win(), "Stats")
+  check(questText(win(), "Counting since you logged in"), "without saved data the tab says what it counts")
+  check(not findButton(win(), function(l) return l == "This character" end), "no switch without saved data")
+end
+
+-- Vendor with a server round trip (money and bought items arrive later): the repair waits for the
+-- junk money, and a second click on Buy doesn't buy the list again.
+function S.vendorServer()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  MOCK.serverDelay = 0.3
+  MOCK.money = 150
+  MOCK.bagItems = { { name = "Broken Fang", id = 3300, quality = 0, level = 1, sell = 100 } }
+  MOCK.openMerchant({ items = {}, canRepair = true, repairCost = 210 })
+  MOCK.advance(2)
+  check(MOCK.repaired == 210 and not chatHas("Not enough money to repair"),
+    "the repair waits for the junk money to arrive")
+  MOCK.closeMerchant()
+  MOCK.money, MOCK.bagItems = 1000, {}
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  card.buy:Click()
+  card.buy:Click()
+  MOCK.advance(1)
+  check(#MOCK.bought == 1, "a second click before the items arrive buys nothing more (" .. #MOCK.bought .. " buys)")
+  check(not card:IsShown(), "the card hides once the items are in your bags")
+end
+
+-- Vendor: a purchase the game refuses (full bags) is never called bought; one that arrives late is.
+function S.vendorBuyFails()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  S.login()
+  MOCK.serverDelay, MOCK.money, MOCK.buyFails = 0.3, 1000, true
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  card.buy:Click()
+  MOCK.advance(0.5)
+  check(not chatHas("Bought"), "nothing is called bought before it arrives")
+  MOCK.advance(5)
+  check(not chatHas("Bought") and chatHas("Couldn't buy 3 Soothing Spices"), "a purchase that never arrives says so")
+  check(card:IsShown() and findButton(card, function(l) return l == "Buy for 1s 50c" end), "and the card offers Buy again")
+  MOCK.buyFails = nil
+  card.buy:Click()
+  check(not chatHas("Bought"), "the items are on their way")
+  MOCK.advance(1)
+  check(chatHas("Bought 3 Soothing Spices for 1s 50c%."), "once they're in your bags, chat says what it bought")
+end
+
+-- Vendor with a controller: the shopping card never takes the controller from the vendor window.
+function S.vendorPad()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 2, { type = "buy", item = 3713, count = 3, name = "Soothing Spices",
+        text = "Buy 3 Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.gamepad, MOCK.gamepadUI = true, true
+  S.login()
+  MOCK.money = 1000
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(1)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown(), "the card shows with a controller too")
+  check(GamepadMode.FrameControlsManager:GetActiveFrame() ~= card, "the card doesn't take the controller's focus")
+  check(not (LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown()), "and gets no highlight of its own")
+  check(#MOCK.bought == 0, "nothing is bought")
+end
+
+-- Vendor: a quest in your log that needs a vendor item, next to the step that buys it, counts once.
+function S.vendorShoppingQuest()
+  routeAt("Human", 35, 1445, 66.4, 51.5, { { questID = 1218, title = "Soothing Spices",
+    objectives = { { text = "Soothing Spices: 0/3", finished = false } } } })
+  MOCK.money = 1000
+  MOCK.openMerchant({ items = { { id = 3713, name = "Soothing Spices", price = 50 } } })
+  MOCK.advance(0.5)
+  local card = _G.LevelingCodexShopCard
+  check(card and card:IsShown() and questText(card, "3 x Soothing Spices"), "Theramore: the card lists Jarl's spices")
+  check(not questText(card, "6 x Soothing Spices"), "the buy step and the quest don't add up")
+  check(questText(card, "Swamp Eye"), "it says who they're for")
+end
+
 -- A trainer's real skill requirements that differ from the guide show in /codex debug.
 function S.trainerReqs()
   if not D() or MOCK.minimal then return end
@@ -6203,4 +9434,263 @@ function S.craftSmeltingCases()
   check(t:find("no points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
+end
+
+-- A new character's intro cinematic (or Alt+Z) hides UIParent: the step window comes back with it.
+-- Only the player's own Hide keeps it closed.
+function S.questUiHidden()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Rude Awakening"), "a fresh Undead starts at Rude Awakening")
+  UIParent:Hide()
+  check(not frame:IsVisible(), "hidden with the UI")
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(frame:IsShown() and frame:IsVisible(), "back when the UI comes back")
+  click(frame, "Hide")
+  UIParent:Hide()
+  UIParent:Show()
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not frame:IsShown(), "a window the player hid stays hidden")
+  MOCK.faction = nil
+end
+
+-- A fresh character whose client lists flight points as known: guides it hasn't started show no %.
+function S.questFreshProgress()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Horde", "Scourge", 1, 1420, 30.0, 71.8
+  LevelingCodexCharDB = { questFlights = { ["Crossroads, The Barrens"] = true, ["Ratchet, The Barrens"] = true,
+    ["The Sepulcher, Silverpine Forest"] = true, ["Undercity, Tirisfal"] = true, ["Orgrimmar, Durotar"] = true } }
+  S.login()
+  MOCK.questLog = { { questID = 363 } }
+  MOCK.event("QUEST_ACCEPTED", 1, 363)
+  MOCK.event("QUEST_LOG_UPDATE")
+  slash("quests")
+  for _, name in ipairs({ "The Crossroads", "Silverpine Forest", "Northern Barrens" }) do
+    check(guideButton(name), "the guide list has " .. name)
+  end
+  local function tagged(root)
+    for _, r in ipairs({ root:GetRegions() }) do
+      if r:IsShown() and type(r._text) == "string" and r._text:find("^Later %d+%%") then return r._text end
+    end
+    for _, c in ipairs({ root:GetChildren() }) do
+      local hit = c:IsShown() and tagged(c)
+      if hit then return hit end
+    end
+  end
+  local tag = tagged(win())
+  check(not tag, "no guide you haven't started shows a percentage: " .. tostring(tag))
+  MOCK.faction = nil
+end
+
+----------------------------------------------------------------------------
+-- EllesmereUI (MOCK.makeEllesmere): its skin API themes the Codex. Its pieces must only go on the
+-- backing frames the Codex makes for them: EllesmereUI fades every texture of a frame it skinned again
+-- whenever some Blizzard windows open (the talent window among them, under the talent card).
+----------------------------------------------------------------------------
+
+local function eachFrame(root, fn)
+  fn(root)
+  for _, c in ipairs({ root:GetChildren() }) do eachFrame(c, fn) end
+end
+
+local function euiCalled(kind, frame)
+  for _, c in ipairs(MOCK.eui.calls) do
+    if c[1] == kind and (frame == nil or c[2] == frame) then return true end
+  end
+  return false
+end
+
+-- Every frame EllesmereUI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
+local function euiOnlyOnBacking()
+  for frame, kind in pairs(MOCK.eui.skinned) do
+    if MOCK.eui.restrip[frame] then
+      check(frame.codexSkin, "EllesmereUI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
+      for _, r in ipairs({ frame:GetRegions() }) do
+        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an EllesmereUI backing frame", 2)
+      end
+    end
+  end
+end
+
+-- EllesmereUI's re-fade leaves every Codex texture under these frames as it was.
+local function survivesRestrip(roots, what)
+  local before, n = {}, 0
+  for _, root in ipairs(roots) do
+    eachFrame(root, function(f)
+      for _, r in ipairs({ f:GetRegions() }) do
+        if r:IsObjectType("Texture") and not MOCK.eui.own[r] then before[r] = r:GetAlpha(); n = n + 1 end
+      end
+    end)
+  end
+  check(n > 0, what .. " has textures to check", 2)
+  MOCK.euiRestrip()
+  for r, a in pairs(before) do check(r:GetAlpha() == a, "EllesmereUI's re-fade hid a texture of " .. what, 2) end
+end
+
+local function usesFont(root, path)
+  local hit
+  eachFrame(root, function(f)
+    for _, r in ipairs({ f:GetRegions() }) do
+      if r:IsShown() and r._font == path and r._text and r._text ~= "" then hit = true end
+    end
+  end)
+  return hit
+end
+
+local MORPHEUS = "Fonts\\MORPHEUS.TTF"
+
+-- Installed and on: the theme at login, EllesmereUI's shell, close button and font, nothing on content.
+function S.euiSkin()
+  local E = MOCK.eui
+  check(E and E.fired.LevelingCodex, "the Codex registered its skin with EllesmereUI and it ran")
+  check(#E.registry == 1, "registered once (" .. #E.registry .. ")")
+  if not D() then return end
+  openAt(30, "This Level")
+  local f = win()
+  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has EllesmereUI's window shell")
+  check(f._backdrop == nil, "no Blizzard dialog border under the EllesmereUI shell")
+  check(euiCalled("CloseButton"), "the close button is EllesmereUI's")
+  check(euiCalled("PageButton"), "the level arrows are EllesmereUI's")
+  check(usesFont(f, E.font), "the window's text is in the EllesmereUI font")
+  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the EllesmereUI theme")
+  for _, tab in ipairs({ "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }) do
+    click(win(), tab)
+    check(not usesFont(win(), MORPHEUS), "no Morpheus on " .. tab)
+  end
+  click(win(), "This Level")
+  euiOnlyOnBacking()
+  survivesRestrip({ win() }, "the Codex window")
+  local v = questViewer()
+  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has EllesmereUI's panel")
+  check(v._backdrop == nil, "no Blizzard dialog border on the step window")
+  check(not usesFont(v, MORPHEUS), "no Morpheus on the step window")
+  survivesRestrip({ v }, "the step window")
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+-- The trainer, talent, crafting and vendor cards: an EllesmereUI panel behind them, their icons kept.
+function S.euiCards()
+  local seen = 0
+  for _, name in ipairs({ "LevelingCodexTrainerHint", "LevelingCodexTalentHint", "LevelingCodexCraftHint", "LevelingCodexShopCard" }) do
+    local card = _G[name]
+    if card then
+      seen = seen + 1
+      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an EllesmereUI panel behind it")
+      check(card._backdrop == nil, name .. " has no Blizzard tooltip border")
+      check(not usesFont(card, MORPHEUS), name .. " has no Morpheus heading")
+      survivesRestrip({ card }, name)
+    end
+  end
+  check(seen > 0 or MOCK.minimal, "a card to check")
+  euiOnlyOnBacking()
+end
+
+-- Settings: the EllesmereUI theme sits beside the other two and a choice made with it on is kept apart.
+function S.euiThemePick()
+  if not D() then return end
+  openAt(30, "Settings")
+  check(findButton(win(), function(l) return l == "EllesmereUI" end), "Settings offers the EllesmereUI theme")
+  local before = LevelingCodexDB.theme
+  click(win(), "Forever (teal)")
+  check(LevelingCodexDB.euiTheme == "forever", "the choice made with EllesmereUI on is saved apart")
+  check(LevelingCodexDB.theme == before, "the theme without EllesmereUI is untouched")
+  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the EllesmereUI shell")
+  check(not MOCK.minimal == (win()._backdrop ~= nil), "Forever teal draws its own border again")
+  local v = _G.LevelingCodexQuestViewer
+  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the EllesmereUI panel") end
+  click(win(), "Settings")
+  click(win(), "EllesmereUI")
+  check(LevelingCodexDB.euiTheme == "ellesmere", "EllesmereUI chosen again")
+  check(win().euiSkin and win().euiSkin:IsShown(), "the EllesmereUI shell is back")
+  if v and v:IsShown() then check(v.euiSkin and v.euiSkin:IsShown(), "the step window's panel is back") end
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+-- A new accent colour in EllesmereUI repaints the Codex and never opens a closed window. A colour
+-- picker sends a change for every step of a drag: the Codex repaints once, after the last.
+function S.euiAccent()
+  if not D() then return end
+  if win() then win():Hide() end
+  MOCK.euiLooks({ 1, 0.5, 0 })
+  MOCK.advance(0.5)
+  check(not (win() and win():IsShown()), "an accent change leaves the window closed")
+  openAt(30, "Settings")
+  local accent = MOCK.ns.C.accent
+  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows EllesmereUI's new accent")
+  local function shells()
+    local n = 0
+    for _, c in ipairs(MOCK.eui.calls) do if c[1] == "Shell" then n = n + 1 end end
+    return n
+  end
+  local before = shells()
+  for i = 1, 8 do MOCK.euiLooks({ 0.2, 0.6, 0.1 * i }); MOCK.advance(0.05) end
+  check(shells() == before, "no repaint while the colour is still moving")
+  MOCK.advance(0.5)
+  check(shells() == before + 1, "one repaint after the last change (" .. (shells() - before) .. ")")
+  check(win():IsShown(), "an accent change keeps an open window open")
+  check(math.abs(MOCK.ns.C.accent[3] - 0.8) < 1e-9, "and repaints it in the last colour")
+  euiOnlyOnBacking()
+  win():Hide()
+end
+
+function S.euiDebug()
+  MOCK.chat = {}
+  slash("debug")
+  if MOCK.eui and MOCK.eui.off then
+    check(chatHas("EllesmereUI: installed, skin off"), "debug says EllesmereUI's skin is off for the Codex")
+  elseif MOCK.eui then
+    check(chatHas("EllesmereUI: skin on %(api 4, style eui%)"), "debug says the EllesmereUI skin is on")
+  else
+    check(chatHas("EllesmereUI: not installed"), "debug says EllesmereUI isn't installed")
+  end
+end
+
+-- EllesmereUI installed with its skin for the Codex turned off: nothing changes.
+function S.euiOff()
+  check(MOCK.eui and not MOCK.eui.fired.LevelingCodex, "the skin callback never ran")
+  if not D() then return end
+  openAt(30, "Settings")
+  check(not findButton(win(), function(l) return l == "EllesmereUI" end), "no EllesmereUI theme while its skin is off")
+  check(not win().euiSkin, "no EllesmereUI shell")
+  check(not MOCK.minimal == (win()._backdrop ~= nil), "the Codex draws its own border")
+  win():Hide()
+  S.euiDebug()
+end
+
+function S.euiDispatch() MOCK.euiDispatch() end
+
+-- EllesmereUI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
+function S.euiLate()
+  local v = questViewer()
+  check(not v.euiSkin, "Forever teal until EllesmereUI's callback runs")
+  if D() then openAt(30, "This Level"); win():Hide() end
+  MOCK.euiDispatch()
+  check(MOCK.eui.fired.LevelingCodex, "the callback ran")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the EllesmereUI panel at once")
+  check(not usesFont(v, MORPHEUS), "and its fonts")
+  if D() then
+    check(not win():IsShown(), "the window stays closed")
+    openAt(30, "This Level")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the EllesmereUI theme")
+    win():Hide()
+  end
+  euiOnlyOnBacking()
+end
+
+-- Saved settings from before EllesmereUI (Codex gold): installing EllesmereUI still brings its theme.
+function S.euiSkinOn()
+  check(MOCK.eui.fired.LevelingCodex, "the callback ran")
+  check(MOCK.ns.C.eui == true, "the EllesmereUI theme is on")
+  local v = questViewer()
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the EllesmereUI panel")
+  if D() then
+    openAt(30, "This Level")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the EllesmereUI shell")
+    win():Hide()
+  end
+  euiOnlyOnBacking()
 end

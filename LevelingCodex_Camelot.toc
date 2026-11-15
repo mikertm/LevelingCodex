@@ -5,12 +5,15 @@
 ## Version: @project-version@
 ## SavedVariables: LevelingCodexDB
 ## SavedVariablesPerCharacter: LevelingCodexCharDB
-## OptionalDeps: Questie, QuestieDB
+## OptionalDeps: Questie, QuestieDB, EllesmereUI
 ## IconTexture: Interface\Icons\Achievement_Level_60
 ## X-Curse-Project-ID: 1789784
 ## X-Website: https://claude.ai/artifact/WN1YRMyVRuxSBmS55Gz4f3
 
 Data.lua
+TalentTreeData.lua
+TalentPaths.lua
+PathMacros.lua
 ProfessionData.lua
 QuestData.lua
 QuestAlternateData.lua
@@ -40,11 +43,15 @@ QuestHordeClassDruidShaman.lua
 QuestHordeClass3060.lua
 QuestClassData.lua
 QuestMobData.lua
+QuestNPCData.lua
+QuestShopData.lua
 QuestDangerData.lua
 QuestFlightData.lua
 Theme.lua
 Art.lua
+Ellesmere.lua
 Guide.lua
+Talents.lua
 Quests.lua
 QuestieSupport.lua
 QuestTravel.lua
@@ -53,15 +60,20 @@ Disenchant.lua
 Macros.lua
 Banner.lua
 Window.lua
+TalentTab.lua
 ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua
+QuestMap.lua
+QuestPortrait.lua
 QuestParty.lua
 Pace.lua
 QuestTab.lua
+Stats.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua
 ProfessionGuide.lua
 TrainerGuide.lua
+Vendor.lua
 Init.lua

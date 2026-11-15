@@ -1,13 +1,15 @@
 -- Window.lua: the /codex window in Blizzard frame art: the dialog border and gold title banner,
 -- a round class portrait, character-sheet tabs, red panel buttons, check boxes, and cards with
 -- the tooltip border (parchment or dark). Morpheus headings and the theme's accent colour stay.
--- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua).
+-- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua). In the
+-- EllesmereUI theme (Ellesmere.lua) the window is EllesmereUI's shell on a backing frame, the inside
+-- the flat look in its colours and font.
 
 local _, ns = ...
 local C, rgba, plain, padText = ns.C, ns.rgba, ns.plain, ns.padText
 local A = ns.art
 
-local FONT_HEAD = "Fonts\\MORPHEUS.TTF"
+local FONT_HEAD = "head" -- Morpheus, or the EllesmereUI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
 
@@ -84,7 +86,11 @@ local function styleFS(fs, kind)
   local st = STYLES[kind] or STYLES.body
   fs:SetFontObject(st[1])
   local path, size, flags = fontOf(st[1], 12)
-  fs:SetFont(st[2] or path, st[3] or size, (st[2] and "") or flags or "")
+  local face, fl = st[2] or path, (st[2] and "") or flags or ""
+  if face == FONT_HEAD then face = ns.headFont() end
+  local eui, euiFlags = ns.ellesmere.font()
+  if eui and kind ~= "mono" then face, fl = eui, euiFlags end -- code keeps Arial Narrow
+  fs:SetFont(face, st[3] or size, fl)
   local sh = (kind == "head" or kind == "title" or kind == "label") and 1 or 0
   fs:SetShadowOffset(sh, -sh)
   fs:SetSpacing(kind == "mono" and 3 or 2)
@@ -99,6 +105,7 @@ local function T(str, x, y, width, kind, color, justify, onTop)
   fs:SetTextColor(rgba(color or C.light))
   fs:SetWidth(width)
   fs:SetJustifyH(justify or "LEFT")
+  if fs.SetWordWrap then fs:SetWordWrap(true) end -- a pooled string may have been kept to one line
   fs:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   fs:SetText(str)
   return fs:GetStringHeight(), fs
@@ -137,9 +144,16 @@ local function newCard()
   return f
 end
 
--- The guide's flat card (when the client has no backdrops): fill, aged shade, double border.
+-- The guide's flat card (when the client has no backdrops): fill, aged shade, double border. In the
+-- EllesmereUI theme its panel: the fill and a 1 px border, nothing else.
 local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
+  if C.eui then
+    edge = edge or C.edge
+    rect(x, y, w, 1, edge, "border"); rect(x, y + h - 1, w, 1, edge, "border")
+    rect(x, y, 1, h, edge, "border"); rect(x + w - 1, y, 1, h, edge, "border")
+    return
+  end
   local shade = rect(x, y, w, h, { 1, 1, 1, 1 }, nil, 1, "fade")
   if fill == C.parch then ns.fade(shade, "VERTICAL", 0.5, 0.35, 0.15, 0.22, 0)
   else ns.fade(shade, "VERTICAL", 0.6, 0.45, 0.2, 0, 0.12) end
@@ -237,7 +251,27 @@ local function btn(label, x, y, w, onClick, on, tip)
   b:SetLook(on)
   b:SetScript("OnClick", onClick)
   b.tipTitle, b.tipText = tip and label or nil, tip
+  b.codexLabel = nil -- a caller may name it (steppers); a reused button forgets the old name
   return b
+end
+
+-- A row of choices with one lit (A.segment): equal widths, 4 px apart, 24 px tall. `lit` is the
+-- chosen index (nil: none), `onPick(i)` runs on a click, `tips[i]` is that choice's tooltip.
+local function newSegment() return A.segment(overlay) end
+local function segments(x, y, w, labels, lit, onPick, tips)
+  local n = #labels
+  local each = math.floor((w - 4 * (n - 1)) / n)
+  for i, label in ipairs(labels) do
+    local b = take("segment", newSegment)
+    b:SetSize(each, 24)
+    b:SetPoint("TOPLEFT", content, "TOPLEFT", x + (i - 1) * (each + 4), -y)
+    b:SetLabel(label)
+    b.codexLabel, b.codexOn = label, i == lit
+    b:SetLook(i == lit)
+    b:SetScript("OnClick", function() onPick(i) end)
+    b.tipTitle, b.tipText = tips and tips[i] and label or nil, tips and tips[i] or nil
+  end
+  return 24
 end
 
 -- A check box with its label (for on/off settings).
@@ -559,11 +593,14 @@ local function controllerMock(list, y)
         local ms = set.slots[name]
         local b = set.isDir and { dir = name } or { face = name }
         if ms and #ms > 1 then
-          -- shared button: both icons, overlapped, each with its own tooltip
-          for k = math.min(#ms, 2), 1, -1 do
+          -- shared button (a druid's caster, Bear and Cat Fight, used in different forms): up to three
+          -- icons, overlapped, the first on top, each with its own tooltip
+          local n = math.min(#ms, 3)
+          local size, step = n == 2 and 25 or 21, n == 2 and 10 or 7
+          for k = n, 1, -1 do
             local m = ms[k]
-            local f = icon(m.icon, sx - 17 + (k - 1) * 10, sy - 17 + (k - 1) * 10, 25, m.name, macroTip(m))
-            f:SetFrameLevel(overlay:GetFrameLevel() + 1 + (k == 1 and 1 or 0))
+            local f = icon(m.icon, sx - 17 + (k - 1) * step, sy - 17 + (k - 1) * step, size, m.name, macroTip(m))
+            f:SetFrameLevel(overlay:GetFrameLevel() + 1 + (n - k))
           end
           glyph(sx + 13, sy + 13, 16, b)
         elseif ms then
@@ -643,6 +680,93 @@ end
 
 local renderers = {}
 
+-- The pace card's pieces: durations, counts and the colours of the XP bar and the XP sources.
+local XP_FILL, RESTED_FILL, BAR_TRACK = { 0.58, 0.31, 0.75, 1 }, { 0.25, 0.4, 0.85, 1 }, { 0.05, 0.05, 0.08, 0.9 }
+local SOURCE_COLORS = { { 0.88, 0.7, 0.29, 1 }, { 0.77, 0.33, 0.29, 1 }, { 0.36, 0.45, 0.46, 1 } }
+local function duration(seconds)
+  local minutes = math.floor((tonumber(seconds) or 0) / 60 + 0.5)
+  if minutes < 60 then return minutes .. " min" end
+  return math.floor(minutes / 60) .. " h " .. (minutes % 60) .. " min"
+end
+local function plural(n, word) return n .. " " .. word .. (n == 1 and "" or "s") end
+
+-- YOUR PACE for level V: on your own level the XP bar (rested in blue) and the time to the next
+-- level at this session's rate; the time spent on V, its XP by source and the last three levels.
+local function paceCard(V, y)
+  local S, me = ns.stats, tonumber(UnitLevel("player")) or 1
+  local top = y
+  y = y + 12
+  T("YOUR PACE", 16, y, 300, "label", C.gold)
+  y = y + 22
+  if ns.settingsLost then y = y + T("Counting since you logged in.", 16, y, W - 32, "small", C.dim) + 4 end
+  local rate = ns.paceRate and ns.paceRate()
+  if V == me then
+    local cur, max = tonumber(ns.quests.try(UnitXP, "player")), tonumber(ns.quests.try(UnitXPMax, "player"))
+    if cur and max and max > 0 then
+      T("Level " .. V .. ": " .. ns.thousands(cur) .. " / " .. ns.thousands(max) .. " XP", 16, y, W / 2, "small", C.light)
+      if rate and rate > 0 and max > cur and V < 60 then
+        T("Level " .. (V + 1) .. " in about " .. duration((max - cur) / rate * 3600), W / 2, y, W / 2 - 16, "small",
+          C.light, "RIGHT")
+      end
+      y = y + 16
+      local bw = W - 32
+      local done = math.min(1, math.max(0, cur / max))
+      local rested = tonumber(ns.quests.try(GetXPExhaustion)) or 0
+      rect(16, y, bw, 12, BAR_TRACK)
+      local restedPart = math.min(1 - done, rested / max)
+      if restedPart * bw >= 1 then rect(16 + done * bw, y, restedPart * bw, 12, RESTED_FILL, nil, 1) end
+      if done * bw >= 1 then rect(16, y, done * bw, 12, XP_FILL, nil, 2) end
+      y = y + 20
+    end
+  end
+  local rec = S and S.levelRecord(V)
+  if not rec then
+    y = y + T("No stats for level " .. V .. " yet.", 16, y, W - 32, "body", C.dim) + 6
+  else
+    y = y + T(duration(rec.seconds) .. " on this level " .. (ns.settingsLost and "since you logged in" or "(all sessions)")
+      .. (rec.fromPct and (" (counted from " .. rec.fromPct .. "%)") or ""), 16, y, W - 32, "body", C.light) + 4
+    if V == me and rate then
+      y = y + T(ns.thousands(rate) .. " XP per hour this session"
+        .. ((rec.rested or 0) > 0 and (", " .. ns.thousands(rec.rested) .. " rested XP on this level") or ""), 16, y,
+        W - 32, "small",
+        C.light) + 6
+    end
+    local other = (rec.xp or 0) - (rec.questXP or 0) - (rec.killXP or 0)
+    local chips = { "Quests " .. ns.thousands(rec.questXP) .. " XP, " .. (rec.quests or 0) .. " turned in",
+      "Kills " .. ns.thousands(rec.killXP) .. " XP, " .. plural(rec.kills or 0, "kill") }
+    if other > 0 then chips[3] = "Other " .. ns.thousands(other) .. " XP" end
+    local cw = math.floor((W - 32) / 3)
+    for i, text in ipairs(chips) do
+      local x = 16 + (i - 1) * cw
+      rect(x, y + 3, 9, 9, SOURCE_COLORS[i])
+      T(text, x + 14, y, cw - 18, "small", C.light)
+    end
+    y = y + 20
+  end
+  local earlier = S and S.earlierLevels(math.min(V, me), 3) or {}
+  if #earlier > 0 then
+    y = y + 4
+    T("LAST LEVELS", 16, y, 300, "label", C.goldDim)
+    y = y + 20
+    local longest = 1
+    for _, e in ipairs(earlier) do longest = math.max(longest, tonumber(e.record.seconds) or 0) end
+    for _, e in ipairs(earlier) do
+      local r = e.record
+      T("Level " .. e.level, 16, y, 70, "small", C.light)
+      rect(90, y + 3, 140, 8, BAR_TRACK)
+      local bar = 140 * (tonumber(r.seconds) or 0) / longest
+      if bar >= 1 then rect(90, y + 3, bar, 8, C.accent, nil, 1) end
+      T(duration(r.seconds) .. ", " .. plural(r.quests or 0, "quest") .. ", " .. plural(r.kills or 0, "kill")
+        .. ((r.deaths or 0) > 0 and (", " .. plural(r.deaths, "death")) or "")
+        .. (r.fromPct and (" (counted from " .. r.fromPct .. "%)") or ""), 240, y, W - 256, "small", C.light)
+      y = y + 18
+    end
+  end
+  y = y + 8
+  box(0, top, W, y - top, C.panel, C.edge)
+  return y
+end
+
 renderers.level = function(V)
   local y = 0
   -- Talent card (parchment)
@@ -659,6 +783,8 @@ renderers.level = function(V)
       T(hit.tree, 74, y + h + 2, W - 100, "small", C.inkSoft)
       y = y + math.max(50, h + 20)
       y = y + T(plain(text), 16, y, W - 32, "body", C.ink) + 14
+    elseif ns.talentUnplanned(V) then
+      y = y + T("Your custom path has no point for level " .. V .. " yet. Plan it on the Talents tab.", 16, y, W - 32, "body", C.ink) + 14
     end
   else
     T("YOUR TALENT POINT", 16, y, 300, "label", C.inkSoft)
@@ -677,6 +803,9 @@ renderers.level = function(V)
       if h2 then
         icon(h2.icon, x, y, 28, l .. ": " .. h2.name .. " " .. r2 .. "/" .. h2.max, plain(l == h2.from and h2.why or h2.more))
         T(l .. "  " .. h2.name .. " " .. r2 .. "/" .. h2.max, x + 34, y + 8, 160, "small", C.light)
+        x = x + 196
+      elseif ns.talentUnplanned(l) then
+        T(l .. "  Not planned yet", x + 34, y + 8, 160, "small", C.dim)
         x = x + 196
       end
     end
@@ -721,239 +850,23 @@ renderers.level = function(V)
   y = y + 4
   box(0, top, W, y - top, C.panel, C.edge)
 
-  -- Pace card: how fast you're levelling (Pace.lua), about your own level whichever level is shown
-  local pace = ns.paceRows()
-  if #pace > 0 then
-    y = y + 14
-    top = y
-    y = y + 12
-    T("YOUR PACE", 16, y, 300, "label", C.gold)
-    y = y + 22
-    for _, r in ipairs(pace) do
-      local h = math.max((T(r[1], 16, y, 150, "body", C.light)), (T(r[2], 172, y, W - 188, "body", C.light)))
-      y = y + h + 4
-    end
-    y = y + 6
-    box(0, top, W, y - top, C.panel, C.edge)
-  end
+  -- Pace card: the shown level's record from Stats.lua (all sessions), with your XP bar and this
+  -- session's rate on your own level, XP by source and the levels before it
+  y = paceCard(V, y + 14)
   return y + 10
 end
 
 ----------------------------------------------------------------------------
--- Talents: the build as a tree that fills in up to the level shown, plus every point and why
+-- Talents: the path cards, the game's tree and every point (TalentTab.lua)
 ----------------------------------------------------------------------------
 
--- The plan as talents: { name, icon, max, tree, points = { { level, rank, text } } }, by tree.
-local function talentModel()
-  local trees, byTree, byName, ranks = {}, {}, {}, {}
-  for _, p in ipairs(ns.D.plan) do
-    local t = byName[p.name]
-    if not t then
-      t = { name = p.name, icon = p.icon, max = p.max, tree = p.tree, points = {} }
-      byName[p.name] = t
-      if not byTree[p.tree] then
-        byTree[p.tree] = { name = p.tree, talents = {} }
-        trees[#trees + 1] = byTree[p.tree]
-      end
-      table.insert(byTree[p.tree].talents, t)
-    end
-    for l = p.from, p.to do
-      ranks[p.name] = (ranks[p.name] or 0) + 1
-      t.points[#t.points + 1] = { level = l, rank = ranks[p.name], text = (l == p.from or p.more == "") and p.why or p.more }
-    end
-  end
-  for _, t in pairs(byName) do table.sort(t.points, function(a, b) return a.level < b.level end) end
-  return trees, byName
-end
-
--- Grid positions: the game's own tree layout when the trait system tells us, else tiers worked
--- out from the plan (a talent sits in the tier its tree had 5 points per row for when it's taken).
-local function layoutTree(tree)
-  local live = ns.traitLayout and ns.traitLayout()
-  if live then
-    local xs, ys, ok = {}, {}, true
-    for _, t in ipairs(tree.talents) do
-      local p = live[string.lower(t.name)]
-      if not p then ok = false; break end
-      xs[p.x], ys[p.y] = true, true
-    end
-    if ok then
-      local function index(set)
-        local list, idx = {}, {}
-        for v in pairs(set) do list[#list + 1] = v end
-        table.sort(list)
-        for i, v in ipairs(list) do idx[v] = i - 1 end
-        return idx, #list
-      end
-      local xi, nx = index(xs)
-      local yi, ny = index(ys)
-      for _, t in ipairs(tree.talents) do
-        local p = live[string.lower(t.name)]
-        t.col, t.row = xi[p.x], yi[p.y]
-      end
-      return math.max(nx, 1), math.max(ny, 1), true
-    end
-  end
-  local order = {}
-  for _, t in ipairs(tree.talents) do order[#order + 1] = t end
-  table.sort(order, function(a, b) return a.points[1].level < b.points[1].level end)
-  local used, ncols, nrows = {}, 1, 1
-  for _, t in ipairs(order) do
-    local before = 0
-    for _, o in ipairs(tree.talents) do
-      for _, p in ipairs(o.points) do if p.level < t.points[1].level then before = before + 1 end end
-    end
-    local tier = math.min(6, math.floor(before / 5))
-    used[tier] = (used[tier] or 0) + 1
-    t.row, t.col = tier, used[tier] - 1
-    ncols = math.max(ncols, used[tier])
-    nrows = math.max(nrows, tier + 1)
-  end
-  return math.max(ncols, 4), nrows, false
-end
-
-local selectedTalent
-
-local function rankAt(t, V)
-  local r, nextP, here = 0, nil, false
-  for _, p in ipairs(t.points) do
-    if p.level <= V then
-      r = p.rank
-      if p.level == V then here = true end
-    elseif not nextP then
-      nextP = p
-    end
-  end
-  return r, nextP, here
-end
-
--- a 2 px outline around a node
-local function outline(x, y, w, h, color)
-  rect(x, y, w, 2, color, "border", 1); rect(x, y + h - 2, w, 2, color, "border", 1)
-  rect(x, y, 2, h, color, "border", 1); rect(x + w - 2, y, 2, h, color, "border", 1)
-end
-
-renderers.talents = function(V)
-  local trees, byName = talentModel()
-  local y = sectionTitle("Talent tree", 0, "your build at level " .. V .. "  -  click a talent for every point")
-  local sel = selectedTalent and byName[selectedTalent]
-  if not sel then
-    local hit = ns.talentAt(math.max(10, V))
-    sel = hit and byName[hit.name]
-  end
-  for _, tree in ipairs(trees) do
-    local ncols, nrows, live = layoutTree(tree)
-    local cellW = math.min(96, math.floor((W - 40) / ncols))
-    local cellH = 72
-    local x0 = math.floor((W - cellW * ncols) / 2)
-    local top = y
-    y = y + 12
-    local got, total = 0, 0
-    for _, t in ipairs(tree.talents) do
-      for _, p in ipairs(t.points) do
-        total = total + 1
-        if p.level <= V then got = got + 1 end
-      end
-    end
-    T(tree.name, 16, y, 300, "head", C.gold)
-    T(got .. " of " .. total .. " points by level " .. V, 16, y + 4, W - 32, "small", C.dim, "RIGHT")
-    y = y + 34
-    local gy = y
-    for _, t in ipairs(tree.talents) do
-      local nx = x0 + t.col * cellW + math.floor((cellW - 40) / 2)
-      local ny = gy + t.row * cellH
-      local r, nextP, here = rankAt(t, V)
-      if here then rect(nx - 7, ny - 7, 54, 54, { C.accent[1], C.accent[2], C.accent[3], 0.5 }, "border", 0) end
-      if t == sel then outline(nx - 4, ny - 4, 48, 48, { 1, 0.82, 0, 1 }) end
-      local f = icon(t.icon, nx, ny, 40, nil, nil)
-      local rankInk
-      if r == 0 then
-        f.tex:SetDesaturated(true); f.tex:SetVertexColor(0.65, 0.65, 0.65)
-        f.ring:SetColorTexture(0.38, 0.38, 0.38, 0.9)
-        rankInk = { 0.75, 0.75, 0.75, 1 }
-      elseif r >= t.max then
-        f.ring:SetColorTexture(1, 0.82, 0, 1); rankInk = { 1, 0.82, 0, 1 }
-      else
-        f.ring:SetColorTexture(0.3, 0.9, 0.35, 1); rankInk = { 0.4, 1, 0.45, 1 }
-      end
-      f:SetScript("OnClick", function() selectedTalent = t.name; refresh() end)
-      f.tipTitle = t.name .. "  " .. r .. "/" .. t.max
-      f.tipText = (here and ("Level " .. V .. ": your point goes here. ") or "") ..
-        (nextP and ("Next point at level " .. nextP.level .. ". ") or "All points taken. ") ..
-        plain(t.points[1].text) .. "\n\nClick for every point and why."
-      -- rank tag on the corner, like the talent window
-      rect(nx + 20, ny + 27, 24, 15, { 0, 0, 0, 0.88 }, nil, 0, nil, true)
-      T(r .. "/" .. t.max, nx + 20, ny + 28, 24, "small", rankInk, "CENTER", true)
-      if here then
-        T("NOW", nx - 10, ny + 46, 60, "label", C.gold, "CENTER")
-      elseif nextP then
-        T("Lv " .. nextP.level, nx - 10, ny + 46, 60, "small", C.dim, "CENTER")
-      end
-    end
-    y = gy + nrows * cellH + 2
-    if not live then
-      y = y + T("Open your talent window once and the Codex lays this out exactly like the game's tree.",
-        16, y, W - 32, "small", C.dim, "CENTER") + 4
-    end
-    y = y + 6
-    box(0, top, W, y - top, C.panel, C.edge)
-    y = y + 12
-  end
-
-  -- the selected talent: every point that goes into it, and why
-  if sel then
-    local top = y
-    y = y + 14
-    local r = rankAt(sel, V)
-    icon(sel.icon, 16, y, 40, sel.name, nil)
-    T(sel.name, 66, y, W - 90, "head", C.ink)
-    T(sel.tree .. "  -  " .. r .. "/" .. sel.max .. " at level " .. V, 66, y + 22, W - 90, "small", C.inkSoft)
-    y = y + 52
-    for _, p in ipairs(sel.points) do
-      local now, past = p.level == V, p.level < V
-      local h = T(plain(p.text), 110, y + 3, W - 130, "body", past and C.inkSoft or C.ink)
-      local rowH = math.max(20, h + 6)
-      if now then rect(10, y - 2, W - 20, rowH + 2, { C.accent[1], C.accent[2], C.accent[3], 0.22 }, nil, 4) end
-      T("Level " .. p.level, 16, y + 4, 60, "label", past and C.inkSoft or C.ink)
-      T(p.rank .. "/" .. sel.max, 76, y + 4, 30, "label", past and C.inkSoft or C.ink, "CENTER")
-      y = y + rowH + 4
-    end
-    y = y + 8
-    box(0, top, W, y - top, C.parch, C.edge)
-    y = y + 14
-  end
-
-  -- every point in order (click one to see that level)
-  T("EVERY POINT, IN ORDER", 0, y, W, "label", C.gold)
-  T("click a level to open it", 0, y, W - 6, "small", C.dim, "RIGHT")
-  y = y + 20
-  local me = UnitLevel("player")
-  for l = 10, 60 do
-    local hit, rank, text = ns.talentAt(l)
-    if hit then
-      if l == V then rect(0, y, W, 28, { C.accent[1], C.accent[2], C.accent[3], 0.18 }, nil, 2) end
-      if l == me then rect(0, y, 3, 28, C.edge, "border") end
-      T(tostring(l), 8, y + 7, 30, "label", l <= me and C.goldDim or C.gold, "RIGHT")
-      icon(hit.icon, 46, y + 2, 24, hit.name, plain(text))
-      T(hit.name .. "  " .. rank .. "/" .. hit.max, 80, y + 7, 330, "body", l < me and C.dim or C.light)
-      T(hit.tree, 0, y + 8, W - 10, "small", C.dim, "RIGHT")
-      local hb = take("hit", newHit)
-      hb:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y); hb:SetSize(W, 28)
-      hb.tipTitle = "Level " .. l .. ": " .. hit.name .. " " .. rank .. "/" .. hit.max
-      hb.tipText = plain(text)
-      hb:SetScript("OnClick", function() viewLevel = l; activeTab = "level"; refresh() end)
-      hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
-      y = y + 30
-    end
-  end
-  return y + 8
-end
+renderers.talents = function(V) return ns.renderTalents(V) end
 
 renderers.trainer = function(V)
   local y = sectionTitle("Trainer visits", 0, "every new spell and rank, by level")
   local me = UnitLevel("player")
   local list = {}
-  for _, t in ipairs(ns.D.train) do list[#list + 1] = t end
+  for _, t in ipairs(ns.trainVisits()) do list[#list + 1] = t end
   table.sort(list, function(a, b) return a.level < b.level end)
   for _, t in ipairs(list) do
     local here = t.level == V
@@ -978,6 +891,16 @@ local PAD_NAMES = { xbox = "Xbox", ps = "PlayStation", switch = "Switch" }
 renderers.macros = function(V)
   local list = ns.macrosFor(V)
   local y = sectionTitle("Macros for level " .. V, 0, "hover a button for how it works")
+  -- the macros follow your talent path: its own set, or the guide's when it has none
+  local path = ns.talentPath()
+  local _, from = ns.pathMacros()
+  if path and path.custom then
+    y = y + T("Your custom path uses the " .. ((from and from.spec) or ns.D.spec) ..
+      " macros: that path shares the most points with yours.", 0, y, W, "small", C.gold) + 6
+  elseif path and not path.guide then
+    y = y + T(from and not from.guide and ("Built for the " .. path.spec .. " path.")
+      or ("These macros are built for the " .. ns.D.spec .. " guide."), 0, y, W, "small", C.gold) + 6
+  end
   local h = T("Set up macros makes them all at once (character tab of Esc > Macros). Then put each on the button or key shown below.",
     0, y, W - 170, "small", C.dim)
   btn("Set up macros", W - 150, y - 2, 150, function() ns.setupMacros(false) end, true,
@@ -1092,11 +1015,15 @@ renderers.settings = function()
   local function head(str) T(str, 0, y, W, "label", C.gold); y = y + 20 end
 
   head("THEME")
-  local th = db.theme or "forever"
-  row("Forever (teal)", 0, 150, th == "forever", function() db.theme = "forever"; ns.rebuildForTheme() end,
+  local th = ns.themeKey or "forever"
+  row("Forever (teal)", 0, 150, th == "forever", function() ns.setTheme("forever") end,
     "WoW: Forever's logo teal for the accents and highlights.")
-  row("Codex (gold)", 156, 150, th == "codex", function() db.theme = "codex"; ns.rebuildForTheme() end,
+  row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
     "The guide site's gold for the accents and highlights.")
+  if ns.ellesmere.available() then
+    row("EllesmereUI", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
+      "Your EllesmereUI look: its panels, your accent colour and your UI font. EllesmereUI's options can turn it off for the Codex (Blizzard Skins+ > Window Skins > Third-Party Addons).")
+  end
   y = y + 40
 
   head("CONTROLLER BUTTON NAMES")
@@ -1137,16 +1064,18 @@ renderers.settings = function()
     "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
   y = y + 12
 
-  head("CLASS TRAINER")
+  head("TRAINERS")
   tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
     "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
+  tick("Show what to learn at profession trainers", not db.noProfTrainer, function() db.noProfTrainer = not db.noProfTrainer end,
+    "At a profession trainer, a card lists the next rank when you can train it and the recipes your route needs from this trainer, and names the trainer or vendor for one it doesn't teach.")
   y = y + 12
 
   head("PROFESSIONS")
   tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open Blacksmithing, Smelting, Tailoring, Enchanting or Leatherworking, the Codex outlines the recipe to make for your skill and shows how many more to make.")
+    "When you open a crafting profession or Smelting, the Codex outlines the recipe to make for your skill and shows how many more to make.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "Shows a card for new steps, training or skill caps in Mining, Blacksmithing, Tailoring, Enchanting, Herbalism, Skinning and Leatherworking. Mining and Herbalism also announce new nodes.")
+    "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
   y = y + 12
 
   head("GATHERING")
@@ -1163,13 +1092,32 @@ renderers.settings = function()
   end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
   y = y + 12
 
+  head("VENDOR")
+  tick("Sell grey items at vendors", not db.noAutoSell, function() db.noAutoSell = not db.noAutoSell end,
+    "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
+  tick("Repair at vendors", not db.noAutoRepair, function() db.noAutoRepair = not db.noAutoRepair end,
+    "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
+  tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
+    "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
+  tick("Include profession supplies", not db.noProfShop, function() db.noProfShop = not db.noProfShop end,
+    "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
+  y = y + 12
+
   head("QUEST GUIDE")
   tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
-    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guide library > Dungeons plans runs one by one, which overrides this.")
+    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")
   tick("Keep grey quests in the route", db.questKeepGrey, function() db.questKeepGrey = not db.questKeepGrey; ns.updateQuestSettings() end,
     "Off: pickups that have gone grey for your level leave the route (unless a later quest needs them) and are listed under Quests > Missed quests > Outleveled.")
   tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
     "Side errands the route can skip, such as Forever's Camping 101 profession introductions.")
+  -- Elite quests: ask at each pickup (default), or take or skip them all.
+  T("Elite quests", 0, y + 5, 110, "body", C.ink)
+  local Q = ns.quests
+  y = y + segments(116, y, W - 116, Q.ELITE_LABELS, Q.eliteModeIndex(), function(i)
+    Q.setEliteMode(i)
+    ns.updateQuestSettings()
+    refresh()
+  end, Q.ELITE_TIPS) + 8
   tick("Skip hearthstone binding steps", db.questSkipBind, function()
     db.questSkipBind = not db.questSkipBind
     ns.updateQuestSettings()
@@ -1182,6 +1130,31 @@ renderers.settings = function()
   tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
     "A button below the item button that targets the current step's quest giver, or the creatures its objectives need. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+  tick("Show the NPC portrait", not db.noQuestPortrait, function()
+    db.noQuestPortrait = not db.noQuestPortrait
+    ns.questRefresh()
+  end, "A small 3D portrait of the quest giver, the one you turn in to, or the creature to hunt, beside the step's title.")
+  tick("Colour the arrow by direction", not db.noArrowColor, function()
+    db.noArrowColor = not db.noArrowColor
+    ns.questRefresh()
+  end, "Green when you're heading for the step, gold when it's off to your side, red when it's behind you.")
+  tick("Animate the arrow on arrival", not db.noArrowBounce, function() db.noArrowBounce = not db.noArrowBounce end,
+    "When you reach the step's spot (or its mob or object), the arrow turns into the step's icon, bobbing gently over a gold ring that pulses once.")
+  tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,
+    "Drag the arrow to put it anywhere on screen; Ctrl+mouse wheel over it changes its size. Locked, it stays where it is.")
+  T("Arrow size", 0, y + 4, 90, "body", C.light)
+  local function arrowSize(step)
+    db.questArrowScale = math.floor(math.max(0.6, math.min(2, (tonumber(db.questArrowScale) or 1) + step)) * 10 + 0.5) / 10
+    ns.placeQuestArrow()
+  end
+  row("-", 90, 28, false, function() arrowSize(-0.1) end)
+  T(math.floor((tonumber(db.questArrowScale) or 1) * 100 + 0.5) .. "%", 122, y + 4, 50, "body", C.gold, "CENTER")
+  row("+", 176, 28, false, function() arrowSize(0.1) end)
+  row("Reset arrow", 216, 120, false, function()
+    db.questArrowPos, db.questArrowScale = nil, nil
+    ns.placeQuestArrow()
+  end, "Puts the arrow back above the step window at its normal size.")
+  y = y + 36
   if ns.questie.usable() then
     tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
       db.noNearestSpawn = not db.noNearestSpawn
@@ -1195,23 +1168,74 @@ renderers.settings = function()
   y = y + 6
   head("PARTY")
   tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
-    "Party members who use the Codex see each other's current step in the step window, and how far ahead or behind they are.")
-  tick("Share guide quests with my party", db.questShareParty, function() db.questShareParty = not db.questShareParty end,
-    "Off by default. When you accept a quest from your guide, the Codex offers it to your party.")
+    "The step window lists your party: who is on your step (with their kill or loot count), how many steps ahead or behind the others are, and who isn't sharing a step. Party members need the Codex to share theirs.")
+  tick("Share guide quests with my party", ns.questSharing(), ns.toggleQuestSharing,
+    "On by default. When you accept a quest from your guide, the Codex offers it to party members who don't have it yet.")
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
+  tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
+    "Off by default. When the game finishes a step of your guide (not Next or Back), party chat gets \"Codex: Done - Accept - A Threat Within\".")
+  tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
+    "Off by default. Each quest item you loot goes to party chat with your count, \"Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)\", and so does an item that starts a quest of your guide.")
+  tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
+    "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
+  tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
+    "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+  -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
+  T("Ping sound", 0, y + 5, 110, "body", C.ink)
+  local pingLabels, pingTips = {}, {
+    "A quiet chime (the game's friend-online sound).",
+    "The game's party invite sound.",
+    "The game's ready-check sound: the loudest.",
+  }
+  for i, sound in ipairs(ns.PARTY_PINGS) do pingLabels[i] = sound[1] end
+  y = y + segments(116, y, W - 116, pingLabels, ns.partyPingIndex(), function(i)
+    db.partyPingSound = i
+    ns.playPartyPing(i)
+    refresh()
+  end, pingTips) + 8
+  if ns.questie.announces("objectives") or ns.questie.announces("items") then
+    y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
+      28, y - 4, W - 28, "small", C.dim) + 6
+  end
   T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
-  row("-", 150, 28, false, function()
-    db.questPreview = math.max(0, (tonumber(db.questPreview) or 2) - 1); ns.questRefresh()
-  end)
-  T(tostring(tonumber(db.questPreview) or 2), 182, y + 4, 30, "body", C.gold, "CENTER")
-  row("+", 216, 28, false, function()
-    db.questPreview = math.min(5, (tonumber(db.questPreview) or 2) + 1); ns.questRefresh()
-  end, "How many of the next steps the step window lists under the current one (0-5).")
+  row("-", 150, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() - 1) end,
+    "Fewer of the next steps the step window lists under the current one.")
+  T(tostring(ns.questPreviewCount()), 182, y + 4, 30, "body", C.gold, "CENTER")
+  row("+", 216, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() + 1) end,
+    "More of the next steps the step window lists under the current one (0-10). The list runs on into the next section.")
   y = y + 36
   tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
     "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
+  tick("Show the completion bar", not db.noStepBar, function() db.noStepBar = not db.noStepBar; ns.questRefresh() end,
+    "A thin bar under the step's title fills as you get through the guide; hover it for the counts, click it for the route.")
+  tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
+    "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
+  tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,
+    "Pins for the current step and the next two on your world map; hover one for its step.")
+  tick("Route line on the minimap", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
+    "Gold dots on the minimap run from you to the current step, through a cave or tunnel's way in.")
+  tick("Route line on the world map", not db.noWorldMapLine, function()
+    db.noWorldMapLine = not db.noWorldMapLine
+    ns.questRefresh()
+  end, "The same gold dots on your world map, from you to the current step, on the map you're on.")
   tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
+  -- The step window's size (down to half for small screens) and background, as steppers.
+  local function stepper(label, value, change)
+    T(label, 0, y + 4, 150, "body", C.light)
+    btn("-", 156, y, 28, function() change(-0.1); refresh() end, false).codexLabel = label .. " -"
+    T(math.floor(value * 100 + 0.5) .. "%", 188, y + 4, 46, "body", C.gold, "CENTER")
+    btn("+", 238, y, 28, function() change(0.1); refresh() end, false).codexLabel = label .. " +"
+    y = y + 30
+  end
+  stepper("Step window size", tonumber(db.questViewerScale) or 1, ns.setQuestViewerScale)
+  stepper("Step window background", tonumber(db.questViewerAlpha) or 1, ns.setQuestViewerAlpha)
+  T("Ctrl+mouse wheel over the step window also changes its size.", 0, y - 2, W, "small", C.dim)
+  y = y + 18
+  tick("Fade the step window in combat", not db.noQuestFade, function() db.noQuestFade = not db.noQuestFade end,
+    "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
+  tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
+    "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
   local questieKey = ns.questie.keyName()
   local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
   local function questieNote(on, text)
@@ -1269,19 +1293,36 @@ function ns.addTab(key, label, renderer)
   table.insert(TABS, #TABS, { key, label })
 end
 
--- An invisible row button with a tooltip (route rows and the like).
-local function hit(x, y, w, h, tipTitle, tipText, onClick)
+-- An invisible row button with a tooltip (route rows and the like). `label` names it for the
+-- controller and the harness (codexLabel); nil leaves it unnamed.
+local function hit(x, y, w, h, tipTitle, tipText, onClick, label)
   local hb = take("hit", newHit)
   hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
   hb.tipTitle, hb.tipText = tipTitle, tipText
+  hb.codexLabel = label
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
   return hb
 end
 
+-- The quest log's fold button (plus folded, minus open), 16 px; "+" / "-" without the art.
+local function newFoldTex() return overlay:CreateTexture(nil, "ARTWORK") end
+local function fold(open, x, y)
+  local path = open and A.FILES.minusUp or A.FILES.plusUp
+  if A.hasFile(path) then
+    local t = take("fold", newFoldTex)
+    t:SetTexture(path)
+    t:SetSize(16, 16)
+    t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+    return
+  end
+  T(open and "-" or "+", x + 4, y, 12, "body", C.gold)
+end
+
 local function questSearch(x, y, w, value, onChange, onSubmit)
   local edit = take("edit", function()
     local box = CreateFrame("EditBox", "LevelingCodexQuestSearch", overlay, "InputBoxTemplate")
+    if C.eui then ns.ellesmere.call("EditBox", box) end -- its near-black box, the template art gone
     box:SetAutoFocus(false)
     box:SetMaxLetters(80)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -1297,7 +1338,9 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+  segments = segments, fold = fold,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
+  openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 
 function ns.placeWindow()
@@ -1418,8 +1461,10 @@ local function flatChrome(f)
   doubleBorder(f)
 end
 
--- The game's dialog border and background, with a faint theme-coloured glow under the header.
+-- The game's dialog border and background, with a faint theme-coloured glow under the header;
+-- EllesmereUI's window shell in its theme.
 local function chrome(f, glowHeight)
+  if ns.ellesmere.backing(f, "Shell") then return true end
   if A.backdrop(f, "dialog") then
     -- the dialog background is see-through: darken it so names and effects in the world
     -- don't show through the text
@@ -1435,9 +1480,11 @@ local function chrome(f, glowHeight)
   return false
 end
 
--- A dark inset (the tooltip border) to hold scrolling content or a text box.
+-- A dark inset (the tooltip border) to hold scrolling content or a text box; EllesmereUI's darker
+-- inset panel in its theme.
 local function inset(parent)
   local f = A.frame("Frame", nil, parent)
+  if ns.ellesmere.backing(f, "Panel", { inset = true }) then return f end
   if not A.backdrop(f, "tooltip", { 0, 0, 0, 0.5 }, { C.edgeSoft[1], C.edgeSoft[2], C.edgeSoft[3], 1 }) then
     local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.35)
   end
@@ -1483,7 +1530,8 @@ local function makeFrame()
 
   local spec = header:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
   spec:SetPoint("TOPLEFT", portrait, "TOPRIGHT", 10, -10)
-  spec:SetFont(FONT_HEAD, 24, "")
+  spec:SetFont(ns.headFont(), 24, "")
+  spec.codexHead = 24
   spec:SetTextColor(rgba(C.titleInk))
   spec:SetShadowOffset(1, -1)
   spec:SetText(ns.D.spec .. " " .. ns.CLASS_NAME)
@@ -1494,12 +1542,14 @@ local function makeFrame()
 
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
+  if C.eui then ns.ellesmere.call("CloseButton", close) end
 
   -- level picker: view any level, with the spellbook's page arrows
   local nextB = A.arrow(header, "next"); nextB:SetPoint("TOPRIGHT", -36, -22)
   levelText = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-  levelText:SetFont(FONT_HEAD, 20, "")
-  levelText:SetTextColor(1, 0.82, 0)
+  levelText:SetFont(ns.headFont(), 20, "")
+  levelText.codexHead = 20
+  if C.eui then levelText:SetTextColor(1, 1, 1) else levelText:SetTextColor(1, 0.82, 0) end
   levelText:SetShadowOffset(1, -1)
   levelText:SetWidth(96); levelText:SetJustifyH("CENTER")
   levelText:SetPoint("RIGHT", nextB, "LEFT", -2, 0)
@@ -1520,6 +1570,7 @@ local function makeFrame()
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 8, -10)
   scroll:SetPoint("BOTTOMRIGHT", -28, 10)
+  ns.ellesmere.scrollBar(scroll)
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(W, 10)
   scroll:SetScrollChild(content)
@@ -1542,7 +1593,15 @@ local function makeFrame()
     tabs[#tabs + 1] = b
     prev = b
   end
+  -- Too many tabs for the window's width: every tab shrinks by the same share (12 px overlap each).
+  local total, avail = -12 * (#tabs - 1), (tonumber(frame:GetWidth()) or 0) - 32
+  for _, b in ipairs(tabs) do total = total + (tonumber(b:GetWidth()) or 0) end
+  if avail > 0 and total > avail then
+    local share = (avail + 12 * (#tabs - 1)) / (total + 12 * (#tabs - 1))
+    for _, b in ipairs(tabs) do b:SetWidth(math.floor((tonumber(b:GetWidth()) or 0) * share)) end
+  end
 
+  ns.ellesmere.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   -- after OnShow is set: the controller (Gamepad.lua) hooks it
   ns.gamepad.attach(frame, { main = true, scroll = scroll, focusables = listFocusables, onTab = cycleTab })
@@ -1596,8 +1655,9 @@ local function makeCopy()
   local function reselect(self) self:SetFocus(); self:HighlightText() end
   eb:SetScript("OnEscapePressed", function() copy:Hide() end)
   eb:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-  -- read-only: typing puts the macro back, still selected
+  -- read-only: typing puts the macro back, still selected (a paste box keeps what you type)
   eb:SetScript("OnTextChanged", function(self, userInput)
+    if copy.paste then return end
     if userInput and copy.body and self:GetText() ~= copy.body then self:SetText(copy.body); self:HighlightText() end
   end)
   eb:SetScript("OnMouseUp", reselect)
@@ -1605,6 +1665,9 @@ local function makeCopy()
 
   copy.count = copy:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   copy.count:SetPoint("BOTTOMLEFT", 24, 24)
+  copy.count:SetWidth(210) -- clear of the buttons at the bottom right (a refused code's reason wraps)
+  copy.count:SetJustifyH("LEFT")
+  copy.count:SetWordWrap(true)
   copy.count:SetTextColor(rgba(C.dim))
 
   local function button(label, w, onClick)
@@ -1619,8 +1682,19 @@ local function makeCopy()
   copy.nextB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   copy.prevB = button("Back", 70, function() ns.showMacroCopy(nil, nil, -1) end)
   copy.prevB:SetPoint("RIGHT", copy.nextB, "LEFT", -6, 0)
+  -- paste mode: hand the text to the entry's onAccept; a refusal says why and keeps the box open
+  copy.useB = button("Use this code", 120, function()
+    local cur = copy.list and copy.list[copy.index]
+    if not (cur and cur.onAccept) then return end
+    local ok, why = cur.onAccept(copy.edit:GetText())
+    if ok then copy:Hide() else copy.count:SetText(why or "") end
+  end)
+  copy.useB.codexLabel = "Use this code"
+  copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
+  if C.eui then ns.ellesmere.call("CloseButton", close) end
+  ns.ellesmere.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
   -- the controller: the text first, then the box's buttons along one row
   ns.gamepad.attach(copy, { popup = true, focusables = function()
@@ -1651,14 +1725,16 @@ function ns.showMacroCopy(m, list, step)
   if not cur then return end
   local many = #copy.list > 1
   copy.title:SetText(cur.copyTitle or (cur.recording and "Copy quest recorder log" or ("Copy the " .. cur.name .. " macro")))
-  copy.help:SetText(cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp)
+  copy.help:SetText(cur.help or (cur.recording and "Press Ctrl+C to copy the selected log, then paste it into a text file." or copy.macroHelp))
   copy.count:SetText(many and ("Macro " .. copy.index .. " of " .. #copy.list .. " to make yourself") or "")
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
-  copy.body = cur.body
+  copy.paste = cur.paste and true or false
+  copy.useB:SetShown(copy.paste)
+  copy.body = cur.body or ""
   copy:Show()
-  copy.edit:SetText(cur.body)
+  copy.edit:SetText(copy.body)
   copy.edit:SetFocus()
-  copy.edit:HighlightText()
+  if not copy.paste then copy.edit:HighlightText() end
 end
 
 function ns.toggleWindow()
@@ -1679,18 +1755,20 @@ function ns.toggleWindow()
   frame:Show()
 end
 
--- Theme change: rebuild the window (and drop the banner) in the new colours.
+-- Theme change: rebuild the window (and drop the banner) in the new colours. A closed window stays
+-- closed (EllesmereUI's accent changes rebuild too).
 function ns.rebuildForTheme()
-  ns.useTheme(ns.db().theme)
+  ns.useTheme(ns.themeName())
   ns.questRefresh()
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
+    local shown = frame:IsShown()
     frame:Hide(); frame = nil -- hiding first hands it back to Forever's controller navigation
     for _, p in pairs(pools) do for i = 1, #p.list do p.list[i]:Hide() end end
     pools = {}
     makeFrame()
-    frame:Show()
+    if shown then frame:Show() end
   end
 end
 

@@ -37,11 +37,228 @@
 - The Quests tab now splits 30-60 into three level bands: 30-40, 40-50 and 50-60.
 - The new guides are not yet tested in game. Steps that need a check carry a note.
 
-## v0.20.2
+## v0.24.0
+
+### Macros
+
+- **Macros for every talent path.** Each talent path now has its own macro set, built for how that spec plays while leveling: Arms and Fury Warriors, Holy and Protection Paladins, Beast Mastery and Survival Hunters, Assassination and Subtlety Rogues, Arcane and Fire Mages, Demonology and Destruction Warlocks, Discipline and Holy Priests, Elemental and Restoration Shamans, and Balance, Cat, Bear and Restoration Druids.
+- **Your macros follow your path.** Set up macros, the level-up refresh, the Macros tab and the level-up banner all use the path you follow. Switch path and the Codex's macros change to the new path's versions in place, on the same buttons and keys. A custom path uses the set of the path closest to your points.
+- **Every guide's macros audited and fixed.** Every class's guide macros were checked against WoW: Forever's own spell data:
+  - Cast sequences that waited on a cooldown are gone: Paladin's Judgement and Holy Strike, Mage's Frost Nova, Hunter's Aimed Shot, Shaman's shocks, Rogue's Kick and Gouge.
+  - Lines that could never fire are fixed: Frost Mages lost Fire Blast once Ice Lance arrived, so targets that weren't frozen had no finisher.
+  - The Rogue's builder and finisher now sit on two buttons, so a miss or a crit no longer finishes at the wrong count.
+  - The Warrior's Bloodrage tips now say when it really fires.
+- **Smarter buttons.**
+  - Heals go to whoever you hover, else your friendly target, else whoever your enemy is attacking, else you.
+  - Fight buttons pick the next enemy after a kill.
+  - Openers know Stealth and Prowl.
+  - Pet buttons know whether your pet is out, dismissed or dead.
+  - Mana gems and Healthstones are made out of combat and used in combat.
+  - Interrupts stop your own cast first.
+  - Cooldowns that must land first, like Cold Blood, Presence of Mind or Nature's Swiftness, get their own Burst button, so they never block your main attack.
+- Every new macro has tips: what each press does and when a new piece joins.
+- Macros made by an older Codex still update in place, even when WoW: Forever doesn't load your saved settings.
+
+### EllesmereUI
+
+- **The Codex takes on EllesmereUI's look.** With EllesmereUI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
+- It's on whenever EllesmereUI is installed. Turn it off for the Codex in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as EllesmereUI is installed.
+- Change your accent colour in EllesmereUI and the Codex follows straight away.
+
+### Party play
+
+- **Your whole party in the step window.** Everyone in your party gets a row: on your step (with their kill or loot count), how many of your steps ahead or behind they are, in another guide, offline, or not sharing a step. The heading says when you're all on the same step, and the compact step window sums it up in one line. Party members need the Codex to share their step.
+- **Quests > Party.** A card for each party member with their guide, their step, their live count and when you last heard from them. When you're in different guides, Follow their guide switches yours in one click.
+- **Quests one of you is missing.** The Party tab lists the guide quests a party member has that you don't, with Ask to share (their Codex offers it to you), and the ones you have that they don't, with Share.
+- **Quest sharing is on by default.** A guide quest you accept is offered to party members who don't have it yet. It waits a moment, so two of you taking it together don't get each other's offer. Turn it off in Settings > Party.
+- **Catch-up cues.** The step window says when someone is 3 or more steps behind you, and a soft chime plays when the last of you reaches the same step. Settings > Party > Ping sound picks the sound (Soft chime, Party invite or Ready check) and plays it so you can hear it.
+- **Party chat lines, like Questie's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what Questie already says in party chat is left to it. Each one is off until you turn it on.
+- **Every party option in the guide setup card**, next to the same switches in Settings > Party and Quests > Party.
+- **Steadier sync.** Your step goes out again every minute, so a long kill step no longer drops you from your partner's window, and going Back to look at an earlier step no longer tells the party you're behind.
+
+## v0.23.1
 
 ### Quest guide
 
+- **A smooth arrival bounce.** When you reach a step, the arrow turns into the step's icon and bobs. It used to jump at the top of every bounce; now it rises and falls in one smooth motion.
+- **Sharper step icons.** The pickup !, the turn-in ?, the sword, the loot bag and the flight, hearth, vendor and trainer icons now use the game's own high-resolution art, picked to fit your screen, so they stay crisp from 1080p to 4K. They show on the arrow, in the step window and on the minimap and world map. Hearth and bind steps now show a hearthstone.
+- **Smoother glows.** The gold ring around your destination on the flight map pulses smoothly. The arrival ring, the minimap pin's ring and the level-up banner no longer flash as they fade out.
+
+## v0.23.0
+
+### Talents
+
+- **A talent path for every spec.** Besides the Codex guide's own build, every class now has a recommended leveling path for each of its three trees, even the ones that aren't the fastest to level with: Arms and Fury Warriors, Fire and Arcane Mages, Holy and Protection Paladins, Discipline and Holy Priests, and so on. Druids get Feral Cat, Bear tank, Balance and Restoration next to the guide's Feral. They're built from the Forever guides published since launch and checked point by point against the game's own trees.
+- **Your own custom path.** Pick Custom, start from any path, from the talents you already have, or from nothing, and click the tree to place each point in level order. The Codex checks the game's rules as you go (points per row, prerequisites, ranks) and says why a talent isn't open yet. Undo and Clear are a click away.
+- **Share codes.** Copy your custom path as a short code and paste it on another character, or back in if you ever lose it.
+- **A new Talents tab.** Path cards at the top with each path's role and its split at 60, then the full game tree for all three trees side by side with your path filled in to the level you're viewing, prerequisite lines and every point in order. Click a talent for its tooltip and every point your path puts into it.
+- **Everything follows your path.** This Level, the level-up banner and chat line, the minimap tooltip and the outline in your talent window all show your path's point. The trainer list follows it too: an Arms Warrior sees Mortal Strike ranks instead of Shield Slam. Macros and tips stay with the Codex guide.
+- **Remembered per character.** Your choice is saved. If WoW: Forever doesn't load your saved settings, the Codex picks the path that the talents you've already spent follow.
+
+### Horde quest guide
+
+- **Smoother loops from 30 to 60.**
+  - The Horde route was checked chapter by chapter for back-and-forth walking.
+  - Gadgetzan, Booty Bay, Silithus's Cenarion Hold and the Riverglades' ring fights are each one sweep now.
+  - Pickups you used to come back for are taken on the first visit: Enemies in the Water, Thundering Hearts, Super Sticky, Nafien's quest in Felwood.
+- **Quests the guide missed.**
+  - Stranglethorn's hunting quests and Weed Whacked, The Severed Head, Sunken Treasure, News for Fizzle.
+  - Noggenfogger Elixir, Fuel for the Zapping, Locked Away, the Jeremiah chain in the Plaguelands, the Riverglades side quests.
+  - A few quests started by items you find.
+- **Cozy Sleeping Bag for the Horde.** A new special guide for the chain that ends with the sleeping bag (up to 3% bonus XP): it starts at the burned watchtower south of Camp Taurajo. The Camp Taurajo chapter offers it.
+- **Ruins of Lordaeron.** The New Plague is only offered after Apothecary Renferrel's three-part A Recipe For Death, so the dungeon guide now runs that chain first.
+- **Buy it before you go.**
+  - Quests that need a bought item say so at the step before the trip: the Southshore Stout that gets you past the Syndicate in Strahnbrad, the Blasted Lands reagents, Gorilla Fangs, Silk Cloth, the Mithril Casing, Gregan's bait.
+  - Auction House items are optional steps.
+- **Dungeons at the right moment.**
+  - Zul'Farrak, Krol'dok, City of Dalaran, Razorfen Downs, Sunken Temple, Scholomance, Stratholme and Upper Blackrock Spire are offered at the steps that lead into them.
+  - The Scholomance key guide works with Thunder Bluff's call to arms too.
+- Elite quests ask first (see Elite quests below): King Bangalash, Gorlash, the Bloodsail captains, the Swamp Talker, Vile Priestess Hexx, Hitah'ya the Keeper, Overseer Maltorius, Marez Cowl and Or'Kalar.
+- Class objectives on the route sit where they add the least walking.
+- The quest log stays at 20 or fewer with every dungeon planned.
+
+### Alliance quest guide
+
+- **Smoother loops from 1 to 60.**
+  - The whole Alliance route was checked chapter by chapter for back-and-forth walking, like the Horde's.
+  - Fixed: Brother Anton in Nijel's Point, the troll tablets in Stranglethorn, the Badlands buzzards and the Sign of the Earth, Torwa's chain in Un'Goro, the Slag Pit in the Searing Gorge, Silithus in one sweep (Bronzebeard's Encampment once), Deadwood of the North and Salfa in Felwood, Are We There, Yeti? in Winterspring.
+  - A Refuge Pointe to Southshore flight replaces a long ride; Felwood starts with a hearth to Ironforge.
+- **Chains that never showed now work.** Stranglethorn's Nesingwary hunts, Colonel Kurzen, Troll Witchery, Ansirem's Key, Sunken Treasure, ... and Bugs, Goblin Sponsorship and Rhapsody's Kalimdor Kocktail had hand-ins in the forties but no pickup. The thirties now give them. Reassignment is handed in at Stormwind Keep instead of riding in your log to 60.
+- **Riverglades fixes.** Several quests came in an order the game doesn't offer them in; the Riverglades chapters now follow the game's chains, with corrected spots and the shopping steps.
+- **Quests the guide missed.** Supply and Demand and Some Assembly Required, Hemet Nesingwary, Talk of the Town, This Light of Mine, Crystal in the Mountains, Anyone Can Cook, Parts for Kravel, Sword in the Slime, Stranglethorn Fever, the Talrendis Point quests, Alien Ecology, Lost!, Chasing A-Me 01, Better Late Than Never, Chillwind Horns, Locked Away, Are We There, Yeti? part 3 and more in Silithus.
+- **Dungeon guides:** Power Stones (Uldaman), The Ancient Egg and The God Hakkar (Sunken Temple), A Taste of Flame (Blackrock Depths), The Argent Hold (Stratholme), Gnome Improvement (Gnomeregan) and Return to the Hinterlands (Zul'Farrak). Steps that lead into a dungeon offer its guide.
+- **Buy it before you go.** Stormwind Seasoning Herbs for Chef Grual, Hillman's Cloak, water breathing, a Moonsteel Broadsword, Silk Cloth, the bloodmage parts, the Mithril Casing, Gregan's bait and more say where to get them before the trip.
+- **Class objectives on the route** for Warriors, Mages, Warlocks, Hunters, Priests and Rogues from 36 to 57 (Cyclonian's tusks, the Desolace orbs, the Blasted Lands and Azshara quests, the Ichor of Undeath), shown only to that class while the quest is in your log. Three early ones moved to where they cost the least walking.
+- The quest log stays at 20 or fewer with every dungeon planned.
+
+### Elite quests (both factions)
+
+- **The guide asks before an elite quest.** When the route reaches the pickup of a quest whose target is an elite, the step window says so and asks: **Take it** keeps the quest on your route, **Skip** passes it and the quests that need it. Back asks again.
+- The Quests tab's Step view has the same Take it and Skip it buttons, for controller players.
+- Your choice is kept for your character. If WoW: Forever doesn't load your saved settings, the guide just asks again.
+- **Settings > Elite quests** (also on the guide setup card): Ask (the default), Always take or Always skip.
+- A quest already in your log is never asked about.
+- Alliance elite quests include Hogger, Vagash, Oakenscowl, Stonewatch Keep's Tharil'zun and Gath'Ilzogg, Morbent Fel, Mor'Ladim, Fozruk, Colonel Kurzen, King Bangalash, King Mukla, Overseer Maltorius, the black dragonkin of the Burning Steppes and High Chief Winterfall.
+
+### Step window
+
+- **See up to 10 steps ahead.** Up next can now list up to 10 of the next steps (it was 5), and it carries on into the next guide, naming it where it starts. Before, it stopped at the end of the current guide. Pick 2, 5 or 10 on the setup card's new Steps ahead row, or any number from 0 to 10 in Settings > Steps shown ahead. The default is still 2.
+- **It shows up on a new character.** The intro cinematic (and Alt+Z) hides the game's interface. The step window took that as you closing it and stayed hidden until you showed it in the Quests tab; it now comes back with the interface.
+- **NPC portraits load.** A portrait used to give up after one second and show the step's icon (a "?") when the game hadn't loaded that NPC yet. It now keeps trying and shows the NPC once it loads, and targeting the NPC shows it at once.
+- "Also on this loop" is now **While you're here**.
+
+### Minimap button
+
+- **Left-click** opens or closes the Codex. **Right-click** shows or hides the step window (Settings is a tab in the Codex). The addon compartment entry works the same way.
+
+### Quests tab
+
+- A fresh character no longer sees a few percent on guides it hasn't started. Forever lists flight points as already known, and those flight path steps counted as done. A guide now counts nothing until you've done one of its quests.
+
+### Quest rewards
+
+- **The best-selling reward waits for slow prices.** When the game hadn't loaded a reward's price yet, the Codex gave up on it after a second and a half, so the coin could land on a cheaper reward. It now waits up to 3 seconds. If a price still hasn't loaded, chat names that reward instead of saying the marked one sells for the most.
+- **Ties say so:** "Mail Vest sells for the most (4s 50c), tied with Cloth Gloves."
+- Closing the quest window while a price was still loading no longer prints the line afterwards, and opening it again quickly no longer prints it twice.
+- `/codex debug` shows what the last reward choice read: each reward's price and which one got the coin.
+
+## v0.22.0
+
+### Step window
+
+- **Colour-coded steps.** Each step shows what it asks of you in a chip before its title, and the title and a stripe down the left take its colour: pickups gold, turn-ins green, kills red, collecting orange, travel blue, dungeons purple. Travel chips say Fly, Flight path, Boat, Hearth or Bind, and a step without a name shows the first sentence of its instructions as its title.
+- **Goals you can read at a glance.** Every objective has a bar that fills as you go, and a finished one says "done". The quests you can work on along the way get bars too.
+- **Up next with distances.** Each coming step shows its icon and how far away it is ("340 yd"), or its zone when it's elsewhere, and the distance counts down as you move.
+- **Turn-in XP.** A turn-in shows the XP it gives ("+2,100 XP") and "levels you up" when it will.
+- **NPC portraits.** A small 3D portrait of the quest giver, the NPC you turn in to, or the creature you're hunting sits beside the step's title (Settings > Show the NPC portrait).
+- **New buttons.** A wide Next step button in the theme's colour, with small Back, Quests and Hide buttons around it.
+- **Made for smaller screens.** Shrink the window to as little as 50% (Settings, the guide setup card, or Ctrl+mouse wheel over the window), turn down its background, let it fade while you fight (the mouse over it brings it back), or switch to compact mode with the button in its corner: just the step, its count or distance, a progress bar and the buttons.
+- **Progress you can feel.** A completion bar under the step counts the guide's steps (hover it for the quests turned in too), a goal that moves on flashes, and a step the game finishes glows and plays a sound.
+
+### Arrow, minimap and world map
+
+- **An arrow that says you're on course.** It turns green as you head for the step, stays gold with the step off to your side and goes red when it's behind you (Settings > Colour the arrow by direction).
+- **Move the arrow anywhere.** Drag it, Ctrl+mouse wheel over it to resize it, or lock it; when you arrive, the step's icon bobs over a gold ring.
+- **The route on your minimap.** Pins for the current and next two steps, a dotted line from you to the step that bends through tunnels and caves, an arrow on the rim when the step is off the minimap (it steps aside for the game's own waypoint arrow), and tooltips on hover.
+- **The route on your world map.** Numbered pins for the current and next steps that keep their size as you zoom, and a dotted line from you to the step (on or off in Settings and the guide setup).
+- The map pin keeps following your steps after a /reload.
+
+### Quests tab
+
+- **A new layout.** The current step sits at the top with its buttons, and the rest is split into Route, Step, Guides and Quest log.
+- **A clearer guide setup.** Choices light up when they're on: pace, dungeons, the automation helpers, the map lines, the step window's size and compact mode, and the vendor helpers.
+- **Guides as quest-log rows.** Each guide shows a progress bar and one tag (Current, Suggested, Side, Later, Done, Outleveled), and level bands fold away.
+- **What you get.** Special chains and class quests say what they give you, from the Cozy Sleeping Bag's bonus XP to the attunements and the class spells.
+- A dungeon run you finished before its guide could see you enter no longer leaves the guide stuck on its entry step.
+
+### Level-up banner
+
+- The level-up banner always closes by itself after 8 seconds, even with the cursor on it. With a controller the hidden cursor sits in the middle of the screen, so the banner used to stay up.
+
+### Vendors
+
+- **Junk and repairs.** At a vendor the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. Both can be turned off in Settings or the guide setup; hold Alt as you open the vendor to skip them once.
+- **A shopping card.** When a coming step needs something this vendor sells, a card lists it with one Buy button.
+- Selling and repairing now wait for the vendor window: in Forever it opens a moment after the vendor does, and the Codex used to give up before its first sale, so nothing was sold or repaired. `/codex debug` says what the last vendor visit did.
+- Grey items now sell: the Codex read item prices the old way, which Forever doesn't answer, so no grey had a price. The same fix brings back the coin on the best-selling quest reward and your bag items in the Enchanting tab's disenchanting list.
+
+### Stats and pace
+
+- **A Stats tab.** Headline tiles, your level splits as bars, gold earned and spent by source, activity and zones, for this session or for the character.
+- **Pace you can trust.** The This Level card reads your saved stats, so a /reload keeps the level's time and counts, with an XP bar showing your rested XP and your last levels. Kills are counted in every client language.
+
+### Routes
+
+- **Duskwood:** Seasoned Wolf Kabobs now shows on the Ira's Dagger hunt and in the spider woods, where its wolf flanks also drop.
+
+## v0.21.1
+
+### Alliance quest guide, levels 30-60
+
+- **The route now runs to 60.** About 35 new leveling guides follow on from the Wetlands:
+  - **30-40:** Darkshire, Southshore and Alterac, Refuge Pointe, Theramore and the Shimmering Flats, Desolace, Stranglethorn, the Swamp of Sorrows, Arathi and Aerie Peak, then Dustwallow.
+  - **40-50:** Desolace again, the Badlands, Stranglethorn and the Swamp, Tanaris, Feralas, the Hinterlands and Un'Goro.
+  - **50-60:** Booty Bay, the Searing Gorge, the Blasted Lands, the Plaguelands, Felwood, Feralas, Azshara, Un'Goro, Winterspring and the Burning Steppes, ending in Silithus and Moonglade.
+- **Alternate routes for every level.** Each level from 30 to 60 has at least three guides to choose from. They include Forever's **Riverglades** (Farholde Keep, then Sunnyglade and the Twilight's Shroud), **Shen'dralas**, early Stranglethorn, Theramore, the Searing Gorge, the Blasted Lands, Azshara, Winterspring and Silithus.
+- **Dungeon checklists for 30-60.** Each dungeon from the Scarlet Monastery to Stratholme has a checklist, including Forever's Krol'dok Stronghold.
+- **Class quests 30-60.** These include the Warrior Whirlwind weapon, the Paladin Tome of Nobility, the Warlock Felsteed and Orb of Orahil, Mage Celestial Power, and each class's Sunken Temple chain. Each dungeon checklist recommends itself to the classes whose chains need it.
+- **Attunement guides.** New guides cover the Drakefire Amulet (Onyxia), the Seal of Ascension (Upper Blackrock Spire), Attunement to the Core, the Key to Scholomance and the Shadowforge Key.
+- **Item notes.** Steps say what to buy and where: Soothing Spices, Elixir of Water Breathing, Thorium Bars and Fine Thread. They also say what to get from a crafter or the Auction House.
+- **Quest log clean-up.** At 30 and again in Booty Bay, the guide reminds you to drop grey dungeon quests you never ran.
+- The Quests tab now splits 30-60 into three level bands: 30-40, 40-50 and 50-60.
+
+### Horde quest guide, levels 30-60
+
+- **The Horde route now runs to 60.** 27 new leveling guides follow on from Thousand Needles:
+  - **30-40:** Tarren Mill, Alterac and Hammerfall, the Shimmering Flats, Desolace, Grom'gol and Nesingwary, Brackenwall Village, Alterac and Arathi again, then Kargath.
+  - **40-50:** Grom'gol, Stonard, Desolace, Gadgetzan and Brackenwall, Camp Mojache, Booty Bay and the southern jungle, the Swamp of Sorrows, Lost Rigger Cove, Revantusk Village, then Feralas and Un'Goro.
+  - **50-60:** the Blasted Lands, the Searing Gorge and Burning Steppes, Azshara, Felwood, Un'Goro, Winterspring, the Plaguelands (the Bulwark, Tirion Fordring, Darrowshire and Northdale), then Moonglade and Silithus, ending with Calm Before the Storm in Orgrimmar.
+- **Alternate routes for every level.** Each level from 30 to 60 has at least three guides to choose from, the main route included. The alternates include early Stranglethorn, Desolace or Dustwallow, the Badlands before Arathi, the Searing Gorge, the Blasted Lands and Un'Goro in the late 40s, and other orders through the 50s. Forever's **Riverglades** has three Horde routes from **Rog'mar**: the Plains, Bolder'ok and the Twilight's Shroud, and the Eastsea pirates out of Powderfuse Port. There is also a route through **Shen'dralas**. Each guide suggests where to go next.
+- **Horde dungeon guides for 30-60.** Every dungeon from Gnomeregan to Stratholme has a Horde guide with Horde quests and travel, before, inside and after the run. That includes Forever's Excavation Site, City of Dalaran and Krol'dok Stronghold. Uldaman is two runs, because Jarkal hands out the gem quest in between. The Horde reaches Gnomeregan through Scooty's transporter in Booty Bay.
+- **Horde attunements.** New guides cover Onyxia (from Warlord's Command to Blood of the Black Dragon Champion), the Seal of Ascension, Attunement to the Core, the Shadowforge Key and the Key to Scholomance.
+- **Horde class quests 30-60.** These include the Whirlwind weapon, Celestial Power, the Felsteed, the Orb of Orahil and Kroshius, Forever's shaman weapon chain (The Tempest's Weapons), Da Voodoo, and every class's Sunken Temple chain. Where the route already passes a class objective, such as the Bloodscalp tusks, the Twisted Totems or the Azshara errands, your class gets a step for it while the quest is in your log.
+- **Quest log clean-up.** At 30, 46 and 48 the guide reminds you to drop grey dungeon quests you never ran.
+
+### Leveling guides 1-30
+
+- **Fewer trips back and forth.** Every leveling guide from 1 to 30, Alliance and Horde, was checked for pickups taken only after you had walked past their objectives, and for hubs visited twice when once would do. Kharanos, Auberdine, Darnassus, Menethil Harbor, Lakeshire, Thunder Bluff, northern Durotar and the Sepulcher are now single passes. Darnassus alone drops from about 3,800 to 1,700 yards of walking.
+- **Quests the guides missed.** About 25 quests are now on the route, among them Uncovering the Past and Ormer's second hunt at the Wetlands dig, Daily Delivery, Report to Ironforge, One Shot. One Kill., Gerenzo's Orders, Stop the Spread, A New Ore Sample, The Weathered Grave, Traditions of the Bluff, and the Camping 101 gathering lessons. Group quests such as Chol'aruk and the Goaz Warder are optional.
+- **The Wetlands dig in one visit.** In the 20-25 Wetlands guide, Prospector Whelgar's Uncovering the Past is taken when you arrive, next to Merrin, and the fragments you pass on the way to the raptors count. Ormer's second hunt and the rest of the fragments share the dig.
+
+### Step window
+
 - **A cleaner step window.** Quest objectives are now a checklist under the step's instructions, each on its own line with its count on the right ("Mottled Raptor slain ... 2/10"); the count turns gold once you've started and a finished goal gets a green tick. Quests you can work on during the same trip sit under **ALSO ON THIS LOOP**, goals the route passed under **ON THE WAY**, and the next steps under **UP NEXT**, each with its own heading. A quest's place in its chain sits under the step's name, and warnings (full quest log, level too low, elites nearby) stand out in their own colours. The Quests tab's step card lists one objective per line too.
+
+### Fixes
+
+- **Eastern Plaguelands positions.** Forever redrew the Eastern Plaguelands map. The arrow pointed at the old spots for Tirion Fordring's hut, the Symbol of Lost Honor in Northdale and the Stratholme gate.
+- **Krol'dok Stronghold.** Entering it now opens its guide, and each boss is checked off when it dies.
+- A level 28 entering a zone that has a later chapter (Duskwood at 30, Hillsbrad at 30) no longer jumps into that chapter past the route's own next guide.
+- **Fly steps finished too early.** In many Horde guides and in the new 30-60 guides, a "Fly to" step counted as done as soon as you reached the flight master you leave from, so the flight map didn't mark the flight and auto-fly didn't take it. Every Fly step now stays current until you land.
+- **The 26-30 Wetlands guide after the 20-25 one** listed Howin's quests, Blisters on the Land, War Banners and more under Missed quests and sent you to Stormwind. It now starts at Howin.
+- **Assessing the Threat** in Redridge pointed at a camp with no Poachers. It now points at the south camp.
+- **Silverpine:** Wild Hearts and Wild Eyes had no hunting step, so the guide sent you to the turn-in empty-handed. Ivar the Foul now waits for Return to Quinn (Again).
+- **Moonglade (Alliance):** the guide named the druid-only flight point at Sindrayl instead of the Moonglade one.
 
 ## v0.20.1
 
