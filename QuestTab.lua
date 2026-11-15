@@ -79,6 +79,14 @@ local function show(key)
   U.refreshTop()
 end
 
+-- A guide's page (Guides), where Start this route switches to it: clicking a guide never switches
+-- by itself. `from` = the sub-tab its Back button returns to ("route" for Other routes).
+local pageFrom
+local function previewGuide(section, from)
+  sub, librarySection, pageFrom = "guides", section, from or "route"
+  U.refreshTop()
+end
+
 -- The current step's card, with the guide's completion bar under the step text.
 local function stepCard(row, y)
   local top = y
@@ -141,13 +149,37 @@ end
 -- Route
 ----------------------------------------------------------------------------
 
+-- The guide you're on, first thing on the Route sub-tab, so the other routes under it don't read
+-- as a choice you still have to make.
+local function followingCard(selected, current, y)
+  local on = current and current.section or selected
+  if not on then return y end
+  local top = y
+  y = y + 10
+  y = y + U.T("YOU ARE ON THIS ROUTE", 16, y, W - 32, "label", C.inkSoft) + 4
+  y = y + U.T(Q.plain(on.title), 16, y, W - 32, "head", C.ink) + 2
+  local info = on.levels and ("Levels " .. on.levels[1] .. "-" .. on.levels[2]) or ""
+  local passed, total = Q.stepProgress(on)
+  if total > 0 then info = info .. (info ~= "" and ", " or "") .. math.floor(passed * 100 / total) .. "% done" end
+  if on ~= selected and selected then info = info .. ". Your leveling route: " .. Q.plain(selected.title) end
+  if info ~= "" then y = y + U.T(info, 16, y, W - 32, "small", C.inkSoft) + 2 end
+  y = y + 8
+  U.box(0, top, W, y - top, C.parch, C.edge)
+  return y + 12
+end
+
 local function renderRoute(rows, selected, current, y)
-  -- Other routes for your level (alternates and the next zone), above this guide's steps.
+  y = followingCard(selected, current, y)
+  -- Other routes for your level (alternates and the next zone): each opens its page, where
+  -- Start this route switches to it.
   local choices = Q.suggestions(true)
-  if #choices > 0 then y = y + U.T("ROUTE OPTIONS FOR YOUR LEVEL", 0, y, W, "label", C.gold) + 6 end
+  if #choices > 0 then
+    y = y + U.T("OTHER ROUTES FOR YOUR LEVEL", 0, y, W, "label", C.gold) + 4
+    y = y + U.T("Preview one to see its steps; Start this route on its page switches to it.", 0, y, W, "small", C.dim) + 6
+  end
   for _, suggested in ipairs(choices) do
-    U.btn("Try " .. suggested.title, 0, y, W, function() ns.followSuggestedQuestSection(suggested) end, false,
-      "Follow this section and resume a quest there if you have one.")
+    U.btn("Preview " .. suggested.title, 0, y, W, function() previewGuide(suggested) end, false,
+      "See this route's steps. You stay on your current route until you start it.")
     y = y + 34
   end
   if #choices > 0 then y = y + 6 end
@@ -189,15 +221,31 @@ local function followGuide(section, phase)
 end
 
 local function showGuide(section)
-  librarySection = section
+  librarySection, pageFrom = section, nil
+  U.refreshTop()
+end
+
+-- Start this route / Start this guide: switch, say so, and show the route you're now on.
+local function startGuide(section)
+  local before = Q.current()
+  Q.jump(section)
+  ns.showQuestViewer()
+  local now = Q.current()
+  if now and now.section == section then
+    if not (before and before.section == section) then ns.say("Now following " .. Q.plain(section.title) .. ".") end
+    sub, librarySection, pageFrom = "route", nil, nil
+  end
   U.refreshTop()
 end
 
 local function renderLibrarySection(rows, section, y)
-  U.btn("Back to guides", 0, y, 160, function()
+  local back = pageFrom == "route"
+  U.btn(back and "Back to the route" or "Back to guides", 0, y, 160, function()
     librarySection = nil
+    if back then sub = "route" end
+    pageFrom = nil
     U.refreshTop()
-  end, false, "Back to the list of guides.")
+  end, false, back and "Back to the route you're on." or "Back to the list of guides.")
   y = y + 34
   y = y + U.sectionTitle(section.title, y)
   y = y + U.T(sectionInfo(section), 0, y, W, "small", C.dim) + 4
@@ -205,8 +253,25 @@ local function renderLibrarySection(rows, section, y)
   y = y + 4
   local col = math.floor((W - 16) / 3)
   local minimum = Q.guideMinimum(section)
+  local current = Q.current()
   if minimum then
     U.T("Available at level " .. minimum, 0, y + 4, W, "body", C.dim)
+  elseif not section.category then
+    -- A leveling route or class guide: nothing switches until you press Start.
+    local route = not section.side
+    if current and current.section == section then
+      U.T(route and "You are on this route." or "You are following this guide.", 0, y + 4, W - 376, "body", C.gold)
+      U.btn("First open step", W - 368, y, 200, function() startGuide(section) end, false,
+        "Go back to the first step of this " .. (route and "route" or "guide") .. " you haven't done (after Back or a skip).")
+      U.btn("See your step", W - 160, y, 160, function() show("step") end, false, "The step you're on, under Step.")
+    else
+      local label = route and "Start this route" or "Start this guide"
+      U.btn(label, 0, y, 200, function() startGuide(section) end, true,
+        "Move the step window and arrow to this " .. (route and "route" or "guide") .. ".")
+      local now = current and current.section
+      U.T(now and ("You are on " .. Q.plain(now.title) .. " until you start this one.")
+        or "Start it to follow it in the step window.", 212, y + 4, W - 212, "small", C.dim)
+    end
   else
     U.btn("Follow this guide", 0, y, col, function() followGuide(section) end)
   end
@@ -300,10 +365,8 @@ local function guideRows(y, list, suggestedSet)
   for _, section in ipairs(list) do
     local status, done, total = Q.sectionStatus(section, suggestedSet)
     y = guideRow(y, section, status, done, total, guideTag(section, status, done, total), function()
-      sub = "route"
-      Q.jump(section)
-      ns.showQuestViewer()
-    end, "Follow this section in the step window.")
+      showGuide(section)
+    end, status == "current" and "The route you are on: see its steps." or "See its steps; Start on its page switches to it.")
   end
   return y
 end
@@ -851,7 +914,7 @@ local function render()
   local fifth = (W - 32) / #SUBS
   for i, s in ipairs(SUBS) do
     U.btn(s[2], (i - 1) * (fifth + 8), y, fifth, function()
-      if s[1] == "guides" and sub == "guides" then librarySection = nil end
+      if s[1] == "guides" and (sub == "guides" or pageFrom == "route") then librarySection, pageFrom = nil, nil end
       show(s[1])
     end, sub == s[1])
   end
@@ -884,7 +947,7 @@ function ns.openQuestRoute()
 end
 
 function ns.openQuestGuide(section)
-  sub, librarySection, query, draft = "guides", section, "", ""
+  sub, librarySection, query, draft, pageFrom = "guides", section, "", "", nil
   ns.openTab("quests")
   U.refreshTop()
 end

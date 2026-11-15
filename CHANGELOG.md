@@ -17,6 +17,8 @@
 
 ### Fixes
 
+- **Picking a route asks first.** Clicking a guide under Quests > Guides used to switch to it at once, with nothing to say so. It now opens the guide's page, and **Start this route** switches to it and says so in chat. The Route tab starts with a **You are on this route** card, and the other routes for your level are now **Preview** buttons below it, so they no longer look like a choice you still have to make.
+- **The quest log clean-up note stays read.** The note at the start of a band (Tarren Mill, Alterac and Hammerfall and the others) came back after every /reload or login until you pressed Next again. Next now keeps it passed, and it also counts as passed once you've done a later step of that guide.
 - **No flying straight back.** The arrow could send you to a flight point in the next zone to walk the rest (Darkshire to Sentinel Hill for Sven's Camp), then tell you to fly back once you landed. It now points on to the step, with its distance across the zone border.
 - **Eastern Plaguelands positions.** Forever redrew the Eastern Plaguelands map. The arrow pointed at the old spots for Tirion Fordring's hut, the Symbol of Lost Honor in Northdale and the Stratholme gate.
 - **Krol'dok Stronghold.** Entering it now opens its guide, and each boss is checked off when it dies.

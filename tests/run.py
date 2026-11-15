@@ -1050,6 +1050,7 @@ def main():
                              "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questWetlandsEarly", "questRouteEnd", "questStranglethornRoad", "questWetlandsDig", "questStepChecklist", "questWetlandsAfterEarly", "questNoCheckNotes",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
                              "questStartHordeOrc", "questStartHordeTroll", "questStartHordeTauren", "questStartHordeScourge", "questStartHordeSkyborne", "questHordeSkyborne", "questHordeBarrens", "questHordeSilverpine", "questHordeStranglethorn", "questHordeRouteEnd", "questHordeDungeon",
+                             "questRoutePick", "questNoteOnce", "questNoteSaved", "questNoteLater",
                              "questClassSide", "questClassCatchup", "questWestfallDeed", "questQuarryKeg",
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",

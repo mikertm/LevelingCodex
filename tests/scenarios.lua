@@ -104,10 +104,14 @@ local function stepTool(name)
   return click(win(), name)
 end
 
+-- Opens a guide's page and, for a leveling route or class guide, presses Start on it (a guide row
+-- only opens its page). Dungeon and special pages are left open for their own buttons.
 local function clickGuide(name)
   local b = guideButton(name)
   check(b, "no guide button '" .. name .. "'", 2)
   b:Click()
+  local start = findButton(win(), function(l) return l == "Start this route" or l == "Start this guide" end)
+  if start then start:Click() end
 end
 
 function S.questStart()
@@ -3773,6 +3777,8 @@ function S.questDuskwoodZoneEntry()
   -- Select the section so its return-to-town step is current before turning in.
   slash("quests")
   clickGuide("Lakeshire")
+  check(questText(win(), "You are on this route."), "Lakeshire's page says you're on it")
+  click(win(), "First open step")
   check(questText(frame, "Return to Lakeshire"), "the guide is still on the Lakeshire hearth step")
 
   MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 77.7, 44.4
@@ -4190,6 +4196,91 @@ function S.questHordeStranglethorn()
     "a level 36 Troll at Grom'gol follows the Horde Stranglethorn chapter")
   click(frame, "Next")
   check(questText(frame, "Stranglethorn") and questText(frame, "Levels 35-37"), "Next stays in the chapter")
+  MOCK.faction = nil
+end
+
+-- Player feedback: clicking a route switched to it without a word, and the Route sub-tab then led
+-- with other routes, so it didn't look like you were on the one you picked.
+function S.questRoutePick()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Levels 11-18"), "the Dwarf starts on Loch Modan")
+  slash("quests")
+  check(questText(win(), "YOU ARE ON THIS ROUTE"), "the Route sub-tab names the route you're on first")
+  local row = guideButton("Darkshore")
+  check(row, "Darkshore is listed under Guides", 2)
+  row:Click()
+  check(not questText(frame, "Levels 12-20"), "clicking a guide row doesn't switch routes")
+  check(findButton(win(), function(l) return l == "Start this route" end), "its page offers Start this route")
+  check(questText(win(), "until you start this one"), "the page says which route you stay on")
+  click(win(), "Start this route")
+  check(questText(frame, "Levels 12-20"), "Start this route switches the step window")
+  check(chatHas("Now following Darkshore"), "starting a route says so in chat")
+  check(questText(win(), "YOU ARE ON THIS ROUTE") and findButton(win(), function(l) return l == "Show all steps" end),
+    "Start shows the Route sub-tab of the new route")
+  clickGuide("Darkshore")
+  check(questText(win(), "You are on this route."), "the page of the route you're on says so")
+  click(win(), "Route")
+  local preview = findButton(win(), function(l) return l:find("^Preview ") ~= nil end)
+  if preview then
+    preview:Click()
+    check(questText(frame, "Levels 12-20"), "previewing another route keeps you on yours")
+    click(win(), "Back to the route")
+    check(questText(win(), "YOU ARE ON THIS ROUTE"), "Back returns to the Route sub-tab")
+  end
+end
+
+local function hillsbradNote()
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "hillsbrad-30" then
+      for n, step in ipairs(section.steps) do
+        if step.type == "note" then return section, n, step end
+      end
+    end
+  end
+end
+
+-- Player feedback: Tarren Mill's quest log clean-up note came back after every /reload until Next.
+function S.questNoteOnce()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 30, 1441
+  S.login()
+  slash("quests")
+  clickGuide("Tarren Mill, Alterac and Hammerfall")
+  local frame = questViewer()
+  check(questText(frame, "Clean out your quest log"), "Tarren Mill starts with the clean-up note")
+  click(frame, "Next")
+  check(not questText(frame, "Clean out your quest log"), "Next passes the note")
+  local saved = false
+  for key in pairs(LevelingCodexCharDB.questSkips or {}) do
+    if key:find("^hillsbrad%-30:note:") then saved = true end
+  end
+  check(saved, "the passed note is kept with the character's skips")
+  MOCK.faction = nil
+end
+
+-- After a reload: a note passed with Next (saved) stays passed.
+function S.questNoteSaved()
+  local _, n = hillsbradNote()
+  check(n, "hillsbrad-30 has a note step", 2)
+  LevelingCodexCharDB = { questSkips = { ["hillsbrad-30:note:" .. n .. ":1"] = true } }
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 30, 1441
+  S.login()
+  slash("quests")
+  clickGuide("Tarren Mill, Alterac and Hammerfall")
+  check(not questText(questViewer(), "Clean out your quest log"), "a saved note doesn't come back after a reload")
+  MOCK.faction = nil
+end
+
+-- Without SavedVariables: a later step of the chapter the game finished passes the note too.
+function S.questNoteLater()
+  MOCK.faction, MOCK.race, MOCK.level, MOCK.questMap = "Horde", "Orc", 30, 1441
+  MOCK.questDone[1145] = true
+  S.login()
+  slash("quests")
+  clickGuide("Tarren Mill, Alterac and Hammerfall")
+  check(not questText(questViewer(), "Clean out your quest log"),
+    "the note is passed once a later quest of the chapter is turned in")
   MOCK.faction = nil
 end
 
@@ -4854,7 +4945,7 @@ function S.questAlternateRoutes()
   check(questText(frame, "Accept - Thelsamar Blood Sausages"), "Loch Modan starts with a Thelsamar pickup")
   check(not LevelingCodexCharDB.questFlights["Thelsamar, Loch Modan"], "skipping does not record a flight path as learned")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Try Darkshore" end), "other suitable routes are offered away from checkpoints")
+  check(findButton(win(), function(label) return label == "Preview Darkshore" end), "other suitable routes are offered away from checkpoints")
   clickGuide("Darkshore")
   check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
   MOCK.questMap = 1439
@@ -4951,8 +5042,10 @@ function S.questWestfallDetour()
   local frame = questViewer()
   check(findButton(frame, function(label) return label == "Try Loch Modan" end), "the step window offers a detour")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Try Loch Modan" end), "Westfall offers Loch Modan")
-  click(win(), "Try Darkshore")
+  check(findButton(win(), function(label) return label == "Preview Loch Modan" end), "Westfall offers Loch Modan")
+  click(win(), "Preview Darkshore")
+  check(not questText(frame, "Levels 12-20"), "previewing a route doesn't switch to it")
+  click(win(), "Start this route")
   check((questText(frame, "Darkshore") and questText(frame, "Levels 12-20")), "Westfall also offers quest XP through Darkshore")
 end
 

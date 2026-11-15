@@ -627,6 +627,11 @@ local function state(row, skips, blockedQuests, later, map, x, y)
       if row.section.category and s.type ~= "accept" then return "blocked" end
     end
   end
+  -- A note (the quest log clean-ups at the start of a band) is read once: Next keeps it passed
+  -- (saved with the skips), and so does a later step of its section the game has finished, so a
+  -- reload without SavedVariables doesn't put it back in front of you either. A note gated on a
+  -- quest (ifDone, ifOnQuest) only shows up when that happens, so a later step doesn't pass it.
+  if s.type == "note" and (skips[row.key] or (later and not s.ifDone and not s.ifOnQuest)) then return "done" end
   if skips[row.key] then return "skipped" end
   -- Already in the section's zone: the way there no longer applies.
   if row.leadIn and not visited[row.key] and map == row.section.zone then
@@ -1739,7 +1744,8 @@ function Q.next()
     Q.setElite(row.step.eliteQuest, false) -- Next on an elite quest skips it and the quests that need it
     ns.say(Q.plain((row.step.name or "The quest") .. " is skipped (" .. (row.step.elite or "an elite")
       .. " is elite). Back asks again."))
-  elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth" then
+  elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth"
+      or row.step.type == "note" then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key] = true
   else
