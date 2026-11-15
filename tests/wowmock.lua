@@ -725,17 +725,20 @@ function Anim:GetStartDelay() return self._delay end
 ----------------------------------------------------------------------------
 
 -- PlayerModel (the step window's portrait): SetCreature records `_creature` (and counts `_asked`),
--- SetUnit `_unit`; GetModelFileID is 123 once "loaded", nil with MOCK.modelFails (a unit's model
--- always loads). The minimal client has no PlayerModel frame type.
+-- SetUnit `_unit`. Like the client, a creature that hasn't loaded (MOCK.modelFails) leaves the
+-- model it showed before on screen: `_shows` is the creature drawn, and GetModelFileID reports that
+-- model's file (nil only once ClearModel emptied it). A unit's model always loads. The minimal
+-- client has no PlayerModel frame type.
 local PlayerModel = setmetatable({}, { __index = Frame })
 PlayerModel.__index = PlayerModel
 function PlayerModel:SetCreature(id) self._creature, self._unit = id, nil; self._asked = (self._asked or 0) + 1 end
-function PlayerModel:SetUnit(unit) self._unit = unit end
-function PlayerModel:ClearModel() self._creature, self._unit = nil, nil end
+function PlayerModel:SetUnit(unit) self._unit, self._shows = unit, "unit:" .. unit end
+function PlayerModel:ClearModel() self._creature, self._unit, self._shows = nil, nil, nil end
 function PlayerModel:SetPortraitZoom(z) self._zoom = z end
 function PlayerModel:SetCamera(c) self._camera = c end
 function PlayerModel:GetModelFileID()
-  if self._unit or (self._creature and not MOCK.modelFails) then return 123 end
+  if not self._unit and self._creature and not MOCK.modelFails then self._shows = self._creature end
+  if self._shows then return 123 end
 end
 
 local CLASSES = { Frame = Frame, Button = Button, ScrollFrame = ScrollFrame, EditBox = EditBox, Slider = Slider,
@@ -1237,7 +1240,7 @@ MOCK.knownSpells = {}
 function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 
 -- Your target's GUID ("Creature-0-1-2-3-<npcID>-<spawn>"): MOCK.targetGUID.
-function UnitGUID(unit) if unit == "target" then return MOCK.targetGUID end end
+function UnitGUID(unit) if unit == "target" then return MOCK.targetGUID elseif unit == "npc" then return MOCK.npcGUID end end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
