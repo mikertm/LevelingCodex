@@ -110,8 +110,14 @@ C_ChatInfo = {
   end,
 }
 function SendChatMessage(text, channel)
+  if #text > 255 then error("SendChatMessage: over 255 bytes", 2) end
   MOCK.said = MOCK.said or {}
   table.insert(MOCK.said, { text = text, channel = channel })
+end
+function GetQuestLink(id) return MOCK.questLinks and MOCK.questLinks[id] end
+function ChatFrameAddMessageEventFilter(event, filter)
+  MOCK.chatFilters = MOCK.chatFilters or {}
+  MOCK.chatFilters[event] = filter
 end
 function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
 -- The world map: OpenWorldMap records the map it opened.
@@ -1648,7 +1654,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
-  "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
+  "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 
 function MOCK.setup(opts)

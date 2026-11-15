@@ -1,6 +1,11 @@
 # Leveling Codex
 
-## Unreleased
+## v0.26.0
+
+### Quest chat announcements
+
+- Quest announcements use a recognizable chat marker, native quest and item links when available, clear progress counts, and distinct accepted, objective-complete, ready-to-turn-in and turned-in messages. Codex clients display a badge and colored status icons. A private preview is available in Settings and Quests > Party.
+- Existing opt-in switches, message throttling, raid exclusion and Questie duplicate suppression remain in effect.
 
 ### Quest guide buttons
 

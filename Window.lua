@@ -1264,13 +1264,15 @@ renderers.settings = function()
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
   tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
-    "Off by default. When the game finishes a step of your guide (not Next or Back), party chat gets \"Codex: Done - Accept - A Threat Within\".")
+    "Off by default. Icons and clickable quest links mark accepted quests, finished objectives and turn-ins. Next and Back stay quiet.")
   tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
-    "Off by default. Each quest item you loot goes to party chat with your count, \"Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)\", and so does an item that starts a quest of your guide.")
+    "Off by default. Quest loot goes to party chat with your progress count and quest link. An item that starts a quest includes its item link when available.")
   tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
-    "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
+    "Off by default. Finished objectives and quests ready to turn in use distinct status messages and quest links. At most a line a second, never in a raid.")
   tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
     "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+  btn("Preview quest announcements", 0, y, 260, ns.previewQuestAnnouncements, false, "Show sample icons, links and progress privately. Nothing is sent to the party.")
+  y = y + 28
   -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
   T("Ping sound", 0, y + 5, 110, "body", C.ink)
   local pingLabels, pingTips = {}, {

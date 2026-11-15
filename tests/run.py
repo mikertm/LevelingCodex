@@ -1076,7 +1076,8 @@ def main():
                              "questEliteChain", "questEliteFresh", "questSovikDungeon", "questSovikRoute", "questSovikWithoutRigWars",
                              "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",
                              "questHearthModernCooldown", "questFlightRouteInitialization", "questCompletedSet",
-                             "questDungeonPreparation", "questDungeonIncompletePreparation"):
+                             "questDungeonPreparation", "questDungeonIncompletePreparation", "questPartyPolishedChat",
+                             "questPartyAnnouncementPreview", "questPartyAnnouncementBudget", "questPartyQuestieAnnounce"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
@@ -1088,6 +1089,8 @@ def main():
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/warrior-macros" % variant, "WARRIOR", minimal, ["login", "warriorPackMacros"]))
         runs.append(("WARRIOR/%s/talent-path-api" % variant, "WARRIOR", minimal, ["login", "talentPathApi"]))
+        if minimal:
+            runs.append(("WARRIOR/minimal/quest-announcement-preview", "WARRIOR", True, ["questPartyAnnouncementPreview"]))
         if not minimal:
             for cls in ("DRUID", UNSUPPORTED):
                 runs.append(("%s/full/talent-path-api" % cls, cls, False, ["login", "talentPathApi"]))

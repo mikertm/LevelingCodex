@@ -918,7 +918,7 @@ local function renderParty(y)
     { "Say my flights in party chat", db.questAnnounceFlights, toggle("questAnnounceFlights"),
       "Taking a flight says where you're flying in party chat." },
     { "Say steps I finish in party chat", db.questAnnounceSteps, toggle("questAnnounceSteps"),
-      "When the game finishes a step of your guide, party chat gets \"Codex: Done - <step>\"." },
+      "Accepted quests, finished objectives and turn-ins use distinct messages, icons and quest links. Next and Back stay quiet." },
     { "Say quest items I pick up", db.questAnnounceItems, toggle("questAnnounceItems"),
       "Each quest item you loot goes to party chat with your count." },
     { "Say quest progress in party chat", db.questAnnounceProgress, toggle("questAnnounceProgress"),
@@ -930,6 +930,9 @@ local function renderParty(y)
     U.check(c[1], 0, y, c[2], c[3], c[4])
     y = y + 28
   end
+  U.btn("Preview quest announcements", 0, y, W, ns.previewQuestAnnouncements, false,
+    "See the badge, status icons and clickable links privately; no party messages are sent.")
+  y = y + 30
   return y
 end
 

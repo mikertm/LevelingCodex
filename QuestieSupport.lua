@@ -28,7 +28,8 @@ end
 
 -- Questie's own party chat lines: "objectives" (an objective finished) or "items" (an item that
 -- starts a quest), said in a party when its announce channel is "party" or "both" and it isn't shut up.
-local ANNOUNCE = { objectives = "questAnnounceObjectives", items = "questAnnounceItems" }
+local ANNOUNCE = { objectives = "questAnnounceObjectives", items = "questAnnounceItems",
+  accepted = "questAnnounceAccepted", turnedIn = "questAnnounceCompleted" }
 
 function M.announces(kind)
   local p = profile()

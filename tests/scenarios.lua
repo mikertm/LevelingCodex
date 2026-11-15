@@ -2242,7 +2242,7 @@ function S.questParty()
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   TakeTaxiNode(2)
   local said = MOCK.said and MOCK.said[#MOCK.said]
-  check(said and said.text == "Flying to Lakeshire." and said.channel == "PARTY", "the flight is said in party chat")
+  check(said and said.text == "{rt6} Codex: Flying to: Lakeshire." and said.channel == "PARTY", "the flight is said in party chat")
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(not questText(frame, "Ann:"), "leaving the party clears the party's steps")
@@ -2471,28 +2471,28 @@ function S.questPartyChat()
   check(LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress, "Settings turns them on")
   check(not MOCK.said, "nothing for what was already in your log")
   set(meat, 4)
-  check(said("Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)") == 1, "a quest item you pick up is said in party chat")
+  check(said("{rt6} Codex: Loot: Tough Wolf Meat: 4/8 - [Wolves Across the Border]") == 1, "a quest item you pick up is said in party chat")
   set(meat, 5)
   set(meat, 6)
   check(#MOCK.said == 1, "a line a second at most")
   MOCK.advance(1.1)
-  check(#MOCK.said == 2 and said("Codex: Tough Wolf Meat: 6/8 (Wolves Across the Border)") == 1,
+  check(#MOCK.said == 2 and said("{rt6} Codex: Loot: Tough Wolf Meat: 6/8 - [Wolves Across the Border]") == 1,
     "a newer count replaces the waiting one")
   set(worker, 5)
   MOCK.advance(1.1)
   check(#MOCK.said == 2, "kills are said when the objective is finished, not each one")
   set(vermin, 10)
   MOCK.advance(1.1)
-  check(said("Codex: Kobold Vermin slain: 10/10 (Kobold Camp Cleanup)") == 1, "a finished objective")
+  check(said("{rt6} Codex: Objective complete: Kobold Vermin slain: 10/10 - [Kobold Camp Cleanup]") == 1, "a finished objective")
   set(worker, 10)
   MOCK.advance(1.1)
-  check(said("Codex: Kobold Camp Cleanup is ready to turn in.") == 1
-    and said("Codex: Kobold Worker slain: 10/10 (Kobold Camp Cleanup)") == 0, "the last objective says the quest is ready instead")
+  check(said("{rt6} Codex: Ready to turn in: [Kobold Camp Cleanup]") == 1
+    and said("{rt6} Codex: Objective complete: Kobold Worker slain: 10/10 - [Kobold Camp Cleanup]") == 0, "the last objective says the quest is ready instead")
   MOCK.bagItems = { { id = 1307, name = "Gold Pickup Schedule", level = 1, quality = 1 } }
   MOCK.bags[1307] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
   MOCK.advance(1.1)
-  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1, "a route item that starts a quest")
+  check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1, "a route item that starts a quest")
   -- Questie says finished objectives and quest-starting items itself: the Codex leaves those to it.
   MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
   MOCK.bags[1307] = 0
@@ -2506,15 +2506,15 @@ function S.questPartyChat()
   MOCK.advance(1.1)
   set(bandana, 6)
   MOCK.advance(1.1)
-  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1
-    and said("Codex: Defias Thug slain: 10/10 (Brotherhood of Thieves)") == 0, "what Questie says is left to it")
-  check(said("Codex: Red Burlap Bandana: 6/12 (Brotherhood of Thieves)") == 1, "item counts still go out")
+  check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1
+    and said("{rt6} Codex: Objective complete: Defias Thug slain: 10/10 - [Brotherhood of Thieves]") == 0, "what Questie says is left to it")
+  check(said("{rt6} Codex: Loot: Red Burlap Bandana: 6/12 - [Brotherhood of Thieves]") == 1, "item counts still go out")
   click(win(), "Settings")
   check(questText(win(), "leaves those to Questie"), "Settings says so")
   MOCK.raid = true
   set(bandana, 7)
   MOCK.advance(1.1)
-  check(said("Codex: Red Burlap Bandana: 7/12 (Brotherhood of Thieves)") == 0, "nothing in a raid")
+  check(said("{rt6} Codex: Loot: Red Burlap Bandana: 7/12 - [Brotherhood of Thieves]") == 0, "nothing in a raid")
 end
 
 -- Settings > Say steps I finish in party chat: a step the game finished (not Next or Back) goes out
@@ -2531,19 +2531,99 @@ function S.questPartyChatSteps()
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.event("QUEST_LOG_UPDATE")
   local last = MOCK.said and MOCK.said[#MOCK.said]
-  check(last and last.text == "Codex: Done - Accept - A Threat Within" and last.channel == "PARTY", "a step the game finished is said")
+  check(last and last.text == "{rt6} Codex: Accepted: [A Threat Within]" and last.channel == "PARTY", "a step the game finished is said")
   MOCK.advance(1.1)
   MOCK.questLog = {}
   MOCK.questDone[783] = true
   MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
   MOCK.event("QUEST_LOG_UPDATE")
   last = MOCK.said[#MOCK.said]
-  check(last.text == "Codex: Done - Turn in - A Threat Within", "and the next one")
+  check(last.text == "{rt6} Codex: Turned in: [A Threat Within]", "and the next one")
   local n = #MOCK.said
   MOCK.advance(1.1)
   click(frame, "Next")
   MOCK.advance(1.1)
   check(#MOCK.said == n, "Next isn't a finished step")
+end
+
+function S.questPartyPolishedChat()
+  MOCK.party = true
+  MOCK.questLinks = { [783] = "|cffffff00|Hquest:783:1|h[A Threat Within]|h|r" }
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  local line = MOCK.said and MOCK.said[#MOCK.said]
+  check(line and line.text:find("{rt6} Codex: Accepted:", 1, true), "accepted quests have a recognizable marker and status")
+  check(line.text:find("|Hquest:783:1|h[A Threat Within]|h", 1, true), "party announcements preserve the native clickable quest link")
+  check(not line.text:find("|T", 1, true), "party transport contains no custom texture escapes")
+  local filter = MOCK.chatFilters and MOCK.chatFilters.CHAT_MSG_PARTY
+  check(filter, "party chat has a local visual filter")
+  local blocked, display, author, language = filter(nil, "CHAT_MSG_PARTY", line.text, "Ann", "enUS")
+  check(blocked == false and author == "Ann" and language == "enUS", "visual formatting preserves the chat sender and metadata")
+  check(display:find("|T", 1, true) and display:find("|cff", 1, true), "Codex clients render a badge and colored status")
+  check(display:find("|TInterface\\GossipFrame\\AvailableQuestIcon:14:14|t", 1, true),
+    "status icons retain their full Blizzard texture path")
+  check(display:find("|Hquest:783:1|h[A Threat Within]|h", 1, true), "visual filter preserves quest links")
+  check(filter(nil, "CHAT_MSG_PARTY", "A normal party message", "Ann") == nil, "other party messages are untouched")
+  MOCK.advance(1.1)
+  MOCK.questLinks[783], MOCK.questLog, MOCK.questDone[783] = nil, {}, true
+  MOCK.event("QUEST_TURNED_IN", 783)
+  local turnedIn = MOCK.said[#MOCK.said].text
+  check(turnedIn:find("Turned in:", 1, true) and turnedIn:find("|Hquest:783:1|h", 1, true),
+    "turn-in announcements retain the known native link after the quest leaves the log")
+  local _, finished = filter(nil, "CHAT_MSG_PARTY", turnedIn, "Ann")
+  check(finished:find("ReadyCheck-Ready", 1, true), "turned-in quests use a completion check rather than a ready question mark")
+end
+
+function S.questPartyAnnouncementPreview()
+  S.login()
+  slash("")
+  click(win(), "Settings")
+  local before = #MOCK.chat
+  click(win(), "Preview quest announcements")
+  check(not MOCK.said, "preview never sends a party message")
+  check(#MOCK.chat >= before + 5, "preview shows several announcement states privately")
+  check(chatHas("|T"), "private previews use the same graphical presentation")
+  slash("quests")
+  click(win(), "Party")
+  click(win(), "Preview quest announcements")
+  check(not MOCK.said, "Party tab preview is also private while solo")
+end
+
+function S.questPartyAnnouncementBudget()
+  MOCK.party = true
+  MOCK.questLinks = { [783] = "|cffffff00|Hquest:783:1" .. string.rep(":0", 150)
+    .. "|h[" .. string.rep("Long quest title ", 30) .. "]|h|r" }
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = string.rep("Long quest title ", 30) } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  local line = MOCK.said and MOCK.said[#MOCK.said]
+  check(line and #line.text <= 255, "long announcements fit the chat byte limit")
+  check(line.text:find("{rt6} Codex: Accepted:", 1, true), "long messages retain their status and marker")
+  if line.text:find("|H", 1, true) then
+    check(line.text:match("|Hquest:[^|]+|h%b[]|h"), "length limiting never cuts a native link in half")
+  end
+end
+
+function S.questPartyQuestieAnnounce()
+  MOCK.party = true
+  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  Questie.db.profile.questAnnounceAccepted = true
+  Questie.db.profile.questAnnounceCompleted = true
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  check(not MOCK.said, "Questie handles its enabled accepted-quest announcement")
+  MOCK.advance(1.1)
+  MOCK.questLog, MOCK.questDone[783] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 783)
+  check(not MOCK.said, "Questie handles its enabled quest turn-in announcement")
 end
 
 -- Trips through flight masters (QuestTravel.lua): the arrow leads to a flight master when flying
@@ -2594,7 +2674,7 @@ function S.questPartyGoal()
   MOCK.advance(1.1)
   local lines = {}
   for _, m in ipairs(MOCK.said or {}) do lines[#lines + 1] = m.text end
-  check(#lines == 1 and lines[1] == "Codex: A Baying of Gnolls is ready to turn in.",
+  check(#lines == 1 and lines[1] == "{rt6} Codex: Ready to turn in: [A Baying of Gnolls]",
     "one line for the finished kill step: " .. table.concat(lines, " | "))
 end
 
