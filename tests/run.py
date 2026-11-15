@@ -1069,7 +1069,10 @@ def main():
                              "questArrowTimes", "questTracker", "questSetup", "questPreviewAhead", "questDanger", "questParty", "questPartySync", "questPartyGoal", "questPartyChat", "questPartyChatSteps", "questPartyHeartbeat", "questPartyTab", "questPartyShare", "questPartyCatchUp",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",
-                             "questEliteChain", "questEliteFresh"):
+                             "questEliteChain", "questEliteFresh", "questSovikDungeon", "questSovikRoute", "questSovikWithoutRigWars",
+                             "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",
+                             "questHearthModernCooldown", "questFlightRouteInitialization", "questCompletedSet",
+                             "questDungeonPreparation", "questDungeonIncompletePreparation"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),

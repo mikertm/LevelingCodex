@@ -301,8 +301,9 @@ do
       "Hidden Chamber explored"),
     objective(1360, nil, "Krom's chest is in the North Common Hall, past Ironaya.", "Krom Stoutarm's Treasure"),
     withItem(7666, accept(2198, nil, "If a Shattered Necklace drops, use it.")),
-    accept(2278, nil, "After Archaedas, speak to the stone watcher and use the Discs of Norgannon."),
-    finish(2278, nil, "Activate the Discs of Norgannon."),
+    accept(2278, nil, "After Archaedas, click the Discs of Norgannon in the treasure chamber to accept the quest."),
+    objective(2278, nil, "Talk to the Lore Keeper of Norgannon and continue through every dialogue page until the objective completes.", "Stone watcher's lore"),
+    finish(2278, nil, "Click the Discs of Norgannon again, then take their next quest before leaving the chamber."),
     accept(2279, nil, "Take the miniature discs for the Explorers' League."),
   }, {
     finish(723, ryedol, "Ride to Ryedol's camp in the Badlands."), accept(724, ryedol),
@@ -439,7 +440,7 @@ do
     objective(2865, nil, "Open the scarab-filled sand mounds and kill the scarabs for shells.", "5 Uncracked Scarab Shells"),
     objective(3527, nil, "Loot one tablet from Theka the Martyr and the other from Hydromancer Velratha.", "First Mosh'aru Tablet", "Second Mosh'aru Tablet"),
     objective(2846, nil, "Velratha carries the Tiara of the Deep.", "Tiara of the Deep"),
-    objective(2768, nil, "After the pyramid event, kill Sergeant Bly and loot the Divino-matic Rod.", "Divino-matic Rod"),
+    objective(2768, nil, "After the pyramid event, recover with the group, then talk to Sergeant Bly and demand the Divino-matic Rod to make him hostile. Kill him and loot the rod.", "Divino-matic Rod"),
     objective(2991, nil, "Nekrum Gutchewer drops his medallion at the end of the pyramid event.", "Nekrum's Medallion"),
     uncertain(objective(2770, nil, "Ring the gong at Velratha's pool with the Mallet of Zul'Farrak and kill Gahz'rilla.", "Gahz'rilla's Electrified Scale"),
       "The Mallet comes from a separate Hinterlands quest; skip this one without it."),
@@ -501,12 +502,12 @@ do
       "Enter the cave in the Valley of Spears. Purple (left) leads to Vyletongue, orange (right) to Noxxion; both join the inner falls."),
   }, {
     objective(7070, nil, "Shadowshard smashers and rumblers on both outer sides drop the fragments.", "10 Shadowshard Fragments"),
-    objective(7067, nil, "Kill the Kolkar khan spirits along the outer paths and loot their amulet pieces, then combine them.", "Amulet of Union"),
+    withItem(17757, objective(7067, nil, "Kill the Nameless Prophet in the outer caves for the Amulet of Spirits. Use it on each khan spirit to make it attackable: three are in the outer caves and two inside the instance, one on each wing. Kill all five, loot their gems and use a gem to combine them into the Amulet of Union.", "Amulet of Union")),
     withItem(17693, objective(7041, nil, "Fill the vial at the orange crystal pool, then use it on the Vylestem vines and kill the scions that emerge.",
       "8 plants healed")),
     objective(7044, nil, "Take the Celebrian Rod from Noxxion and the Celebrian Diamond from Lord Vyletongue.", "Celebrian Rod", "Celebrian Diamond"),
     finish(7044, nil, "Kill Celebras the Cursed, then speak to Celebras the Redeemed."),
-    accept(7046, nil, "Watch Celebras make the scepter."), objective(7046, nil, "Stay until the ritual ends.", "Scepter of Celebras"),
+    accept(7046, nil, "Watch Celebras make the scepter."), objective(7046, nil, "Follow Celebras to the stone, click the Incantations of Celebras and stay until the ritual ends.", "Scepter of Celebras"),
     finish(7046, nil, "Speak to Celebras again for the scepter."),
     objective(7028, nil, "Constructs throughout the inner halls drop the carvings.", "15 Theradric Crystal Carvings"),
     objective(7065, nil, "Use the scepter's portal to Theradras's chamber or walk the falls, then kill Princess Theradras.", "Princess Theradras"),
@@ -583,7 +584,7 @@ do
     objective(4143, nil, "Deep Lurkers, Murk Worms and Oozes in the flooded halls drop the haze.", "5 Atal'ai Haze"),
     finish(3446, nil, "Find the Altar of Hakkar in the central chamber after the trolls."),
     objective(1446, nil, "Kill Jammal'an the Prophet and loot his head.", "Head of Jammal'an"),
-    uncertain(objective(3528, nil, "At the central altar use the Egg of Hakkar, put out the four flames with Hakkari Blood from the Bloodkeepers, and kill the Avatar of Hakkar.",
+    uncertain(objective(3528, nil, "At the altar use the Egg of Hakkar, put out all four flames with Hakkari Blood from the Bloodkeepers, then kill the Avatar of Hakkar. Loot its Essence of Hakkar and use it to fill your egg.",
       "Filled Egg of Hakkar"), "Event order from the Horde guide: check in game."),
     withItem(10454, accept(3373, nil, "Use the Essence of Eranikus from the Shade.")),
     finish(3373, nil, "Place the essence in the Essence Font in Eranikus's lair."),
@@ -672,7 +673,7 @@ do
     },
     sources = { "https://www.wowhead.com/forever/zone=1584", qdb } }, prep, {
     finish(4341, nil, "Kharan Mighthammer sits in a cell of the Detention Block."),
-    accept(4342, nil, "Listen to Kharan's story."), objective(4342, nil, "Hear him out.", "Kharan's Tale"), finish(4342, nil, "Speak to Kharan again."),
+    accept(4342, nil, "Listen to Kharan's story."), objective(4342, nil, "Talk to Kharan and continue through every dialogue page until his tale is complete.", "Kharan's Tale"), finish(4342, nil, "Speak to Kharan again."),
     accept(4361, nil, "Take Kharan's news back to Magni."),
     objective(4286, nil, "Loot Dark Iron fanny packs from the dwarves throughout the Depths.", "20 Dark Iron Fanny Packs"),
     objective(4263, nil, "Kill Lord Incendius at the Black Anvil.", "Lord Incendius"),
@@ -680,7 +681,7 @@ do
     uncertain(objective(4123, nil, "Open the safe in the Vault after the four watchers fall for the Heart of the Mountain.", "Heart of the Mountain"),
       "Check the Vault's lock in game."),
     objective(4126, nil, "In the Grim Guzzler, break the ale kegs and kill Hurley Blackbreath for the recipe.", "Lost Thunderbrew Recipe"),
-    objective(4136, nil, "Kill Ribbly Screwspigot in the Grim Guzzler and loot his head.", "Ribbly's Head"),
+    objective(4136, nil, "Talk to Ribbly Screwspigot in the Grim Guzzler and demand his head to start the fight. Kill him and his cronies, then loot his head.", "Ribbly's Head"),
   }, {
     finish(4286, oralius), finish(4263, jalinda), finish(4123, maxwort), finish(4136, yuka),
     finish(4024, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
@@ -737,7 +738,7 @@ do
     enter(name, brm, "In Blackrock Mountain take the upper path and climb to the Spire's portal."),
   }, {
     accept(4867, nil, "Warosh, a troll near the start, gives you his scroll."),
-    objective(4867, nil, "Find the spear and the challenge at Urok's platform and summon Urok Doomhowl for Warosh's mojo.", "Warosh's Mojo"),
+    objective(4867, nil, "Loot Omokk's Head from Highlord Omokk and take the Roughshod Pike from its rack on the bridge route. At Urok's Tribute Pile beyond Mother Smolderweb, use the head with the pike in your bags. Defeat the ogre waves, then Urok, and loot Warosh's Mojo.", "Warosh's Mojo"),
     finish(4867, nil, "Return to Warosh."),
     accept(5001, nil, "Bijou, a gnome near the spider halls, lost her belongings."),
     objective(5001, nil, "Her belongings are on a crate near Mother Smolderweb.", "Bijou's Belongings"),
@@ -770,8 +771,8 @@ do
   need(4765, "Delivery to Ridgewell", 60, 57, 4764)
   fromItem(5089, 12780, "General Drakkisath's Command", 60, 55)
   need(5102, "General Drakkisath's Demise", 60, 55, 5089)
-  fromItem(5160, 12923, "The Matron Protectorate", 60, 57)
-  fromItem(5047, 12710, "Finkle Einhorn, At Your Service!", 60, 55)
+  need(5160, "The Matron Protectorate", 60, 57)
+  need(5047, "Finkle Einhorn, At Your Service!", 60, 55)
   add({ id = "dungeon-upper-blackrock-spire", title = name, zone = M.searing, levels = { 58, 60 }, instanceID = 229,
     instance = "Blackrock Spire", links = { "dungeon-lower-blackrock-spire" },
     bosses = {
@@ -784,7 +785,7 @@ do
       { name = "Warchief Rend Blackhand and Gyth", npc = 10429,
         tip = "The event sends many waves before Gyth lands with Rend. Fight near the door so the waves come in a line; kill Gyth, then Rend." },
       { name = "The Beast", npc = 10430,
-        tip = "Fireballs, fear and a knockback. Tank him in the corridor so nobody is feared into packs. Finkle Einhorn comes out after." },
+        tip = "Fireballs, fear and a knockback. Tank him in the corridor so nobody is feared into packs. Skin his body afterward to reveal Finkle Einhorn." },
       { name = "General Drakkisath", npc = 10363,
         tip = "Pull his two guards away first. Tank him facing away; his Flamestrike and Conflagration need spread ranged." },
     },
@@ -797,8 +798,8 @@ do
     enter(name, brm, "Climb to the Spire's portal in Blackrock Mountain. The Upper Spire door is at the start, past the first ramps."),
   }, {
     objective(4764, nil, "Doomrigger's Clasp sits in a chest along the way to Rend.", "Doomrigger's Clasp"),
-    withItem(12923, accept(5160, nil, "Use Awbee's scale if it drops for you.")),
-    withItem(12710, accept(5047, nil, "Speak to Finkle Einhorn after The Beast dies.")),
+    accept(5160, nil, "After Rend and Gyth, talk to Awbee on the ledge beyond the stadium and finish the dialogue. Accept the quest to receive Awbee's Scale."),
+    accept(5047, nil, "After The Beast dies, have the group's skinner skin it to reveal Finkle Einhorn. Talk to him and finish his dialogue to receive the quest and the flesh sample."),
     objective(5102, nil, "Kill General Drakkisath in his hall.", "General Drakkisath"),
   }, {
     finish(4764, mayara), accept(4765, mayara), finish(4765, ridgewell),
@@ -827,7 +828,7 @@ do
       { name = "Pusillin", npc = 14354,
         tip = "An imp who runs off when you speak to him. Chase him through the halls; he fights at the end with his imps." },
       { name = "Zevrim Thornhoof", npc = 11490,
-        tip = "His Sacrifice stuns and drains one player. Burn him and heal through it." },
+        tip = "His Sacrifice stuns and drains one player. After he dies, talk to Ironbark in the Conservatory and ask him to open the door to Alzzin." },
       { name = "Hydrospawn", npc = 13280,
         tip = "A water elemental. His Riptide and knockback scatter the group; tank him against a wall." },
       { name = "Lethtendris", npc = 14327,
@@ -844,9 +845,9 @@ do
     uncertain(enter(name, dmDoor, "Ride to the ruined city in central Feralas. The East wing's portal is in the courtyard reached from the Broken Commons."),
       "Wing entrance positions from the classic map; check in game."),
   }), {
-    objective(7441, nil, "Speak to Pusillin and chase him; loot his book when he gives up.", "Azj'Tordin's Book of Incantations"),
+    objective(7441, nil, "Talk to Pusillin at every stop as you chase him through the halls. At his last stop, speak again to start the fight; kill him and loot his book and Crescent Key.", "Azj'Tordin's Book of Incantations"),
     objective(7488, nil, "Kill Lethtendris and loot her web.", "Lethtendris's Web"),
-    withItem(18539, objective(5526, nil, "Kill Alzzin, then use the Reliquary of Purity on the Felvine.", "Felvine Shard")),
+    withItem(18539, objective(5526, nil, "Kill Alzzin, loot a Felvine Shard from the vine behind him, then use the Reliquary of Purity in your bags to seal it.", "Sealed Reliquary of Purity")),
   }, {
     finish(7441, azj), finish(7488, latronicus), finish(5526, rabine),
   })
@@ -974,7 +975,7 @@ do
     tip("Skeleton Key", "Scholomance needs the Skeleton Key from the Chillwind Camp key chain. One key holder opens the door for everyone."),
     accept(5529, betina, "Betina Bigglezink at Light's Hope Chapel wants the plagued hatchlings cleared."),
     accept(5343, weldon, "Weldon Barov at Chillwind Camp wants his family's deeds."),
-    accept(5382, eva, "Eva Sarkhoff waits by the Caer Darrow ruins with her husband."),
+    accept(5382, eva, "Eva Sarkhoff waits by the Caer Darrow ruins with her husband. Ask why she is here and finish every page of her story to reveal the quest."),
     enter(name, at("Caer Darrow", 69.4, 72.8, M.wpl), "Cross to Caer Darrow and enter the Scholomance through the castle's crypt with your key."),
   }, {
     objective(5529, nil, "Kill the plagued hatchlings in the dragon nests past the first halls.",

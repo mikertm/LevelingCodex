@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## Unreleased
+
+- **Step-guide travel and dungeon preparation:** clickable items show live cooldowns, flights initialize connecting routes, and return steps name the next flight. Completed-history handling accepts keyed sets and keeps confirmed completions for the session. Corrected Snellig's wreck and lower-deck directions. Dungeon pages and the Route tab offer outdoor quest preparation before the run; readiness waits for all outdoor pickups, and a small footer icon replaces the wide Run button.
+- **Sovik's Gnomeregan errand:** both Horde guides now name the gossip option "What else do you have to say?", explain retries and automatic acceptance, and remind you to check the quest log before leaving Orgrimmar. The pickup is no longer hidden when Rig Wars is absent.
+- **Alliance and Horde quest interactions:** checked both reference addons and online guides for missing dialogue, event triggers, escort releases, and quest-item actions. Corrected confirmed omissions in leveling, alternate, dungeon, class, and special guides; the dated audit notes list each change and its sources. These steps still need in-game verification.
+
 ## v0.25.0
 
 ### Horde quest guide, levels 30-60

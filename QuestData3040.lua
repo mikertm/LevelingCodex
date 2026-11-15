@@ -917,7 +917,7 @@ do
     along(objective(1387, ds(nil, 69.4, 73.4), "Kill Magram centaurs for their ears. Every kill also raises your standing with the Gelkis.", "15 Centaur Ears"), 1382),
     objective(261, ds(nil, 64.0, 91.7), "Go south to the Scarlet camp at the edge of the Valley of Bones and kill Undead Ravagers.", "30 Undead Ravagers"),
     accept(5561, smeed, "Smeed Scrabblescrew camps beside the Kodo Graveyard."),
-    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard, then walk each tamed kodo back to Smeed.",
+    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on one Ancient or Dying Kodo, lead it to Smeed and wait for his acknowledgement. Talk to that Tamed Kodo to get credit before fetching the next; repeat five times.",
       "5 Tamed Kodos")), 5501, 1459),
     along(objective(5501, graveyard, "Pick up kodo bones from the ground in the graveyard.", "10 Kodo Bones"), 5561, 1459),
     along(objective(1459, ds(nil, 52.2, 57.5), "Kill Scorpashi scorpids around the graveyard for venom, and Aged Kodos for their hides.",

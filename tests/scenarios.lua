@@ -2956,9 +2956,20 @@ function S.questDungeonChoice()
     MOCK.questLog[#MOCK.questLog + 1] = { questID = id }
     MOCK.event("QUEST_ACCEPTED", 1, id)
   end
-  check(questText(frame, "Find a group for The Deadmines: ") and questText(frame, " of its quests are in your log"),
-    "a ready run leads the step text: " .. allText(frame))
-  check(findButton(frame, function(l) return l == "Run The Deadmines" end), "and offers Run The Deadmines")
+  check(not findButton(frame, function(l) return l == "Run The Deadmines" end), "finish the remaining outdoor chains before declaring the run ready")
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "dungeon-deadmines" then
+      for _, step in ipairs(section.steps) do
+        if step.phase == "prepare" and step.type == "accept" and step.quest ~= 2040 and step.quest ~= 168 and step.quest ~= 167 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.event("QUEST_QUERY_COMPLETE")
+  check(questText(frame, "Dungeon quests ready - find a group"), "a ready run has a short reminder after the quest instructions")
+  local dungeon = findButton(frame, function(l) return l == "Run The Deadmines" end)
+  check(dungeon and dungeon:GetWidth() <= 32, "the run action is a compact icon")
 end
 
 -- The quests a section's route takes before the step `stop` matches: turned in before it (MOCK.questDone)
@@ -3759,7 +3770,8 @@ function S.questDuskwoodHandoff()
   check(questText(frame, "Reach level 26 for Wetlands"), "an underleveled handoff shows the catch-up step")
   MOCK.level = 26
   MOCK.event("PLAYER_LEVEL_UP", 26)
-  check(questText(frame, "return to Darkshire"), "at level 26 the route leads back to the flight path")
+  check(questText(frame, "Hearth to Darkshire") and questText(frame, "Felicia Maline") and questText(frame, "flight to Stormwind"),
+    "at level 26 the route names the return, flight master and onward flight")
 end
 
 function S.questLakeshireHandoff()
@@ -4350,6 +4362,176 @@ function S.questHordeDungeon()
   check(questText(frame, "Boss - Antu'sul") and chatHas("Zul'Farrak: the step window follows its guide"),
     "zoning into Zul'Farrak opens the Horde guide at its first boss")
   MOCK.faction, MOCK.instanceName, MOCK.instanceID = nil, nil, nil
+end
+
+-- Reported in game: Sovik's quest is behind gossip, so leaving Orgrimmar after
+-- only visiting the vendor sends the player back from Booty Bay.
+local function sovikPickup(dungeon, withoutRigWars)
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 30
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1454, 75.49, 25.36
+  LevelingCodexDB = { questDungeonPlan = { ["dungeon-gnomeregan"] = true } }
+  MOCK.questLog = withoutRigWars and {} or { { questID = 2841 } }
+  if not dungeon then
+    for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+      if not section.side and not section.alternate then
+        for _, step in ipairs(section.steps) do
+          if step.quest == 2842 then break end
+          if step.quest and step.quest ~= 2841 then MOCK.questDone[step.quest] = true end
+        end
+        if section.id == "hillsbrad-30" then break end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  if dungeon then
+    guidesView("Dungeons")
+    click(win(), "Gnomeregan")
+    click(win(), "Follow this guide")
+    if withoutRigWars then
+      check(questText(questViewer(), "Accept - Rig Wars"), "Nogg is offered first")
+      click(questViewer(), "Next")
+    end
+  else
+    clickGuide("Tarren Mill, Alterac and Hammerfall")
+    -- Travel and clean-up notes before the city pickups still need acknowledging.
+    for _ = 1, 20 do
+      if questTextStarts(questViewer(), "Sovik") then break end
+      click(questViewer(), "Next")
+    end
+  end
+  local frame = questViewer()
+  check(questText(frame, "Accept - Chief Engineer Scooty"), "Sovik's pickup is current")
+  check(questText(frame, "What else do you have to say?"), "Sovik's pickup explains the required gossip choice")
+  check(questText(frame, "quest log") and questText(frame, "Orgrimmar"), "confirm the quest before leaving Orgrimmar")
+  MOCK.event("GOSSIP_CLOSED")
+  check(questText(frame, "Accept - Chief Engineer Scooty"), "closing gossip cannot acknowledge the pickup")
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 2842 }
+  MOCK.event("QUEST_ACCEPTED", 2, 2842)
+  check(not questTextStarts(frame, "Sovik"), "accepting the quest advances past Sovik")
+end
+
+function S.questSovikDungeon() sovikPickup(true) end
+function S.questSovikRoute() sovikPickup(false) end
+function S.questSovikWithoutRigWars() sovikPickup(true, true) end
+
+local function incendiariesAfterUse(ready)
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 56
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1420, 83.2, 69.1
+  if ready then MOCK.questLog = { { questID = 5096, isComplete = true } }
+  else MOCK.questDone[5096] = true end
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "plaguelands-56" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.quest == 5096 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  clickGuide("Plaguelands: the Bulwark and Tirion Fordring")
+  local frame = questViewer()
+  for _ = 1, 12 do
+    if questTextStarts(frame, "Take a Flame in a Bottle") or questTextStarts(frame, "Garush hands out") then break end
+    click(frame, "Next")
+  end
+  check(not questTextStarts(frame, "Take a Flame in a Bottle"), "a finished Scarlet Diversions never sends you back for an incendiary")
+  check(questTextStarts(frame, "Garush hands out"), "the route continues to the Argent Dawn pickup")
+end
+
+function S.questIncendiariesDone() incendiariesAfterUse(false) end
+function S.questIncendiariesReady() incendiariesAfterUse(true) end
+
+local function upperSpireDialoguePickup(quest, name)
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 60, nil
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Upper Blackrock Spire")
+  click(win(), "Start inside")
+  local frame = questViewer()
+  local found = false
+  for _ = 1, 60 do
+    -- The pickup instructions are on the current card, not in UP NEXT.
+    if questText(frame, "Accept - " .. name) and questText(frame, "dialogue") then found = true; break end
+    local nextButton = findButton(frame, function(l) return l == "Next" end)
+    if not nextButton then break end
+    nextButton:Click()
+  end
+  check(found, name .. " is offered before receiving its supplied quest item")
+  MOCK.questLog = { { questID = quest } }
+  MOCK.event("QUEST_ACCEPTED", 1, quest)
+  check(not questTextStarts(frame, quest == 5160 and "Awbee" or "After The Beast"), "accepting the NPC quest advances the guide")
+end
+
+function S.questAwbeePickup() upperSpireDialoguePickup(5160, "The Matron Protectorate") end
+function S.questFinklePickup() upperSpireDialoguePickup(5047, "Finkle Einhorn, At Your Service!") end
+
+function S.questHearthModernCooldown()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "hearth", bind = "Goldshire", map = 1429, x = 47, y = 41,
+        text = "Return to Goldshire, then talk to the flight master." })
+    end
+  end
+  MOCK.bind, MOCK.bags[6948], MOCK.time = "Goldshire", 1, 20
+  GetItemCooldown = nil
+  C_Item.GetItemCooldown = function(id) if id == 6948 then return 10, 3600, true end end
+  C_Container.GetItemCooldown = function(bag, slot) return 0, 0, true end
+  S.login()
+  check(questText(questViewer(), "ready in 60 min"), "modern item cooldown does not mistake an item ID for a bag")
+  local b = LevelingCodexQuestItem
+  check(b and b:IsShown() and questText(b, "60m"), "clickable hearthstone shows its live cooldown")
+  MOCK.advance(61)
+  check(questText(b, "59m"), "clickable item cooldown updates while the step stays current")
+end
+
+function S.questFlightRouteInitialization()
+  local initialized
+  TaxiNodeOnButtonEnter = function(button) initialized = button end
+  local original = TakeTaxiNode
+  TakeTaxiNode = function(slot)
+    check(initialized == _G["TaxiButton" .. slot], "initialize the destination route before taking a connecting flight")
+    original(slot)
+  end
+  _G.TaxiButton2 = CreateFrame("Button", "TaxiButton2", UIParent)
+  S.questTravelFlight()
+end
+
+function S.questCompletedSet()
+  C_QuestLog.IsQuestFlaggedCompleted = function() return false end
+  C_QuestLog.GetAllCompletedQuestIDs = function() return { [783] = true, [92710] = true } end
+  S.login()
+  check(not questText(questViewer(), "Accept - A Threat Within"), "completed quest ID sets skip earlier pickups on a fresh DB")
+end
+
+function S.questDungeonPreparation()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 24, 1437
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Excavation Site: Wetlands")
+  click(win(), "Prepare quests")
+  check(LevelingCodexDB.questDungeonPlan["dungeon-excavation-site"], "preparation plans the dungeon pickups while leveling")
+  check(questText(questViewer(), "Songblade Search"), "prepare offers the Lakeshire prerequisite before the run level")
+  -- Finish every outdoor quest and travel step through player acknowledgements.
+  for _ = 1, 60 do
+    local frame = questViewer()
+    check(not questTextStarts(frame, "Meet the group at the upper dig"), "preparing never sends you to enter the dungeon")
+    if findButton(frame, function(l) return l == "Return to leveling" end) == nil then break end
+    click(frame, "Next")
+  end
+  check(not findButton(questViewer(), function(l) return l == "Return to leveling" end), "finishing preparation returns to leveling")
+end
+
+function S.questDungeonIncompletePreparation()
+  MOCK.level, MOCK.questMap = 28, 1437
+  LevelingCodexDB = { questDungeonPlan = { ["dungeon-excavation-site"] = true } }
+  MOCK.questLog = { { questID = 98815 }, { questID = 95772 }, { questID = 95647 } }
+  S.login()
+  check(not findButton(questViewer(), function(l) return l == "Run Excavation Site: Wetlands" end),
+    "three quests do not declare the dungeon ready while outdoor prerequisites remain")
 end
 
 local function classSideFixture()

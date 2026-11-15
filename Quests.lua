@@ -21,7 +21,7 @@ local log, turnedIn, liveDone, removed = {}, {}, {}, {}
 local knownFlights, flightHubs, flightLinks = {}, {}, {}
 local visited, selected, review = {}, nil, nil
 local sideSection
-local sideFrom, sideResumeAt
+local sideFrom, sideResumeAt, sidePrepare
 local history, sideHistory, sideSkips = {}, {}, {}
 local route, race, class
 local sections, sectionsById, steps, missed, ready = {}, {}, {}, {}, {}
@@ -151,17 +151,22 @@ local function readCompleted()
   local completed = {}
   local ids = try(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
   if type(ids) == "table" then
-    for _, id in ipairs(ids) do completed[id] = true end
+    for key, value in pairs(ids) do
+      local id = (value == true or (value == 1 and type(key) == "number" and key > 1)) and tonumber(key)
+        or (type(value) == "number" and value)
+      if id then completed[id] = true end
+    end
   end
   local legacy = {}
   local value = try(GetQuestsCompleted, legacy)
   if type(value) == "table" then legacy = value end
   local function check(id)
     if not id or turnedIn[id] ~= nil then return end
-    if liveDone[id] or completed[id] or legacy[id] then turnedIn[id] = true; return end
+    if liveDone[id] or completed[id] or legacy[id] then turnedIn[id], liveDone[id] = true, true; return end
     local done = try(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted, id)
     if done ~= true and done ~= 1 then done = try(IsQuestFlaggedCompleted, id) end
     turnedIn[id] = done == true or done == 1
+    if turnedIn[id] then liveDone[id] = true end
   end
   for _, row in ipairs(steps) do
     check(row.step.quest)
@@ -792,7 +797,7 @@ end
 
 local function leaveSide()
   if review and steps[review].section == sideSection then review = nil end
-  sideSection, sideFrom, sideResumeAt, sideHistory, sideSkips = nil, nil, nil, {}, {}
+  sideSection, sideFrom, sideResumeAt, sidePrepare, sideHistory, sideSkips = nil, nil, nil, nil, {}, {}
 end
 
 -- How far below your level a quest goes grey (the client's own range when it says).
@@ -870,6 +875,7 @@ local function calculate()
     if row.state == "pending" then
       if row.section.side then
         if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom
+            and (not sidePrepare or (s.phase == "prepare" and s.type ~= "dungeon"))
             and not passOver(row) then
           sideIndex = i
         end
@@ -926,10 +932,16 @@ function Q.stickies()
 end
 
 -- Seconds until the Hearthstone is ready: 0 = ready, nil = the client doesn't say.
-function Q.hearthCooldown()
-  local start, duration = try(C_Container and C_Container.GetItemCooldown, 6948)
-  if type(start) ~= "number" then start, duration = try(GetItemCooldown, 6948) end
+function Q.itemCooldown(item)
+  local start, duration = try(C_Item and C_Item.GetItemCooldown, item)
+  if type(start) ~= "number" then start, duration = try(GetItemCooldown, item) end
   if type(start) ~= "number" or type(duration) ~= "number" then return end
+  return start, duration
+end
+
+function Q.hearthCooldown()
+  local start, duration = Q.itemCooldown(6948)
+  if not start then return end
   if start <= 0 or duration <= 0 then return 0 end
   return math.max(0, start + duration - GetTime())
 end
@@ -1286,6 +1298,10 @@ end
 function Q.runReadiness(section)
   local quests = runQuests[section.id]
   if not quests then return 0, 0 end
+  local later = {}
+  for _, s in ipairs(section.steps) do
+    if s.type == "accept" and s.phase and s.phase ~= "prepare" then later[s.quest] = true end
+  end
   local inLog, left = 0, 0
   for id in pairs(quests) do
     if log[id] and not turnedIn[id] then inLog = inLog + 1 end
@@ -1295,7 +1311,7 @@ function Q.runReadiness(section)
     local s = row.step
     if s.type == "accept" and quests[s.quest] and not counted[s.quest] and not log[s.quest] and not turnedIn[s.quest]
         and (s.phase == nil or s.phase == "prepare") and row.state ~= "filtered" and row.state ~= "skipped"
-        and not s.startItem and level >= (s.min or 1) and prerequisitesMet(s) then
+        and not later[s.quest] and (s.phase == "prepare" or (not s.item and not s.startItem)) then
       left, counted[s.quest] = left + 1, true
     end
   end
@@ -1303,14 +1319,14 @@ function Q.runReadiness(section)
 end
 
 -- The "find a group" moment: a planned run in your level range whose pickups are done
--- (or that already has three quests waiting). Nil while you are on a detour.
+-- Nil while preparing, before the suggested level, or while outdoor pickups remain.
 function Q.readyRun()
   if sideSection or not level then return end
   for _, section in ipairs(sections) do
     if section.category == "dungeon" and Q.planned(section.id) and level >= section.levels[1]
         and level <= section.levels[2] + 3 and not sideHidden(section) then
       local inLog, left = Q.runReadiness(section)
-      if inLog > 0 and (left == 0 or inLog >= 3) then return section, inLog end
+      if inLog > 0 and left == 0 then return section, inLog end
     end
   end
 end
@@ -1705,7 +1721,8 @@ function Q.upcoming(i, count)
   for n = i + 1, #steps do
     local row = steps[n]
     if section.side and row.section ~= section then break end
-    if row.state == "pending" and not row.step.sticky and not row.sticky and (row.section == section or
+    if row.state == "pending" and not row.step.sticky and not row.sticky
+        and (not sidePrepare or (row.step.phase == "prepare" and row.step.type ~= "dungeon")) and (row.section == section or
         follows(row.section, start) or row.requiredFor) then
       result[#result + 1] = row
       if #result == (count or 2) then break end
@@ -1799,6 +1816,7 @@ function Q.jump(section, row, phase, resumeRow)
   elseif section.side then
     if Q.guideMinimum(section) then return end
     sideSection, review, sideHistory, sideSkips = section, nil, {}, {}
+    sidePrepare = phase == "prepareOnly"
     sideFrom = PHASE[phase] or (section.category == "dungeon" and inDungeon(section) and PHASE.inside) or PHASE.prepare
     sideResumeAt = 0
     if resumeRow then
@@ -1912,6 +1930,21 @@ function Q.eliteText(step)
 end
 
 function Q.text(step)
+  local instructions = step.text
+  if step.type == "fly" and step.flight then
+    return instructions .. " Talk to the flight master and choose " .. step.flight .. "."
+  end
+  if step.type == "hearth" then
+    for i, row in ipairs(steps) do
+      if row.step == step then
+        local nextRow = steps[i + 1]
+        if nextRow and nextRow.step.type == "fly" then
+          instructions = instructions .. " Next, talk to the flight master and fly to " .. nextRow.step.flight .. "."
+        end
+        break
+      end
+    end
+  end
   if step.type == "elite" then return Q.eliteText(step) end
   if step.type == "getfp" then return step.text .. " Use Next to skip this flight path." end
   if step.quest == 95998 and step.type == "complete" then
@@ -1923,22 +1956,22 @@ function Q.text(step)
   end
   if step.type == "sethearth" or step.type == "hearth" then
     local bind = Q.bindLocation()
-    if not step.bind then return step.text end
+    if not step.bind then return instructions end
     local atTarget = bind and bind:lower() == step.bind:lower()
     if step.type == "sethearth" then
       if atTarget then return "Your hearthstone is already set to " .. bind .. "." end
       local current = bind and (" Your hearthstone is set to " .. bind .. ".") or ""
-      return step.text .. current .. " Use Next to keep your current bind."
+      return instructions .. current .. " Use Next to keep your current bind."
     end
     if atTarget then
       local wait = Q.hearthCooldown()
       if wait and wait >= 60 then
-        return step.text .. " Your hearthstone is ready in " .. math.ceil(wait / 60) .. " min: travel there instead."
+        return instructions .. " Your hearthstone is ready in " .. math.ceil(wait / 60) .. " min: travel there instead."
       end
-      return step.text .. (wait and " Use your hearthstone: it's ready." or " Use your hearthstone if it's ready.")
+      return instructions .. (wait and " Use your hearthstone: it's ready." or " Use your hearthstone if it's ready.")
     end
-    if not bind then return step.text .. " Use your hearthstone if you're bound there and it's ready." end
-    return step.text .. " Your hearthstone is set to " .. bind .. "."
+    if not bind then return instructions .. " Use your hearthstone if you're bound there and it's ready." end
+    return instructions .. " Your hearthstone is set to " .. bind .. "."
   end
   if step.type ~= "train" then return step.text end
   local visit = ns.trainAt(step.level or level) or ns.nextTrain((step.level or level) - 1)

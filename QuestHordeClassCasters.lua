@@ -205,7 +205,7 @@ do
       finish(1949, tirth, "Find Magus Tirth at the Mirage Raceway in the Shimmering Flats."),
       accept(1950, tirth),
       objective(1950, B.at('"Plucky" Johnson', 79.61, 75.63, needles),
-        "Find the chicken near the raceway tower. Target it and type /beckon; the man who appears tells you the phrase.",
+        "Find the chicken near the raceway tower. Target it and type /beckon, then talk to the man who appears and choose the dialogue asking for the phrase.",
         "Find the strongbox phrase"),
       finish(1950, tirth),
       accept(1951, tirth),

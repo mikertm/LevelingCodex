@@ -5,7 +5,7 @@ local try = Q.try
 local viewer, arrow, header, headerArt, title, arrowText, arrowArt, flatBackground, levels, arrowFile
 local arrowBearing, arrowCaption, arrowFacing
 local dismissed, painting, theme
-local nextButton, suggestionButton, bar
+local nextButton, suggestionButton, runButton, bar
 local lastRow, quiet -- the step shown last; quiet = the player moved it (no completion sound)
 local announced = {} -- dungeon runs whose "find a group" note was said this session
 local itemButton, itemPending, updateItemButton -- itemButton false = the client can't make one
@@ -349,6 +349,12 @@ local function makeViewer()
     icon("Quests", 270, A.FILES.questBook, "Q", function() ns.openQuestStep() end),
     icon("Hide", 302, A.FILES.closeUp, "x", ns.hideQuestViewer), -- the close art: minus is compact's
   }
+  runButton = icon("Dungeon", 238, "Interface\\TargetingFrame\\UI-TargetingFrame-Skull", "D", function()
+    local run = Q.readyRun()
+    if run then Q.jump(run); ns.showQuestViewer() end
+  end)
+  viewer.buttons[#viewer.buttons + 1] = runButton
+  runButton:Hide()
   nextButton = primary("Next", 44, 222, function(_, mouse)
     ns.moveQuestStep(mouse == "RightButton")
   end)
@@ -1052,6 +1058,14 @@ local function makeItemButton()
   end
   b.count = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   b.count:SetPoint("BOTTOMRIGHT", -3, 3)
+  b.cooldownText = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  b.cooldownText:SetPoint("CENTER", 0, 0)
+  b:SetScript("OnUpdate", function(self)
+    local start, duration = Q.itemCooldown(self.item)
+    local left = start and duration and math.max(0, start + duration - GetTime()) or 0
+    self.cooldownText:SetText(left >= 60 and (math.ceil(left / 60) .. "m") or left > 0 and tostring(math.ceil(left)) or "")
+    if self.icon.SetDesaturated then try(self.icon.SetDesaturated, self.icon, left > 0) end
+  end)
   b:SetScript("OnEnter", itemTooltip)
   b:SetScript("OnLeave", function() GameTooltip:Hide() end)
   b:Hide()
@@ -1801,12 +1815,11 @@ function ns.questRefresh()
         local shade = onDark and 1 or 0.55
         title:SetTextColor(style.color[1] * shade, style.color[2] * shade, style.color[3] * shade)
       end
-      -- A planned run that's ready leads the step text until you go (Run <dungeon> below).
-      if run then
-        blocks[1] = { kind = "note", tone = "gold", text = "Find a group for " .. run.title .. ": " .. runCount
-          .. " of its quests are in your log. Then press Run " .. run.title .. "." }
-      end
+      -- Keep the current instructions first; a ready run has a short footer reminder.
       for _, b in ipairs(Q.detailBlocks(row.step, row.requiredFor, true)) do blocks[#blocks + 1] = b end
+      if run then
+        blocks[#blocks + 1] = { kind = "note", tone = "dim", text = "Dungeon quests ready - find a group when you want to run. Use the dungeon icon below." }
+      end
       addPreview(blocks, row, i)
     else
       title.codexLabel = nil
@@ -1873,6 +1886,13 @@ function ns.questRefresh()
     local eliteAsk = row and row.step.type == "elite"
     nextButton.codexLabel = (choosing or eliteAsk) and "Skip" or "Next"
     nextButton:SetLabel(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", true)
+    runButton:SetShown(run ~= nil)
+    nextButton:SetWidth(run and 190 or 222)
+    if run then
+      runButton.codexLabel = "Run " .. run.title
+      runButton.tipTitle = "Find a group for " .. Q.plain(run.title)
+      runButton.tipText = runCount .. " quests in your log; outdoor pickups complete. Click for the dungeon checklist when your group is ready."
+    end
     local returnToRoute = sec.side
     if run and not announced[run.id] then
       announced[run.id] = true
@@ -1881,11 +1901,11 @@ function ns.questRefresh()
     end
     local related = Q.relatedGuide()
     local setup = ns.questSetupDue()
-    local offer = eliteAsk or choosing or returnToRoute or run or suggestion or related or setup
+    local offer = eliteAsk or choosing or returnToRoute or suggestion or related or setup
     suggestionButton:SetShown(offer ~= nil and offer ~= false)
     if offer then
       suggestionButton.codexLabel = eliteAsk and "Take it" or choosing and ("Plan " .. row.step.name)
-        or returnToRoute and "Return to leveling" or run and ("Run " .. run.title)
+        or returnToRoute and "Return to leveling"
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
@@ -2319,6 +2339,12 @@ local function takeFlight(nodes)
     local name = try(TaxiNodeName, i)
     if type(name) == "string" and Q.plain(name):lower() == want then
       if try(TaxiNodeGetType, i) == "REACHABLE" then
+        -- Forever needs the same route initialization as hovering its map button,
+        -- especially when the destination is reached through connecting hubs.
+        local button = _G["TaxiButton" .. i]
+        if button and type(TaxiNodeOnButtonEnter) == "function" then
+          try(TaxiNodeOnButtonEnter, button)
+        end
         ns.say("flying to " .. Q.plain(name) .. ". Hold Alt at the flight master to pick your own flight.")
         try(TakeTaxiNode, i)
       end
