@@ -1448,6 +1448,15 @@ end
 -- The zones' flight hubs (a route's flight-path steps): from your map's hub to the step map's hub,
 -- both known and on one network. Returns the hub to walk to and the flight to take there. The arrow
 -- uses it when no trip through flight masters is planned (QuestTravel.lua), and so does the flight map.
+-- Never straight back along the flight you just took while the step is still in the zone you flew
+-- away from (`Q.lastFlight`, set at landing in QuestGuide.lua): the trip planner flew you from
+-- Darkshire to Sentinel Hill for Sven's Camp to walk the rest, and the hub flight then said "Fly to
+-- Darkshire". The trip planner (Q.travelLeg) still plans a flight back when one pays.
+local function flyingBack(target, step)
+  local back = Q.lastFlight
+  return back ~= nil and back.map == step.map and Q.plain(target.flight or "") == back.from
+end
+
 function Q.hubFlight(step, map)
   if not (route and step and step.map and map) or step.map == map then return end
   local network = route.flightNetwork
@@ -1455,7 +1464,7 @@ function Q.hubFlight(step, map)
   local links = origin and flightLinks[origin.flight]
   if origin and target and network and network[map] and network[map] == network[step.map]
       and (not links or links[target.flight] == "REACHABLE")
-      and knownFlights[origin.flight] and knownFlights[target.flight] then
+      and knownFlights[origin.flight] and knownFlights[target.flight] and not flyingBack(target, step) then
     return origin, target.flight
   end
 end
@@ -1482,7 +1491,16 @@ function Q.destination(step, map)
   if road then return road.waypoint, road.label end
   local info = try(C_Map and C_Map.GetMapInfo, step.map)
   local name = type(info) == "table" and info.name or step.flight
-  return step, name and ("Travel to " .. Q.plain(name)) or "Objective in another zone"
+  local label = name and ("Travel to " .. Q.plain(name)) or "Objective in another zone"
+  -- On your continent with no flight or road to take, the arrow points across the border with its
+  -- distance (Sentinel Hill to Sven's Camp) instead of only naming the zone.
+  if Q.sameContinent and Q.sameContinent(step.map, map) then
+    local _, x, y = Q.position()
+    if x and Q.worldVector(step, map, x, y) then
+      return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind }, label
+    end
+  end
+  return step, label
 end
 
 function Q.upcoming(i, count)

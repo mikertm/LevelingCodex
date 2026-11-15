@@ -17,6 +17,7 @@
 
 ### Fixes
 
+- **No flying straight back.** The arrow could send you to a flight point in the next zone to walk the rest (Darkshire to Sentinel Hill for Sven's Camp), then tell you to fly back once you landed. It now points on to the step, with its distance across the zone border.
 - **Eastern Plaguelands positions.** Forever redrew the Eastern Plaguelands map. The arrow pointed at the old spots for Tirion Fordring's hut, the Symbol of Lost Honor in Northdale and the Stratholme gate.
 - **Krol'dok Stronghold.** Entering it now opens its guide, and each boss is checked off when it dies.
 - A level 28 entering a zone that has a later chapter (Duskwood at 30, Hillsbrad at 30) no longer jumps into that chapter past the route's own next guide.

@@ -758,7 +758,7 @@ def main():
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questDanger", "questParty",
-                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questDungeonChoice",
+                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))

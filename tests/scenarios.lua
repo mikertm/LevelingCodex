@@ -1021,6 +1021,48 @@ function S.questFlightHub()
   TaxiFrame:Hide()
 end
 
+-- Reported from the game: in Darkshire the arrow sent you to Sentinel Hill for Sven's Camp (on the
+-- Duskwood-Westfall border), and once you landed it said "Fly to Darkshire": the trip planner chose
+-- walking from Sentinel Hill, and the zone-hub fallback flew you back to a hub farther from the step.
+function S.questFlightBack()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 26, 1431, 77.4, 44.3
+  local open = {}
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "duskwood" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "goto" and step.text and step.text:find("Sven's Camp", 1, true) then break end
+        if step.type == "accept" and step.quest then open[step.quest] = true end
+        if step.type == "turnin" and step.quest then open[step.quest] = nil; MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = {}
+  for id in pairs(open) do MOCK.questLog[#MOCK.questLog + 1] = { questID = id, isComplete = id == 230 } end
+  S.login()
+  local nodes = { { "Darkshire, Duskwood", "CURRENT" }, { "Sentinel Hill, Westfall", "REACHABLE" },
+    { "Stormwind, Elwynn", "REACHABLE" } }
+  taxiMap(nodes)
+  TaxiFrame:Hide()
+  slash("quests")
+  click(win(), "Resume active quest")
+  MOCK.advance(0.3)
+  check(questText(questViewer(), "Sven"), "following the way to Sven's Camp")
+  -- Walked into Westfall: the hub flight still offers Darkshire (mountains can block a straight walk).
+  walkTo(1436, 56.0, 50.0)
+  check(arrowSays("Fly to Darkshire"), "walking in, the zone hub's flight is offered: " .. arrowCaption())
+  walkTo(1431, 77.4, 44.3)
+  taxiMap(nodes)
+  TakeTaxiNode(2)
+  TaxiFrame:Hide()
+  MOCK.onTaxi = true
+  MOCK.advance(1)
+  MOCK.onTaxi = false
+  walkTo(1436, 56.6, 52.7) -- landed at Sentinel Hill
+  check(questText(questViewer(), "Sven"), "still on the way to Sven's Camp")
+  check(not arrowSays("Fly to"), "after landing the arrow doesn't fly you back: " .. arrowCaption())
+  check(arrowSays(" yd"), "it leads on to Sven's Camp with its distance: " .. arrowCaption())
+end
+
 local function allText(root)
   local out = {}
   for _, child in ipairs({ root:GetRegions() }) do

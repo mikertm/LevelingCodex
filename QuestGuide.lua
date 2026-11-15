@@ -220,6 +220,8 @@ local function tickFlight()
     flight.start = flight.start or GetTime()
   elseif flight.start then
     if flight.from and flight.to then flightTimes()[flight.from .. ">" .. flight.to] = GetTime() - flight.start end
+    -- The hub flight never sends you straight back while the step is in the zone you left (Q.hubFlight).
+    Q.lastFlight = flight.from and { from = flight.from, map = flight.map } or nil
     flight = {}
   end
 end
@@ -1589,7 +1591,8 @@ function ns.startQuestGuide()
   ns.questRefresh()
   if type(TakeTaxiNode) == "function" then
     try(hooksecurefunc, "TakeTaxiNode", function(node)
-      flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin }
+      local row = Q.current()
+      flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin, map = row and row.step.map }
       if recorder then flightTarget = Q.plain(try(TaxiNodeName, node)) end
     end)
   end
