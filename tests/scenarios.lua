@@ -3851,6 +3851,268 @@ function S.questItem()
   check(not button:IsShown(), "the setting hides the button")
 end
 
+local function questButtonFixture()
+  MOCK.questDone[783], MOCK.questDone[5261], MOCK.questDone[33] = true, true, true
+  MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", numFulfilled = 4, numRequired = 10 } } } }
+  MOCK.questItems[1] = { "|cffffffff|Hitem:5555::::|h[Thing]|h|r", 134400 }
+  MOCK.bags[5555] = 2
+  S.login()
+  local item, target = _G.LevelingCodexQuestItem, _G.LevelingCodexQuestTarget
+  check(item and item:IsShown() and target and target:IsShown(), "both quest buttons are available")
+  return questViewer(), item, target
+end
+
+local function questOffsetSlider(label)
+  local function find(root)
+    for _, child in ipairs({ root:GetChildren() }) do
+      if child:IsShown() then
+        if child:GetObjectType() == "Slider" and child.codexLabel == label then return child end
+        local found = find(child)
+        if found then return found end
+      end
+    end
+  end
+  local slider = find(win())
+  check(slider, "offset slider is available: " .. label)
+  return slider
+end
+
+function S.questButtonOptions()
+  local frame, item, target = questButtonFixture()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Quest item position: Right")
+  check(item:GetLeft() ~= nil and select(1, item:GetPoint()) == "TOPLEFT", "item can move to the right")
+  check(select(1, target:GetPoint()) == "TOPRIGHT", "target keeps its own left placement")
+  local _, parent, _, x, y = item:GetPoint()
+  check(parent == UIParent, "secure buttons stay independent of the movable step window")
+  local slider = questOffsetSlider("Quest item horizontal offset")
+  slider:SetValue(37)
+  local _, _, _, movedX = item:GetPoint()
+  check(math.abs(movedX - x - 37) < 0.001, "horizontal slider moves the item immediately")
+  questOffsetSlider("Quest item vertical offset"):SetValue(-23)
+  check(math.abs(select(5, item:GetPoint()) - y + 23) < 0.001, "vertical slider moves the item immediately")
+  click(win(), "Target position: Bottom")
+  check(select(1, target:GetPoint()) == "TOPLEFT", "target can move below the panel")
+  click(win(), "Quest item position: Bottom")
+  questOffsetSlider("Quest item horizontal offset"):SetValue(0)
+  questOffsetSlider("Quest item vertical offset"):SetValue(0)
+  local _, _, _, ix, iy = item:GetPoint()
+  local _, _, _, tx, ty = target:GetPoint()
+  check(tx >= ix + item:GetWidth() and math.abs(iy - ty) < 0.001, "bottom buttons sit side by side without overlapping")
+  click(win(), "Target position: Top")
+  check(select(1, target:GetPoint()) == "BOTTOMLEFT", "target can move above the panel")
+  click(win(), "Show the quest item button")
+  check(not item:IsShown() and target:IsShown(), "item can be disabled independently")
+  click(win(), "Show the target button")
+  check(not target:IsShown(), "target can be disabled independently")
+  slash("quests")
+  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  check(not findButton(win(), function(l) return l == "Show the quest item button" end):GetChecked(), "setup shares the item toggle")
+  click(win(), "Show the quest item button")
+  click(win(), "Show the target button")
+  check(item:IsShown() and target:IsShown(), "setup can turn both buttons back on")
+  click(win(), "Quest item position: Top")
+  check(select(1, item:GetPoint()) == "BOTTOMLEFT", "setup can place the item above the panel")
+  questOffsetSlider("Target horizontal offset"):SetValue(-41)
+  questOffsetSlider("Target vertical offset"):SetValue(19)
+  click(win(), "Target horizontal offset +")
+  check(questOffsetSlider("Target horizontal offset"):GetValue() == -36, "offset steppers move by 5 pixels")
+  click(win(), "Reset quest item position")
+  check(select(1, item:GetPoint()) == "TOPRIGHT", "reset returns the item to the left")
+  click(win(), "Reset target position")
+  check(select(1, target:GetPoint()) == "TOPRIGHT" and questOffsetSlider("Target horizontal offset"):GetValue() == 0,
+    "reset clears the target's placement and offsets")
+  -- The protected buttons must stay where they were until combat ends.
+  local _, _, _, oldX, oldY = target:GetPoint()
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  click(win(), "Target position: Right")
+  questOffsetSlider("Target horizontal offset"):SetValue(75)
+  check(select(1, target:GetPoint()) == "TOPRIGHT" and select(4, target:GetPoint()) == oldX
+    and select(5, target:GetPoint()) == oldY, "placement changes wait through combat")
+  click(win(), "Show the quest item button")
+  check(item:IsShown(), "hiding the secure item button also waits through combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(select(1, target:GetPoint()) == "TOPLEFT" and not item:IsShown(), "pending placement and visibility apply after combat")
+  click(win(), "Show the quest item button")
+  win():Hide()
+  frame:Hide()
+  check(not item:IsShown() and not target:IsShown(), "hiding the guide hides the repositioned buttons")
+end
+
+function S.questButtonSavedLayout()
+  LevelingCodexDB = { questViewerScale = 0.7, questItemLayout = { side = "right", x = 24, y = -17 },
+    questTargetLayout = { side = "bottom", x = -30, y = 11 } }
+  local frame, item, target = questButtonFixture()
+  local _, _, _, x, y = item:GetPoint()
+  check(select(1, item:GetPoint()) == "TOPLEFT" and math.abs(x - ((frame:GetLeft() + frame:GetWidth()) * 0.7 + 6 + 24)) < 0.001
+    and math.abs(y - ((frame:GetTop() - 26) * 0.7 - 17)) < 0.001, "saved right placement follows the scaled panel")
+  local _, _, _, tx, ty = target:GetPoint()
+  check(math.abs(tx - (frame:GetLeft() * 0.7 + 56 - 30)) < 0.001
+    and math.abs(ty - ((frame:GetTop() - frame:GetHeight()) * 0.7 - 10 + 11)) < 0.001, "bottom placement follows the scaled panel height")
+  frame._left, frame._top = 200, 600
+  MOCK.fire(frame, "OnDragStop")
+  check(math.abs(select(4, item:GetPoint()) - ((200 + frame:GetWidth()) * 0.7 + 30)) < 0.001,
+    "buttons follow the panel when it is dragged")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Compact step window")
+  check(math.abs(select(5, target:GetPoint()) - ((600 - frame:GetHeight()) * 0.7 + 1)) < 0.001,
+    "bottom placement follows compact mode's new height")
+end
+
+function S.questButtonInvalidLayout()
+  LevelingCodexDB = { questItemLayout = "invalid", questTargetLayout = { side = "elsewhere", x = 99999, y = "bad" } }
+  local _, item, target = questButtonFixture()
+  check(select(1, item:GetPoint()) == "TOPRIGHT" and select(1, target:GetPoint()) == "TOPRIGHT", "invalid sides fall back to the left")
+  slash("")
+  click(win(), "Settings")
+  check(questOffsetSlider("Quest item horizontal offset"):GetValue() == 0
+    and questOffsetSlider("Target horizontal offset"):GetValue() == UIParent:GetWidth()
+    and questOffsetSlider("Target vertical offset"):GetValue() == 0, "invalid offsets fall back or clamp to the slider range")
+end
+
+-- Move the handle as the client does: StartMoving may change its anchor, and the final
+-- screen edges are what the player dropped. The mock's default GetLeft/GetTop are fixed.
+local function dragQuestHandle(handle, dx, dy)
+  check(handle and handle:IsShown(), "quest button drag handle is visible")
+  local point, _, _, x, y = handle:GetPoint()
+  local left = point == "TOPRIGHT" and x - handle:GetWidth() or x
+  local top = point == "BOTTOMLEFT" and y + handle:GetHeight() or y
+  MOCK.fire(handle, "OnDragStart", "LeftButton")
+  check(handle._moving, "the handle starts moving")
+  handle._left, handle._top = left + dx, top + dy
+  MOCK.fire(handle, "OnDragStop")
+  check(not handle._moving, "the handle stops moving")
+end
+
+function S.questButtonDragging()
+  local frame, item, target = questButtonFixture()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Unlock button dragging")
+  local itemMover, targetMover = _G.LevelingCodexQuestItemMover, _G.LevelingCodexQuestTargetMover
+  check(itemMover and itemMover:IsShown() and targetMover and targetMover:IsShown(), "unlock shows both drag handles")
+  check(not itemMover._secure and not targetMover._secure, "handles do not use the item or target action")
+  local _, _, _, x, y = item:GetPoint()
+  local targetX, targetY = select(4, target:GetPoint()), select(5, target:GetPoint())
+  dragQuestHandle(itemMover, 540, -61)
+  check(math.abs(select(4, item:GetPoint()) - x - 540) < 0.001 and math.abs(select(5, item:GetPoint()) - y + 61) < 0.001,
+    "dropping the item handle moves only its button, including beyond the old slider range")
+  check(select(4, target:GetPoint()) == targetX and select(5, target:GetPoint()) == targetY, "item dragging leaves the target in place")
+  check(questOffsetSlider("Quest item horizontal offset"):GetValue() == 540
+    and questOffsetSlider("Quest item vertical offset"):GetValue() == -61, "dragged offsets appear in Settings")
+  check(item:GetAttribute("type") == "item" and target:GetAttribute("type") == "macro", "dragging preserves normal button actions")
+  slash("quests")
+  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  check(findButton(win(), function(l) return l == "Lock button dragging" end), "setup shares the unlock state")
+  click(win(), "Target position: Bottom")
+  local _, _, _, bottomX, bottomY = target:GetPoint()
+  dragQuestHandle(targetMover, -120, 85)
+  check(select(4, target:GetPoint()) == bottomX - 120 and select(5, target:GetPoint()) == bottomY + 85, "bottom handle saves the drop with its own anchor")
+  click(win(), "Target position: Top")
+  local _, _, _, topX, topY = target:GetPoint()
+  dragQuestHandle(targetMover, 13, -17)
+  check(select(4, target:GetPoint()) == topX + 13 and select(5, target:GetPoint()) == topY - 17, "top handle saves the button's bottom anchor")
+  local savedX = select(4, item:GetPoint())
+  frame._left = frame:GetLeft() + 60
+  MOCK.fire(frame, "OnDragStop")
+  check(select(4, item:GetPoint()) == savedX + 60, "dragged buttons still follow the step panel")
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  check(not itemMover:IsShown() and not targetMover:IsShown(), "combat hides drag handles")
+  MOCK.fire(itemMover, "OnDragStart", "LeftButton")
+  check(not itemMover._moving, "dragging is blocked in combat")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(itemMover:IsShown() and targetMover:IsShown(), "drag handles return after combat")
+  MOCK.fire(itemMover, "OnDragStart", "LeftButton")
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  check(not itemMover._moving and not itemMover:IsShown(), "entering combat cancels an active drag")
+  click(win(), "Lock button dragging")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  check(not itemMover:IsShown() and not targetMover:IsShown(), "locking in combat keeps the handles hidden afterward")
+  click(win(), "Reset quest item position")
+  check(select(4, item:GetPoint()) == frame:GetLeft() - 6, "reset clears dragged offsets")
+  click(win(), "Unlock button dragging")
+  frame:Hide()
+  check(not itemMover:IsShown() and not targetMover:IsShown(), "hiding the guide also hides its drag handles")
+end
+
+function S.questButtonDragPreview()
+  S.login()
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Unlock button dragging")
+  local mover = _G.LevelingCodexQuestItemMover
+  check(mover and mover:IsShown() and not (_G.LevelingCodexQuestItem and _G.LevelingCodexQuestItem:IsShown()),
+    "the item can be positioned without an item on the current step")
+  dragQuestHandle(mover, 80, -42)
+  check(LevelingCodexDB.questItemLayout.x == 80 and LevelingCodexDB.questItemLayout.y == -42, "preview drag saves offsets")
+  click(win(), "Lock button dragging")
+  check(not mover:IsShown(), "lock removes the preview")
+  if not MOCK.minimal then
+    MOCK.bags["Nibbled-On Book"] = 1
+    click(questViewer(), "Next")
+    local item = _G.LevelingCodexQuestItem
+    check(item and item:IsShown() and select(4, item:GetPoint()) == questViewer():GetLeft() - 6 + 80,
+      "a quest item appearing later uses its dragged position")
+  end
+end
+
+function S.questButtonMinimalLayout()
+  S.login()
+  local target = _G.LevelingCodexQuestTarget
+  check(target and target:IsShown(), "target works without optional APIs")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Target position: Right")
+  check(select(1, target:GetPoint()) == "TOPLEFT", "minimal client can reposition the target")
+  questOffsetSlider("Target horizontal offset"):SetValue(18)
+  click(win(), "Show the target button")
+  check(not target:IsShown(), "minimal client can hide the target")
+  slash("quests")
+  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Show the target button")
+  check(target:IsShown(), "minimal setup shares the visibility option")
+end
+
+function S.questButtonController()
+  LevelingCodexDB = { padNative = false }
+  MOCK.gamepadUI = true
+  S.login()
+  slash("")
+  click(win(), "Settings")
+  local function press(button) MOCK.fire(win(), "OnGamePadButtonDown", button) end
+  local function adjust()
+    local minus, plus = "Quest item horizontal offset -", "Quest item horizontal offset +"
+    -- Changing tabs keeps the closest focus position, which can be below this row.
+    for _ = 1, 100 do press("PADDUP") end
+    for _ = 1, 100 do
+      local focused = LevelingCodexPadFocus and LevelingCodexPadFocus.target
+      if focused and (labelOf(focused) == minus or labelOf(focused) == plus) then break end
+      press("PADDDOWN")
+    end
+    check(LevelingCodexPadFocus and (labelOf(LevelingCodexPadFocus.target) == minus or labelOf(LevelingCodexPadFocus.target) == plus),
+      "D-pad reaches the offset adjustment row")
+    if labelOf(LevelingCodexPadFocus.target) == minus then press("PADDRIGHT") end
+    check(labelOf(LevelingCodexPadFocus.target) == plus, "D-pad selects the plus button")
+    local before = questOffsetSlider("Quest item horizontal offset"):GetValue()
+    press("PAD1")
+    check(questOffsetSlider("Quest item horizontal offset"):GetValue() == before + 5, "controller A adjusts the offset")
+  end
+  adjust()
+  slash("quests")
+  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  adjust()
+  press("PAD2")
+  check(not win():IsShown(), "controller B closes setup")
+end
+
 local function routeHas(text)
   click(win(), "Route")
   if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end

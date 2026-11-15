@@ -996,6 +996,7 @@ local function renderSetup(y)
     y = y + U.T((ahead == 1 and "1 step" or ahead .. " steps") .. ": see Settings", x, y, w, "small", C.dim) + 4
   end
   y = y + 6
+  y = U.questButtonOptions(y, 16, W - 32)
   -- the vendor helpers (Vendor.lua), the same switches as Settings
   label("Vendor")
   U.check("Sell junk", x, y - 1, not db.noAutoSell, function()

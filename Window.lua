@@ -995,6 +995,99 @@ renderers.tips = function(V)
   return y + 10
 end
 
+-- Shared by Settings and Quests > Guide setup. Sliders update only the secure buttons,
+-- so dragging a thumb never rebuilds the setup card under the mouse. +/- buttons offer
+-- the same offsets to controller users.
+local function newOffsetSlider()
+  local slider = CreateFrame("Slider", nil, overlay)
+  slider:SetOrientation("HORIZONTAL")
+  slider:SetValueStep(1)
+  ns.try(slider.SetObeyStepOnDrag, slider, true)
+  slider.track = slider:CreateTexture(nil, "BACKGROUND")
+  slider.track:SetPoint("LEFT", 0, 0)
+  slider.track:SetPoint("RIGHT", 0, 0)
+  slider.track:SetHeight(4)
+  slider.thumb = slider:CreateTexture(nil, "ARTWORK")
+  slider.thumb:SetSize(12, 20)
+  slider:SetThumbTexture(slider.thumb)
+  return slider
+end
+
+local function questButtonOptions(y, x, w)
+  local db = ns.db()
+  btn(ns.questButtonsUnlocked() and "Lock button dragging" or "Unlock button dragging", x, y, 190, function()
+    ns.toggleQuestButtonDragging()
+    refresh()
+  end, ns.questButtonsUnlocked(), "Show drag handles for both buttons, even when this step has no quest item. Drag outside combat, then lock them here.")
+  local h = T("Unlock, drag the Item and Target handles, then lock. Dragging pauses in combat.",
+    x + 202, y + 3, w - 202, "small", C.dim)
+  y = y + math.max(30, h + 8)
+  local choices = { { "left", "Left" }, { "right", "Right" }, { "top", "Top" }, { "bottom", "Bottom" } }
+  local function draw(kind, name, toggleLabel, offKey, tip)
+    check(toggleLabel, x, y, not db[offKey], function()
+      db[offKey] = not db[offKey]
+      ns.placeQuestButtons()
+      refresh()
+    end, tip .. " Changes wait until you leave combat.")
+    btn("Reset position", x + w - 116, y, 116, function()
+      ns.resetQuestButtonLayout(kind)
+      refresh()
+    end, false, "Return this button to the left of the step window with no offsets.").codexLabel = "Reset " .. name:lower() .. " position"
+    y = y + 30
+    local side = ns.questButtonLayout(kind)
+    T("Position", x, y + 5, 86, "body", C.ink)
+    local each = math.floor((w - 92 - 12) / 4)
+    for i, choice in ipairs(choices) do
+      btn(choice[2], x + 92 + (i - 1) * (each + 4), y, each, function()
+        local _, dx, dy = ns.questButtonLayout(kind)
+        ns.setQuestButtonLayout(kind, choice[1], dx, dy)
+        refresh()
+      end, side == choice[1], "Place the " .. name:lower() .. " button at the " .. choice[1] .. " of the step window.").codexLabel = name .. " position: " .. choice[2]
+    end
+    y = y + 30
+    local function offset(axis, label)
+      local _, dx, dy = ns.questButtonLayout(kind)
+      local value = axis == "x" and dx or dy
+      T(label, x, y + 4, 86, "small", C.ink)
+      local _, amount = T(value .. " px", x + w - 124, y + 4, 54, "small", C.ink, "CENTER")
+      local slider = take("offsetSlider", newOffsetSlider)
+      slider:SetPoint("TOPLEFT", content, "TOPLEFT", x + 98, -y)
+      slider:SetSize(w - 238, 24)
+      slider.track:SetColorTexture(rgba(C.edge))
+      slider.thumb:SetColorTexture(rgba(C.gold))
+      slider.codexLabel = name .. " " .. label:lower() .. " offset"
+      slider:SetScript("OnValueChanged", nil)
+      local limit = ns.questButtonOffsetLimit()
+      slider:SetMinMaxValues(-limit, limit)
+      slider:SetValue(value)
+      local function change(n)
+        n = math.floor(math.max(-limit, math.min(limit, n)) + 0.5)
+        local currentSide, currentX, currentY = ns.questButtonLayout(kind)
+        ns.setQuestButtonLayout(kind, currentSide, axis == "x" and n or currentX, axis == "y" and n or currentY)
+        amount:SetText(n .. " px")
+      end
+      slider:SetScript("OnValueChanged", function(_, n) change(n) end)
+      for i, delta in ipairs({ -5, 5 }) do
+        local symbol = delta < 0 and "-" or "+"
+        btn(symbol, x + w - 64 + (i - 1) * 34, y, 30, function()
+          local _, currentX, currentY = ns.questButtonLayout(kind)
+          change((axis == "x" and currentX or currentY) + delta)
+          refresh()
+        end, false, "Move the button by 5 pixels.").codexLabel = slider.codexLabel .. " " .. symbol
+      end
+      y = y + 30
+    end
+    offset("x", "Horizontal")
+    offset("y", "Vertical")
+    y = y + 8
+  end
+  draw("item", "Quest item", "Show the quest item button", "noQuestItem", "Use the current step's quest item.")
+  draw("target", "Target", "Show the target button", "noQuestTarget", "Target the step's quest giver or creatures. Key Bindings > AddOns can give it a key.")
+  y = y + T("Offsets: positive horizontal moves right; positive vertical moves up. Button changes wait until you leave combat.",
+    x, y, w, "small", C.dim) + 12
+  return y
+end
+
 renderers.settings = function()
   local db = LevelingCodexDB
   local toast = ns.getToast()
@@ -1125,10 +1218,7 @@ renderers.settings = function()
   tick("Play a sound when a step completes", not db.questNoSound, function() db.questNoSound = not db.questNoSound end)
   tick("Show class quests", not db.noClassQuests, function() db.noClassQuests = not db.noClassQuests; ns.updateQuestSettings() end,
     "Your class's quest chains (pets, forms, totems, class spells) as their own sections in the Quests tab. They also show under Missed quests when you reach their level.")
-  tick("Show the quest item button", not db.noQuestItem, function() db.noQuestItem = not db.noQuestItem; ns.questRefresh() end,
-    "A button beside the step window that uses the current step's quest item. Changes wait until you leave combat.")
-  tick("Show the target button", not db.noQuestTarget, function() db.noQuestTarget = not db.noQuestTarget; ns.questRefresh() end,
-    "A button below the item button that targets the current step's quest giver, or the creatures its objectives need. Key Bindings > AddOns can give it a key. Changes wait until you leave combat.")
+  y = questButtonOptions(y, 0, W)
   tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
   tick("Show the NPC portrait", not db.noQuestPortrait, function()
     db.noQuestPortrait = not db.noQuestPortrait
@@ -1338,7 +1428,7 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
-  segments = segments, fold = fold,
+  segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }

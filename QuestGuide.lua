@@ -216,6 +216,7 @@ local function makeViewer()
     local parent = self:GetParent()
     if not painting and not (parent and not parent:IsVisible()) then dismissed = true end
     if arrow then arrow:Hide() end
+    updateItemButton()
   end)
   viewer:HookScript("OnShow", function()
     if not painting and not dismissed then ns.questRefresh() end
@@ -1064,6 +1065,151 @@ local targetButton -- false = the client can't make one
 local TARGET_TYPES = { accept = true, turnin = true, buy = true }
 local MACRO_LIMIT = 255
 
+-- Each secure button has its own side and offsets, in UIParent units. Keep the old left
+-- positions by default. Never anchor a protected button to the movable step window.
+local BUTTON_LAYOUT_KEYS = { item = "questItemLayout", target = "questTargetLayout" }
+local BUTTON_SIDES = { left = true, right = true, top = true, bottom = true }
+function ns.questButtonOffsetLimit()
+  -- Enough room to drag across the screen, including when the UI is scaled down.
+  return math.max(300, tonumber(try(UIParent.GetWidth, UIParent)) or 0, tonumber(try(UIParent.GetHeight, UIParent)) or 0)
+end
+local function buttonOffset(value)
+  local n = tonumber(value) or 0
+  if n ~= n then n = 0 end
+  local limit = ns.questButtonOffsetLimit()
+  return math.floor(math.max(-limit, math.min(limit, n)) + 0.5)
+end
+
+function ns.questButtonLayout(kind)
+  local value = ns.db()[BUTTON_LAYOUT_KEYS[kind]]
+  local layout = type(value) == "table" and value or {}
+  return BUTTON_SIDES[layout.side] and layout.side or "left", buttonOffset(layout.x), buttonOffset(layout.y)
+end
+
+function ns.setQuestButtonLayout(kind, side, x, y)
+  local key = BUTTON_LAYOUT_KEYS[kind]
+  if not key then return end
+  ns.db()[key] = { side = BUTTON_SIDES[side] and side or "left", x = buttonOffset(x), y = buttonOffset(y) }
+  updateItemButton()
+end
+
+function ns.resetQuestButtonLayout(kind)
+  local key = BUTTON_LAYOUT_KEYS[kind]
+  if not key then return end
+  ns.db()[key] = nil
+  updateItemButton()
+end
+
+function ns.placeQuestButtons() updateItemButton() end
+
+local function placeStepButton(button, kind)
+  local side, dx, dy = ns.questButtonLayout(kind)
+  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
+  button:ClearAllPoints()
+  if not left or not top then
+    button:SetPoint("CENTER", UIParent, "CENTER", -260 + dx, (kind == "item" and 80 or 30) + dy)
+    return "CENTER", -260 + dx, (kind == "item" and 80 or 30) + dy
+  end
+  local s = tonumber(viewer:GetScale()) or 1
+  local isItem = kind == "item"
+  local inset, gap = isItem and 26 or 72, isItem and 6 or 10
+  local point, x, y
+  if side == "right" then
+    point, x, y = "TOPLEFT", (left + viewer:GetWidth()) * s + gap, (top - inset) * s
+  elseif side == "top" or side == "bottom" then
+    -- Horizontal rows above/below the panel; reserve a slot for each button so they
+    -- don't jump when an item runs out or the step stops offering a target.
+    point = side == "top" and "BOTTOMLEFT" or "TOPLEFT"
+    x = left * s + (isItem and 8 or 56)
+    y = side == "top" and top * s + 10 or (top - viewer:GetHeight()) * s - 10
+  else
+    point, x, y = "TOPRIGHT", left * s - gap, (top - inset) * s
+  end
+  button:SetPoint(point, UIParent, "BOTTOMLEFT", x + dx, y + dy)
+  return point, x + dx, y + dy
+end
+
+-- Non-secure handles cover the action buttons while positioning them, so dragging never
+-- uses an item or targets a creature. They also preview a button absent from this step.
+-- Only the offsets persist: a new session starts with dragging locked.
+local buttonDragging, buttonMovers = false, {}
+function ns.questButtonsUnlocked() return buttonDragging end
+function ns.toggleQuestButtonDragging()
+  buttonDragging = not buttonDragging
+  if buttonDragging then ns.showQuestViewer() end
+  updateItemButton()
+end
+
+local function makeButtonMover(kind)
+  local name = kind == "item" and "Quest item" or "Target"
+  local mover = CreateFrame("Frame", kind == "item" and "LevelingCodexQuestItemMover" or "LevelingCodexQuestTargetMover", UIParent)
+  local size = kind == "item" and 40 or 32
+  mover:SetSize(size, size)
+  mover:SetFrameStrata("DIALOG")
+  mover:SetMovable(true)
+  mover:SetClampedToScreen(true)
+  mover:EnableMouse(true)
+  mover:RegisterForDrag("LeftButton")
+  mover.fill = mover:CreateTexture(nil, "BACKGROUND")
+  mover.fill:SetAllPoints()
+  mover.label = mover:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  mover.label:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+  mover.label:SetPoint("CENTER")
+  mover.label:SetText(kind == "item" and "Item" or "Target")
+  mover:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(name .. " button position")
+    GameTooltip:AddLine("Drag to move it. Lock button dragging in Settings or Quests > Setup when finished.", 1, 1, 1, true)
+    GameTooltip:Show()
+  end)
+  mover:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  mover:SetScript("OnDragStart", function(self)
+    if not buttonDragging or inCombat or try(InCombatLockdown) ~= false then return end
+    self.dragging = true
+    self:StartMoving()
+    GameTooltip:Hide()
+  end)
+  mover:SetScript("OnDragStop", function(self)
+    if not self.dragging then return end
+    self.dragging = nil
+    self:StopMovingOrSizing()
+    if not buttonDragging or inCombat or try(InCombatLockdown) ~= false then updateItemButton(); return end
+    local left, top = try(self.GetLeft, self), try(self.GetTop, self)
+    if not left or not top then updateItemButton(); return end
+    local side, dx, dy = ns.questButtonLayout(kind)
+    -- StartMoving can change the anchor. Convert the dropped screen edges back to this
+    -- side's anchor, using the panel's current size in case the step changed during a drag.
+    local point, x, y = placeStepButton(self, kind)
+    local droppedX = left + (point == "TOPRIGHT" and size or point == "CENTER" and size / 2 or 0)
+    local droppedY = top - (point == "BOTTOMLEFT" and size or point == "CENTER" and size / 2 or 0)
+    if point == "CENTER" then
+      droppedX, droppedY = droppedX - UIParent:GetWidth() / 2, droppedY - UIParent:GetHeight() / 2
+    end
+    ns.setQuestButtonLayout(kind, side, dx + droppedX - x, dy + droppedY - y)
+    ns.refresh()
+  end)
+  mover:SetScript("OnHide", function(self)
+    self.dragging = nil
+    self:StopMovingOrSizing()
+    if GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+  end)
+  return mover
+end
+
+local function updateButtonMovers()
+  local show = buttonDragging and viewer and viewer:IsShown() and not inCombat and try(InCombatLockdown) == false
+  for _, kind in ipairs({ "item", "target" }) do
+    local mover = buttonMovers[kind]
+    if show then
+      if not mover then mover = makeButtonMover(kind); buttonMovers[kind] = mover end
+      mover.fill:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.95)
+      mover.label:SetTextColor(ns.rgba(C.ink))
+      if not mover.dragging then placeStepButton(mover, kind) end
+      mover:Show()
+    elseif mover then mover:Hide() end
+  end
+end
+
 local function targetName(value)
   local name = type(value) == "string" and Q.plain(value)
   if name and name:find("%a") and not name:find("[\n/;]") then return name end
@@ -1146,21 +1292,14 @@ local function updateTargetButton()
   targetButton:SetAttribute("type", "macro")
   targetButton:SetAttribute("macrotext", macro)
   targetButton.targets = kept
-  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
-  targetButton:ClearAllPoints()
-  if left and top then
-    -- the window's edges are in its own units: times its scale for UIParent's
-    local s = tonumber(viewer:GetScale()) or 1
-    targetButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 10, (top - 72) * s)
-  else
-    targetButton:SetPoint("CENTER", UIParent, "CENTER", -260, 30)
-  end
+  placeStepButton(targetButton, "target")
   targetButton:Show()
 end
 
 updateItemButton = function()
+  updateButtonMovers()
   if itemButton == false and targetButton == false then return end
-  if try(InCombatLockdown) ~= false then itemPending = true; return end
+  if inCombat or try(InCombatLockdown) ~= false then itemPending = true; return end
   itemPending = false
   updateTargetButton()
   if itemButton == false then return end
@@ -1181,16 +1320,7 @@ updateItemButton = function()
   icon = icon or try(C_Item and C_Item.GetItemIconByID, item) or try(GetItemIcon, item)
   if not icon or itemButton.icon:SetTexture(icon) == false then itemButton.icon:SetTexture(ns.QUESTION_ICON) end
   itemButton.count:SetText(count > 1 and tostring(count) or "")
-  -- Placed by the window's screen position, not anchored to it: a protected frame anchored
-  -- to the window would stop the window moving or hiding in combat.
-  local left, top = try(viewer.GetLeft, viewer), try(viewer.GetTop, viewer)
-  itemButton:ClearAllPoints()
-  if left and top then
-    local s = tonumber(viewer:GetScale()) or 1
-    itemButton:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", left * s - 6, (top - 26) * s)
-  else
-    itemButton:SetPoint("CENTER", UIParent, "CENTER", -260, 80)
-  end
+  placeStepButton(itemButton, "item")
   itemButton:Show()
 end
 
@@ -2376,7 +2506,7 @@ local function handle(event, a, b, c, d, e)
     end
     return
   end
-  if event == "PLAYER_REGEN_DISABLED" then inCombat = true; return end
+  if event == "PLAYER_REGEN_DISABLED" then inCombat = true; updateItemButton(); return end
   if event == "PLAYER_REGEN_ENABLED" then
     inCombat = false
     if comfortPending then applyComfort() end

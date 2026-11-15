@@ -1037,6 +1037,10 @@ def main():
     for minimal in (False, True):
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
+        for scenario in (("questButtonMinimalLayout", "questButtonDragPreview") if minimal else
+                         ("questButtonOptions", "questButtonSavedLayout", "questButtonInvalidLayout", "questButtonController",
+                          "questButtonDragging", "questButtonDragPreview")):
+            runs.append(("WARRIOR/%s/quests-" % variant + scenario, "WARRIOR", minimal, [scenario]))
         if minimal:
             runs.append(("WARRIOR/minimal/questie", "WARRIOR", True, ["questQuestieMinimal"]))
         if not minimal:

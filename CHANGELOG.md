@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## Unreleased
+
+### Quest guide buttons
+
+- Place the quest item and target buttons independently on the left, right, top or bottom of the step window. Each has horizontal and vertical offset sliders, controller-friendly adjustment buttons and a position reset.
+- Settings and Quests > Guide setup offer the same placement controls and separate switches to hide either button. Changes made in combat apply when combat ends.
+- Unlock button dragging in either screen to move separate Item and Target handles with the mouse, then lock them again. Handles preview missing buttons and pause in combat; drops update the saved offsets, whose range now covers the screen.
+
 ## v0.25.0
 
 ### Horde quest guide, levels 30-60
