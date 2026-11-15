@@ -876,6 +876,18 @@ function S.questPortrait()
     return
   end
   check(p:IsShown() and p.creature == 197 and p.model:IsShown(), "an accept step shows its giver")
+  -- A quest several NPCs give (class quests): the one the step names.
+  local giver
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    for _, step in ipairs(section.steps) do
+      if step.quest == 783 and step.type == "accept" then giver = giver or step.npc end
+    end
+  end
+  check(giver, "the 783 pickup names its NPC")
+  MOCK.ns.questNPCs[783].by = { [giver] = 198 }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p.creature == 198, "the step's own NPC wins over the first giver")
+  MOCK.ns.questNPCs[783].by = nil
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.event("QUEST_LOG_UPDATE")
@@ -894,6 +906,10 @@ function S.questPortrait()
   MOCK.modelFails = true
   MOCK.ns.questNPCs[783].finish = 825
   MOCK.event("QUEST_LOG_UPDATE")
+  -- Reported from the game: Zombie Juice's step showed Tavernkeep Smitts, the step before's NPC. A
+  -- creature the client hasn't loaded leaves the old model drawn, and that passed for loaded.
+  MOCK.advance(0.3)
+  check(not (p.model:IsShown() and p.model._shows and p.model._shows ~= 825), "the step before's NPC never stands in for this one")
   MOCK.advance(11)
   check(p.icon:IsShown() and not p.model:IsShown(), "a model that never loads gives way to the icon")
   MOCK.targetGUID = "Creature-0-1-2-3-825-0001"
@@ -901,7 +917,13 @@ function S.questPortrait()
   MOCK.advance(0.5)
   check(p.model:IsShown() and p.model._unit == "target" and not p.icon:IsShown(),
     "targeting the step's NPC shows it from the target")
-  MOCK.targetGUID, MOCK.modelFails = nil, nil
+  MOCK.targetGUID = nil
+  -- Talking to the NPC (the quest window is open): drawn from that unit at once.
+  MOCK.ns.questNPCs[783].finish = 826
+  MOCK.npcGUID = "Creature-0-1-2-3-826-0001"
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(p.model:IsShown() and p.model._unit == "npc", "the NPC you talk to is drawn from that unit")
+  MOCK.npcGUID, MOCK.modelFails = nil, nil
   MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
   MOCK.event("QUEST_LOG_UPDATE")
   check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")

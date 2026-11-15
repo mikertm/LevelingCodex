@@ -7,6 +7,11 @@
 = the first creature a kill objective names, else the first kill-credit creature. A quest started by
 an object or an item gets no `start`; the step window then shows the step's icon in the portrait
 ring. Facts come from the cached QuestieDB Forever records (see tools/questfacts.py).
+
+`by` = { ["NPC name"] = creature } for the route's accept/turn-in steps that name another NPC than
+`start`/`finish` (a class quest every trainer gives, a breadcrumb with several givers, a giver
+QuestieDB doesn't list): the quest's own givers/finishers by that name first, else the one NPC with
+spawns QuestieDB knows by that name. The portrait shows the step's NPC.
 """
 import argparse
 import sys
@@ -26,6 +31,7 @@ local _, ns = ...
 ns.questNPCs = {
 """
 STEP_TYPES = ("accept", "turnin", "complete")
+FIELD = {"accept": "start", "turnin": "finish"}
 
 
 def route_quests(data):
@@ -76,12 +82,39 @@ def npcs_for(quest):
     return entry
 
 
+def lua_string(text):
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def ids(values):
+    """Every positive integer in a QuestieDB list, in order."""
+    if not isinstance(values, dict):
+        return []
+    return [values[k] for k in sorted(k for k in values if isinstance(k, int))
+            if isinstance(values[k], int) and values[k] > 0]
+
+
+def step_npcs(data):
+    """(quest, field, NPC name) for every accept and turn-in step that names an NPC."""
+    found = set()
+    for route in data.values():
+        for section in route["sections"]:
+            for step in section["steps"]:
+                field = FIELD.get(step.get("type"))
+                if field and step.get("quest") and isinstance(step.get("npc"), str):
+                    found.add((int(step["quest"]), field, step["npc"]))
+    return found
+
+
 def render(table):
     lines = [HEADER]
     for quest_id in sorted(table):
-        fields = ", ".join(f"{key} = {table[quest_id][key]}" for key in ("start", "finish", "mob")
-                           if key in table[quest_id])
-        lines.append(f"  [{quest_id}] = {{ {fields} }},\n")
+        entry = table[quest_id]
+        fields = [f"{key} = {entry[key]}" for key in ("start", "finish", "mob") if key in entry]
+        if entry.get("by"):
+            pairs = ", ".join(f"[{lua_string(name)}] = {entry['by'][name]}" for name in sorted(entry["by"]))
+            fields.append(f"by = {{ {pairs} }}")
+        lines.append(f"  [{quest_id}] = {{ {', '.join(fields)} }},\n")
     lines.append("}\n")
     return "".join(lines)
 
@@ -90,12 +123,30 @@ def build():
     data = load_lua_global(ROUTES, "LevelingCodexQuests")
     lu, read = lua_reader()
     quests = entity(lu, read, "forever", "quest")
+    npcs = entity(lu, read, "forever", "npc")
+    names, by_name = {}, {}
+    for npc_id in npcs[1].keys():
+        npc = record(npcs, npc_id)
+        if npc and isinstance(npc.get("name"), str):
+            names[npc_id] = npc["name"]
+            if npc.get("spawns"):
+                by_name.setdefault(npc["name"], []).append(npc_id)
     table = {}
     for quest_id in route_quests(data):
         quest = record(quests, quest_id)
         entry = npcs_for(quest) if quest else {}
         if entry:
             table[quest_id] = entry
+    for quest_id, field, name in sorted(step_npcs(data)):
+        entry = table.get(quest_id, {})
+        if entry.get(field) and names.get(entry[field]) == name:
+            continue
+        quest = record(quests, quest_id) or {}
+        own = ids((quest.get("startedBy" if field == "start" else "finishedBy") or {}).get(1))
+        spawned = by_name.get(name, [])
+        match = [i for i in own if names.get(i) == name] or (spawned if len(spawned) == 1 else [])
+        if match:
+            table.setdefault(quest_id, entry).setdefault("by", {})[name] = match[0]
     return render(table)
 
 
@@ -112,7 +163,7 @@ def main():
         print("QuestNPCData.lua is up to date.")
         return 0
     OUT.write_text(text, encoding="utf-8", newline="\n")
-    print(f"Wrote {OUT.name}: {text.count(' = {')} quests.")
+    print(f"Wrote {OUT.name}: {text.count(chr(10) + '  [')} quests.")
     return 0
 
 

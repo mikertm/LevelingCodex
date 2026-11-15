@@ -444,8 +444,8 @@ def quest_danger_checks():
 
 
 def quest_npc_checks():
-    """QuestNPCData.lua (tools/questnpcs.py): quest ID -> { start, finish, mob } creature IDs for the
-    step window's portrait; positive integers, no other keys, and quest 783 has its giver and finisher."""
+    """QuestNPCData.lua (tools/questnpcs.py): quest ID -> { start, finish, mob, by = { [name] = id } }
+    creature IDs for the step window's portrait; positive integers, no other keys, and quest 783 has its giver and finisher."""
     errors = []
     path = os.path.join(ROOT, "QuestNPCData.lua")
     if not os.path.exists(path):
@@ -463,7 +463,11 @@ def quest_npc_checks():
             errors.append(where + ": expected [questID] = { start, finish, mob }")
             continue
         for key, value in entry.items():
-            if key not in ("start", "finish", "mob") or not isinstance(value, int) or value <= 0:
+            if key == "by" and lupa.lua_type(value) == "table":
+                for name, npc in value.items():
+                    if not isinstance(name, str) or not isinstance(npc, int) or npc <= 0:
+                        errors.append(where + ": bad by[%r] = %r" % (name, npc))
+            elif key not in ("start", "finish", "mob") or not isinstance(value, int) or value <= 0:
                 errors.append(where + ": bad field %r = %r" % (key, value))
     first = npcs[783]
     if lupa.lua_type(first) != "table" or not first["start"] or not first["finish"]:
