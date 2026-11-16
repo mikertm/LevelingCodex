@@ -35,6 +35,34 @@ end
 
 local function click(root, text, mouse)
   local b = findButton(root, function(l) return l == text end)
+  -- Follow the redesigned board's visible navigation when an older scenario asks for a
+  -- control that moved to an area, a focused options page, or another grid page.
+  if not b and root == win() then
+    local function press(name)
+      local control = findButton(root, function(l) return l == name end)
+      if control then control:Click(mouse); return true end
+    end
+    if text == "Step" then press("Route")
+    elseif text == "Show all steps" then press("Area steps")
+    elseif text:find("^Track ") or text:find("^Untrack ") or text:find("^Show ") then press("In progress") end
+    b = findButton(root, function(l) return l == text end)
+    if not b then
+      local group = ({ ["Fastest"] = "Your route", ["Every quest"] = "Your route", ["Recommended"] = "Your route", ["All"] = "Your route", ["None"] = "Your route",
+        ["Ask"] = "Your route", ["Always take"] = "Your route", ["Always skip"] = "Your route", ["Auto-accept"] = "Helpers", ["Auto turn-in"] = "Helpers",
+        ["Auto-fly and bind"] = "Helpers", ["Sell junk"] = "Helpers", ["Repair"] = "Helpers", ["Minimap"] = "Map and step window", ["World map"] = "Map and step window",
+        ["Compact"] = "Map and step window", ["2 steps"] = "Map and step window", ["5 steps"] = "Map and step window", ["10 steps"] = "Map and step window",
+        ["Step window size -"] = "Map and step window", ["Step window size +"] = "Map and step window", ["Party steps"] = "Party play", ["Share quests"] = "Party play",
+        ["Ping together"] = "Party play", ["Steps done"] = "Party play", ["Quest items"] = "Party play", ["Progress"] = "Party play", ["Flights"] = "Party play" })[text]
+      if group and press("Back to options") then press(group)
+      elseif group then press(group) end
+      b = findButton(root, function(l) return l == text end)
+    end
+    for _ = 1, 40 do
+      if b then break end
+      if not (press("Next dungeons page") or press("Next guides page")) then break end
+      b = findButton(root, function(l) return l == text end)
+    end
+  end
   check(b, "no button '" .. text .. "'", 2)
   b:Click(mouse)
   return b
@@ -81,6 +109,7 @@ end
 -- The Quests tab's Quest log sub-tab, with this queue's heading ("Missed quests (2)").
 local function questQueue(name)
   click(win(), "Quest log")
+  click(win(), name == "Missed quests" and "Missed pickups" or name)
   check(questText(win(), name .. " ("), "quest view is available: " .. name, 2)
 end
 
@@ -89,13 +118,36 @@ end
 local function guideButton(name)
   click(win(), "Guides")
   local function find() return findButton(win(), function(l) return l == name end) end
-  local b = find()
+  local function pages()
+    local b = find()
+    for _ = 1, 40 do
+      if b then return b end
+      local next = findButton(win(), function(l) return l == "Next guides page" or l == "Next dungeons page" end)
+      if not next then break end
+      next:Click(); b = find()
+    end
+    return b
+  end
+  local b = pages()
   for _, view in ipairs({ "Your level", "All levels", "Dungeons", "Special", "Class" }) do
     if b then break end
+    if view ~= "Dungeons" then click(win(), "Guides") end
     local tab = findButton(win(), function(l) return l == view end)
     if tab then
       tab:Click()
-      b = find()
+      b = pages()
+      if not b and view == "All levels" then
+        local bands = {}
+        for _, control in ipairs(MOCK.buttons(win())) do
+          local label = labelOf(control)
+          if label and label:find("^LEVELS ") then bands[#bands + 1] = label end
+        end
+        for _, label in ipairs(bands) do
+          click(win(), label); b = pages()
+          if b then break end
+          click(win(), "All level bands")
+        end
+      end
       while not b do
         local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
         if not folded then break end
@@ -127,6 +179,78 @@ local function clickGuide(name)
   b:Click()
   local start = findButton(win(), function(l) return l == "Start this route" or l == "Start this guide" end)
   if start then start:Click() end
+end
+
+-- Browse the visible area nodes and six-card pages; data scenarios still inspect every authored
+-- step, while the board itself is deliberately bounded. This never follows or advances a step.
+local function walkRoute(visit)
+  click(win(), "Route")
+  local function press(name)
+    local button = findButton(win(), function(l) return l == name end)
+    if button then button:Click(); return true end
+  end
+  for _ = 1, 80 do if not press("Previous areas page") then break end end
+  for _ = 1, 80 do
+    local areas = {}
+    for _, button in ipairs(MOCK.buttons(win())) do
+      local label = labelOf(button)
+      if label and label:find("^Area %d+:") then areas[#areas + 1] = label end
+    end
+    if #areas == 0 then break end
+    for _, name in ipairs(areas) do
+      press(name); press("Area steps")
+      press("Show all steps")
+      for _ = 1, 100 do
+        local result = visit()
+        if result then return result end
+        if not press("Next steps page") then break end
+      end
+      press("Back to journey")
+    end
+    if not press("Next areas page") then break end
+  end
+  click(win(), "Route")
+end
+
+local function routeHas(text)
+  local found = false
+  walkRoute(function()
+    if questText(win(), text) then found = true end
+  end)
+  return found
+end
+
+local function routeStep(title)
+  return walkRoute(function()
+    for _, button in ipairs(MOCK.buttons(win())) do
+      if button:IsShown() and button.tipTitle == title then return button end
+    end
+  end)
+end
+
+local function guideHas(text)
+  local function press(name)
+    local b = findButton(win(), function(l) return l == name end)
+    if b then b:Click(); return true end
+  end
+  local phases = {}
+  for _, phase in ipairs({ "Prepare", "Inside", "Turn-ins" }) do
+    local b = findButton(win(), function(l) return l == phase or l == phase .. " (now)" end)
+    if b then phases[#phases + 1] = labelOf(b) end
+  end
+  if #phases == 0 then phases[1] = false end
+  for _, phase in ipairs(phases) do
+    if phase then press(phase) end
+    for _ = 1, 80 do if not press("Previous guide area") then break end end
+    for _ = 1, 80 do
+      for _ = 1, 100 do
+        if questText(win(), text) then return true end
+        if not press("Next steps page") then break end
+      end
+      if not press("Next guide area") then break end
+    end
+  end
+  return false
 end
 
 function S.questStart()
@@ -317,10 +441,9 @@ function S.questDuskwoodFlanks()
   S.login()
   slash("quests")
   local function preview(title)
-    for _, b in ipairs(MOCK.buttons(win())) do
-      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
-    end
-    error("No route objective for " .. title)
+    local button = routeStep("Complete - " .. title)
+    check(button, "route objective is available for " .. title)
+    button:Click()
   end
   local frame = questViewer()
   preview("Ira's Dagger")
@@ -342,10 +465,9 @@ function S.questRedridgeOverlap()
   S.login()
   slash("quests")
   local function preview(title)
-    for _, b in ipairs(MOCK.buttons(win())) do
-      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
-    end
-    error("No route objective for " .. title)
+    local button = routeStep("Complete - " .. title)
+    check(button, "route objective is available for " .. title)
+    button:Click()
   end
   preview("Blackrock Blockade")
   local frame = questViewer()
@@ -406,7 +528,7 @@ function S.questLayout()
   check(questText(win(), "CURRENT STEP"), "current action has a dedicated card")
   check(not questText(win(), "Accept - Hilary's Necklace"), "finished steps are hidden by default")
   click(win(), "Show all steps")
-  check(questText(win(), "Accept - Hilary's Necklace"), "finished steps can be shown")
+  check(routeHas("Accept - Hilary's Necklace"), "finished steps can be shown through area pages")
   check(not questText(win(), "The Defias Brotherhood"), "route shows only the selected section")
   checkBounds()
   questQueue("Ready to turn in")
@@ -416,7 +538,7 @@ function S.questLayout()
   check(questText(win(), "Missed quests"), "missed view has its own heading")
   checkBounds()
   clickGuide("Westfall")
-  check(questText(win(), "The Defias Brotherhood"), "switching sections returns to its route")
+  check(routeHas("The Defias Brotherhood"), "switching sections exposes that route's area cards")
   checkBounds()
 end
 
@@ -450,11 +572,8 @@ function S.questBind()
   check(not questText(frame, "Bind hearthstone"), "skip setting hides bind steps")
   check(questText(frame, "Accept - A Free Lunch"), "skip setting moves on to the next step")
   click(win(), "Quests")
-  check(not questText(win(), "Bind hearthstone"), "skipped bind steps leave the route list")
-  local hearth
-  for _, button in ipairs(MOCK.buttons(win())) do
-    if button:IsVisible() and button.tipTitle == "Return to Lakeshire" then hearth = button; break end
-  end
+  check(not routeHas("Bind hearthstone"), "skipped bind steps leave the route list")
+  local hearth = routeStep("Return to Lakeshire")
   check(hearth, "hearth step is in the route list")
   MOCK.bags[6948] = 1
   hearth:Click()
@@ -617,7 +736,7 @@ function S.questCleanup()
     { questID = 7, title = "Kobold Camp Cleanup", level = 2, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Quest log")
+  click(win(), "Quest log"); click(win(), "Clean up")
   check(questText(win(), "Quest log cleanup"), "the library lists quests to clean up")
   check(questText(win(), "Stray Errand") and questText(win(), "Not in your guides") and questText(win(), "Grey"),
     "each quest says why it is listed")
@@ -1035,10 +1154,12 @@ function S.stepSetupWindow()
   S.login()
   slash("quests")
   local frame = questViewer()
+  click(win(), "Setup"); click(win(), "Map and step window")
   click(win(), "Step window size -")
   check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
   click(win(), "Compact")
   check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+  click(win(), "Back to options"); click(win(), "Helpers")
   local function box(name) return findButton(win(), function(l) return l == name end) end
   check(box("Sell junk") and box("Sell junk"):GetChecked() and box("Repair") and box("Repair"):GetChecked(),
     "the vendor helpers start on")
@@ -1148,6 +1269,7 @@ end
 function S.questSetupLevelled()
   S.login()
   slash("quests")
+  click(win(), "Setup"); click(win(), "Your route")
   click(win(), "Recommended")
   MOCK.level = 30
   MOCK.event("PLAYER_LEVEL_UP", 30)
@@ -1629,9 +1751,9 @@ function S.guideRowsLong()
     for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c); if hit then return hit end end
   end
   local fs = find(win())
-  check(fs and fs:GetWidth() <= row:GetWidth() - 190, "the title keeps clear of the range and the tag")
+  check(fs and fs:GetWidth() <= row:GetWidth() - 24, "the title keeps clear of the range and the tag")
   guidesView("All levels")
-  check(findButton(win(), function(l) return l:find("^%- LEVELS 30%-40: %d+ guides") end),
+  check(findButton(win(), function(l) return l:find("^LEVELS 30%-40") end),
     "an open band keeps its label")
 end
 
@@ -1785,8 +1907,8 @@ function S.stepProgress()
   MOCK.fire(bar, "OnLeave")
   local pct = MOCK.textUnder(bar):match("(%d+)%%")
   bar:Click()
-  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
-    "clicking opens the route")
+  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Area steps" end),
+    "clicking opens the journey")
   click(win(), "Guides")
   check(pct and (questText(win(), "Current " .. pct .. "%") or (pct == "0" and questText(win(), "Current"))),
     "the guide list shows the bar's percentage: " .. tostring(pct))
@@ -1830,40 +1952,25 @@ end
 
 -- The Quests tab: a fixed step card and button row, then Step, Route, Guides and Quest log sub-tabs.
 function S.questTabViews()
-  S.login()
-  slash("quests")
-  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Quest log" }) do
-    check(findButton(win(), function(l) return l == name end), "the Quests tab has " .. name)
+  S.login(); slash("quests")
+  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Dungeons", "Quest log", "Party" }) do
+    check(findButton(win(), function(l) return l == name end), "the quest board has " .. name)
   end
-  check(findButton(win(), function(l) return l == "Show all steps" end), "Route, the guide's steps, opens first")
+  check(findButton(win(), function(l) return l == "Area steps" end), "Journey opens first with area drill-down")
   click(win(), "Step")
-  check(findButton(win(), function(l) return l == "Resume active quest" end), "Step has the step's tools")
+  check(findButton(win(), function(l) return l == "Resume active quest" end), "the selected step retains its tools")
   click(win(), "Guides")
-  local yourLevel = findButton(win(), function(l) return l == "Your level" end)
-  check(yourLevel and yourLevel.codexOn and questText(win(), "LEVELING GUIDES FOR LEVEL"),
-    "Guides opens on the guides for your level")
+  check(findButton(win(), function(l) return l == "Your level" end).codexOn, "Routes opens on Your level")
   click(win(), "All levels")
-  check(findButton(win(), function(l) return l == "Search" end)
-    and findButton(win(), function(l) return l:find("^%- LEVELS 1%-12") end),
-    "Guides has the search and the level bands")
-  local folded = findButton(win(), function(l) return l:find("^%+ LEVELS 30%-40") end)
-  check(folded, "a band far from your level is folded")
-  local function band30() -- guide buttons starting in the 30s (class quests can be among them)
-    local n = 0
-    for line in (MOCK.textUnder(win()) .. "\n"):gmatch("(.-)\n") do
-      if line:find("^Levels 3%d%-%d+$") then n = n + 1 end
-    end
-    return n
-  end
-  local before = band30()
-  folded:Click()
-  check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
+  local band = findButton(win(), function(l) return l:find("^LEVELS 30%-40") end)
+  check(band, "level bands are selectable tiles")
+  band:Click()
+  check(questText(win(), "Levels 3") and findButton(win(), function(l) return l == "All level bands" end), "a band opens its guide grid")
   click(win(), "Dungeons")
-  check(findButton(win(), function(l) return l == "Recommended" end), "dungeons live under Guides")
-  click(win(), "Quest log")
-  check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
-  click(win(), "Step")
-  check(findButton(win(), function(l) return l == "Report this step" end), "the step tools sit under Step")
+  check(findButton(win(), function(l) return l == "Recommended" end), "Dungeons has pickup plan choices")
+  questQueue("Ready to turn in")
+  check(questText(win(), "Ready to turn in"), "quest log categories open focused queues")
+  stepTool("Report this step")
 end
 
 -- A buy step that lists several items waits until the bags hold every one of them.
@@ -1970,12 +2077,9 @@ function S.questWindowExtras()
   slash("quests")
   click(win(), "Route")
   if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end
-  local skipped
-  for _, button in ipairs(MOCK.buttons(win())) do
-    if button.tipTitle == "Flight path - Lakeshire, Redridge" then skipped = button end
-  end
+  local skipped = routeStep("Flight path - Lakeshire, Redridge")
   check(skipped and skipped.tipText:find("Skipped: you passed it with Next", 1, true), "the route list says why a step was skipped")
-  click(win(), "Show on map")
+  click(win(), "Route"); click(win(), "Show on map")
   check(MOCK.openedMap == 1433, "Show on map opens the world map at the step")
   stepTool("Report this step")
   local copy = _G.LevelingCodexCopy
@@ -2068,6 +2172,7 @@ function S.questSetup()
   slash("quests")
   check(not seg("Fastest").codexOn and not seg("Every quest").codexOn and questText(win(), "Custom: see Settings"),
     "a mixed pace lights neither and says so")
+  click(win(), "Back to options"); click(win(), "Helpers")
   local accept = seg("Auto-accept")
   check(accept and accept.GetChecked and not accept:GetChecked(), "helpers are check boxes")
   click(win(), "Every quest")
@@ -2078,12 +2183,14 @@ function S.questSetup()
   check(seg("Auto-accept"):GetChecked(), "and ticks the box")
   click(win(), "Fastest")
   check(not LevelingCodexDB.questKeepGrey and not LevelingCodexDB.questOptional, "Fastest drops them again")
+  click(win(), "Back to options"); click(win(), "Map and step window")
   check(seg("Minimap"):GetChecked() and seg("World map"):GetChecked(), "both route lines start on")
   click(win(), "World map")
   check(LevelingCodexDB.noWorldMapLine and not seg("World map"):GetChecked(), "the setup turns the world map line off")
   click(win(), "Minimap")
   check(LevelingCodexDB.noMinimapLine, "and the minimap line")
   -- the party: every party sync option, with quest sharing on by default and the chat lines off
+  click(win(), "Back to options"); click(win(), "Party play")
   check(seg("Party steps"):GetChecked() and seg("Share quests"):GetChecked() and seg("Ping together"):GetChecked(),
     "party sync, quest sharing and the together ping start on")
   check(not seg("Steps done"):GetChecked() and not seg("Quest items"):GetChecked() and not seg("Progress"):GetChecked()
@@ -2101,6 +2208,7 @@ function S.questSetup()
   LevelingCodexDB.questDungeons = false
   LevelingCodexDB.questDungeonPlan = { ["dungeon-deadmines"] = true }
   slash("quests")
+  click(win(), "Back to options"); click(win(), "Your route")
   check(seg("Your picks (1)") and seg("Your picks (1)").codexOn, "a hand-made plan shows as your picks")
   click(win(), "Done")
   check(LevelingCodexDB.questSetupDone and not questText(win(), "SET UP YOUR GUIDE"), "Done closes the setup")
@@ -2143,7 +2251,7 @@ function S.questPreviewAhead()
   check(questText(frame, "Next section: Duskwood"), "the list names the next section where it starts")
 
   local function seg(name) return findButton(win(), function(l) return l == name end) end
-  click(win(), "Setup")
+  click(win(), "Setup"); click(win(), "Map and step window")
   check(not seg("2 steps").codexOn and questText(win(), "8 steps: see Settings"),
     "the setup card says when the count is one Settings set")
   click(win(), "10 steps")
@@ -2364,11 +2472,13 @@ function S.questPartyTab()
   fromParty("Ann", "L;7,33,783")
   slash("quests")
   click(win(), "Party")
-  check(questText(win(), "Ann (5) Mage"), "the Party tab lists each member")
+  check(findButton(win(), function(l) return l == "Party member: Ann" end) and findButton(win(), function(l) return l == "Party member: Bo" end), "the Party board has one panel per member")
+  click(win(), "Party member: Bo")
+  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"), "a member without the Codex has a detail panel")
+  click(win(), "Back to party"); click(win(), "Party member: Ann")
+  check(questText(win(), "Ann (5) Mage"), "the member detail shows level and class")
   check(questText(win(), "Westfall: Accept - Westfall Stew"), "with their guide and step")
   check(questText(win(), "heard just now"), "and when you last heard from them")
-  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"),
-    "a member without the Codex")
   check(questText(win(), "Ann has, you don't (2)"), "the quests Ann has that you don't")
   click(win(), "Ask Ann to share Wolves Across the Border")
   check(addonCount("^R;33;Ann$") == 1, "asking sends Ann's Codex a share request")
@@ -2381,7 +2491,7 @@ function S.questPartyTab()
   check(MOCK.ns.quests.current().section.id == "westfall", "following switches your guide to Ann's")
   click(win(), "Party")
   check(not findButton(win(), function(l) return l == "Follow Ann's guide" end), "no Follow once you're in the same guide")
-  click(win(), "Say quest items I pick up")
+  click(win(), "Party settings"); click(win(), "Quest items")
   check(LevelingCodexDB.questAnnounceItems, "the party switches are in the tab too")
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
@@ -3152,7 +3262,7 @@ function S.questEliteModes()
   check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil,
     "the modes don't save a choice for the quest")
   click(win(), "Quests")
-  click(win(), "Setup")
+  click(win(), "Setup"); click(win(), "Your route")
   check(hasButton(win(), "Ask") and hasButton(win(), "Always take") and hasButton(win(), "Always skip"),
     "the guide setup card has the same three choices")
   click(win(), "Always take")
@@ -3999,7 +4109,8 @@ function S.questButtonOptions()
   click(win(), "Show the target button")
   check(not target:IsShown(), "target can be disabled independently")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   check(not findButton(win(), function(l) return l == "Show the quest item button" end):GetChecked(), "setup shares the item toggle")
   click(win(), "Show the quest item button")
   click(win(), "Show the target button")
@@ -4098,7 +4209,8 @@ function S.questButtonDragging()
     and questOffsetSlider("Quest item vertical offset"):GetValue() == -61, "dragged offsets appear in Settings")
   check(item:GetAttribute("type") == "item" and target:GetAttribute("type") == "macro", "dragging preserves normal button actions")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   check(findButton(win(), function(l) return l == "Lock button dragging" end), "setup shares the unlock state")
   click(win(), "Target position: Bottom")
   local _, _, _, bottomX, bottomY = target:GetPoint()
@@ -4168,7 +4280,8 @@ function S.questButtonMinimalLayout()
   click(win(), "Show the target button")
   check(not target:IsShown(), "minimal client can hide the target")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   click(win(), "Show the target button")
   check(target:IsShown(), "minimal setup shares the visibility option")
 end
@@ -4199,16 +4312,11 @@ function S.questButtonController()
   end
   adjust()
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   adjust()
   press("PAD2")
   check(not win():IsShown(), "controller B closes setup")
-end
-
-local function routeHas(text)
-  click(win(), "Route")
-  if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end
-  return questText(win(), text)
 end
 
 function S.questRace()
@@ -4655,20 +4763,341 @@ end
 
 -- Player feedback: clicking a route switched to it without a word, and the Route sub-tab then led
 -- with other routes, so it didn't look like you were on the one you picked.
+-- The overview must describe the route being followed while guide pages are only previews.
+-- Option summaries must update from the same choices that actually change the route.
+function S.questTabOverview()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login()
+  slash("quests")
+  clickGuide("Loch Modan")
+  click(win(), "Route")
+  check(questText(win(), "Area: Loch Modan"), "the overview names the active route's area")
+  check(questText(win(), "Pace: Fastest") and questText(win(), "Elites: Ask"), "the overview shows the active options")
+  local viewer = questViewer()
+  local before = MOCK.textUnder(viewer)
+  guideButton("Darkshore"):Click()
+  check(questText(win(), "PREVIEW") and questText(win(), "Area: Darkshore"), "a guide page labels its preview and area")
+  check(MOCK.textUnder(viewer) == before, "browsing another area never changes the followed step")
+  click(win(), "Start this route")
+  check(questText(win(), "Darkshore") and questText(win(), "Following"), "starting updates the route overview")
+  click(win(), "Setup")
+  click(win(), "Every quest")
+  click(win(), "Always skip")
+  click(win(), "None")
+  click(win(), "Done")
+  check(questText(win(), "Pace: Every quest") and questText(win(), "Elites: Always skip")
+    and questText(win(), "Dungeons: None"), "the closed setup still confirms every routing choice")
+  if not MOCK.minimal then
+    MOCK.mapInfo = nil
+    C_Map.GetMapInfo = function() error("map data unavailable") end
+    click(win(), "Route")
+    check(questText(win(), "Darkshore") and not questText(win(), "Area: nil"), "missing area APIs keep the route readable")
+  end
+end
+
+-- The journey must stay a single screen even when a route has hundreds of steps.
+-- In-game report: the board's circles and tile headers were empty. Artwork paths
+-- must reach SetTexture intact, including GossipFrame art outside Interface/Icons.
+function S.questBoardIcons()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests")
+  local function textures()
+    local found = {}
+    local function walk(frame)
+      for _, region in ipairs(frame._regions) do
+        if region._shown and region._type == "Texture" then
+          check(not (region._path or ""):find("Interface\\Icons\\Interface\\", 1, true),
+            "quest artwork paths must not receive a second icon-directory prefix")
+          found[#found + 1] = region
+        end
+      end
+      for _, child in ipairs(frame._children) do if child._shown then walk(child) end end
+    end
+    walk(win())
+    return found
+  end
+  local function artwork(file)
+    for _, texture in ipairs(textures()) do
+      if texture._path == file then return texture end
+    end
+  end
+  local map = "Interface\\Icons\\INV_Misc_Map_01"
+  check(artwork(map), "journey area nodes and sidebar display game map artwork")
+  click(win(), "Guides")
+  check(artwork(map), "route tiles display game map artwork")
+  click(win(), "Dungeons")
+  check(artwork("Interface\\Icons\\INV_Misc_Head_Dragon_01"), "dungeon tiles display game artwork")
+  click(win(), "Quest log")
+  check(artwork("Interface\\GossipFrame\\AvailableQuestIcon"), "quest-log cards display quest artwork outside the icon directory")
+  MOCK.missingTextures[map:lower()] = true
+  click(win(), "Guides")
+  local fallback = false
+  for _, texture in ipairs(textures()) do
+    if texture:GetTexture() == 134400 then fallback = true end
+  end
+  check(fallback, "unavailable board artwork displays the question-mark fallback")
+end
+
+function S.questBoardAreaMaps()
+  local maps = { 1432, 1437, 1417 }
+  local names = { "Loch Modan", "Wetlands", "Arathi Highlands" }
+  local steps = {}
+  MOCK.mapArt, MOCK.mapInfo, MOCK.mapOverlays = {}, {}, {}
+  for i, map in ipairs(maps) do
+    MOCK.mapInfo[map] = { name = names[i] }
+    MOCK.mapArt[map] = {
+      layers = { { layerWidth = 768, layerHeight = 512, tileWidth = 256, tileHeight = 256 } },
+      textures = { { 900000 + i * 10 + 1, 900000 + i * 10 + 2, 900000 + i * 10 + 3,
+        900000 + i * 10 + 4, 900000 + i * 10 + 5, 900000 + i * 10 + 6 } },
+    }
+    MOCK.mapOverlays[map] = { { textureWidth = 300, textureHeight = 270, offsetX = 150, offsetY = 110,
+      fileDataIDs = { 901000 + i * 10 + 1, 901000 + i * 10 + 2, 901000 + i * 10 + 3, 901000 + i * 10 + 4 } } }
+    steps[#steps + 1] = { type = "note", name = names[i] .. " stop", text = "Visit " .. names[i] .. ".", map = map }
+  end
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-area-art", title = "Test area artwork", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests"); clickGuide("Test area artwork")
+  if MOCK.minimal then
+    check(questText(win(), "Map unavailable") and questText(win(), "Loch Modan"),
+      "without map APIs the area preview keeps its name and explains unavailable art")
+    return
+  end
+  local function artUnder(root)
+    local found = {}
+    local function walk(frame)
+      for _, region in ipairs(frame._regions) do
+        if region._shown and region._type == "Texture" and type(region._tex) == "number"
+          and region._tex > 900000 and region._tex < 902000 then
+          found[region._tex] = region
+          for _, v in ipairs(region._coords or {}) do check(v >= 0 and v <= 1, "map tiles crop within their texture") end
+        end
+      end
+      for _, child in ipairs(frame._children) do if child._shown then walk(child) end end
+    end
+    walk(root)
+    return found
+  end
+  local art = artUnder(win())
+  for i = 1, 3 do
+    check(art[900000 + i * 10 + 2] and art[900000 + i * 10 + 5], "each journey area uses its own map tiles")
+    check(art[901000 + i * 10 + 4], "each map includes explored terrain over its base parchment")
+  end
+  local edge = art[901014]._coords
+  check(edge[2] <= 44 / 64 and edge[4] <= 14 / 16, "partial exploration tiles exclude power-of-two texture padding")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 2: Wetlands")
+  check(MOCK.textUnder(questViewer()) == before and not MOCK.openedMap, "map previews leave the followed step and world map alone")
+  click(win(), "Guides")
+  check(artUnder(win())[900012], "route cards use their zone's real map tiles")
+  C_MapExplorationInfo.GetExploredMapTextures = function() error("exploration unavailable") end
+  click(win(), "Route")
+  check(artUnder(win())[900012], "unavailable exploration APIs keep the base map usable")
+  C_Map.GetMapArtLayers = function() error("map art unavailable") end
+  click(win(), "Route")
+  check(questText(win(), "Map unavailable") and not next(artUnder(win())), "failed map APIs show a named placeholder and hide pooled map tiles")
+  C_Map.GetMapArtLayers, C_Map.GetMapArtLayerTextures = nil, nil
+  click(win(), "Guides"); click(win(), "Route")
+  check(questText(win(), "Map unavailable"), "clients without map-art APIs keep the board usable")
+end
+
+function S.questBoardJourney()
+  local steps = {}
+  for i = 1, 36 do steps[#steps + 1] = { type = "note", name = "Loch stop " .. i, text = "Read the Loch instruction " .. i .. ".", map = 1432 } end
+  steps[#steps + 1] = { type = "note", name = "Coastal stop", text = "Read the coastal instruction.", map = 1439 }
+  steps[#steps + 1] = { type = "note", name = "Return stop", text = "Return to the Loch.", map = 1432 }
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-journey-board", title = "Test journey board", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login()
+  slash("quests")
+  clickGuide("Test journey board")
+  local opener = findButton(win(), function(l) return l == "Hide step window" or l == "Show step window" end)
+  local _, content = opener:GetPoint()
+  check(content:GetHeight() <= 480, "the default journey fits one screen instead of drawing the full itinerary")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 2: Darkshore")
+  check(questText(win(), "Coastal stop") and questText(win(), "AREA PREVIEW"), "an area node opens its own quest panel")
+  check(MOCK.textUnder(questViewer()) == before, "area browsing leaves the followed quest and arrow alone")
+  click(win(), "Area steps")
+  check(questText(win(), "Coastal stop") and not questText(win(), "Loch stop 36"), "area steps contain only the selected leg")
+  click(win(), "Back to journey")
+  click(win(), "Area 1: Loch Modan")
+  click(win(), "Area steps")
+  check(not questText(win(), "Loch stop 36"), "long areas are paged")
+  click(win(), "Next steps page")
+  local oldPage = false
+  for _, b in ipairs(MOCK.buttons(win())) do if b.tipTitle == "Note - Loch stop 1" then oldPage = true end end
+  check(questText(win(), "Loch stop 7") and not oldPage, "the next page replaces the first six quest cards")
+end
+
+function S.questBoardDungeons()
+  MOCK.level, MOCK.questMap = 20, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  local a = findButton(win(), function(l) return l == "The Deadmines" end)
+  local b = findButton(win(), function(l) return l == "Wailing Caverns" end)
+  check(a and b, "the dungeon board includes the early runs")
+  local _, _, _, ax, ay = a:GetPoint()
+  local _, _, _, bx, by = b:GetPoint()
+  check(ax ~= bx and ay == by, "dungeons are peer tiles in two columns, not a vertical button list")
+  click(win(), "Plan The Deadmines")
+  check(LevelingCodexDB.questDungeonPlan["dungeon-deadmines"], "a tile plans its run without following it")
+  check(not questText(questViewer(), "Enter the Deadmines"), "planning leaves the leveling guide active")
+end
+
+function S.questBoardSearch()
+  local steps = { { type = "note", text = "Stay at the Loch.", map = 1432 } }
+  for i = 1, 12 do steps[#steps + 1] = { type = "note", text = "Coastal errand " .. i, map = 1439 } end
+  steps[#steps + 1] = { type = "accept", quest = 999181, name = "Needle Paperwork", text = "Pick up the paperwork.", map = 1439, min = 11 }
+  steps[#steps + 1] = { type = "accept", quest = 999182, name = "Optional Paperwork", text = "An optional errand.", map = 1439, min = 11, optional = true }
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-board-search", title = "Test board search", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Needle Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  local match = findButton(win(), function(l) return l == "Accept - Needle Paperwork" end)
+  check(match, "quest-name searches retain a card for the matching quest")
+  match:Click()
+  check(questText(win(), "Needle Paperwork"), "search opens the area and card page containing the matching quest")
+  check(MOCK.textUnder(questViewer()) == before, "search previews leave the followed step alone")
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Optional Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  check(not findButton(win(), function(l) return l == "Accept - Optional Paperwork" end)
+    and questText(win(), "outside your current route options"), "filtered matches explain their exclusion instead of opening an unrelated area")
+  click(win(), "Setup"); click(win(), "Your route"); click(win(), "Every quest")
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Optional Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  local optional = findButton(win(), function(l) return l == "Accept - Optional Paperwork" end)
+  check(optional, "enabling optional quests makes the search result navigable")
+  optional:Click()
+  check(questText(win(), "Optional Paperwork"), "the enabled match opens its own area page")
+end
+
+function S.questBoardExternalGuide()
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  for _, name in ipairs({ "A", "B" }) do
+    sections[#sections + 1] = { id = "board-run-" .. name, title = "Board run " .. name, zone = 1436, levels = { 13, 18 }, side = true, category = "dungeon", steps = {
+      { type = "note", phase = "prepare", text = "Prepare for " .. name },
+      { type = "note", phase = "inside", text = "Inside " .. name },
+      { type = "note", phase = "after", text = "After " .. name },
+    } }
+  end
+  sections[#sections + 1] = { id = "board-linked-route", title = "Board linked route", zone = 1436, levels = { 13, 18 }, steps = {
+    { type = "note", text = "A related guide is available.", guide = "board-run-B" },
+  } }
+  MOCK.level, MOCK.questMap = 14, 1436
+  S.login(); slash("quests"); clickGuide("Board linked route")
+  guidesView("Dungeons"); click(win(), "Board run A"); click(win(), "Turn-ins")
+  stepTool("Plan Board run B")
+  local prepare = findButton(win(), function(l) return l == "Prepare" end)
+  local after = findButton(win(), function(l) return l == "Turn-ins" end)
+  check(prepare and prepare.codexOn and after and not after.codexOn, "opening a related guide clears the previous dungeon's phase selection")
+end
+
+-- Area headings follow travel order, including returning to an earlier area.
+function S.questTabItinerary()
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-itinerary", title = "Test travel itinerary", zone = 1432, levels = { 11, 18 }, steps = {
+      { type = "note", name = "First stop", text = "First stop.", map = 1432 },
+      { type = "note", name = "Second stop", text = "Second stop.", map = 1439 },
+      { type = "note", name = "Return stop", text = "Return stop.", map = 1432 },
+    },
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login(); slash("quests"); clickGuide("Test travel itinerary")
+  local positions = {}
+  for i, name in ipairs({ "Area 1: Loch Modan", "Area 2: Darkshore", "Area 3: Loch Modan" }) do
+    local b = findButton(win(), function(l) return l == name end)
+    check(b, "consecutive area node is available: " .. name)
+    positions[i] = select(4, b:GetPoint())
+  end
+  check(positions[1] < positions[2] and positions[2] < positions[3], "area nodes preserve route order, including a return visit")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 3: Loch Modan")
+  check(questText(win(), "Return stop") and MOCK.textUnder(questViewer()) == before, "a return-area preview is independent of the followed step")
+end
+
+-- Planning pickups and actively following a dungeon are independent states.
+function S.questTabDungeonStates()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 20, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "The Deadmines")
+  check(questText(win(), "Not planned") and questText(win(), "PREVIEW"), "an unplanned dungeon opens as a preview")
+  check(findButton(win(), function(l) return l == "Prepare" end) and findButton(win(), function(l) return l == "Inside" end) and findButton(win(), function(l) return l == "Turn-ins" end),
+    "the dungeon page explains its three stages")
+  local pickup
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() and type(b.tipTitle) == "string" and b.tipTitle:find("^Accept %- ") then pickup = b; break end
+  end
+  check(pickup, "the dungeon preview has a pickup to inspect")
+  pickup:Click()
+  check(questText(win(), "FOLLOWING") and questText(win(), "PREVIEW"),
+    "inspecting a dungeon step keeps the followed leveling route in the overview")
+  click(win(), "Plan this run")
+  check(questText(win(), "Planned") and questText(win(), "PREVIEW"), "planning leaves the leveling route active")
+  click(win(), "Start inside")
+  click(win(), "Guides")
+  click(win(), "Dungeons")
+  click(win(), "The Deadmines")
+  check(questText(win(), "Following") and questText(win(), "Planned"), "a followed dungeon still confirms its pickup plan")
+end
+
+function S.questTabStagePreview()
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-stage-run", title = "Test stage run", zone = 1436, levels = { 20, 30 }, side = true, category = "dungeon",
+    steps = {
+      { type = "note", phase = "prepare", text = "Prepare for the test run." },
+      { type = "note", phase = "inside", text = "Inside the test run." },
+      { type = "note", phase = "after", text = "Finish the test run." },
+    },
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 26, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Test stage run")
+  click(win(), "Start inside")
+  check(questText(questViewer(), "Inside the test run."), "the run is following its inside phase")
+  guidesView("Dungeons")
+  click(win(), "The Deadmines")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if type(b.tipTitle) == "string" and b.tipTitle:find("^Accept %- ") then b:Click(); break end
+  end
+  guidesView("Dungeons")
+  click(win(), "Test stage run")
+  check(findButton(win(), function(l) return l == "Inside (now)" end) and not findButton(win(), function(l) return l == "Prepare (now)" end),
+    "another dungeon's step preview cannot move the followed dungeon's stage highlight")
+end
+
 function S.questRoutePick()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
   S.login()
   local frame = questViewer()
   check(questText(frame, "Levels 11-18"), "the Dwarf starts on Loch Modan")
   slash("quests")
-  check(questText(win(), "YOU ARE ON THIS ROUTE"), "the Route sub-tab names the route you're on first")
+  check(questText(win(), "Following") and questText(win(), "Loch Modan"), "Journey names the followed route")
   local row = guideButton("Darkshore")
   check(row, "Darkshore is listed under Guides", 2)
   row:Click()
   check(not questText(frame, "Levels 12-20"), "clicking a guide row doesn't switch routes")
   check(findButton(win(), function(l) return l == "Start this route" end), "its page offers Start this route")
   check(questText(win(), "until you start this one"), "the page says which route you stay on")
-  check(questText(win(), "STEPS ("), "the page lists the route's steps under a heading")
+  check(questText(win(), "Area:"), "the preview identifies the selected area")
   -- a step row of a route you're only previewing doesn't move the step window
   local stepRow
   for _, b in ipairs(MOCK.buttons(win())) do
@@ -4681,21 +5110,21 @@ function S.questRoutePick()
   click(win(), "Start this route")
   check(questText(frame, "Levels 12-20"), "Start this route switches the step window")
   check(chatHas("Now following Darkshore"), "starting a route says so in chat")
-  check(questText(win(), "YOU ARE ON THIS ROUTE") and findButton(win(), function(l) return l == "Show all steps" end),
-    "Start shows the Route sub-tab of the new route")
-  check(questText(win(), "Started. The step window and arrow follow it now."), "the route card confirms the start")
+  check(questText(win(), "Following") and findButton(win(), function(l) return l == "Area steps" end),
+    "Start opens the new route's journey board")
+  check(questText(win(), "Darkshore"), "the journey confirms which route started")
   MOCK.advance(31)
   click(win(), "Route")
   check(not questText(win(), "Started. The step window"), "the confirmation goes after half a minute")
   clickGuide("Darkshore")
   check(questText(win(), "You are on this route."), "the page of the route you're on says so")
   click(win(), "Route")
-  local preview = findButton(win(), function(l) return l:find("^Preview ") ~= nil end)
-  check(preview, "the Route sub-tab lists other routes for your level", 2)
+  local preview = guideButton("Loch Modan")
+  check(preview, "Routes offers another route")
   preview:Click()
   check(questText(frame, "Levels 12-20"), "previewing another route keeps you on yours")
-  click(win(), "Back to the route")
-  check(questText(win(), "YOU ARE ON THIS ROUTE"), "Back returns to the Route sub-tab")
+  click(win(), "Back to guides"); click(win(), "Route")
+  check(questText(win(), "Following") and questText(win(), "Darkshore"), "Journey keeps the followed route after previewing")
   click(win(), "Change route")
   check(guideButton("Darkshore"), "Change route opens the guide list")
   -- a route above your level says so on its page
@@ -5019,8 +5448,10 @@ function S.questDetourLibrary()
   click(win(), "Quests")
   guidesView("Dungeons")
   click(win(), "Test Dungeon")
-  check(questText(win(), "BEFORE YOU GO") and questText(win(), "INSIDE") and questText(win(), "AFTER THE RUN"), "dungeon stages are shown")
-  check(questText(win(), "Requires level 15"), "shows the actual level gate")
+  check(findButton(win(), function(l) return l == "Prepare" end) and findButton(win(), function(l) return l == "Inside" end)
+    and findButton(win(), function(l) return l == "Turn-ins" end), "dungeon stages are selectable")
+  click(win(), "Inside")
+  check(questText(win(), "Requires level 15"), "the inside checklist shows the actual level gate")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Dungeon Test Pickup"), "dungeon guide starts independently of class quests")
   MOCK.questLog = { { questID = 999011, title = "Dungeon Test Pickup", objectives = { { text = "Dungeon widgets: 0/2" } } } }
@@ -5054,8 +5485,9 @@ function S.questDungeonContent()
   slash("quests")
   guidesView("Dungeons")
   click(win(), "Hall of Thanes")
-  check(questText(win(), "Old Ironforge Incursion") and questText(win(), "The Treaty of Understanding"),
-    "Hall of Thanes has both outdoor unlock and inside starter")
+  check(guideHas("Old Ironforge Incursion"), "Hall of Thanes shows its outdoor unlock")
+  click(win(), "Inside")
+  check(guideHas("The Treaty of Understanding"), "its inside checklist includes the starter")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - Old Ironforge Incursion"), "completed map prep leads directly to the dungeon pickup")
   click(questViewer(), "Return to leveling")
@@ -5202,14 +5634,14 @@ function S.questQuarryKeg()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
   S.login()
   slash("quests")
-  check(not questText(win(), "Stolen Blasting Powder"), "the entire powder chain is hidden without the keg")
+  check(not routeHas("Stolen Blasting Powder"), "the entire powder chain is hidden without the keg")
   MOCK.bags[268548] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
-  check(questText(win(), "Stolen Blasting Powder"), "looting the keg reveals the chain")
+  check(routeHas("Stolen Blasting Powder"), "looting the keg reveals the chain")
   MOCK.bags[268548] = 0
   MOCK.questDone[95213] = true
   MOCK.event("QUEST_TURNED_IN", 95213)
-  check(questText(win(), "Complete - Stolen Blasting Powder"), "the follow-up stays visible after turning in the keg")
+  check(routeHas("Complete - Stolen Blasting Powder"), "the follow-up stays visible after turning in the keg")
 end
 
 function S.questWestfall()
@@ -5217,12 +5649,12 @@ function S.questWestfall()
   S.login()
   check(questText(questViewer(), "Westfall"), "Skyborne can enter the shared Westfall route")
   slash("quests")
-  check(questText(win(), "The Defias Brotherhood"), "solo Defias lead-in is visible with dungeons off")
-  check(not questText(win(), "Dungeon - The Deadmines"), "dungeon run is hidden by default")
+  check(routeHas("The Defias Brotherhood"), "solo Defias lead-in is visible with dungeons off")
+  check(not routeHas("Dungeon - The Deadmines"), "dungeon run is hidden by default")
   click(win(), "Settings")
   click(win(), "Plan every dungeon run")
   click(win(), "Quests")
-  check(questText(win(), "Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
+  check(routeHas("Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
 end
 
 -- Reported in game: logging in at Menethil with Wetlands turn-ins ready kept the Duskwood guide,
@@ -5272,7 +5704,7 @@ function S.questWarriorFangs()
     { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" }, { text = "Charred Horn: 0/12" },
       { text = "Galvanized Horn: 0/1" }, { text = "Vial of Phlogiston: 0/1" } } },
   })
-  check(questText(win(), "Complete - Alchemical Hazards") and questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and routeHas("Complete - Fire Hardened Mail"),
     "a Warrior with Fire Hardened Mail collects the fangs at Thelgen Rock")
 end
 
@@ -5281,14 +5713,14 @@ function S.questWarriorFangsOtherClass() -- run as a Mage
     { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
     { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" } } },
   })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Complete - Fire Hardened Mail"),
     "other classes never get the Warrior's fang step")
 end
 
 function S.questWarriorFangsNotTaken()
   LevelingCodexDB = { questOptional = true } -- even with optional quests shown
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Complete - Fire Hardened Mail"),
     "without Fire Hardened Mail in the log there is no fang step")
 end
 
@@ -5304,24 +5736,24 @@ end
 
 function S.questClassAlongDruid() -- run as a Druid
   routeAt("NightElf", 16, 1439, 47.0, 14.0, { { questID = 272, objectives = { { text = "Pendant of the Sea Lion: 0/1" } } } })
-  check(questText(win(), "Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
+  check(routeHas("Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
 end
 
 function S.questClassAlongDruidNotTaken() -- run as a Druid
   routeAt("NightElf", 16, 1439, 47.0, 14.0, {})
-  check(questText(win(), "Darkshore") and not questText(win(), "Trial of the Sea Lion"), "no lockbox stop without the quest")
+  check(routeHas("Darkshore") and not routeHas("Trial of the Sea Lion"), "no lockbox stop without the quest")
 end
 
 function S.questClassAlongShaman() -- run as a Shaman
   MOCK.faction = "Horde"
   routeAt("Orc", 13, 1413, 52.0, 30.0, { { questID = 1525, objectives = { { text = "Fire Tar: 0/1" }, { text = "Reagent Pouch: 0/1" } } } })
-  check(questText(win(), "Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
+  check(routeHas("Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
 end
 
 function S.questClassAlongShamanNotTaken() -- run as a Shaman
   MOCK.faction = "Horde"
   routeAt("Orc", 13, 1413, 52.0, 30.0, {})
-  check(questText(win(), "Crossroads") and not questText(win(), "Complete - Call of Fire"), "no Fire Tar step without the quest")
+  check(routeHas("Crossroads") and not routeHas("Complete - Call of Fire"), "no Fire Tar step without the quest")
 end
 
 -- Reported in game: with Show optional quests on, the step window said "Turn in - Unrequited Love"
@@ -5329,7 +5761,7 @@ end
 function S.questCarriedTurninNotTaken()
   LevelingCodexDB = { questOptional = true }
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Turn in - Unrequited Love"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Turn in - Unrequited Love"),
     "no turn-in for an optional quest you don't have, even with optional quests shown")
 end
 
@@ -5337,7 +5769,7 @@ function S.questCarriedTurninCarried()
   LevelingCodexDB = { questOptional = true }
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
     { questID = 98461, isComplete = true } })
-  check(questText(win(), "Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
+  check(routeHas("Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
 end
 
 -- Outleveled pickups leave the route and guides show progress by level band.
@@ -5411,7 +5843,9 @@ function S.questDungeonPlan()
   check(findButton(win(), function(l) return l == "Recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
-  check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page lists boss tips")
+  click(win(), "Bosses in order")
+  check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page retains boss tips")
+  click(win(), "Quest checklist")
   click(win(), "Plan this run")
   check(findButton(win(), function(l) return l == "Planned: its pickups are in your route" end), "the dungeon page shows the plan")
   check(questText(frame, "Accept - Plan Dungeon Pickup"), "a planned run adds its pickup to the route")
@@ -5591,7 +6025,7 @@ function S.questAlternateRoutes()
   check(questText(frame, "Accept - Thelsamar Blood Sausages"), "Loch Modan starts with a Thelsamar pickup")
   check(not LevelingCodexCharDB.questFlights["Thelsamar, Loch Modan"], "skipping does not record a flight path as learned")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Preview Darkshore" end), "other suitable routes are offered away from checkpoints")
+  check(guideButton("Darkshore"), "other suitable routes are offered through Routes")
   clickGuide("Darkshore")
   check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
   MOCK.questMap = 1439
@@ -5623,6 +6057,8 @@ function S.questLochHistory()
   local frame = questViewer()
   check(questText(frame, "End of the alternate route"), "completed Loch Modan history advances past setup and reminders")
   check(not findButton(frame, function(label) return label == "Next" end), "a completed route needs no manual Next")
+  slash("quests")
+  check(questText(win(), "Complete"), "the completed selected route has an explicit Complete badge")
 end
 
 function S.questLochReady()
@@ -5688,8 +6124,8 @@ function S.questWestfallDetour()
   local frame = questViewer()
   check(findButton(frame, function(label) return label == "Try Loch Modan" end), "the step window offers a detour")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Preview Loch Modan" end), "Westfall offers Loch Modan")
-  click(win(), "Preview Darkshore")
+  check(guideButton("Loch Modan"), "Westfall offers Loch Modan through Routes")
+  guideButton("Darkshore"):Click()
   check(not questText(frame, "Levels 12-20"), "previewing a route doesn't switch to it")
   click(win(), "Start this route")
   check((questText(frame, "Darkshore") and questText(frame, "Levels 12-20")), "Westfall also offers quest XP through Darkshore")

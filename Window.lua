@@ -101,6 +101,7 @@ end
 -- Place text at (x, y) in content; returns its height and the font string.
 local function T(str, x, y, width, kind, color, justify, onTop)
   local fs = onTop and take("fsTop", newFSTop) or take("fs", newFS)
+  fs.codexLabel = nil
   styleFS(fs, kind)
   fs:SetTextColor(rgba(color or C.light))
   fs:SetWidth(width)

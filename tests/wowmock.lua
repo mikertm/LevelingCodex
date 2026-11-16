@@ -124,6 +124,14 @@ function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
 function OpenWorldMap(map) MOCK.openedMap = map end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
+  GetMapArtLayers = function(id)
+    local art = MOCK.mapArt and MOCK.mapArt[id]
+    return art and art.layers
+  end,
+  GetMapArtLayerTextures = function(id, layer)
+    local art = MOCK.mapArt and MOCK.mapArt[id]
+    return art and art.textures[layer]
+  end,
   -- MOCK.mapInfo[id] = { name, mapType, parentMapID } (opt-in: other names change "Travel to" captions)
   GetMapInfo = function(id)
     local m = MOCK.mapInfo and MOCK.mapInfo[id]
@@ -142,6 +150,11 @@ C_Map = {
   GetUserWaypoint = function() return MOCK.userWaypoint end,
   ClearUserWaypoint = function() MOCK.userWaypoint = nil end,
   CanSetUserWaypointOnMap = function(map) return not (MOCK.noWaypointMaps and MOCK.noWaypointMaps[map]) end,
+}
+C_MapExplorationInfo = {
+  GetExploredMapTextures = function(id)
+    return MOCK.mapOverlays and MOCK.mapOverlays[id]
+  end,
 }
 C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end,
   IsSuperTrackingUserWaypoint = function() return MOCK.superTracked and true or false end }
@@ -1662,6 +1675,7 @@ function MOCK.setup(opts)
   MOCK.minimal = opts.minimal
   if opts.minimal then
     C_QuestLog, C_Map, GetPlayerFacing, GetQuestID, GetNumQuestChoices, AcceptQuest, GetQuestReward = nil, nil, nil, nil, nil, nil, nil
+    C_MapExplorationInfo = nil
     UnitOnTaxi, NumTaxiNodes, TaxiNodeName, TaxiNodeGetType = nil, nil, nil, nil
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
     for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end

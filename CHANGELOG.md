@@ -1,7 +1,10 @@
 # Leveling Codex
 
-## Unreleased
+## v0.27.0
 
+- Replaced the scrolling Quests tab with a journey board: connected area map previews, route progress, one selected quest panel, and area checklists paged six cards at a time.
+- A side rail opens two-column route and dungeon boards, quest-log categories, party panels and focused option groups. Guide previews keep the followed route, dungeon plans remain separate from entering a run, and quest searches open the matching area and page.
+- Area previews use the client's world-map artwork and explored terrain. Route cards show their zone's map; dungeon cards label their entrance-area map. Missing map APIs or artwork leave a readable fallback without opening or changing the world map.
 - Cleaned up documentation, guide notes and interface wording. Optional integrations retain their existing behavior.
 
 ## v0.26.0

@@ -6,6 +6,8 @@ In-game companion for **The Leveling Codex** WoW: Forever leveling guides. It tr
 
 Optional integrations coordinate quest automation, place the step window beside your tracker, and point the arrow at nearby unfinished objectives. Compatible UI skins can also supply the window frame, panels, accent colour and font.
 
+The Quests tab opens a journey board with connected area map previews and one selected quest panel. The previews use the client's map artwork and explored terrain; route cards show their zone, and dungeon cards label their entrance-area map. Browse six quest cards at a time within an area. The side rail opens route and dungeon tiles, quest-log categories, party panels and Options. Route previews leave your followed step alone; dungeon pickup plans stay separate from entering a run. Options groups route choices, display controls, helpers and party settings into focused pages.
+
 See [CURSEFORGE_DESCRIPTION.md](CURSEFORGE_DESCRIPTION.md) for the full feature list and [RELEASING.md](RELEASING.md) for how releases are published.
 
 Fan-made. Not affiliated with or endorsed by Blizzard Entertainment.

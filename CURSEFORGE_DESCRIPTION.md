@@ -21,7 +21,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - Horde 1-30: Tirisfal and Silverpine for Kalimdor races at 12-15, and the Shimmering Flats.
   - 30-60: Forever's **Riverglades** (Alliance from Farholde Keep, Horde from Rog'mar and Powderfuse Port), **Shen'dralas**, early Stranglethorn, the Searing Gorge, the Blasted Lands, Un'Goro and other orders through the 50s.
 
-  The Quests tab lists the route options for your level, and each guide suggests where to go next.
+  The Quests tab opens a journey board with connected area map previews, progress and one selected quest panel. Map previews use the client's own artwork and explored terrain; route cards show their zone, and dungeon cards label their entrance area. Open an area to browse six quest cards at a time. The side rail opens two-column route and dungeon boards, quest-log categories and party panels. Preview another route before starting it; each guide suggests where to go next. Dungeon pages separate pickup plans from entering a run, with preparation, inside and turn-in stages.
 - **Buy it before you go.** Steps that need a bought item say where to get it before the trip (Southshore Stout, Silk Cloth, the Mithril Casing and more). Auction House items are optional steps.
 - **Catch-up built in.**
   - Missed pickups move to Missed quests.
@@ -65,7 +65,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 - **Quest item and target buttons** for the current step, both key-bindable: use the quest item (or your Hearthstone on a hearth step), and target the NPC you're looking for or the creatures the quest needs.
 - **Vendors:** the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. When a coming step needs something this vendor sells, a card lists it with one Buy button. Hold Alt as you open the vendor to skip it once.
 - **XP to go** on "Level up" steps: how much is left, about how many kills that is, your rested XP and the XP waiting in finished quests.
-- **Guide setup.** A new character gets a quick setup card: fastest or every quest, recommended dungeons or none, elite quests, the automation and vendor helpers, the map lines, the step window's size and compact mode, and every party option (party steps, quest sharing, the together ping and the party chat lines). Quests > Guide setup opens it any time.
+- **Guide setup.** A new character gets an offer to set up the guide. Quests > Options opens four groups: your route, map and step window, helpers, and party play. Each opens a focused page for pace, dungeon plans, elite decisions, automation, vendors, display controls or party sharing and announcements.
 
 ### Talent paths
 Pick your path in the **Talents** tab: the Codex guide's own build, a recommended leveling path for every spec of your class (Arms, Fire, Holy and so on; Druids get Feral Cat, Bear, Balance and Restoration), or your own.
