@@ -66,18 +66,18 @@ local function bob()
   end
 end
 
--- A saved position wins; without one the window sits beside Questie's tracker (built some
+-- A saved position wins; without one the window sits beside external quest tracker (built some
 -- seconds after login, so the refresh and the ticker both check) or in its default spot. It
 -- only re-anchors when the answer changes. On the tracker's right it keeps 58 px clear: the
 -- item and target buttons hang up to 46 px off the window's left edge.
 local placedBy, refused -- refused: a tracker the client wouldn't let us anchor to (not retried)
-local PLACED = { saved = "saved position", left = "beside Questie's tracker", right = "beside Questie's tracker",
+local PLACED = { saved = "saved position", left = "beside external quest tracker", right = "beside external quest tracker",
   default = "default spot" }
 
 local function place()
   local p = ns.db().questPosition
   local tracker, side
-  if not p then tracker, side = ns.questie.trackerSide() end
+  if not p then tracker, side = ns.questSupport.trackerSide() end
   if tracker and tracker == refused then tracker, side = nil, nil end
   local key = (p and "saved") or side or "default"
   if key == placedBy then return end
@@ -115,7 +115,7 @@ end
 
 -- The banner shows the guide's short name (the part before a colon; the Quests tab has the full
 -- title). The dialog header art's plate is about 45% of the texture's width, so the art widens
--- with the name, Morpheus (the EllesmereUI font in its theme) drops to 12 for long names, and anything
+-- with the name, Morpheus (the external UI font in its theme) drops to 12 for long names, and anything
 -- longer still is cut off.
 local PLATE = 0.45
 local function fitHeader(text)
@@ -171,7 +171,7 @@ local function applyComfort()
   end
   local a = math.max(0.2, math.min(1, tonumber(db.questViewerAlpha) or 1))
   viewer.background:SetAlpha(a)
-  if viewer.euiSkin then viewer.euiSkin:SetAlpha(a) end -- the EllesmereUI panel behind it
+  if viewer.euiSkin then viewer.euiSkin:SetAlpha(a) end -- the external UI panel behind it
   if type(viewer.SetBackdropColor) == "function" then
     local r, g, b = ns.rgba(C.parch)
     pcall(viewer.SetBackdropColor, viewer, r, g, b, a)
@@ -302,7 +302,7 @@ local function makeViewer()
   glow:SetAllPoints()
   glow:SetAlpha(0)
   local glowEdges = {}
-  viewer.glowEdge = function(c) -- gold, or the accent in the EllesmereUI theme
+  viewer.glowEdge = function(c) -- gold, or the accent in the external UI theme
     for _, t in ipairs(glowEdges) do t:SetColorTexture(c[1], c[2], c[3], 0.9) end
   end
   local function edge(a, b, w, h)
@@ -714,9 +714,9 @@ local function paintArrow()
   local map, x, y = Q.position()
   local spot, point, count, kind = Q.waypoint(goal)
   local step, travel = Q.destination(spot, map)
-  -- QuestieDB's nearest spawn leads the last mile of a kill or collect step (QuestieSupport.lua).
+  -- quest database's nearest spawn leads the last mile of a kill or collect step (quest trackerSupport.lua).
   local spawn, spawnName
-  if step == goal then spawn, spawnName = ns.questie.nearest(goal, map, x, y) end
+  if step == goal then spawn, spawnName = ns.questSupport.nearest(goal, map, x, y) end
   local key = row.key .. ":" .. tostring(point or "")
   if spawn or step then
     arrowGoal = { spot = spawn or step, step = goal, kind = spawn and "spawn" or travel and "leg" or "step",
@@ -1874,11 +1874,11 @@ function ns.questRefresh()
     place()
     if theme ~= ns.themeVersion then
       local backdrop = A.backdrop(viewer, "dialog", C.parch, C.edge)
-      -- the EllesmereUI theme: its panel on a backing frame (never on the window, Ellesmere.lua)
-      local skinned = ns.ellesmere.backing(viewer, "Panel")
+      -- the external UI theme: its panel on a backing frame (never on the window, skin adapter)
+      local skinned = ns.skinSupport.backing(viewer, "Panel")
       flatBackground:SetColorTexture(ns.rgba(C.parch))
       flatBackground:SetShown(not backdrop and not skinned)
-      -- Ink only on the flat parchment; the dialog art and EllesmereUI's panel are dark: light text.
+      -- Ink only on the flat parchment; the dialog art and external UI's panel are dark: light text.
       onDark = (backdrop or skinned) and true or false
       viewer.glowEdge(C.eui and C.accent or { 1, 0.82, 0.25 })
       title:SetTextColor(ns.rgba(C.gold))
@@ -2041,7 +2041,7 @@ function ns.questRefresh()
     end
     viewer:SetHeight(compact and (cursor + (offer and 64 or 38)) or math.max(140, cursor + (offer and 64 or 38)))
     applyComfort()
-    ns.ellesmere.fonts(viewer) -- the theme's fonts, for rows made this time too (each string once)
+    ns.skinSupport.fonts(viewer) -- the theme's fonts, for rows made this time too (each string once)
     viewer:Show()
     painting = false
     paintArrow()
@@ -2236,15 +2236,15 @@ function ns.questRecord(command)
   ns.say(recorder and "quest recorder on. Use /codex record copy to export." or "quest recorder off.")
 end
 
--- Alt, or Questie's own hold-back key, stops the Codex's automation.
+-- Alt, or quest tracker's own hold-back key, stops the Codex's automation.
 local function heldBack()
   if try(IsAltKeyDown) then return true end
-  return ns.questie.modifierHeld()
+  return ns.questSupport.modifierHeld()
 end
 
--- Questie's own auto-accept / auto-complete handles the quest when it is on.
-local function autoAccepting(db) return db.questAutoAccept and not ns.questie.autoAccept() end
-local function autoTurningIn(db) return db.questAutoTurnin and not ns.questie.autoComplete() end
+-- quest tracker's own auto-accept / auto-complete handles the quest when it is on.
+local function autoAccepting(db) return db.questAutoAccept and not ns.questSupport.autoAccept() end
+local function autoTurningIn(db) return db.questAutoTurnin and not ns.questSupport.autoComplete() end
 
 local function interact(event)
   local id = try(GetQuestID)
@@ -2361,7 +2361,7 @@ local function sameTitle(a, b)
 end
 
 -- Many NPCs open a gossip or greeting list before the quest window. With auto-accept or
--- auto-turn-in on, pick the guide's current quest there (never another; Alt or Questie's key holds it back).
+-- auto-turn-in on, pick the guide's current quest there (never another; Alt or quest tracker's key holds it back).
 local function pickFromList(event)
   local s = Q.autoStep()
   if not s or not s.quest or try(InCombatLockdown) ~= false or heldBack() then return end
@@ -2590,7 +2590,7 @@ local function handle(event, a, b, c, d, e)
   ns.questRefresh()
 end
 
--- Questie's tracker can appear, hide or move without a quest event: check every tick, and
+-- external quest tracker can appear, hide or move without a quest event: check every tick, and
 -- move the item and target buttons (placed by screen position) when the window moved with it.
 local followLeft, followTop
 local function followTracker()
@@ -2644,7 +2644,7 @@ function ns.questDebugLines()
     { "C_Map", C_Map, "GetBestMapForUnit", "GetPlayerMapPosition", "GetMapInfo", "GetMapWorldSize", "SetUserWaypoint",
       "GetUserWaypoint", "ClearUserWaypoint", "CanSetUserWaypointOnMap" },
     { "C_SuperTrack", C_SuperTrack, "SetSuperTrackedUserWaypoint" },
-    { "TomTom", TomTom, "AddWaypoint" },
+    { "waypoint provider", TomTom, "AddWaypoint" },
     { "Facing", _G, "GetPlayerFacing" },
     { "Death", _G, "UnitIsGhost" },
     { "XP", _G, "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP" },

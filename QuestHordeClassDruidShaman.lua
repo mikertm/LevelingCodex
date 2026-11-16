@@ -32,7 +32,7 @@ do
   for _, id in ipairs({ 5922, 5930, 5932, 6002 }) do quest[id].race = tauren end
   B.hordeSide({ id = "druid-bear-form-tauren", title = "Druid: Bear Form", zone = m.thunderBluff,
     levels = { 10, 12 }, class = druid, start = tauren,
-    sources = { "QuestieDB Forever 0f7d8ad", "RestedXP Forever Horde 1-12 Mulgore (order and IDs)",
+    sources = { "quest database Forever 0f7d8ad", "reference guide A Forever Horde 1-12 Mulgore (order and IDs)",
       "https://bindonforever.com/quest/6002" },
     steps = {
       accept(5922, turak, "Find Turak Runetotem on Elder Rise in Thunder Bluff. If you still carry Heeding the Call, hand it in first."),
@@ -59,7 +59,7 @@ do
   quest[94913].race = skyborne
   B.hordeSide({ id = "druid-moonglade-skyborne-horde", title = "Druid: Moonglade (Skyborne)", zone = glade,
     levels = { 10, 12 }, class = druid, start = skyborne,
-    sources = { "QuestieDB Forever 0f7d8ad", "RestedXP Forever Horde 1-14 Undead (94913 turn-in)" },
+    sources = { "quest database Forever 0f7d8ad", "reference guide A Forever Horde 1-14 Undead (94913 turn-in)" },
     steps = {
       accept(94913, turak, "Find Turak Runetotem on Elder Rise in Thunder Bluff, where Child of Nature ended."),
       finish(94913, dendrite, teleport .. " Use Bunthen Plainswind's flight to get back to Thunder Bluff."),
@@ -74,7 +74,7 @@ do
   q(6130, "Power over Poison", 14, 14, 6129, nil, druid)
   B.hordeSide({ id = "druid-cure-poison-horde", title = "Druid: Cure Poison", zone = m.barrens,
     levels = { 14, 16 }, class = druid, start = hordeDruids,
-    sources = { "QuestieDB Forever 0f7d8ad", "https://polestar.guide/guides/class/druid/cure-poison" },
+    sources = { "quest database Forever 0f7d8ad", "https://polestar.guide/guides/class/druid/cure-poison" },
     steps = {
       accept(6126, turak, "Find Turak on Elder Rise in Thunder Bluff. Pick or buy 5 Earthroot before you go: a later step needs them."),
       finish(6126, dendrite, teleport),
@@ -107,7 +107,7 @@ do
   q(31, "Aquatic Form", 16, 16, 30, nil, druid)
   B.hordeSide({ id = "druid-aquatic-form-horde", title = "Druid: Aquatic Form", zone = glade,
     levels = { 16, 18 }, class = druid, start = hordeDruids,
-    sources = { "QuestieDB Forever 0f7d8ad", "RestedXP Forever Horde 12-22 Barrens (order and IDs)",
+    sources = { "quest database Forever 0f7d8ad", "reference guide A Forever Horde 12-22 Barrens (order and IDs)",
       "https://efficient.games/wowf/quests/id5061" },
     steps = {
       accept(27, turak, "Find Turak on Elder Rise in Thunder Bluff."),
@@ -151,7 +151,7 @@ do
     for _, id in ipairs({ intro, trial, blessing }) do quest[id].race = race end
     B.hordeSide({ id = windborne and "druid-cat-form-skyborne-horde" or "druid-cat-form-tauren",
       title = "Druid: Cat Form", zone = glade, levels = { 20, 22 }, class = druid, start = race,
-      sources = { "RestedXP Forever Horde 12-22 Barrens (order and IDs)",
+      sources = { "reference guide A Forever Horde 12-22 Barrens (order and IDs)",
         "https://polestar.guide/guides/class/druid/cat-form" },
       steps = {
         accept(98340, turak, "Find Turak on Elder Rise in Thunder Bluff."),
@@ -218,8 +218,8 @@ do
   breadcrumb(2984, 1524)
   B.hordeSide({ id = "shaman-fire-totem-horde", title = "Shaman: Fire Totem", zone = m.barrens,
     levels = { 10, 13 }, class = shaman, start = { "ORC", "TROLL", tauren },
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide,
-      "RestedXP Forever Horde 01-12 Durotar, 1-12 Mulgore, 12-22 Barrens (order and IDs)" },
+    sources = { "quest database Forever 0f7d8ad", totemGuide,
+      "reference guide A Forever Horde 01-12 Durotar, 1-12 Mulgore, 12-22 Barrens (order and IDs)" },
     steps = {
       accept(2983, swart, "Find Swart, the shaman trainer in Razor Hill." .. other),
       accept(2984, narm, "Find Narm Skychaser, the shaman trainer in Bloodhoof Village." .. other),
@@ -265,8 +265,8 @@ do
   breadcrumb(1529, 1530)
   B.hordeSide({ id = "shaman-water-totem-horde", title = "Shaman: Water Totem", zone = m.barrens,
     levels = { 20, 25 }, class = shaman, start = { "ORC", "TROLL", tauren, skyborne },
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide,
-      "RestedXP Forever Horde 12-22 Barrens and Classic Horde 20-30 (order and IDs)" },
+    sources = { "quest database Forever 0f7d8ad", totemGuide,
+      "reference guide A Forever Horde 12-22 Barrens and Classic Horde 20-30 (order and IDs)" },
     steps = {
       accept(1528, searn, "Find Searn Firewarder in the Valley of Wisdom, Orgrimmar." .. other),
       accept(1529, xanis, "Find Xanis Flameweaver on Spirit Rise in Thunder Bluff." .. other),
@@ -312,7 +312,7 @@ do
   quest[1531].race, quest[1532].race = orcTroll, tauren
   B.hordeSide({ id = "shaman-air-totem-horde", title = "Shaman: Air Totem", zone = m.needles,
     levels = { 30, 30 }, class = shaman, start = { "ORC", "TROLL", tauren },
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide },
+    sources = { "quest database Forever 0f7d8ad", totemGuide },
     steps = {
       accept(1531, searn, "Find Searn Firewarder in the Valley of Wisdom, Orgrimmar."),
       accept(1532, xanis, "Find Xanis Flameweaver on Spirit Rise in Thunder Bluff."),

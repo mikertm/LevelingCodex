@@ -1,6 +1,6 @@
 # Westfall, Redridge and Duskwood gaps (12-30)
 
-This file covers quests that another Forever leveling guide routes in Westfall 13-15, Redridge 19-20, the Mage AoE Westfall, Redridge and Duskwood chapters, Duskwood/Redridge 24-27 and Duskwood 29-32, where the Codex previously had no step. Facts come from `tools/questfacts.py` (QuestieDB Forever 0f7d8ad) and the Forever client reference. Both reference guides were read only to check order and grouping. One guide's world-yard coordinates were converted to map percentages with Marshal Marris, Sven Yorgen and Felicia Maline as reference points; each conversion matched the cached NPC position to within 0.01. Every added ID is in the client reference.
+This file covers quests that another Forever leveling guide routes in Westfall 13-15, Redridge 19-20, the Mage AoE Westfall, Redridge and Duskwood chapters, Duskwood/Redridge 24-27 and Duskwood 29-32, where the Codex previously had no step. Facts come from `tools/questfacts.py` (quest database Forever 0f7d8ad) and the Forever client reference. Both reference guides were read only to check order and grouping. One guide's world-yard coordinates were converted to map percentages with Marshal Marris, Sven Yorgen and Felicia Maline as reference points; each conversion matched the cached NPC position to within 0.01. Every added ID is in the client reference.
 
 Sections touched: `westfall`, `duskwood` (QuestData.lua), and `redridge-late` and `duskwood-late` (QuestAlternateData.lua). `lakeshire` is unchanged.
 

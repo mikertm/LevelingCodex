@@ -50,7 +50,7 @@ ns.THEMES = {
 local C = {}
 ns.C = C
 
--- A third theme, "ellesmere", exists while EllesmereUI lends the Codex its look (Ellesmere.lua); its
+-- A third theme, "external UI", exists while external UI lends the Codex its look (skin adapter); its
 -- palette carries eui = true, which the other two leave out (a key a theme doesn't name is cleared).
 ns.themeVersion = 0 -- bumped on every switch, so long-lived frames know to repaint
 function ns.useTheme(name)

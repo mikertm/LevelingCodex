@@ -20,7 +20,7 @@ Tanning Rack exception in `gamedata.py` (`(125, 140)`) can go.
   [Method](https://www.method.gg/wow-forever/leatherworking-in-wow-forever-leveling-guide-and-trainers) (14 Nov),
   [Warcraft Tavern](https://www.warcrafttavern.com/forever/guides/profession-trainers/), [metabot](https://metabot.gg/en/wow-forever/professions/cooking),
   [timesaver](https://timesaver.gg/tools/wow-forever/professions/blacksmithing), wow.gg (Merchant's Favor).
-- QuestieDB Forever (`tools/questfacts.py --flavor forever quest N`) for quest requirements.
+- quest database Forever (`tools/questfacts.py --flavor forever quest N`) for quest requirements.
 - Blizzard's [hotfix thread](https://us.forums.blizzard.com/en/wow/t/wow-forever-hotfixes-november-13-2026/2403040),
   Nov 5-13. New since the 11 Nov audit: Tailoring bags (Nov 11), Nyalah Brightfire's wider cooking
   stock and the Fishing Extravaganza winners (Nov 13). Nothing else touches a route.
@@ -36,7 +36,7 @@ wow-professions both say the trainer teaches it).
 
 ## Decisions
 
-- **Blacksmithing 240-300 (owner, 14 Nov):** QuestieDB Forever gives A Blue Light Bargain (7652) and
+- **Blacksmithing 240-300 (owner, 14 Nov):** quest database Forever gives A Blue Light Bargain (7652) and
   every Imperial Plate quest Blacksmithing 265 and level 50, and no source shows Derotain lower. The
   route now uses trainer recipes to 250 and Magnus Frostwake's Ornate Thorium Handaxe to 270, then
   Derotain's Boots and Leggings. The cheaper Belt and Bracers stay as the alternative for a player he
@@ -84,7 +84,7 @@ wow-professions both say the trainer teaches it).
 - **Camp**: Sharpening Wheel source `"Blacksmithing trainer"` -> `"Blacksmithing trainer or Camping 101"`.
   Master Forge `"(drop source unconfirmed)"` -> `", reported from Golem Lord Argelmach (Blackrock Depths)"`
   (wow-professions camping guide; Wowhead's DB lists the same) and its materials.
-- **notes[200]**: specialization at skill 200 and level 40 with the four quest givers (QuestieDB Forever
+- **notes[200]**: specialization at skill 200 and level 40 with the four quest givers (quest database Forever
   5283/5301/5284/5302): Grumnus Steelshaper and Ironus Coldsteel (Ironforge), Okothos Ironrager and
   Borgosh Corebender (Orgrimmar).
 
@@ -95,7 +95,7 @@ wow-professions both say the trainer teaches it).
 - 1-65 note: a Mining Pick in your bags; Poor Copper Veins in the starting areas give points only to
   20; the junior trainers stop at 75.
 - 175-245 note: Dark Iron Deposits (230) in Blackrock Depths and Searing Gorge; Smelt Dark Iron is
-  taught in Blackrock Depths (The Spectral Chalice, QuestieDB 4083) and works only at the Black Forge.
+  taught in Blackrock Depths (The Spectral Chalice, quest database 4083) and works only at the Black Forge.
 - Vein colour comment: yellow to + 65. `ns.profNodeColor`'s default for veins changed with it.
 - Camp: Lodestone `"Mining trainer"` -> `"Mining trainer or Camping 101"`; Molten Foundry: "unconfirmed:
   Wowhead lists Ambassador Flamelash, Blackrock Depths" and its materials.
@@ -111,7 +111,7 @@ wow-professions both say the trainer teaches it).
   for Gnomish (was "or sell them").
 - 175-190 note: `"Learn the Gyromatic Micro-Adjustor at 175 if another schematic needs it."` -> make one
   (4 Steel Bar, yellow until 195) and keep it: goggle schematics need it as a tool (client: 2 recipes).
-- notes[200]: Gnomish or Goblin at skill 200 and level 30, with the trainers (QuestieDB 3629-3643).
+- notes[200]: Gnomish or Goblin at skill 200 and level 30, with the trainers (quest database 3629-3643).
 - Camp: Anarchist's Workbench "unconfirmed: Wowhead lists Ezra Grimm, Stratholme", and its materials
   (Essence of Anarchy, 2 Thorium Widgets: keep two).
 

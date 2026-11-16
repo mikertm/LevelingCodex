@@ -1,6 +1,6 @@
 # Dwarf and Gnome 1-12 quest route audit
 
-Client reference: WoW Forever 1.60.1.70862 (`tools/reference/forever.json`). Every quest ID in the two sections is in QuestV2, and both flight names (`Ironforge, Dun Morogh`, `Stormwind, Elwynn`) match the reference. Givers, turn-ins, levels, prerequisites, race masks and mob or object spawn clusters come from `tools/questfacts.py` (QuestieDB Forever data and player traces). The new Forever quests have no item or object data in that cache, so their objective points come from the Bind on Forever quest pages. Guide order comes from [Bind on Forever Dun Morogh](https://bindonforever.com/zones/dun-morogh) and [ForG Dun Morogh](https://forg.gg/en/forever/zones/dun-morogh). [Judgement's Classic route](https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/) has no Dun Morogh section: non-Humans join it in Loch Modan, so it gave no order to compare. The step text is original.
+Client reference: WoW Forever 1.60.1.70862 (`tools/reference/forever.json`). Every quest ID in the two sections is in QuestV2, and both flight names (`Ironforge, Dun Morogh`, `Stormwind, Elwynn`) match the reference. Givers, turn-ins, levels, prerequisites, race masks and mob or object spawn clusters come from `tools/questfacts.py` (quest database Forever data and player traces). The new Forever quests have no item or object data in that cache, so their objective points come from the Bind on Forever quest pages. Guide order comes from [Bind on Forever Dun Morogh](https://bindonforever.com/zones/dun-morogh) and [ForG Dun Morogh](https://forg.gg/en/forever/zones/dun-morogh). [Judgement's Classic route](https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/) has no Dun Morogh section: non-Humans join it in Loch Modan, so it gave no order to compare. The step text is original.
 
 Gnomes start in Coldridge Valley with the Dwarves. Tidegear Coast is a neutral flight point in the north-west, not a start area. Both sections use `start = { "DWARF", "GNOME" }`.
 
@@ -36,10 +36,10 @@ Forever additions: The Great Outdoors (96608), Camping 101: Cooking (96629), Fli
 ## Uncertain, check in game
 
 - The bind name for the Kharanos inn is set to `Thunderbrew Distillery`. Check what GetBindLocation returns. If it says "Kharanos", change `kharanosHearth`.
-- Bind on Forever marks Felix (3361) and the Mornbrew pair (3364, 3365) as Paladin, Hunter, Shaman, Mage and Warlock only. QuestieDB has no class mask. The route follows Bind on Forever: check them on a Warrior or Rogue.
+- Bind on Forever marks Felix (3361) and the Mornbrew pair (3364, 3365) as Paladin, Hunter, Shaman, Mage and Warlock only. quest database has no class mask. The route follows Bind on Forever: check them on a Warrior or Rogue.
 - Grund Drokda is "UNUSED" in the quest data. His position (28.7, 67.5) and Gozwin's camp (27.3, 62.9) come from Bind on Forever.
 - Ingrid Dunwald (Kharanos, 47.54, 51.96) is used as the Shaman trainer, and Teo Hammerstorm as the Coldridge one. Confirm both.
 - Prerequisites not in the data: The Adventurer (none set), The Great Outdoors (after 96628), Finding Warmth (no link to Dawn in the Mountains), Farsen's Watch (no link to A Visitor to Dun Morogh). Record the actual gates.
-- Stolen Blasting Powder: Bind on Forever lists 95213 (the rare Empty Powder Keg from Rockjaw Ambushers) before 95214. QuestieDB lists no prerequisite. Check whether Thesten offers 95214 without the keg.
+- Stolen Blasting Powder: Bind on Forever lists 95213 (the rare Empty Powder Keg from Rockjaw Ambushers) before 95214. quest database lists no prerequisite. Check whether Thesten offers 95214 without the keg.
 - Check the objective points for the Forever quests: firewood, the three rifles, Avala, Cornelius, Frosthowl at the west end of the den, the Pristine Leopard Pelts and the Dark Iron Spies.
 - Record the level at Kharanos (expected 6), after the west loop (10) and at Ironforge. The level 11 grind step is a placeholder.

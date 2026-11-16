@@ -108,7 +108,7 @@ The last circuit is reworked into one sweep, following the reference guide's 29-
 
 ## Facts that disagree between sources
 
-- Apprentice's Duties (471): QuestieDB Forever lists 484 as its prerequisite, and the other reference guide takes 471 without 484. The route does 484 first. That costs little: the skins are next to town.
+- Apprentice's Duties (471): quest database Forever lists 484 as its prerequisite, and the other reference guide takes 471 without 484. The route does 484 first. That costs little: the skins are next to town.
 - The Powers Below (968): The reference guide shows it as an accept step for Shamans only. The quest data says an item drop (Book: The Powers Below from Twilight Disciples and Thugs) for all races. It is routed as item-started.
 - Fall of Dun Modr (472): requires level 25 and has quest level 25. Both reference guides turn it in at the start of the Dun Modr trip, so it sits with the Thandol Span (min 28) at the end of the eastern sweep.
 - Velinde Starsong (1037): Melyria is at the Shrine of Aessina in the Forever spawn data. Classic placed her at Forest Song. Illiyana is also at the shrine (21.7, 53.3), not in Forest Song.

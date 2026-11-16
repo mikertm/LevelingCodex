@@ -3,7 +3,7 @@
 -- the quests in their log (addon messages); the step window lists every party member against your
 -- step (Settings > Show my party's steps) and Quests > Party shows each one in full, with the
 -- quests one of you has and the other doesn't. Opt-in helpers: share a guide quest with the party
--- when you accept it, say in party chat where you are flying, and Questie-like party chat lines for
+-- when you accept it, say in party chat where you are flying, and quest tracker-like party chat lines for
 -- the steps you finish, the quest items you pick up and your quest progress.
 local _, ns = ...
 local Q = ns.quests
@@ -609,7 +609,7 @@ local function readSnapshot()
 end
 
 -- Quest items you picked up (each new count), finished objectives and quests ready to turn in.
--- One line per objective; a quest that is now ready says only that. Questie's own lines win:
+-- One line per objective; a quest that is now ready says only that. quest tracker's own lines win:
 -- with its objective announcements on, a finished objective is left to it. `said[questID]` marks
 -- the quests that got a line, so a finished step for one isn't said as well.
 local readFrom -- the log table the snapshot was read from (each quest log read makes a new one)
@@ -623,7 +623,7 @@ local function announceLog(said)
   local items, progress = db.questAnnounceItems, db.questAnnounceProgress
   if not old or GetTime() < quietUntil or not (items or progress) or not inParty() then return end
   local log = Q.logEntries()
-  local questieObjectives = ns.questie.announces("objectives")
+  local providerObjectives = ns.questSupport.announces("objectives")
   for id, now in pairs(snap) do
     local before, entry = old[id], log[id]
     if before and entry then
@@ -635,10 +635,10 @@ local function announceLog(said)
           local was, is = before.objs[i], now.objs[i]
           local rose = was and is and is.have and was.have and is.have > was.have
           local doneNow = was and is and is.done and not was.done
-          if rose and items and obj.type == "item" and not (doneNow and questieObjectives) then
+          if rose and items and obj.type == "item" and not (doneNow and providerObjectives) then
             chat("obj:" .. id .. ":" .. i, { chatText(obj.text, is.have), " - ", questRef(id, entry) }, is.have, doneNow and "objective" or "item")
             said[id] = true
-          elseif doneNow and progress and not questieObjectives then
+          elseif doneNow and progress and not providerObjectives then
             chat("obj:" .. id .. ":" .. i, { chatText(obj.text, is.have), " - ", questRef(id, entry) }, is.have, "objective")
             said[id] = true
           end
@@ -662,14 +662,14 @@ local function startsQuest(item)
   return starterQuest[item]
 end
 
--- A route item that starts a quest turning up in your bags (left to Questie when it says those).
+-- A route item that starts a quest turning up in your bags (left to quest tracker when it says those).
 local function announceStarters()
   local now = {}
   for item, has in pairs(Q.starterItems()) do now[item] = has end
   local old = starters
   starters = now
   if not old or GetTime() < quietUntil or not ns.db().questAnnounceItems or not inParty()
-      or ns.questie.announces("items") then
+      or ns.questSupport.announces("items") then
     return
   end
   for item, has in pairs(now) do
@@ -724,8 +724,8 @@ function ns.partyStepChanged()
   if step and ns.db().questAnnounceSteps and GetTime() >= quietUntil and not (step.quest and said[step.quest]) then
     local kind = step.type == "accept" and "accepted" or step.type == "turnin" and "turnin"
       or step.type == "complete" and "objective" or STYLES[step.type] and step.type or "step"
-    local delegate = kind == "accepted" and ns.questie.announces("accepted")
-      or kind == "turnin" and ns.questie.announces("turnedIn")
+    local delegate = kind == "accepted" and ns.questSupport.announces("accepted")
+      or kind == "turnin" and ns.questSupport.announces("turnedIn")
     if not delegate then
       chat(nil, step.quest and { questRef(step.quest, Q.log(step.quest), step.name) } or Q.plain(Q.label(step)), nil, kind)
     end

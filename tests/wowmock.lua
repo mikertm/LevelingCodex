@@ -910,10 +910,10 @@ function GetMinimapShape() return MOCK.minimapShape or "ROUND" end
 function IsShiftKeyDown() return MOCK.shift or false end
 function IsControlKeyDown() return MOCK.ctrl or false end
 
--- Questie (opt-in, made by scenarios): its settings and its tracker frame.
--- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
+-- quest tracker (opt-in, made by scenarios): its settings and its tracker frame.
+-- MOCK.makequest tracker{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
 --   announce = { channel = "party", objectives, items, shutUp } }
-function MOCK.makeQuestie(opts)
+function MOCK.makeQuestProvider(opts)
   opts = opts or {}
   local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
   if opts.announce then
@@ -937,16 +937,16 @@ function MOCK.makeQuestie(opts)
   tracker:Show()
 end
 
--- QuestieDB's LibQuestieDB (opt-in, made by scenarios), a new table on every call.
--- MOCK.makeQuestieDB{ contract = 4, quests = { [id] = { objectives } }, npcs/objects = { [id] = { name, spawns } },
+-- quest database's quest data API (opt-in, made by scenarios), a new table on every call.
+-- MOCK.makequest database{ contract = 4, quests = { [id] = { objectives } }, npcs/objects = { [id] = { name, spawns } },
 --   items = { [id] = { name, npcDrops, objectDrops } }, zones = "return {...}", noZones }
--- Entity getters raise while MOCK.questieDBError is set.
-function MOCK.makeQuestieDB(opts)
+-- Entity getters raise while MOCK.quest databaseError is set.
+function MOCK.makeQuestDataProvider(opts)
   opts = opts or {}
   local contract = opts.contract or 4
   local function getter(source, field)
     return function(id)
-      if MOCK.questieDBError then error("mock read error", 2) end
+      if MOCK.questDataError then error("mock read error", 2) end
       local row = source and source[id]
       return row and row[field]
     end
@@ -960,7 +960,7 @@ function MOCK.makeQuestieDB(opts)
     contractVersion = contract, minSupportedContract = 1, readMode = "baked",
     RequireContract = function(n)
       if type(n) == "number" and n >= 1 and n <= contract then return true end
-      return false, "QuestieDB contract " .. contract .. " does not support " .. tostring(n)
+      return false, "quest data contract " .. contract .. " does not support " .. tostring(n)
     end,
     Quest = { objectives = getter(opts.quests or {}, "objectives") },
     Npc = { name = getter(npcs, "name"), spawns = getter(npcs, "spawns") },
@@ -970,21 +970,21 @@ function MOCK.makeQuestieDB(opts)
   }
 end
 
--- EllesmereUI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
+-- external UI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
 -- the .toc lists as an optional dependency). Its public skin API (SKINNING_API.md, apiVersion 4):
--- EllesmereUI.RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
--- else hears it (EllesmereUI loads first), or at MOCK.euiDispatch() with opts.manual; never with
+-- RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
+-- else hears it (external UI loads first), or at MOCK.euiDispatch() with opts.manual; never with
 -- opts.off (the player turned third-party skins off). The facade records each call in MOCK.eui.calls
 -- and, like the real engine, fades every texture of a frame it skins. Shell, Panel, Inset and Button
--- keep the frame for MOCK.euiRestrip(), which fades them all again (EllesmereUI does that when some
+-- keep the frame for MOCK.euiRestrip(), which fades them all again (external UI does that when some
 -- Blizzard windows open), sparing only the textures the facade made itself. MOCK.euiLooks(accent)
 -- changes the accent colour and calls every OnLooksChanged callback.
--- MOCK.makeEllesmere{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
-function MOCK.makeEllesmere(opts)
+-- MOCK.makeexternal UI{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
+function MOCK.makeSkinProvider(opts)
   opts = opts or {}
   local E = { calls = {}, skinned = {}, restrip = {}, own = {}, looks = {}, registry = {}, fired = {},
     accent = opts.accent or { 0.047, 0.824, 0.616 }, style = opts.style or "eui", off = opts.off,
-    font = "Interface\\AddOns\\EllesmereUI\\media\\fonts\\Expressway.ttf" }
+    font = "Interface\\AddOns\\TestSkinProvider\\media\\fonts\\UI.ttf" }
   MOCK.eui = E
   local function fade(frame)
     for _, r in ipairs({ frame:GetRegions() }) do
@@ -1023,7 +1023,7 @@ function MOCK.makeEllesmere(opts)
     if E.fired[entry.name] or E.off then return end
     E.fired[entry.name] = true
     local ok, err = pcall(entry.apply, S)
-    if not ok then problem("lua", "EllesmereUI skin callback: " .. tostring(err)) end
+    if not ok then problem("lua", "external UI skin callback: " .. tostring(err)) end
   end
   EllesmereUI = {
     RegisterSkin = function(name, fn)
@@ -1352,7 +1352,7 @@ function RepairAllItems()
   fromServer(function() MOCK.setMoney((MOCK.money or 0) - cost) end)
 end
 -- MOCK.merchantLate = s: Forever's order, MERCHANT_SHOW first and the vendor window s seconds
--- later (Zygor's Forever build waits for it too); closing before then keeps it hidden.
+-- later (reference guide B's Forever build waits for it too); closing before then keeps it hidden.
 local merchantVisit = 0
 function MOCK.openMerchant(m)
   MOCK.merchant = m

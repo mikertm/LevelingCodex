@@ -66,7 +66,7 @@ local function bosses(id, ids, more)
   return list
 end
 
--- Shared places (QuestieDB Forever spawns; flight masters at the client's taxi nodes).
+-- Shared places (quest database Forever spawns; flight masters at the client's taxi nodes).
 local og, uc, bad, bs, ds = on.orgrimmar, on.undercity, on.badlands, on.steppes, on.desolace
 local thrall = og("Thrall", 31.73, 37.82)
 local ogFlights = og("Doras", 45.1, 63.9)

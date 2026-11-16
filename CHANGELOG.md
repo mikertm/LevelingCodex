@@ -1,11 +1,15 @@
 # Leveling Codex
 
+## Unreleased
+
+- Cleaned up documentation, guide notes and interface wording. Optional integrations retain their existing behavior.
+
 ## v0.26.0
 
 ### Quest chat announcements
 
 - Quest announcements use a recognizable chat marker, native quest and item links when available, clear progress counts, and distinct accepted, objective-complete, ready-to-turn-in and turned-in messages. Codex clients display a badge and colored status icons. A private preview is available in Settings and Quests > Party.
-- Existing opt-in switches, message throttling, raid exclusion and Questie duplicate suppression remain in effect.
+- Existing opt-in switches, message throttling, raid exclusion and quest tracker duplicate suppression remain in effect.
 
 ### Quest guide buttons
 
@@ -18,7 +22,7 @@
 - **Wetlands eastern loop:** gather Crocs of the Sky scales, Carnage's Rotclaw bait, Razormaw incisors and Perfect Razormaw Eggs on the same Green Belt/Raptor Ridge trip, with shared progress in the step window. Carnage offers the existing elite Take/Skip choice and gives a cave entrance waypoint, Offering Stone instructions and a clickable bait item. Raptor pickups wait until after the coast quests to keep the first Menethil visit's quest log lighter.
 - **Step-guide travel and dungeon preparation:** clickable items show live cooldowns, flights initialize connecting routes, and return steps name the next flight. Completed-history handling accepts keyed sets and keeps confirmed completions for the session. Corrected Snellig's wreck and lower-deck directions. Dungeon pages and the Route tab offer outdoor quest preparation before the run; readiness waits for all outdoor pickups, and a small footer icon replaces the wide Run button.
 - **Sovik's Gnomeregan errand:** both Horde guides now name the gossip option "What else do you have to say?", explain retries and automatic acceptance, and remind you to check the quest log before leaving Orgrimmar. The pickup is no longer hidden when Rig Wars is absent.
-- **Alliance and Horde quest interactions:** checked both reference addons and online guides for missing dialogue, event triggers, escort releases, and quest-item actions. Corrected confirmed omissions in leveling, alternate, dungeon, class, and special guides; the dated audit notes list each change and its sources. These steps still need in-game verification.
+- **Alliance and Horde quest interactions:** corrected missing dialogue, event triggers, escort releases, and quest-item actions in leveling, alternate, dungeon, class, and special guides. The dated audit notes list each change and its sources. These steps still need in-game verification.
 
 ## v0.25.0
 
@@ -86,11 +90,11 @@
 - Every new macro has tips: what each press does and when a new piece joins.
 - Macros made by an older Codex still update in place, even when WoW: Forever doesn't load your saved settings.
 
-### EllesmereUI
+### external UI
 
-- **The Codex takes on EllesmereUI's look.** With EllesmereUI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
-- It's on whenever EllesmereUI is installed. Turn it off for the Codex in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as EllesmereUI is installed.
-- Change your accent colour in EllesmereUI and the Codex follows straight away.
+- **The Codex takes on external UI's look.** With external UI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
+- It's on whenever external UI is installed. Turn it off for the Codex in external UI's options (skin settings > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as external UI is installed.
+- Change your accent colour in external UI and the Codex follows straight away.
 
 ### Party play
 
@@ -99,7 +103,7 @@
 - **Quests one of you is missing.** The Party tab lists the guide quests a party member has that you don't, with Ask to share (their Codex offers it to you), and the ones you have that they don't, with Share.
 - **Quest sharing is on by default.** A guide quest you accept is offered to party members who don't have it yet. It waits a moment, so two of you taking it together don't get each other's offer. Turn it off in Settings > Party.
 - **Catch-up cues.** The step window says when someone is 3 or more steps behind you, and a soft chime plays when the last of you reaches the same step. Settings > Party > Ping sound picks the sound (Soft chime, Party invite or Ready check) and plays it so you can hear it.
-- **Party chat lines, like Questie's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what Questie already says in party chat is left to it. Each one is off until you turn it on.
+- **Party chat lines, like quest tracker's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what quest tracker already says in party chat is left to it. Each one is off until you turn it on.
 - **Every party option in the guide setup card**, next to the same switches in Settings > Party and Quests > Party.
 - **Steadier sync.** Your step goes out again every minute, so a long kill step no longer drops you from your partner's window, and going Back to look at an earlier step no longer tells the party you're behind.
 
@@ -341,13 +345,13 @@
 
 ## v0.19.0
 
-### Questie compatibility
+### quest tracker compatibility
 
-- **Works side by side with Questie.** While Questie's own auto-accept or auto-complete is on, the Codex leaves those quests to Questie, so the two never pick different quests from one NPC. Settings says so under each tickbox.
-- **One key holds both back.** Questie's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
-- **The step window sits beside Questie's tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
-- **Last-mile arrow with QuestieDB.** With QuestieDB installed (Questie needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (QuestieDB).
-- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks QuestieDB once more if it wasn't ready at login.
+- **Works side by side with quest tracker.** While quest tracker's own auto-accept or auto-complete is on, the Codex leaves those quests to quest tracker, so the two never pick different quests from one NPC. Settings says so under each tickbox.
+- **One key holds both back.** quest tracker's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
+- **The step window sits beside external quest tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
+- **Last-mile arrow with quest database.** With quest database installed (quest tracker needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (quest database).
+- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks quest database once more if it wasn't ready at login.
 
 ### Alliance quest guide
 

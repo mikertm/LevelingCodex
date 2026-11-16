@@ -4,8 +4,8 @@ local B = LevelingCodexQuests.build
 local route = LevelingCodexQuests.HORDE
 local M = B.maps
 
--- Quest facts: QuestieDB (Forever) and the client reference. Chains on Forever quests follow
--- the order the givers offer them (RestedXP Forever); QuestieDB has none for them.
+-- Quest facts: quest database (Forever) and the client reference. Chains on Forever quests follow
+-- the order the givers offer them (reference guide A Forever); quest database has none for them.
 do
   local q, quest = B.q, B.quest
   -- Deathknell
@@ -132,7 +132,7 @@ do
   q(430, "Return to Quinn", 11, 10, 429)
   q(91920, "Wild Eyes", 11, 10, 430, true)
   q(91921, "Return to Quinn (Again)", 11, 10, 91920, true)
-  -- Forever puts Wild Eyes and Return to Quinn (Again) between Return to Quinn and Ivar: QuestieDB's
+  -- Forever puts Wild Eyes and Return to Quinn (Again) between Return to Quinn and Ivar: quest database's
   -- Forever fixes give 91921 as Ivar's prerequisite (its base record still says 430).
   q(425, "Ivar the Foul", 12, 10, 91921)
   q(97891, "Prompt Potion Runner", 16, 10, nil, true)
@@ -607,8 +607,8 @@ sections[#sections + 1] = { id = "tirisfal", title = "Tirisfal Glades", zone = t
 sections[#sections + 1] = { id = "silverpine", title = "Silverpine Forest", zone = silverpine, levels = { 12, 15 },
   start = "SCOURGE", verified = false, sources = sources, steps = sepulcher }
 
--- Alternate for Orcs, Trolls, Tauren and Skyborne at 12-15: RestedXP's Forever route for Kalimdor
--- races who want Silverpine before the Barrens. The zeppelin to Tirisfal, the Brill pickups RestedXP
+-- Alternate for Orcs, Trolls, Tauren and Skyborne at 12-15: reference guide A's Forever route for Kalimdor
+-- races who want Silverpine before the Barrens. The zeppelin to Tirisfal, the Brill pickups reference guide A
 -- takes (The Argent Emissary, the Cult of the Damned, Rear Guard Patrol, Delivery to Silverpine),
 -- the Undercity flight path, then the Undead Silverpine loop without its Undead and Rogue quests,
 -- and back to Durotar for the Crossroads. Source notes: tools/audits/2026-11-10-horde-loop-audit.md.

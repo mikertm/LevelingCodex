@@ -48,7 +48,7 @@ end
 
 local function dungeon(id, step) return forDungeon(step, "dungeon-" .. id) end
 
-local qdb = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local qdb = "Cached quest records (revision 0f7d8ad)"
 
 -- Desolace at 40: Nijel's Point, Mannoroc Coven and the Valley of Bones' spectres, with a Shimmering Flats errand.
 -- The Gelkis line (Ongeku 1373, Khan Jehn 1374 and Forever's Valley of Bones chain 93034-93128 behind it) is left
@@ -262,7 +262,7 @@ do
   q(205, "Troll Witchery", 40, 30, 207)
   q(202, "Colonel Kurzen", 40, 30, 574)
   q(208, "Big Game Hunter", 43, 28, { 188, 193, 197 })
-  -- Elites (QuestieDB Forever ranks): the route asks at the pickup.
+  -- Elites (quest database Forever ranks): the route asks at the pickup.
   elite(193, "Bhag'thera")
   elite(197, "Tethis")
   elite(202, "Colonel Kurzen")
@@ -316,7 +316,7 @@ do
     objective(193, st("Bhag'thera", 49.6, 24.0), "Head north. Bhag'thera, an elite panther, prowls the ridge east of the road; pull her alone.",
       "Fang of Bhag'thera"),
     note(objective(202, st(nil, 48.5, 6.0), "Fight into the Kurzen caves for the Kurzen Elites and Subchiefs, then Colonel Kurzen at the back. He is elite: bring a group.",
-      "6 Kurzen Elites", "4 Kurzen Subchiefs", "Kurzen's Head"), "Positions are QuestieDB's cave spawns (Kurzen 49.9, 4.0); the cave layout needs an in-game check."),
+      "6 Kurzen Elites", "4 Kurzen Subchiefs", "Kurzen's Head"), "Positions are quest database's cave spawns (Kurzen 49.9, 4.0); the cave layout needs an in-game check."),
     finish(205, st("Brother Nimetz", 37.8, 3.6), "Brother Nimetz is at the Rebel Camp."),
     finish(202, st("Lieutenant Doren", 38.0, 3.0)),
     finish(193, erlgadin, "Ride south to Nesingwary's camp."), finish(196, hemet), accept(197, hemet),
@@ -400,7 +400,7 @@ do
   q(3520, "Screecher Spirits", 44, 40)
   q(626, "Cortello's Riddle", 51, 35, 625)
   q(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
-  -- Forever quest (no QuestieDB record; level from the published quest page's XP figure).
+  -- Forever quest (no quest database record; level from the published quest page's XP figure).
   q(98233, "Sword in the Slime", 42, 35, nil, true)
 
   chapter("tanaris-43", "Tanaris: Gadgetzan and the Shimmering Flats", M.tanaris, 43, 44, {
@@ -418,7 +418,7 @@ do
     objective(1187, dm(nil, 54.1, 56.5), "Take the road west out of Theramore and look for the Seaforium booster in the wrecked camp south of the road.",
       "Seaforium Booster"),
     along(note(objective(98233, dm(nil, 52.9, 55.2), "Kill the swamp oozes in the bog beside the camp until Jameson's sword turns up.",
-      "Jameson's Training Sword"), "Which ooze carries the sword is not published; the Acidic Swamp Oozes gather here (QuestieDB)."), 1187),
+      "Jameson's Training Sword"), "Which ooze carries the sword is not published; the Acidic Swamp Oozes gather here (quest database)."), 1187),
     finish(625, dm("Musty Scroll", 31.1, 66.14), "Follow the riddle to the musty scroll in the southwest of the marsh."),
     accept(626, dm("Musty Scroll", 31.1, 66.14), "The last clue points to the Hinterlands. Keep it for later."),
     action("goto", jameson, "Ride back east along the road to Theramore."),

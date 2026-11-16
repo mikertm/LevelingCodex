@@ -16,12 +16,12 @@ Earlier decisions in `2026-11-08-duskwood.md`, `2026-11-08-wetlands.md`, `2026-1
 
 ## Sources
 
-- **Guide A** (the local RXP Forever copy; see `2026-11-10-guide-cross-reference.md`). Only quest IDs, grouping, order and positions were used, never its text. Chapters read:
+- **Guide A** (the local reference guide A Forever copy; see `2026-11-10-guide-cross-reference.md`). Only quest IDs, grouping, order and positions were used, never its text. Chapters read:
   - "24-27 Duskwood/Redridge" and "24-27 Duskwood/Redridge/Stockades"
   - "27-29 Wetlands/Hillsbrad" and "27-29 Wetlands/Excavation Site"
   - "29-32 Duskwood" and "30-32 Duskwood/Gnomeregan"
   - the Mage AoE "21-22 Duskwood", "22-26 Wetlands" and "26-31 Duskwood Part 2"
-- **Zygor Forever guides (quest-ID gap check only).** We used the owner's prepared list of quest IDs that Zygor's 1-30 guides accept and our route does not, and the level band of each guide. We used no text, step order or code. None of the Zygor-only IDs ("also in RXP: no") are in these zones.
+- **reference guide B Forever guides (quest-ID gap check only).** We used the owner's prepared list of quest IDs that reference guide B's 1-30 guides accept and our route does not, and the level band of each guide. We used no text, step order or code. None of the reference guide B-only IDs ("also in reference guide A: no") are in these zones.
 - [Wowhead Forever](https://www.wowhead.com/forever/) quest pages for [98216](https://www.wowhead.com/forever/quest=98216), [98230](https://www.wowhead.com/forever/quest=98230), [98240](https://www.wowhead.com/forever/quest=98240), [98059](https://www.wowhead.com/forever/quest=98059) and [98071](https://www.wowhead.com/forever/quest=98071), and the item page for [Soothing Spices](https://www.wowhead.com/forever/item=3713/soothing-spices).
   - 98240 is listed in a series after Crocs of the Sky (98072).
   - 98071's case goes to the fireplace at the bottom of the Dun Garok fort.
@@ -29,7 +29,7 @@ Earlier decisions in `2026-11-08-duskwood.md`, `2026-11-08-wetlands.md`, `2026-1
   - 98240 requires Crocs of the Sky (98072).
   - 98071 is Alliance, with a minimum level of 23 and a 2,200 XP reward.
 - [Bind on Forever: Hillsbrad Foothills](https://bindonforever.com/zones/hillsbrad-foothills) lists Hillsbrad's Hoard (98059) and Brewer's Trade (98071) as Alliance level 27 quests, without positions.
-- `tools/questfacts.py` (QuestieDB Forever) gives levels, givers and spawns:
+- `tools/questfacts.py` (quest database Forever) gives levels, givers and spawns:
   - Leech and Cave Stalkers inside Thelgen Rock (46-51, 58-63).
   - Fen Creepers, Fenrunners and Trappers.
   - Einar Stonegrip (49.92, 39.37) and Harlo Barnaby.
@@ -61,7 +61,7 @@ Earlier decisions in `2026-11-08-duskwood.md`, `2026-11-08-wetlands.md`, `2026-1
 
 ## Findings
 
-| Quest | Status | Reason | RXP | Zygor |
+| Quest | Status | Reason | reference guide A | reference guide B |
 |---|---|---|---|---|
 | 269, 270, 337 (Stormwind) | Reordered | Duskwood ends at Farthing (269). The Wetlands route starts with 270 at the same spot, then 337 at the Keep library on the way to the tram (fix 1) | yes | in route |
 | 343 Speaking of Fortitude | Added, optional | Coordinator's suggestion, checked: Brother Kristoff (Stormwind 55.04, 54.16) is on the walk from the gryphons to Farthing (about 2 yd out of the way), and Milton Sheaf takes it at the library. Only 195 XP, and players without the history book have no other reason to visit the library (about 310 yd more), so it is optional, like the other Stormwind library errand (97234). The pickup ends `duskwood` and the turn-in opens `wetlands`. Its follow-ups (344-347: Northshire, Redridge, the Rethban Caverns) stay out | yes | yes |
@@ -248,7 +248,7 @@ Text changes:
   - McManus and Bilger offer 98059 and 98071 to the Alliance at 27.
   - Where the bookkeeping table is in the Hillsbrad Fields town hall, and the Dun Garok fireplace.
   - The XP of 98059.
-- The Weathered Grave at 28 (QuestieDB's minimum), and Mor'Ladim's patrol around it.
+- The Weathered Grave at 28 (quest database's minimum), and Mor'Ladim's patrol around it.
 - Your quest log on the first Menethil visit. The audit's worst case is 20 of 20.
 - Levels at each Menethil visit and at the end of `wetlands`, and in `southshore` after the two level 27 errands (the level 29 check follows them).
 
@@ -256,7 +256,7 @@ Text changes:
 
 - **`tools/questroute.py audit`: passed** (5,470 steps; it was 5,449).
   - The `wetlands` step 8 and 9 distance warnings are gone.
-  - New warnings: `duskwood-late` steps 32 and 46, "The Weathered Grave / Morgan Ladimore is more than 5 levels above the section's current target". QuestieDB gives these talk quests level 35 with a minimum of 28, and the chapter's level target is 28 after its grind check. They stay, like the existing Ghoulish Effigy and Proving Your Worth warnings.
+  - New warnings: `duskwood-late` steps 32 and 46, "The Weathered Grave / Morgan Ladimore is more than 5 levels above the section's current target". quest database gives these talk quests level 35 with a minimum of 28, and the chapter's level target is 28 after its grind check. They stay, like the existing Ghoulish Effigy and Proving Your Worth warnings.
 - **Loop check** (extended, every Alliance race with Warrior, Hunter and Priest):
   - Before:
     - `wetlands` 23,622 yd.

@@ -4,8 +4,8 @@
 
 ## Sources
 
-- RestedXP Forever `Horde-01-12_Durotar.lua` ("6-10 Durotar" and "10-12 Durotar") and `Horde-12-22_Barrens.lua` ("12-17 The Barrens", "17-22 Stonetalon/Barrens/Ashenvale"). These gave the order and the class stops only. The text is ours.
-- QuestieDB Forever, through `tools/questfacts.py`, for givers, turn-ins, races, prerequisites, item drops and spawn clusters.
+- reference guide A Forever `Horde-01-12_Durotar.lua` ("6-10 Durotar" and "10-12 Durotar") and `Horde-12-22_Barrens.lua` ("12-17 The Barrens", "17-22 Stonetalon/Barrens/Ashenvale"). These gave the order and the class stops only. The text is ours.
+- quest database Forever, through `tools/questfacts.py`, for givers, turn-ins, races, prerequisites, item drops and spawn clusters.
 - Web:
   - [questing.wiki Forever Hunter quests](https://questing.wiki/wow-forever/classes/hunter/). No Horde-only Forever Hunter quest is listed below 35. The new taming routes are Human (Elwynn) and Skyborne (Valanaar).
   - [zockify: Horde poison quest](https://www.zockify.com/forever/rogue/poison-quest/). It gives the order, the level-20 start, the Silixiz-first warning and the lockbox needing 80. Poisons come from the second Hinott's Assistance.
@@ -22,10 +22,10 @@ Who can be what: Orc and Troll can be Hunters and Rogues. Tauren can be Hunters,
 | Inline, `northern-durotar` after Encroachment 837 (Razor Hill, after the first Orgrimmar visit) | Orc, Troll | 6062 Dire Mottled Boar -> 6083 Surf Crawler -> 6082 Armored Scorpid -> 6081 Training the Beast |
 | Inline, `northern-durotar` after Halikor's Hoof 96877 (second Orgrimmar visit, Valley of Honor) | Orc, Troll | 6081 turn-in at Ormak Grimshot |
 
-- **Placement.** RestedXP tames at the end of its 6-10 chapter. We start at the Razor Hill stop after the first Orgrimmar visit, because every quest in the chain needs level 10. By then everyone has it.
-- **Tame areas** come from the QuestieDB spawn clusters closest to Razor Hill:
+- **Placement.** reference guide A tames at the end of its 6-10 chapter. We start at the Razor Hill stop after the first Orgrimmar visit, because every quest in the chain needs level 10. By then everyone has it.
+- **Tame areas** come from the quest database spawn clusters closest to Razor Hill:
   - boars at 54.5, 45.9, just east of town;
-  - Surf Crawlers at 59.8, 25.4, the small north-east coast group, which matches RestedXP's loop;
+  - Surf Crawlers at 59.8, 25.4, the small north-east coast group, which matches reference guide A's loop;
   - Armored Scorpids at 54.7, 34.1.
 - **Already in the route:**
   - Tauren: 6061/6087/6088/6089, in `QuestHordeMulgore.lua`.
@@ -33,7 +33,7 @@ Who can be what: Orc and Troll can be Hunters and Rogues. Tauren can be Hunters,
   - The starting letters 3087/3082/3092 and The Way of the Hunter 92482.
 - **Not added:**
   - The Hunter's Path referrals 6065-6070. Jen'shan (Valley of Trials), Sian'dur (Orgrimmar) and Thotar's referral to Mulgore are optional pointers to a trainer the route already visits, and they exclude each other. The Alliance guides leave them out too.
-  - Wenikee Boltbucket 3921 and Report to Kadrak 6541 are not class quests: QuestieDB has no class filter on them. RestedXP only times them differently for Hunters.
+  - Wenikee Boltbucket 3921 and Report to Kadrak 6541 are not class quests: quest database has no class filter on them. reference guide A only times them differently for Hunters.
   - Horns of Frenzy 2754 needs level 32.
 
 ## Rogue
@@ -52,20 +52,20 @@ Who can be what: Orc and Troll can be Hunters and Rogues. Tauren can be Hunters,
 | `rogue-syndicate-sabotage-horde` "Rogue: Syndicate Sabotage" | side | 24-30 | all | 96779 |
 | `rogue-eye-of-bhossca-horde` "Rogue: The Eye of Bhossca" | side | 30 | all | 78676 -> 78699 |
 
-- **The Shattered Hand prerequisites.** QuestieDB has 1963 needing Therzok 1859, but 1859 is Orc-only (race mask 2). RestedXP's Forever guide has Orc and Troll rogues accept 1963 straight from Therzok. So 1963 has no prerequisite here, and 1859 is a breadcrumb for Orcs, picked up from Kaplak at the start of `northern-durotar`.
-- **Tazan.** He is a lone level 13 pirate. QuestieDB puts him at 63.1, 44.3. We use RestedXP's 64.3, 44.1, where he walks up the hill from the first camp. His step sits beside the route's Southsea Freebooters kills.
-- **Tazan's Logbook (1858).** Either Pick Lock opens the satchel, or the Tazan's Key pickpocketed from Gamon in the Valley of Strength inn (54.0, 68.0) does. Both come from RestedXP. The step points at Gamon because that works before level 16.
-- **Lockpicking.** RestedXP takes Zando'zan 2379 straight from Shenthul. QuestieDB lists To Orgrimmar! 2380 (Kaplak) and Find the Shattered Hand 2378 (Mennet Carkad) before it. The route passes neither giver at 16, so they aren't tracked; Shenthul's step tells players to hand one in if they carry it. 2379 has no prerequisite here.
+- **The Shattered Hand prerequisites.** quest database has 1963 needing Therzok 1859, but 1859 is Orc-only (race mask 2). reference guide A's Forever guide has Orc and Troll rogues accept 1963 straight from Therzok. So 1963 has no prerequisite here, and 1859 is a breadcrumb for Orcs, picked up from Kaplak at the start of `northern-durotar`.
+- **Tazan.** He is a lone level 13 pirate. quest database puts him at 63.1, 44.3. We use reference guide A's 64.3, 44.1, where he walks up the hill from the first camp. His step sits beside the route's Southsea Freebooters kills.
+- **Tazan's Logbook (1858).** Either Pick Lock opens the satchel, or the Tazan's Key pickpocketed from Gamon in the Valley of Strength inn (54.0, 68.0) does. Both come from reference guide A. The step points at Gamon because that works before level 16.
+- **Lockpicking.** reference guide A takes Zando'zan 2379 straight from Shenthul. quest database lists To Orgrimmar! 2380 (Kaplak) and Find the Shattered Hand 2378 (Mennet Carkad) before it. The route passes neither giver at 16, so they aren't tracked; Shenthul's step tells players to hand one in if they carry it. 2379 has no prerequisite here.
   - The practice boxes are the Buccaneer's Strongboxes on the Tide Razor at 65.06, 45.45. The Jewel of the Southsea is at 64.95, 45.44.
-  - RestedXP aims for skill 70 before the Jewel.
+  - reference guide A aims for skill 70 before the Jewel.
 - **Poisons.** The chain is from zockify:
   - Salute Shenthul, then fire two flares within sight of the tower.
   - Salute Fizzule before anything else.
   - Pick pocket Silixiz first, because the lockbox's Touch of Zanzil blocks Stealth.
   - Kill two each of drones, patrollers and lookouts, then Gallywix (level 23 elite).
   - Open the lockbox, which needs Lockpicking 80. Mission gives Thistle Tea.
-  - Hinott's cure teaches Poisons. Positions are from QuestieDB.
-- **Tools of the Trade (Undead).** These are Mennet Carkad's level 16 jobs: Fenwick Thatros at Silverpine 59.6, 33.9, and the Ambermill Strongbox at 63.71, 65.24 for the Dalaran Status Report. RestedXP's Forever guides don't route them. Their rewards are not confirmed for Forever.
+  - Hinott's cure teaches Poisons. Positions are from quest database.
+- **Tools of the Trade (Undead).** These are Mennet Carkad's level 16 jobs: Fenwick Thatros at Silverpine 59.6, 33.9, and the Ambermill Strongbox at 63.71, 65.24 for the Dalaran Status Report. reference guide A's Forever guides don't route them. Their rewards are not confirmed for Forever.
 - **Forever-wide jobs.** The Horn, Ravenholdt, Syndicate Sabotage and the Eye use the same quest IDs and the same flow as the Alliance guides in `QuestClassData.lua` (see `2026-11-08-class-hunter-rogue.md`). The text is rewritten for the Horde, and the payment letters arrive in a Horde capital.
 - **Left out:**
   - The Deathstalkers 1885-1978 (Undead, level 10) are already inline in `QuestHordeTirisfal.lua` and the Undercity stop.

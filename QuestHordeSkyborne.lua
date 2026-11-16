@@ -211,7 +211,7 @@ insert(valanaar, "complete", 93317, {
 })
 local essences = along(objective(93736, z(nil, 58.2, 32.8), "Loot Wind Hollow Essences from the same Wind Hollows. Use Next if they drop too slowly.",
   "10 Wind Hollow Essences"), 93172)
-essences.mobs = { "Wind Hollow" } -- QuestieDB has no drop data for the essence
+essences.mobs = { "Wind Hollow" } -- quest database has no drop data for the essence
 insert(valanaar, "complete", 93172, { essences })
 -- Shamans finish the orchard trip at the brazier in Valanaar (Call of Fire), so the hearth back
 -- from the orchard is for the other classes: a Shaman would spend the hearthstone needed after Shadowgale.
@@ -257,7 +257,7 @@ local sources = {
   "https://www.warcrafttavern.com/forever/guides/zephras-isle-walkthrough/",
   "https://warcraft.wiki.gg/wiki/Skyborne_starting_experience",
   "https://www.warcrafttavern.com/forever/guides/skyborne/",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 route.starts.SKYBORNE = "zephras"
 -- Zephras Isle's size in yards (as in the Alliance route): the arrow's yards and the loop check need it.

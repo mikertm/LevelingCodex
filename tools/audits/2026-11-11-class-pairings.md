@@ -49,7 +49,7 @@ Follow-up to `2026-11-11-class-quest-audit.md`; the owner asked to add the pairi
 
 Worktree read: `QuestData.lua`, `QuestAlternateData.lua`, `QuestDungeonData.lua`, `QuestSpecialData.lua`,
 `QuestClassData.lua` (the thelgen pattern now calls `B.logOnlyPart`, defined in `QuestHordeData.lua`).
-Facts: `tools/questfacts.py` (QuestieDB Forever 0f7d8ad), the Forever client item names
+Facts: `tools/questfacts.py` (quest database Forever 0f7d8ad), the Forever client item names
 (`tools/.cache/1.60.1.70888/ItemSparse.csv`), `UiMapAssignment.csv` (70862) for cross-map distances.
 `Quests.lua` `included()`: `logOnly` works on any step type (`log[step.quest] ~= nil`), so a turn-in can
 be log-only too; only an accept can't.
@@ -74,8 +74,8 @@ Summary
    (28.79, 66.18). One objective (index 1): item 264356, client name **Iceclaw Bear Pendant** x2 (quest
    text says "Frostmane Bear Pendants"; side guide `shaman-earth-totem` already uses the client name).
 2. **Facts**: no Forever drop record for 264356. Drop source from our side guide, the 2026-11-08
-   druid/shaman audit (azeroth.wiki), RXP and Zygor: Frostmane Troll Whelps and Frostmane Novices.
-   QuestieDB spawns: Frostmane Troll Whelp (npc 706, level 3-4) Dun Morogh 24.4, 78.4 (n 33), **27.5, 80.9
+   druid/shaman audit (azeroth.wiki), reference guide A and reference guide B: Frostmane Troll Whelps and Frostmane Novices.
+   quest database spawns: Frostmane Troll Whelp (npc 706, level 3-4) Dun Morogh 24.4, 78.4 (n 33), **27.5, 80.9
    (n 23)**, 30.5, 81.0; Frostmane Novice (npc 946) 29.0, 82.0 and 30.2, 81.2 (inside the cave).
 3. **Route**: `coldridge` (QuestData.lua `dm.coldridge`). The Troll Cave 182 (`objectiveAt(182, dm(nil,
    24.4, 78.4))`) comes **before** the level-4 training (`action("train", ..., { level = 4 })`, which is
@@ -89,7 +89,7 @@ Summary
 
 ```lua
   -- Call of Earth's Iceclaw Bear Pendants drop from the Frostmane Troll Whelps and Novices of the
-  -- Coldridge troll cave (QuestieDB: whelps 24.4, 78.4 and 27.5, 80.9; novices 29.0, 82.0). The quest
+  -- Coldridge troll cave (quest database: whelps 24.4, 78.4 and 27.5, 80.9; novices 29.0, 82.0). The quest
   -- needs level 4 from Teo, the Shaman trainer the level-4 training visits, so it is in the log on the
   -- second cave trip (Grik'nir), not during The Troll Cave's whelps.
   inline("coldridge", "complete", 218, {
@@ -105,9 +105,9 @@ Summary
 
 1. **Quest**: 94466 Call of Fire, level 14, requiredLevel 10, from Braldir Ashmantle (Loch Modan 32.17,
    65.97). Objectives in log order: **1 = Fire Tar** (item 5026), **2 = Reagent Pouch** (item 6652).
-2. **Facts**: QuestieDB only lists the Horde drops for both items (Razormane in the Barrens, Burning
+2. **Facts**: quest database only lists the Horde drops for both items (Razormane in the Barrens, Burning
    Blade Cultists in Durotar). The Dwarf version's sources (side guide `shaman-fire-totem`, audit
-   2026-11-08 citing bindonforever.com/quest/94466, RXP, Zygor): Tunnel Rat Geomancers and Stonesplinter
+   2026-11-08 citing bindonforever.com/quest/94466, reference guide A, reference guide B): Tunnel Rat Geomancers and Stonesplinter
    Seers. Spawns: Tunnel Rat Geomancer (npc 1174, level 12-13) Loch Modan **35.8, 23.8** (n 10, the Silver
    Stream Mine, with Tunnel Rat Diggers 35.7, 23.9). Stonesplinter Seer (npc 1166, level 13-14) **34.7, 85.3**
    (n 16), 28.6, 84.4 (n 11), 48.6, 25.5 (n 11, Bingles' island).
@@ -119,12 +119,12 @@ Summary
    `objectiveAt(237, loch(nil, 32.9, 85.0), ..., "10 Stonesplinter Skullthumpers", "10 Stonesplinter Seers")`
    = the route already kills 10 Seers. Braldir is on the hill ~225 yards from the first loop, so a
    Shaman who stops there during the first loop carries 94466 into the mine.
-4. **Verdict**: ADD, two steps. (Zygor's anchors 436/298 are travel neighbours; our route's own Geomancer and
+4. **Verdict**: ADD, two steps. (reference guide B's anchors 436/298 are travel neighbours; our route's own Geomancer and
    Seer stops are 307 and 237.)
 5. **Lua** (Druid/Shaman block, after `shaman-fire-totem`):
 
 ```lua
-  -- Call of Fire's reagents (bindonforever.com/quest/94466; QuestieDB has only the Horde drops):
+  -- Call of Fire's reagents (bindonforever.com/quest/94466; quest database has only the Horde drops):
   -- Fire Tar from the Tunnel Rat Geomancers in Silver Stream Mine (npc 1174: 35.8, 23.8), where Filthy
   -- Paws sends the route; Reagent Pouch from the Stonesplinter Seers (npc 1166: 34.7, 85.3) that In
   -- Defense of the King's Lands (237) already hunts.
@@ -165,7 +165,7 @@ A log-only turn-in of 94465 (the torch delivery) right after the tower turn-ins 
      the gates into Stormwind.")`). After Stormwind it goes Goldshire, Hogger, Westfall: never Brackwell again.
      A log-only step after 83 would essentially never show.
    - Dwarf/Gnome `dunmorogh`: ends with the tram to Stormwind (Gakin reachable ~12) and the road through
-     Goldshire to Westfall; never near Brackwell. Our route has no Manhunt 147 (RXP's D/G anchor) at all.
+     Goldshire to Westfall; never near Brackwell. Our route has no Manhunt 147 (reference guide A's D/G anchor) at all.
    - **`westfall`** (all races): after the level-15 grind, `accept(65, gryan)` then
      `action("goto", ariena, "Follow the road east through Goldshire to Redridge ...")`, a walk along the
      Elwynn east road. Brackwell lies ~200 yards south of that road between the Tower of Azora (65, 69.8)
@@ -195,7 +195,7 @@ over when a level-15 Human enters Elwynn (its range is 6-12, so it shouldn't).
 
 **ID correction**: the audit row says 94497, but 94497 is the **brown** waterskin at the pool below
 Hervdana's cave in the Wetlands (64.8, 74.8). Stonewatch Falls is **94499** ("Fill the Empty Red Waterskin
-at Stonewatch Falls near the Nightcrawler Murlocs"), which is also what the RXP notes pair with Fangore 180.
+at Stonewatch Falls near the Nightcrawler Murlocs"), which is also what the reference guide A notes pair with Fangore 180.
 
 1. **Quest**: 94499 Call of Water, level 22, requiredLevel 20, from Hervdana Saegrund (Wetlands 65.76,
    76.52) after 94497. One objective (index 1): item 265748 **Full Red Waterskin** (use item 265747
@@ -240,7 +240,7 @@ companion if the owner wants the whole Water chain on the route.
 2. **Facts**: Daphne Stilwell (npc 6182) Westfall 41.69, 89.24.
 3. **Route**: `westfall` (12-18) does The Coastal Menace 104 (`objectiveAt(104, wf("Old Murk-Eye", 29.3, 76))`,
    Grayson at the lighthouse 30.01, 86.02) at about level 16, before the level-17 grind. 1649 needs level
-   20 and a Stormwind visit, so no Paladin can carry 1650 there (RXP does this coast trip at 19-20, Zygor at
+   20 and a Stormwind visit, so no Paladin can carry 1650 there (reference guide A does this coast trip at 19-20, reference guide B at
    25-27). After Westfall the route never returns to the Westfall coast (`duskwood` stays in Duskwood).
 4. **Verdict**: SKIP (route order / level: the coast is passed at ~16, the chain opens at 20).
    - Only place our data passes Daphne at 20+: the Deadmines back exit (`exitAlba` 38.68, 83.7, ~165 yards
@@ -293,7 +293,7 @@ Lakeshire docks:
   inline("lakeshire", "accept", 127, { luciusStop })
 ```
 
-Aside: QuestieDB gives 98386 (and 98387) `requiredRaces = DWARF + NIGHT_ELF + GNOME + SKYBORNE`, no Human;
+Aside: quest database gives 98386 (and 98387) `requiredRaces = DWARF + NIGHT_ELF + GNOME + SKYBORNE`, no Human;
 our `q(98386, ...)` has no race. Out of scope here, but the Rogue text above doesn't depend on 98386.
 
 ---
@@ -353,13 +353,13 @@ the schoolhouse; it would also pull a Rogue who flies to Sentinel Hill ~1000 yar
 - Cross-map log-only steps (Surena's Elwynn step inside `westfall`, the Westfall steps inside `duskwood`):
   check the arrow's road/flight leg and that zone-entry switching doesn't pick the other section (Elwynn
   6-12 and Westfall 12-18 are both below the player's level there).
-- Text is ASCII, starts with "<Class>s with <Quest>:", written for this file (no RXP/Zygor wording).
+- Text is ASCII, starts with "<Class>s with <Quest>:", written for this file (no reference guide A/reference guide B wording).
 - In game: confirm the Dwarf drops (pendants from whelps/novices, Fire Tar from Geomancers, Reagent Pouch
-  from Seers) and the Stonewatch Falls spot; none of them is in QuestieDB's Forever drop data.
+  from Seers) and the Stonewatch Falls spot; none of them is in quest database's Forever drop data.
 
 ## Pairings: Alliance Druid, Rogue, Warlock (Kalimdor plus one Westfall stop)
 
-Research only, no repo edits. Facts: `questfacts.py` (QuestieDB Forever 0f7d8ad cache) and the raw
+Research only, no repo edits. Facts: `questfacts.py` (quest database Forever 0f7d8ad cache) and the raw
 `foreverObjectDB.lua`. Route anchors were checked by grep in the worktree. Each anchor is the only
 step of that type and quest in its section, so `inline` lands where intended.
 `B.logOnlyPart(id, index, place, text, label)` is already in `QuestHordeData.lua` (lines 31-35), with
@@ -373,7 +373,7 @@ Teldrassil 5092 x 3394, Ashenvale 5767 x 3844.
 | 1a | 272 Darkshore half | ADD | `darkshore`, complete 87760 |
 | 1b | 272 Westfall half | ADD | `westfall`, turnin 104 |
 | 2a | 6122 Cliffspring sample | ADD | `darkshore`, complete 947 |
-| 2b | 6123 Earthroot with Cleansing of the Infected 2138 (RXP) | SKIP | - |
+| 2b | 6123 Earthroot with Cleansing of the Infected 2138 (reference guide A) | SKIP | - |
 | 2c | 6123 Lunar Fungus (my alternative) | ADD (owner's call) | `darkshore`, accept 4740 |
 | 3a | 6001 Lunaclaw, NE route's Auberdine stop | ADD | `teldrassil`, accept 6343 |
 | 3b | 6001 Lunaclaw, Darkshore red crystal | ADD (second chance) | `darkshore`, complete 4811 |
@@ -384,7 +384,7 @@ Teldrassil 5092 x 3394, Ashenvale 5767 x 3844.
 
 ### 1. Druid: Trial of the Sea Lion 272 (Night Elf and Skyborne)
 
-**Objectives.** Neither half is a quest-log objective. QuestieDB 272 has a single item objective,
+**Objectives.** Neither half is a quest-log objective. quest database 272 has a single item objective,
 index 1 = 15885 Pendant of the Sea Lion. You get it by joining the halves at the Shrine of Remulos.
 The halves are only `requiredSourceItems`:
 - 15883 Half Pendant of Aquatic **Agility**: Strange Lockbox, object 177792, Darkshore **48.9, 11.3**.
@@ -420,7 +420,7 @@ even one who already has that half. That is why each text says to use Next.
 ```lua
 -- QuestClassData.lua, "Druid and Shaman" block (locals at, maps), after the druid-aquatic-form side(...)
   -- The halves are not quest-log objectives (the log only tracks the joined Pendant of the Sea
-  -- Lion, made at the Shrine of Remulos), so these steps end with Next. QuestieDB: Strange Lockbox
+  -- Lion, made at the Shrine of Remulos), so these steps end with Next. quest database: Strange Lockbox
   -- 177792 (Darkshore 48.9, 11.3) and 177844 (Westfall 17.9, 33.2).
   inline("darkshore", "complete", 87760, {
     B.logOnlyPart(272, nil, at(nil, 48.87, 11.32, maps.darkshore),
@@ -446,18 +446,18 @@ index so it completes on its own.
   15844 Empty Cliffspring Falls Sampler "at the mouth of the cave by the falls".
 - Route: `darkshore`, first north loop, `objectiveAt(947, shore("Cliffspring Falls Cave Mouth", 54.92, 33.31), ...)`
   (Cave Mushrooms, QuestData.lua:2699). It is the same cave mouth as our side guide's spot
-  (55, 33.5). RestedXP does the sample with 947.
-- Zygor's anchor, after Gyromast's Retrieval 2098, is our later north loop. Our cave visit is 947 in
+  (55, 33.5). reference guide A does the sample with 947.
+- reference guide B's anchor, after Gyromast's Retrieval 2098, is our later north loop. Our cave visit is 947 in
   the first loop, so 947 is the anchor.
 - Level: 6122 needs 14, and this loop is about 15-16.
 
-#### 2b. Gathering the Cure 6123, Earthroot with Cleansing of the Infected 2138 (RestedXP): SKIP
-- Objectives (QuestieDB order): **1 = 5 Earthroot (2449), 2 = 12 Lunar Fungus (15851)**. Our side
+#### 2b. Gathering the Cure 6123, Earthroot with Cleansing of the Infected 2138 (reference guide A): SKIP
+- Objectives (quest database order): **1 = 5 Earthroot (2449), 2 = 12 Lunar Fungus (15851)**. Our side
   guide lists the labels the other way round ("12 Lunar Fungus", "5 Earthroot"). Only the log index
   matters.
 - In our order, the 2138 bear kills (47.4, 33.2) come right after the 947 sample. 6123 only starts
   when you hand 6122 to Alanndarian in Auberdine, which is later. So 6123 can't be in the log there.
-- Earthroot is a Herbalism node (object 1619). QuestieDB has no nodes near the bears. The Darkshore
+- Earthroot is a Herbalism node (object 1619). quest database has no nodes near the bears. The Darkshore
   clusters are 36.1, 84.9 (Master's Glaive), 43.2, 65.9 and 44.0, 86.7, all in the south.
 - Steps have no profession filter, so an Earthroot step would hold non-herbalists until Next.
 
@@ -474,7 +474,7 @@ index so it completes on its own.
 ```lua
 -- QuestClassData.lua, "Additional Druid and Shaman unlocks" block (locals at, m), after the druid-cure-poison side(...)
   -- The Principal Source fills at the mouth of the Cliffspring Falls cave, the Cave Mushrooms (947)
-  -- cave. Gathering the Cure: Lunar Fungal Blooms (QuestieDB object 177750) in the moonkin caves at
+  -- cave. Gathering the Cure: Lunar Fungal Blooms (quest database object 177750) in the moonkin caves at
   -- 44.4, 51.5 and 44.5, 46.9; objective 1 is Earthroot, 2 is Lunar Fungus.
   inline("darkshore", "complete", 947, {
     B.withItem(15844, B.logOnlyPart(6122, 1, at(nil, 54.92, 33.31, m.darkshore),
@@ -496,7 +496,7 @@ Check in game:
 
 ### 3. Druid Body and Heart 6001 (Night Elf; Skyborne use Ursera 94006/94638)
 
-- Objectives: QuestieDB has none. It is a scripted event (`specialFlags` 2): use 15208 Cenarion
+- Objectives: quest database has none. It is a scripted event (`specialFlags` 2): use 15208 Cenarion
   Moondust on the Moonkin Stone, kill Lunaclaw (npc 12138, level 12, summoned, no spawn record), then
   speak to his spirit. Index: nil (the step ends when the quest is ready).
 - Place: Moonkin Stone, object 177525, Darkshore **43.5, 46.0**. That is the moonkin cave east of
@@ -507,14 +507,14 @@ Check in game:
   then fly back to Nessa.
   - Laird to the stone is about 450 yards.
   - Level about 12. 6001 needs 10, Lunaclaw is level 12.
-  - This is Zygor's spot. RestedXP uses the red crystal (3b).
+  - This is reference guide B's spot. reference guide A uses the red crystal (3b).
 - **3b. Route:** `darkshore`, first loop, `objectiveAt(4811, crystal 47.32, 48.68, ...)`
   (QuestData.lua:2617). The stone is about 280 yards west of the crystal. It is a second chance for a
   druid still carrying 6001 into Darkshore. Once the first step completes, the second is done too.
 
 ```lua
 -- QuestClassData.lua, "Druid and Shaman" block (locals at, maps, withItem), after the druid-bear-form side(...)
-  -- Lunaclaw: the Moonkin Stone (QuestieDB object 177525, Darkshore 43.5, 46.0). The quest has no
+  -- Lunaclaw: the Moonkin Stone (quest database object 177525, Darkshore 43.5, 46.0). The quest has no
   -- item objective, so the step ends when the quest is ready.
   local function lunaclaw(text)
     return withItem(15208, B.logOnlyPart(6001, nil, at("Moonkin Stone", 43.5, 45.97, maps.darkshore), text,
@@ -542,13 +542,13 @@ Check in game: talking to the spirit marks 6001 complete in the log, so the step
   (QuestData.lua:2166, bark at 36.97, 34.04). Next is `along(objectiveAt(2518, Lady Sathrah 44.2, 25.5), 923)`.
   - Bark to Sethir to Sathrah costs about 290 yards extra.
   - After the harpy leaders (98392, Arysa at 35.0, 28.2) it would be about 340 yards.
-  - Between 2518 and 923 (Zygor's slot) it would be about 700 yards, out from Wellspring Lake and
+  - Between 2518 and 923 (reference guide B's slot) it would be about 700 yards, out from Wellspring Lake and
     back.
 - Level: about 11. 2242 needs 10, and Sethir is 12. Our side guide already says to try again at 12.
 
 ```lua
 -- QuestClassData.lua, "Hunter and Rogue" block (locals at, maps), after the rogue-blade-night-elf side(...)
-  -- Sethir the Ancient (QuestieDB npc 6909, Teldrassil 37.1, 22.8) is north of the Oracle Glade, on
+  -- Sethir the Ancient (quest database npc 6909, Teldrassil 37.1, 22.8) is north of the Oracle Glade, on
   -- the way from the Oracle Tree Bark to Wellspring Lake.
   inline("teldrassil", "accept", 940, {
     B.logOnlyPart(2242, 1, at("Sethir the Ancient", 37.1, 22.8, maps.teldrassil),
@@ -562,12 +562,12 @@ Check in game: talking to the spirit marks 6001 complete in the log, so the step
 ### 5. Warlock: Heartswood 1738
 
 - Objective index 1 = 6912 Heartswood (only objective).
-- QuestieDB: the Heartswood object at Ashenvale **31.5, 31.5**. Dark Strand Excavators (npc 3730,
+- quest database: the Heartswood object at Ashenvale **31.5, 31.5**. Dark Strand Excavators (npc 3730,
   level 19-20, 5 spawns at 31.6, 31.2) are listed as droppers too, which is likely the guards around
   the object.
 - Route: `ashenvale-early`, second circuit, `objective(970, ash(nil, 31.39, 30.62), "Clear cultists around the ruins northeast of the post. Loot the Glowing Soul Gem.")`
   (QuestAlternateData.lua:138). These are the same Ordil'Aran ruins, about 35 yards away.
-  - Zygor's "after The Tower of Althalaxx 973" is the 973 pickup at Delgren. 973's own objective is at
+  - reference guide B's "after The Tower of Althalaxx 973" is the 973 pickup at Delgren. 973's own objective is at
     Fire Scar Shrine, so 970 is the place that matches.
   - `ashenvale-late` never goes back to Ordil'Aran.
 - Level: this circuit starts after "Reach level 20", and 1738 needs 20. A warlock has 1738 here only
@@ -576,7 +576,7 @@ Check in game: talking to the spirit marks 6001 complete in the log, so the step
 
 ```lua
 -- QuestClassData.lua, "Priest, Mage, Warlock" block (locals at, ashenvale = 1440), after the warlock-sayaad side(...)
-  -- Heartswood (QuestieDB object at Ashenvale 31.5, 31.5) lies in the Ordil'Aran ruins where
+  -- Heartswood (quest database object at Ashenvale 31.5, 31.5) lies in the Ordil'Aran ruins where
   -- ashenvale-early takes the Glowing Soul Gem (970).
   inline("ashenvale-early", "complete", 970, {
     B.logOnlyPart(1738, 1, at("Heartswood", 31.53, 31.52, ashenvale),
@@ -613,7 +613,7 @@ the quest is in the log even when unfinished, so a player who skipped the object
 
 ## Horde pairings: class objectives on the route (logOnly steps)
 
-Research only, no repo edits. Facts from `questfacts.py` (QuestieDB Forever 0f7d8ad) and the client tables in
+Research only, no repo edits. Facts from `questfacts.py` (quest database Forever 0f7d8ad) and the client tables in
 `tools/.cache/1.60.1.70888` (`ItemSparse`, `AreaTable`). Route anchors read from the Horde route files.
 
 **Checked:** every snippet below was run in a scratch lupa load of the quest data files (the .toc order QuestData.lua
@@ -672,7 +672,7 @@ are already defined in that `do` block.
 - **Lua** (QuestHordeClassDruidShaman.lua, Shaman block, after the `shaman-fire-totem-horde` side guide):
 
 ```lua
-  -- Call of Fire's two drops are on the route: Burning Blade Cultists in Dustwind Cave (QuestieDB: 3199, 52.4, 25.5)
+  -- Call of Fire's two drops are on the route: Burning Blade Cultists in Dustwind Cave (quest database: 3199, 52.4, 25.5)
   -- next to Securing the Lines' harpies, and Fire Tar from the Barrens Razormane of Disrupt the Attacks.
   B.hordeInline("northern-durotar", "complete", 835, {
     B.logOnlyPart(1525, 2, at(nil, 52.4, 25.5, m.durotar),
@@ -705,7 +705,7 @@ are already defined in that `do` block.
 
 ```lua
   -- Path of Defense's Singed Scales drop from Thunder Ridge's Lightning Hides (Stormy Potential's lizards) and the
-  -- Thunder Lizards just south of them (QuestieDB item 6486).
+  -- Thunder Lizards just south of them (quest database item 6486).
   B.hordeInline("northern-durotar", "complete", 97282, {
     B.logOnlyPart(1498, 1, at(nil, 39.6, 27.8, M.durotar),
       "Warriors with Path of Defense: the Lightning Hides here and the Thunder Lizards just south of them also drop Singed Scales. Stay until you have all 5.",
@@ -733,12 +733,12 @@ are already defined in that `do` block.
   - Scratch check #24: `complete 97250` -> **1824** -> `goto` (Ride north back to Camp Taurajo).
 - **Verdict: ADD.**
   - The section is 5-6 levels above the quest, but this is the route's first pass of Camp Taurajo after level 20.
-    RestedXP does 1824 at exactly this stop ("Camp Taurajo after Wrongly Blamed").
+    reference guide A does 1824 at exactly this stop ("Camp Taurajo after Wrongly Blamed").
   - The mobs (20-22) are easy at 25.
 - **Lua** (QuestHordeClassWarriorPaladin.lua, Warrior block, after the `warrior-field-of-giants` side guide):
 
 ```lua
-  -- Trial at the Field of Giants: the antennae (QuestieDB item 7119, silithid around 45, 71) last 15 minutes
+  -- Trial at the Field of Giants: the antennae (quest database item 7119, silithid around 45, 71) last 15 minutes
   -- (client DurationInInventory 900), so the step sits on the ride back north to Ruga, not on the first Egg Hunt visit.
   B.hordeInline("camp-taurajo", "complete", 97250, {
     B.logOnlyPart(1824, 1, at(nil, 45.1, 70.8, M.barrens),
@@ -759,13 +759,13 @@ are already defined in that `do` block.
 - **Route:**
   - barrens-south (16-18) flies to Ratchet, does its pickups (last: `accept 1069`, Mebok), then `complete 888` Stolen
     Booty at the pirate camps (63.1, 49.4).
-  - The ship lies between Ratchet and that camp, so the step goes after `accept 1069` (Zygor's "before Stolen Booty").
+  - The ship lies between Ratchet and that camp, so the step goes after `accept 1069` (reference guide B's "before Stolen Booty").
   - Scratch check #23: `accept 1069` -> **2381** -> `complete 888`.
 - **Verdict: ADD.** Level matches (Pick Lock at 16 is trained at the end of barrens-north).
 - **Lua** (QuestHordeClassHunterRogue.lua, Rogue side-guide block, after the `rogue-lockpicking-horde` side guide):
 
 ```lua
-  -- Plundering the Plunderers: the Tide Razor (Jewel of the Southsea, QuestieDB object 123462) lies between Ratchet
+  -- Plundering the Plunderers: the Tide Razor (Jewel of the Southsea, quest database object 123462) lies between Ratchet
   -- and the camp of Stolen Booty, so Rogues carrying it board the ship on the way south.
   B.hordeInline("barrens-south", "accept", 1069, {
     withItem(7970, B.logOnlyPart(2381, 1, ba("The Jewel of the Southsea", 64.95, 45.44),
@@ -798,7 +798,7 @@ are already defined in that `do` block.
     (7768) at the Tarren Mill well.
   - 1534: level 23, needs 20, after 1536. Single objective: 1 = Filled Blue Waterskin (7770). Use the Empty Blue
     Waterskin (7767) at the Ruins of Stardust (AreaTable 418).
-  - The use spots (62.17, 20.82 Hillsbrad; 33.5, 67.5 Ashenvale) are our class guide's coordinates. QuestieDB has no
+  - The use spots (62.17, 20.82 Hillsbrad; 33.5, 67.5 Ashenvale) are our class guide's coordinates. quest database has no
     record for these spell-focus spots.
 - **Route:**
   - 1536: hillsbrad (23-25). The first Tarren Mill stop is getfp -> Lydon (`turnin 1065`, `accept 1066/496/501`) ->
@@ -847,7 +847,7 @@ are already defined in that `do` block.
 - **Silverpine half: ADD.**
   - sepulcher (22-23), after `turnin 264` (Yuriv's Tombstone, 44.19, 42.67). That is the route's westernmost Sepulcher
     step, about 720 yd south-east of the lockbox, and the last stop before the road south.
-  - RestedXP and Zygor both take this half on the 22-24 Hillsbrad trip, the first Eastern Kingdoms visit. Druids who
+  - reference guide A and reference guide B both take this half on the 22-24 Hillsbrad trip, the first Eastern Kingdoms visit. Druids who
     don't want a zeppelin trip at 16-18 will carry 30 until then.
   - Scratch check #13: `turnin 264` -> **30** -> `complete 530` (Valdred).
   - **One new audit warning:** "sepulcher step 14: 1677 yd from the prior waypoint with no travel step". The Valdred
@@ -866,7 +866,7 @@ are already defined in that `do` block.
 - **Lua** (QuestHordeClassDruidShaman.lua, Druid block, after the `druid-aquatic-form-horde` side guide):
 
 ```lua
-  -- Trial of the Sea Lion's Silverpine half (QuestieDB Strange Lockbox 177790, 29.6, 29.2): the closest route point is
+  -- Trial of the Sea Lion's Silverpine half (quest database Strange Lockbox 177790, 29.6, 29.2): the closest route point is
   -- the Sepulcher graveyard on the 22-23 visit. The half isn't a log objective, so the step waits for Next.
   B.hordeInline("sepulcher", "turnin", 264, {
     B.logOnlyPart(30, nil, at(nil, 29.6, 29.2, m.silverpine),
@@ -888,7 +888,7 @@ are already defined in that `do` block.
 - **Route:**
   - tirisfal does Balnir Farmstead (`complete 1882`, `complete 99142` Tomb Weed at 75.0, 59.4, `complete 356`) **before**
     Bandarion Keep (`accept 91317` ... `turnin 91317`), and the Undercity comes after that.
-  - So 94434 can't be in the log at Tomb Weed. Zygor solves this by collecting the linen in advance (its `|future`
+  - So 94434 can't be in the log at Tomb Weed. reference guide B solves this by collecting the linen in advance (its `|future`
     tag), which logOnly can't do: logOnly only shows while the quest is in the log.
 - **Verdict: SKIP.**
   - The class guide's 94427 turn-in already says "Bring 10 Linen Cloth", and most characters have 10 linen by level 12.
@@ -907,7 +907,7 @@ are already defined in that `do` block.
   - Optional inline turn-ins of the previous part (`optional` steps show only while that quest is in the log) would make
     these steps fire for more players. Accept steps can't be logOnly (`questroute.py` requires complete + quest + class),
     so an inline accept would need another gate.
-- All coordinates are QuestieDB clusters except the two waterskin spots, which come from our class guide. Check in
+- All coordinates are quest database clusters except the two waterskin spots, which come from our class guide. Check in
   game:
   - The Tarren Mill well.
   - The Ruins of Stardust pool.

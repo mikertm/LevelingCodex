@@ -56,7 +56,7 @@ Kinship and War on the Shadowsworn (`blasted-50`); the Azshara errands for hunte
 
 ## Alliance fixes
 
-- **Eastern Plaguelands frame.** Forever redrew the map: QuestieDB Forever has Tirion Fordring at 5.2, 35.6
+- **Eastern Plaguelands frame.** Forever redrew the map: quest database Forever has Tirion Fordring at 5.2, 35.6
   where classic has 7.6, 43.7 (a fit over four NPCs: x' = 0.899x - 1.58, y' = 0.898y - 3.65). The Alliance
   50-60 file had classic points for Tirion (three steps) and the Symbol of Lost Honor (now 62.5, 26.8, the
   item's Forever spawn), and the Stratholme guide had Tirion and the gate (now 26.5, 10.4, converted). Every
@@ -69,7 +69,7 @@ Kinship and War on the Shadowsworn (`blasted-50`); the Azshara errands for hunte
 
 - Dungeon pickups left to the dungeon guides (not tagged on the route, to keep the log at 20): most of the
   Blackrock Depths, Stratholme and Sunken Temple outdoor pickups. Each guide lists them in its prepare phase.
-- Blackrock Mountain, Maraudon and the Sunken Temple have no `path` into the instance: QuestieDB has no
+- Blackrock Mountain, Maraudon and the Sunken Temple have no `path` into the instance: quest database has no
   positions inside the mountain or the caves.
 - Mount Hyjal: no Horde quest could be confirmed.
 - Undead paladins: no 30-60 class quest could be confirmed.

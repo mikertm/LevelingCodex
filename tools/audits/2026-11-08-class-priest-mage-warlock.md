@@ -5,7 +5,7 @@ QuestClassData.lua contains 18 side guides, the inline Stars of Elune quest and 
 ## Evidence
 
 - Client build 1.60.1.70862. The committed `tools/reference/forever.json` validates every added quest ID and map. The snippet supplies yard extents for seven additional maps from that reference. Client ID presence establishes that a record exists. Server offers, quest conditions and turn-ins also need quest records or live evidence. [Forever client tables](https://wago.tools/db2/QuestV2?build=1.60.1.70862)
-- Reused scratch `class/pml_list.py` and `class/pml_facts.py`, plus the pinned local QuestieDB Forever records, traces, base and fixes for masks, prerequisites, endpoints and item sources. Some newer quests are in the base or fixes and absent from the compact `questfacts.py` output. Quest instructions were written for this handoff using the sources below. [QuestieDB data at 0f7d8ad](https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever)
+- Reused scratch `class/pml_list.py` and `class/pml_facts.py`, plus the pinned local quest database Forever records, traces, base and fixes for masks, prerequisites, endpoints and item sources. Some newer quests are in the base or fixes and absent from the compact `questfacts.py` output. Quest instructions were written for this handoff using the sources below. external reference
 - Blizzard's launch matrix gives Priest to Human, Dwarf, Night Elf and Gnome, Mage to Human, Gnome and Alliance High Order Skyborne, and Warlock to Human and Gnome. Warlock cache mask 4294967373 is broader than the playable Alliance Warlock roster. [Blizzard race and class matrix](https://news.blizzard.com/en-us/article/24304075/create-the-hero-you-want-to-be-in-world-of-warcraft-forever)
 
 ## Priest

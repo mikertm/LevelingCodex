@@ -27,7 +27,7 @@ API reference: [Blizzard generated Item documentation](https://github.com/Gethe/
   These totals include alternate and side-guide copies, not distinct trips.
 - The flight automation initializes the destination's map route by calling the
   guarded `TaxiNodeOnButtonEnter(TaxiButtonN)` before `TakeTaxiNode(N)`, matching
-  the supplied RXP `functions.lua:2881-2885`. Previously it skipped initialization,
+  the supplied reference guide A `functions.lua:2881-2885`. Previously it skipped initialization,
   allowing the client to reject a connecting route as having no direct path.
 - `questFlightRouteInitialization` failed before the fix and passes afterward.
   Existing Alt, combat and unreachable-destination checks remain in force.
@@ -55,7 +55,7 @@ closest to Menethil, entry through the broken hull, the flooded lowest deck, the
 Snellig position (13.8, 30.2), and surfacing between pulls. The waypoint names
 Snellig and points at his position rather than the general sailor area.
 
-Evidence: `python tools/questfacts.py npc 1159`; supplied Zygor Alliance leveling
+Evidence: `python tools/questfacts.py npc 1159`; supplied reference guide B Alliance leveling
 289/3 (14.08, 30.01, underwater inside ship);
 [Forever walkthrough](https://urgametips.com/wow-forever/quest-guides/the-cursed-crew-snellig-snuffbox/);
 [historical atlas, Wetlands NPC index](https://ptgmedia.pearsoncmg.com/imprint_downloads/brady/connected/wowatlas/RegionalIndices_hr.pdf).

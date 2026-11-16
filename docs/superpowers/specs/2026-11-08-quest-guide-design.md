@@ -6,7 +6,7 @@ Leveling Codex guides Alliance players through a single ordered route. The first
 
 Each faction has a table of racial starts and an ordered list of sections. Sections carry stable IDs, level ranges, maps, verification state and sources. Each step contains one action with quest ID, objective labels, position, filters and prerequisite IDs where applicable. Client QuestV2, UiMap, UiMapAssignment and TaxiNodes validate IDs and distances. QuestLine and quest points help locate new chains. Client IDs alone establish presence in the build. Published Forever quest pages and recorder observations establish who offers a quest and how it works. Classic data fills gaps with provenance.
 
-The local facts tool reads specific QuestieDB records from an ignored cache. Route authors compare free guides, write their own instructions and log their sources and routing choices in the audit. Route data ships with the addon. The route remains marked unverified until tested in game.
+The local facts tool reads specific quest database records from an ignored cache. Route authors compare free guides, write their own instructions and log their sources and routing choices in the audit. Route data ships with the addon. The route remains marked unverified until tested in game.
 
 ## Player flow
 
@@ -14,7 +14,7 @@ Quest completion and the live quest log drive progress. Use modern APIs first an
 
 Westfall and Lakeshire are shared Alliance sections. At overlapping levels, the current zone takes priority and active quest history breaks ties. Resume active quest keeps the earlier chain steps that later pickups depend on and lists deferred pickups under Missed quests. Ready to turn in comes directly from the live log and can show a waypoint without moving the normal route forward.
 
-The movable step window shows the active action, live objective counts and two upcoming actions. The Quests tab shows section status, earlier eligible unfinished quests and controls for the viewer. Settings control dungeon steps, arrow, lock and optional automation. The arrow uses map extents for distance, facing for rotation and a compass label as fallback. Its pin action can use native waypoints and TomTom. All optional API calls and event registrations are guarded. Quest automation acts only on the current guide quest, outside combat and with zero reward choices for automatic rewards.
+The movable step window shows the active action, live objective counts and two upcoming actions. The Quests tab shows section status, earlier eligible unfinished quests and controls for the viewer. Settings control dungeon steps, arrow, lock and optional automation. The arrow uses map extents for distance, facing for rotation and a compass label as fallback. Its pin action can use native waypoints and waypoint provider. All optional API calls and event registrations are guarded. Quest automation acts only on the current guide quest, outside combat and with zero reward choices for automatic rewards.
 
 The recorder is opt-in per session. It captures quest, objective and travel observations locally and supports both copy-box export and SavedVariables import. The importer emits draft steps for review. Recorder observations may be incomplete when the client omits an API or event.
 

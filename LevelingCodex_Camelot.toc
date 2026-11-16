@@ -49,11 +49,11 @@ QuestDangerData.lua
 QuestFlightData.lua
 Theme.lua
 Art.lua
-Ellesmere.lua
+SkinSupport.lua
 Guide.lua
 Talents.lua
 Quests.lua
-QuestieSupport.lua
+QuestSupport.lua
 QuestTravel.lua
 Professions.lua
 Disenchant.lua

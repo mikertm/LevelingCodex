@@ -1,6 +1,6 @@
 # 2026-11-10: Horde 1-30 audit (loops, zig-zags, reference coverage, alternates)
 
-The pass ran four checks over the Horde route: a loop check, a map check, a RestedXP coverage diff, and an alternate-route review.
+The pass ran four checks over the Horde route: a loop check, a map check, a reference guide A coverage diff, and an alternate-route review.
 
 ## 1. Loop check (`tools/questloops.py`, new)
 
@@ -36,18 +36,18 @@ Walking per race, main route: Orc 138.3k yards, Tauren 136.8k, Undead 143.3k, Sk
 
 On a leveling route, a step on another map between two steps on the same map, with no travel step around it, now gives the warning "hops to map X and back". It would have flagged the Elwynn steps above. Side guides (class and dungeon) go out and back by design, so they are skipped. Both factions' leveling routes are clean.
 
-## 3. RestedXP coverage
+## 3. reference guide A coverage
 
-The script parsed every Horde-applicable quest ID in RestedXP's Forever Horde chapters (Durotar, Undead, Mulgore, Barrens and its dungeon variant, and the 22-30 and Zephras chapters inside the Skyborne file). It compared them with every Horde section: route, dungeons and class guides. Most chapters have 0 to 5 quests we don't route; the 28-30 Thousand Needles chapter has 23, mostly its level 31+ tail. Each was checked. The reasons:
+The script parsed every Horde-applicable quest ID in reference guide A's Forever Horde chapters (Durotar, Undead, Mulgore, Barrens and its dungeon variant, and the 22-30 and Zephras chapters inside the Skyborne file). It compared them with every Horde section: route, dungeons and class guides. Most chapters have 0 to 5 quests we don't route; the 28-30 Thousand Needles chapter has 23, mostly its level 31+ tail. Each was checked. The reasons:
 
 - **Not in the Forever client:** 813, 926, 972.
 - **Level 31+, or the start of a 31+ chain:** the Thousand Needles chapter's tail (Shimmering Flats 1111-1112 and 1175, Alliance Relations, the Swarm Grows, Rig Wars, Wet Job, Eagle's Fist), and ...and that note you found 79007 with its later Stepping Stones / Scramble (79192, 79980). That chain starts with a note in Westfall and continues into Desolace at 33+.
 - **Alliance or Undead-only, or on the other faction's island path:** 92481, 93949, 93791 and 93797 (High Order and Mage).
 - **Optional professions:** the Camping 101 crafting intros, and Gathering Leather 768.
 - **Skipped on purpose:**
-  - Exploring the Horde 93739: RestedXP comments it out too, because it can't be finished before 22-23, when it gives no XP.
-  - A Grand Adventure 92708 and Unwelcome Spirits 93736: switched off in RestedXP.
-  - Wayward Weapons 97279: RestedXP's note says it isn't worth it.
+  - Exploring the Horde 93739: reference guide A comments it out too, because it can't be finished before 22-23, when it gives no XP.
+  - A Grand Adventure 92708 and Unwelcome Spirits 93736: switched off in reference guide A.
+  - Wayward Weapons 97279: reference guide A's note says it isn't worth it.
   - Need for a Cure 812: needs the missing 813.
 - **Not routed, to keep the log at 20:**
   - Mahren Skyseer and Isha Awak (874, 873; Ratchet coast, level 27).
@@ -55,13 +55,13 @@ The script parsed every Horde-applicable quest ID in RestedXP's Forever Horde ch
   - The Lost Pages 6504 (level 30).
   - Dangerous! 567 (a level 28 bounty on several named Hillsbrad NPCs).
 - **Alternative IDs for the same pickup:** Heeding the Call 5928, Hex/Touch of Weakness 5652 and 5660, Devouring Plague 5679 (Forever renamed it Dark Sacrifice 5644, which is routed).
-- 103 and 104 appear in RestedXP's Barrens chapter, but they are Westfall quests.
+- 103 and 104 appear in reference guide A's Barrens chapter, but they are Westfall quests.
 
 ## 4. Alternate routes
 
-Before this pass the Horde had one alternate, Shimmering Flats at 29-31. Dungeon runs are already handled by dungeon plans: RestedXP's dungeon chapters become planned-run pickups and checklists.
+Before this pass the Horde had one alternate, Shimmering Flats at 29-31. Dungeon runs are already handled by dungeon plans: reference guide A's dungeon chapters become planned-run pickups and checklists.
 
-**New: Tirisfal and Silverpine (`silverpine-early`, levels 12-15, Orcs, Trolls, Tauren, Skyborne).** This is RestedXP's Forever route for Kalimdor races who go to Silverpine at 12 before the Barrens:
+**New: Tirisfal and Silverpine (`silverpine-early`, levels 12-15, Orcs, Trolls, Tauren, Skyborne).** This is reference guide A's Forever route for Kalimdor races who go to Silverpine at 12 before the Barrens:
 1. The zeppelin to Tirisfal, then Brill: Delivery to Silverpine, The Argent Emissary, Rear Guard Patrol, and Hadric's The Cult of the Damned and Remnants of War.
 2. The Undercity flight path.
 3. The whole Silverpine loop (Erland's escort, the Yoricks, the Sepulcher chains, the Dead Fields, the Decrepit Ferry, Arugal's Folly, Border Crossings).
@@ -74,8 +74,8 @@ The steps are copied from the Undead `silverpine` and `tirisfal` sections, witho
 - `questroute.py` now lets an optional turn-in for a quest the path never picked up pass, the same rule as on main.
 
 Not added:
-- **A Kalimdor-first path for the Undead.** RestedXP has none in Forever, and Silverpine is on their way.
-- **Classic RestedXP's 20-30 "JJ" order.** It visits the same zones in a different order and has no Forever quests.
+- **A Kalimdor-first path for the Undead.** reference guide A has none in Forever, and Silverpine is on their way.
+- **Classic reference guide A's 20-30 "JJ" order.** It visits the same zones in a different order and has no Forever quests.
 
 ## Things to check in game
 

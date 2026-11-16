@@ -4,7 +4,7 @@ Owner report (in game, Duskwood at level 25): on Eight-Legged Menaces, Rabid Dir
 spider woods drop Lean Wolf Flanks for Seasoned Wolf Kabobs (90), which the route only lists at
 Sven's Camp later.
 
-QuestieDB Forever (`tools/questfacts.py item 1015`, Lean Wolf Flank) drop sources on Duskwood (1431):
+quest database Forever (`tools/questfacts.py item 1015`, Lean Wolf Flank) drop sources on Duskwood (1431):
 
 | Creature | Levels | Spawns | Main clusters |
 |---|---|---|---|

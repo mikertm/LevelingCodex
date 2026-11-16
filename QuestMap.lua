@@ -153,7 +153,7 @@ end
 M.paintIcon = paintIcon
 
 ----------------------------------------------------------------------------
--- Minimap: where the arrow leads (the step, QuestieDB's nearest spawn, a flight master on a trip,
+-- Minimap: where the arrow leads (the step, quest database's nearest spawn, a flight master on a trip,
 -- your corpse) gets a pin, or an edge arrow on the rim while it's off the minimap; the next two
 -- steps get small numbered pins (faded on the rim while they're off it). Gold dots run from you to
 -- the pin and, for a step's way in, on through its tunnel points (a bend dot at each) to the step;
@@ -563,7 +563,7 @@ local function lineKey()
     .. ":" .. tostring(goal and goal.key) .. ":" .. tostring(goal and goal.spot and goal.spot.x)
 end
 
--- The map's own pin level (the level Questie's pins get from the map), so our layer draws above
+-- The map's own pin level (the level quest tracker's pins get from the map), so our layer draws above
 -- the map's art, which sits above the canvas's own level; without that manager, a little above it.
 local function layerLevel(child)
   local frame = WorldMapFrame

@@ -10,16 +10,16 @@ Horde corrections. No `Data.lua`, talent, trainer, macro, TOC or engine changes 
   copied alternates, dungeon checklists, class side guides, attunements and keys.
 - The loaded baseline had 153 Horde sections, 6,551 steps and 1,644 distinct quests. Those are
   coverage inventory counts, **not** a claim that every step was individually verified in game.
-- Read the relevant trigger blocks in the five dedicated RestedXP Horde files and their four
+- Read the relevant trigger blocks in the five dedicated reference guide A Horde files and their four
   dungeon-route counterparts. Searched the 98 Horde/shared `RegisterGuide` blocks in
-  `RestedXP-Skyborne.lua` for gossip, item use, repeated conversations and event starts. Shared
+  `local guide reference` for gossip, item use, repeated conversations and event starts. Shared
   Skyborne blocks also contain Alliance-only steps; these were excluded where appropriate.
-- Zygor's Horde leveling file has 52 explicit `Select` step blocks. Thirteen concern training or
+- reference guide B's Horde leveling file has 52 explicit `Select` step blocks. Thirteen concern training or
   spirit-healer resurrection; the remaining 39 were examined against our routes. The Horde
   dungeon file adds 27 `Select` blocks, for 66 non-training interaction candidates including
   repeated quests. These carry 28 and 17 distinct explicit quest tags respectively; not every
   candidate belongs to an implemented Codex guide.
-- Also searched the 258 leveling and 84 dungeon `use` commands, RestedXP `.use`/`.complete`
+- Also searched the 258 leveling and 84 dungeon `use` commands, reference guide A `.use`/`.complete`
   blocks, and click/talk/escort instructions. Compared prerequisite acquisition, the trigger,
   combat/event, and post-event item/dialogue credit. Checked matching main, alternate and
   dungeon copies instead of assuming all alternates are copied automatically.
@@ -33,16 +33,16 @@ Horde corrections. No `Data.lua`, talent, trainer, macro, TOC or engine changes 
 The owner's reference files were read only. Line numbers below refer to these files as supplied
 on 2026-11-15, not to Codex's edited files.
 
-Root `C:/Dev/Starbreak/reference/Upload Nov 10 6_50 PM/RXPGuides/`:
+Root `local guide reference`:
 
 | Key | File under that root |
 | --- | --- |
-| ZL | `ZygorGuidesViewerForever/Guides-Forever/Leveling/ZygorLevelingHordeCLASSIC.lua` |
-| ZD | `ZygorGuidesViewerForever/Guides-Forever/Dungeons/ZygorDungeonHordeCLASSIC.lua` |
-| R | `RXPGuides/Guides/forever/RestedXP-Skyborne.lua` |
-| RM | `RXPGuides/Guides/forever/Horde-1-12_Mulgore.lua` |
-| RU | `RXPGuides/Guides/forever/Horde-01-14_Undead.lua` |
-| RB | `RXPGuides/Guides/forever/Horde-12-22_Barrens.lua` |
+| ZL | `local guide reference` |
+| ZD | `local guide reference` |
+| R | `local guide reference` |
+| RM | `local guide reference` |
+| RU | `local guide reference` |
+| RB | `local guide reference` |
 
 ## Corrections: before -> after
 

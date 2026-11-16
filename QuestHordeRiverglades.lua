@@ -2,8 +2,8 @@
 -- four alternate routes, and the Horde Krol'dok Stronghold guide.
 -- Source notes: tools/audits/2026-11-12-horde-riverglades.md.
 --
--- QuestieDB's cached Forever data has no Riverglades or Shen'dralas quests. Givers, enders and their
--- positions come from bindonforever.com quest and NPC pages (QuestieDB-format data for client build
+-- quest database's cached Forever data has no Riverglades or Shen'dralas quests. Givers, enders and their
+-- positions come from bindonforever.com quest and NPC pages (quest database-format data for client build
 -- 1.60.1.70888); objectives, levels and sides from ForeverDB quest pages; quest-starting items from the
 -- client's ItemSparse table; the instance and its encounters from tools/reference/forever.json.
 -- Objective spots are the centre of the target creatures' published spawn points. Anything the

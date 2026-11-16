@@ -173,7 +173,7 @@ do
 
   chapter("stv-50", "Booty Bay: Pirates and Princess Poobah", M.stv, 50, 50, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), RATCHET, "If you are still in Tanaris, fly from Gadgetzan to Ratchet."),
     action("boat", at(nil, 63.7, 38.6, M.barrens), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Use Next when you arrive.",
@@ -248,7 +248,7 @@ do
 
   chapter("searing-50", "Searing Gorge: Thorium Point", M.searing, 50, 51, {
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", at(nil, 69.0, 31.0, M.stormwind), "Take the Deeprun Tram from the Dwarven District to Ironforge."),
     taxi("fly", B.at("Lanie Reed", 37.9, 30.9, 1427), THORIUM,
@@ -331,7 +331,7 @@ do
 
   chapter("blasted-51", "Blasted Lands: The Bloodmages", M.blasted, 51, 51, {
     "https://www.wowhead.com/forever/zone=4/blasted-lands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("collect", at("Auctioneer Jaxon", 61.16, 70.68, M.stormwind),
       "The auction house is a few steps from the inn. If they sell cheaply, buy the Blasted Lands bloodmages' parts now: 5 Snickerfang Jowls, 6 Blasted Boar Lungs, 6 Scorpok Pincers, 11 Basilisk Brains and 14 Vulture Gizzards cover all five quests. Use Next to hunt for them instead.",
@@ -397,7 +397,7 @@ do
 
   chapter("wpl-51", "Western Plaguelands: Chillwind Camp", M.wpl, 51, 52, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(5090, ironforge("Courier Hammerfall", 55.9, 81.4), "Courier Hammerfall rides a circuit through Ironforge. Stop him when he passes to take his call to arms."),
     finish(3182, thorius, "Curator Thorius stands in the Hall of Explorers."), accept(3201, thorius),
@@ -448,7 +448,7 @@ do
   local erelas = tel("Erelas Ambersky", 55.5, 92.05)
   local lohatu = on.azshara("Loh'atu", 11.37, 78.17)
   local truesong, berdun = on.azshara("Commander Truesong", 11.78, 78.3), on.azshara("Berdun Cliffbrew", 12.58, 77.33)
-  local TALRENDIS_NOTE = "Forever quest with no QuestieDB record: places converted from reference guide A, level 48 from Wowhead Forever. Check in game."
+  local TALRENDIS_NOTE = "Forever quest with no quest database record: places converted from reference guide A, level 48 from Wowhead Forever. Check in game."
   local arathandris = fw("Arathandris Silversky", 54.15, 86.83)
   local grazle = fw("Grazle", 50.93, 85.01)
   local greta = fw("Greta Mosshoof", 51.21, 82.11)
@@ -468,7 +468,7 @@ do
   q(2972, "Doling Justice", 47, 38, 2970)
   q(5535, "Spiritual Unrest", 47, 45)
   q(5536, "A Land Filled with Hatred", 47, 45)
-  -- Forever's Talrendis Point quests: no QuestieDB record; level 48 from Wowhead Forever, places from guide A.
+  -- Forever's Talrendis Point quests: no quest database record; level 48 from Wowhead Forever, places from guide A.
   q(88807, "Slay the Spitelash", 48, nil, nil, true)
   q(89001, "Home on the Range", 48, nil, nil, true)
   q(89013, "Gettin' Buzzed", 48, nil, 89001, true)
@@ -495,7 +495,7 @@ do
 
   chapter("felwood-52", "Felwood: Emerald Sanctuary and Jaedenar", M.felwood, 52, 52, {
     "https://www.wowhead.com/forever/zone=361/felwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("hearth", at("Innkeeper Firebrew", 18.1, 51.5, M.ironforge), "Hearth to Ironforge.", { bind = "Ironforge" }),
     taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
@@ -561,7 +561,7 @@ do
     finish(8462, fw("Nafien", 64.77, 8.13), "Follow the road north to Nafien at the Timbermaw Hold tunnel."),
     accept(8461, fw("Nafien", 64.77, 8.13), "Nafien also wants the Deadwood camp beside the tunnel cleared."),
     note(objective(8461, fw(nil, 62.6, 10.1), "Clear the Deadwood furbolg camp next to the tunnel. They are a level or two above you: pull them one at a time.",
-      "6 Deadwood Den Watchers", "6 Deadwood Avengers", "6 Deadwood Shamans"), "Deadwood here are 53-55 (QuestieDB); the Horde route does this camp at 53."),
+      "6 Deadwood Den Watchers", "6 Deadwood Avengers", "6 Deadwood Shamans"), "Deadwood here are 53-55 (quest database); the Horde route does this camp at 53."),
     finish(8461, fw("Nafien", 64.77, 8.13)), accept(8465, fw("Nafien", 64.77, 8.13), "Nafien sends word to Salfa at the Winterspring end of the tunnel."),
     action("goto", on.winterspring(nil, 27.8, 34.6), "Walk through Timbermaw Hold. The furbolgs let you pass now. Exit into Winterspring."),
     finish(8465, on.winterspring("Salfa", 27.73, 34.5), "Salfa stands just outside the tunnel."),
@@ -610,7 +610,7 @@ do
 
   chapter("feralas-52", "Feralas: Feathermoon and the Forgotten Coast", M.feralas, 52, 53, {
     "https://www.wowhead.com/forever/zone=357/feralas",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(7733, pratt, "Pratt McGrubben, by the Feathermoon inn, has a better job now that you brought his first hides."),
     finish(2943, troyas, "Troyas Moonbreeze is in the building on the north side of the stronghold."), accept(2879, troyas),
@@ -632,7 +632,7 @@ do
     finish(2879, monolith), accept(2942, monolith),
     note(action("collect", fe("Evoroot", 44.6, 10.2),
       "Ride east to the Ruins of Isildien. Set the Bait down beside Miblon Snarltooth and take the Evoroot while he eats.",
-      { item = 11242, count = 1, ifOnQuest = 3909 }), "Reference guide A uses the Bait this way; the Evoroot is an object in the ruins (QuestieDB)."),
+      { item = 11242, count = 1, ifOnQuest = 3909 }), "Reference guide A uses the Bait this way; the Evoroot is an object in the ruins (quest database)."),
     objective(2845, rockbiter, "Stay close to Shay on the walk back to Rockbiter. Ring Shay's Bell whenever she wanders off.", "Shay's Bell"),
     finish(2845, rockbiter),
     note(objective(3909, gregan, "Bring the Evoroot back to Gregan for the Videre Elixir.", "Videre Elixir"),
@@ -668,7 +668,7 @@ do
 
   chapter("azshara-53", "Azshara: Kim'jael and the Runes", M.azshara, 53, 53, {
     "https://www.wowhead.com/forever/zone=16/azshara",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), RATCHET, "Fly to Ratchet."),
     action("sethearth", wiley, "Bind at the Ratchet inn.", ratchet),
@@ -744,7 +744,7 @@ do
 
   chapter("ungoro-53", "Un'Goro Crater: Marshal's Refuge", M.ungoro, 53, 54, {
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bera Stonehammer", 51, 29.3, 1446), GADGETZAN, "Fly to Gadgetzan."),
     carried(finish(2641, tan("Sprinkle", 51.06, 26.87), "Give Sprinkle the Violet Tragan from the Hinterlands.")),
@@ -764,7 +764,7 @@ do
       { name = "Un'Goro dinosaurs" }),
     finish(4243, ame, "Ride east along the crater's north wall. A-Me 01 waits beside the gorilla caves."), accept(4244, ame),
     note(finish(4244, ame, "Give A-Me the Mithril Casing from the auction house. Without one, use Next and skip the escort."),
-      "Mithril Casing source: QuestieDB lists Clunk and shredders; engineers craft it, so the auction house sells it too."),
+      "Mithril Casing source: quest database lists Clunk and shredders; engineers craft it, so the auction house sells it too."),
     accept(4245, ame, "Walk A-Me back to Karna. Gorillas and dinosaurs attack on the way."),
     finish(4245, karna),
     objective(4504, ug(nil, 46.6, 17.0), "The Lakkari Tar Pits are just south of Karna. Tar beasts, lurkers and lords drop Super Sticky Tar.",
@@ -858,7 +858,7 @@ do
   chapter("winterspring-54", "Felwood and Winterspring: Shadow Hold and the Winterfall", M.felwood, 54, 55, {
     "https://www.wowhead.com/forever/zone=618/winterspring",
     "https://www.wowhead.com/forever/zone=361/felwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Daelyshia", 34.41, 47.99, 1440), ASTRANAAR, "Fly to Astranaar."),
     action("goto", fw(nil, 51.2, 82.0), "Ride north out of Astranaar into Felwood. The Emerald Sanctuary is beside the road."),
@@ -950,7 +950,7 @@ do
 
   chapter("winterspring-55", "Winterspring: Everlook and the Southern Valleys", M.winterspring, 55, 56, {
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("sethearth", vizzie, "Ride east to Everlook and bind at the inn.", everlook),
     accept(6028, gregor, "Gregor Greystone, by the inn, has a report for the Argent Dawn at Chillwind Camp."),
@@ -975,7 +975,7 @@ do
     finish(969, mauari), finish(977, umi),
     accept(5163, umi, "Umi has one last job: scare three of her friends with her mechanical yeti. Sprinkle in Gadgetzan and Quixxil in Un'Goro wait for your trip south at 59."),
     note(withItem(12928, B.objectivePart(5163, 1, ws("Legacki", 61.5, 38.6), "Use the mechanical yeti on Legacki, right here in Everlook.", "Legacki")),
-      "Objective order (Legacki, Sprinkle, Quixxil) taken from QuestieDB; check the quest log order in game."),
+      "Objective order (Legacki, Sprinkle, Quixxil) taken from quest database; check the quest log order in game."),
     finish(4864, jaron, "Take Jaron his supplies and amulet at Starfall Village."),
     finish(4842, donova), finish(5087, donova),
     action("goto", on.felwood("Mishellena", 62.5, 24.2), "Walk back through Timbermaw Hold and ride south to the Talonbranch Glade flight master."),
@@ -1040,7 +1040,7 @@ do
   chapter("steppes-56", "Burning Steppes: Morgan's Vigil and the True Masters", M.steppes, 56, 57, {
     "https://www.wowhead.com/forever/zone=46/burning-steppes",
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(3702, archesonus, "Royal Historian Archesonus stands beside King Magni in the High Seat."),
     objective(3702, archesonus, "Tell Archesonus you are ready to listen, then continue through all her dialogue about Thaurissan.", "The Smoldering Ruins of Thaurissan"),
@@ -1084,7 +1084,7 @@ do
     finish(5022, at("Royal Factor Bathrilor", 57.17, 48.07, M.stormwind), "Bring Janice's parcel to Royal Factor Bathrilor, the census officer in the city hall."),
     accept(5048, at("Royal Factor Bathrilor", 57.17, 48.07, M.stormwind)),
     note(finish(5048, at("Ol' Emma", 60.2, 57.03, M.stormwind), "Find Ol' Emma in the streets a little south and give her the parcel."),
-      "QuestieDB has one spot for Ol' Emma; she may walk a path through the city."),
+      "quest database has one spot for Ol' Emma; she may walk a path through the city."),
     accept(5050, at("Ol' Emma", 60.2, 57.03, M.stormwind), "Emma sends half of a good luck charm back to Janice. You pass Felstone Farm early at 57."),
     finish(4184, bolvar, "Highlord Bolvar is in the throne room of Stormwind Keep."), accept(4185, bolvar),
     objective(4185, bolvar, "Talk to Lady Katrana Prestor beside Bolvar and continue through all her dialogue about his request. Return to Bolvar once the objective completes.", "Lady Prestor's counsel"),
@@ -1169,7 +1169,7 @@ do
   chapter("plaguelands-57", "Plaguelands: Andorhal and Tirion Fordring", M.wpl, 57, 58, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly to Southshore."),
     action("sethearth", anderson, "Bind at the Southshore inn, the closest inn to the Plaguelands.", southshore),
@@ -1225,7 +1225,7 @@ do
     withItem(15042, objective(5903, epl(nil, 26.6, 22.9), "Use the termite jar on the termite mounds in the north-west.", "100 Plagueland Termites")),
     objective(5542, epl(nil, 44.2, 30.7), "Finish the plaguehounds in the northern hills.", "20 Plaguehound Runt", "5 Plaguehound", "5 Frenzied Plaguehound"),
     note(accept(6164, epl("Augustus the Touched", 11.36, 26.37), "Ride west to the ruins of Terrordale on your way back to Tirion. Augustus the Touched lost his receipt book."),
-      "Augustus' quest is only in the Zygor Forever list (quest-ID check); check he offers it to the Alliance."),
+      "Augustus' quest is only in the reference guide B Forever list (quest-ID check); check he offers it to the Alliance."),
     objective(6164, epl("Augustus' Receipt Book", 14.0, 24.2), "The book lies in the ruins a little north-east of him.", "Augustus' Receipt Book"),
     finish(6164, epl("Augustus the Touched", 11.36, 26.37)),
     finish(5542, tirion), finish(5543, tirion), finish(5544, tirion),
@@ -1282,7 +1282,7 @@ do
   chapter("plaguelands-58", "Plaguelands: Darrowshire's Heroes and Hearthglen", M.epl, 58, 59, {
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Khaelyn Steelwing", 71.8, 49.6, 1423), LIGHTSHOPE, "Fly to Light's Hope Chapel."),
     action("sethearth", chambers, "Bind at Light's Hope Chapel.", lightsHope),
@@ -1383,7 +1383,7 @@ do
   chapter("silithus-59", "Winterspring to Silithus: Cenarion Hold", M.silithus, 59, 59, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Gryth Thurden", 55.5, 47.7, 1455), IF_FLIGHT, "Fly to Ironforge from Chillwind Camp."),
     accept(8275, at("Cenarion Emissary Jademoon", 58.54, 47.32, M.ironforge),
@@ -1450,7 +1450,7 @@ do
     accept(8282, noggle, "Noggle lost his satchel in the southern mountains, next to Bronzebeard's Encampment."),
     finish(8318, bor),
     note(accept(8304, maralith, "Commander Mar'alith asks you to question the dwarves at Bronzebeard's Encampment, far to the south."),
-      "QuestieDB gives Dearest Natalia a minimum level of 60; check whether Mar'alith offers it at 59."),
+      "quest database gives Dearest Natalia a minimum level of 60; check whether Mar'alith offers it at 59."),
     action("goto", frankal, "Ride south to Bronzebeard's Encampment."),
     B.objectivePart(8304, 1, frankal, "Talk to Frankal Stonebridge about Natalia and continue through his whole dialogue until his objective completes.", "Frankal Invisible Trigger"),
     B.objectivePart(8304, 2, rutgar, "Talk to Rutgar Glyphshaper beside Frankal about Natalia and continue through his whole dialogue until his objective completes.", "Rutgar Invisible Trigger"),
@@ -1484,7 +1484,7 @@ do
   chapter("silithus-60", "The Road to 60: Moonglade and Darnassus", M.darnassus, 59, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
     "https://www.wowhead.com/forever/zone=493/moonglade",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bera Stonehammer", 51, 29.3, 1446), GADGETZAN, "Fly to Gadgetzan."),
     finish(4507, on.tanaris("Alchemist Pestlezugg", 50.89, 26.96), "Alchemist Pestlezugg takes the queen's brain."),

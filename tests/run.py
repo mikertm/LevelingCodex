@@ -43,7 +43,7 @@ ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "tale
 NOART = ["skills:BS;97;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved", "euiDebug"]
-# EllesmereUI installed ("eui" makes it before the addon loads; "eui:off" = its skin turned off for the
+# external UI installed ("eui" makes it before the addon loads; "eui:off" = its skin turned off for the
 # Codex, "eui:manual" = its callback runs only at the euiDispatch step).
 EUI = ["eui", "makeTalentWindow:name", "login", "questStart", "euiSkin", "talentByName", "classTrainer", "euiCards",
        "browse", "everyButton", "euiThemePick", "euiAccent", "copyMacro", "debugReport", "euiDebug"]
@@ -202,7 +202,7 @@ def run_sequence(name, cls, minimal, files, steps):
     for step in steps:
         if step == "eui" or step.startswith("eui:"):
             opts = ", ".join("%s = true" % o for o in step.split(":")[1:])
-            pre += "\nMOCK.makeEllesmere({ %s })\n" % opts
+            pre += "\nMOCK.makeSkinProvider({ %s })\n" % opts
     lua, err = new_state(cls, minimal, files, pre or None, noart=steps is NOART)
     if not err and "lost" in steps:
         lua.execute(LOST_DB.encode())
@@ -722,7 +722,7 @@ def talent_tree_checks():
             if t.talents[i].name == name:
                 return t.talents[i]
     ms = find("WARRIOR", "Mortal Strike")
-    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"] \
+    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"]\
             or [2, 48] not in [list(r.values()) for r in ms.spell.values()]:
         errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
     if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
@@ -1042,7 +1042,7 @@ def main():
                           "questButtonDragging", "questButtonDragPreview")):
             runs.append(("WARRIOR/%s/quests-" % variant + scenario, "WARRIOR", minimal, [scenario]))
         if minimal:
-            runs.append(("WARRIOR/minimal/questie", "WARRIOR", True, ["questQuestieMinimal"]))
+            runs.append(("WARRIOR/minimal/integration", "WARRIOR", True, ["questIntegrationMinimal"]))
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questDuskwoodZoneEntry",
@@ -1060,12 +1060,12 @@ def main():
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
                              "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
-                             "questQuestieAuto", "questQuestieTracker", "questQuestieDB", "questQuestieNearest",
-                             "questQuestieNearestItem", "questQuestieNearestPart", "questQuestieNearestError",
-                             "questQuestieTrackerLive", "questQuestieNearestFallback", "questQuestieNearestCleared",
-                             "questQuestieArrowClamp", "questQuestieNearestRetext", "questQuestieNearestLateData",
-                             "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
-                             "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
+                             "questIntegrationAuto", "questIntegrationTracker", "questIntegrationDB", "questIntegrationNearest",
+                             "questIntegrationNearestItem", "questIntegrationNearestPart", "questIntegrationNearestError",
+                             "questIntegrationTrackerLive", "questIntegrationNearestFallback", "questIntegrationNearestCleared",
+                             "questIntegrationArrowClamp", "questIntegrationNearestRetext", "questIntegrationNearestLateData",
+                             "questIntegrationRecheck", "questIntegrationNearestEmptyText", "questIntegrationNearestEmptyName",
+                             "questIntegrationNearestNoRows", "questIntegrationNearestNoScale", "questIntegrationNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questRewardStale", "questRewardSlowPrice", "questRewardButtons", "questMobTarget",
                              "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "stepButtons", "stepComfort", "stepSetupWindow", "stepCompactNote", "stepScaleButtons", "stepScaleSaved", "stepCompactDistance", "stepTitles", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
@@ -1077,7 +1077,7 @@ def main():
                              "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",
                              "questHearthModernCooldown", "questFlightRouteInitialization", "questCompletedSet",
                              "questDungeonPreparation", "questDungeonIncompletePreparation", "questWetlandsRidgeLoop", "questWetlandsCarnageChoice", "questWetlandsCarnageSummon", "questPartyPolishedChat",
-                             "questPartyAnnouncementPreview", "questPartyAnnouncementBudget", "questPartyQuestieAnnounce"):
+                             "questPartyAnnouncementPreview", "questPartyAnnouncementBudget", "questPartyProviderAnnounce"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),

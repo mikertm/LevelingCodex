@@ -334,7 +334,7 @@ local function makeCard()
   h:SetClampedToScreen(true)
   h:EnableMouse(true)
   h:Hide()
-  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it (painted in refreshCard)
+  A.cardChrome(h) -- the tooltip border, flat edges, or external UI's panel behind it (painted in refreshCard)
   h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   h.label:SetPoint("TOPLEFT", 12, -10)
   h.label:SetText("FOR YOUR GUIDE")
@@ -479,7 +479,7 @@ local function begin(v)
   ns.after(STEP, function() sellNext(r) end)
 end
 
--- Forever fires MERCHANT_SHOW before the vendor window shows (Zygor's Forever build says so too),
+-- Forever fires MERCHANT_SHOW before the vendor window shows (reference guide B's Forever build says so too),
 -- and a run that started then found the window "closed" and stopped before its first sale: the
 -- visit waits for the window (up to WINDOW_WAIT), then sells and repairs. Alt and combat are read
 -- as the vendor opens.

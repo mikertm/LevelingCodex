@@ -8,7 +8,7 @@ Every boss and instance fact comes from the Forever client (build 1.60.1.70888).
 - a boss's `encounter` must belong to that dungeon;
 - it warns about game encounters a guide doesn't list.
 
-QuestieDB Forever confirmed the NPC ID and level of every boss in the classic dungeons. It has no records for the Forever-only dungeons (Hall of Thanes, Ruins of Lordaeron, Excavation Site, City of Dalaran), so their names come from the client and the published Forever guides below. All tips and step text are original.
+quest database Forever confirmed the NPC ID and level of every boss in the classic dungeons. It has no records for the Forever-only dungeons (Hall of Thanes, Ruins of Lordaeron, Excavation Site, City of Dalaran), so their names come from the client and the published Forever guides below. All tips and step text are original.
 
 ## Boss data (`bosses` in QuestDungeonData.lua and QuestHordeDungeons.lua)
 
@@ -22,7 +22,7 @@ QuestieDB Forever confirmed the NPC ID and level of every boss in the classic du
   - City of Dalaran NPC IDs from wowforevertalents.com: Atrexis the Grave Knight 247126, Fel Ancient 246003, Shade of the Archmage 246020. They back up the encounter IDs when a kill is matched in the combat log.
   - Deadmines, Sneed's Shredder = encounter "Sneed" (2742). Blackfathom Deeps, Gelihast = encounter "Geilhast" (2914): that's the game's spelling for normal difficulty.
 - **Added:**
-  - Blackfathom Deeps (both factions): Lorgus Jett (encounter 2913, NPC 12902, level 26 in QuestieDB), after Gelihast. He is a normal-difficulty encounter the list was missing.
+  - Blackfathom Deeps (both factions): Lorgus Jett (encounter 2913, NPC 12902, level 26 in quest database), after Gelihast. He is a normal-difficulty encounter the list was missing.
   - Ruins of Lordaeron (Horde): Lordaeron Captain (rare, encounter 3408), last. wowforeverinfo.com describes him as a rare who can appear in the west once the other bosses are dead, friendly to the Alliance. The Alliance list leaves him out on purpose (the audit warns about it).
 - **Instance IDs added:** City of Dalaran = 2959 and Scarlet Monastery (Graveyard) = 189, from the client's `Map` table. Before this, entering them went unnoticed. All four Scarlet Monastery wings share map 189, so the Graveyard guide opens in any wing.
 - **Check in game:**
@@ -36,10 +36,10 @@ A step's `path = { {x, y}, ... }` is the way in through tunnels or a cave. The a
 
 | Guide | Step | Before | After | Sources |
 | --- | --- | --- | --- | --- |
-| Deadmines (Alliance) | Enter the portal | no spot (the arrow was hidden) | portal at Westfall 38.15, 77.47; path 40.79, 79.3 then 39.98, 77.89 | Another Forever leveling guide's tunnel waypoints (world yards, converted). QuestieDB puts the tunnel undead (Skeletal Miner, 41.2, 81.9) and Foreman Thistlenettle (42.2, 82.6) on the same stretch. |
-| Westfall route (tagged Deadmines) | 168 Collecting Memories | no spot | Westfall 41.2, 81.9 (QuestieDB Skeletal Miner cluster); path 43.2, 79.7 (bottom of the ramps) | QuestieDB spawns; the other guide's first tunnel point |
-| Westfall route (tagged Deadmines) | 167 Oh Brother. . . | no spot | Foreman Thistlenettle, Westfall 42.2, 82.6 | QuestieDB spawn |
-| Wailing Caverns (both factions) | Enter the portal | "approach" 46.0, 36.5 | portal at Barrens 47.76, 34.86; path 46.0, 36.5 (cave mouth), 46.2, 34.96, 45.91, 33.29, 46.12, 32.53, 47.29, 32.86 | The other guide's cave waypoints (converted). wowforeverinfo.com puts the mouth at about 46.0, 36.3. QuestieDB puts Mad Magglish (outer cave) at 45.7, 33.6. |
+| Deadmines (Alliance) | Enter the portal | no spot (the arrow was hidden) | portal at Westfall 38.15, 77.47; path 40.79, 79.3 then 39.98, 77.89 | Another Forever leveling guide's tunnel waypoints (world yards, converted). quest database puts the tunnel undead (Skeletal Miner, 41.2, 81.9) and Foreman Thistlenettle (42.2, 82.6) on the same stretch. |
+| Westfall route (tagged Deadmines) | 168 Collecting Memories | no spot | Westfall 41.2, 81.9 (quest database Skeletal Miner cluster); path 43.2, 79.7 (bottom of the ramps) | quest database spawns; the other guide's first tunnel point |
+| Westfall route (tagged Deadmines) | 167 Oh Brother. . . | no spot | Foreman Thistlenettle, Westfall 42.2, 82.6 | quest database spawn |
+| Wailing Caverns (both factions) | Enter the portal | "approach" 46.0, 36.5 | portal at Barrens 47.76, 34.86; path 46.0, 36.5 (cave mouth), 46.2, 34.96, 45.91, 33.29, 46.12, 32.53, 47.29, 32.86 | The other guide's cave waypoints (converted). wowforeverinfo.com puts the mouth at about 46.0, 36.3. quest database puts Mad Magglish (outer cave) at 45.7, 33.6. |
 | Hall of Thanes | Enter the portal | portal 27.98, 47.78 | same portal; path 43.5, 52.0 (passage from the High Seat), 38.1, 52.9 (stairs), 32.2, 44.44 (Thom's bridge) | dlonem.com (passage, stairs, portal near 28.4, 47.8); the other guide (Thom Filch, portal 27.78, 47.89) |
 
 The other dungeons keep their single entrance point. The published guides only give one point for those (Razorfen Kraul 42, 90; Scarlet Monastery 82.6, 33.8; Gnomeregan 24, 40; Blackfathom Deeps 14.5, 14.6; Excavation Site 47.8, 56.3), so a path for them needs to be recorded in game.

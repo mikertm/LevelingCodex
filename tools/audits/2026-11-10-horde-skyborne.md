@@ -2,8 +2,8 @@
 
 ## Sources
 
-- RestedXP Forever "1-9 Zephras Isle" and "9-13 Zephras Isle" chapters (`Guides/forever/RestedXP-Skyborne.lua`). One chapter serves both factions with `<< Horde` / `<< Alliance` step filters. We used its Horde path for which quests the Windshapers take and in what order. The text is ours.
-- QuestieDB Forever for quest givers, positions, levels and objectives.
+- reference guide A Forever "1-9 Zephras Isle" and "9-13 Zephras Isle" chapters (`local guide reference`). One chapter serves both factions with `<< Horde` / `<< Alliance` step filters. We used its Horde path for which quests the Windshapers take and in what order. The text is ours.
+- quest database Forever for quest givers, positions, levels and objectives.
 - Web sources:
   - [Warcraft Tavern: Zephras Isle walkthrough](https://www.warcrafttavern.com/forever/guides/zephras-isle-walkthrough/)
   - [warcraft.wiki.gg: Skyborne starting experience](https://warcraft.wiki.gg/wiki/Skyborne_starting_experience) (The Gift of Skysight as the Horde counterpart of Reading the Leylines; the Shaman totem quests)
@@ -41,8 +41,8 @@
 
 ## Left out
 
-- **A Grand Adventure 92708:** RestedXP takes it but has its turn-in commented out.
-- **Unwelcome Spirits 93736:** commented out in RestedXP.
+- **A Grand Adventure 92708:** reference guide A takes it but has its turn-in commented out.
+- **Unwelcome Spirits 93736:** commented out in reference guide A.
 - **Deliver the News 92703:** its prerequisite is the Alliance-only Standing Our Ground.
 - **The Camping 101 crafting intros:** only Cooking and the three gathering lessons (optional) are in, as on the Alliance side.
 - **Orgrimmar's Meal Appeal errands** for Skyborne: not added yet.

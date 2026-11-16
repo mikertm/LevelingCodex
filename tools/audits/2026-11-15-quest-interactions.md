@@ -9,9 +9,9 @@ interactions, and follow-ups that appear only after an event.
 ## Scope and evidence
 
 - Both supplied addon copies were read in place, without modifying them:
-  `C:\Dev\Starbreak\reference\Upload Nov 10 6_50 PM\RXPGuides\RXPGuides`
-  and its sibling `ZygorGuidesViewerForever`.
-- RXP's `Guides/forever` interaction directives and Zygor's
+  `local guide reference`
+  and its sibling `local guide reference`.
+- reference guide A's `Guides/forever` interaction directives and reference guide B's
   `Guides-Forever` dialogue/item/event instructions were compared with loaded
   Codex main, alternate, dungeon, class, and special guides. Reference syntax and
   facts informed the checks; replacement instructions are original.
@@ -39,9 +39,9 @@ still precedes Sovik for players planning the dungeon.
 
 Evidence:
 
-- RXP `Guides/forever/Horde-12-22_Barrens.lua:5128-5144`: the Rig Wars block is
+- reference guide A `Guides/forever/Horde-12-22_Barrens.lua:5128-5144`: the Rig Wars block is
   skipped; gossip option 95758 precedes accepting 2842 and the auto-accept warning.
-- Zygor `Guides-Forever/Leveling/ZygorLevelingHordeCLASSIC.lua:9317-9322`:
+- reference guide B `local guide reference`:
   the named gossip option precedes accepting 2842.
 - [Blizzard's November 10 hotfix](https://us.forums.blizzard.com/en/wow/t/wow-forever-hotfixes-november-13-2026/2403040/6)
   confirms that Sovik's quest offer follows gossip.

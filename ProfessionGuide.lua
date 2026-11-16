@@ -261,7 +261,7 @@ local function makeHint()
   h:SetClampedToScreen(true)
   h:EnableMouse(false) -- text only: nothing on it to click or for the controller to land on
   h:Hide()
-  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
+  A.cardChrome(h) -- the tooltip border, flat edges, or external UI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")

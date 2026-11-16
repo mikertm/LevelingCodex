@@ -6,7 +6,7 @@ local route = LevelingCodexQuests.ALLIANCE
 local M, on = B.maps, B.on
 local at, q, accept, finish, action = B.at, B.q, B.accept, B.finish, B.action
 local objective, part, withItem, uncertain = B.objectiveAt, B.objectivePart, B.withItem, B.note
-local qdb = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local qdb = "Cached quest records (revision 0f7d8ad)"
 
 local function add(section, prepare, inside, after)
   section.side, section.category, section.verified = true, "dungeon", false

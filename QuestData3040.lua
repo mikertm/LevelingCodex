@@ -149,7 +149,7 @@ do
   section("darkshire-30", "Darkshire: Mor'Ladim and the Worgen", M.duskwood, 30, 32, {
     "https://www.wowhead.com/forever/zone=10/duskwood",
     "https://bindonforever.com/zones/duskwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("boat", on.darkshore("Thamarian", 32.67, 42.11),
       "Take the Stormwind ship from Auberdine's south pier. Use Next when you reach Stormwind Harbor.",
@@ -271,7 +271,7 @@ do
     "https://www.wowhead.com/forever/zone=267/hillsbrad-foothills",
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
     "https://bindonforever.com/zones/hillsbrad-foothills",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     withGuide("dungeon-gnomeregan", action("goto", nil,
       "Take the Deeprun Tram from Stormwind's Dwarven District to Ironforge. Use Next when you arrive. The tram stops in Tinker Town, where the Gnomeregan quests are.")),
@@ -388,7 +388,7 @@ do
   section("needles-33", "Theramore and the Shimmering Flats", M.needles, 33, 35, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
     "https://www.wowhead.com/forever/zone=400/thousand-needles",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks in Theramore.",
       { name = "Menethil Harbor - Theramore Isle" }),
@@ -881,7 +881,7 @@ do
 
   section("desolace-35", "Desolace: Nijel's Point", M.desolace, 35, 37, {
     "https://www.wowhead.com/forever/zone=405/desolace",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Thyssiana", 89.5, 45.9, 1444), "Thalanaar, Feralas", "Fly from Theramore to Thalanaar."),
     action("goto", on.feralas(nil, 44.9, 4.0), "Follow the road west across Feralas, then take the north fork into Desolace. Stay on the road past the ogre ruins."),
@@ -1015,7 +1015,7 @@ do
 
   section("stv-36", "Stranglethorn: Rebels, Kurzen and Nesingwary", M.stv, 36, 38, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", on.barrens(nil, 62.6, 37.0), "Leave Theramore west and follow the Barrens road north to Ratchet on the coast."),
     taxi("getfp", on.barrens("Bragok", 63.1, 37.2), "Ratchet, The Barrens", "Learn the Ratchet flight path."),
@@ -1132,7 +1132,7 @@ do
 
   section("swamp-38", "Swamp of Sorrows and Nethergarde", M.swamp, 38, 39, {
     "https://www.wowhead.com/forever/zone=8/swamp-of-sorrows",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), "Stormwind, Elwynn", "Fly to Stormwind."),
     accept(1363, sw("Mazen Mac'Nadir", 51.8, 74.24), "Mazen Mac'Nadir works in the Mage Quarter's tower."),
@@ -1147,7 +1147,7 @@ do
     withItem(6196, accept(1392, nil, "If Noboru's Cudgel dropped from the mossy giant Noboru, read it to start the quest.")),
     accept(93585, sm("Father Tuttle", 22.22, 50.23), "Father Tuttle, north-west of Biggs, wants to reach the draenei refuge at the Harborage. His quest is an escort."),
     note(objective(93585, magtoor, "Escort Father Tuttle north to the Harborage on the swamp's northwest shore. Stay close and fight off what attacks him.",
-      "Father Tuttle escorted"), "Forever quest: QuestieDB has the giver only; the escort's end and the hand-in at Magtoor come from a published guide."),
+      "Father Tuttle escorted"), "Forever quest: quest database has the giver only; the escort's end and the hand-in at Magtoor come from a published guide."),
     finish(93585, magtoor, "Magtoor waits at the Harborage."),
     accept(1389, magtoor, "Magtoor also wants Draenethyst crystals from the Lost One villages."),
     finish(1392, magtoor),
@@ -1241,7 +1241,7 @@ do
   section("arathi-39", "Arathi Highlands, Alterac and Aerie Peak", M.arathi, 39, 40, {
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
     "https://www.wowhead.com/forever/zone=36/alterac-mountains",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", nil, "Take the Deeprun Tram from Stormwind to Ironforge. Use Next when you arrive."),
     finish(1457, ifg("Roetten Stonehammer", 69.95, 21.26), "Give Karnitol's satchel to Roetten Stonehammer in the Hall of Explorers."),
@@ -1274,7 +1274,7 @@ do
       "Trelane's Wand of Invocation"),
     withItem(213422, accept(79624, ar(nil, 53.8, 74.6), "If an Illegible Recipe dropped from the Boulderfist ogres by the cave, use it from your bags: an ogre who can read waits nearby.")),
     note(finish(79624, ar("Skonk", 57.7, 74.7), "Follow the path east of the ogre camp to Skonk and give him the recipe."),
-      "Skonk and the recipe's drop have no QuestieDB record; the spots come from a published guide."),
+      "Skonk and the recipe's drop have no quest database record; the spots come from a published guide."),
     finish(693, skuerto), accept(694, skuerto),
     action("goto", ar(nil, 25.5, 30.1), "Ride northwest past Northfold Manor."),
     B.objectivePart(651, 1, ar("Stone of West Binding", 25.5, 30.1), "Take the Burning Key from the Stone of West Binding.", "Burning Key"),
@@ -1284,7 +1284,7 @@ do
       "Otto's Head", "Falconcrest's Head"),
     finish(651, inner, "Bring the three keys to the Stone of Inner Binding on the hill east of Stromgarde."), accept(652, inner),
     note(objective(652, ar(nil, 44.5, 58.8), "Fozruk, a level 42 elite giant with a kobold escort, walks a long loop around Arathi. Wait for him on his path east of the stone and pull him away from the kobolds.",
-      "Rod of Order"), "Patrol line from a published guide; QuestieDB spawns him at 67.7, 37.6 near the Stone of East Binding."),
+      "Rod of Order"), "Patrol line from a published guide; quest database spawns him at 67.7, 37.6 near the Stone of East Binding."),
     finish(652, keystone, "Place the rod at the Keystone beside the stone."), accept(653, keystone, "Keep the message for Gerrig Bonegrip in Ironforge."),
     accept(663, ar("Lolo the Lookout", 31.78, 82.68), "Follow the coast south to Faldir's Cove. Lolo watches from the cliff."),
     finish(663, obreen), accept(662, nilzlix), accept(664, steelgut), accept(665, ar("Professor Phizzlethorpe", 33.87, 80.55)),
@@ -1364,7 +1364,7 @@ do
 
   section("dustwallow-40", "Dustwallow Marsh and Razorfen Downs", M.dustwallow, 40, 41, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     forDungeon(accept(3636, at("Archbishop Benedictus", 50.31, 45.47, M.stormwind),
       "Archbishop Benedictus, in the Cathedral of Light, wants Amnennar the Coldbringer of Razorfen Downs destroyed. Take it now if you might run the dungeon: it is only offered here."), rfd),
@@ -1413,7 +1413,7 @@ do
 
   section("stv-30", "Stranglethorn Early: Rebel Camp and Nesingwary", M.stv, 30, 35, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("sethearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Bind in Darkshire. This run starts and ends there.", darkshire),
     accept(215, st("Private Thorsen", 40.3, 8.4), "Take the road south out of Duskwood into Stranglethorn. Private Thorsen sometimes patrols the road below the Rebel Camp: take his note if you see him."),
@@ -1457,7 +1457,7 @@ do
 
   section("theramore-33", "Dustwallow: Theramore and the Marsh", M.dustwallow, 33, 37, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
       { name = "Menethil Harbor - Theramore Isle" }),

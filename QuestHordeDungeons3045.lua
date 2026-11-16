@@ -7,7 +7,7 @@ local route = LevelingCodexQuests.HORDE
 local M, on = B.maps, B.on
 local accept, finish, action, taxi, withItem = B.accept, B.finish, B.action, B.taxi, B.withItem
 local objective, part, uncertain = B.objectiveAt, B.objectivePart, B.note
-local qdb = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local qdb = "Cached quest records (revision 0f7d8ad)"
 
 -- Steps that stay optional inside a guide: work on a quest picked up somewhere else, shown only
 -- while that quest is in your log.
@@ -77,7 +77,7 @@ local function og(name, x, y) return B.at(name, x, y, M.orgrimmar) end
 local function uc(name, x, y) return B.at(name, x, y, M.undercity) end
 local function tb(name, x, y) return B.at(name, x, y, M.thunderBluff) end
 
--- Shared places (QuestieDB Forever spawns).
+-- Shared places (quest database Forever spawns).
 local ogFlights = og("Doras", 45.12, 63.89)
 local ucFlights = uc("Michael Garrett", 63.26, 48.55)
 local tbFlights = tb("Tal", 47.0, 49.82)
@@ -134,7 +134,7 @@ do
         "Goblin Transponder calibrated"),
       finish(2843, scooty),
       uncertain(action("goto", pad, "Step onto the transporter beside Scooty with the transponder in your bags. It sets you down in the tunnels outside Gnomeregan."),
-        "Landing spot from QuestieDB's transporter pad (21.4, 37.1). If you lose the transponder, Scooty hands out another."),
+        "Landing spot from quest database's transporter pad (21.4, 37.1). If you lose the transponder, Scooty hands out another."),
       uncertain(enter(name, pad, "The portal is a short walk from the pad. Meet your group there and go in together."),
         "Check how far the portal is from the pad and which way to walk."),
     }, {
@@ -178,7 +178,7 @@ do
   fromItem(95664, 270866, "Elder Knowledge", 31, 24, nil, true)
   H.need(98823, "Earthen Echo", 31, 24, 95664, true)
   local meetAgent = uncertain(finish(95663, agent, "Climb the ridge to the upper dig. The Deathstalker Agent waits in the hills near the dungeon portal."),
-    "QuestieDB has no spawn for the agent; the step points at the portal. Check where he stands.")
+    "quest database has no spawn for the agent; the step points at the portal. Check where he stands.")
   meetAgent.path = { { 53.27, 65.81 } }
   add({ id = "dungeon-excavation-site", title = name, zone = M.wetlands, levels = { 28, 33 }, instanceID = 2998,
     instance = name,
@@ -216,7 +216,7 @@ do
       finish(95664, bashana, "Bashana Runetotem on the Elder Rise knows about titan relics."),
       accept(98823, bashana),
       uncertain(action("goto", muln, "Take the lift down from Thunder Bluff and climb to the Skywatcher Plateau, north-west of the bluffs."),
-        "Muln's spot from QuestieDB (33.4, 22.6); the way up was not checked."),
+        "Muln's spot from quest database (33.4, 22.6); the way up was not checked."),
       finish(98823, muln, "Give the relic to Muln Earthfury."),
     })
 end
@@ -254,7 +254,7 @@ do
       part(544, 4, al("Kegan Darkmar", 17.8, 83.2), "Kegan Darkmar is upstairs in the warden's building to the west. Kill Warden Belamoore first, using doorways to block her spells, then Kegan.",
         "Bloodstone Oval"),
       uncertain(objective(93680, al("Warden Belamoore", 17.8, 83.0), "Open the warden's footlocker inside the same building, on the way upstairs, for the Grimy Key.",
-        "Grimy Key"), "Footlocker position not in QuestieDB; published notes place it on the stairs near Warden Belamoore."),
+        "Grimy Key"), "Footlocker position not in quest database; published notes place it on the stairs near Warden Belamoore."),
       action("goto", wordeen, "Ride back to Tarren Mill."),
       finish(544, wordeen),
       finish(93680, wordeen),
@@ -265,7 +265,7 @@ do
       action("goto", wordeen, "Ride back to Tarren Mill."),
       finish(545, wordeen),
       uncertain(accept(92434, wordeen, "Wordeen wants a way into Dalaran found along Lordamere Lake."),
-        "Offered after Dalaran Patrols and Key to the City in published order; QuestieDB lists no prerequisite."),
+        "Offered after Dalaran Patrols and Key to the City in published order; quest database lists no prerequisite."),
       action("goto", modera, "Ride back into the mountains. Go around Dalaran's dome on its north side and follow the Lordamere Lake shore to the sewer outlet."),
       finish(92434, modera, "The Image of Archmage Modera stands by the sewer outlet on the shore."),
       accept(96984, modera),
@@ -286,7 +286,7 @@ do
       accept(97287, wordeen, "He sends you to Archmage Celindra."),
       action("goto", celindra, "Ride back to the lake shore by the sewer outlet."),
       uncertain(finish(97287, celindra, "Archmage Celindra stands near Modera's image."),
-        "Celindra's spot from QuestieDB (14.2, 60.0); one published route hands this in right after the run."),
+        "Celindra's spot from quest database (14.2, 60.0); one published route hands this in right after the run."),
       action("goto", felben, "Travel to the Undercity: ride to Tarren Mill and fly, or ride north through Silverpine Forest."),
       finish(96988, felben, "Bring the sentry cores to Doctor Martin Felben."),
     })

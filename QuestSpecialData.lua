@@ -118,7 +118,7 @@ do
     sources = {
       "https://www.wowhead.com/forever/quest=66/the-legend-of-stalvan",
       "https://www.wowhead.com/forever/quest=98/the-legend-of-stalvan",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+      "Cached quest records (revision 0f7d8ad)",
     },
     steps = {
       accept(66, eva, "From level 22, speak to Madame Eva in Darkshire. Start the investigation while questing here and plan to finish the fight at a higher level or with help."),
@@ -285,7 +285,7 @@ do
     links = { "dungeon-blackrock-depths", "dungeon-upper-blackrock-spire" },
     sources = { "https://www.wowhead.com/forever/quest=6502/drakefire-amulet",
       "https://warcraft.wiki.gg/wiki/Drakefire_Amulet",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = join(fromRoute("steppes-56", { 4182, 4183, 4184, 4185, 4186, 4223, 4224 }), {
       accept(4241, maxwell, "Marshal Maxwell asks what became of Marshal Windsor. He is a prisoner in Blackrock Depths: plan a run."),
       finish(4241, nil, "Find Marshal Windsor in a cell in Blackrock Depths' Detention Block, past the first bridge."),
@@ -316,7 +316,7 @@ do
   special({ id = "ubrs-seal", title = "Seal of Ascension (Upper Blackrock Spire)", zone = searing, levels = { 57, 60 },
     links = { "dungeon-lower-blackrock-spire", "dungeon-upper-blackrock-spire" },
     sources = { "https://www.wowhead.com/forever/quest=4742/seal-of-ascension",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       action("goto", blackrock, "Meet your group at Blackrock Mountain and enter Lower Blackrock Spire."),
       accept(4742, nil, "First loot an Unadorned Seal of Ascension from the Scarshield orcs. Carry it to the lone Scarshield Infiltrator on the ledge near the start of Lower Blackrock Spire. Let him reveal himself as Vaelan, then finish his dialogue to unlock the quest."),
@@ -334,7 +334,7 @@ do
   special({ id = "molten-core-attunement", title = "Attunement to the Core", zone = searing, levels = { 55, 60 },
     links = { "dungeon-blackrock-depths" },
     sources = { "https://www.wowhead.com/forever/quest=7848/attunement-to-the-core",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       accept(7848, nil, "Lothos Riftwaker waits on the ledge inside Blackrock Mountain, just past the chain down to Blackrock Depths."),
       goal(7848, nil, "In Blackrock Depths, go past Lord Incendius to the Molten Core portal and take a Core Fragment from the rock beside it.",
@@ -351,7 +351,7 @@ do
   special({ id = "scholomance-key", title = "The Key to Scholomance", zone = wpl, levels = { 55, 60 },
     links = { "dungeon-scholomance" },
     sources = { "https://www.wowhead.com/forever/quest=5505/the-key-to-scholomance",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = join(fromRoute("wpl-51", { 5090, 5092 }), fromRoute("plaguelands-57", { 5097, 5533, 5537 }), {
       accept(5538, arbington, "Arbington needs the fragments shaped by a smith. Take them and 15 gold to Krinkle Goodsteel."),
       finish(5538, at("Krinkle Goodsteel", 51.46, 28.81, tanaris), "Krinkle Goodsteel is the smith in Gadgetzan."),
@@ -373,7 +373,7 @@ do
   special({ id = "shadowforge-key", title = "Dark Iron Legacy (Shadowforge Key)", zone = searing, levels = { 52, 60 },
     links = { "dungeon-blackrock-depths" },
     sources = { "https://www.wowhead.com/forever/quest=3802/dark-iron-legacy",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       uncertain(accept(3801, blackrock, "Franclorn Forgewright's ghost lies on the stone ledge in the middle of Blackrock Mountain. You only see him as a spirit: die nearby and talk to him before you resurrect."),
         "Check that Forever keeps the ghost-only rule."),

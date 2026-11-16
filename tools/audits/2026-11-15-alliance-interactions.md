@@ -8,7 +8,7 @@ The baseline Alliance route loads 172 sections: 43 main, 20 alternate, 30 dungeo
 
 The nine Alliance guide files inspected were `QuestData.lua`, `QuestAlternateData.lua`, `QuestData3040.lua`, `QuestData4050.lua`, `QuestData5060.lua`, `QuestDungeonData.lua`, `QuestDungeonData3060.lua`, `QuestClassData.lua` and `QuestSpecialData.lua`. Class insertions and copied alternate/dungeon/special steps were inspected through the loaded Lua tables, not just text searches. No class guide changes were necessary for the checked interactions.
 
-The reference inventory covered 13 RXP files: the seven top-level `Alliance*.lua` files, four dungeon `Alliance*.lua` files, and the two `RestedXP-Skyborne.lua` files. There were 159 applicable `RegisterGuide` blocks, including shared Skyborne and Alliance sections; explicitly Horde-only steps were excluded. Candidate blocks were joined to quest IDs present in the loaded Alliance route:
+The reference inventory covered 13 reference guide A files: the seven top-level `Alliance*.lua` files, four dungeon `Alliance*.lua` files, and the two `local guide reference` files. There were 159 applicable `RegisterGuide` blocks, including shared Skyborne and Alliance sections; explicitly Horde-only steps were excluded. Candidate blocks were joined to quest IDs present in the loaded Alliance route:
 
 | Candidate kind | Matching block occurrences | Distinct quest/target/item patterns |
 | --- | ---: | ---: |
@@ -16,7 +16,7 @@ The reference inventory covered 13 RXP files: the seven top-level `Alliance*.lua
 | `.use` | 525 | 222 |
 | Event/escort/summon/emote hints | 144 | 66 |
 
-The Zygor Alliance leveling file added 86 matching dialogue/emote blocks involving 84 quest IDs; the Alliance dungeon file added 43 involving 24 quest IDs. These counts include repeated routes, bank/spirit-healer conversations, ordinary trainer menus and role-specific hints. They are search candidates, not additional omissions. Deduplication used quest ID, target/mob and used item; it does not equate different dialogue sequences merely because their NPC is the same.
+The reference guide B Alliance leveling file added 86 matching dialogue/emote blocks involving 84 quest IDs; the Alliance dungeon file added 43 involving 24 quest IDs. These counts include repeated routes, bank/spirit-healer conversations, ordinary trainer menus and role-specific hints. They are search candidates, not additional omissions. Deduplication used quest ID, target/mob and used item; it does not equate different dialogue sequences merely because their NPC is the same.
 
 For manual review, compare each candidate's action order with the route's accept/complete/turn-in steps and any item gate. Inspect surrounding steps so that nearby equipment, Hearthstone use, escort maintenance and item-started follow-ups are not mistaken for the current quest's required action. Check important omissions against public quest/item text or another independent reference. Keep uncertain server behavior as an in-game check rather than a new programmatic prerequisite.
 
@@ -24,11 +24,11 @@ For manual review, compare each candidate's action order with the route's accept
 
 All paths below are under the read-only root:
 
-`C:/Dev/Starbreak/reference/Upload Nov 10 6_50 PM/RXPGuides/`
+`local guide reference`
 
-- **R**: `RXPGuides/Guides/forever/RestedXP-Skyborne.lua`
-- **ZD**: `ZygorGuidesViewerForever/Guides-Forever/Dungeons/ZygorDungeonAllianceCLASSIC.lua`
-- **ZL**: `ZygorGuidesViewerForever/Guides-Forever/Leveling/ZygorLevelingAllianceCLASSIC.lua`
+- **R**: `local guide reference`
+- **ZD**: `local guide reference`
+- **ZL**: `local guide reference`
 
 Line numbers refer to the supplied, unchanged reference files. A `start` entry in this addon's `QuestNPCData.lua` is also useful evidence that a quest begins with an NPC rather than a dropped item.
 
@@ -123,7 +123,7 @@ These sources were browsed on 2026-11-15. Classic-era evidence is identified as 
 - The Camping 101 `/sit` quests already tell the player to sit until Boosted Rest. Normal trainer/merchant menus, bank interactions, resurrection shortcuts and optional equipment uses were not added as new route requirements.
 - Cyrus's route intentionally carries a molt from the Searing Gorge hoard. No alternate no-molt drake-fight branch was inserted; the fix only makes that route's proof conversation explicit.
 - The Videre Elixir/Gregan handling has existing uncertainty about quest 4041 and official Hardcore variants. The audit did not replace those notes with an unverified Forever branch.
-- RXP's Urok step says to use the pike; Zygor explicitly uses Omokk's Head with the pike carried. The corrected instruction collects both and follows the latter sequence. Confirm the clickable item and event behavior in Forever.
+- reference guide A's Urok step says to use the pike; reference guide B explicitly uses Omokk's Head with the pike carried. The corrected instruction collects both and follows the latter sequence. Confirm the clickable item and event behavior in Forever.
 - Older sources vary on Finkle/Pip's name, minimum level, skinning skill and tools. The quest is clearly an NPC pickup and the flesh is supplied; only those confirmed facts and the skinning reveal were corrected. Confirm current skill/tool requirements in-game.
 - Prior Dire Maul discovery for 5527 remains a Classic-derived, guide-corroborated prerequisite, rather than a separately observed live Forever condition.
 

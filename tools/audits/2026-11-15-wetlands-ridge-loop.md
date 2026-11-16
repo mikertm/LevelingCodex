@@ -8,10 +8,10 @@ leave new players without Halloran's quest on that trip.
 
 ## References
 
-- Local RestedXP `Guides/forever/RestedXP-Skyborne.lua`, lines 26427-26541:
+- Local reference guide A `local guide reference`, lines 26427-26541:
   turn in Blisters, take Carnage, work whelps and Rotclaws together, gather raptor
   teeth/eggs, summon with item 280331 at the Offering Stone, return west.
-- Local Zygor `Guides-Forever/Leveling/ZygorLevelingAllianceCLASSIC.lua`,
+- Local reference guide B `local guide reference`,
   lines 7720-7792: Halloran's Crocs pickup follows Apprentice's Duties; whelp
   scales are below Raptor Ridge. Its older ordering separates the raptor trip.
 - [Wowhead Carnage](https://www.wowhead.com/forever/quest=98283/carnage):
@@ -22,10 +22,10 @@ leave new players without Halloran's quest on that trip.
 - [Wowhead Crocs of the Sky](https://www.wowhead.com/forever/quest=98072/crocs-of-the-sky):
   eight Pristine Crimson Scales from eastern whelps; the description warns about
   the nearby orcs. Completing it is not required to pick up Razormaw Needling.
-- Cached QuestieDB, `python tools/questfacts.py quest 98283` and `npc 271336`:
+- Cached quest database, `python tools/questfacts.py quest 98283` and `npc 271336`:
   Rethiel starts/finishes it at 56.37, 40.4; flesh/head item objectives; Carnage is
   level 30 inside the ridge around 69.5, 29.0. The cached item table has no flesh
-  entry; its usable ID 280331 and Offering Stone instruction come from RestedXP.
+  entry; its usable ID 280331 and Offering Stone instruction come from reference guide A.
 
 ## Route data changes
 
@@ -60,7 +60,7 @@ cover entry and return from the early chapter. The route audit checks the
 
 The loop tool still reports the existing late Bloom pickup and Fall of Dun Modr
 hub visit. Its new Death to the Dragonmaw suggestion overlooks the raptor
-turn-ins: RestedXP gates that pickup on both of them. The combined trip is about
+turn-ins: reference guide A gates that pickup on both of them. The combined trip is about
 grouping nearby tasks; no measured in-game time saving is claimed.
 
 In game: verify Halloran's pickup before heading east, all four progress groups,

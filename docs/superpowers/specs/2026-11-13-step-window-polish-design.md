@@ -85,7 +85,7 @@ quest isn't in the log.
   first target creature; other kinds have no portrait (the title starts at the left as today).
 - NPC IDs come from a new generated file, `QuestNPCData.lua` (`tools/questnpcs.py`, like
   `QuestMobData.lua`): `ns.questNPCs[questID] = { start = npcID, finish = npcID, mob = npcID }`,
-  each only when QuestieDB names a creature (a quest started by an object or an item has no `start`).
+  each only when quest database names a creature (a quest started by an object or an item has no `start`).
   `--check` fails when stale; the harness checks its shape. Loaded in the .toc after
   `QuestMobData.lua`.
 - When the model hasn't loaded 1 s after `SetCreature`, there is no ID, or the client has no

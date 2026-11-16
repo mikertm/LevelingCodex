@@ -20,7 +20,7 @@ local F = {
   moonglade = "Moonglade", cenarion = "Cenarion Hold, Silithus",
 }
 
--- Places shared by the chapters and the alternates (QuestieDB Forever spawn points).
+-- Places shared by the chapters and the alternates (quest database Forever spawn points).
 local P = {}
 do
   local stv, sw, bl, bad, sg, bs = on.stv, on.swamp, on.blasted, on.badlands, on.searing, on.steppes
@@ -132,9 +132,9 @@ do
 end
 
 local ORGRIMMAR_BIND, EVERLOOK_BIND = { bind = "Orgrimmar" }, { bind = "Everlook" }
-local QUESTIE = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local QUEST_RECORDS = "Cached quest records (revision 0f7d8ad)"
 
--- QuestieDB lists two possible prerequisites for some quests (one per faction or per giver):
+-- quest database lists two possible prerequisites for some quests (one per faction or per giver):
 -- the step names the one this route gives you.
 local function pre(step, ...)
   step.chain = { ... }
@@ -200,7 +200,7 @@ do
   chapter("blasted-50", "Booty Bay, Stonard and the Blasted Lands", M.stv, 50, 51, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
     "https://www.wowhead.com/forever/zone=4/blasted-lands",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "searing-alt", "azshara-alt" }, {
     action("boat", on.barrens(nil, 63.7, 38.6), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Use Next when you arrive.",
       { name = "Ratchet - Booty Bay" }),
@@ -284,7 +284,7 @@ do
   chapter("searing-51", "Searing Gorge and the Burning Steppes", M.searing, 51, 52, {
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
     "https://www.wowhead.com/forever/zone=46/burning-steppes",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "azshara-alt", "ungoro-alt" }, {
     accept(3821, P.thaltrak, "Thal'trak Proudtusk in Kargath asks you to find his brother in the Burning Steppes. Follow him if he walks off while he talks."),
     H.dungeon("blackrock-depths", accept(3906, P.thunderheart, "Thunderheart wants Overmaster Pyron dead in Blackrock Depths.")),
@@ -383,7 +383,7 @@ do
 
   chapter("azshara-52", "Orgrimmar and Azshara", M.azshara, 52, 53, {
     "https://www.wowhead.com/forever/zone=16/azshara",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "felwood-alt", "ungoro-alt" }, {
     action("sethearth", P.gryshka, "Bind at the inn in the Valley of Strength.", ORGRIMMAR_BIND),
     action("note", nil,
@@ -465,7 +465,7 @@ do
   chapter("felwood-53", "Felwood: Bloodvenom Post and Timbermaw Hold", M.felwood, 53, 54, {
     "https://www.wowhead.com/forever/zone=361/felwood",
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "ungoro-alt", "plaguelands-alt" }, {
     action("goto", P.grazle, "Ride west out of Splintertree and take the north road out of Ashenvale into Felwood. The Emerald Sanctuary sits beside the road."),
     accept(8460, P.grazle, "Grazle, a Timbermaw furbolg, asks you to prove yourself against the Deadwood tribe."),
@@ -566,7 +566,7 @@ do
   chapter("ungoro-54", "Un'Goro Crater: Marshal's Refuge", M.ungoro, 54, 55, {
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
     "https://www.wowhead.com/forever/zone=440/tanaris",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "felwood-alt", "plaguelands-alt" }, {
     action("collect", P.thathung,
       "If Clunk in the Searing Gorge never dropped a Mithril Casing, buy one at the auction house in the Valley of Strength (engineers make them). A-Me 01 in Un'Goro needs it. Use Next to skip.",
@@ -596,7 +596,7 @@ do
       "2 Un'Goro Gorilla Pelt", "2 Un'Goro Stomper Pelt", "2 Un'Goro Thunderer Pelt"),
     finish(4243, P.ame, "A-Me 01 waits beside the gorilla caves."), accept(4244, P.ame),
     note(finish(4244, P.ame, "Give A-Me the Mithril Casing from Clunk or the auction house. Skip with Next if you have none."),
-      "Mithril Casing source: QuestieDB lists Clunk; engineers craft it, so the auction house sells it too."),
+      "Mithril Casing source: quest database lists Clunk; engineers craft it, so the auction house sells it too."),
     accept(4245, P.ame, "Walk A-Me back to Karna at the refuge. Gorillas and dinosaurs attack on the way."),
     finish(4245, P.karna),
     objective(4504, ug(nil, 46.6, 17.0), "Ride just south of the refuge into the Lakkari Tar Pits. Tar beasts, lurkers and lords drop Super Sticky Tar.",
@@ -703,7 +703,7 @@ do
   chapter("winterspring-55", "Felwood and Winterspring: Shadow Hold and the Winterfall", M.felwood, 55, 56, {
     "https://www.wowhead.com/forever/zone=361/felwood",
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "plaguelands-alt", "winterspring-alt" }, {
     taxi("fly", B.at("Kroum", 21.96, 49.62, 1447), F.valormok, "Fly from Ratchet to Valormok in Azshara."),
     finish(3562, P.jediga, "Give Jediga Magatha's note."), finish(3563, P.jediga, "And Jes'rimon's note."),
@@ -845,7 +845,7 @@ do
   chapter("plaguelands-56", "Plaguelands: the Bulwark and Tirion Fordring", M.wpl, 56, 57, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "silithus-alt", "winterspring-alt" }, {
     action("boat", P.durotarTower, "Leave Orgrimmar by the front gate and take the zeppelin to the Undercity from the tower outside. Use Next when you land.",
       { name = "Orgrimmar - Undercity" }),
@@ -854,7 +854,7 @@ do
     finish(3568, P.cuely, "Chemist Cuely, in the Apothecarium, takes the filled vials if you carry them."), accept(3569, P.cuely),
     finish(3569, P.thersa, "Give Thersa Windsong Cuely's elixir."),
     note(accept(3570, P.cuely, "Step back to Cuely: she has a last word on the corruption."),
-      "QuestieDB has Cuely start and end 3570; reference guide A hands it in beside Thersa. Check in game."),
+      "quest database has Cuely start and end 3570; reference guide A hands it in beside Thersa. Check in game."),
     finish(3570, P.cuely),
     accept(5961, P.sylvanas, "In the Royal Quarter, Lady Sylvanas sends you to Nathanos Blightcaller as her champion."),
     action("goto", P.derrington, "Leave the city and ride east along the road to the Bulwark at the edge of the Plaguelands."),
@@ -986,7 +986,7 @@ do
   chapter("plaguelands-57", "Plaguelands: Darrowshire, Northdale and Hearthglen", M.epl, 57, 58, {
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "silithus-alt", "winterspring-alt" }, {
     action("goto", P.bauhaus, "Ride west to the Undercity and take the lift down. Royal Overseer Bauhaus keeps the city's census in the Trade Quarter."),
     finish(5023, P.bauhaus, "Ask Bauhaus about the Felstone family."), accept(5049, P.bauhaus),
@@ -1055,7 +1055,7 @@ do
     "https://www.wowhead.com/forever/zone=618/winterspring",
     "https://www.wowhead.com/forever/zone=493/moonglade",
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "silithus-alt", "winterspring-alt" }, {
     action("hearth", P.vizzie, "Hearth to Everlook.", EVERLOOK_BIND),
     accept(4809, P.felnok, "Felnok wants Uncracked Chillwind Horns from the chimaeras."),
@@ -1134,7 +1134,7 @@ do
   chapter("silithus-59", "Silithus: Cenarion Hold and the Road to 60", M.silithus, 59, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
     "https://www.wowhead.com/forever/zone=493/moonglade",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "winterspring-alt", "silithus-alt", "plaguelands-alt" }, {
     -- Southwind and Layo first: the last chapter ends at Valor's Rest, and Cenarion Hold's work then
     -- runs as one loop.
@@ -1173,7 +1173,7 @@ do
     accept(8282, P.noggle, "Noggle lost his satchel in the southern mountains, next to Bronzebeard's Encampment."),
     finish(8318, P.bor),
     note(accept(8304, P.maralith, "Commander Mar'alith asks about Natalia at Bronzebeard's Encampment, where you head next. She offers it from level 60."),
-      "QuestieDB gives Dearest Natalia a minimum level of 60; reference guide A takes it on the first Cenarion Hold visit. Check in game."),
+      "quest database gives Dearest Natalia a minimum level of 60; reference guide A takes it on the first Cenarion Hold visit. Check in game."),
     action("goto", P.frankal, "Ride south to Bronzebeard's Encampment."),
     part(8304, 1, P.frankal, "Ask Frankal Stonebridge about Natalia and continue through every dialogue page until the objective completes.", "Frankal questioned"),
     part(8304, 2, P.rutgar, "Ask Rutgar Glyphshaper beside him about Natalia and continue through every dialogue page until the objective completes.", "Rutgar questioned"),
@@ -1251,7 +1251,7 @@ do
   alternate("searing-alt", "Searing Gorge and the Burning Steppes", M.searing, 50, 53, {
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
     "https://www.wowhead.com/forever/zone=46/burning-steppes",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "azshara-52", "azshara-alt" }, join({
     taxi("fly", nil, F.kargath, "Fly to Kargath in the Badlands. From Kalimdor, take the zeppelin to Grom'gol and fly from there."),
   }, from("searing-51", { 3821, 4449, 4451, 3441, 3442, 7723, 7724, 7727, 7728, 7729, 7701, 7722, 3443, 3452, 3453, 3454,
@@ -1259,7 +1259,7 @@ do
 
   alternate("azshara-alt", "Azshara: Valormok and Kim'jael", M.azshara, 51, 54, {
     "https://www.wowhead.com/forever/zone=16/azshara",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "felwood-53", "felwood-alt" }, join({
     action("goto", P.belgrom, "Travel to Orgrimmar. Belgrom Rockmaul stands in the Valley of Honor."),
   }, from("azshara-52", { 3504, 5535, 5536, 3505, 3517, 3601, 3506, 5534, 3561, 3565, 3507 }, true), {
@@ -1269,7 +1269,7 @@ do
 
   alternate("ungoro-alt", "Un'Goro Crater: Marshal's Refuge", M.ungoro, 50, 56, {
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "winterspring-55", "plaguelands-alt" }, join({
     taxi("fly", nil, F.gadgetzan, "Fly to Gadgetzan in Tanaris."),
   }, (function()
@@ -1283,7 +1283,7 @@ do
 
   alternate("felwood-alt", "Felwood: Emerald Sanctuary and Bloodvenom Post", M.felwood, 52, 56, {
     "https://www.wowhead.com/forever/zone=361/felwood",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "ungoro-54", "ungoro-alt" }, {
     taxi("fly", nil, F.splintertree, "Fly to Splintertree Post in Ashenvale."),
     action("goto", P.grazle, "Ride west and take the north road out of Ashenvale into Felwood. The Emerald Sanctuary sits beside the road."),
@@ -1323,7 +1323,7 @@ do
 
   alternate("plaguelands-alt", "Western Plaguelands: the Bulwark", M.wpl, 53, 58, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "silithus-58", "winterspring-alt", "silithus-alt" }, {
     action("goto", P.balthazad, "Travel to the Undercity. Harbinger Balthazad stands near the bank."),
     accept(5094, P.balthazad, "Harbinger Balthazad calls you to the Plaguelands. You can hold only one call to arms: use Next if you carry Thunder Bluff's."),
@@ -1392,7 +1392,7 @@ do
 
   alternate("silithus-alt", "Silithus: Cenarion Hold", M.silithus, 55, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "winterspring-alt", "silithus-59" }, join({
     taxi("fly", nil, F.cenarion, "Fly to Cenarion Hold. Without that flight path, fly to Marshal's Refuge and take Un'Goro's north-west ramp into Silithus."),
     taxi("getfp", P.runk, F.cenarion, "Learn the Cenarion Hold flight path from Runk Windtamer."),
@@ -1400,7 +1400,7 @@ do
 
   alternate("winterspring-alt", "Winterspring: Everlook and the Winterfall", M.winterspring, 55, 60, {
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    QUESTIE,
+    QUEST_RECORDS,
   }, { "silithus-alt", "silithus-59" }, {
     taxi("fly", nil, F.everlook, "Fly to Everlook. Without that flight path, go through Timbermaw Hold from northern Felwood and ride east."),
     action("sethearth", P.vizzie, "Bind at the Everlook inn.", EVERLOOK_BIND),

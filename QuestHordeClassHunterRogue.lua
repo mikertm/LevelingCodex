@@ -44,7 +44,7 @@ do
 end
 
 -- Rogue: the Orc and Troll level 10 chain (Therzok's Shattered Hand), placed on the route's own
--- Orgrimmar and Southsea stops. RestedXP takes The Shattered Hand straight from Therzok for Orcs
+-- Orgrimmar and Southsea stops. reference guide A takes The Shattered Hand straight from Therzok for Orcs
 -- and Trolls, so Kaplak's referral (Orcs only) is a breadcrumb.
 do
   local at, q, accept, finish, objective = B.at, B.q, B.accept, B.finish, B.objectiveAt

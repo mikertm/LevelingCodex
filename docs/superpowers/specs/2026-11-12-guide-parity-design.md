@@ -90,7 +90,7 @@ shopping card still shows (it only buys on a click).
   point at the Auction House stay text-only.
 - `tools/questshop.py` writes the generated `QuestShopData.lua` (`ns.questShop[questID] =
   { { item, count }, ... }`), loaded after `QuestMobData.lua`: for every route quest (both
-  factions, `questroute.ROUTES`), its QuestieDB item objectives whose item has `vendors` and no
+  factions, `questroute.ROUTES`), its quest database item objectives whose item has `vendors` and no
   `npcDrops`/`objectDrops`/`itemDrops`. The count comes from the quest's objective text ("Bring 3
   Soothing Spices"); when the text doesn't name a count for the item, the count is 1 and the card
   waits for the quest log. `--check` fails when stale; the harness checks the shape.
@@ -165,11 +165,11 @@ probed once (`A.hasFile`); a missing one falls back to a gold dot drawn with a c
   `db.questArrowLocked`) and saves `db.questArrowPos`; Ctrl+mouse wheel sets `db.questArrowScale`
   (0.6-2.0, steps of 0.1). The rest of the frame, with its text, ignores the mouse.
 - Arrival state (`db.noArrowBounce` turns the animation off): when the waypoint is within
-  `Q.arrived()`, or QuestieDB's nearest spawn is "nearby", or the corpse is here. The arrow art
+  `Q.arrived()`, or quest database's nearest spawn is "nearby", or the corpse is here. The arrow art
   hides; the step icon (36 px) shows and loops a Translation animation (8 px up, 0.4 s, BOUNCE);
   the ring (`Interface\TaxiFrame\UI-Taxi-Icon-Highlight`, additive, gold) plays once: scale 0.6 to
   1.4 and alpha 1 to 0 over 0.6 s. The text reads the step's NPC over "Arrived" (path stops:
-  "Arrived (way in 2 of 3)"); QuestieDB's spawn keeps its "<mob> nearby" and the corpse its "Your
+  "Arrived (way in 2 of 3)"); quest database's spawn keeps its "<mob> nearby" and the corpse its "Your
   corpse is here". Entering the state starts the animations; leaving it stops them and
   shows the arrow again. Missing animation support: the icon shows without moving.
 - Settings: Lock the arrow, Arrow size -/+, Reset arrow (clears the position and scale), Animate the

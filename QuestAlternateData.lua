@@ -54,7 +54,7 @@ local menethilFlight = "Menethil Harbor, Wetlands"
 local ashSources = {
   "https://wowforeverinfo.com/guides/ashenvale-alliance-18-30/",
   "https://bindonforever.com/zones/ashenvale",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 q(967, "The Tower of Althalaxx", 18, 13, 966)

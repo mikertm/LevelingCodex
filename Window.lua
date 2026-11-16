@@ -2,14 +2,14 @@
 -- a round class portrait, character-sheet tabs, red panel buttons, check boxes, and cards with
 -- the tooltip border (parchment or dark). Morpheus headings and the theme's accent colour stay.
 -- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua). In the
--- EllesmereUI theme (Ellesmere.lua) the window is EllesmereUI's shell on a backing frame, the inside
+-- external UI theme (skin adapter) the window is external UI's shell on a backing frame, the inside
 -- the flat look in its colours and font.
 
 local _, ns = ...
 local C, rgba, plain, padText = ns.C, ns.rgba, ns.plain, ns.padText
 local A = ns.art
 
-local FONT_HEAD = "head" -- Morpheus, or the EllesmereUI font in its theme (ns.headFont)
+local FONT_HEAD = "head" -- Morpheus, or the external UI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
 
@@ -88,7 +88,7 @@ local function styleFS(fs, kind)
   local path, size, flags = fontOf(st[1], 12)
   local face, fl = st[2] or path, (st[2] and "") or flags or ""
   if face == FONT_HEAD then face = ns.headFont() end
-  local eui, euiFlags = ns.ellesmere.font()
+  local eui, euiFlags = ns.skinSupport.font()
   if eui and kind ~= "mono" then face, fl = eui, euiFlags end -- code keeps Arial Narrow
   fs:SetFont(face, st[3] or size, fl)
   local sh = (kind == "head" or kind == "title" or kind == "label") and 1 or 0
@@ -145,7 +145,7 @@ local function newCard()
 end
 
 -- The guide's flat card (when the client has no backdrops): fill, aged shade, double border. In the
--- EllesmereUI theme its panel: the fill and a 1 px border, nothing else.
+-- external UI theme its panel: the fill and a 1 px border, nothing else.
 local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
   if C.eui then
@@ -1113,9 +1113,9 @@ renderers.settings = function()
     "WoW: Forever's logo teal for the accents and highlights.")
   row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
     "The guide site's gold for the accents and highlights.")
-  if ns.ellesmere.available() then
-    row("EllesmereUI", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
-      "Your EllesmereUI look: its panels, your accent colour and your UI font. EllesmereUI's options can turn it off for the Codex (Blizzard Skins+ > Window Skins > Third-Party Addons).")
+  if ns.skinSupport.available() then
+    row("External skin", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
+      "Use your installed UI skin's panels, accent colour and font. Its skin settings can turn this off for the Codex.")
   end
   y = y + 40
 
@@ -1245,11 +1245,11 @@ renderers.settings = function()
     ns.placeQuestArrow()
   end, "Puts the arrow back above the step window at its normal size.")
   y = y + 36
-  if ns.questie.usable() then
-    tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
+  if ns.questSupport.usable() then
+    tick("Point the arrow at the nearest objective", not db.noNearestSpawn, function()
       db.noNearestSpawn = not db.noNearestSpawn
       ns.questRefresh()
-    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need. The spawns come from your QuestieDB addon.")
+    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need using your installed quest-data provider.")
   end
   tick("Track the step's quest in the quest tracker", not db.noQuestWatch, function() db.noQuestWatch = not db.noQuestWatch; ns.questRefresh() end,
     "Adds the current step's quest to the game's objective tracker. Quests you track yourself are left alone.")
@@ -1286,8 +1286,8 @@ renderers.settings = function()
     ns.playPartyPing(i)
     refresh()
   end, pingTips) + 8
-  if ns.questie.announces("objectives") or ns.questie.announces("items") then
-    y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
+  if ns.questSupport.announces("objectives") or ns.questSupport.announces("items") then
+    y = y - 4 + T("Your quest tracker already announces finished objectives and quest-starting items, so the Codex avoids repeating them.",
       28, y - 4, W - 28, "small", C.dim) + 6
   end
   T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
@@ -1328,17 +1328,17 @@ renderers.settings = function()
     "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
   tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
     "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
-  local questieKey = ns.questie.keyName()
-  local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
-  local function questieNote(on, text)
+  local providerKey = ns.questSupport.keyName()
+  local holdBack = "Hold Alt" .. (providerKey and (" or " .. providerKey) or "") .. " to stop it."
+  local function providerNote(on, text)
     if on then y = y - 4 + T(text, 28, y - 4, W - 28, "small", C.dim) + 6 end
   end
   tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
     "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. " .. holdBack)
-  questieNote(ns.questie.autoAccept(), "Questie's auto-accept is on, so Questie accepts quests.")
+  providerNote(ns.questSupport.autoAccept(), "Your quest tracker's auto-accept is on and handles quest pickups.")
   tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
     "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
-  questieNote(ns.questie.autoComplete(), "Questie's auto-complete is on, so Questie turns quests in.")
+  providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
   tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
     "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
   tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
@@ -1414,7 +1414,7 @@ end
 local function questSearch(x, y, w, value, onChange, onSubmit)
   local edit = take("edit", function()
     local box = CreateFrame("EditBox", "LevelingCodexQuestSearch", overlay, "InputBoxTemplate")
-    if C.eui then ns.ellesmere.call("EditBox", box) end -- its near-black box, the template art gone
+    if C.eui then ns.skinSupport.call("EditBox", box) end -- its near-black box, the template art gone
     box:SetAutoFocus(false)
     box:SetMaxLetters(80)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -1554,9 +1554,9 @@ local function flatChrome(f)
 end
 
 -- The game's dialog border and background, with a faint theme-coloured glow under the header;
--- EllesmereUI's window shell in its theme.
+-- external UI's window shell in its theme.
 local function chrome(f, glowHeight)
-  if ns.ellesmere.backing(f, "Shell") then return true end
+  if ns.skinSupport.backing(f, "Shell") then return true end
   if A.backdrop(f, "dialog") then
     -- the dialog background is see-through: darken it so names and effects in the world
     -- don't show through the text
@@ -1572,11 +1572,11 @@ local function chrome(f, glowHeight)
   return false
 end
 
--- A dark inset (the tooltip border) to hold scrolling content or a text box; EllesmereUI's darker
+-- A dark inset (the tooltip border) to hold scrolling content or a text box; external UI's darker
 -- inset panel in its theme.
 local function inset(parent)
   local f = A.frame("Frame", nil, parent)
-  if ns.ellesmere.backing(f, "Panel", { inset = true }) then return f end
+  if ns.skinSupport.backing(f, "Panel", { inset = true }) then return f end
   if not A.backdrop(f, "tooltip", { 0, 0, 0, 0.5 }, { C.edgeSoft[1], C.edgeSoft[2], C.edgeSoft[3], 1 }) then
     local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.35)
   end
@@ -1634,7 +1634,7 @@ local function makeFrame()
 
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
-  if C.eui then ns.ellesmere.call("CloseButton", close) end
+  if C.eui then ns.skinSupport.call("CloseButton", close) end
 
   -- level picker: view any level, with the spellbook's page arrows
   local nextB = A.arrow(header, "next"); nextB:SetPoint("TOPRIGHT", -36, -22)
@@ -1662,7 +1662,7 @@ local function makeFrame()
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 8, -10)
   scroll:SetPoint("BOTTOMRIGHT", -28, 10)
-  ns.ellesmere.scrollBar(scroll)
+  ns.skinSupport.scrollBar(scroll)
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(W, 10)
   scroll:SetScrollChild(content)
@@ -1693,7 +1693,7 @@ local function makeFrame()
     for _, b in ipairs(tabs) do b:SetWidth(math.floor((tonumber(b:GetWidth()) or 0) * share)) end
   end
 
-  ns.ellesmere.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
+  ns.skinSupport.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   -- after OnShow is set: the controller (Gamepad.lua) hooks it
   ns.gamepad.attach(frame, { main = true, scroll = scroll, focusables = listFocusables, onTab = cycleTab })
@@ -1785,8 +1785,8 @@ local function makeCopy()
   copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
-  if C.eui then ns.ellesmere.call("CloseButton", close) end
-  ns.ellesmere.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
+  if C.eui then ns.skinSupport.call("CloseButton", close) end
+  ns.skinSupport.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
   -- the controller: the text first, then the box's buttons along one row
   ns.gamepad.attach(copy, { popup = true, focusables = function()
@@ -1848,7 +1848,7 @@ function ns.toggleWindow()
 end
 
 -- Theme change: rebuild the window (and drop the banner) in the new colours. A closed window stays
--- closed (EllesmereUI's accent changes rebuild too).
+-- closed (external UI's accent changes rebuild too).
 function ns.rebuildForTheme()
   ns.useTheme(ns.themeName())
   ns.questRefresh()

@@ -2430,7 +2430,7 @@ end
 -- items you pick up (each new count; a route item that starts a quest) and quest progress (an
 -- objective finished, a quest ready to turn in). Nothing for what's in your log at login, at most a
 -- line a second (a newer count of the same item replaces a waiting one), nothing in a raid, and
--- what Questie already says in party chat is left to it.
+-- what quest tracker already says in party chat is left to it.
 function S.questPartyChat()
   MOCK.party = true
   local function goal(text, kind, have, need)
@@ -2493,8 +2493,8 @@ function S.questPartyChat()
   MOCK.event("BAG_UPDATE_DELAYED")
   MOCK.advance(1.1)
   check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1, "a route item that starts a quest")
-  -- Questie says finished objectives and quest-starting items itself: the Codex leaves those to it.
-  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  -- quest tracker says finished objectives and quest-starting items itself: the Codex leaves those to it.
+  MOCK.makeQuestProvider({ announce = { channel = "party", objectives = true, items = true } })
   MOCK.bags[1307] = 0
   MOCK.event("BAG_UPDATE_DELAYED")
   MOCK.bags[1307] = 1
@@ -2507,10 +2507,10 @@ function S.questPartyChat()
   set(bandana, 6)
   MOCK.advance(1.1)
   check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1
-    and said("{rt6} Codex: Objective complete: Defias Thug slain: 10/10 - [Brotherhood of Thieves]") == 0, "what Questie says is left to it")
+    and said("{rt6} Codex: Objective complete: Defias Thug slain: 10/10 - [Brotherhood of Thieves]") == 0, "what quest tracker says is left to it")
   check(said("{rt6} Codex: Loot: Red Burlap Bandana: 6/12 - [Brotherhood of Thieves]") == 1, "item counts still go out")
   click(win(), "Settings")
-  check(questText(win(), "leaves those to Questie"), "Settings says so")
+  check(questText(win(), "avoids repeating them"), "Settings explains duplicate announcement suppression")
   MOCK.raid = true
   set(bandana, 7)
   MOCK.advance(1.1)
@@ -2609,9 +2609,9 @@ function S.questPartyAnnouncementBudget()
   end
 end
 
-function S.questPartyQuestieAnnounce()
+function S.questPartyProviderAnnounce()
   MOCK.party = true
-  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  MOCK.makeQuestProvider({ announce = { channel = "party", objectives = true, items = true } })
   Questie.db.profile.questAnnounceAccepted = true
   Questie.db.profile.questAnnounceCompleted = true
   S.login()
@@ -2619,11 +2619,11 @@ function S.questPartyQuestieAnnounce()
   LevelingCodexDB.questAnnounceSteps = true
   MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
-  check(not MOCK.said, "Questie handles its enabled accepted-quest announcement")
+  check(not MOCK.said, "quest tracker handles its enabled accepted-quest announcement")
   MOCK.advance(1.1)
   MOCK.questLog, MOCK.questDone[783] = {}, true
   MOCK.event("QUEST_TURNED_IN", 783)
-  check(not MOCK.said, "Questie handles its enabled quest turn-in announcement")
+  check(not MOCK.said, "quest tracker handles its enabled quest turn-in announcement")
 end
 
 -- Trips through flight masters (QuestTravel.lua): the arrow leads to a flight master when flying
@@ -3382,8 +3382,8 @@ function S.questGossip()
   PlaySound = original
 end
 
--- Questie side by side: its auto-questing and hold-back key take precedence over the Codex's.
-function S.questQuestieAuto()
+-- quest tracker side by side: its auto-questing and hold-back key take precedence over the Codex's.
+function S.questIntegrationAuto()
   S.login()
   local frame = questViewer()
   check(questText(frame, "Accept - A Threat Within"), "fresh route starts with an accept")
@@ -3391,71 +3391,71 @@ function S.questQuestieAuto()
   MOCK.gossipAvailable = { { questID = 783, title = "A Threat Within" } }
   Questie = {} -- loaded, settings not built yet
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == 783, "Questie without settings leaves auto-accept to the Codex")
+  check(MOCK.gossipPicked == 783, "quest tracker without settings leaves auto-accept to the Codex")
   MOCK.gossipPicked = nil
-  MOCK.makeQuestie({ autoAccept = true })
+  MOCK.makeQuestProvider({ autoAccept = true })
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == nil, "Questie's auto-accept handles gossip lists")
+  check(MOCK.gossipPicked == nil, "quest tracker's auto-accept handles gossip lists")
   MOCK.interactionQuest = 783
   MOCK.event("QUEST_DETAIL")
-  check(not MOCK.questAccepted, "Questie's auto-accept handles the quest window")
-  MOCK.makeQuestie({ legacyAccept = true })
+  check(not MOCK.questAccepted, "quest tracker's auto-accept handles the quest window")
+  MOCK.makeQuestProvider({ legacyAccept = true })
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == nil, "an older Questie's autoaccept counts too")
+  check(MOCK.gossipPicked == nil, "an older quest tracker's autoaccept counts too")
   slash("quests")
   click(win(), "Settings")
-  check(questText(win(), "Questie's auto-accept is on, so Questie accepts quests."), "the tickbox says Questie handles it")
+  check(questText(win(), "Your quest tracker's auto-accept is on and handles quest pickups."), "the tickbox says quest tracker handles it")
 
-  MOCK.makeQuestie({}) -- auto-accept off, key Shift
+  MOCK.makeQuestProvider({}) -- auto-accept off, key Shift
   click(win(), "Settings")
   local box = findButton(win(), function(l) return l == "Auto-accept the current guide quest" end)
   MOCK.fire(box, "OnEnter")
   check(table.concat(GameTooltip._lines or {}, " "):find("Hold Alt or Shift to stop it.", 1, true),
-    "the tooltip names Questie's key")
+    "the tooltip names quest tracker's key")
   MOCK.shift = true
   MOCK.event("GOSSIP_SHOW")
   MOCK.event("QUEST_DETAIL")
-  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "Questie's key holds the Codex back")
+  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "quest tracker's key holds the Codex back")
   MOCK.shift, MOCK.alt = false, true
   MOCK.event("QUEST_DETAIL")
   check(not MOCK.questAccepted, "Alt holds back the quest window too")
   MOCK.alt = false
   MOCK.event("QUEST_DETAIL")
-  check(MOCK.questAccepted == 783, "the Codex accepts when Questie's auto-accept is off and no key is held")
+  check(MOCK.questAccepted == 783, "the Codex accepts when quest tracker's auto-accept is off and no key is held")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
-    "debug reports Questie's settings")
+  check(chatHas("quest tracker: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
+    "debug reports quest tracker's settings")
 
   local objective = { text = "Speak to McBride 1/1", numFulfilled = 1, numRequired = 1, finished = true }
   MOCK.questLog = { { questID = 783, title = "A Threat Within", objectives = { objective } } }
   MOCK.event("QUEST_ACCEPTED", 783)
   MOCK.event("QUEST_LOG_UPDATE")
   LevelingCodexDB.questAutoTurnin, MOCK.questChoices = true, 0
-  MOCK.makeQuestie({ autocomplete = true })
+  MOCK.makeQuestProvider({ autocomplete = true })
   MOCK.event("QUEST_COMPLETE")
-  check(not MOCK.questRewarded, "Questie's auto-complete handles turn-ins")
+  check(not MOCK.questRewarded, "quest tracker's auto-complete handles turn-ins")
   click(win(), "Settings")
-  check(questText(win(), "Questie's auto-complete is on, so Questie turns quests in."), "the turn-in tickbox says so")
-  MOCK.makeQuestie({})
+  check(questText(win(), "Your quest tracker's auto-complete is on and handles quest turn-ins."), "the turn-in tickbox says so")
+  MOCK.makeQuestProvider({})
   MOCK.event("QUEST_COMPLETE")
-  check(MOCK.questRewarded == 783, "the Codex turns in when Questie's auto-complete is off")
+  check(MOCK.questRewarded == 783, "the Codex turns in when quest tracker's auto-complete is off")
 end
 
--- Questie side by side: the step window sits beside Questie's tracker until you move it.
-function S.questQuestieTracker()
+-- quest tracker side by side: the step window sits beside external quest tracker until you move it.
+function S.questIntegrationTracker()
   S.login()
   local viewer = questViewer()
   local p, rel, rp, x, y = viewer:GetPoint()
-  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without Questie")
-  MOCK.makeQuestie({ cx = 1700 }) -- Questie builds its tracker after login
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without quest tracker")
+  MOCK.makeQuestProvider({ cx = 1700 }) -- quest tracker builds its tracker after login
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
   check(p == "TOPRIGHT" and rel == Questie_BaseFrame and rp == "TOPLEFT" and x == -12 and y == -40,
     "beside a right-hand tracker, on its left")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Step window: beside Questie's tracker"), "debug names the placement")
+  check(chatHas("Step window: beside external quest tracker"), "debug names the placement")
   Questie_BaseFrame._cx = 200
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
@@ -3473,17 +3473,17 @@ function S.questQuestieTracker()
   Questie_BaseFrame:Show()
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
-  check(rel == UIParent and x == -78, "a dragged position wins over Questie's tracker")
+  check(rel == UIParent and x == -78, "a dragged position wins over external quest tracker")
   MOCK.chat = {}
   slash("debug")
   check(chatHas("Step window: saved position"), "debug names the saved position")
 end
 
--- Questie's tracker changing without a quest event, in combat, and an anchor the client refuses.
-function S.questQuestieTrackerLive()
+-- external quest tracker changing without a quest event, in combat, and an anchor the client refuses.
+function S.questIntegrationTrackerLive()
   S.login()
   local viewer = questViewer()
-  MOCK.makeQuestie({ cx = 1700 })
+  MOCK.makeQuestProvider({ cx = 1700 })
   MOCK.advance(0.25)
   check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "a tracker shown without a quest event is noticed on the next tick")
   MOCK.combat = true
@@ -3507,10 +3507,10 @@ function S.questQuestieTrackerLive()
   check(chatHas("Step window: default spot"), "debug says where the window is")
 end
 
--- QuestieDB fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
+-- quest database fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
 local function koboldDB(opts)
   opts = opts or {}
-  MOCK.makeQuestieDB({
+  MOCK.makeQuestDataProvider({
     contract = opts.contract, noZones = opts.noZones,
     quests = { [7] = { objectives = opts.objectives or { [1] = { { 6, nil, 0 }, { 257, nil, 0 }, { 999, nil, 0 } } } } },
     npcs = {
@@ -3524,32 +3524,32 @@ local function koboldDB(opts)
   })
 end
 
-function S.questQuestieDB()
+function S.questIntegrationDB()
   S.login()
   slash("quests")
   click(win(), "Settings")
-  check(not questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "no setting without QuestieDB")
+  check(not questText(win(), "Point the arrow at the nearest objective"), "no setting without quest database")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: not loaded") and chatHas("QuestieDB: not installed"), "debug names what is missing")
+  check(chatHas("quest tracker: not loaded") and chatHas("quest database: not installed"), "debug names what is missing")
   koboldDB({ contract = 0 })
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(contract check failed%)"), "an incompatible QuestieDB is refused")
+  check(chatHas("quest database: off %(contract check failed%)"), "an incompatible quest database is refused")
   koboldDB({ noZones = true })
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(no zone table%)"), "QuestieDB without its zone table is refused")
+  check(chatHas("quest database: off %(no zone table%)"), "quest database without its zone table is refused")
   koboldDB()
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable QuestieDB is reported")
+  check(chatHas("quest database: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable quest database is reported")
   click(win(), "Settings")
-  check(questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "the setting shows with QuestieDB")
+  check(questText(win(), "Point the arrow at the nearest objective"), "the setting shows with quest database")
 end
 
-function S.questQuestieMinimal()
-  MOCK.makeQuestie({ autoAccept = true })
+function S.questIntegrationMinimal()
+  MOCK.makeQuestProvider({ autoAccept = true })
   koboldDB()
   S.login()
   slash("quests")
@@ -3558,7 +3558,7 @@ function S.questQuestieMinimal()
   MOCK.event("QUEST_DETAIL")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: loaded") and chatHas("QuestieDB: contract 4"), "the Questie block works on a minimal client")
+  check(chatHas("quest tracker: loaded") and chatHas("quest database: contract 4"), "the quest tracker block works on a minimal client")
 end
 
 -- The last-mile arrow: Kobold Camp Cleanup's camp is at (48.8, 36.4) in Elwynn.
@@ -3574,7 +3574,7 @@ local function moveTo(x, y)
   MOCK.advance(0.25)
 end
 
-function S.questQuestieNearest()
+function S.questIntegrationNearest()
   koboldDB()
   local vermin = { text = "Kobold Vermin 4/10", finished = false }
   koboldCamp({ vermin }, 48.8, 50.0)
@@ -3618,13 +3618,13 @@ function S.questQuestieNearest()
   check(not questText(arrow, "Kobold Vermin"), "a new step drops the old nearest target")
 end
 
-function S.questQuestieNearestFallback()
+function S.questIntegrationNearestFallback()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 10/10", finished = true }, { text = "Gnoll Pelt 0/5", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Worker - 242 yd"), "the wide fallback leaves out finished objectives")
 end
 
-function S.questQuestieNearestItem()
+function S.questIntegrationNearestItem()
   koboldDB({
     objectives = { [3] = { { 1001, nil, 0 } } },
     items = { [1001] = { name = "Large Candle", npcDrops = { 6 }, objectDrops = { 50 } } },
@@ -3637,8 +3637,8 @@ function S.questQuestieNearestItem()
   check(questText(arrow, "Candle Box nearby"), "nearby an item source")
 end
 
-function S.questQuestieNearestPart()
-  MOCK.makeQuestieDB({
+function S.questIntegrationNearestPart()
+  MOCK.makeQuestDataProvider({
     quests = { [92745] = { objectives = { [1] = { { 1101, nil, 0 }, { 1102, nil, 0 } } } } },
     npcs = {
       [1101] = { name = "Kobold Digger", spawns = { [40] = { { 46.5, 22.0 } } } },
@@ -3666,7 +3666,7 @@ function S.questQuestieNearestPart()
 end
 
 -- Deferred review minors, one scenario each.
-function S.questQuestieNearestCleared()
+function S.questIntegrationNearestCleared()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
@@ -3679,13 +3679,13 @@ function S.questQuestieNearestCleared()
   check(questText(arrow, "Kobold Vermin - 145 yd"), "it counts again after 90 seconds")
 end
 
-function S.questQuestieArrowClamp()
+function S.questIntegrationArrowClamp()
   S.login()
   local _, _, top = questViewer():GetClampRectInsets()
   check(top and top >= 76, "the screen clamp keeps the arrow above the window on screen")
 end
 
-function S.questQuestieNearestRetext()
+function S.questIntegrationNearestRetext()
   koboldDB()
   local line = { text = "", finished = false } -- objective text not loaded yet
   koboldCamp({ line }, 48.8, 44.0)
@@ -3697,47 +3697,47 @@ function S.questQuestieNearestRetext()
   check(questText(arrow, "Kobold Worker - 242 yd"), "the objective text arriving narrows the search")
 end
 
-function S.questQuestieNearestLateData()
+function S.questIntegrationNearestLateData()
   local quests = {}
-  MOCK.makeQuestieDB({ quests = quests, npcs = { [6] = { name = "Kobold Vermin", spawns = { [12] = { { 50.0, 38.0 } } } } } })
+  MOCK.makeQuestDataProvider({ quests = quests, npcs = { [6] = { name = "Kobold Vermin", spawns = { [12] = { { 50.0, 38.0 } } } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
-  check(questText(arrow, "176 yd"), "no QuestieDB objectives yet: today's arrow")
+  check(questText(arrow, "176 yd"), "no quest database objectives yet: today's arrow")
   quests[7] = { objectives = { [1] = { { 6, nil, 0 } } } }
   MOCK.advance(5)
   check(questText(arrow, "Kobold Vermin - 145 yd"), "an empty spawn list is looked up again after 5 seconds")
 end
 
-function S.questQuestieRecheck()
+function S.questIntegrationRecheck()
   koboldDB({ contract = 0 })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "176 yd"), "a refused contract keeps today's arrow")
-  LibQuestieDB.RequireContract = function() return true end -- QuestieDB finished starting up
+  LibQuestieDB.RequireContract = function() return true end -- quest database finished starting up
   MOCK.advance(10)
-  check(questText(arrow, "Kobold Vermin - 145 yd"), "QuestieDB is checked once more after 10 seconds")
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "quest database is checked once more after 10 seconds")
 end
 
-function S.questQuestieNearestEmptyText()
+function S.questIntegrationNearestEmptyText()
   koboldDB({ objectives = { [1] = { { 6, "", 0 } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty objective text falls back to the NPC's name")
 end
 
-function S.questQuestieNearestEmptyName()
-  MOCK.makeQuestieDB({ quests = { [7] = { objectives = { [1] = { { 6, "Kobold Vermin", 0 } } } } },
+function S.questIntegrationNearestEmptyName()
+  MOCK.makeQuestDataProvider({ quests = { [7] = { objectives = { [1] = { { 6, "Kobold Vermin", 0 } } } } },
     npcs = { [6] = { name = "", spawns = { [12] = { { 50.0, 38.0 } } } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty NPC name falls back to the objective's")
 end
 
-function S.questQuestieNearestNoRows()
+function S.questIntegrationNearestNoRows()
   koboldDB()
   koboldCamp({}, 48.8, 44.0) -- the log gives no objective lines
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "no objective lines: the wide search")
 end
 
-function S.questQuestieNearestNoScale()
+function S.questIntegrationNearestNoScale()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   LevelingCodexQuests.ALLIANCE.extents[1429] = nil
@@ -3747,7 +3747,7 @@ function S.questQuestieNearestNoScale()
   check(chatHas("arrow: no map scale"), "debug says the map scale is missing")
 end
 
-function S.questQuestieNearestRoundTrip()
+function S.questIntegrationNearestRoundTrip()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local frame, arrow = questViewer(), LevelingCodexQuestArrow
@@ -3760,26 +3760,26 @@ function S.questQuestieNearestRoundTrip()
   check(questText(arrow, "268 yd"), "leaving the step and coming back starts outside the camp")
 end
 
-function S.questQuestieNearestError()
+function S.questIntegrationNearestError()
   koboldDB()
-  MOCK.questieDBError = true
+  MOCK.questDataError = true
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "a read error keeps today's arrow")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(read failed"), "debug names the read error")
-  MOCK.questieDBError = false
+  check(chatHas("quest database: off %(read failed"), "debug names the read error")
+  MOCK.questDataError = false
   MOCK.advance(0.25)
   check(questText(arrow, "176 yd"), "no retry straight away")
   MOCK.advance(10)
   check(questText(arrow, "Kobold Vermin - 145 yd"), "one retry after 10 seconds")
-  MOCK.questieDBError = true
+  MOCK.questDataError = true
   MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", finished = false },
     { text = "Kobold Worker 0/5", finished = false } } } }
   MOCK.event("QUEST_LOG_UPDATE")
   MOCK.advance(0.25)
-  MOCK.questieDBError = false
+  MOCK.questDataError = false
   MOCK.advance(15)
   check(questText(arrow, "176 yd"), "a second read error turns it off for the session")
 end
@@ -10246,8 +10246,8 @@ function S.questFreshProgress()
 end
 
 ----------------------------------------------------------------------------
--- EllesmereUI (MOCK.makeEllesmere): its skin API themes the Codex. Its pieces must only go on the
--- backing frames the Codex makes for them: EllesmereUI fades every texture of a frame it skinned again
+-- external UI (MOCK.makeexternal UI): its skin API themes the Codex. Its pieces must only go on the
+-- backing frames the Codex makes for them: external UI fades every texture of a frame it skinned again
 -- whenever some Blizzard windows open (the talent window among them, under the talent card).
 ----------------------------------------------------------------------------
 
@@ -10263,19 +10263,19 @@ local function euiCalled(kind, frame)
   return false
 end
 
--- Every frame EllesmereUI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
+-- Every frame external UI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
 local function euiOnlyOnBacking()
   for frame, kind in pairs(MOCK.eui.skinned) do
     if MOCK.eui.restrip[frame] then
-      check(frame.codexSkin, "EllesmereUI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
+      check(frame.codexSkin, "external UI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
       for _, r in ipairs({ frame:GetRegions() }) do
-        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an EllesmereUI backing frame", 2)
+        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an external UI backing frame", 2)
       end
     end
   end
 end
 
--- EllesmereUI's re-fade leaves every Codex texture under these frames as it was.
+-- external UI's re-fade leaves every Codex texture under these frames as it was.
 local function survivesRestrip(roots, what)
   local before, n = {}, 0
   for _, root in ipairs(roots) do
@@ -10287,7 +10287,7 @@ local function survivesRestrip(roots, what)
   end
   check(n > 0, what .. " has textures to check", 2)
   MOCK.euiRestrip()
-  for r, a in pairs(before) do check(r:GetAlpha() == a, "EllesmereUI's re-fade hid a texture of " .. what, 2) end
+  for r, a in pairs(before) do check(r:GetAlpha() == a, "external UI's re-fade hid a texture of " .. what, 2) end
 end
 
 local function usesFont(root, path)
@@ -10302,20 +10302,20 @@ end
 
 local MORPHEUS = "Fonts\\MORPHEUS.TTF"
 
--- Installed and on: the theme at login, EllesmereUI's shell, close button and font, nothing on content.
+-- Installed and on: the theme at login, external UI's shell, close button and font, nothing on content.
 function S.euiSkin()
   local E = MOCK.eui
-  check(E and E.fired.LevelingCodex, "the Codex registered its skin with EllesmereUI and it ran")
+  check(E and E.fired.LevelingCodex, "the Codex registered its skin with external UI and it ran")
   check(#E.registry == 1, "registered once (" .. #E.registry .. ")")
   if not D() then return end
   openAt(30, "This Level")
   local f = win()
-  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has EllesmereUI's window shell")
-  check(f._backdrop == nil, "no Blizzard dialog border under the EllesmereUI shell")
-  check(euiCalled("CloseButton"), "the close button is EllesmereUI's")
-  check(euiCalled("PageButton"), "the level arrows are EllesmereUI's")
-  check(usesFont(f, E.font), "the window's text is in the EllesmereUI font")
-  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the EllesmereUI theme")
+  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has external UI's window shell")
+  check(f._backdrop == nil, "no Blizzard dialog border under the external UI shell")
+  check(euiCalled("CloseButton"), "the close button is external UI's")
+  check(euiCalled("PageButton"), "the level arrows are external UI's")
+  check(usesFont(f, E.font), "the window's text is in the external UI font")
+  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the external UI theme")
   for _, tab in ipairs({ "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }) do
     click(win(), tab)
     check(not usesFont(win(), MORPHEUS), "no Morpheus on " .. tab)
@@ -10324,7 +10324,7 @@ function S.euiSkin()
   euiOnlyOnBacking()
   survivesRestrip({ win() }, "the Codex window")
   local v = questViewer()
-  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has EllesmereUI's panel")
+  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has external UI's panel")
   check(v._backdrop == nil, "no Blizzard dialog border on the step window")
   check(not usesFont(v, MORPHEUS), "no Morpheus on the step window")
   survivesRestrip({ v }, "the step window")
@@ -10332,14 +10332,14 @@ function S.euiSkin()
   win():Hide()
 end
 
--- The trainer, talent, crafting and vendor cards: an EllesmereUI panel behind them, their icons kept.
+-- The trainer, talent, crafting and vendor cards: an external UI panel behind them, their icons kept.
 function S.euiCards()
   local seen = 0
   for _, name in ipairs({ "LevelingCodexTrainerHint", "LevelingCodexTalentHint", "LevelingCodexCraftHint", "LevelingCodexShopCard" }) do
     local card = _G[name]
     if card then
       seen = seen + 1
-      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an EllesmereUI panel behind it")
+      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an external UI panel behind it")
       check(card._backdrop == nil, name .. " has no Blizzard tooltip border")
       check(not usesFont(card, MORPHEUS), name .. " has no Morpheus heading")
       survivesRestrip({ card }, name)
@@ -10349,29 +10349,29 @@ function S.euiCards()
   euiOnlyOnBacking()
 end
 
--- Settings: the EllesmereUI theme sits beside the other two and a choice made with it on is kept apart.
+-- Settings: the external UI theme sits beside the other two and a choice made with it on is kept apart.
 function S.euiThemePick()
   if not D() then return end
   openAt(30, "Settings")
-  check(findButton(win(), function(l) return l == "EllesmereUI" end), "Settings offers the EllesmereUI theme")
+  check(findButton(win(), function(l) return l == "External skin" end), "Settings offers the external UI theme")
   local before = LevelingCodexDB.theme
   click(win(), "Forever (teal)")
-  check(LevelingCodexDB.euiTheme == "forever", "the choice made with EllesmereUI on is saved apart")
-  check(LevelingCodexDB.theme == before, "the theme without EllesmereUI is untouched")
-  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the EllesmereUI shell")
+  check(LevelingCodexDB.euiTheme == "forever", "the choice made with external UI on is saved apart")
+  check(LevelingCodexDB.theme == before, "the theme without external UI is untouched")
+  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the external UI shell")
   check(not MOCK.minimal == (win()._backdrop ~= nil), "Forever teal draws its own border again")
   local v = _G.LevelingCodexQuestViewer
-  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the EllesmereUI panel") end
+  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the external UI panel") end
   click(win(), "Settings")
-  click(win(), "EllesmereUI")
-  check(LevelingCodexDB.euiTheme == "ellesmere", "EllesmereUI chosen again")
-  check(win().euiSkin and win().euiSkin:IsShown(), "the EllesmereUI shell is back")
+  click(win(), "External skin")
+  check(LevelingCodexDB.euiTheme == "ellesmere", "external UI chosen again")
+  check(win().euiSkin and win().euiSkin:IsShown(), "the external UI shell is back")
   if v and v:IsShown() then check(v.euiSkin and v.euiSkin:IsShown(), "the step window's panel is back") end
   euiOnlyOnBacking()
   win():Hide()
 end
 
--- A new accent colour in EllesmereUI repaints the Codex and never opens a closed window. A colour
+-- A new accent colour in external UI repaints the Codex and never opens a closed window. A colour
 -- picker sends a change for every step of a drag: the Codex repaints once, after the last.
 function S.euiAccent()
   if not D() then return end
@@ -10381,7 +10381,7 @@ function S.euiAccent()
   check(not (win() and win():IsShown()), "an accent change leaves the window closed")
   openAt(30, "Settings")
   local accent = MOCK.ns.C.accent
-  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows EllesmereUI's new accent")
+  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows external UI's new accent")
   local function shells()
     local n = 0
     for _, c in ipairs(MOCK.eui.calls) do if c[1] == "Shell" then n = n + 1 end end
@@ -10402,21 +10402,21 @@ function S.euiDebug()
   MOCK.chat = {}
   slash("debug")
   if MOCK.eui and MOCK.eui.off then
-    check(chatHas("EllesmereUI: installed, skin off"), "debug says EllesmereUI's skin is off for the Codex")
+    check(chatHas("external UI: installed, skin off"), "debug says external UI's skin is off for the Codex")
   elseif MOCK.eui then
-    check(chatHas("EllesmereUI: skin on %(api 4, style eui%)"), "debug says the EllesmereUI skin is on")
+    check(chatHas("external UI: skin on %(api 4, style eui%)"), "debug says the external UI skin is on")
   else
-    check(chatHas("EllesmereUI: not installed"), "debug says EllesmereUI isn't installed")
+    check(chatHas("external UI: not installed"), "debug says external UI isn't installed")
   end
 end
 
--- EllesmereUI installed with its skin for the Codex turned off: nothing changes.
+-- external UI installed with its skin for the Codex turned off: nothing changes.
 function S.euiOff()
   check(MOCK.eui and not MOCK.eui.fired.LevelingCodex, "the skin callback never ran")
   if not D() then return end
   openAt(30, "Settings")
-  check(not findButton(win(), function(l) return l == "EllesmereUI" end), "no EllesmereUI theme while its skin is off")
-  check(not win().euiSkin, "no EllesmereUI shell")
+  check(not findButton(win(), function(l) return l == "External skin" end), "no external UI theme while its skin is off")
+  check(not win().euiSkin, "no external UI shell")
   check(not MOCK.minimal == (win()._backdrop ~= nil), "the Codex draws its own border")
   win():Hide()
   S.euiDebug()
@@ -10424,33 +10424,33 @@ end
 
 function S.euiDispatch() MOCK.euiDispatch() end
 
--- EllesmereUI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
+-- external UI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
 function S.euiLate()
   local v = questViewer()
-  check(not v.euiSkin, "Forever teal until EllesmereUI's callback runs")
+  check(not v.euiSkin, "Forever teal until external UI's callback runs")
   if D() then openAt(30, "This Level"); win():Hide() end
   MOCK.euiDispatch()
   check(MOCK.eui.fired.LevelingCodex, "the callback ran")
-  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the EllesmereUI panel at once")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the external UI panel at once")
   check(not usesFont(v, MORPHEUS), "and its fonts")
   if D() then
     check(not win():IsShown(), "the window stays closed")
     openAt(30, "This Level")
-    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the EllesmereUI theme")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the external UI theme")
     win():Hide()
   end
   euiOnlyOnBacking()
 end
 
--- Saved settings from before EllesmereUI (Codex gold): installing EllesmereUI still brings its theme.
+-- Saved settings from before external UI (Codex gold): installing external UI still brings its theme.
 function S.euiSkinOn()
   check(MOCK.eui.fired.LevelingCodex, "the callback ran")
-  check(MOCK.ns.C.eui == true, "the EllesmereUI theme is on")
+  check(MOCK.ns.C.eui == true, "the external UI theme is on")
   local v = questViewer()
-  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the EllesmereUI panel")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the external UI panel")
   if D() then
     openAt(30, "This Level")
-    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the EllesmereUI shell")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the external UI shell")
     win():Hide()
   end
   euiOnlyOnBacking()

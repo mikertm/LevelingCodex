@@ -42,7 +42,7 @@ local function with(step, fields)
   return step
 end
 
--- Quests (facts: tools/questfacts.py, QuestieDB Forever 0f7d8ad; Forever IDs checked in tools/reference/forever.json).
+-- Quests (facts: tools/questfacts.py, quest database Forever 0f7d8ad; Forever IDs checked in tools/reference/forever.json).
 q(441, "Raleigh and the Undercity", 16, 10, 440)
 q(530, "A Husband's Revenge", 20, 10, 441)
 q(1013, "The Book of Ur", 26, 16)
@@ -92,7 +92,7 @@ q(893, "Weapons of Choice", 24, 17)
 q(1130, "Melor Sends Word", 30, 20)
 q(1131, "Steelsnap", 30, 20, 1130)
 -- Weapons of Choice: the three Razormane weapons drop in the southern camps around Kuz, Lok and Nak
--- (QuestieDB), which the route clears anyway. Its follow-up is taken on the Thousand Needles trip
+-- (quest database), which the route clears anyway. Its follow-up is taken on the Thousand Needles trip
 -- and only shows once Weapons of Choice is turned in.
 q(1153, "A New Ore Sample", 29, 25, 893)
 quest[1153].ifDone = 893
@@ -174,7 +174,7 @@ carriedQ(6462, "Troll Charm", 24, 19)
 -- Raleigh and the Undercity follows The Engraved Ring, which only the Undead route takes.
 quest[441].race, quest[530].race = "SCOURGE", "SCOURGE"
 
--- Thunder Bluff and Undercity trainers (QuestieDB spawns; RestedXP for the two it lacks).
+-- Thunder Bluff and Undercity trainers (quest database spawns; reference guide A for the two it lacks).
 local tb = function(name, x, y) return at(name, x, y, M.thunderBluff) end
 local ucTrainers = {
   { "WARRIOR", at("Angela Curthas", 48.3, 16.0, M.undercity) },
@@ -674,7 +674,7 @@ local sources = {
   "https://bindonforever.com/zones/ashenvale",
   "https://bindonforever.com/zones/thousand-needles",
   "https://www.warcrafttavern.com/forever/guides/leveling",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 for _, section in ipairs({

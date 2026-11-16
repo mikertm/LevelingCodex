@@ -367,7 +367,7 @@ do
     "https://bindonforever.com/zones/mulgore",
     "https://www.warcrafttavern.com/forever/guides/tauren/",
     "https://mobalytics.gg/wow-forever/guides/wow-forever-race-class-combinations",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
     "https://wago.tools/db2/QuestV2?build=1.60.1.70862",
   }
   route.sections[#route.sections + 1] = { id = "camp-narache", title = "Camp Narache", zone = mulgore, levels = { 1, 6 },

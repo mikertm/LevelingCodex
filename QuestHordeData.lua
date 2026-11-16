@@ -92,7 +92,7 @@ local route = {
 LevelingCodexQuests.HORDE = route
 
 -- Durotar: the Valley of Trials (1-6), then Sen'jin, Razor Hill and Orgrimmar (6-12), ending at
--- the Barrens' Far Watch Outpost. Order from RestedXP's Forever Durotar chapters (its Hunter and
+-- the Barrens' Far Watch Outpost. Order from reference guide A's Forever Durotar chapters (its Hunter and
 -- Shaman path, which stays in Kalimdor); text and simplifications are ours.
 do
   local at, q, quest = B.at, B.q, B.quest
@@ -491,7 +491,7 @@ do
   local sources = {
     "https://bindonforever.com/zones/durotar",
     "https://www.warcrafttavern.com/forever/guides/leveling",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }
   route.starts.ORC, route.starts.TROLL = "valley-of-trials", "valley-of-trials"
   route.sections[#route.sections + 1] = { id = "valley-of-trials", title = "Valley of Trials", zone = durotar,

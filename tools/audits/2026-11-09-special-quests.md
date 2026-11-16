@@ -1,6 +1,6 @@
 # Alliance special quests
 
-These detours can be started independently of the leveling route. Their quest IDs and waypoint maps are in the Forever client reference (`1.60.1.70862`). The cached Forever quest records supply NPC and object positions, quest levels, and prerequisites where present. Each section is marked for live verification. [QuestieDB Forever records](https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever)
+These detours can be started independently of the leveling route. Their quest IDs and waypoint maps are in the Forever client reference (`1.60.1.70862`). The cached Forever quest records supply NPC and object positions, quest levels, and prerequisites where present. Each section is marked for live verification. external reference
 
 ## Seeking Caitlin
 

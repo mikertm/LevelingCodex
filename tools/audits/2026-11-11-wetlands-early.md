@@ -7,7 +7,7 @@ Section: `wetlands-early` in `QuestAlternateData.lua` ("Wetlands: The Green Belt
 - **Guide A** (local copy, see `2026-11-10-guide-cross-reference.md`): its "23-24 Wetlands" chapter in four versions (speedrun, Hunter, dungeon and Mage AoE), plus "27-29 Wetlands" to see what it leaves for later. We used only quest IDs, how quests are grouped and in what order, and the positions of Forever-only objects. Its world-yard coordinates were converted to map percentages from the Wetlands extents (4135.417 x 2756.25 yd). Two known NPCs check the conversion: Shellei and Rethiel land within 0.01.
 - [Bind on Forever: Wetlands](https://bindonforever.com/zones/wetlands): the quest list with Forever IDs, and its Dwarf/Gnome visit order (visit 2 at 22-24, visit 3 at 24).
 - [games.gg Wetlands guide](https://games.gg/world-of-warcraft/guides/wow-forever-wetlands-leveling-guide/): recommends arriving by ship at 20-21 and binding in Menethil. Its quest grouping, by area, matches ours.
-- `tools/questfacts.py` (QuestieDB Forever plus traces): every level, minimum level, prerequisite, giver and mob spawn below. Every quest ID is in the Forever client reference.
+- `tools/questfacts.py` (quest database Forever plus traces): every level, minimum level, prerequisite, giver and mob spawn below. Every quest ID is in the Forever client reference.
 - No public source gives a step-by-step 20-25 order. Several guides note that Forever's new Wetlands quests are missing from the public databases.
 
 ## What was wrong
@@ -100,7 +100,7 @@ Per quest, that is about 1,030 yd before and 550 yd after by ship, or 930 yd bef
 
 - The fastest arrival from Lakeshire or Duskwood at 20-22: walking through Dun Algaz, or two ships by way of Auberdine.
 - Halloran offers 484 on the first visit (the step's existing uncertain note).
-- Tarrel offers 305 to a player who never brought Hollee's note. QuestieDB lists no prerequisite.
+- Tarrel offers 305 to a player who never brought Hollee's note. quest database lists no prerequisite.
 - Thelgen Rock: the cave mouth at 52.6, 62.9, and which stalkers drop the Unruptured Stalker Gland.
 - The north-west Mosshide camp (44.3, 34.0): the flint drop rate, and whether walking north of Angerfang is safe at 22.
 - The Sida's Bag drop rate at Ironbeard's Tomb.

@@ -566,7 +566,7 @@ elite(98283, "Carnage")
 q(294, "Ormer's Revenge", 24, 22)
 q(295, "Ormer's Revenge", 27, 22, 294)
 q(296, "Ormer's Revenge", 29, 22, 295)
--- QuestieDB says level 25, but Whelgar offered it to a level 24 in game (2026-11-12).
+-- quest database says level 25, but Whelgar offered it to a level 24 in game (2026-11-12).
 q(299, "Uncovering the Past", 28, 24)
 q(279, "Claws from the Deep", 22, 20)
 q(281, "Reclaiming Goods", 25, 20, 279)
@@ -1484,7 +1484,7 @@ local dm = (function()
     "https://bindonforever.com/zones/dun-morogh",
     "https://forg.gg/en/forever/zones/dun-morogh",
     "https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }
   return { coldridge = withTrainers(coldridge, coldridgeTrainers), kharanos = withTrainers(kharanos, kharanosTrainers),
     sources = sources }
@@ -1501,7 +1501,7 @@ local zephras = 2521
 local zi = {}
 function zi.at(name, x, y) return at(name, x, y, zephras) end
 
--- (b) Quest levels and minimums from QuestieDB Forever. Chains use the High Order branch.
+-- (b) Quest levels and minimums from quest database Forever. Chains use the High Order branch.
 q(92460, "Coming of Age", 1, 1, nil, true)
 q(92461, "Harmony in Balance", 1, 1, 92460, true)
 q(92462, "Infestation Investigation", 2, 1, 92460, true)
@@ -1956,7 +1956,7 @@ zi.sources = {
   "https://www.warcrafttavern.com/forever/guides/how-to-get-to-ironforge-from-the-zephras-isle/",
   "https://gamer-guides.com/warcraft-forever/zephras-isle-to-stormwind-orgrimmar/",
   "https://allthings.how/how-to-complete-the-magical-city-of-dalaran-in-wow-forever/",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 -- Night Elf start, levels 1-12: Shadowglen, Teldrassil and Darnassus, then the Forever ship
@@ -2360,7 +2360,7 @@ te.sources = {
   "https://bindonforever.com/quest/98067",
   "https://warcraft.wiki.gg/wiki/Idrieth_Mossgrove",
   "https://www.warcrafttavern.com/wow-classic/guides/alliance-leveling-guide/",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 
@@ -2601,7 +2601,7 @@ local lm = (function()
   }
 
   return { steps = steps, sources = {
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
     "https://bindonforever.com/zones/loch-modan",
     "https://polestar.guide/guides/alliance/03-loch-modan",
     "https://warcraft.blizzplanet.com/world-of-warcraft-forever-loch-modan-quests/",
@@ -2959,7 +2959,7 @@ local ds = (function()
       "https://worldofwarcraft.blizzard.com/en-us/news/24304071/world-of-warcraft-forever-found-photos-panel-recap",
       "https://azeroth.wiki/forever/quests/business-in-auberdine",
       "https://wago.tools/db2/QuestV2?build=1.60.1.70862",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf",
+      "Cached quest records (revision 0f7d8ad)",
       "https://www.wowhead.com/forever/quests/kalimdor/darkshore",
       "https://bindonforever.com/zones/darkshore",
     },
@@ -2973,7 +2973,7 @@ local sources = {
   "https://forg.gg/en/forever/zones/elwynn-forest",
   "https://bindonforever.com/zones/elwynn-forest",
   "https://www.oraclenewsnetwork.com/quests",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 local westSources = {

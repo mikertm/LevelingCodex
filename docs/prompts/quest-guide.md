@@ -60,8 +60,8 @@ downloads tables from there):
   classic dungeon got a new loot table.
 - Travel: Stormwind Harbor, a ship between Auberdine and Stormwind Harbor, a new Hillsbrad boat stop on the
   Wetlands-Darkshore route.
-- Existing Forever quest addons on CurseForge: **ForeverQuest** (Questie-style helper: tracker, map markers,
-  minimap guidance, a bundled database of about 3,800 legacy Classic quests) and **AllyRoute**. Look at their
+- Existing Forever quest addons on CurseForge: **quest helper** (quest tracker-style helper: tracker, map markers,
+  minimap guidance, a bundled database of about 3,800 legacy Classic quests) and **quest helper**. Look at their
   CurseForge pages to see what players already have. Never copy their code or data.
 
 ## Research rules
@@ -74,7 +74,7 @@ downloads tables from there):
   NPC, coordinates, level, required level, prerequisites, chains, and which race/class can take it.
 - Facts (IDs, NPC names, coordinates, levels) are fine to use. **Write every step's text yourself**; never
   paste a guide's prose. Never use paid guide add-ons, and that includes the local copies under
-  `C:\Dev\Starbreak\reference\`: don't open them. Never ship or bulk-import another addon's database (Questie is
+  `C:\Dev\Starbreak\reference\`: don't open them. Never ship or bulk-import another addon's database (quest tracker is
   GPL, other guide add-ons have their own terms); looking up the facts for the quests in our route is fine.
 - Write down the sources for each section in `tools/audits/<date>-quests.md`, like the profession audits.
 - Classic facts may be stale where Forever changed a zone (all starting zones, Wetlands). Mark those
@@ -82,11 +82,11 @@ downloads tables from there):
 
 ### How to build the route
 
-1. **A facts tool first:** `tools/questfacts.py`. It downloads Questie's Classic database into `tools/.cache/`
+1. **A facts tool first:** `tools/questfacts.py`. It downloads quest tracker's Classic database into `tools/.cache/`
    (not committed, not packaged) and prints facts: `questfacts.py quest 7` (name, level, required level,
    races/classes, giver and turn-in NPC with coordinates, objectives, prerequisites, next in chain) and
-   `questfacts.py zone Elwynn` (every Alliance quest that starts there, by level). Questie is
-   github.com/Questie/Questie; the field order is `questKeys`/`npcKeys`/`objectKeys` in `Database/QuestieDB.lua`.
+   `questfacts.py zone Elwynn` (every Alliance quest that starts there, by level). quest tracker is
+   github.com/quest tracker/quest tracker; the field order is `questKeys`/`npcKeys`/`objectKeys` in `Database/quest database.lua`.
    The quest/NPC/object files have moved: `Database/Classic/classicQuestDB.lua` on `master` was a 404 on
    2026-11-08, so find their current path in the repo tree first. Its zone IDs are AreaTable IDs (Elwynn 12,
    Westfall 40, Redridge 44, Stormwind 1519, Duskwood 10) with 0-100 coordinates; map them to our UiMap IDs.
@@ -142,7 +142,7 @@ steps = { ... } }`. A step is one action:
   at position 8, `GetQuestLogLeaderBoard`, `IsQuestFlaggedCompleted`, `GetQuestsCompleted`), `C_Map`
   (`GetBestMapForUnit`, `GetPlayerMapPosition`, which is nil in instances), `GetPlayerFacing` (nil in
   instances), `C_Map.SetUserWaypoint`/`C_SuperTrack` (use the built-in waypoint pin when it exists),
-  `TomTom` (add a waypoint when it's installed). Add a `/codex debug` section listing which of these exist,
+  `waypoint provider` (add a waypoint when it's installed). Add a `/codex debug` section listing which of these exist,
   so I can screenshot it from the game.
 - **New modules** (add them to both .toc files, `CLAUDE.md`'s file table and module list, and the harness's
   allowed globals): `Quests.lua` (data lookups and step state), `QuestGuide.lua` (the step window

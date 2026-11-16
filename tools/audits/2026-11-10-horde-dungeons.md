@@ -2,8 +2,8 @@
 
 The six Horde dungeon detours in `QuestHordeDungeons.lua`, replacing the placeholders. Each keeps its fixed ID and
 instance ID. Quest facts (IDs, givers, finishers, levels, prerequisites, item starters, NPC and spawn positions) come
-from `tools/questfacts.py` (QuestieDB Forever 0f7d8ad) and the client reference; every ID is in `quests.ids`.
-RestedXP gave the grouping and order only; all step text is our own. Boss lists and tips are the Alliance
+from `tools/questfacts.py` (quest database Forever 0f7d8ad) and the client reference; every ID is in `quests.ids`.
+reference guide A gave the grouping and order only; all step text is our own. Boss lists and tips are the Alliance
 checklists' own text (`QuestDungeonData.lua`), reused for the same dungeons.
 
 Every section is self-contained for the route audit: each turn-in has its accept earlier in the same section and
@@ -13,7 +13,7 @@ All sections are `verified = false`.
 
 ## Sections
 
-| ID | Levels | Steps (prepare / inside / after) | RestedXP chapters |
+| ID | Levels | Steps (prepare / inside / after) | reference guide A chapters |
 |---|---|---|---|
 | `dungeon-ragefire-chasm` | 13-18 (unchanged) | 33 (15 / 7 / 11) | Skyborne "101 Ragefire Chasm"; Barrens dungeon guide "16-17 Ragefire Chasm" |
 | `dungeon-ruins-of-lordaeron` | 17-22 (was 15-20) | 34 (8 / 7 / 19) | Skyborne "102 Ruins of Lordaeron"; Barrens dungeon guide "17-18 Ruins of Lordaeron" |
@@ -22,7 +22,7 @@ All sections are `verified = false`.
 | `dungeon-blackfathom-deeps` | 25-32 (was 24-32) | 22 (10 / 6 / 6) | Skyborne "105 Blackfathom Deeps", "28-29 Blackfathom Deeps" |
 | `dungeon-razorfen-kraul` | 30-38 (was 29-38) | 22 (8 / 7 / 7) | Skyborne "106 Razorfen Kraul", "30-31 Razorfen Kraul" |
 
-Level changes: Ruins of Lordaeron's Horde quests are level 21-22 (minimum 15-16) and RestedXP runs it at 17-18;
+Level changes: Ruins of Lordaeron's Horde quests are level 21-22 (minimum 15-16) and reference guide A runs it at 17-18;
 Blackfathom's Baron Aquanis is level 30; Going, Going, Guano! needs level 30.
 
 ## Ragefire Chasm
@@ -34,7 +34,7 @@ zeppelin to Tirisfal for Varimathras's 5725 The Power to Destroy...; back to Thr
 (5722 turn-in, 5724 Returning the Lost Satchel), Searing Blade books, Taragaman's heart, Bazzalan and Jergosh.
 After: Neeru, Thrall 5728 -> 5729 (Neeru) -> 5730 (Thrall), zeppelin to Varimathras, Rahauro.
 
-- Dropped: Burning Shadows (832, Gazz'uz's item) and RestedXP's training, first-aid and rogue/warlock/priest steps.
+- Dropped: Burning Shadows (832, Gazz'uz's item) and reference guide A's training, first-aid and rogue/warlock/priest steps.
 - Hearthstone binding replaced by plain zeppelin legs, so no bind name has to be guessed.
 - Check in game: where Maur Grimtotem's body lies (marked `uncertain`).
 
@@ -50,8 +50,8 @@ Snakewrithe) and Unending Torment 97288 (Abominable Head 280438 from The Baron) 
 97291 (Toxic Skullcap from Tawny Grisette, Blisterweed by the herbalism trainer, Essence of Agony from Ezekiel Graves:
 three `objectiveIndex` parts) -> 97292 (Hissing Serum 281327 upstairs, 45.3, 63.9).
 
-- The 97289-97292 chain is given prerequisites in order (QuestieDB has none for these Forever quests; each is offered
-  by the previous turn-in NPC per RestedXP).
+- The 97289-97292 chain is given prerequisites in order (quest database has none for these Forever quests; each is offered
+  by the previous turn-in NPC per reference guide A).
 - Alliance-only quests (95250, 95195, 92415, 95161, 95189) stay in the Alliance checklist.
 - Check in game: whether the 97291 ingredients are handed over or must be bought (marked `uncertain`); crest spawn spots.
 
@@ -59,17 +59,17 @@ Sources: questing.wiki/wow-forever/dungeons/ruins-of-lordaeron/quests, wowforeve
 
 ## Wailing Caverns
 
-Prepare follows RestedXP's 103 chapter: Tonga Runetotem's chain 870 The Forgotten Pools -> 877 The Stagnant Oasis ->
+Prepare follows reference guide A's 103 chapter: Tonga Runetotem's chain 870 The Forgotten Pools -> 877 The Stagnant Oasis ->
 880 Altered Beings -> 1489 Hamuul Runetotem -> 1490 Nara Wildmane -> 914 Leaders of the Fang, Apothecary Zamah 962
 Serpentbloom, Ratchet's 1491 Smart Drinks and 959 Trouble at the Docks, Nalpak 1486 and Ebru 1487 above the cave.
 Smart Drinks needs Raptor Horns (865) turned in first, so the checklist includes it (Sunscale Scytheclaws at 52.0,
-46.5, by the Stagnant Oasis, where RestedXP's Barrens chapter kills them). After: Glowing Shard 6981 (Sputtervalve,
+46.5, by the Stagnant Oasis, where reference guide A's Barrens chapter kills them). After: Glowing Shard 6981 (Sputtervalve,
 then Falla Sagewind) -> 3369 In Nightmares to Hamuul.
 
-- Mad Magglish (45.7, 33.6) and Serpentbloom (47.5, 33.4) positions from QuestieDB spawns.
+- Mad Magglish (45.7, 33.6) and Serpentbloom (47.5, 33.4) positions from quest database spawns.
 - Audit warnings kept: The Glowing Shard (26) and In Nightmares (25) are above the 17 start; both start from
   Mutanus's drop at the end of the run.
-- Note for the Alliance file: its Raptor Horns objective points at 43.36, 15.57, but QuestieDB puts Sunscale
+- Note for the Alliance file: its Raptor Horns objective points at 43.36, 15.57, but quest database puts Sunscale
   Scytheclaws at 56.2, 52.7 / 52.7, 47.2 / 46.6, 45.1. The Alliance audit warns on the 2435 yd jump there.
 
 Sources: questing.wiki/wow-forever/dungeons/wailing-caverns/quests (Leaders of the Fang Horde, minimum 10-15 in
@@ -78,8 +78,8 @@ different lists; Serpentbloom Horde).
 ## Shadowfang Keep
 
 Keeper Bel'dugur 1013 The Book of Ur (Undercity), High Executor Hadrec 1098 Deathstalkers in Shadowfang (turned in
-to Deathstalker Vincent inside), Dalar Dawnweaver 1014 Arugal Must Die. RestedXP also lists a second 1098 turn-in to
-Hadrec; QuestieDB's finisher is Vincent only, so it is left out.
+to Deathstalker Vincent inside), Dalar Dawnweaver 1014 Arugal Must Die. reference guide A also lists a second 1098 turn-in to
+Hadrec; quest database's finisher is Vincent only, so it is left out.
 
 - Left for a class pass: The Orb of Soran'ruk (1740, Warlock, Doan Karhan in the Barrens; fragments from BFD and SFK).
 - Check in game: the Book of Ur shelf (Classic data puts it in Fenrus's round room).
@@ -90,12 +90,12 @@ Sources: questing.wiki/wow-forever/dungeons/shadowfang-keep/quests, zockify.com/
 
 Tsunaman (Sun Rock Retreat) 6562 Trouble in the Deeps -> Je'neu Sancrea (Zoram'gar) 6563 The Essence of Aku'Mai and
 6921 Amongst the Ruins. The Damp Note (16790) drops from Blackfathom Tide Priestesses outside the instance (Ashenvale
-13.3, 12.6), so 6564 is turned in and 6565 (Lorgus Jett) taken before the run, as RestedXP does. Sapphires of
+13.3, 12.6), so 6564 is turned in and 6565 (Lorgus Jett) taken before the run, as reference guide A does. Sapphires of
 Aku'Mai are on the outer tunnel walls (13.4, 12.9). Inside: Argent Guard Thaelrid 6561 Blackfathom Villainy (to
 Bashana Runetotem, Thunder Bluff), Lorgus Jett, the Fathom Core, Baron Aquanis's Strange Water Globe 6922, Kelris.
 
 - Added a Baron Aquanis entry to the boss list (Horde-only summon at the Fathom Stone), with a generic tip.
-- Forever data conflict: questing.wiki says the globe quest is 909 with minimum 25; QuestieDB and RestedXP use 6922
+- Forever data conflict: questing.wiki says the globe quest is 909 with minimum 25; quest database and reference guide A use 6922
   (minimum 21). Both IDs exist in the client. The step uses 6922 and is marked `uncertain`.
 - Je'neu of the Earthen Ring (824) belongs to the Ashenvale route and is not needed here.
 

@@ -81,7 +81,7 @@ LevelingCodexProfessions = {
         yellow = 230, grey = 235, mats = { { "Dense Stone", 1 } }, learn = 225,
         source = "Brikk Keencraft, Booty Bay (the only trainer for it)", note = "One Dense Stone each (Small Thorium Veins drop it). Yellow from 230, green from 232.",
         alt = "Dense Weightstone (same cost)" },
-      -- Derotain's quests ask for skill 265 and level 50 (QuestieDB Forever), so the trainer and a
+      -- Derotain's quests ask for skill 265 and level 50 (quest database Forever), so the trainer and a
       -- vendor plan carry the route to 270 (owner's choice, 14 Nov: tools/audits/2026-11-14-professions.md).
       { from = 235, to = 246, name = "Heavy Mithril Boots", spell = 9968, icon = "inv_boots_plate_01",
         yellow = 230, grey = 250, mats = { { "Mithril Bar", 14 }, { "Thick Leather", 4 } }, learn = 210, tools = { "Blacksmith Hammer" },
