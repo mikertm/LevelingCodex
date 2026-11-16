@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## Unreleased
+
+- Added Loot: browse equipment and acquisition sources, compare links/bag/equipped items, track targets, and map source locations independently of quest progress.
+- Loot profiles follow talent paths and support manual choices, custom weights, and share codes. Comparisons cover paired rings/trinkets and weapon configurations, with explicit warnings for missing facts and unmodeled effects.
+- Added optional tooltip advice, a gear-upgrade quest reward mark beside the existing vendor-price hint, enchant suggestions, and a compact controller-accessible target tracker. Loot notifications are off by default.
+- Added a reproducible equipment catalog, source provenance, coverage matrices and offline audits. Dungeon entrance pins are labeled separately from boss locations.
+
 ## v0.27.0
 
 - Replaced the scrolling Quests tab with a journey board: connected area map previews, route progress, one selected quest panel, and area checklists paged six cards at a time.

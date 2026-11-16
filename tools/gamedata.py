@@ -1197,7 +1197,29 @@ def full_audit(ref, only=None):
         res += [r for r in audit_professions(load_profdata() or {}, ref) if not only or r[0] == only]
     if not only or only == "QUESTS":
         res += audit_quests(ref)
+    if not only or only == "LOOT":
+        res += audit_loot(ref)
     return res
+
+
+def audit_loot(ref):
+    from lootdata import REF as loot_ref, OUT as loot_out, validate, render, coverage
+    if not loot_ref.exists():
+        return [("LOOT", "error", "equipment reference is missing")]
+    loot = json.loads(loot_ref.read_text(encoding="utf-8"))
+    rows = [("LOOT", "error", error) for error in validate(loot)]
+    if loot.get("build") != ref["build"]:
+        rows.append(("LOOT", "error", "loot build differs from game reference; fetch/build the loot catalog"))
+    if not loot_out.exists() or loot_out.read_text(encoding="utf-8") != render(loot):
+        rows.append(("LOOT", "error", "LootData.lua is stale"))
+    counts = coverage(loot)
+    rows.append(("LOOT", "info", "%d equipment items, %d source records, %d enchant options" %
+                 (counts["items"], counts["sources"], len(loot.get("enchants", {})))))
+    for key, label in (("missingStats", "incomplete stats"), ("unknownRestrictions", "unverified requirements"),
+                       ("unmodeledEffects", "unmodeled effects"), ("missingLocations", "sources without map coordinates")):
+        if counts[key]:
+            rows.append(("LOOT", "warn", "%d %s; shown as unknown or Needs review" % (counts[key], label)))
+    return rows
 
 
 def audit_quests(ref):
@@ -1968,6 +1990,7 @@ def main():
         changes = diff(old, new) if old else "first reference, nothing to compare"
         print(changes)
         if a.cmd == "update":
+            refresh_loot(new)
             res = full_audit(new)
             if a.report:
                 write_report(a.report, old, new, changes, res)
@@ -2038,6 +2061,16 @@ def main():
         print("%d error(s), %d warning(s)" % (errs, sum(1 for r in res if r[1] == "warn")))
         return 1 if errs else 0
     return 0
+
+
+def refresh_loot(ref):
+    """Explicit online update path. Offline audit/build readers never call this."""
+    from types import SimpleNamespace
+    from lootdata import fetch_catalog, build_command
+    args = SimpleNamespace(command="fetch", build=ref["build"], cache=None)
+    fetch_catalog(args, __import__("pathlib").Path(CACHE) / "loot" / ref["build"])
+    args.command = "build"
+    build_command(args)
 
 
 def write_report(path, old, new, changes, res):

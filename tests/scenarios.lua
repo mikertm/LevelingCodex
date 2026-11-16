@@ -10296,7 +10296,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 9, "nine tabs (" .. #tabs .. ")")
+  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -10890,4 +10890,75 @@ function S.euiSkinOn()
     win():Hide()
   end
   euiOnlyOnBacking()
+end
+
+local function lootSetup()
+  MOCK.level=30
+  MOCK.lootItems[900001]={name="Old Vest",stats={ITEM_MOD_STRENGTH_SHORT=10}}
+  MOCK.lootItems[900002]={name="Better Vest",stats={ITEM_MOD_STRENGTH_SHORT=100}}
+  MOCK.equipped[5]="item:900001"
+  MOCK.skills={{name="Cloth",rank=1,max=1}}
+  MOCK.event("PLAYER_LOGIN")
+  slash("loot")
+  check(win() and win():IsShown() and questText(win(),"Loot"),"Loot tab opens")
+end
+function S.lootTab()
+  lootSetup()
+  for _,name in ipairs({"Compare","Tracked","Profiles","Upgrades"}) do click(win(),name) end
+  check(questText(win(),"Estimated gear score"),"loot score is clearly labeled")
+end
+function S.lootCompareVerdicts()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText("900002"); edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Upgrade (" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
+  click(win(),"Track this item"); click(win(),"Tracked")
+  check(findButton(win(),function(label) return label:find(" - tracked",1,true) and (label:find("Better Vest",1,true) or label:find("900002",1,true)) end),"tracked item is listed")
+end
+function S.lootInputBounds()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText(string.rep("x",2049)); edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"valid item"),"invalid item input has a clear message")
+end
+function S.lootTracker()
+  S.lootCompareVerdicts();MOCK.advance(0.5)
+  check(_G.LevelingCodexLootTracker and LevelingCodexLootTracker:IsShown(),"tracked loot opens the optional tracker")
+  check(not MOCK.questRewarded,"loot guidance never selects a reward")
+end
+function S.lootTooltips()
+  lootSetup()
+  GameTooltip:SetHyperlink("item:900002")
+  local count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"one annotation even with setter and item callbacks ("..count..")")
+  GameTooltip:SetHyperlink("item:900001")
+  count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"reused tooltip has one current annotation")
+  check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
+end
+function S.lootPad()
+  if not GamepadMode then return end
+  MOCK.gamepadUI=true
+  lootSetup();click(win(),"Compare");MOCK.advance(0.6)
+  check(LevelingCodexLootItem and not LevelingCodexLootItem.padSkip,"controller can focus the item input")
+  MOCK.padRefuse=true;win():Hide();slash("loot");MOCK.advance(0.6)
+  check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(),"fallback controller can navigate Loot")
+  MOCK.combat=true;MOCK.event("PLAYER_REGEN_DISABLED");MOCK.combat=false;MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.6)
+  check(not MOCK.forbidden,"loot controller recovery is safe")
+end
+function S.lootCacheLate()
+  lootSetup();click(win(),"Compare")
+  MOCK.lootItems[900003]={name="Late Vest",loaded=false,stats={ITEM_MOD_STRENGTH_SHORT=50}}
+  local edit=LevelingCodexLootItem
+  edit:SetText("900003");edit:GetScript("OnEnterPressed")(edit)
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  MOCK.lootItems[900003].loaded=true;MOCK.event("GET_ITEM_INFO_RECEIVED",900003,true);MOCK.advance(1)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"late response does not replace the selected candidate")
 end

@@ -503,6 +503,7 @@ function Frame:CreateFontString(name, layer, template)
   return fs
 end
 local SCRIPTS = {
+  OnTooltipSetItem=1, OnTooltipSetUnit=1, OnTooltipCleared=1,
   OnShow = 1, OnHide = 1, OnUpdate = 1, OnEvent = 1, OnEnter = 1, OnLeave = 1, OnClick = 1, OnMouseUp = 1,
   OnMouseDown = 1, OnDragStart = 1, OnDragStop = 1, OnMouseWheel = 1, OnKeyDown = 1, OnKeyUp = 1,
   OnGamePadButtonDown = 1, OnGamePadButtonUp = 1, OnGamePadStick = 1, OnEscapePressed = 1, OnEnterPressed = 1, OnTextChanged = 1,
@@ -860,6 +861,13 @@ function GameTooltip:AddLine(s) ascii(s, "GameTooltip:AddLine"); self._lines[#se
 function GameTooltip:AddDoubleLine(a, b) ascii(a, "GameTooltip"); ascii(b, "GameTooltip") end
 function GameTooltip:ClearLines() self._lines = {} end
 function GameTooltip:IsOwned(f) return self._owner == f end
+function GameTooltip:GetItem() return self._lootName,self._lootLink end
+function GameTooltip:SetHyperlink(link)
+  self:ClearLines();self._lootLink=link;self._lootName="Item"
+  local clear=self:GetScript("OnTooltipCleared");if clear then clear(self) end
+  local set=self:GetScript("OnTooltipSetItem");if set then set(self) end
+  self:Show()
+end
 
 DEFAULT_CHAT_FRAME = CreateFrame("Frame", "ChatFrame1", UIParent)
 function DEFAULT_CHAT_FRAME:AddMessage(s)
@@ -1326,6 +1334,32 @@ end
 -- Modern clients (retail, and WoW: Forever by every add-on written for it) read item info through
 -- C_Item.GetItemInfo; scenario noGlobalItemInfo drops the old global, the minimal client drops C_Item.
 C_Item = { GetItemInfo = GetItemInfo }
+-- Equipment fixtures used only by loot scenarios; all existing item readers keep their behavior.
+MOCK.lootItems, MOCK.equipped = {}, {}
+local beforeLootItemInfo = GetItemInfo
+local function lootItem(ref)
+  local id=tonumber(tostring(ref):match("item:(%d+)")) or tonumber(ref)
+  return MOCK.lootItems[ref] or MOCK.lootItems[id]
+end
+function GetItemInfo(ref)
+  local it=lootItem(ref)
+  if not it then return beforeLootItemInfo(ref) end
+  if it.loaded==false then return end
+  return it.name,tostring(ref),2,20,it.level or 1,"Armor","Cloth",1,it.slot or "INVTYPE_CHEST",134400,0,it.classID or 4,it.subclassID or 1
+end
+C_Item.GetItemInfo=GetItemInfo
+function GetInventoryItemLink(unit,slot) return MOCK.equipped[slot] end
+function GetItemStats(ref,output)
+  local it=lootItem(ref)
+  if not it or it.loaded==false then return end
+  if output then for k,v in pairs(it.stats or {}) do output[k]=v end end
+  return it.stats or {}
+end
+C_Item.GetItemStats=GetItemStats
+C_TooltipInfo={GetHyperlink=function(ref)
+  local it=lootItem(ref)
+  if it and it.loaded~=false then return {lines={{leftText=it.effect or "Plain equipment"}}} end
+end}
 
 local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
 function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end

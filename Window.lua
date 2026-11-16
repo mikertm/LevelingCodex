@@ -1342,6 +1342,14 @@ renderers.settings = function()
   providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
   tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
     "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+  tick("Loot tooltip advice",not db.noLootHints,function() db.noLootHints=not db.noLootHints end,
+    "Compare equipment against your current gear with your selected loot profile.")
+  tick("Mark gear upgrade rewards",not db.noLootRewards,function() db.noLootRewards=not db.noLootRewards end,
+    "A plus marks the strongest conclusive gear upgrade. Vendor value keeps its separate coin mark.")
+  tick("Show loot target tracker",not db.noLootTracker,function() db.noLootTracker=not db.noLootTracker;if ns.loot then ns.loot.refreshTracker() end end,
+    "A small panel lists your tracked items. Drag it to move it.")
+  tick("Loot notifications",db.lootNotifications,function() db.lootNotifications=not db.lootNotifications end,
+    "Off by default. Announce obtained targets and conclusively new bag upgrades once.")
   tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
     "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
   tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
@@ -1429,8 +1437,31 @@ local function questSearch(x, y, w, value, onChange, onSubmit)
   edit:SetScript("OnEnterPressed", function(self) self:ClearFocus(); onSubmit() end)
 end
 
+local function entry(key,x,y,w,value,onChange,onSubmit,maxBytes)
+  local edit=take("input:"..key,function()
+    local e=CreateFrame("EditBox","LevelingCodex"..key,overlay,"InputBoxTemplate")
+    e:SetAutoFocus(false)
+    e:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+    e:SetScript("OnHide",function(self) self:ClearFocus() end)
+    return e
+  end)
+  edit:SetScript("OnTextChanged",nil)
+  edit:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y); edit:SetSize(w,22)
+  edit:SetMaxLetters(maxBytes or 2048); edit.codexLabel=key
+  if edit:GetText()~=value then edit:SetText(value or "") end
+  edit:SetScript("OnTextChanged",function(self) if onChange then onChange(self:GetText()) end end)
+  edit:SetScript("OnEnterPressed",function(self) self:ClearFocus(); if onSubmit then onSubmit(self:GetText()) end end)
+  return edit
+end
+local function interactivePoolKinds()
+  local kinds={"icon","btn","check","hit","edit"}
+  for kind in pairs(pools) do if kind:sub(1,6)=="input:" then kinds[#kinds+1]=kind end end
+  return kinds
+end
+
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+  entry = entry,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
@@ -1469,11 +1500,11 @@ refresh = function(professionSnapshot)
   -- the controller's tags, from what each widget is now (pooled widgets change role between tabs,
   -- and some get their click after the helper drew them): padSkip = nothing to press, padX/padY =
   -- its centre in content coordinates
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
-      w.padSkip = (kind ~= "edit" and w:GetScript("OnClick") == nil) or nil
+      w.padSkip = (kind ~= "edit" and kind:sub(1,6) ~= "input:" and w:GetScript("OnClick") == nil) or nil
       local _, rel, _, x, y = w:GetPoint(1)
       if rel == content and x and y then
         w.padX, w.padY = x + (w:GetWidth() or 0) / 2, -y + (w:GetHeight() or 0) / 2
@@ -1484,6 +1515,9 @@ refresh = function(professionSnapshot)
   if keepSearchFocus and edit:IsShown() then edit:SetFocus() end
 end
 ns.refresh = refresh
+function ns.refreshLootTab()
+  if frame and frame:IsShown() and activeTab=="loot" then refresh() end
+end
 function ns.refreshQuestTab()
   if frame and frame:IsShown() and activeTab == "quests" then refresh() end
 end
@@ -1505,7 +1539,7 @@ end
 -- buttons, ticks and clickable strips, the header above it and the tabs below it.
 local function listFocusables()
   local out = {}
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]

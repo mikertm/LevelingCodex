@@ -948,7 +948,7 @@ def update_audit_checks(gamedata, ref, tag):
     import tempfile
     built = copy.deepcopy(ref)
     built["quests"]["maps"] = {int(key): value for key, value in built["quests"]["maps"].items()}
-    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata")
+    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata", "refresh_loot")
     saved = {name: getattr(gamedata, name) for name in names}
     audited, calls, trees_written = [], [], []
     fd, path = tempfile.mkstemp(suffix=".json")
@@ -965,6 +965,7 @@ def update_audit_checks(gamedata, ref, tag):
         gamedata.load_reference = lambda p=path: saved["load_reference"](p)
         gamedata.full_audit = lambda r, only=None: calls.append(r) or audited.extend(saved["full_audit"](r, "QUESTS")) or audited
         gamedata.write_talentdata = lambda r: trees_written.append(r)
+        gamedata.refresh_loot = lambda r: None
         sys.argv = ["gamedata.py", "update"]
         with contextlib.redirect_stdout(io.StringIO()):
             gamedata.main()
@@ -1039,6 +1040,12 @@ def main():
         print("FAIL", p)
 
     runs = []
+    for minimal in (False, True):
+        for scenario in ("lootTab", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootPad", "lootCacheLate"):
+            runs.append(("WARRIOR/%s/%s" % ("minimal" if minimal else "full", scenario), "WARRIOR", minimal, [scenario]))
+        for loot_class in CLASSES:
+            if loot_class != "WARRIOR":
+                runs.append(("%s/%s/lootTab" % (loot_class, "minimal" if minimal else "full"), loot_class, minimal, ["lootTab"]))
     for minimal in (False, True):
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
