@@ -1,6 +1,6 @@
 # Loot: find upgrades, compare gear, and follow its sources
 
-Date: 2026-11-16. Status: scope approved in chat; written specification awaiting owner review.
+Date: 2026-11-16. Status: written specification approved by the owner on 2026-11-16.
 
 ## Intent and agreed scope
 
@@ -11,7 +11,8 @@ and controller support. Recommendations follow the selected Codex talent path by
 
 The installed reference was inspected for behavior and coverage. Product code, art, explanatory
 text, and scoring profiles will be authored for Codex. Generated facts must have traceable game
-or upstream database sources. No other addon's name appears in new code, documentation, or UI.
+or upstream database sources. The inspected reference addon's name does not appear in new
+product code, documentation, or UI.
 
 Success means useful coverage for all nine supported classes, both factions, every functional
 equipment slot, and levels 1-60, including Forever-specific gear. A player can investigate a

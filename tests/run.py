@@ -1015,6 +1015,11 @@ def herbalism_tool_checks(gamedata, ref, guide, tag):
 
 
 def main():
+    # Run offline generator/engine units once in the parent, not once per Lua scenario.
+    import unittest
+    loot_units = unittest.defaultTestLoader.discover(HERE, pattern="test_loot*.py")
+    if not unittest.TextTestRunner(verbosity=1).run(loot_units).wasSuccessful():
+        return 1
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = sys.argv[1:]
