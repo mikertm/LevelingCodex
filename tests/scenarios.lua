@@ -10906,6 +10906,72 @@ function S.lootTab()
   lootSetup()
   for _,name in ipairs({"Compare","Tracked","Profiles","Upgrades"}) do click(win(),name) end
   check(questText(win(),"Estimated gear score"),"loot score is clearly labeled")
+  MOCK.equipped[5]="item:900002"
+  if MOCK.event("PLAYER_EQUIPMENT_CHANGED",5)==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"paper doll refreshes after equipment changes")
+  click(win(),"Browse Ranged / relic")
+  local relic=MOCK.class=="PALADIN" or MOCK.class=="SHAMAN" or MOCK.class=="DRUID"
+  check(questText(win(),relic and "Relic upgrades" or "Ranged upgrades"),"paper doll chooses the class's ranged or relic category")
+end
+-- A wrong slot handler, lost filter/page, or an item detail appended below the list
+-- would break this player-visible browse/back flow.
+function S.lootBrowse()
+  lootSetup()
+  check(questText(win(),"Your equipment"),"loot starts with the equipment paper doll")
+  for _,name in ipairs({"Head","Neck","Shoulders","Back","Chest","Wrists","Hands","Waist","Legs","Feet",
+    "Ring 1","Ring 2","Trinket 1","Trinket 2","Main hand","Off hand","Ranged / relic"}) do
+    check(findButton(win(),function(label) return label=="Browse "..name end),"paper doll slot is clickable: "..name)
+  end
+  click(win(),"Browse Chest")
+  check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
+  local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
+  MOCK.fire(shoulder,"OnEnter")
+  check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
+  MOCK.fire(shoulder,"OnLeave")
+  click(win(),"All sources")
+  check(findButton(win(),function(label) return label=="Quest reward" end),"source choices can be browsed directly")
+  click(win(),"All sources")
+  check(not findButton(win(),function(label) return label=="Quest reward" end),"source picker can be closed without changing a filter")
+  click(win(),"Sort: Power");click(win(),"Sort: Access")
+  check(findButton(win(),function(label) return label=="Sort: Power" end),"both sort directions are reachable")
+  check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"secondary filters start collapsed")
+  click(win(),"Next loot page")
+  check(questText(win(),"Page 2 of"),"results can be paged")
+  local row=findButton(win(),function(label) return label:find("^Inspect item ") end)
+  check(row,"a result can be opened");row:Click()
+  check(findButton(win(),function(label) return label=="Back to results" end)
+    and not findButton(win(),function(label) return label=="Next loot page" end),"details replace the list")
+  click(win(),"Back to results")
+  check(questText(win(),"Page 2 of"),"returning from details retains the result page")
+  local search=LevelingCodexLootSearch
+  search:SetFocus()
+  if MOCK.event("BAG_UPDATE_DELAYED")==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  check(search:HasFocus(),"background equipment updates do not interrupt search typing")
+  search:SetText("Red Linen Robe");search:GetScript("OnEnterPressed")(search)
+  check(findButton(win(),function(label) return label=="Inspect item 2572" end),"chest browsing includes robes")
+  click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Sources")
+  check(questText(win(),"Crafted:"),"item details retain the acquisition source")
+  click(win(),"Back to results")
+  search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
+  local lastSlot=findButton(win(),function(label) return label=="Slot Relic" end)
+  local _,content,_,_,sy=lastSlot:GetPoint(1)
+  check(content:GetHeight()>=-sy+lastSlot:GetHeight(),"empty results retain scroll space for every slot after a status message")
+  click(win(),"More filters")
+  check(LevelingCodexLootZone and LevelingCodexLootZone:IsShown(),"advanced filters can be opened")
+  local zone=LevelingCodexLootZone
+  zone:SetText("no-such-zone-123");zone:GetScript("OnEnterPressed")(zone)
+  check(questText(win(),"No matching items"),"empty results explain the filters")
+  click(win(),"Reset filters")
+  check(LevelingCodexLootSearch:GetText()=="" and not questText(win(),"No matching items"),"reset restores the slot list")
+  click(win(),"Back to character")
+  click(win(),"Browse Ring 2")
+  check(questText(win(),"Ring upgrades") and questText(win(),"Ring 1") and questText(win(),"Ring 2"),"paired slots show both equipped baselines")
+  click(win(),"Back to character")
+  click(win(),"Browse Off hand")
+  check(questText(win(),"Off hand upgrades"),"off hand opens its own equipment category")
 end
 function S.lootCompareVerdicts()
   lootSetup(); click(win(),"Compare")
@@ -10914,6 +10980,10 @@ function S.lootCompareVerdicts()
   edit:SetText("900002"); edit:GetScript("OnEnterPressed")(edit)
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
   check(questText(win(),canRead and "Upgrade (" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
+  click(win(),"Gear / bags")
+  click(win(),"Chest: "..(canRead and "Old Vest" or "Item 900001"))
+  check(findButton(win(),function(label) return label=="Track this item" end),"another equipped item can be checked without reopening Loot")
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
   click(win(),"Track this item"); click(win(),"Tracked")
   check(findButton(win(),function(label) return label:find(" - tracked",1,true) and (label:find("Better Vest",1,true) or label:find("900002",1,true)) end),"tracked item is listed")
 end

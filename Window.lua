@@ -1400,6 +1400,8 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick, label)
   local hb = take("hit", newHit)
   hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
   hb.tipTitle, hb.tipText = tipTitle, tipText
+  -- A previous use may have installed a native item tooltip (the Loot browser).
+  hb:SetScript("OnEnter", showTip); hb:SetScript("OnLeave", hideTip)
   hb.codexLabel = label
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
@@ -1453,6 +1455,39 @@ local function entry(key,x,y,w,value,onChange,onSubmit,maxBytes)
   edit:SetScript("OnEnterPressed",function(self) self:ClearFocus(); if onSubmit then onSubmit(self:GetText()) end end)
   return edit
 end
+
+-- A pooled, read-only character preview for the Loot paper doll. Slot buttons live
+-- beside it on the overlay; clients without PlayerModel keep the same navigation.
+local function newPlayerDoll()
+  local holder = CreateFrame("Frame", nil, content)
+  holder:SetFrameLevel(overlay:GetFrameLevel() + 1)
+  local ok, model = pcall(CreateFrame, "PlayerModel", nil, holder)
+  if ok and model then
+    holder.model = model
+    model:SetFrameLevel(holder:GetFrameLevel() + 1)
+    model:SetAllPoints(holder)
+    model:EnableMouse(false)
+  end
+  return holder
+end
+local function playerDoll(x, y, w, h, enabled)
+  local holder = take("playerDoll", newPlayerDoll)
+  holder:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  holder:SetSize(w, h)
+  local model = holder.model
+  if not (enabled and model and type(model.SetUnit) == "function") then
+    if model then model:Hide() end
+    holder:Hide()
+    return false
+  end
+  -- Re-read the player after an equipment event, including on pooled redraws.
+  local ok = pcall(model.SetUnit, model, "player")
+  if not ok then model:Hide(); holder:Hide(); return false end
+  if model.SetPortraitZoom then pcall(model.SetPortraitZoom, model, 0) end
+  if model.SetCamera then pcall(model.SetCamera, model, 0) end
+  model:Show()
+  return true
+end
 local function interactivePoolKinds()
   local kinds={"icon","btn","check","hit","edit"}
   for kind in pairs(pools) do if kind:sub(1,6)=="input:" then kinds[#kinds+1]=kind end end
@@ -1461,7 +1496,7 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
-  entry = entry,
+  entry = entry, playerDoll = playerDoll,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
@@ -1489,6 +1524,15 @@ refresh = function(professionSnapshot)
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   local edit = pools.edit and pools.edit.list[1]
   local keepSearchFocus = edit and edit:IsShown() and edit:HasFocus()
+  local keepEntryFocus
+  for kind, pool in pairs(pools) do
+    if kind:sub(1,6) == "input:" then
+      for i = 1, pool.used do
+        local entry = pool.list[i]
+        if entry:IsShown() and entry:HasFocus() then keepEntryFocus = entry; break end
+      end
+    end
+  end
   releaseAll()
   local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
@@ -1513,6 +1557,7 @@ refresh = function(professionSnapshot)
   end
   if ns.gamepad then ns.gamepad.refresh(frame) end
   if keepSearchFocus and edit:IsShown() then edit:SetFocus() end
+  if keepEntryFocus and keepEntryFocus:IsShown() then keepEntryFocus:SetFocus() end
 end
 ns.refresh = refresh
 function ns.refreshLootTab()

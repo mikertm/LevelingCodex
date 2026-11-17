@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Redesigned Loot around a character paper doll: select an equipped or empty slot to browse upgrades, with compact source and play-style filters, readable item rows, and a focused details page that returns to the same results. Advanced filters and comparison planning are folded away; sources, enchants, tracked targets, and profile weights have clearer sections.
+
 - Fixed item and equipment tooltips disappearing during delayed loot-data updates. Shared tooltips retain their owner and other advice, with one Codex comparison per native tooltip build.
 
 - Added Loot: browse equipment and acquisition sources, compare links/bag/equipped items, track targets, and map source locations independently of quest progress.
