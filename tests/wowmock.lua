@@ -853,21 +853,26 @@ MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
 MerchantFrame:SetSize(336, 447)
 MerchantFrame:Hide()
 
-GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
-GameTooltip:Hide()
-function GameTooltip:SetOwner(owner, anchor) self._owner = owner; self._lines = {} end
-function GameTooltip:SetText(s) ascii(s, "GameTooltip:SetText"); self._lines = { s } end
-function GameTooltip:AddLine(s) ascii(s, "GameTooltip:AddLine"); self._lines[#self._lines + 1] = s end
-function GameTooltip:AddDoubleLine(a, b) ascii(a, "GameTooltip"); ascii(b, "GameTooltip") end
-function GameTooltip:ClearLines() self._lines = {} end
-function GameTooltip:IsOwned(f) return self._owner == f end
-function GameTooltip:GetItem() return self._lootName,self._lootLink end
-function GameTooltip:SetHyperlink(link)
-  self:ClearLines();self._lootLink=link;self._lootName="Item"
-  local clear=self:GetScript("OnTooltipCleared");if clear then clear(self) end
-  local set=self:GetScript("OnTooltipSetItem");if set then set(self) end
-  self:Show()
+local function itemTooltip(name)
+  local tip=CreateFrame("Frame",name,UIParent)
+  tip:Hide()
+  function tip:SetOwner(owner,anchor) self._owner=owner;self._lines={} end
+  function tip:SetText(s) ascii(s,name..":SetText");self._lines={s} end
+  function tip:AddLine(s) ascii(s,name..":AddLine");self._lines[#self._lines+1]=s end
+  function tip:AddDoubleLine(a,b) ascii(a,name);ascii(b,name) end
+  function tip:ClearLines() self._lines={} end
+  function tip:IsOwned(f) return self._owner==f end
+  function tip:GetItem() return self._lootName,self._lootLink end
+  function tip:SetHyperlink(link)
+    self:ClearLines();self._lootLink=link;self._lootName="Item"
+    local clear=self:GetScript("OnTooltipCleared");if clear then clear(self) end
+    local set=self:GetScript("OnTooltipSetItem");if set then set(self) end
+    self:Show()
+  end
+  return tip
 end
+GameTooltip=itemTooltip("GameTooltip")
+ItemRefTooltip=itemTooltip("ItemRefTooltip")
 
 DEFAULT_CHAT_FRAME = CreateFrame("Frame", "ChatFrame1", UIParent)
 function DEFAULT_CHAT_FRAME:AddMessage(s)

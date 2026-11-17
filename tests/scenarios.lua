@@ -10941,6 +10941,34 @@ function S.lootTooltips()
   check(count==1,"reused tooltip has one current annotation")
   check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
 end
+function S.lootTooltipStaysOpen()
+  lootSetup()
+  for _,tip in ipairs({GameTooltip,ItemRefTooltip}) do
+    tip:SetOwner(UIParent,"ANCHOR_RIGHT")
+    tip:SetHyperlink("item:900002")
+    tip:AddLine("Shared tooltip detail")
+    MOCK.advance(0.3)
+    check(tip:IsShown(),tip:GetName().." remains open after delayed loot-data refresh")
+    for _,event in ipairs({"GET_ITEM_INFO_RECEIVED","BAG_UPDATE_DELAYED","PLAYER_EQUIPMENT_CHANGED","PLAYER_REGEN_ENABLED"}) do
+      MOCK.event(event,900002,true)
+      MOCK.advance(0.2)
+      check(tip:IsShown() and tip:IsOwned(UIParent),tip:GetName().." keeps its visibility and owner after "..event)
+      local callback=tip:GetScript("OnTooltipSetItem")
+      if callback then callback(tip) end
+      local ours,shared=0,0
+      for _,line in ipairs(tip._lines or {}) do
+        if line:find("Codex:",1,true) then ours=ours+1 end
+        if line=="Shared tooltip detail" then shared=shared+1 end
+      end
+      check(ours==1 and shared==1,"refresh callbacks preserve shared tooltip content without duplicate advice")
+    end
+    tip:Hide();MOCK.advance(0.3)
+    check(not tip:IsShown(),"a player-closed tooltip stays closed")
+    tip:SetHyperlink("item:900001")
+    check(tip:IsShown(),"the next item tooltip can open normally")
+    tip:Hide()
+  end
+end
 function S.lootPad()
   if not GamepadMode then return end
   MOCK.gamepadUI=true

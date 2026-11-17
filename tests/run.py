@@ -1041,7 +1041,7 @@ def main():
 
     runs = []
     for minimal in (False, True):
-        for scenario in ("lootTab", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootPad", "lootCacheLate"):
+        for scenario in ("lootTab", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootTooltipStaysOpen", "lootPad", "lootCacheLate"):
             runs.append(("WARRIOR/%s/%s" % ("minimal" if minimal else "full", scenario), "WARRIOR", minimal, [scenario]))
         for loot_class in CLASSES:
             if loot_class != "WARRIOR":

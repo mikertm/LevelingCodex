@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed item and equipment tooltips disappearing during delayed loot-data updates. Shared tooltips retain their owner and other advice, with one Codex comparison per native tooltip build.
+
 - Added Loot: browse equipment and acquisition sources, compare links/bag/equipped items, track targets, and map source locations independently of quest progress.
 - Loot profiles follow talent paths and support manual choices, custom weights, and share codes. Comparisons cover paired rings/trinkets and weapon configurations, with explicit warnings for missing facts and unmodeled effects.
 - Added optional tooltip advice, a gear-upgrade quest reward mark beside the existing vendor-price hint, enchant suggestions, and a compact controller-accessible target tracker. Loot notifications are off by default.

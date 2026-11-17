@@ -6,7 +6,9 @@ function L.annotate(tip,ref)
   if ns.db().noLootHints or not tip or not ref then return end
   local item=L.item(ref);if not item then return end
   if item.classID and item.classID~=2 and item.classID~=4 then return end
-  local key=item.key..":"..tostring(L.version)
+  -- Advice belongs to this native tooltip build, not the loot cache version. Async
+  -- data events must not duplicate shared content; the client's clear/hide hooks reset it.
+  local key=item.key
   if tip.codexLootKey==key then return end
   local r=L.compare(item);tip.codexLootKey=key;tip.codexLootRef=ref
   local pct=r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent) or ""
@@ -126,8 +128,5 @@ end
 if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType then
   pcall(TooltipDataProcessor.AddTooltipPostCall,Enum.TooltipDataType.Item,function(tip,data) itemTip(tip,data and data.id) end)
 end
-if L.subscribe then L.subscribe(function()
-  for tip in pairs(hooked) do
-    if tip.codexLootKey and call(tip.IsShown,tip) then call(tip.Hide,tip) end
-  end
-end) end
+-- The client owns tooltip visibility and rebuilding. Loot refreshes only invalidate
+-- comparison data; never hide, clear or rebuild a shared tooltip from those callbacks.
