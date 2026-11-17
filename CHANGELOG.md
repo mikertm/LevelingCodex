@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reworked Loot for a dark, opaque reading surface. Full-width results align items, sources, and upgrade verdicts, with separate screens for changing slots and filtering.
+
 - Polished the Loot journal with an original teal banner, source shortcuts on results, expandable acquisition cards, and before-and-after stat graphs. Incomplete comparisons explain which information is missing.
 
 - Refined Loot into a textured parchment journal with restored equipment icons, a full-body character preview, grouped equipment cards, illustrated role choices, and an actionable target page. Fixed native texture IDs and complete texture paths being treated as icon names.

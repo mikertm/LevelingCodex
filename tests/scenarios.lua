@@ -10932,6 +10932,25 @@ function S.lootGraphics()
   local chestTexture=canRead and 134400 or MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
   check(chestIcon and chestIcon:GetTexture()==chestTexture,"native item IDs and unloaded-item slot art reach the renderer intact")
   check(headIcon and headIcon:GetTexture()==MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Head"),"complete empty-slot texture paths stay intact")
+  local darkBackground
+  local function checkSurfaces(frame)
+    for _,r in ipairs({frame:GetRegions()}) do
+      if r:IsShown() then
+        check(not (r._path and r._path:find("loot-paper.tga",1,true)),"Loot backgrounds do not depend on the client's paper texture tint")
+        local color=r._color
+        if r:GetObjectType()=="Texture" and color then
+          local _,anchor=r:GetPoint(1)
+          local _,opposite=r:GetPoint(2)
+          if anchor==frame and opposite==frame and frame:GetWidth()>=500 and frame:GetHeight()>=420 then
+            darkBackground=darkBackground or (color[1]<0.22 and color[2]<0.22 and color[3]<0.22 and color[4]==1)
+          end
+        end
+      end
+    end
+    for _,child in ipairs({frame:GetChildren()}) do if child:IsShown() then checkSurfaces(child) end end
+  end
+  checkSurfaces(win())
+  check(darkBackground,"Loot uses an opaque dark background even in a bright game scene")
 end
 function S.lootCardViews()
   lootSetup();click(win(),"Compare")
@@ -11017,17 +11036,24 @@ function S.lootBrowse()
   end
   click(win(),"Browse Chest")
   check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
+  check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
+  check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
+  click(win(),"Change slot")
   local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
+  check(shoulder and questText(win(),"Accessories") and questText(win(),"Weapons"),"slot picker groups the equipment slots")
   MOCK.fire(shoulder,"OnEnter")
   check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
   MOCK.fire(shoulder,"OnLeave")
+  click(win(),"Back to results")
+  click(win(),"Filters")
   click(win(),"All sources")
   check(findButton(win(),function(label) return label=="Quest reward" end),"source choices can be browsed directly")
   click(win(),"All sources")
   check(not findButton(win(),function(label) return label=="Quest reward" end),"source picker can be closed without changing a filter")
   click(win(),"Sort: Power");click(win(),"Sort: Access")
   check(findButton(win(),function(label) return label=="Sort: Power" end),"both sort directions are reachable")
-  check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"secondary filters start collapsed")
+  click(win(),"Show results")
+  check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"filter fields are hidden from results")
   click(win(),"Next loot page")
   check(questText(win(),"Page 2 of"),"results can be paged")
   local row=findButton(win(),function(label) return label:find("^Inspect item ") end)
@@ -11052,15 +11078,16 @@ function S.lootBrowse()
   check(questText(win(),"Crafted:"),"item details retain the acquisition source")
   click(win(),"Back to results")
   search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
-  local lastSlot=findButton(win(),function(label) return label=="Slot Relic" end)
-  local _,content,_,_,sy=lastSlot:GetPoint(1)
-  check(content:GetHeight()>=-sy+lastSlot:GetHeight(),"empty results retain scroll space for every slot after a status message")
-  click(win(),"More filters")
+  check(questText(win(),"No matching items"),"empty results explain the filters")
+  click(win(),"Filters")
   check(LevelingCodexLootZone and LevelingCodexLootZone:IsShown(),"advanced filters can be opened")
   local zone=LevelingCodexLootZone
   zone:SetText("no-such-zone-123");zone:GetScript("OnEnterPressed")(zone)
-  check(questText(win(),"No matching items"),"empty results explain the filters")
+  click(win(),"Show results")
+  check(questText(win(),"No matching items") and questText(win(),"Zone: no-such-zone-123"),"results show the applied filter")
+  click(win(),"Filters")
   click(win(),"Reset filters")
+  click(win(),"Show results")
   check(LevelingCodexLootSearch:GetText()=="" and not questText(win(),"No matching items"),"reset restores the slot list")
   click(win(),"Back to character")
   click(win(),"Browse Ring 2")

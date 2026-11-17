@@ -3,22 +3,33 @@ local _, ns = ...
 local L,U,Theme=ns.loot,ns.ui,ns.C
 local C={}
 local function palette()
-  if Theme.eui then for k,v in pairs(Theme) do C[k]=v end;C.loss={1,0.45,0.35};return end
-  C.parch={0.86,0.80,0.68,1};C.panel={0.91,0.86,0.75,1};C.btnOff={0.96,0.91,0.81,1}
-  C.btnOn={0.81,0.74,0.55,1};C.btnOnInk={0.19,0.15,0.09}
-  C.light={0.19,0.15,0.11};C.ink=C.light;C.dim={0.42,0.35,0.26};C.inkSoft=C.dim
-  C.gold={0.10,0.29,0.30};C.green={0.16,0.36,0.16}
-  C.edge={0.46,0.34,0.18,1};C.edgeSoft={0.62,0.51,0.34,0.44}
-  C.accent={Theme.accent[1]*0.55,Theme.accent[2]*0.55,Theme.accent[3]*0.55,1}
-  C.loss={0.56,0.18,0.12}
-  C.ribbon={0.12,0.23,0.24,1}
+  if Theme.eui then
+    for k,v in pairs(Theme) do C[k]=v end
+    C.background={Theme.bg[1],Theme.bg[2],Theme.bg[3],1}
+    C.loss={1,0.55,0.49}
+    return
+  end
+  C.background={0.055,0.078,0.099,1}
+  C.panel={0.085,0.125,0.151,1}
+  C.btnOff={0.112,0.16,0.192,1}
+  C.btnOn={0.13,0.28,0.32,1}
+  C.light={0.91,0.94,0.95}
+  C.btnOnInk=C.light
+  C.dim={0.66,0.74,0.77}
+  C.gold={0.93,0.83,0.63}
+  C.green={0.60,0.86,0.48}
+  C.loss={1,0.61,0.53}
+  C.edge={0.45,0.53,0.54,0.72}
+  C.edgeSoft={0.47,0.61,0.65,0.27}
+  C.accent=Theme.accent
+  C.ribbon={0.11,0.21,0.23,1}
 end
 local ART="Interface\\AddOns\\LevelingCodex\\media\\"
 local section,view="Upgrades","character"
 local filters={slot="INVTYPE_CHEST",source="all",style="all",search=""}
 local offset,sourceOffset,slotNumber=0,0,5
 local selected,input,message,code,editor,preview,picker
-local advanced,planning=false,false
+local planning=false
 local detailSection="Overview"
 local expandedSource, preferredSource
 local inventoryMode,inventoryGroup,inventoryPage="Equipped","Armor",0
@@ -79,7 +90,7 @@ local function button(label,x,y,w,fn,on,tip)
 end
 local function quality(q)
   if Theme.eui then return C.light end
-  return ({[0]={0.43,0.40,0.35},[2]={0.15,0.34,0.12},[3]={0.10,0.27,0.48},[4]={0.36,0.18,0.46},[5]={0.63,0.30,0.07}})[q] or C.light
+  return ({[0]=C.dim,[2]={0.65,0.88,0.49},[3]={0.55,0.76,1},[4]={0.81,0.66,0.99},[5]={1,0.72,0.44}})[q] or C.light
 end
 local function itemIcon(it,x,y,size,title,tip,fallback)
   local f=U.icon(it and it.icon or fallback,x,y,size,title,tip)
@@ -165,132 +176,225 @@ end
 
 local function baseline(y,ctx)
   local slots={slotNumber}
-  if filters.slot=="INVTYPE_FINGER" then slots={11,12} elseif filters.slot=="INVTYPE_TRINKET" then slots={13,14} end
-  U.surface(108,y,U.W-108,40,C.panel,C.edgeSoft)
-  local current=ctx.snapshot.slots[slotNumber]
-  itemIcon(current,116,y+6,28,"Currently equipped",nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[slotNumber] or "Chest"))
-  line("Currently equipped",154,y+3,180,"small",C.dim)
+  if filters.slot=="INVTYPE_FINGER" then slots={11,12} end
+  if filters.slot=="INVTYPE_TRINKET" then slots={13,14} end
   local names={}
   for _,n in ipairs(slots) do
-    names[#names+1]=(#slots>1 and (L.slotNames[n]..": ") or "")..equippedName(ctx.snapshot.slots[n],ctx.snapshot.equipmentKnown)
+    local name=equippedName(ctx.snapshot.slots[n],ctx.snapshot.equipmentKnown)
+    names[#names+1]=#slots>1 and (L.slotNames[n]..": "..name) or name
   end
-  line(table.concat(names,"  /  "),154,y+20,U.W-168,"small",C.light)
-  U.hit(108,y,U.W-108,40,"Currently equipped",ns.plain(table.concat(names,"\n")))
-  return y+46
+  local current=ctx.snapshot.slots[slotNumber]
+  itemIcon(current,26,y+11,24,"Currently equipped",nil,
+    "Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[slotNumber] or "Chest"))
+  line("Currently equipped",60,y+8,235,"small",C.dim)
+  line(table.concat(names,"  /  "),60,y+24,476,"body",current and quality(current.quality) or C.light)
+  local equipped=U.hit(12,y,544,47,"Currently equipped",ns.plain(table.concat(names,"\n")))
+  if current and #slots==1 then itemTip(equipped,current) end
 end
+
 local function resetFilters()
-  filters={slot=filters.slot,source="all",style="all",search=""};picker=nil;resetResults()
+  filters={slot=filters.slot,source="all",style="all",search=""}
+  picker=nil
+  resetResults()
 end
-local function extraFilters(y,ctx)
-  local x,w=108,U.W-108
-  if picker then
-    local keys=picker=="source" and SOURCES or {"all","solo","group","buy"}
-    U.surface(x,y,w,math.ceil(#keys/3)*26+8,C.panel,C.edgeSoft)
-    for i,k in ipairs(keys) do
-      local key=k
-      local label=picker=="source" and (L.sourceNames[k] or "All sources") or STYLES[k]
-      button(label,x+4+(i-1)%3*150,y+4+math.floor((i-1)/3)*26,146,function()
-        filters[picker]=key;picker=nil;resetResults()
-      end,filters[picker]==key)
+
+local function returnToList()
+  view="list";picker=nil;message=nil
+  refresh(true)
+end
+
+local function slotPicker(y)
+  line("Choose a gear slot",16,y+3,354,"head",C.gold)
+  button("Back to results",418,y,138,returnToList)
+  y=y+36
+  local groups={
+    {label="Armor",indices={1,3,4,5,6,7,8,9,10}},
+    {label="Accessories",indices={2,11,12}},
+    {label="Weapons",indices={13,14,15,16}},
+  }
+  for g,group in ipairs(groups) do
+    local x=12+(g-1)*184
+    U.surface(x,y,176,310,C.panel,C.edgeSoft)
+    line(group.label,x+12,y+12,150,"body",C.gold)
+    for i,index in ipairs(group.indices) do
+      local n,label,key=unpack(SLOTS[index])
+      local isSelected=filters.slot==key
+      local yy=y+40+(i-1)*28
+      if isSelected then U.surface(x+5,yy,166,25,C.btnOn,C.accent) end
+      itemIcon(nil,x+12,yy+4,17,label,nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[n] or "Chest"))
+      line(label,x+40,yy+5,120,"body",isSelected and C.light or C.dim)
+      U.hit(x+5,yy,166,25,label,"Browse this equipment slot.",function() chooseSlot(n,key) end,"Slot "..label)
     end
-    y=y+math.ceil(#keys/3)*26+14
   end
-  if not advanced then return y end
-  U.surface(x,y,w,116,C.panel,C.edgeSoft)
-  for i,e in ipairs({{"Zone","LootZone","zone"},{"Dungeon","LootDungeon","dungeon"},{"Profession","LootProfession","profession"}}) do
-    local field=e[3];local xx=x+10+(i-1)*150
-    line(e[1],xx,y+8,138,"small",C.dim)
-    U.entry(e[2],xx,y+26,138,filters[field] or "",function(v) filters[field]=field=="profession" and v:upper() or v end,resetResults,80)
-  end
-  line("Available by level",x+10,y+62,122,"small",C.dim)
-  button("-",x+130,y+58,26,function() filters.maxLevel=math.max(1,(filters.maxLevel or ctx.level)-5);resetResults() end)
-  line(tostring(filters.maxLevel or ctx.level),x+160,y+62,24,"small",C.light,"CENTER")
-  button("+",x+188,y+58,26,function() filters.maxLevel=math.min(60,(filters.maxLevel or ctx.level)+5);resetResults() end)
-  button(filters.showIneligible and "Ineligible: shown" or "Ineligible: hidden",x+228,y+58,218,function() filters.showIneligible=not filters.showIneligible;resetResults() end,filters.showIneligible)
-  line("Level changes plan availability; comparisons use your current character.",x+10,y+91,w-20,"small",C.dim)
-  return y+124
+  return y+318
 end
+
+local function filterPage(y,ctx)
+  line("Filter upgrades",16,y+3,350,"head",C.gold)
+  button("Show results",416,y,140,returnToList,true)
+  y=y+38
+  local showSources=picker=="source"
+  U.surface(12,y,544,62,C.panel,C.edgeSoft)
+  line("Acquisition source",26,y+23,226,"body",C.light)
+  button(L.sourceNames[filters.source] or "All sources",332,y+19,208,function()
+    if showSources then picker=nil else picker="source" end
+    refresh(true)
+  end,showSources,"Choose a source type.")
+  y=y+70
+  if showSources then
+    local h=math.ceil(#SOURCES/3)*31+16
+    U.surface(12,y,544,h,C.panel,C.edgeSoft)
+    for i,key in ipairs(SOURCES) do
+      local x=21+(i-1)%3*179
+      local yy=y+8+math.floor((i-1)/3)*31
+      button(L.sourceNames[key] or "Any source",x,yy,168,function()
+        filters.source=key;picker=nil;resetResults()
+      end,filters.source==key)
+    end
+    return y+h+8
+  end
+
+  U.surface(12,y,544,67,C.panel,C.edgeSoft)
+  line("Play style",26,y+10,200,"body",C.light)
+  for i,key in ipairs({"all","solo","group","buy"}) do
+    button(STYLES[key],26+(i-1)*129,y+35,122,function()
+      filters.style=key;resetResults()
+    end,filters.style==key)
+  end
+  y=y+75
+  U.surface(12,y,544,70,C.panel,C.edgeSoft)
+  for i,e in ipairs({{"Zone","LootZone","zone"},{"Dungeon","LootDungeon","dungeon"},{"Profession","LootProfession","profession"}}) do
+    local label,entry,field=unpack(e)
+    local x=26+(i-1)*174
+    line(label,x,y+10,160,"body",C.light)
+    U.entry(entry,x,y+36,155,filters[field] or "",function(v)
+      filters[field]=field=="profession" and v:upper() or v
+    end,resetResults,80)
+  end
+  y=y+78
+  U.surface(12,y,544,69,C.panel,C.edgeSoft)
+  line("Available by level",26,y+11,139,"body",C.light)
+  button("-",157,y+7,26,function()
+    filters.maxLevel=math.max(1,(filters.maxLevel or ctx.level)-5);resetResults()
+  end)
+  line(tostring(filters.maxLevel or ctx.level),191,y+11,29,"small",C.light,"CENTER")
+  button("+",228,y+7,26,function()
+    filters.maxLevel=math.min(60,(filters.maxLevel or ctx.level)+5);resetResults()
+  end)
+  button(filters.showIneligible and "Ineligible: shown" or "Ineligible: hidden",332,y+7,208,function()
+    filters.showIneligible=not filters.showIneligible;resetResults()
+  end,filters.showIneligible)
+  line("Plan level filters availability. Scores use the current character.",26,y+42,508,"small",C.dim)
+  y=y+77
+  button("Reset filters",12,y,152,resetFilters)
+  button(filters.sort=="acquisition" and "Sort: Access" or "Sort: Power",184,y,176,function()
+    if filters.sort=="acquisition" then filters.sort=nil else filters.sort="acquisition" end
+    resetResults()
+  end)
+  return y+30
+end
+
+local function filterSummary(ctx)
+  local tags={}
+  if filters.source~="all" then tags[#tags+1]=L.sourceNames[filters.source] or filters.source end
+  if filters.style~="all" then tags[#tags+1]=STYLES[filters.style] end
+  for _,key in ipairs({"zone","dungeon","profession"}) do
+    if filters[key] and filters[key]~="" then
+      tags[#tags+1]=key:sub(1,1):upper()..key:sub(2)..": "..filters[key]
+    end
+  end
+  if filters.showIneligible then tags[#tags+1]="Includes ineligible" end
+  if filters.maxLevel and filters.maxLevel~=ctx.level then tags[#tags+1]="By level "..filters.maxLevel end
+  if filters.sort=="acquisition" then tags[#tags+1]="Sorted by access" end
+  return tags
+end
+
 local function sourceSummary(row)
   local s=row.sources[1]
-  if not s then return "Source unverified",row.item.tradable and "Tradable" or "Check in game" end
+  if not s then return "Source unverified",row.item.tradable and "Tradable" or "" end
   local name=s.dungeon or s.zone or s.profession or s.name or ""
-  return (L.sourceNames[s.type] or s.type)..(#row.sources>1 and (" +"..(#row.sources-1)) or ""),name
+  if name==s.profession then name=name:sub(1,1)..name:sub(2):lower() end
+  local source=L.sourceNames[s.type] or s.type
+  return source..(#row.sources>1 and (" +"..(#row.sources-1)) or ""),name
 end
+
 local function browse(y,ctx)
-  local x,w=108,U.W-108
-  local sidebarBottom=y+54+#SLOTS*20
-  local back=button("< Character",0,y,100,function() view="character";selected=nil;refresh(true) end)
+  local back=button("< Equipment",12,y,106,function() view="character";selected=nil;refresh(true) end)
   back.codexLabel,back.tipTitle="Back to character","Back to character"
-  U.entry("LootSearch",x+6,y,w-94,filters.search,function(v) filters.search=v end,resetResults,80)
-  button("Search",U.W-80,y,80,resetResults)
-  line("Gear slots",6,y+33,94,"small",C.dim)
-  for i,s in ipairs(SLOTS) do
-    local n,key=s[1],s[3]
-    local yy=y+54+(i-1)*20
-    if filters.slot==key then U.surface(0,yy,100,19,C.btnOn,C.accent) end
-    itemIcon(nil,5,yy+3,13,s[2],nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[n] or "Chest"))
-    line(s[2],24,yy+2,70,"small",filters.slot==key and C.btnOnInk or C.dim)
-    U.hit(0,yy,100,19,s[2],"Browse this equipment slot.",function() chooseSlot(n,key) end,"Slot "..s[2])
-  end
+  line(slotTitle().." upgrades",132,y+1,272,"head",C.gold)
+  button("Change slot",418,y,138,function() view="slots";refresh(true) end)
+  y=y+30
+  U.surface(12,y,544,47,C.panel,C.edgeSoft)
+  baseline(y,ctx)
+  y=y+56
+
+  local tags=filterSummary(ctx)
+  U.entry("LootSearch",17,y,335,filters.search,function(v) filters.search=v end,resetResults,80)
+  button("Search",361,y,76,resetResults,false,"Search by item name or ID.")
+  local filterLabel=#tags>0 and ("Filters ("..#tags..")") or "Filters"
+  local filter=button(filterLabel,449,y,107,function() view="filters";refresh(true) end,#tags>0)
+  filter.codexLabel="Filters"
   y=y+29
-  button(L.sourceNames[filters.source] or "All sources",x,y,152,function() if picker=="source" then picker=nil else picker="source" end;refresh() end,picker=="source","Choose acquisition sources.")
-  button(STYLES[filters.style],x+158,y,146,function() if picker=="style" then picker=nil else picker="style" end;refresh() end,picker=="style","Choose solo, group, or buy / craft.")
-  local extra=0
-  for _,key in ipairs({"zone","dungeon","profession"}) do if filters[key] and filters[key]~="" then extra=extra+1 end end
-  if filters.showIneligible then extra=extra+1 end
-  if filters.maxLevel and filters.maxLevel~=ctx.level then extra=extra+1 end
-  local moreLabel=advanced and "Fewer filters" or "More filters"
-  local more=button(moreLabel..(extra>0 and (" ("..extra..")") or ""),x+310,y,w-310,function() advanced=not advanced;picker=nil;refresh() end,advanced)
-  more.codexLabel=moreLabel
-  y=extraFilters(y+29,ctx)
-  y=baseline(y,ctx)
+
   local page=L.candidates(filters,ctx,offset,PAGE)
   if offset>0 and offset>=page.total then
-    offset=math.max(0,math.floor((page.total-1)/PAGE)*PAGE);page=L.candidates(filters,ctx,offset,PAGE)
+    offset=math.max(0,math.floor((page.total-1)/PAGE)*PAGE)
+    page=L.candidates(filters,ctx,offset,PAGE)
   end
-  line(slotTitle().." upgrades",x,y,220,"body",C.gold)
-  button("Reset filters",U.W-104,y-2,104,resetFilters);y=y+23
-  line(page.total.." matching items",x,y,200,"small",C.dim)
-  button(filters.sort=="acquisition" and "Sort: Access" or "Sort: Power",U.W-104,y-2,104,function()
-    if filters.sort=="acquisition" then filters.sort=nil else filters.sort="acquisition" end;resetResults()
-  end);y=y+25
+  line(page.total.." matching items",16,y,139,"small",C.dim)
+  if #tags>0 then
+    local summary=table.concat(tags,"  /  ")
+    line(summary,160,y,392,"small",C.dim,"RIGHT")
+    U.hit(160,y-2,392,18,"Active filters",ns.plain(summary))
+  end
+  y=y+18
   if page.total==0 then
-    U.surface(x,y,w,92,C.panel,C.edgeSoft)
-    text("No matching items",y+14,"body",C.gold,x+12,w-24)
-    text("Try another slot or reset your filters.",y+42,"small",C.dim,x+12,w-24)
-    y=y+100
+    U.surface(12,y,544,90,C.panel,C.edgeSoft)
+    text("No matching items",y+14,"body",C.gold,24,512)
+    text("Try a different search or clear your filters.",y+41,"small",C.dim,24,512)
+    button("Clear search and filters",312,y+56,220,resetFilters)
+    return y+102
   end
+
+  U.rect(12,y,544,23,C.panel)
+  line("Item",24,y+4,188,"small",C.dim)
+  line("Where to get it",273,y+4,144,"small",C.dim)
+  line("Comparison",460,y+4,87,"small",C.dim,"CENTER")
+  y=y+25
   for i,row in ipairs(page.rows) do
     local it,r=row.item,row.result
-    U.surface(x,y,w,50,i%2==0 and C.panel or C.btnOff,C.edgeSoft)
-    U.rect(x+3,y+5,2,40,quality(it.quality),"border")
-    itemIcon(it,x+10,y+8,34,it.name,r.reason)
-    line(it.name,x+54,y+6,257,"body",quality(it.quality))
+    U.rect(12,y,544,43,i%2==0 and C.panel or C.btnOff)
+    U.rect(12,y+42,544,1,C.edgeSoft,"border")
+    itemIcon(it,21,y+6,30,it.name,r.reason)
+    line(it.name,62,y+13,196,"body",quality(it.quality))
     local source,where=sourceSummary(row)
     local route=row.sources[1]
-    U.icon(route and SOURCE_ICONS[route.type] or "inv_misc_map_01",x+54,y+29,13,source,where)
-    local caption=source..(where~="" and (" / "..where) or "")
-    line(caption,x+74,y+28,228,"small",route and C.gold or C.dim)
+    local sourceIcon=route and SOURCE_ICONS[route.type]
+    if sourceIcon then U.icon(sourceIcon,273,y+14,14,source,where) end
+    local sourceX=sourceIcon and 295 or 273
+    line(source,sourceX,y+5,434-sourceX,"small",route and C.gold or C.dim)
+    if where~="" then line(where,sourceX,y+22,434-sourceX,"small",C.dim) end
     if route then
-      line(">",x+308,y+27,12,"body",C.gold)
-      U.hit(x+50,y+25,274,22,caption,"Open this acquisition source.",
+      line(">",435,y+13,12,"body",C.accent)
+      U.hit(264,y,185,43,source.." / "..where,"Open this acquisition source.",
         function() choose(it.id,route.id) end,"Sources for item "..it.id)
     end
     local verdict=row.futureLevel and "Later level" or L.labels[r.verdict] or r.verdict
     local color=row.futureLevel and C.dim or verdictColor(r.verdict)
-    U.rect(x+335,y+7,w-350,16,C.parch,"border")
-    line(verdict,x+337,y+9,w-354,"small",color,"CENTER")
-    local gain=row.futureLevel and ("At level "..row.futureLevel) or
-      (r.confidence=="complete" and r.percent and string.format("%+.1f%% score",r.percent))
-      or (r.verdict=="upgrade" and "Empty slot" or "View details")
-    line(gain,x+328,y+29,w-336,"small",C.dim,"CENTER")
-    local b=U.hit(x,y,w,route and 25 or 50,it.name,r.reason,function() choose(it.id) end,"Inspect item "..it.id)
-    itemTip(b,it,r.reason);y=y+54
+    line(verdict,452,y+5,99,"small",color,"CENTER")
+    local gain=row.futureLevel and ("Level "..row.futureLevel) or
+      (r.confidence=="complete" and r.percent and string.format("%+.1f%%",r.percent))
+      or (r.verdict=="upgrade" and "Empty slot" or nil)
+    if gain then line(gain,452,y+22,99,"small",C.dim,"CENTER") end
+    local b=U.hit(12,y,249,43,it.name,r.reason,function() choose(it.id) end,"Inspect item "..it.id)
+    itemTip(b,it,r.reason)
+    y=y+46
   end
-  if offset>0 then button("Previous loot page",x,y,132,function() offset=math.max(0,offset-PAGE);refresh(true) end) end
-  line("Page "..(page.total>0 and math.floor(offset/PAGE)+1 or 0).." of "..math.ceil(page.total/PAGE),x+138,y+4,w-276,"small",C.dim,"CENTER")
-  if offset+PAGE<page.total then button("Next loot page",U.W-132,y,132,function() offset=offset+PAGE;refresh(true) end) end
-  return math.max(y+30,sidebarBottom+8)
+  y=y+5
+  if offset>0 then button("Previous loot page",12,y,138,function() offset=math.max(0,offset-PAGE);refresh(true) end) end
+  line("Page "..(math.floor(offset/PAGE)+1).." of "..math.ceil(page.total/PAGE),165,y+5,238,"small",C.dim,"CENTER")
+  if offset+PAGE<page.total then button("Next loot page",418,y,138,function() offset=offset+PAGE;refresh(true) end) end
+  return y+27
 end
 
 local function number(n)
@@ -734,18 +838,20 @@ local function render()
   if section=="Upgrades" then
     if view=="character" then y=character(y,ctx)
     elseif view=="detail" and selected then y=details(selected,y)
+    elseif view=="slots" then y=slotPicker(y)
+    elseif view=="filters" then y=filterPage(y,ctx)
     else y=browse(y,ctx) end
   elseif section=="Compare" then y=compare(y,ctx)
   elseif section=="Tracked" then y=tracked(y)
   else y=profiles(y,ctx) end
   local height=math.max(484,y+8)
-  U.folio(height,C.parch)
+  U.folio(height,C.background)
   return height
 end
 ns.addTab("loot","Loot",render)
 function L.open(want,ref)
   if want then section=want end
   if ref then selected=ref;input=tostring(ref);detailSection="Overview";sourceOffset=0;expandedSource=nil;preferredSource=nil;if section=="Upgrades" then view="detail" end end
-  ns.openTab("loot")
+  ns.openTab("loot",true)
 end
 L.subscribe(function() if ns.refreshLootTab then ns.refreshLootTab() end end)

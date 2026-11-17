@@ -211,26 +211,23 @@ local function plate(x, y, w, h, bg, edge)
   f.paper:Hide(); f.shade:Hide(); f.glow:Hide()
 end
 
--- The Loot journal's textured folio surfaces, independent of stretched quest art.
+-- Loot uses standalone illustrations over solid UI surfaces.
 -- Every file can fall back to a plain surface without a missing-texture square.
-local function picture(path, x, y, w, h, tint, tile)
+local function picture(path, x, y, w, h)
   if not A.hasFile(path) then return false end
   local t = take("picture", newTex)
-  t:SetDrawLayer("BACKGROUND", tile and 1 or 2)
-  t:SetTexture(path, tile and "REPEAT" or "CLAMP", tile and "REPEAT" or "CLAMP")
-  t:SetTexCoord(0, tile and w / 128 or 1, 0, tile and h / 128 or 1)
-  t:SetVertexColor(rgba(tint or { 1, 1, 1, 1 }))
+  t:SetDrawLayer("BACKGROUND", 2)
+  t:SetTexture(path)
+  t:SetTexCoord(0, 1, 0, 1)
+  t:SetVertexColor(1, 1, 1, 1)
   t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); t:SetSize(w, h)
   return true
 end
 local function surface(x, y, w, h, bg, edge)
   rect(x,y,w,h,bg)
-  picture("Interface\\AddOns\\LevelingCodex\\media\\loot-paper.tga",x,y,w,h,bg,true)
   edge = edge or C.edgeSoft
   rect(x,y,w,1,edge,"border"); rect(x,y+h-1,w,1,edge,"border")
   rect(x,y,1,h,edge,"border"); rect(x+w-1,y,1,h,edge,"border")
-  local inner={edge[1],edge[2],edge[3],0.22}
-  rect(x+3,y+3,w-6,1,inner,"border"); rect(x+3,y+h-4,w-6,1,inner,"border")
 end
 local function newFolio()
   local f=CreateFrame("Frame",nil,content)
@@ -241,11 +238,7 @@ end
 local function folio(h,bg)
   local f=take("folio",newFolio)
   f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(W,h)
-  local path="Interface\\AddOns\\LevelingCodex\\media\\loot-paper.tga"
-  if A.hasFile(path) then
-    f.paper:SetTexture(path,"REPEAT","REPEAT");f.paper:SetTexCoord(0,W/128,0,h/128)
-    f.paper:SetVertexColor(rgba(bg))
-  else f.paper:SetColorTexture(rgba(bg)) end
+  f.paper:SetColorTexture(rgba(bg))
 end
 
 local showTip, hideTip = A.showTip, A.hideTip
@@ -1985,10 +1978,14 @@ function ns.rebuildForTheme()
   end
 end
 
-function ns.openTab(tab)
+function ns.openTab(tab, atTop)
   if not ns.D then return end
   ns.lastBanner = nil -- a banner click (or any direct opening) has used it
   if not frame then makeFrame() end
+  if atTop then
+    scrollPos[tab] = 0
+    if shownTab == tab then scroll:SetVerticalScroll(0) end
+  end
   activeTab = tab
   if frame:IsShown() then refresh() else frame:Show() end
 end
