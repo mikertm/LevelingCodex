@@ -10915,6 +10915,59 @@ function S.lootTab()
   local relic=MOCK.class=="PALADIN" or MOCK.class=="SHAMAN" or MOCK.class=="DRUID"
   check(questText(win(),relic and "Relic upgrades" or "Ranged upgrades"),"paper doll chooses the class's ranged or relic category")
 end
+function S.lootGraphics()
+  lootSetup()
+  local chestIcon,headIcon
+  local function walk(f)
+    for _,b in ipairs({f:GetChildren()}) do
+      if b:IsShown() then
+        if b.tex and b.tipTitle=="Chest" then chestIcon=b.tex end
+        if b.tex and b.tipTitle=="Head" then headIcon=b.tex end
+        walk(b)
+      end
+    end
+  end
+  walk(win())
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chestTexture=canRead and 134400 or MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
+  check(chestIcon and chestIcon:GetTexture()==chestTexture,"native item IDs and unloaded-item slot art reach the renderer intact")
+  check(headIcon and headIcon:GetTexture()==MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Head"),"complete empty-slot texture paths stay intact")
+end
+function S.lootCardViews()
+  lootSetup();click(win(),"Compare")
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chest=findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+  check(chest and chest:GetWidth()<400 and chest:GetHeight()>=44,"equipment is browsed in readable item cards")
+  click(win(),"Bags")
+  check(questText(win(),"No bag equipment") or questText(win(),"Bag items unavailable"),"an empty or unavailable bag view is explained")
+  if C_Container and canRead then
+    for i=1,7 do
+      local id=900010+i;local name="Bag Vest "..i
+      MOCK.lootItems[id]={name=name,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+      MOCK.bagItems[#MOCK.bagItems+1]={id=id,name=name,class="Armor",quality=2,level=1}
+    end
+    MOCK.lootItems[900018]={name="Bag Blade",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+    MOCK.bagItems[#MOCK.bagItems+1]={id=900018,name="Bag Blade",class="Weapon",quality=2,level=1}
+    MOCK.event("BAG_UPDATE_DELAYED");MOCK.advance(0.2)
+    click(win(),"Next items")
+    check(findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag cards remain reachable beyond the first page")
+    click(win(),"Weapons")
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and not findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"equipment groups select the right items and reset paging")
+  end
+  click(win(),"Equipped");click(win(),"Weapons")
+  check(questText(win(),"No equipped weapons"),"empty equipment groups are explained")
+  click(win(),"Armor")
+  click(win(),"Profiles")
+  local protection=findButton(win(),function(label) return label=="Protection" end)
+  check(protection and protection:GetWidth()<300 and protection:GetHeight()>=80,"specializations are distinct illustrated choices")
+  click(win(),"Arms")
+  check(LevelingCodexCharDB.lootProfileKey=="arms","specialization cards apply their selected scoring profile")
+  click(win(),"Export profile")
+  check(LevelingCodexLootProfileCode and LevelingCodexLootProfileCode:IsShown() and #LevelingCodexLootProfileCode:GetText()>0,"profile sharing remains available")
+  click(win(),"Tracked");click(win(),"Browse upgrades")
+  check(questText(win(),"Your equipment"),"the empty target page leads directly to equipment browsing")
+end
 -- A wrong slot handler, lost filter/page, or an item detail appended below the list
 -- would break this player-visible browse/back flow.
 function S.lootBrowse()

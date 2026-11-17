@@ -211,6 +211,43 @@ local function plate(x, y, w, h, bg, edge)
   f.paper:Hide(); f.shade:Hide(); f.glow:Hide()
 end
 
+-- The Loot journal's textured folio surfaces, independent of stretched quest art.
+-- Every file can fall back to a plain surface without a missing-texture square.
+local function picture(path, x, y, w, h, tint, tile)
+  if not A.hasFile(path) then return false end
+  local t = take("picture", newTex)
+  t:SetDrawLayer("BACKGROUND", 1)
+  t:SetTexture(path, tile and "REPEAT" or "CLAMP", tile and "REPEAT" or "CLAMP")
+  t:SetTexCoord(0, tile and w / 128 or 1, 0, tile and h / 128 or 1)
+  t:SetVertexColor(rgba(tint or { 1, 1, 1, 1 }))
+  t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); t:SetSize(w, h)
+  return true
+end
+local function surface(x, y, w, h, bg, edge)
+  rect(x,y,w,h,bg)
+  picture("Interface\\AddOns\\LevelingCodex\\media\\loot-paper.tga",x,y,w,h,bg,true)
+  edge = edge or C.edgeSoft
+  rect(x,y,w,1,edge,"border"); rect(x,y+h-1,w,1,edge,"border")
+  rect(x,y,1,h,edge,"border"); rect(x+w-1,y,1,h,edge,"border")
+  local inner={edge[1],edge[2],edge[3],0.22}
+  rect(x+3,y+3,w-6,1,inner,"border"); rect(x+3,y+h-4,w-6,1,inner,"border")
+end
+local function newFolio()
+  local f=CreateFrame("Frame",nil,content)
+  f:SetFrameLevel(content:GetFrameLevel()+1)
+  f.paper=f:CreateTexture(nil,"BACKGROUND");f.paper:SetAllPoints(f)
+  return f
+end
+local function folio(h,bg)
+  local f=take("folio",newFolio)
+  f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(W,h)
+  local path="Interface\\AddOns\\LevelingCodex\\media\\loot-paper.tga"
+  if A.hasFile(path) then
+    f.paper:SetTexture(path,"REPEAT","REPEAT");f.paper:SetTexCoord(0,W/128,0,h/128)
+    f.paper:SetVertexColor(rgba(bg))
+  else f.paper:SetColorTexture(rgba(bg)) end
+end
+
 local showTip, hideTip = A.showTip, A.hideTip
 
 -- Spell icons the way the game draws them: a black edge with a thin gold rim.
@@ -235,6 +272,7 @@ local function icon(name, x, y, size, title, text)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
   ns.setIcon(f.tex, name)
   f.tex:SetDesaturated(false)
+  f.tex:SetAlpha(1)
   f.tex:SetVertexColor(1, 1, 1)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
@@ -1483,8 +1521,11 @@ local function playerDoll(x, y, w, h, enabled)
   -- Re-read the player after an equipment event, including on pooled redraws.
   local ok = pcall(model.SetUnit, model, "player")
   if not ok then model:Hide(); holder:Hide(); return false end
+  -- Match the character sheet's neutral full-body reset. A fixed camera preset
+  -- applied after PortraitZoom overrides that framing on the Forever client.
+  if model.SetPosition then pcall(model.SetPosition, model, 0, 0, 0) end
+  if model.SetRotation then pcall(model.SetRotation, model, 0.61) end
   if model.SetPortraitZoom then pcall(model.SetPortraitZoom, model, 0) end
-  if model.SetCamera then pcall(model.SetCamera, model, 0) end
   model:Show()
   return true
 end
@@ -1495,7 +1536,7 @@ local function interactivePoolKinds()
 end
 
 -- The drawing helpers for tabs that live in other files.
-ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
   entry = entry, playerDoll = playerDoll,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,

@@ -44,6 +44,7 @@ def source(f, ver):
 def payload():
     toc = open(os.path.join(ROOT, "LevelingCodex.toc"), encoding="utf-8").read().splitlines()
     files = ["LevelingCodex.toc", "LevelingCodex_Camelot.toc", "Bindings.xml", "media/quest-arrow.tga"]
+    files += ["media/loot-paper.tga", "media/loot-stage.tga", "media/loot-ornament.tga"]
     files += [l.strip() for l in toc if l.strip() and not l.startswith("#")]
     return files
 

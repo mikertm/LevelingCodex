@@ -201,7 +201,10 @@ end
 -- Drawing helpers that work across client versions -----------------------------
 
 function ns.iconPath(name)
+  if type(name) == "number" then return name end
   if not name or name == "" then return ns.QUESTION_ICON end
+  if type(name) ~= "string" then return ns.QUESTION_ICON end
+  if name:find("[/\\]") then return name end
   return "Interface\\Icons\\" .. name
 end
 
