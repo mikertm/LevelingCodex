@@ -15,6 +15,7 @@ function L.showSourceOnMap(sourceID)
   L.call(C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint,true)
   if type(OpenWorldMap)=="function" then L.call(OpenWorldMap,s.map)
   elseif WorldMapFrame then L.call(WorldMapFrame.Show,WorldMapFrame);L.call(WorldMapFrame.SetMapID,WorldMapFrame,s.map) end
+  if L.refreshTracker then L.refreshTracker() end
   return true,"Mapped "..(s.locationKind=="entrance" and "entrance: " or "")..(s.name or "loot source")
 end
 function L.clearMapTarget()
@@ -24,6 +25,7 @@ function L.clearMapTarget()
   if not point or point.uiMapID==target.map and point.position and math.abs((point.position.x or -1)-target.x/100)<0.00001
     and math.abs((point.position.y or -1)-target.y/100)<0.00001 then L.call(C_Map and C_Map.ClearUserWaypoint) end
   target=nil
+  if L.refreshTracker then L.refreshTracker() end
 end
 function L.openQuestSource(quest)
   local faction=L.call(UnitFactionGroup,"player")

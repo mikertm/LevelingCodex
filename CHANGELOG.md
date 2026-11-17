@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Widened the Loot window and added a live item preview beside upgrade results. Item and slot artwork now sends the first click to its row, and the floating tracker uses compact rows with item icons and source names.
+
 - Reworked Loot for a dark, opaque reading surface. Full-width results align items, sources, and upgrade verdicts, with separate screens for changing slots and filtering.
 
 - Polished the Loot journal with an original teal banner, source shortcuts on results, expandable acquisition cards, and before-and-after stat graphs. Incomplete comparisons explain which information is missing.

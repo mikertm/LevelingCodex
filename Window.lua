@@ -12,6 +12,7 @@ local A = ns.art
 local FONT_HEAD = "head" -- Morpheus, or the external UI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
+local tabWidths = {}
 
 local frame, scroll, content, tabs, levelText, nowBtn
 local viewLevel -- the level the window is showing (defaults to yours)
@@ -235,9 +236,9 @@ local function newFolio()
   f.paper=f:CreateTexture(nil,"BACKGROUND");f.paper:SetAllPoints(f)
   return f
 end
-local function folio(h,bg)
+local function folio(h,bg,w)
   local f=take("folio",newFolio)
-  f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(W,h)
+  f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(w or W,h)
   f.paper:SetColorTexture(rgba(bg))
 end
 
@@ -1419,8 +1420,9 @@ local TABS = {
 
 -- Another file adds its own tab (before Settings): renderer(viewLevel) draws with ns.ui and
 -- returns the content height. TABS outlives the frame, so a theme rebuild keeps the tab.
-function ns.addTab(key, label, renderer)
+function ns.addTab(key, label, renderer, width)
   renderers[key] = renderer
+  tabWidths[key] = width
   for _, t in ipairs(TABS) do if t[1] == key then return end end
   table.insert(TABS, #TABS, { key, label })
 end
@@ -1540,7 +1542,12 @@ function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
   local p = db.windowPos
-  frame:SetScale(db.windowScale or 1)
+  local scale = db.windowScale or 1
+  if tabWidths[activeTab] then
+    local screenWidth = UIParent:GetWidth()
+    if screenWidth and screenWidth > 32 then scale = math.min(scale, (screenWidth - 32) / frame:GetWidth()) end
+  end
+  frame:SetScale(scale)
   frame:ClearAllPoints()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
@@ -1548,6 +1555,12 @@ end
 refresh = function(professionSnapshot)
   if not (frame and frame:IsShown() and ns.D) then return end
   local me = UnitLevel("player")
+  local width = tabWidths[activeTab] or W
+  if content:GetWidth() ~= width then
+    content:SetWidth(width)
+    frame:SetWidth(width + 72)
+    ns.placeWindow()
+  end
   viewLevel = viewLevel or me
   if viewLevel < 1 then viewLevel = 1 elseif viewLevel > 60 then viewLevel = 60 end
   levelText:SetText("Level " .. viewLevel)
@@ -1626,7 +1639,8 @@ local function listFocusables()
     end
   end
   local chrome = frame.padChrome or {}
-  for _, c in ipairs({ { chrome.prev, W * 0.6 }, { chrome.now, W * 0.75 }, { chrome.next, W * 0.9 }, { chrome.close, W + 20 } }) do
+  local width = content:GetWidth()
+  for _, c in ipairs({ { chrome.prev, width * 0.6 }, { chrome.now, width * 0.75 }, { chrome.next, width * 0.9 }, { chrome.close, width + 20 } }) do
     if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40, fixed = true } end
   end
   local h = content:GetHeight() or 0

@@ -11030,11 +11030,24 @@ end
 function S.lootBrowse()
   lootSetup()
   check(questText(win(),"Your equipment"),"loot starts with the equipment paper doll")
+  check(win():GetWidth()>810,"Loot has room for a result list beside the item preview")
   for _,name in ipairs({"Head","Neck","Shoulders","Back","Chest","Wrists","Hands","Waist","Legs","Feet",
     "Ring 1","Ring 2","Trinket 1","Trinket 2","Main hand","Off hand","Ranged / relic"}) do
     check(findButton(win(),function(label) return label=="Browse "..name end),"paper doll slot is clickable: "..name)
   end
-  click(win(),"Browse Chest")
+  local function clickThroughArtwork(control)
+    local _,anchor,_,x,y=control:GetPoint(1)
+    for _,child in ipairs({control:GetParent():GetChildren()}) do
+      local _,relative,_,cx,cy=child:GetPoint(1)
+      if child.tex and child:IsShown() and child:IsMouseEnabled() and relative==anchor
+          and cx<x+control:GetWidth() and cx+child:GetWidth()>x
+          and cy>y-control:GetHeight() and cy-child:GetHeight()<y then
+        check(control:GetFrameLevel()>child:GetFrameLevel(),"the first click on an item icon reaches its row action")
+      end
+    end
+    control:Click()
+  end
+  clickThroughArtwork(findButton(win(),function(label) return label=="Browse Chest" end))
   check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
   check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
   check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
@@ -11056,10 +11069,19 @@ function S.lootBrowse()
   check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"filter fields are hidden from results")
   click(win(),"Next loot page")
   check(questText(win(),"Page 2 of"),"results can be paged")
-  local row=findButton(win(),function(label) return label:find("^Inspect item ") end)
-  check(row,"a result can be opened");row:Click()
-  check(findButton(win(),function(label) return label=="Back to results" end)
-    and not findButton(win(),function(label) return label=="Next loot page" end),"details replace the list")
+  local row
+  for _,candidate in ipairs(MOCK.buttons(win())) do
+    if candidate.codexLabel and candidate.codexLabel:find("^Inspect item ") and not candidate.codexOn then
+      row=candidate;break
+    end
+  end
+  check(row,"a different result can be selected")
+  local label=row.codexLabel
+  clickThroughArtwork(row)
+  local active=findButton(win(),function(candidate) return candidate==label end)
+  check(active and active.codexOn and LevelingCodexLootSearch:IsShown() and questText(win(),"Selected item"),
+    "a single click changes the selection while keeping the results visible")
+  click(win(),"Full comparison")
   click(win(),"Back to results")
   check(questText(win(),"Page 2 of"),"returning from details retains the result page")
   local search=LevelingCodexLootSearch
@@ -11074,7 +11096,7 @@ function S.lootBrowse()
     and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
   click(win(),"Back to results")
   check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
-  click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Sources")
+  click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Full comparison");click(win(),"Sources")
   check(questText(win(),"Crafted:"),"item details retain the acquisition source")
   click(win(),"Back to results")
   search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
@@ -11120,6 +11142,9 @@ end
 function S.lootTracker()
   S.lootCompareVerdicts();MOCK.advance(0.5)
   check(_G.LevelingCodexLootTracker and LevelingCodexLootTracker:IsShown(),"tracked loot opens the optional tracker")
+  check(LevelingCodexLootTracker:GetHeight()<160,"a single target keeps the floating tracker compact")
+  check(questText(LevelingCodexLootTracker,"Choose a source"),"the tracker explains a target with no selected source")
+  check(not findButton(LevelingCodexLootTracker,function(label) return label=="Clear loot map" end),"a map clear action only appears for an active loot waypoint")
   check(not MOCK.questRewarded,"loot guidance never selects a reward")
 end
 function S.lootTooltips()
