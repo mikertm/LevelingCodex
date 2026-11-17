@@ -99,8 +99,11 @@ function L.readProfileCode(code)
       local k,v=field:match("^([%w_]+)=([%d%.eE%+%-]+)$")
       if not k then return false,"Invalid profile field" end
       if k=="feral" then if v~="0" and v~="1" then return false,"Invalid feral flag" end; p.weapon.feral=v=="1"
-      elseif k:sub(1,2)=="w_" then p.weapon[k:sub(3)]=tonumber(v)
-      else p.weights[k]=tonumber(v) end
+      else
+        local n=tonumber(v)
+        if not validNumber(n) then return false,"Invalid numeric profile field" end
+        if k:sub(1,2)=="w_" then p.weapon[k:sub(3)]=n else p.weights[k]=n end
+      end
     end
   end
   return L.setProfile(p)

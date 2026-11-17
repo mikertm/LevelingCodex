@@ -77,5 +77,38 @@ class LootItemTests(unittest.TestCase):
           assert(a~=ns.loot.itemKey("item:123:0:0:0:0:0:43:0:30:0"))
         ''')
 
+    def test_classic_container_tuple_preserves_links_and_counts(self):
+        self.lua.execute('''
+          C_Container=nil
+          function GetContainerNumSlots(bag) return bag==0 and 1 or 0 end
+          function GetContainerItemInfo(bag,slot)
+            return 134400,2,false,2,false,false,"item:1"
+          end
+          local s=ns.loot.snapshot()
+          assert(s.bagsKnown and s.bagLinks["item:1"]==2)
+        ''')
+
+    def test_occupied_container_without_link_is_not_a_known_empty_bag(self):
+        self.lua.execute('''
+          bags[1]="item:1";assert(ns.loot.snapshot().bagLinks["item:1"]==1)
+          C_Container.GetContainerItemInfo=function() return {itemID=1,stackCount=1} end
+          ns.loot.refresh("bag item not loaded")
+          local s=ns.loot.snapshot()
+          assert(not s.bagsKnown and s.bagLinks["item:1"]==1)
+        ''')
+
+    def test_modified_link_effects_do_not_inherit_base_completeness(self):
+        self.lua.execute('''
+          ns.lootData.items[1]={id=1,name="Plain",slot="INVTYPE_CHEST",stats={str=10},
+            complete={stats=true,effects=true,restrictions=true}}
+          stats["item:1:123:0:0:0:0:0:0:0:0"]={ITEM_MOD_STRENGTH_SHORT=10}
+          local i=ns.loot.item("item:1:123:0:0:0:0:0:0:0:0")
+          assert(i.complete.stats and not i.complete.effects)
+          C_TooltipInfo={GetHyperlink=function() return {lines={{leftText="Fiery Weapon"}}} end}
+          ns.loot.refresh("tooltip available")
+          assert(not ns.loot.item("item:1:123:0:0:0:0:0:0:0:0").complete.effects)
+          assert(ns.loot.item("item:1:0:0:0:0:0:0:0:0:0").complete.effects)
+        ''')
+
 
 if __name__=='__main__': unittest.main()

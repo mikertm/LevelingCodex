@@ -47,4 +47,16 @@ class LootProfileTests(unittest.TestCase):
           assert(not ns.loot.readProfileCode(string.rep("x",4097)))
         ''')
 
+    def test_invalid_numeric_tokens_cannot_replace_a_valid_profile(self):
+        for token in ('.','1e','1e309','-1'):
+            payload='Bad;str='+token+';feral=0'
+            checksum=1
+            for b in payload.encode(): checksum=(checksum*31+b)%65521
+            self.lua.globals().badcode=f'LCL1-DRUID-{payload}-{checksum}'
+            self.lua.execute('''
+              assert(ns.loot.setProfile({class="DRUID",label="Keep",weights={str=3},weapon={feral=true}}))
+              assert(not ns.loot.readProfileCode(badcode))
+              assert(ns.loot.profile().weights.str==3)
+            ''')
+
 if __name__=='__main__': unittest.main()

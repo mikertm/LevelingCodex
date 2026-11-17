@@ -17,6 +17,14 @@ function L.itemKey(ref)
   if #fields>=9 then fields[9]="0";if #fields>=10 then fields[10]="0" end;key="item:"..table.concat(fields,":") end
   return key
 end
+local function hasUnknownModifications(key)
+  local fields={};for value in (key:sub(6)..":"):gmatch("(.-):") do fields[#fields+1]=value end
+  for i=2,#fields do
+    -- Unique ID and viewing level/spec are identity/context, not added item effects.
+    if i~=8 and i~=9 and i~=10 and (tonumber(fields[i]) or 0)~=0 then return true end
+  end
+  return false
+end
 local function copy(t)
   local out={}; for k,v in pairs(t or {}) do out[k]=v end; return out
 end
@@ -66,8 +74,8 @@ function L.item(ref)
     end
     item.complete.stats=true
   end
-  local bare=key=="item:"..id
-  if base and not bare and not raw then
+  local modified=hasUnknownModifications(key)
+  if base and modified and not raw then
     -- Even a fixed item may carry an enchant or suffix not represented by base facts.
     item.complete.stats=false
   end
@@ -92,6 +100,10 @@ function L.item(ref)
       item.damage=tonumber(text:match("([%d%.]+) damage per second")) or item.damage
       item.speed=tonumber(text:match("Speed%s+([%d%.]+)")) or item.speed
     end
+  end
+  if modified then
+    item.complete.effects=false
+    item.warnings[#item.warnings+1]="Item modification effects have not been verified"
   end
   if item.random and not raw then item.complete.stats=false end
   local canRead=not ns.itemInfoAPI or ns.itemInfoAPI()~=nil
@@ -124,9 +136,13 @@ function L.snapshot()
       local ok,n=pcall(size,bag)
       if not ok or type(n)~="number" then bagsOK=false; break end
       for slot=1,n do
-        local good,info, count,_,_,_,link=pcall(get,bag,slot)
+        local good,info, count,_,_,_,_,link=pcall(get,bag,slot)
         if not good then bagsOK=false; break end
         if type(info)=="table" then link=info.hyperlink; count=info.stackCount end
+        if info and not link then
+          link=call(C_Container and C_Container.GetContainerItemLink or GetContainerItemLink,bag,slot)
+          if not link then bagsOK=false;break end
+        end
         if link then
           local key=L.itemKey(link)
           if key then links[key]=(links[key] or 0)+(tonumber(count) or 1) end

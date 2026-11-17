@@ -20,7 +20,7 @@ local function result(verdict, reason, item)
   return {verdict=verdict,reason=reason,candidate=item,warnings={},replacedSlots={},baseline={},statDelta={}}
 end
 
-function L.eligible(item, ctx, proposed)
+function L.eligible(item, ctx, proposed, insertedSlot)
   local r, p = item.restrictions or {}, ctx.proficiencies
   if (item.requiredLevel or 0) > ctx.level then return {state="no",reasons={"Requires level "..item.requiredLevel}} end
   if r.classes and not has(r.classes, ctx.class) then return {state="no",reasons={"Restricted to another class"}} end
@@ -54,8 +54,8 @@ function L.eligible(item, ctx, proposed)
     if not p.dualWield then return {state="no",reasons={"Dual wield required"}} end
   end
   if r.unique then
-    for _, other in pairs(proposed) do
-      if other and other ~= item and other.restrictions and other.restrictions.unique == r.unique then
+    for slot, other in pairs(proposed) do
+      if slot~=insertedSlot and other and other.restrictions and other.restrictions.unique == r.unique then
         return {state="no",reasons={"Conflicts with an equipped unique item"}}
       end
     end
@@ -70,8 +70,13 @@ function L.score(item, profile)
   local value, warnings = 0, {}
   for key, n in pairs(item.stats or {}) do value = value + n * ((profile.weights or {})[key] or 0) end
   local w = profile.weapon or {}
+  local ranged = item.slot == "INVTYPE_RANGED" or item.slot == "INVTYPE_RANGEDRIGHT" or item.slot == "INVTYPE_THROWN"
+  if item.classID==2 and not w.feral then
+    local weight=ranged and (w.ranged or 0) or (w.melee or 0)
+    if weight>0 and type(item.damage)~="number" then warnings[#warnings+1]="Weapon damage is not fully known" end
+    if (w.speed or 0)>0 and type(item.speed)~="number" then warnings[#warnings+1]="Weapon speed is not fully known" end
+  end
   if item.damage and not w.feral then
-    local ranged = item.slot == "INVTYPE_RANGED" or item.slot == "INVTYPE_RANGEDRIGHT" or item.slot == "INVTYPE_THROWN"
     value = value + item.damage * (ranged and (w.ranged or 0) or (w.melee or 0))
   end
   if item.speed and w.speed then value = value + item.speed * w.speed end
@@ -87,6 +92,9 @@ function L.compare(ref, ctx, baseline)
   if not item then return result("needsReview","Item information is unavailable") end
   if item.state == "loading" then return result("loading","Loading item information",item) end
   if not ctx then return result("needsReview","Character information is unavailable",item) end
+  if not baseline and ctx.snapshot and ctx.snapshot.equipmentKnown==false then
+    return result("needsReview","Equipped gear is not currently readable; the previous snapshot may be stale",item)
+  end
   local slots = baseline or (ctx.snapshot and ctx.snapshot.slots) or {}
   local locations = L.slotsFor(item.slot)
   if #locations == 0 then return result(item.slot and "cannotEquip" or "needsReview",item.slot and "This is not a supported equipment slot" or "Equipment slot information is unavailable",item) end
@@ -97,7 +105,7 @@ function L.compare(ref, ctx, baseline)
     proposed[slot] = item
     if item.slot == "INVTYPE_2HWEAPON" then proposed[17]=false; replaced={16,17} end
     local partnerMissing = slots[16] and slots[16].slot == "INVTYPE_2HWEAPON" and item.slot ~= "INVTYPE_2HWEAPON" and (slot==16 or slot==17)
-    local eligible = L.eligible(item,ctx,proposed)
+    local eligible = L.eligible(item,ctx,proposed,slot)
     if eligible.state == "no" then
       refusal = result("cannotEquip",eligible.reasons[1],item)
     else
@@ -132,6 +140,11 @@ function L.compare(ref, ctx, baseline)
         if not uncertain or (r.delta or -math.huge)>(uncertain.delta or -math.huge) then uncertain=r end
       end
     end
+  end
+  if best and uncertain then
+    best.verdict="needsReview";best.confidence="provisional"
+    best.reason="Another eligible replacement slot is not fully known; review both slots"
+    return best
   end
   return best or uncertain or refusal or result("needsReview","No legal comparison available",item)
 end

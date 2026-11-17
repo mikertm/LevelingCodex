@@ -83,6 +83,36 @@ class LootCompareTests(unittest.TestCase):
           assert(L.compare(i,c).verdict=="needsReview")
         ''')
 
+    def test_unread_equipment_snapshot_never_uses_stale_gear_conclusively(self):
+        self.lua.execute('''
+          local c=ctx();c.snapshot.equipmentKnown=false
+          assert(L.compare(item(9,110),c).verdict=="needsReview")
+        ''')
+
+    def test_unknown_paired_slot_prevents_a_false_downgrade(self):
+        self.lua.execute('''
+          local c=ctx();c.snapshot.slots[11]=item(1,100,"INVTYPE_FINGER");c.snapshot.slots[12]=nil
+          assert(L.compare(item(9,90,"INVTYPE_FINGER"),c).verdict=="needsReview")
+          c.snapshot.slots[12]=false
+          assert(L.compare(item(9,90,"INVTYPE_FINGER"),c).verdict=="upgrade")
+        ''')
+
+    def test_same_cached_unique_item_cannot_fill_a_second_slot(self):
+        self.lua.execute('''
+          local c=ctx();local i=item(9,90,"INVTYPE_FINGER");i.restrictions.unique="u"
+          c.snapshot.slots[11]=i;c.snapshot.slots[12]=item(2,10,"INVTYPE_FINGER")
+          local r=L.compare(i,c)
+          assert(r.verdict=="sidegrade" and r.replacedSlots[1]==11)
+        ''')
+
+    def test_unknown_weapon_damage_cannot_get_a_conclusive_score(self):
+        self.lua.execute('''
+          local c=ctx();local i=item(9,100,"INVTYPE_WEAPONMAINHAND");i.classID=2;i.subclassID=7
+          assert(L.compare(i,c).verdict=="needsReview")
+          i.damage=10
+          assert(L.compare(i,c).verdict=="upgrade")
+        ''')
+
     def test_target_variants_and_partial_bags(self):
         path = ROOT/'LootTargets.lua'
         self.assertTrue(path.exists(), 'target tracking is missing')
@@ -101,7 +131,12 @@ class LootCompareTests(unittest.TestCase):
           assert(L.targets("obtained")[1].key==a)
           snapshot.bagsKnown=false; snapshot.bagLinks={}; L.refreshTargets()
           assert(#L.targets("obtained")==1)
+          snapshot.bagsKnown=true;snapshot.bagLinks["item:123:0:1"]=1
           assert(L.setTargetState(a,"tracked")); assert(#L.targets("tracked")==2)
+          L.refreshTargets(); assert(#L.targets("tracked")==2,"explicit restore survives an ownership refresh")
+          snapshot.bagLinks={};L.refreshTargets()
+          snapshot.bagLinks["item:123:0:1"]=1;L.refreshTargets()
+          assert(#L.targets("obtained")==1,"a later acquisition still completes the target")
           assert(L.setTargetState(a,"dismissed")); assert(L.setTargetState(a,"tracked"))
         ''')
 

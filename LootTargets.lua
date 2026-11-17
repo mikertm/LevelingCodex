@@ -30,6 +30,7 @@ function L.setTargetState(key,state)
   local t=targets()[key]
   if type(t)~="table" or not valid[state] then return false,"Invalid target or state" end
   t.state=state
+  if state=="tracked" then t.ignoreOwnedUntilMissing=true end
   if L.refresh then L.refresh("loot target state") end
   return true
 end
@@ -44,7 +45,8 @@ function L.refreshTargets()
     if not found and not t.exact then
       for key in pairs(owned) do if tonumber(key:match("^item:(%d+)"))==t.id then found=true; break end end
     end
-    if found then
+    if not found and s.bagsKnown and s.equipmentKnown then t.ignoreOwnedUntilMissing=nil end
+    if found and not t.ignoreOwnedUntilMissing then
       t.state="obtained"
       changes[#changes+1]={kind="obtained",key=t.key,name=t.name}
     end

@@ -123,7 +123,7 @@ local function render()
     for _,row in ipairs(page.rows) do
       local it,r=row.item,row.result
       U.icon(it.icon,12,y,28,it.name,r.reason)
-      button(it.name,48,y,310,function() choose(it.id) end,selected==it.id)
+      button(it.name..(row.futureLevel and (" (level "..row.futureLevel..")") or ""),48,y,310,function() choose(it.id) end,selected==it.id)
       U.T(L.labels[r.verdict],370,y+4,174,"small",r.verdict=="upgrade" and C.accent or C.dim)
       y=y+32
     end

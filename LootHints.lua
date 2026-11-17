@@ -77,10 +77,12 @@ local function unitTip(tip)
   local seen,n={},0
   for _,sid in ipairs(ids or {}) do
     local s=data.sources[sid];local it=s and data.items[s.item]
-    if it and not seen[it.id] then
+    local drops=s and (s.type=="creature" or s.type=="rare" or s.type=="boss" or s.type=="dungeonTrash" or s.type=="raidTrash")
+    local prefix=s and s.type=="vendor" and "Codex vendor: " or drops and "Codex drop: "
+    if prefix and it and not seen[it.id] then
       local r=L.compare(it)
       if r.verdict=="upgrade" or r.verdict=="needsReview" then
-        tip:AddLine(ns.plain("Codex drop: "..it.name.." - "..L.labels[r.verdict]),1,0.82,0,true)
+        tip:AddLine(ns.plain(prefix..it.name.." - "..L.labels[r.verdict]),1,0.82,0,true)
         seen[it.id]=true;n=n+1;if n>=3 then break end
       end
     end
