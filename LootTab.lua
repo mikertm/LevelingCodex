@@ -123,14 +123,10 @@ end
 local function itemTip(b,it,description)
   b.tipTitle,b.tipText=ns.plain(it.name),ns.plain(description or "Select to inspect this item.")
   b:SetScript("OnEnter",function(self)
-    if GameTooltip and GameTooltip.SetHyperlink then
-      GameTooltip:SetOwner(self,"ANCHOR_RIGHT")
-      if pcall(GameTooltip.SetHyperlink,GameTooltip,it.key or ("item:"..it.id)) then GameTooltip:Show();return end
-    end
-    ns.art.showTip(self)
+    L.showItemTooltip(self,it.key or it.id)
   end)
   b:SetScript("OnLeave",function(self)
-    if GameTooltip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end
+    L.hideItemTooltip(self)
   end)
 end
 local function choose(ref,source,page)
@@ -161,26 +157,24 @@ local function paperSlot(n,x,y,w,ctx)
   local label=L.slotNames[n]
   U.surface(x,y,w,36,C.btnOff,C.edgeSoft)
   local art=it and it.icon or ("Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[n] or "Chest"))
-  itemIcon(it,x+5,y+4,28,label,equippedName(it,ctx.snapshot.equipmentKnown),art)
-  line(label,x+40,y+3,w-46,"small",C.dim)
-  line(equippedName(it,ctx.snapshot.equipmentKnown),x+40,y+19,w-46,"small",it and quality(it.quality) or C.dim)
-  local b=action(x,y,w,36,label,"Find upgrades for this slot.",function() chooseSlot(n,slotKey(n,ctx)) end,"Browse "..label)
-  if it then itemTip(b,it,"Select to browse upgrades for "..label..".") end
+  local name=equippedName(it,ctx.snapshot.equipmentKnown)
+  itemIcon(it,x+5,y+4,28,label,name,art):EnableMouse(false)
+  line(label,x+40,y+4,w-56,"small",C.light)
+  line(name,x+40,y+20,w-56,"small",it and quality(it.quality) or C.dim)
+  line(">",x+w-15,y+11,10,"small",C.gold)
+  action(x,y,w,36,"Browse "..label,ns.plain(name),function() chooseSlot(n,slotKey(n,ctx)) end,"Browse "..label)
 end
 local function character(y,ctx)
   y=text("Your equipment",y,"head",C.gold)
   y=text("Select a gear slot to browse upgrades and where to get them.",y,"small",C.dim)
   local top=y
   U.surface(188,top,192,266,C.panel,C.edge)
-  U.picture(ART.."loot-stage.tga",190,top+2,188,262)
-  if not U.playerDoll(192,top+4,184,258,not ctx.preview) then
-    -- A neutral silhouette keeps slot navigation useful without optional model APIs.
-    local c={0.28,0.33,0.32,1}
-    U.rect(271,top+30,26,30,c);U.rect(247,top+66,74,22,c)
-    U.rect(260,top+84,48,58,c);U.rect(243,top+88,13,65,c);U.rect(312,top+88,13,65,c)
-    U.rect(261,top+146,19,61,c);U.rect(288,top+146,19,61,c)
-    line(ctx.preview and "Planning preview" or "Character preview",196,top+234,176,"small",{0.77,0.73,0.61},"CENTER")
-  end
+  ornament(top+18,201,166)
+  U.surface(224,top+52,120,120,C.background,C.edge)
+  U.playerPortrait(230,top+58,108,ctx.class,not ctx.preview)
+  line(ctx.profile.label,198,top+188,172,"head",C.gold,"CENTER")
+  line((ctx.preview and "Preview level " or "Level ")..ctx.level,198,top+220,172,"small",C.dim,"CENTER")
+  ornament(top+234,201,166)
   for i,n in ipairs({1,2,3,15,5,9,10}) do paperSlot(n,4,top+(i-1)*38,180,ctx) end
   for i,n in ipairs({6,7,8,11,12,13,14}) do paperSlot(n,384,top+(i-1)*38,180,ctx) end
   for i,n in ipairs({16,17,18}) do paperSlot(n,4+(i-1)*188,top+274,180,ctx) end
@@ -658,30 +652,7 @@ local function compare(y,ctx)
   button("Live character",190,entryY+27,166,function() preview=nil;refresh() end,not ctx.preview)
   button("Gear / bags",368,entryY+27,186,function() selected=nil;input=nil;refresh(true) end)
   y=y+(selected and 72 or 110)
-  if planning then
-    U.surface(0,y,U.W,144,C.panel,C.edgeSoft)
-    line("Preview class / faction",12,y+10,240,"small",C.dim)
-    button(ctx.class,12,y+30,250,function()
-      local list={"WARRIOR","PALADIN","HUNTER","ROGUE","PRIEST","SHAMAN","MAGE","WARLOCK","DRUID"}
-      for i,c in ipairs(list) do if c==ctx.class then preview=preview or {};preview.class=list[i%#list+1];selected=nil;break end end
-      refresh()
-    end)
-    button(ctx.faction or "Unknown faction",274,y+30,280,function() preview=preview or {};preview.faction=ctx.faction=="Alliance" and "Horde" or "Alliance";refresh() end)
-    line("Level (1-60)",12,y+62,100,"small",C.dim)
-    line("Baseline item link or ID",132,y+62,410,"small",C.dim)
-    U.entry("LootPreviewLevel",12,y+82,100,tostring(ctx.level),nil,function(v)
-      local n=tonumber(v);if n and n>=1 and n<=60 then preview=preview or {};preview.level=math.floor(n) else message="Use a level from 1 to 60" end;refresh()
-    end,2)
-    U.entry("LootBaseline",132,y+82,412,preview and preview.baselineText or "",function(v) preview=preview or {};preview.baselineText=v end,function(v)
-      local key=L.itemKey(v)
-      if key then
-        local it=L.item(key);preview=preview or {};preview.snapshot={slots={},equipmentKnown=true}
-        for _,n in ipairs(L.slotsFor(it.slot)) do preview.snapshot.slots[n]=it end
-      else message="Enter a valid baseline item link" end;refresh()
-    end,2048)
-    line("Press Enter to apply a preview field. Unknown slots remain unverified.",12,y+116,U.W-24,"small",C.dim)
-    y=y+156
-  end
+
   if selected then return details(selected,y) end
   line("Choose equipment",12,y+3,245,"head",C.gold)
   for i,label in ipairs({"Equipped","Bags"}) do
@@ -866,14 +837,84 @@ local function profiles(y,ctx)
   end)
   return y+88
 end
+local function planningFields(y,ctx,x,w)
+  local inner=x+14
+  local fieldWidth=w-28
+  y=text("Planning character",y+14,"head",C.gold,inner,fieldWidth)
+  y=text("Class and faction",y+4,"small",C.dim,inner,fieldWidth)
+  local half=math.floor((fieldWidth-8)/2)
+  button(ctx.class,inner,y,half,function()
+    local classes={"WARRIOR","PALADIN","HUNTER","ROGUE","PRIEST","SHAMAN","MAGE","WARLOCK","DRUID"}
+    for i,class in ipairs(classes) do
+      if class==ctx.class then
+        preview=preview or {}
+        preview.class=classes[i%#classes+1]
+        selected=nil
+        break
+      end
+    end
+    refresh()
+  end,false,"Switch the class used for planning.")
+  button(ctx.faction or "Unknown faction",inner+half+8,y,half,function()
+    preview=preview or {}
+    preview.faction=ctx.faction=="Alliance" and "Horde" or "Alliance"
+    refresh()
+  end)
+  y=y+34
+  line("Level (1-60)",inner,y+4,134,"small",C.dim)
+  U.entry("LootPreviewLevel",inner+153,y,fieldWidth-155,tostring(ctx.level),nil,function(v)
+    local n=tonumber(v)
+    if n and n>=1 and n<=60 then
+      preview=preview or {}
+      preview.level=math.floor(n)
+    else
+      message="Use a level from 1 to 60"
+    end
+    refresh()
+  end,2)
+  y=y+34
+  y=text("Baseline item link or ID",y,"small",C.dim,inner,fieldWidth)
+  U.entry("LootBaseline",inner+4,y,fieldWidth-8,preview and preview.baselineText or "",function(v)
+    preview=preview or {}
+    preview.baselineText=v
+  end,function(v)
+    local key=L.itemKey(v)
+    local item=key and L.item(key)
+    if item and #L.slotsFor(item.slot)>0 then
+      preview=preview or {}
+      preview.snapshot={slots={},equipmentKnown=true}
+      for _,n in ipairs(L.slotsFor(item.slot)) do preview.snapshot.slots[n]=item end
+    else
+      message="Enter a valid baseline equipment item"
+    end
+    refresh()
+  end,2048)
+  return text("Press Enter to apply a field.",y+33,"small",C.dim,inner,fieldWidth)
+end
+
 local function workspaceSidebar(y,ctx)
   local x,w=SIDE,WIDTH-SIDE-12
   local top=y
   if section=="Upgrades" and view=="character" then
-    y=text("Find your next upgrade",y+14,"head",C.gold,x+14,w-28)
-    y=text("Select any equipment slot to see its upgrades. Each result has a preview and acquisition sources.",y+4,"body",C.dim,x+14,w-28)
-    button("Browse "..slotTitle().." upgrades",x+14,y+5,w-28,function() chooseSlot(slotNumber,filters.slot) end,true)
-    y=y+42
+    y=text("Equipment overview",y+14,"head",C.gold,x+14,w-28)
+    if ctx.snapshot.equipmentKnown then
+      local filled=0
+      for _,n in ipairs(L.slotOrder) do if ctx.snapshot.slots[n] then filled=filled+1 end end
+      y=text(filled.." equipped slots",y+4,"body",C.light,x+14,w-28)
+    else
+      y=text("Equipment data unavailable",y+4,"body",C.dim,x+14,w-28)
+    end
+    button("Compare an item",x+14,y+5,w-28,function() section="Compare";message=nil;refresh(true) end)
+    button("Open tracked items",x+14,y+35,w-28,function() section="Tracked";message=nil;refresh(true) end)
+    y=y+70
+  elseif section=="Compare" then
+    if planning then
+      y=planningFields(y,ctx,x,w)
+    else
+      y=text("Comparison baseline",y+14,"head",C.gold,x+14,w-28)
+      y=text(ctx.preview and "Planning character" or "Your equipped gear",y+4,"body",C.light,x+14,w-28)
+      y=text("Select gear below the item search, or paste an item link into the search field.",y+2,"small",C.dim,x+14,w-28)
+    end
   elseif section=="Upgrades" and view=="filters" then
     y=text(slotTitle().." upgrades",y+14,"head",C.gold,x+14,w-28)
     local tags=filterSummary(ctx)
@@ -955,4 +996,4 @@ function L.open(want,ref,source)
   end
   ns.openTab("loot",true)
 end
-L.subscribe(function() if ns.refreshLootTab then ns.refreshLootTab() end end)
+L.subscribe(function() if ns.refreshLootTab then ns.refreshLootTab(true) end end)

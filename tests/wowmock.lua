@@ -594,6 +594,7 @@ end
 function Frame:GetNumChildren() return #self._children end
 function Frame:GetRegions() return unpack(self._regions) end
 function Frame:IsMouseOver() return MOCK.mouseOver[self] and true or false end
+function IsMouseButtonDown(button) return MOCK.leftMouseDown and button=="LeftButton" or false end
 function Frame:SetHitRectInsets() end
 function Frame:SetID(id) self._id = id end
 function Frame:GetID() return self._id or 0 end

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stabilized Loot equipment browsing with a static portrait and protected clicks from background redraws. Item tooltips show a single Codex score line, tracked items reveal their native stats on hover, and Compare planning stays beside the equipment list.
+
 - Widened the Loot window and added a live item preview beside upgrade results. Item and slot artwork now sends the first click to its row, and the floating tracker uses compact rows with item icons and source names.
 
 - Reworked Loot for a dark, opaque reading surface. Full-width results align items, sources, and upgrade verdicts, with separate screens for changing slots and filtering.

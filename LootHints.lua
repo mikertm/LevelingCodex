@@ -2,6 +2,11 @@
 local _, ns = ...
 local L=ns.loot
 local call=L.call
+local SCORE_ICON="|TInterface\\Icons\\inv_chest_plate04:12:12:0:0|t "
+local SCORE_COLORS={
+  upgrade={0.67,0.90,0.50}, downgrade={1.00,0.62,0.55},
+  cannotEquip={1.00,0.62,0.55}, sidegrade={0.88,0.86,0.70},
+}
 function L.annotate(tip,ref)
   if ns.db().noLootHints or not tip or not ref then return end
   local item=L.item(ref);if not item then return end
@@ -11,12 +16,27 @@ function L.annotate(tip,ref)
   local key=item.key
   if tip.codexLootKey==key then return end
   local r=L.compare(item);tip.codexLootKey=key;tip.codexLootRef=ref
-  local pct=r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent) or ""
-  tip:AddLine(ns.plain("Codex: "..(L.labels[r.verdict] or r.verdict)..pct),1,0.82,0,true)
-  tip:AddLine(ns.plain(r.reason),0.8,0.8,0.7,true)
-  local enchant=L.enchants(item)[1]
-  if enchant then tip:AddLine(ns.plain("Enchant option: "..enchant.enchant.name.." - "..enchant.reason),0.7,0.8,0.8,true) end
-  if item.slot then tip:AddLine("Use /codex loot to compare this slot and track its sources.",0.6,0.7,0.7,true) end
+  local score="Score unavailable"
+  if r.confidence=="complete" then
+    score=r.percent and string.format("%+.1f%% gear score",r.percent) or string.format("%.1f gear score",r.score)
+  elseif r.verdict=="cannotEquip" then score="Cannot equip"
+  elseif r.verdict=="loading" then score="Loading score" end
+  local color=SCORE_COLORS[r.verdict] or {0.74,0.80,0.84}
+  tip:AddLine(SCORE_ICON.."Codex: "..score,color[1],color[2],color[3])
+end
+
+function L.showItemTooltip(owner,ref,anchor)
+  local tip=GameTooltip
+  local link=L.itemKey(ref)
+  if tip and link and type(tip.SetHyperlink)=="function" then
+    tip:SetOwner(owner,anchor or "ANCHOR_RIGHT")
+    if pcall(tip.SetHyperlink,tip,link) then tip:Show();return end
+  end
+  ns.art.showTip(owner)
+end
+
+function L.hideItemTooltip(owner)
+  if GameTooltip and GameTooltip:IsOwned(owner) then GameTooltip:Hide() end
 end
 function L.rewardAdvice()
   local out={state="complete",rows={}}

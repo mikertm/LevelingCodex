@@ -10917,10 +10917,11 @@ function S.lootTab()
 end
 function S.lootGraphics()
   lootSetup()
-  local chestIcon,headIcon
+  local chestIcon,headIcon,model
   local function walk(f)
     for _,b in ipairs({f:GetChildren()}) do
       if b:IsShown() then
+        if b:GetObjectType()=="PlayerModel" then model=b end
         if b.tex and b.tipTitle=="Chest" then chestIcon=b.tex end
         if b.tex and b.tipTitle=="Head" then headIcon=b.tex end
         walk(b)
@@ -10928,6 +10929,7 @@ function S.lootGraphics()
     end
   end
   walk(win())
+  check(not model,"Loot uses a static portrait instead of inheriting player animations")
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
   local chestTexture=canRead and 134400 or MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
   check(chestIcon and chestIcon:GetTexture()==chestTexture,"native item IDs and unloaded-item slot art reach the renderer intact")
@@ -11047,7 +11049,14 @@ function S.lootBrowse()
     end
     control:Click()
   end
-  clickThroughArtwork(findButton(win(),function(label) return label=="Browse Chest" end))
+  local chest=findButton(win(),function(label) return label=="Browse Chest" end)
+  local redraws=0
+  chest:HookScript("OnHide",function() redraws=redraws+1 end)
+  MOCK.leftMouseDown=true
+  MOCK.event("PLAYER_REGEN_ENABLED");MOCK.advance(0.3)
+  check(redraws==0,"a background refresh does not replace a slot button during a click")
+  MOCK.leftMouseDown=false
+  clickThroughArtwork(chest)
   check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
   check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
   check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
@@ -11145,11 +11154,19 @@ function S.lootTracker()
   check(LevelingCodexLootTracker:GetHeight()<160,"a single target keeps the floating tracker compact")
   check(questText(LevelingCodexLootTracker,"Choose a source"),"the tracker explains a target with no selected source")
   check(not findButton(LevelingCodexLootTracker,function(label) return label=="Clear loot map" end),"a map clear action only appears for an active loot waypoint")
+  local target=findButton(LevelingCodexLootTracker,function(label) return label:find("^Loot target ") end)
+  check(target,"the tracked item has a hover target")
+  MOCK.fire(target,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(target) and link=="item:900002","hovering a tracked item opens its native stat tooltip")
+  MOCK.fire(target,"OnLeave")
+  check(not GameTooltip:IsShown(),"the tracker closes its own tooltip on leave")
   check(not MOCK.questRewarded,"loot guidance never selects a reward")
 end
 function S.lootTooltips()
   lootSetup()
   GameTooltip:SetHyperlink("item:900002")
+  check(#(GameTooltip._lines or {})==1,"Codex adds one compact score line with no extra advice")
   local count=0
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"one annotation even with setter and item callbacks ("..count..")")

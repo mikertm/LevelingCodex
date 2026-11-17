@@ -264,6 +264,7 @@ local function icon(name, x, y, size, title, text)
   local f = take("icon", newIcon)
   f:SetSize(size, size)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  f:EnableMouse(true) -- a decorative use may have made this pooled icon passive
   ns.setIcon(f.tex, name)
   f.tex:SetDesaturated(false)
   f.tex:SetAlpha(1)
@@ -1489,40 +1490,17 @@ local function entry(key,x,y,w,value,onChange,onSubmit,maxBytes)
   return edit
 end
 
--- A pooled, read-only character preview for the Loot paper doll. Slot buttons live
--- beside it on the overlay; clients without PlayerModel keep the same navigation.
-local function newPlayerDoll()
-  local holder = CreateFrame("Frame", nil, content)
-  holder:SetFrameLevel(overlay:GetFrameLevel() + 1)
-  local ok, model = pcall(CreateFrame, "PlayerModel", nil, holder)
-  if ok and model then
-    holder.model = model
-    model:SetFrameLevel(holder:GetFrameLevel() + 1)
-    model:SetAllPoints(holder)
-    model:EnableMouse(false)
+-- A static portrait avoids inheriting the player's animations, mounts, and camera.
+local function playerPortrait(x,y,size,class,live)
+  local tex=take("playerPortrait",function() return overlay:CreateTexture(nil,"ARTWORK") end)
+  tex:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y)
+  tex:SetSize(size,size)
+  tex:SetTexCoord(0,1,0,1)
+  if live then
+    local ok,result=ns.try(SetPortraitTexture,tex,"player")
+    if ok and result~=false then return end
   end
-  return holder
-end
-local function playerDoll(x, y, w, h, enabled)
-  local holder = take("playerDoll", newPlayerDoll)
-  holder:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
-  holder:SetSize(w, h)
-  local model = holder.model
-  if not (enabled and model and type(model.SetUnit) == "function") then
-    if model then model:Hide() end
-    holder:Hide()
-    return false
-  end
-  -- Re-read the player after an equipment event, including on pooled redraws.
-  local ok = pcall(model.SetUnit, model, "player")
-  if not ok then model:Hide(); holder:Hide(); return false end
-  -- Match the character sheet's neutral full-body reset. A fixed camera preset
-  -- applied after PortraitZoom overrides that framing on the Forever client.
-  if model.SetPosition then pcall(model.SetPosition, model, 0, 0, 0) end
-  if model.SetRotation then pcall(model.SetRotation, model, 0.61) end
-  if model.SetPortraitZoom then pcall(model.SetPortraitZoom, model, 0) end
-  model:Show()
-  return true
+  ns.setIcon(tex,"classicon_"..class:lower())
 end
 local function interactivePoolKinds()
   local kinds={"icon","btn","check","hit","edit"}
@@ -1532,7 +1510,7 @@ end
 
 -- The drawing helpers for tabs that live in other files.
 ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
-  entry = entry, playerDoll = playerDoll,
+  entry = entry, playerPortrait = playerPortrait,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
@@ -1607,8 +1585,34 @@ refresh = function(professionSnapshot)
   if keepEntryFocus and keepEntryFocus:IsShown() then keepEntryFocus:SetFocus() end
 end
 ns.refresh = refresh
-function ns.refreshLootTab()
-  if frame and frame:IsShown() and activeTab=="loot" then refresh() end
+local lootRefreshQueued
+function ns.refreshLootTab(background)
+  if not (frame and frame:IsShown() and activeTab=="loot") then return end
+  if background then
+    local ok,down=ns.try(IsMouseButtonDown,"LeftButton")
+    down=ok and down==true
+    local hits=pools.hit
+    if not down and hits then
+      for i=1,hits.used do
+        local button=hits.list[i]
+        local supported,state=ns.try(button.GetButtonState,button)
+        if supported and state=="PUSHED" then down=true;break end
+      end
+    end
+    -- The renderer hides and reuses pooled buttons. Keep a pressed button intact
+    -- until its mouse-up can finish before applying delayed item/bag updates.
+    if down then
+      if not lootRefreshQueued then
+        lootRefreshQueued=true
+        ns.after(0.08,function()
+          lootRefreshQueued=nil
+          ns.refreshLootTab(true)
+        end)
+      end
+      return
+    end
+  end
+  refresh()
 end
 function ns.refreshQuestTab()
   if frame and frame:IsShown() and activeTab == "quests" then refresh() end

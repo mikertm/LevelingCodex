@@ -90,8 +90,8 @@ local function make()
     open:SetPoint("TOPLEFT",0,0);open:SetSize(207,ROW_HEIGHT-5)
     open:EnableMouse(true);open:RegisterForClicks("LeftButtonUp")
     highlight(open)
-    open:SetScript("OnEnter",ns.art.showTip)
-    open:SetScript("OnLeave",ns.art.hideTip)
+    open:SetScript("OnEnter",function(self) L.showItemTooltip(self,self.itemRef,"ANCHOR_LEFT") end)
+    open:SetScript("OnLeave",function(self) L.hideItemTooltip(self) end)
     local name=label(open,46,8,155,"GameFontHighlightSmall",INK)
     local source=label(open,46,26,155,"GameFontHighlightSmall",DIM)
     local map=button(row,211,14,39,21,"Map","Open this target's source location.")
@@ -149,6 +149,7 @@ function L.refreshTracker()
       row.open.tipTitle=name
       row.open.tipText=where.."\nOpen item details."
       row.open.codexLabel="Loot target "..name
+      row.open.itemRef=target.ref
       row.open:SetScript("OnClick",function() L.open("Compare",target.ref,source and source.id) end)
       row.map.codexLabel="Map loot target "..name
       row.map:SetShown(source and source.map and type(source.x)=="number" and type(source.y)=="number" or false)
