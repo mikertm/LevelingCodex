@@ -153,7 +153,7 @@ do
   }, {
     action("boat", on.darkshore("Thamarian", 32.67, 42.11),
       "Take the Stormwind ship from Auberdine's south pier. Use Next when you reach Stormwind Harbor.",
-      { name = "Auberdine - Stormwind Harbor" }),
+      { name = "Auberdine - Stormwind Harbor", skipOn = M.stormwind }),
     action("note", nil, "Clean out your quest log. If you never ran the Deadmines, abandon its quests now: they are grey and the 30s need the room.",
       { name = "Quest log", drop = { 166, 167, 168, 214, 2040, 92753 } }),
     accept(538, at("Milton Sheaf", 77.07, 30.21, M.stormwind),

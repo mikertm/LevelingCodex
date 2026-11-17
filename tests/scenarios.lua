@@ -4388,6 +4388,15 @@ function S.questNoCheckNotes()
 end
 
 function S.questWetlands()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 633 and step.type == "turnin" then
+          check(not step.text:lower():find("swim"), "the Thandol return crosses the bridge instead of swimming beneath it")
+        end
+      end
+    end
+  end
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1437
   S.login()
   local frame = questViewer()
@@ -4652,6 +4661,15 @@ function S.questWetlandsDig()
 end
 
 function S.questWetlandsEnd()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "boat" and step.name == "Stormwind Harbor - Auberdine" then
+          check(step.ifOnQuest == 98209, "the Wetlands boat requires the unfinished Auberdine delivery")
+        end
+      end
+    end
+  end
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
   MOCK.questLog = { { questID = 98209, isComplete = true } }
