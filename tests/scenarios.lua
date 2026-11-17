@@ -10968,6 +10968,44 @@ function S.lootCardViews()
   click(win(),"Tracked");click(win(),"Browse upgrades")
   check(questText(win(),"Your equipment"),"the empty target page leads directly to equipment browsing")
 end
+function S.lootDetailCards()
+  lootSetup();click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  if canRead then
+    check(questText(win(),"Equipped: 10") and questText(win(),"New: 100"),"stat cards show independently known before and after values")
+    local strength=findButton(win(),function(label) return label=="Strength comparison" end)
+    check(strength and strength:GetWidth()<400,"individual stat comparisons are grouped cards")
+    MOCK.fire(strength,"OnEnter")
+    check(GameTooltip:IsOwned(strength),"stat comparison details are available on focus or hover")
+    MOCK.fire(strength,"OnLeave")
+    MOCK.lootItems[900005]={name="Old Sword",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=10}}
+    MOCK.lootItems[900006]={name="Old Shield",slot="INVTYPE_SHIELD",classID=4,subclassID=6,stats={ITEM_MOD_STRENGTH_SHORT=5}}
+    MOCK.lootItems[900007]={name="New Two-hander",slot="INVTYPE_2HWEAPON",classID=2,subclassID=1,stats={ITEM_MOD_STRENGTH_SHORT=20}}
+    MOCK.equipped[16],MOCK.equipped[17]="item:900005","item:900006"
+    MOCK.event("PLAYER_EQUIPMENT_CHANGED",16);MOCK.advance(0.2)
+    edit:SetText("900007");edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"Equipped: 15") and questText(win(),"New: 20"),"two-hand comparisons include both replaced items")
+    edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+    MOCK.lootItems[900004]={name="Unknown Vest",loaded=false}
+    MOCK.equipped[5]="item:900004";MOCK.event("PLAYER_EQUIPMENT_CHANGED",5);MOCK.advance(0.2)
+  end
+  check(questText(win(),"Stat comparison unavailable"),"missing equipment facts never become a zero baseline in a graph")
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Sources")
+  check(findButton(win(),function(label) return label=="Source details 1" end),"acquisition details are organized into expandable source cards")
+  check(not questText(win(),"Materials:"),"source summaries start compact")
+  click(win(),"Source details 1")
+  check(questText(win(),"Database reference") or questText(win(),"Client reference"),"source evidence stays visible while browsing")
+  check(questText(win(),"Materials:") and questText(win(),"Bolt of Linen Cloth"),"expanding a crafting source reveals its actual materials")
+  click(win(),"Source details 1")
+  check(not questText(win(),"Materials:"),"source cards can be folded back to their summary")
+  click(win(),"Track source 1")
+  local target
+  for _,t in pairs(LevelingCodexCharDB.lootTargets or {}) do if t.id==2572 and t.sourceID=="craft:2389:2572" then target=t end end
+  check(target and questText(win(),"Source tracked"),"source card actions track the selected acquisition route")
+end
 -- A wrong slot handler, lost filter/page, or an item detail appended below the list
 -- would break this player-visible browse/back flow.
 function S.lootBrowse()
@@ -11005,6 +11043,11 @@ function S.lootBrowse()
   check(search:HasFocus(),"background equipment updates do not interrupt search typing")
   search:SetText("Red Linen Robe");search:GetScript("OnEnterPressed")(search)
   check(findButton(win(),function(label) return label=="Inspect item 2572" end),"chest browsing includes robes")
+  click(win(),"Sources for item 2572")
+  check(questText(win(),"Tailoring: Red Linen Robe") and questText(win(),"Bolt of Linen Cloth")
+    and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
+  click(win(),"Back to results")
+  check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
   click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Sources")
   check(questText(win(),"Crafted:"),"item details retain the acquisition source")
   click(win(),"Back to results")

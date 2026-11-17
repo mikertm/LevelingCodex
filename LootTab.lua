@@ -3,13 +3,15 @@ local _, ns = ...
 local L,U,Theme=ns.loot,ns.ui,ns.C
 local C={}
 local function palette()
-  if Theme.eui then for k,v in pairs(Theme) do C[k]=v end;return end
+  if Theme.eui then for k,v in pairs(Theme) do C[k]=v end;C.loss={1,0.45,0.35};return end
   C.parch={0.86,0.80,0.68,1};C.panel={0.91,0.86,0.75,1};C.btnOff={0.96,0.91,0.81,1}
   C.btnOn={0.81,0.74,0.55,1};C.btnOnInk={0.19,0.15,0.09}
   C.light={0.19,0.15,0.11};C.ink=C.light;C.dim={0.42,0.35,0.26};C.inkSoft=C.dim
   C.gold={0.10,0.29,0.30};C.green={0.16,0.36,0.16}
-  C.edge={0.46,0.34,0.18,1};C.edgeSoft={0.62,0.51,0.34,0.6}
+  C.edge={0.46,0.34,0.18,1};C.edgeSoft={0.62,0.51,0.34,0.44}
   C.accent={Theme.accent[1]*0.55,Theme.accent[2]*0.55,Theme.accent[3]*0.55,1}
+  C.loss={0.56,0.18,0.12}
+  C.ribbon={0.12,0.23,0.24,1}
 end
 local ART="Interface\\AddOns\\LevelingCodex\\media\\"
 local section,view="Upgrades","character"
@@ -18,6 +20,7 @@ local offset,sourceOffset,slotNumber=0,0,5
 local selected,input,message,code,editor,preview,picker
 local advanced,planning=false,false
 local detailSection="Overview"
+local expandedSource, preferredSource
 local inventoryMode,inventoryGroup,inventoryPage="Equipped","Armor",0
 local sharing=false
 local targetFilter,targetPage="all",0
@@ -35,6 +38,14 @@ local SLOT_ART={[1]="Head",[2]="Neck",[3]="Shoulder",[5]="Chest",[6]="Waist",[7]
   [15]="Chest",[16]="MainHand",[17]="SecondaryHand",[18]="Ranged"}
 local SOURCES={"all","quest","boss","dungeonTrash","raidTrash","creature","rare","object","world","vendor","craft","reputation","pvp"}
 local STYLES={all="Any play style",solo="Solo",group="Group",buy="Buy / craft"}
+local SOURCE_ICONS={quest="inv_misc_book_09",boss="inv_helmet_03",dungeonTrash="inv_misc_bone_humanskull_01",
+  raidTrash="inv_misc_bone_humanskull_01",creature="ability_hunter_beastcall",rare="ability_hunter_snipershot",
+  object="inv_misc_treasurechest01",world="inv_misc_map_01",vendor="inv_misc_coin_01",craft="trade_blacksmithing",
+  reputation="inv_misc_tabardpvp_01",pvp="inv_sword_04"}
+local VERDICT_COLORS={upgrade="green",downgrade="loss",cannotEquip="loss",needsReview="gold"}
+local function verdictColor(verdict)
+  return C[VERDICT_COLORS[verdict] or "dim"]
+end
 local STAT_NAMES={str="Strength",agi="Agility",sta="Stamina",int="Intellect",spi="Spirit",armor="Armor",
   ap="Attack power",rap="Ranged attack power",sp="Spell power",heal="Healing",defense="Defense",
   hit="Hit",crit="Critical strike",dodge="Dodge",parry="Parry",block="Block",mp5="Mana per 5 sec"}
@@ -98,8 +109,9 @@ local function itemTip(b,it,description)
     if GameTooltip and GameTooltip:IsOwned(self) then GameTooltip:Hide() end
   end)
 end
-local function choose(ref)
-  selected=ref;sourceOffset=0;detailSection="Overview";message=nil
+local function choose(ref,source)
+  selected=ref;sourceOffset=0;expandedSource=source;preferredSource=source
+  detailSection=source and "Sources" or "Overview";message=nil
   if section=="Upgrades" then view="detail" end
   refresh(true)
 end
@@ -250,17 +262,29 @@ local function browse(y,ctx)
   end
   for i,row in ipairs(page.rows) do
     local it,r=row.item,row.result
-    U.surface(x,y,w,50,C.btnOff,C.edgeSoft)
-    U.rect(x+1,y+4,2,42,quality(it.quality),"border")
-    itemIcon(it,x+8,y+7,36,it.name,r.reason)
-    line(it.name,x+54,y+6,265,"body",quality(it.quality))
+    U.surface(x,y,w,50,i%2==0 and C.panel or C.btnOff,C.edgeSoft)
+    U.rect(x+3,y+5,2,40,quality(it.quality),"border")
+    itemIcon(it,x+10,y+8,34,it.name,r.reason)
+    line(it.name,x+54,y+6,257,"body",quality(it.quality))
     local source,where=sourceSummary(row)
-    line(source..(where~="" and (" / "..where) or ""),x+54,y+29,265,"small",C.dim)
-    U.surface(x+328,y+6,w-336,18,C.panel,C.edgeSoft)
-    line(L.labels[r.verdict] or r.verdict,x+332,y+8,w-344,"small",r.verdict=="upgrade" and C.green or C.dim,"CENTER")
-    local gain=row.futureLevel and ("At level "..row.futureLevel) or (r.percent and string.format("%+.1f%% score",r.percent) or "Review stats")
+    local route=row.sources[1]
+    U.icon(route and SOURCE_ICONS[route.type] or "inv_misc_map_01",x+54,y+29,13,source,where)
+    local caption=source..(where~="" and (" / "..where) or "")
+    line(caption,x+74,y+28,228,"small",route and C.gold or C.dim)
+    if route then
+      line(">",x+308,y+27,12,"body",C.gold)
+      U.hit(x+50,y+25,274,22,caption,"Open this acquisition source.",
+        function() choose(it.id,route.id) end,"Sources for item "..it.id)
+    end
+    local verdict=row.futureLevel and "Later level" or L.labels[r.verdict] or r.verdict
+    local color=row.futureLevel and C.dim or verdictColor(r.verdict)
+    U.rect(x+335,y+7,w-350,16,C.parch,"border")
+    line(verdict,x+337,y+9,w-354,"small",color,"CENTER")
+    local gain=row.futureLevel and ("At level "..row.futureLevel) or
+      (r.confidence=="complete" and r.percent and string.format("%+.1f%% score",r.percent))
+      or (r.verdict=="upgrade" and "Empty slot" or "View details")
     line(gain,x+328,y+29,w-336,"small",C.dim,"CENTER")
-    local b=U.hit(x,y,w,50,it.name,r.reason,function() choose(it.id) end,"Inspect item "..it.id)
+    local b=U.hit(x,y,w,route and 25 or 50,it.name,r.reason,function() choose(it.id) end,"Inspect item "..it.id)
     itemTip(b,it,r.reason);y=y+54
   end
   if offset>0 then button("Previous loot page",x,y,132,function() offset=math.max(0,offset-PAGE);refresh(true) end) end
@@ -269,28 +293,75 @@ local function browse(y,ctx)
   return math.max(y+30,sidebarBottom+8)
 end
 
-local function statOverview(it,r,y)
-  local top=y
-  y=text(r.reason,y+10,"body",C.light)
-  if r.score then y=text(string.format("Estimated gear score: %.1f vs %.1f",r.score,r.baselineScore or 0),y,"small",C.dim) end
+local function number(n)
+  return math.abs(n-math.floor(n))<0.001 and string.format("%.0f",n) or string.format("%.1f",n)
+end
+local function statsReadable(it,r,ctx)
+  if not (it.complete and it.complete.stats and ctx.snapshot.equipmentKnown and #r.replacedSlots>0) then return false end
+  for _,n in ipairs(r.replacedSlots) do
+    local before=ctx.snapshot.slots[n]
+    local twoHand=n==17 and ctx.snapshot.slots[16] and ctx.snapshot.slots[16].slot=="INVTYPE_2HWEAPON"
+    if before==nil and not twoHand then return false end
+  end
+  for _,old in ipairs(r.baseline) do if not (old.complete and old.complete.stats) then return false end end
+  return true
+end
+local function statOverview(it,r,y,ctx)
+  y=text(r.reason,y,"small",r.verdict=="downgrade" and C.loss or C.dim)
+  local known=statsReadable(it,r,ctx)
+  U.surface(4,y,U.W-8,78,C.panel,C.edgeSoft)
+  line("Replacing",16,y+10,246,"small",C.dim)
   if #r.baseline>0 then
-    y=text("Compared with your equipped gear",y+6,"body",C.gold)
-    for _,old in ipairs(r.baseline) do y=text(old.name,y,"small",C.light) end
-  end
-  if #r.replacedSlots>0 then
-    local names={};for _,n in ipairs(r.replacedSlots) do names[#names+1]=L.slotNames[n] or tostring(n) end
-    y=text("Replaces: "..table.concat(names,", "),y,"small",C.dim)
-  end
-  U.surface(0,top,U.W,y-top+4,C.panel,C.edgeSoft);y=y+16
-  local keys={};for k,n in pairs(r.statDelta) do if n~=0 then keys[#keys+1]=k end end;table.sort(keys)
-  if #keys>0 then
-    y=y+sectionTitle("Stat changes",y)
-    for _,k in ipairs(keys) do
-      U.surface(4,y,U.W-8,22,C.btnOff,C.edgeSoft)
-      line(STAT_NAMES[k] or k,16,y+3,U.W-140,"small",C.light)
-      line(string.format("%+.1f",r.statDelta[k]),U.W-110,y+3,90,"small",r.statDelta[k]>0 and C.green or C.gold,"RIGHT")
-      y=y+24
+    for i,old in ipairs(r.baseline) do
+      itemIcon(old,16,y+29+(i-1)*23,19,old.name,nil)
+      line(old.name,44,y+31+(i-1)*23,244,"small",quality(old.quality))
+      local b=U.hit(12,y+27+(i-1)*23,278,23,old.name,nil,nil,"Equipped comparison "..i)
+      itemTip(b,old)
     end
+  else line(known and "Empty slot" or "Baseline not verified",16,y+36,260,"body",C.dim) end
+  line("Estimated gear score",310,y+10,236,"small",C.gold)
+  if r.confidence=="complete" and r.score and r.baselineScore then
+    local scale=math.max(1,math.abs(r.score),math.abs(r.baselineScore))
+    line("Before "..number(r.baselineScore),310,y+31,112,"small",C.dim)
+    line("With item "..number(r.score),428,y+31,120,"small",r.delta>=0 and C.green or C.loss)
+    U.rect(310,y+55,108,7,C.edgeSoft,"border",1);U.rect(428,y+55,108,7,C.edgeSoft,"border",1)
+    if r.baselineScore>0 then U.rect(310,y+55,108*r.baselineScore/scale,7,C.dim,"border",2) end
+    if r.score>0 then U.rect(428,y+55,108*r.score/scale,7,r.delta>=0 and C.green or C.loss,"border",2) end
+  else
+    line("Score not verified",310,y+33,236,"body",C.dim)
+    line("Review the notes before replacing.",310,y+57,236,"small",C.dim)
+  end
+  y=y+90
+  if not known then
+    U.surface(4,y,U.W-8,58,C.btnOff,C.edgeSoft)
+    line("Stat comparison unavailable",16,y+10,U.W-32,"body",C.gold)
+    local explanation=r.verdict=="cannotEquip" and "This item has no legal replacement in the current setup."
+      or "Verified stats are needed for the item and the gear it replaces."
+    y=text(explanation,y+32,"small",C.dim)
+    y=y+10
+  else
+    local keys={};for k,n in pairs(r.statDelta) do if n~=0 then keys[#keys+1]=k end end;table.sort(keys)
+    if #keys>0 then
+      local top=y;y=y+sectionTitle("Stat changes",y)
+      line("Each pair has its own scale.",300,top+4,256,"small",C.dim,"RIGHT")
+      for i,k in ipairs(keys) do
+        local before=0;for _,old in ipairs(r.baseline) do before=before+(old.stats[k] or 0) end
+        local after=before+r.statDelta[k];local scale=math.max(1,math.abs(before),math.abs(after))
+        local x,yy=12+(i-1)%2*278,y+math.floor((i-1)/2)*66
+        local delta=r.statDelta[k];local color=delta>0 and C.green or C.loss
+        U.surface(x,yy,266,60,C.btnOff,C.edgeSoft)
+        line(STAT_NAMES[k] or k,x+12,yy+8,172,"body",C.light)
+        line((delta>0 and "+" or "")..number(delta),x+188,yy+8,66,"body",color,"RIGHT")
+        line("Equipped: "..number(before),x+12,yy+29,115,"small",C.dim)
+        line("New: "..number(after),x+141,yy+29,113,"small",color)
+        U.rect(x+12,yy+47,113,6,C.edgeSoft,"border",1);U.rect(x+141,yy+47,113,6,C.edgeSoft,"border",1)
+        if before>0 then U.rect(x+12,yy+47,113*before/scale,6,C.dim,"border",2) end
+        if after>0 then U.rect(x+141,yy+47,113*after/scale,6,color,"border",2) end
+        local tip="Equipped: "..number(before).."\nNew: "..number(after).."\nChange: "..(delta>0 and "+" or "")..number(delta).."\nBars compare values for this stat only."
+        U.hit(x,yy,266,60,(STAT_NAMES[k] or k).." comparison",tip,nil,(STAT_NAMES[k] or k).." comparison")
+      end
+      y=y+math.ceil(#keys/2)*66+6
+    else y=text("No numerical stat changes. Review the item's effects.",y,"small",C.dim) end
   end
   if #r.warnings>0 then
     y=y+8;y=y+sectionTitle("Check before replacing",y)
@@ -300,31 +371,52 @@ local function statOverview(it,r,y)
 end
 local function acquisition(it,y,ctx)
   local sources=L.sources(it.id,nil,ctx)
-  if #sources==0 then y=text("No verified acquisition source in this catalog. Check the item in game.",y,"body",C.dim) end
+  -- Keep the route that the player opened first, with all other routes still available.
+  if preferredSource then
+    for i,s in ipairs(sources) do
+      if s.id==preferredSource then table.remove(sources,i);table.insert(sources,1,s);break end
+    end
+  end
+  if #sources==0 then
+    U.surface(4,y,U.W-8,112,C.panel,C.edgeSoft)
+    U.icon("inv_misc_map_01",22,y+24,48,"Acquisition source","Verified source information is not available.")
+    local bottom=text("Source not verified",y+19,"head",C.gold,86,U.W-110)
+    y=text("No verified acquisition source in this catalog. Check the item in game.",bottom,"body",C.dim,86,U.W-110)+20
+  end
   if sourceOffset>=#sources then sourceOffset=0 end
-  for i=sourceOffset+1,math.min(#sources,sourceOffset+3) do
-    local s=sources[i];local top=y
-    y=text((L.sourceNames[s.type] or s.type)..": "..(s.name or "Unknown source"),y+12,"body",C.gold)
-    if s.dungeon or s.zone then y=text(s.dungeon or s.zone,y,"small",C.light) end
-    if s.giverName then y=text("Starts with "..s.giverName,y,"small",C.dim) end
-    if s.requiredLevel then y=text("Source requires level "..s.requiredLevel,y,"small",C.dim) end
-    if s.locationKind=="entrance" then y=text("Map location: dungeon entrance, not the boss room.",y,"small",C.dim) end
-    if s.prerequisites and #s.prerequisites>0 then y=text("Prerequisite quests: "..table.concat(s.prerequisites,", "),y,"small",C.dim) end
-    if s.cost then y=text("Cost: "..(ns.money and ns.money(s.cost) or tostring(s.cost)),y,"small") end
-    if s.materials then
-      local mats={};for name,n in pairs(s.materials) do mats[#mats+1]=n.." "..name end;table.sort(mats)
-      y=text("Materials: "..table.concat(mats,", "),y,"small")
+  for i=sourceOffset+1,math.min(#sources,sourceOffset+2) do
+    local s=sources[i];local top=y;local open=expandedSource==s.id
+    U.icon(SOURCE_ICONS[s.type] or "inv_misc_map_01",16,y+12,32,L.sourceNames[s.type] or s.type,s.name)
+    line((L.sourceNames[s.type] or s.type)..": "..(s.name or "Unknown source"),62,y+10,U.W-176,"body",C.gold)
+    local place=s.dungeon or s.zone or (s.profession and (s.profession:sub(1,1)..s.profession:sub(2):lower())) or "Location unverified"
+    if s.requiredLevel and s.requiredLevel>0 then place=place.." / Level "..s.requiredLevel end
+    line(place,62,y+32,U.W-146,"small",C.dim)
+    line(open and "- Details" or "+ Details",U.W-104,y+13,88,"small",C.dim,"RIGHT")
+    local b=U.hit(4,y,U.W-8,50,s.name,"Show source requirements, costs and materials.",function()
+      if expandedSource==s.id then expandedSource=nil else expandedSource=s.id end;refresh()
+    end,"Source details "..i);b.codexOn=open
+    y=y+54
+    if open then
+      if s.requiredLevel and s.requiredLevel>0 then y=text("Source requires level "..s.requiredLevel,y,"small",C.dim) end
+      if s.giverName then y=text("Starts with "..s.giverName,y,"small",C.dim) end
+      if s.locationKind=="entrance" then y=text("Map location: dungeon entrance, not the boss room.",y,"small",C.dim) end
+      if s.prerequisites and #s.prerequisites>0 then y=text("Prerequisite quests: "..table.concat(s.prerequisites,", "),y,"small",C.dim) end
+      if s.cost then y=text("Cost: "..(ns.money and ns.money(s.cost) or tostring(s.cost)),y,"small") end
+      if s.materials then
+        local mats={};for name,n in pairs(s.materials) do mats[#mats+1]=n.." "..name end;table.sort(mats)
+        y=text("Materials: "..table.concat(mats,", "),y,"small")
+      end
     end
     y=text(s.evidence=="client" and "Client reference" or "Database reference; server availability may vary",y,"small",C.dim)
-    button("Track source "..i,12,y,162,function() local key,err=L.track(it.key,s.id);message=err or (key and "Source tracked");refresh() end)
-    if s.map and L.showSourceOnMap then button("Map source "..i,184,y,162,function() local _,why=L.showSourceOnMap(s.id);message=why;refresh() end)
-    else line("Location not verified",184,y+4,162,"small",C.dim) end
+    button("Track source "..i,16,y,160,function() local key,err=L.track(it.key,s.id);message=err or (key and "Source tracked");refresh() end)
+    if s.map and L.showSourceOnMap then button("Map source "..i,186,y,160,function() local _,why=L.showSourceOnMap(s.id);message=why;refresh() end)
+    else line("Location not verified",186,y+4,160,"small",C.dim) end
     if s.quest and L.openQuestSource then button("Quest guide "..i,356,y,196,function() L.openQuestSource(s.quest) end) end
-    y=y+34;U.surface(0,top,U.W,y-top,C.panel,C.edgeSoft);y=y+10
+    y=y+32;U.surface(4,top,U.W-8,y-top,C.panel,open and C.edge or C.edgeSoft);y=y+10
   end
-  if #sources>3 then
-    button("More sources",12,y,160,function() sourceOffset=sourceOffset+3;if sourceOffset>=#sources then sourceOffset=0 end;refresh(true) end)
-    line((sourceOffset+1).."-"..math.min(#sources,sourceOffset+3).." of "..#sources.." sources",184,y+4,240,"small",C.dim);y=y+32
+  if #sources>2 then
+    button("More sources",12,y,160,function() sourceOffset=sourceOffset+2;if sourceOffset>=#sources then sourceOffset=0 end;expandedSource=nil;refresh(true) end)
+    line((sourceOffset+1).."-"..math.min(#sources,sourceOffset+2).." of "..#sources.." sources",184,y+4,240,"small",C.dim);y=y+32
   end
   if it.tradable then y=text("Tradable: another player or the auction house may have it. Price unknown.",y,"small",C.dim) end
   return y
@@ -355,21 +447,24 @@ local function details(ref,y)
     line(slotTitle().." upgrades",160,y+4,U.W-172,"small",C.dim);y=y+32
   end
   local top=y
-  U.icon(it.icon,12,y+10,36,it.name,r.reason)
-  y=text(it.name,y+8,"head",C.gold,60,U.W-72)
-  local pct=r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent) or ""
-  y=text((L.labels[r.verdict] or r.verdict)..pct,y,"small",r.verdict=="upgrade" and C.green or C.gold,60,U.W-72)
-  U.surface(0,top,U.W,y-top+6,C.panel,C.edgeSoft);y=y+16
-  button("Track this item",0,y,180,function() local key,err=L.track(it.key);message=err or (key and "Target tracked");refresh() end)
-  button("Compare this item",190,y,180,function() input=it.key;section="Compare";selected=it.key;refresh(true) end)
-  button("Where to get it",380,y,U.W-380,function() detailSection="Sources";refresh(true) end,detailSection=="Sources");y=y+32
+  itemIcon(it,16,y+16,40,it.name,r.reason)
+  line(it.name,68,y+13,300,"head",quality(it.quality))
+  local pct=r.confidence=="complete" and r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent) or ""
+  U.T(ns.plain((L.labels[r.verdict] or r.verdict)..pct),68,y+41,300,"small",verdictColor(r.verdict))
+  local header=U.hit(4,top,370,76,it.name,r.reason,nil,"Item comparison");itemTip(header,it,r.reason)
+  button("Track this item",384,y+14,170,function() local key,err=L.track(it.key);message=err or (key and "Target tracked");refresh() end)
+  if section=="Upgrades" then
+    button("Compare this item",384,y+42,170,function() input=it.key;section="Compare";selected=it.key;refresh(true) end)
+  end
+  U.surface(4,top,U.W-8,76,C.panel,C.edgeSoft);y=y+88
   for i,label in ipairs({"Overview","Sources","Enchants"}) do
-    button(label,(i-1)*190,y,184,function() detailSection=label;refresh(true) end,detailSection==label)
+    local b=button(label=="Sources" and "Where to get it" or label,4+(i-1)*188,y,180,function() detailSection=label;refresh(true) end,detailSection==label)
+    b.codexLabel=label
   end
   y=y+32
   if detailSection=="Sources" then return acquisition(it,y,ctx)
   elseif detailSection=="Enchants" then return enchantOptions(it,y,ctx) end
-  return statOverview(it,r,y)
+  return statOverview(it,r,y,ctx)
 end
 
 local function compare(y,ctx)
@@ -377,16 +472,23 @@ local function compare(y,ctx)
     local key=L.itemKey(input);message=not key and "Enter a valid item link or item ID." or nil
     if key then choose(key) else selected=nil;refresh() end
   end
-  U.surface(4,y,U.W-8,98,C.btnOff,C.edgeSoft)
-  U.icon("inv_misc_gem_opal_01",18,y+21,32,"Compare equipment","Paste a link or choose your equipment below.")
-  line("Check an item",64,y+8,180,"head",C.gold)
-  line("Paste an item link or item ID",268,y+12,280,"small",C.dim,"RIGHT")
-  U.entry("LootItem",64,y+34,U.W-218,input or "",function(v) input=v end,submit,2048)
-  button("Check item",U.W-142,y+34,130,submit)
-  button(planning and "Hide planning" or "Planning options",14,y+66,164,function() planning=not planning;refresh() end,planning)
-  button("Live character",190,y+66,166,function() preview=nil;refresh() end,not ctx.preview)
-  button("Gear / bags",368,y+66,186,function() selected=nil;input=nil;refresh(true) end)
-  y=y+110
+  local entryY=y+8
+  if selected then
+    U.surface(4,y,U.W-8,62,C.btnOff,C.edgeSoft)
+  else
+    U.surface(4,y,U.W-8,98,C.btnOff,C.edgeSoft)
+    U.icon("inv_misc_gem_opal_01",18,y+21,32,"Compare equipment","Paste a link or choose your equipment below.")
+    line("Check an item",64,y+8,180,"head",C.gold)
+    line("Paste an item link or item ID",268,y+12,280,"small",C.dim,"RIGHT")
+    entryY=y+34
+  end
+  local entryX=selected and 14 or 64
+  U.entry("LootItem",entryX,entryY,U.W-154-entryX,input or "",function(v) input=v end,submit,2048)
+  button("Check item",U.W-142,entryY,130,submit)
+  button(planning and "Hide planning" or "Planning options",14,entryY+27,164,function() planning=not planning;refresh() end,planning)
+  button("Live character",190,entryY+27,166,function() preview=nil;refresh() end,not ctx.preview)
+  button("Gear / bags",368,entryY+27,186,function() selected=nil;input=nil;refresh(true) end)
+  y=y+(selected and 72 or 110)
   if planning then
     U.surface(0,y,U.W,144,C.panel,C.edgeSoft)
     line("Preview class / faction",12,y+10,240,"small",C.dim)
@@ -605,15 +707,20 @@ end
 local function render()
   palette()
   local ctx=context();local p=ctx.profile
-  U.surface(4,6,U.W-8,42,C.panel,C.edgeSoft)
+  local banner=Theme.eui and C.panel or C.ribbon
+  local title=Theme.eui and C.light or {0.99,0.9,0.68}
+  local finePrint=Theme.eui and C.dim or {0.84,0.88,0.83}
+  U.surface(4,6,U.W-8,42,banner,C.edge)
+  if not Theme.eui then U.picture(ART.."loot-ribbon.tga",5,7,U.W-10,40) end
   U.icon("inv_chest_plate04",14,13,27,"Loot journal","Your equipment, upgrades and acquisition sources.")
-  line("Loot",52,14,64,"head",C.ink)
-  line((ctx.preview and "Planning: " or "Your gear: ")..ctx.class.." / Level "..ctx.level.." / "..(p and p.label or "No profile"),128,12,U.W-144,"small",C.ink)
-  line("Estimated gear score is advisory.",128,29,U.W-144,"small",C.inkSoft)
+  line("Loot",52,14,64,"head",title)
+  line((ctx.preview and "Planning: " or "Your gear: ")..ctx.class.." / Level "..ctx.level.." / "..(p and p.label or "No profile"),116,12,U.W-202,"small",title)
+  line("Estimated gear score is advisory.",116,29,U.W-202,"small",finePrint)
   local tabArt={"inv_chest_plate04","inv_misc_gem_opal_01","inv_misc_bag_10","inv_misc_book_11"}
   for i,label in ipairs({"Upgrades","Compare","Tracked","Profiles"}) do
     local x=4+(i-1)*142;local on=section==label
-    U.surface(x,56,136,28,on and C.btnOn or C.panel,on and C.edge or C.edgeSoft)
+    U.surface(x,56,136,28,on and C.btnOn or C.panel,on and C.accent or C.edgeSoft)
+    if on then U.rect(x+5,81,126,2,C.accent,"border",1) end
     U.icon(tabArt[i],x+8,62,16,label,nil)
     line(label,x+32,62,94,"body",on and C.light or C.dim,"CENTER")
     local b=U.hit(x,56,136,28,label,nil,function() section=label;message=nil;picker=nil;refresh(true) end,label);b.codexOn=on
@@ -638,7 +745,7 @@ end
 ns.addTab("loot","Loot",render)
 function L.open(want,ref)
   if want then section=want end
-  if ref then selected=ref;input=tostring(ref);detailSection="Overview";sourceOffset=0;if section=="Upgrades" then view="detail" end end
+  if ref then selected=ref;input=tostring(ref);detailSection="Overview";sourceOffset=0;expandedSource=nil;preferredSource=nil;if section=="Upgrades" then view="detail" end end
   ns.openTab("loot")
 end
 L.subscribe(function() if ns.refreshLootTab then ns.refreshLootTab() end end)

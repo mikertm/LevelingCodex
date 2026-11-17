@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Polished the Loot journal with an original teal banner, source shortcuts on results, expandable acquisition cards, and before-and-after stat graphs. Incomplete comparisons explain which information is missing.
+
 - Refined Loot into a textured parchment journal with restored equipment icons, a full-body character preview, grouped equipment cards, illustrated role choices, and an actionable target page. Fixed native texture IDs and complete texture paths being treated as icon names.
 
 - Redesigned Loot around a character paper doll: select an equipped or empty slot to browse upgrades, with compact source and play-style filters, readable item rows, and a focused details page that returns to the same results. Advanced filters and comparison planning are folded away; sources, enchants, tracked targets, and profile weights have clearer sections.

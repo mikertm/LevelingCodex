@@ -51,7 +51,30 @@ def build():
     d.polygon(((256, 24), (264, 32), (256, 40), (248, 32)), fill=pale)
     ornament.save(OUT / "loot-ornament.tga")
 
+    ribbon = Image.new("RGBA", (1024, 128))
+    p = ribbon.load()
+    for y in range(128):
+        for x in range(1024):
+            sheen = 1 - abs(y - 44) / 92
+            glow = 1 - abs(x - 310) / 714
+            grain = rng.randrange(-2, 3)
+            p[x, y] = (20 + int(12*sheen) + grain, 36 + int(23*sheen + 9*glow) + grain,
+                       38 + int(26*sheen + 13*glow) + grain, 255)
+    ink = Image.new("RGBA", ribbon.size)
+    d = ImageDraw.Draw(ink)
+    for inset, alpha in [(5, 140), (10, 60)]:
+        d.rounded_rectangle((inset, inset, 1023-inset, 127-inset), radius=12,
+                            outline=(202, 167, 98, alpha), width=1)
+    cx, cy = 952, 63
+    d.ellipse((cx-39, cy-39, cx+39, cy+39), outline=(214, 184, 119, 105), width=2)
+    d.ellipse((cx-32, cy-32, cx+32, cy+32), outline=(214, 184, 119, 45), width=1)
+    d.polygon([(cx-18,cy-17),(cx+18,cy-17),(cx+15,cy+9),(cx,cy+22),(cx-15,cy+9)],
+              fill=(210, 176, 104, 55), outline=(214, 184, 119, 165), width=2)
+    d.line((cx,cy-11,cx,cy+12), fill=(214, 184, 119, 170), width=2)
+    d.line((cx-9,cy-1,cx+9,cy-1), fill=(214, 184, 119, 170), width=2)
+    Image.alpha_composite(ribbon, ink).save(OUT / "loot-ribbon.tga")
+
 
 if __name__ == "__main__":
     build()
-    print("Built Loot journal paper, stage and ornament textures")
+    print("Built Loot journal paper, stage, ornament and banner textures")

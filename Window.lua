@@ -216,7 +216,7 @@ end
 local function picture(path, x, y, w, h, tint, tile)
   if not A.hasFile(path) then return false end
   local t = take("picture", newTex)
-  t:SetDrawLayer("BACKGROUND", 1)
+  t:SetDrawLayer("BACKGROUND", tile and 1 or 2)
   t:SetTexture(path, tile and "REPEAT" or "CLAMP", tile and "REPEAT" or "CLAMP")
   t:SetTexCoord(0, tile and w / 128 or 1, 0, tile and h / 128 or 1)
   t:SetVertexColor(rgba(tint or { 1, 1, 1, 1 }))
