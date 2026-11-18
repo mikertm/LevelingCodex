@@ -10918,6 +10918,16 @@ function S.lootTab()
 end
 function S.lootGraphics()
   lootSetup()
+  check(questText(win(),"Armor") and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "equipment slots have visible group headings")
+  check(questText(win(),"1 / 17") or questText(win(),"Equipment data unavailable"),
+    "the portrait panel summarizes how many equipment slots are filled")
+  local chestSlot=findButton(win(),function(label) return label=="Browse Chest" end)
+  MOCK.fire(chestSlot,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(chestSlot) and link=="item:900001",
+    "the equipment slot opens the native item tooltip")
+  MOCK.fire(chestSlot,"OnLeave")
   local chestIcon,headIcon,model
   local function walk(f)
     for _,b in ipairs({f:GetChildren()}) do
@@ -10983,7 +10993,8 @@ function S.lootCardViews()
   end
   click(win(),"Scoring settings")
   local protection=findButton(win(),function(label) return label=="Protection" end)
-  check(protection and protection:GetWidth()<300 and protection:GetHeight()>=80,"specializations are distinct illustrated choices")
+  check(protection and protection:GetWidth()>240 and protection:GetWidth()<300 and protection:GetHeight()>=80,
+    "specialization cards use the wider workspace")
   click(win(),"Arms")
   check(LevelingCodexCharDB.lootProfileKey=="arms","specialization cards apply their selected scoring profile")
   click(win(),"Export profile")
@@ -11069,7 +11080,8 @@ function S.lootBrowse()
   check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
   click(win(),"Change slot")
   local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
-  check(shoulder and questText(win(),"Accessories") and questText(win(),"Weapons"),"slot picker groups the equipment slots")
+  check(shoulder and shoulder:GetWidth()>240 and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "the slot picker groups the slots in full-width columns")
   MOCK.fire(shoulder,"OnEnter")
   check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
   MOCK.fire(shoulder,"OnLeave")

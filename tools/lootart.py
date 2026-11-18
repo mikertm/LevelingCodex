@@ -23,16 +23,17 @@ def build():
     p = stage.load()
     for y in range(512):
         for x in range(256):
-            glow = max(0, 1 - math.hypot((x - 128) / 180, (y - 205) / 360))
+            glow = max(0, 1 - math.hypot((x - 128) / 150, (y - 209) / 305))
             n = rng.randrange(-2, 3)
-            p[x, y] = (int(19 + glow * 30) + n, int(27 + glow * 27) + n, int(29 + glow * 23) + n, 255)
+            p[x, y] = (int(14 + glow * 14) + n, int(23 + glow * 29) + n, int(31 + glow * 31) + n, 255)
     overlay = Image.new("RGBA", stage.size)
     d = ImageDraw.Draw(overlay)
-    for inset, alpha in [(7, 150), (11, 55)]:
-        d.rounded_rectangle((inset, inset, 255-inset, 511-inset), radius=38, outline=(177, 143, 82, alpha), width=1)
-    d.ellipse((27, 437, 229, 484), fill=(5, 10, 13, 110), outline=(154, 129, 76, 90), width=1)
-    for yy in (36, 419):
-        d.line((30, yy, 226, yy), fill=(162, 135, 83, 65), width=1)
+    for rx, ry, alpha in [(102, 191, 65), (108, 203, 38), (116, 218, 22)]:
+        d.ellipse((128-rx, 217-ry, 128+rx, 217+ry), outline=(185, 159, 110, alpha), width=1)
+    for x in (9, 246):
+        d.line((x, 24, x, 487), fill=(185, 159, 110, 42), width=1)
+    for yy in (17, 495):
+        d.line((20, yy, 235, yy), fill=(185, 159, 110, 50), width=1)
     Image.alpha_composite(stage, overlay).save(OUT / "loot-stage.tga")
 
     ornament = Image.new("RGBA", (512, 64))

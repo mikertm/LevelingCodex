@@ -50,6 +50,9 @@ local SLOTS={
 local SLOT_ART={[1]="Head",[2]="Neck",[3]="Shoulder",[5]="Chest",[6]="Waist",[7]="Legs",[8]="Feet",
   [9]="Wrists",[10]="Hands",[11]="Finger",[12]="Finger",[13]="Trinket",[14]="Trinket",
   [15]="Chest",[16]="MainHand",[17]="SecondaryHand",[18]="Ranged"}
+local ARMOR_SLOTS={1,3,15,5,9,10,6,7,8}
+local ACCESSORY_SLOTS={2,11,12,13,14}
+local WEAPON_SLOTS={16,17,18}
 local SOURCES={"quest","vendor","craft","boss","dungeonTrash","raidTrash","creature","rare","world","object","reputation","pvp"}
 local STYLES={all="Any play style",solo="Solo",group="Group",buy="Buy / craft"}
 local SOURCE_ICONS={quest="inv_misc_book_09",boss="inv_helmet_03",dungeonTrash="inv_misc_bone_humanskull_01",
@@ -161,31 +164,52 @@ end
 local function paperSlot(n,x,y,w,ctx)
   local it=ctx.snapshot.slots[n]
   local label=L.slotNames[n]
-  U.surface(x,y,w,36,C.btnOff,C.edgeSoft)
+  U.surface(x,y,w,29,it and C.btnOff or C.background,C.edgeSoft)
   local art=it and it.icon or ("Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[n] or "Chest"))
   local name=equippedName(it,ctx.snapshot.equipmentKnown)
-  itemIcon(it,x+5,y+4,28,label,name,art):EnableMouse(false)
-  line(label,x+40,y+4,w-56,"small",C.light)
-  line(name,x+40,y+20,w-56,"small",it and quality(it.quality) or C.dim)
-  line(">",x+w-15,y+11,10,"small",C.gold)
-  action(x,y,w,36,"Browse "..label,ns.plain(name),function() chooseSlot(n,slotKey(n,ctx)) end,"Browse "..label)
+  itemIcon(it,x+5,y+3,23,label,name,art):EnableMouse(false)
+  line(label,x+38,y+1,w-56,"small",C.dim)
+  line(name,x+38,y+14,w-56,"small",it and quality(it.quality) or C.dim)
+  line(">",x+w-16,y+8,10,"small",C.accent)
+  local b=action(x,y,w,29,"Browse "..label,name,function() chooseSlot(n,slotKey(n,ctx)) end,"Browse "..label)
+  if it then itemTip(b,it) end
 end
 local function character(y,ctx)
-  y=text("Your equipment",y,"head",C.gold)
-  y=text("Select a gear slot to browse upgrades and where to get them.",y,"small",C.dim)
-  local top=y
-  U.surface(188,top,192,266,C.panel,C.edge)
-  ornament(top+18,201,166)
-  U.surface(224,top+52,120,120,C.background,C.edge)
-  U.playerPortrait(230,top+58,108,ctx.class,not ctx.preview)
-  line(ctx.profile.label,198,top+188,172,"head",C.gold,"CENTER")
-  line((ctx.preview and "Preview level " or "Level ")..ctx.level,198,top+220,172,"small",C.dim,"CENTER")
-  ornament(top+234,201,166)
-  for i,n in ipairs({1,2,3,15,5,9,10}) do paperSlot(n,4,top+(i-1)*38,180,ctx) end
-  for i,n in ipairs({6,7,8,11,12,13,14}) do paperSlot(n,384,top+(i-1)*38,180,ctx) end
-  for i,n in ipairs({16,17,18}) do paperSlot(n,4+(i-1)*188,top+274,180,ctx) end
-  ornament(top+316)
-  return top+342
+  line("Your equipment",16,y+1,330,"head",C.gold)
+  line("Select a slot to browse upgrades",WIDTH-352,y+7,336,"small",C.dim,"RIGHT")
+  local top=y+34
+  local left,center,right=12,316,566
+  U.surface(left,top,292,330,C.panel,C.edgeSoft)
+  U.surface(right,top,292,330,C.panel,C.edgeSoft)
+  line("Armor",left+12,top+10,266,"body",C.gold)
+  line("Accessories",right+12,top+10,266,"body",C.gold)
+  line("Weapons",right+12,top+198,266,"body",C.gold)
+  for i,n in ipairs(ARMOR_SLOTS) do paperSlot(n,left+12,top+32+(i-1)*32,268,ctx) end
+  for i,n in ipairs(ACCESSORY_SLOTS) do paperSlot(n,right+12,top+32+(i-1)*32,268,ctx) end
+  for i,n in ipairs(WEAPON_SLOTS) do paperSlot(n,right+12,top+224+(i-1)*32,268,ctx) end
+
+  U.surface(center,top,238,330,C.panel,C.edgeSoft)
+  if not Theme.eui then U.picture(ART.."loot-stage.tga",center+1,top+1,236,249) end
+  U.surface(center+47,top+30,144,144,C.background,C.edge)
+  U.rect(center+48,top+31,142,142,C.background,nil,3)
+  U.playerPortrait(center+54,top+37,130,ctx.class,not ctx.preview)
+  local name=not ctx.preview and L.call(UnitName,"player")
+  local caption=type(name)=="string" and ns.plain(name)
+  line(caption and caption~="" and caption or ctx.profile.label,center+13,top+184,212,"head",C.gold,"CENTER")
+  if ctx.snapshot.equipmentKnown then
+    local filled=0
+    for _,n in ipairs(L.slotOrder) do if ctx.snapshot.slots[n] then filled=filled+1 end end
+    line("Equipment slots filled",center+17,top+218,145,"small",C.dim)
+    line(filled.." / "..#L.slotOrder,center+168,top+218,54,"small",C.light,"RIGHT")
+    U.rect(center+17,top+237,204,5,C.edgeSoft,"border",1)
+    if filled>0 then U.rect(center+17,top+237,204*filled/#L.slotOrder,5,C.accent,"border",2) end
+  else
+    line("Equipment data unavailable",center+17,top+224,204,"small",C.dim,"CENTER")
+  end
+  U.rect(center+1,top+250,236,1,C.edgeSoft,"border")
+  button("Compare an item",center+17,top+259,204,function() section="Compare";message=nil;refresh(true) end,true)
+  button("Open tracked items",center+17,top+287,204,function() section="Tracked";message=nil;refresh(true) end)
+  return top+340
 end
 
 local function baseline(y,ctx)
@@ -219,25 +243,27 @@ end
 
 local function slotPicker(y)
   line("Choose a gear slot",16,y+3,354,"head",C.gold)
-  button("Back to results",418,y,138,returnToList)
+  button("Back to results",WIDTH-150,y,138,returnToList)
   y=y+36
   local groups={
     {label="Armor",indices={1,3,4,5,6,7,8,9,10}},
     {label="Accessories",indices={2,11,12}},
     {label="Weapons",indices={13,14,15,16}},
   }
+  local w=math.floor((WIDTH-48)/3)
   for g,group in ipairs(groups) do
-    local x=12+(g-1)*184
-    U.surface(x,y,176,310,C.panel,C.edgeSoft)
-    line(group.label,x+12,y+12,150,"body",C.gold)
+    local x=12+(g-1)*(w+12)
+    U.surface(x,y,w,#group.indices*28+49,C.panel,C.edgeSoft)
+    line(group.label,x+12,y+12,w-24,"body",C.gold)
     for i,index in ipairs(group.indices) do
       local n,label,key=unpack(SLOTS[index])
       local isSelected=filters.slot==key
       local yy=y+40+(i-1)*28
-      if isSelected then U.surface(x+5,yy,166,25,C.btnOn,C.accent) end
+      U.surface(x+8,yy,w-16,25,isSelected and C.btnOn or C.btnOff,isSelected and C.accent or C.edgeSoft)
       itemIcon(nil,x+12,yy+4,17,label,nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[n] or "Chest"))
-      line(label,x+40,yy+5,120,"body",isSelected and C.light or C.dim)
-      action(x+5,yy,166,25,label,"Browse this equipment slot.",function() chooseSlot(n,key) end,"Slot "..label)
+      line(label,x+40,yy+5,w-62,"body",isSelected and C.light or C.dim)
+      line(">",x+w-27,yy+6,14,"small",C.accent)
+      action(x+8,yy,w-16,25,label,"Browse this equipment slot.",function() chooseSlot(n,key) end,"Slot "..label).codexOn=isSelected
     end
   end
   return y+318
@@ -747,29 +773,32 @@ local function comparisonResult(y,ctx)
     local r=L.compare(it,ctx)
     local color=verdictColor(r.verdict)
     L.lastComparison=it.name..": "..(L.labels[r.verdict] or r.verdict).." - "..r.reason
-    local function gearCard(item,label,fallback)
+    local score=r.confidence=="complete" and (r.percent and string.format("%+.1f%%",r.percent) or string.format("%+.1f",r.delta))
+    local equipped=#r.baseline==1 and r.baseline[1].key==it.key
+    U.surface(inset,y,w-28,48,C.background,C.edgeSoft)
+    U.rect(inset,y,3,48,color,"border",1)
+    line(equipped and "Already equipped" or L.labels[r.verdict] or r.verdict,inset+12,y+7,w-106,"body",color)
+    if score then
+      line("Estimated gear score",inset+12,y+29,w-110,"small",C.dim)
+      line(score,x+w-103,y+14,79,"head",color,"RIGHT")
+    end
+    y=y+57
+    if not score then y=text(r.reason,y-2,"small",C.dim,inset,w-28)+3 end
+    local function gearCard(item,label,fallback,isCandidate)
       U.surface(inset,y,w-28,43,C.btnOff,C.edgeSoft)
-      itemIcon(item,inset+5,y+6,30,item and item.name or label,nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
-      line(label,inset+44,y+5,w-80,"small",C.dim)
+      if isCandidate then U.rect(inset,y,2,43,C.accent,"border",1) end
+      itemIcon(item,inset+5,y+6,30,item and item.name or label,nil,"Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest"):EnableMouse(false)
+      line(label,inset+44,y+5,w-80,"small",isCandidate and C.accent or C.dim)
       line(item and item.name or fallback,inset+44,y+23,w-80,"small",item and quality(item.quality) or C.dim)
       if item then itemTip(action(inset,y,w-28,43,item.name,nil),item) end
       y=y+48
     end
-    gearCard(it,"Selected item")
     if #r.baseline==0 then
       gearCard(nil,"Equipped baseline",r.confidence=="complete" and "Empty slot" or "Baseline unverified")
     else
       for i,old in ipairs(r.baseline) do gearCard(old,i==1 and "Equipped baseline" or "Also replaces") end
     end
-    local score=r.confidence=="complete" and (r.percent and string.format("%+.1f%%",r.percent) or string.format("%+.1f",r.delta))
-    U.surface(inset,y,w-28,30,C.background,C.edgeSoft)
-    U.rect(inset,y,2,30,color,"border")
-    local equipped=#r.baseline==1 and r.baseline[1].key==it.key
-    line(equipped and "Already equipped" or L.labels[r.verdict] or r.verdict,inset+9,y+8,w-108,"body",color)
-    if score then line(score,x+w-89,y+8,65,"body",color,"RIGHT") end
-    y=y+36
-    if score then y=text("Estimated gear score",y,"small",C.dim,inset,w-28)
-    else y=text(r.reason,y,"small",C.dim,inset,w-28) end
+    gearCard(it,"Selected item",nil,true)
     if statsReadable(it,r,ctx) then
       local changes={}
       for stat,delta in pairs(r.statDelta) do if delta~=0 then changes[#changes+1]=stat end end
@@ -778,16 +807,21 @@ local function comparisonResult(y,ctx)
         if da==db then return a<b end
         return da>db
       end)
+      if #changes>0 then
+        line("Stat changes",inset,y+4,w-28,"small",C.dim)
+        y=y+20
+      end
       for i=1,math.min(3,#changes) do
         local stat=changes[i]
         local delta=r.statDelta[stat]
-        line(STAT_NAMES[stat] or stat,inset+2,y+2,w-100,"small",C.light)
-        line((delta>0 and "+" or "")..number(delta),x+w-83,y+2,66,"small",delta>0 and C.green or C.loss,"RIGHT")
-        y=y+18
+        U.rect(inset,y,w-28,19,C.background)
+        line(STAT_NAMES[stat] or stat,inset+9,y+3,w-100,"small",C.light)
+        line((delta>0 and "+" or "")..number(delta),x+w-90,y+3,66,"small",delta>0 and C.green or C.loss,"RIGHT")
+        y=y+22
       end
     end
     y=y+7
-    button("Full comparison",inset,y,w-28,function() compareDetail.open=true;compareDetail.page="Overview";refresh(true) end)
+    button("Full comparison",inset,y,w-28,function() compareDetail.open=true;compareDetail.page="Overview";refresh(true) end,true)
     local half=math.floor((w-36)/2)
     button("Where to get it",inset,y+28,half,function() compareDetail.open=true;compareDetail.page="Sources";refresh(true) end)
     button("Track this item",inset+half+8,y+28,half,function()
@@ -815,23 +849,27 @@ local function compare(y,ctx)
   local full=compareDetail.open and compareDetail.ref
   local sideBottom=not full and comparisonResult(y,ctx)
   U.surface(4,y,U.W-8,74,C.panel,C.edgeSoft)
-  line("Compare gear",18,y+8,230,"head",C.gold)
-  line("Paste an item link or enter its ID.",248,y+14,U.W-268,"small",C.dim,"RIGHT")
-  U.entry("LootItem",18,y+39,U.W-154,input or "",function(v) input=v end,submit,2048)
+  U.icon("inv_misc_gem_opal_01",17,y+15,30,"Compare gear",nil):EnableMouse(false)
+  line("Compare gear",59,y+7,214,"head",C.gold)
+  line("Item link or ID",288,y+14,U.W-307,"small",C.dim,"RIGHT")
+  U.entry("LootItem",59,y+39,U.W-195,input or "",function(v) input=v end,submit,2048)
   button("Check item",U.W-124,y+39,106,submit,true)
   y=y+86
   if full then
     button("Back to items",12,y,146,function() compareDetail.open=false;refresh(true) end)
     return details(compareDetail,y+32,ctx)
   end
-  line("Choose an item",12,y+3,155,"body",C.gold)
-  line("Filter",171,y+5,46,"small",C.dim)
+  line("Choose an item",12,y+3,145,"body",C.gold)
+  line("Name filter",148,y+5,71,"small",C.dim,"RIGHT")
   U.entry("LootInventorySearch",222,y,112,inventorySearch,function(value) inventorySearch=value end,function()
     inventoryPage=0;refresh()
   end,80)
   for i,label in ipairs({"Bags","Equipped"}) do
-    button(label,346+(i-1)*106,y,100,function() inventoryMode=label;inventoryPage=0;refresh() end,inventoryMode==label)
+    local x=346+(i-1)*106
+    button(label,x,y,100,function() inventoryMode=label;inventoryPage=0;refresh() end,inventoryMode==label)
+    if inventoryMode==label then U.rect(x+5,y+19,90,2,C.accent,"border",1) end
   end
+  U.rect(12,y+26,U.W-24,1,C.edgeSoft,"border")
   y=y+30
   local snapshot=L.snapshot()
   local items={}
@@ -864,11 +902,13 @@ local function compare(y,ctx)
     local row=items[i];local it=row.item;local ix=(i-1)%6
     local x,yy=12+(ix%2)*278,y+math.floor(ix/2)*58
     local on=compareDetail.ref==it.key
-    U.surface(x,yy,266,52,on and C.btnOn or C.btnOff,on and C.edge or C.edgeSoft)
-    itemIcon(it,x+8,yy+10,32,it.name,"Select to compare with your gear.")
+    U.surface(x,yy,266,52,on and C.btnOn or C.panel,on and C.accent or C.edgeSoft)
+    if on then U.rect(x,yy,3,52,C.accent,"border",1) end
+    itemIcon(it,x+8,yy+9,34,it.name,"Select to compare with your gear."):EnableMouse(false)
     local slot=row.slot and L.slotNames[row.slot] or (it.slot and L.slotNames[L.slotsFor(it.slot)[1]])
-    line(slot or "Equipment",x+50,yy+6,202,"small",C.dim)
-    line(it.name,x+50,yy+25,202,"small",quality(it.quality))
+    line(slot or "Equipment",x+52,yy+8,189,"small",C.dim)
+    line(it.name,x+52,yy+27,189,"small",quality(it.quality))
+    line(">",x+247,yy+19,10,"small",C.accent)
     local key=it.key
     local b=action(x,yy,266,52,it.name,"Compare with your equipped gear.",function() input=key;choose(key) end,row.label)
     b.codexOn=on
@@ -1014,50 +1054,65 @@ local function profiles(y,ctx)
     button(editor.weapon.feral and "Feral policy: on" or "Feral policy: off",12,y,260,function() editor.weapon.feral=not editor.weapon.feral;refresh() end)
     return y+34
   end
-  y=text("Choose your priorities",y,"head",C.gold)
-  y=text("Pick the role you are gearing for. Your talent guide stays the same.",y,"small",C.dim)
-  U.surface(4,y,U.W-8,64,C.panel,C.edgeSoft)
-  U.icon("inv_misc_book_11",18,y+13,36,"Scoring profile",p.label)
+  line("Scoring profiles",16,y+1,335,"head",C.gold)
+  line("Sets the priorities used for gear comparisons",WIDTH-357,y+7,341,"small",C.dim,"RIGHT")
+  y=y+34
+  U.surface(12,y,WIDTH-24,64,C.panel,C.edgeSoft)
+  U.rect(12,y,3,64,C.accent,"border",1)
+  U.icon("inv_misc_book_11",28,y+14,36,"Scoring profile",p.label):EnableMouse(false)
   local automatic=not ns.charDB().lootProfile and not ns.charDB().lootProfileKey and not (preview and preview.profileKey)
-  line(automatic and "Following your talent path" or "Manual loot profile",66,y+10,294,"small",C.dim)
-  line(p.label,66,y+29,294,"head",C.gold)
-  button("Follow talent path",376,y+22,176,function()
+  line(automatic and "Following your talent path" or "Manual loot profile",80,y+10,310,"small",C.dim)
+  line(p.label,80,y+28,400,"head",C.gold)
+  button("Follow talent path",WIDTH-203,y+21,175,function()
     L.resetProfile();if preview then preview.profileKey=nil end;editor=nil;refresh()
   end,automatic)
-  y=y+78
+  y=y+80
   local paths=(ns.TALENT_PATHS or {})[ctx.class] or {}
-  local n=math.max(1,#paths);local w=math.floor((U.W-24-(n-1)*12)/n)
+  local n=math.max(1,#paths);local w=math.floor((WIDTH-24-(n-1)*12)/n)
   for i,p0 in ipairs(paths) do
     local x=12+(i-1)*(w+12);local on=p0.key==p.key
-    U.surface(x,y,w,122,on and C.btnOn or C.btnOff,on and C.edge or C.edgeSoft)
+    U.surface(x,y,w,102,on and C.btnOn or C.panel,on and C.accent or C.edgeSoft)
+    if on then U.rect(x,y,3,102,C.accent,"border",1) end
     local plan=p0.plan or (ctx.class==select(2,UnitClass("player")) and ns.D and ns.D.plan)
     local art=plan and plan[1] and plan[1].icon or "inv_misc_book_11"
-    U.icon(art,x+(w-36)/2,y+12,36,p0.spec,p0.note)
-    line(p0.spec,x+8,y+54,w-16,"head",C.gold,"CENTER")
-    line(p0.role or "Leveling",x+8,y+79,w-16,"small",C.dim,"CENTER")
-    line(on and "ACTIVE PROFILE" or "Choose this role",x+8,y+103,w-16,"small",on and C.light or C.dim,"CENTER")
-    local b=action(x,y,w,122,p0.spec,p0.note,function()
+    U.icon(art,x+14,y+21,43,p0.spec,p0.note):EnableMouse(false)
+    line(p0.spec,x+72,y+18,w-85,"head",C.gold)
+    line(p0.role or "Leveling",x+72,y+48,w-85,"small",C.light)
+    if on then
+      U.surface(x+72,y+70,76,18,C.background,C.edgeSoft)
+      line("Active",x+77,y+72,66,"small",C.accent,"CENTER")
+    else
+      line(">",x+w-22,y+43,13,"body",C.accent)
+    end
+    local b=action(x,y,w,102,p0.spec,p0.note,function()
       if ctx.preview then preview=preview or {};preview.profileKey=p0.key else L.setProfile(p0.key) end
       editor=nil;refresh()
     end,p0.spec);b.codexOn=on
   end
-  y=y+138
-  U.surface(12,y,266,76,C.btnOff,C.edgeSoft)
-  U.icon("inv_misc_letter_15",22,y+11,28,"Share a profile","Export your priorities or import a friend's code.")
-  line("Share a profile",62,y+10,202,"body",C.gold)
-  line("Use a code with friends or alts.",62,y+30,202,"small",C.dim)
-  button("Export profile",22,y+50,118,function() code=L.profileCode();sharing=true;refresh(true) end)
-  button("Import profile",148,y+50,118,function() sharing=true;refresh(true) end)
-  U.surface(290,y,266,76,C.btnOff,C.edgeSoft)
-  U.icon("trade_engineering",300,y+11,28,"Custom priorities","Tune individual stats and weapon scoring.")
-  line("Fine-tune your gear",340,y+10,204,"body",C.gold)
-  line("Advanced stat and weapon weights",340,y+30,204,"small",C.dim)
-  button("Edit weights",340,y+50,204,function()
+  y=y+116
+  U.surface(12,y,417,106,C.panel,C.edgeSoft)
+  U.icon("inv_misc_letter_15",26,y+13,28,"Profile tools",nil):EnableMouse(false)
+  line("Profile tools",66,y+11,340,"body",C.gold)
+  line("Share a profile code or set your own stat weights.",66,y+31,340,"small",C.dim)
+  button("Export profile",26,y+67,123,function() code=L.profileCode();sharing=true;refresh(true) end)
+  button("Import profile",158,y+67,123,function() sharing=true;refresh(true) end)
+  button("Edit weights",290,y+67,125,function()
     editor={class=ctx.class,label="Custom",weights={},weapon={}}
     for k,v in pairs(p.weights) do editor.weights[k]=v end;for k,v in pairs(p.weapon) do editor.weapon[k]=v end
     refresh(true)
   end)
-  return y+88
+  U.surface(441,y,417,106,C.panel,C.edgeSoft)
+  U.icon("inv_misc_gem_opal_01",455,y+13,28,"Item tooltips",nil):EnableMouse(false)
+  line("Item tooltips",495,y+11,348,"body",C.gold)
+  line("Show rank and estimated score change on gear.",495,y+31,348,"small",C.dim)
+  local db=ns.db()
+  button(db.noLootHints and "Loot tooltips: off" or "Loot tooltips: on",455,y+67,151,function()
+    db.noLootHints=not db.noLootHints;refresh()
+  end,not db.noLootHints)
+  button(db.lootTooltipProfiles and "Other profile ranks: on" or "Other profile ranks: off",616,y+67,228,function()
+    db.lootTooltipProfiles=not db.lootTooltipProfiles;refresh()
+  end,db.lootTooltipProfiles,"Include the rankings from other talent profiles.").codexLabel="Show other profile ranks"
+  return y+118
 end
 planningFields=function(y,ctx,x,w)
   local inner=x+14
@@ -1113,41 +1168,14 @@ planningFields=function(y,ctx,x,w)
   return text("Press Enter to apply a field.",y+33,"small",C.dim,inner,fieldWidth)
 end
 
-local function workspaceSidebar(y,ctx)
+local function detailSidebar(y,ctx)
   local x,w=SIDE,WIDTH-SIDE-12
   local top=y
-  if section=="Upgrades" and view=="character" then
-    y=text("Equipment overview",y+14,"head",C.gold,x+14,w-28)
-    if ctx.snapshot.equipmentKnown then
-      local filled=0
-      for _,n in ipairs(L.slotOrder) do if ctx.snapshot.slots[n] then filled=filled+1 end end
-      y=text(filled.." equipped slots",y+4,"body",C.light,x+14,w-28)
-    else
-      y=text("Equipment data unavailable",y+4,"body",C.dim,x+14,w-28)
-    end
-    button("Compare an item",x+14,y+5,w-28,function() section="Compare";message=nil;refresh(true) end)
-    button("Open tracked items",x+14,y+35,w-28,function() section="Tracked";message=nil;refresh(true) end)
-    y=y+70
-  elseif section=="Profiles" then
-    y=text("Item tooltips",y+14,"head",C.gold,x+14,w-28)
-    y=text("See an item's rank among scorable catalog gear for its slot and your level, plus its estimated score change.",y+4,"small",C.dim,x+14,w-28)
-    local db=ns.db()
-    button(db.noLootHints and "Loot tooltips: off" or "Loot tooltips: on",x+14,y,w-28,function()
-      db.noLootHints=not db.noLootHints;refresh()
-    end,not db.noLootHints)
-    button("Show other profile ranks",x+14,y+28,w-28,function()
-      db.lootTooltipProfiles=not db.lootTooltipProfiles;refresh()
-    end,db.lootTooltipProfiles,"Add alternate talent profiles to the item tooltip.")
-    line(db.lootTooltipProfiles and "Other profile ranks: on" or "Other profile ranks: off",x+14,y+56,w-28,"small",C.dim)
-    U.surface(x,top,w,y+82-top,C.panel,C.edgeSoft)
-    return y+82
-  else
-    y=text("Loot targets",y+14,"head",C.gold,x+14,w-28)
-    local count=#L.targets("tracked")
-    y=text(count==1 and "1 active target" or (count.." active targets"),y+4,"body",C.dim,x+14,w-28)
-    button("Open tracked items",x+14,y+4,w-28,function() section="Tracked";message=nil;refresh(true) end)
-    y=y+36
-  end
+  y=text("Loot targets",y+14,"head",C.gold,x+14,w-28)
+  local count=#L.targets("tracked")
+  y=text(count==1 and "1 active target" or (count.." active targets"),y+4,"body",C.dim,x+14,w-28)
+  button("Open tracked items",x+14,y+4,w-28,function() section="Tracked";message=nil;refresh(true) end)
+  y=y+36
   line("Scoring profile",x+14,y+6,w-28,"small",C.dim)
   y=text(ctx.profile.label,y+24,"body",C.gold,x+14,w-28)
   U.surface(x,top,w,y+10-top,C.panel,C.edgeSoft)
@@ -1198,10 +1226,11 @@ local function render()
     button("Clear loot map target",12,y,260,function() L.clearMapTarget();refresh() end);y=y+32
   end
   local sideBottom
-  if section~="Compare" and section~="Tracked" and not (section=="Upgrades" and (view=="list" or view=="filters")) then sideBottom=workspaceSidebar(y,ctx) end
   if section=="Upgrades" then
     if view=="character" then y=character(y,ctx)
-    elseif view=="detail" and upgradeDetail.ref then y=details(upgradeDetail,y,ctx)
+    elseif view=="detail" and upgradeDetail.ref then
+      sideBottom=detailSidebar(y,ctx)
+      y=details(upgradeDetail,y,ctx)
     elseif view=="slots" then y=slotPicker(y)
     elseif view=="filters" then y=filterPage(y,ctx)
     else y=browse(y,ctx) end
