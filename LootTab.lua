@@ -367,7 +367,7 @@ local function filterPage(y,ctx)
   end,true)
   y=y+34
 
-  U.surface(left,y,leftWidth,238,C.panel,C.edgeSoft)
+  U.surface(left,y,leftWidth,252,C.panel,C.edgeSoft)
   line("Acquisition source",left+14,y+12,255,"body",C.gold)
   choice("All sources",left+leftWidth-138,y+8,124,filters.source=="all",function()
     filters.source="all";resetResults()
@@ -391,7 +391,7 @@ local function filterPage(y,ctx)
 
   local inner=right+14
   local half=math.floor((rightWidth-36)/2)
-  U.surface(right,y,rightWidth,238,C.panel,C.edgeSoft)
+  U.surface(right,y,rightWidth,252,C.panel,C.edgeSoft)
   line("Play style",inner,y+12,180,"body",C.gold)
   for i,key in ipairs({"all","solo","group","buy"}) do
     local x=inner+(i-1)%2*(half+8)
@@ -421,18 +421,21 @@ local function filterPage(y,ctx)
   button(filters.showIneligible and "Ineligible: shown" or "Ineligible: hidden",inner+119,y+128,rightWidth-147,function()
     filters.showIneligible=not filters.showIneligible;resetResults()
   end,filters.showIneligible,"Show gear your character cannot currently equip.").codexLabel="Show ineligible loot"
-  line(levelError or "This level affects availability only.",inner,y+156,rightWidth-28,"small",levelError and C.loss or C.dim)
+  if levelError then line(levelError,inner,y+153,rightWidth-28,"small",C.loss) end
+  button(filters.showUnverified and "Hide unverified sources" or "Show unverified sources",inner,y+169,rightWidth-28,function()
+    filters.showUnverified=not filters.showUnverified;resetResults()
+  end,filters.showUnverified,"Include items with unverified sources or access requirements.").codexLabel="Show unverified sources"
 
-  U.rect(inner,y+176,rightWidth-28,1,C.edgeSoft,"border")
-  line("Sort results",inner,y+184,180,"body",C.gold)
-  choice("Best upgrade",inner,y+207,half,filters.sort~="acquisition",function()
+  U.rect(inner,y+197,rightWidth-28,1,C.edgeSoft,"border")
+  line("Sort results",inner,y+201,180,"body",C.gold)
+  choice("Best upgrade",inner,y+222,half,filters.sort~="acquisition",function()
     filters.sort=nil;resetResults()
   end,"Order results by estimated upgrade value.")
-  choice("Local / active",inner+half+8,y+207,half,filters.sort=="acquisition",function()
+  choice("Local / active",inner+half+8,y+222,half,filters.sort=="acquisition",function()
     filters.sort="acquisition";resetResults()
   end,"Prioritize sources in your area and quests already in your log.")
 
-  y=y+250
+  y=y+264
   U.surface(left,y,WIDTH-24,75,C.panel,C.edgeSoft)
   line("Narrow by location or profession",left+14,y+9,400,"body",C.gold)
   local fieldWidth=math.floor((WIDTH-84)/3)
@@ -451,7 +454,7 @@ local function filterPage(y,ctx)
   return y+84
 end
 
-local function filterSummary(ctx)
+local function filterSummary()
   local tags={}
   if filters.source~="all" then tags[#tags+1]=L.sourceNames[filters.source] or filters.source end
   if filters.style~="all" then tags[#tags+1]=STYLES[filters.style] end
@@ -461,7 +464,7 @@ local function filterSummary(ctx)
     end
   end
   if filters.showIneligible then tags[#tags+1]="Includes ineligible" end
-  if filters.maxLevel and filters.maxLevel~=ctx.level then tags[#tags+1]="By level "..filters.maxLevel end
+  if filters.showUnverified then tags[#tags+1]="Includes unverified" end
   if filters.sort=="acquisition" then tags[#tags+1]="Sorted by access" end
   return tags
 end
@@ -619,13 +622,14 @@ local function browse(y,ctx)
   end
   y=y+56
 
-  local tags=filterSummary(ctx)
+  local tags=filterSummary()
   U.entry("LootSearch",17,y,335,filters.search,function(v) filters.search=v end,resetResults,80)
   button("Search",361,y,76,resetResults,false,"Search by item name or ID.")
-  local filterLabel=#tags>0 and ("Filters ("..#tags..")") or "Filters"
+  local count=#tags+(filters.maxLevel and filters.maxLevel~=ctx.level and 1 or 0)
+  local filterLabel=count>0 and ("Filters ("..count..")") or "Filters"
   local filter=button(filterLabel,449,y,107,function()
     view="filters";levelDraft,levelError=nil,nil;refresh(true)
-  end,#tags>0)
+  end,count>0)
   filter.codexLabel="Filters"
   y=y+29
 
@@ -636,16 +640,15 @@ local function browse(y,ctx)
     page=L.candidates(filters,ctx,offset,PAGE)
   end
   line(page.total.." matching items",16,y,139,"small",C.dim)
-  if #tags>0 then
-    local summary=table.concat(tags,"  /  ")
-    line(summary,160,y,392,"small",C.dim,"RIGHT")
-    action(160,y-2,392,18,"Active filters",ns.plain(summary))
-  end
+  local available="Available by level "..(filters.maxLevel or ctx.level)
+  local summary=#tags>0 and (available.."  /  "..table.concat(tags,"  /  ")) or available
+  line(summary,160,y,392,"small",C.dim,"RIGHT")
+  action(160,y-2,392,18,"Acquisition availability",ns.plain(summary))
   y=y+18
   if page.total==0 then
     U.surface(12,y,544,90,C.panel,C.edgeSoft)
     text("No matching items",y+14,"body",C.gold,24,512)
-    text("Try a different search or clear your filters.",y+41,"small",C.dim,24,512)
+    text("No matching gear with a source at this level.",y+41,"small",C.dim,24,512)
     button("Clear search and filters",312,y+56,220,resetFilters)
     U.surface(SIDE,top,WIDTH-SIDE-12,124,C.panel,C.edgeSoft)
     text("Item preview",top+16,"head",C.gold,SIDE+14,246)
@@ -690,7 +693,7 @@ local function browse(y,ctx)
       action(270,y+4,174,35,name,route.quest and "Open the quest route and pickup location." or kind..(place and (" / "..place) or ""),
         function() browseItem=it.id;choose(it.id,route.id) end,"Sources for item "..it.id)
     else
-      line(row.item.tradable and "Tradable" or "Source unverified",277,y+13,160,"small",C.dim)
+      line("Source unverified",277,y+13,160,"small",C.dim)
     end
     local verdict,gain,color=upgradeBadge(r,row.futureLevel)
     U.rect(451,y+4,99,35,C.background)

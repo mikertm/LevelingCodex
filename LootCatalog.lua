@@ -39,22 +39,15 @@ RANK_CATEGORY.INVTYPE_SHIELD="INVTYPE_WEAPONOFFHAND"
 RANK_CATEGORY.INVTYPE_HOLDABLE="INVTYPE_WEAPONOFFHAND"
 
 local rankVersion,rankScores
-local function availableForRank(item,data,ctx)
+local function availableForRank(item,ctx)
   if (item.requiredLevel or 0)>ctx.level then return false end
-  local routes=item.sourceIDs or {}
-  if item.tradable or #routes==0 then return true end
-  for _,id in ipairs(routes) do
-    local source=data.sources[id]
-    if source and (source.requiredLevel or 0)<=ctx.level
-      and (not source.faction or source.faction=="All" or source.faction==ctx.faction) then return true end
-  end
-  return false
+  return #L.sources(item.id,{accessLevel=ctx.level},ctx)>0
 end
 function L.catalogRank(item,ctx,result)
   local data=ns.lootData
   if not (data and data.items[item.id] and item.slot and ctx.profile
     and result.confidence=="complete" and type(result.delta)=="number") then return end
-  if not availableForRank(data.items[item.id],data,ctx) then return end
+  if not availableForRank(data.items[item.id],ctx) then return end
   if rankVersion~=L.version then rankVersion=L.version;rankScores={} end
   local category=RANK_CATEGORY[item.slot] or item.slot
   local key=ctx.profile.key.."/"..category
@@ -64,7 +57,7 @@ function L.catalogRank(item,ctx,result)
     for _,kind in ipairs(CATEGORY_TYPES[category] or {category}) do
       for _,id in ipairs(data.bySlot[kind] or {}) do
         local peer=data.items[id]
-        if availableForRank(peer,data,ctx) then
+        if availableForRank(peer,ctx) then
           local comparison=L.compare(peer,ctx)
           if comparison.confidence=="complete" then scores[id]=comparison.delta end
         end
@@ -79,7 +72,6 @@ function L.catalogRank(item,ctx,result)
   return rank
 end
 local function sourceAllowed(s,f,c)
-  if f.accessLevel and (s.requiredLevel or 0)>f.accessLevel then return false end
   if s.faction and s.faction~="All" and s.faction~=c.faction then return false end
   if f.source and f.source~="all" and s.type~=f.source then return false end
   if f.zone and f.zone~="" and not (s.zone or ""):lower():find(f.zone:lower(),1,true) then return false end
@@ -90,16 +82,59 @@ local function sourceAllowed(s,f,c)
   if f.style=="buy" and not (s.type=="vendor" or s.type=="craft" or s.type=="reputation" or s.type=="pvp") then return false end
   return true
 end
+
+local function sourceLevel(source,item,ctx,access)
+  local required=source.requiredLevel
+  if source.type=="raidTrash" or (access.raids or {})[source.instance] then
+    return math.max(60,required or 0)
+  end
+  local enemyLevel=(access.creatures or {})[source.npc]
+  local combatLevel=enemyLevel and math.max(1,enemyLevel-3)
+  local guideLevel=(access.instances or {})[source.instance]
+  if source.instance and (source.type=="boss" or source.type=="dungeonTrash") then
+    if not combatLevel and source.object then return required end
+    if guideLevel or combatLevel then return math.max(guideLevel or 1,combatLevel or 1,required or 1) end
+  end
+  if (source.type=="creature" or source.type=="rare") and combatLevel then
+    return math.max(combatLevel,required or 1)
+  end
+  if source.type=="vendor" then
+    local r=item.restrictions or {}
+    if r.text or r.reputation and (not ctx.reputation or (ctx.reputation[r.reputation] or 0)<(r.standing or 0))
+      or r.skill and (not ctx.professions or (ctx.professions[r.skill] or 0)<(r.skillRank or 1)) then return end
+    if source.npc and source.map then
+      return math.max((access.zones or {})[source.map] or 1,required or 1)
+    end
+  end
+  if source.type=="craft" and source.recipe
+    and (item.tradable or not ctx.preview and L.call(IsPlayerSpell,source.recipe)) then
+    return math.max(1,required or 0)
+  end
+  return required
+end
+
 function L.sources(id,filters,ctx)
   local data=ns.lootData or {}; local it=data.items and data.items[id]
   ctx=ctx or L.context()
-  local out={}
+  filters=filters or {}
+  local out,earliest,unknown={}
   for _,key in ipairs(it and it.sourceIDs or {}) do
     local s=data.sources[key]
-    if s and sourceAllowed(s,filters or {},ctx) then out[#out+1]=s end
+    if s and sourceAllowed(s,filters,ctx) then
+      if not filters.accessLevel then
+        out[#out+1]=s
+      else
+        local level=sourceLevel(s,it,ctx,data.access or {})
+        if level==nil then unknown=true
+        elseif level<=filters.accessLevel then
+          out[#out+1]=s
+          earliest=math.min(earliest or level,level)
+        end
+      end
+    end
   end
   table.sort(out,function(a,b) return a.id<b.id end)
-  return out
+  return out,earliest,unknown
 end
 local ROUTE_ORDER={quest=1,vendor=2,craft=3,reputation=4,boss=5,rare=6,creature=7,
   object=8,dungeonTrash=9,raidTrash=10,pvp=11,world=12}
@@ -177,24 +212,30 @@ function L.candidates(filters,ctx,offset,limit)
     if (it.requiredLevel or 0)<=(f.maxLevel or ctx.level) and (it.requiredLevel or 0)>=(f.minLevel or 0)
       and matchesWeapon(it,style,family)
       and (query=="" or tostring(it.id)==query or it.name:lower():find(query,1,true)) then
-      local sources=L.sources(it.id,sourceFilters,ctx)
-      if #sources>0 or not sourceFiltered and (#(it.sourceIDs or {})==0 or it.tradable) then
+      local sources,earliest,unknown=L.sources(it.id,sourceFilters,ctx)
+      local unverified=#sources==0 and f.showUnverified
+        and (unknown or not sourceFiltered and #(it.sourceIDs or {})==0)
+      if #sources>0 or unverified then
         -- Offline catalog comparisons avoid item requests; only an opened detail reads the live item.
         local r=L.compare(it,ctx,nil,f.weaponSlot)
-        local future=(f.maxLevel or ctx.level)>ctx.level and (it.requiredLevel or 0)>ctx.level
-        if f.showIneligible or r.verdict~="cannotEquip" or future then
+        local level=math.max(it.requiredLevel or 0,earliest or 0)
+        local future=level>ctx.level
+        local needsLevel=(it.requiredLevel or 0)>ctx.level
+        if f.showIneligible or r.verdict~="cannotEquip" or needsLevel then
           local rank=0
           for _,s in ipairs(sources) do
             if s.map and s.map==L.call(C_Map and C_Map.GetBestMapForUnit,"player") then rank=rank+2 end
             if s.quest and ns.quests and ns.quests.log and ns.quests.log(s.quest) then rank=rank+1 end
           end
-          rows[#rows+1]={item=it,result=r,sources=sources,acquisition=rank,futureLevel=future and it.requiredLevel or nil}
+          rows[#rows+1]={item=it,result=r,sources=sources,acquisition=rank,futureLevel=future and level or nil,
+            availabilityUnverified=unverified}
         end
       end
     end
   end
   local order={upgrade=1,sidegrade=2,needsReview=3,loading=4,downgrade=5,cannotEquip=6}
   table.sort(rows,function(a,b)
+    if (a.availabilityUnverified==true)~=(b.availabilityUnverified==true) then return not a.availabilityUnverified end
     if f.sort=="acquisition" and a.acquisition~=b.acquisition then return a.acquisition>b.acquisition end
     local x,y=order[a.result.verdict] or 9,order[b.result.verdict] or 9
     if x~=y then return x<y end

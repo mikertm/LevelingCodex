@@ -11102,7 +11102,7 @@ function S.lootBrowse()
   local level=LevelingCodexLootPlanLevel
   level:SetText("60")
   click(win(),"Show results")
-  check(questText(win(),"By level 60"),"Show results accepts a typed plan level without Enter")
+  check(questText(win(),"Available by level 60"),"Show results accepts a typed plan level without Enter")
   click(win(),"Filters")
   click(win(),"Use my level")
   check(level:GetText()=="30","the player level can be restored directly")
@@ -11221,6 +11221,25 @@ function S.lootWeaponRoutes()
   click(win(),"Sources for item 17046")
   check(questText(win(),"Reward quest pickup at Krolg") and questText(win(),"Turn in to Raene Wolfrunner"),
     "the reward step distinguishes pickup from turn-in")
+end
+function S.lootLevelAvailability()
+  lootSetup()
+  MOCK.level=31
+  MOCK.event("PLAYER_LEVEL_UP",31);MOCK.advance(0.2)
+  click(win(),"Browse Main hand")
+  check(questText(win(),"Available by level 31"),"the list identifies the level used for source availability")
+  local edit=LevelingCodexLootSearch
+  for _,id in ipairs({"289294","274383","20003","276338"}) do
+    edit:SetText(id);edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"No matching items"),"unverified weapon "..id.." is hidden even when searched directly")
+  end
+  edit:SetText("6220");edit:GetScript("OnEnterPressed")(edit)
+  check(findButton(win(),function(label) return label=="Inspect item 6220" end),
+    "level-appropriate dungeon weapons remain discoverable")
+  edit:SetText("289294");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Filters");click(win(),"Show unverified sources");click(win(),"Show results")
+  check(findButton(win(),function(label) return label=="Inspect item 289294" end)
+    and questText(win(),"Source unverified"),"the explicit discovery filter labels unverified weapons")
 end
 function S.lootCompareVerdicts()
   lootSetup(); click(win(),"Compare")

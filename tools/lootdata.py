@@ -192,6 +192,8 @@ def render(ref):
     data = {k: ref[k] for k in ('schema', 'build', 'items', 'sources', 'enchants')}
     if ref.get('questFacts'):
         data['questFacts'] = ref['questFacts']
+    if ref.get('access'):
+        data['access'] = ref['access']
     data['coverage'] = coverage(ref)
     indexes = {k: collections.defaultdict(list) for k in ('bySlot', 'bySource', 'byCreature')}
     for key, item in sorted(ref['items'].items(), key=lambda kv: int(kv[0])):
@@ -289,10 +291,12 @@ def build_command(args):
         item['sourceIDs'] = [k for k in item.get('sourceIDs', []) if k in ref['sources']]
     from gamedata import load_lua_global
     from questroute import ROUTES
-    add_entrances(ref, load_lua_global(ROUTES, 'LevelingCodexQuests'))
+    routes = load_lua_global(ROUTES, 'LevelingCodexQuests')
+    add_entrances(ref, routes)
     overrides = ROOT/'tools/reference/loot-overrides.json'
     if overrides.exists():
         apply_overrides(ref, json.loads(overrides.read_text(encoding='utf-8')))
+    add_access_levels(ref, routes)
     errors = validate(ref)
     if errors:
         raise SystemExit('\n'.join(errors[:20]))
@@ -321,6 +325,37 @@ def add_entrances(ref, routes):
     for s in ref['sources'].values():
         if not s.get('map') and s.get('instance') in entrances:
             s.update(entrances[s['instance']])
+
+
+def source_creature_levels(sources, npcs):
+    from questfacts import record
+    ids = {s['npc'] for s in sources.values() if s.get('npc')}
+    levels = {}
+    for id_ in ids:
+        level = record(npcs, id_).get('minLevel')
+        if type(level) is int and level > 0:
+            levels[str(id_)] = level
+    return levels
+
+
+def add_access_levels(ref, routes):
+    # Dungeon starts come from the guide's leveling bands. Wing-less sources use the lowest
+    # guide start alongside the named encounter's level when that level is known.
+    instances, zones = {}, {}
+    for faction in ('ALLIANCE', 'HORDE'):
+        for section in routes[faction]['sections']:
+            instance, zone = section.get('instanceID'), section.get('zone')
+            start = section['levels'][0]
+            if instance:
+                key = str(instance)
+                instances[key] = min(start, instances.get(key, start))
+            elif zone and section.get('category') != 'dungeon':
+                key = str(zone)
+                zones[key] = min(start, zones.get(key, start))
+    raids = {str(s['instance']): True for s in ref['sources'].values()
+             if s.get('instance') and (s['type'] == 'raidTrash' or s.get('raid'))}
+    ref['access'] = {'creatures': ref.pop('sourceCreatureLevels', {}), 'instances': instances,
+                     'zones': zones, 'raids': raids}
 
 
 STAT_NAMES = {'Strength': 'str', 'Agility': 'agi', 'Stamina': 'sta', 'Intellect': 'int',
@@ -506,6 +541,8 @@ def fetch_catalog(args, cache):
             inst = maps.get(int(a.get('ContinentID') or 0), {})
             if int(inst.get('InstanceType') or 0) in (1, 2) and kind not in ('quest','vendor'):
                 s['type'] = 'raidTrash' if int(inst['InstanceType']) == 2 else 'dungeonTrash'
+                if s['type'] == 'raidTrash':
+                    s['raid'] = True
                 s['instance'] = int(inst['ID']); s['dungeon'] = ascii_text(inst.get('MapName_lang', s['zone']))
                 # Elite dungeon creatures are not necessarily bosses; keep this explicit.
             for xy in coords.values():
@@ -545,6 +582,7 @@ def fetch_catalog(args, cache):
                 source(item, kind, int(n))
     ref = {'schema': 1, 'build': build, 'items': items, 'sources': sources, 'enchants': {}}
     ref['questFacts'] = quest_facts(ref, data['quest'], data['npc'], data['object'])
+    ref['sourceCreatureLevels'] = source_creature_levels(sources, data['npc'])
     # Existing profession output records are client-verified source links.
     game_ref = json.loads((ROOT/'tools/reference/forever.json').read_text())
     bosses={e[1].casefold() for instance in game_ref['quests']['instances'].values() for e in instance.get('encounters',[])}
