@@ -638,9 +638,13 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   -- quest (ifDone, ifOnQuest) only shows up when that happens, so a later step doesn't pass it.
   if s.type == "note" and (skips[row.key] or (later and not s.ifDone and not s.ifOnQuest)) then return "done" end
   if skips[row.key] then return "skipped" end
-  -- Already in the section's zone: the way there no longer applies.
-  if row.leadIn and not visited[row.key] and map == row.section.zone then
-    return "skipped"
+  -- Once the active guide is reached, keep its inbound travel skipped on trips out of the zone.
+  if row.leadIn then
+    if visited[row.key] == "alreadyThere" then return "skipped" end
+    if not visited[row.key] and map == row.section.zone then
+      if row.section == (sideSection or selected) and not Q.inFlight() then visited[row.key] = "alreadyThere" end
+      return "skipped"
+    end
   end
   if visited[row.key] then return "done" end
   if s.type == "grind" and s.level and (level > s.level or (level == s.level and grindReached(s))) then
@@ -1482,7 +1486,7 @@ function Q.reason(row)
     end
     if s.maxLevel and level > s.maxLevel then return "Skipped: you're past level " .. s.maxLevel .. "." end
     if s.unlessDone and turnedIn[s.unlessDone] then return "Skipped: not needed once " .. named(s.unlessDone) .. " is done." end
-    if row.leadIn then return "Skipped: you're already in this zone." end
+    if row.leadIn then return "Skipped: you've already reached this guide's zone." end
     if s.quest and not row.section.side and eliteSkipped(s) then
       if Q.eliteMode() == "skip" then return "Skipped: Settings > Elite quests is set to Always skip." end
       return "Skipped: you chose Skip for this elite quest (or the one it needs)."

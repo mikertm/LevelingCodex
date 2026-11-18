@@ -3083,6 +3083,29 @@ function S.questFlightBack()
   check(arrowSays(" yd"), "it leads on to Sven's Camp with its distance: " .. arrowCaption())
 end
 
+function S.questFlightMorbent()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 31, 1431, 77.4, 44.3
+  MOCK.bind = "Darkshire"
+  for _, id in ipairs({ 538, 181, 173, 58, 221, 134, 225 }) do MOCK.questDone[id] = true end
+  S.login()
+  MOCK.questLog = { { questID = 325, isComplete = true } } -- Morbent's Bane for Sven
+  MOCK.event("QUEST_ACCEPTED", 1, 325)
+  local frame = questViewer()
+  check(questText(frame, "give him Morbent's Bane"), "the Darkshire guide starts with Sven's turn-in")
+  local nodes = { { "Darkshire, Duskwood", "CURRENT" }, { "Sentinel Hill, Westfall", "REACHABLE" } }
+  taxiMap(nodes)
+  check(arrowSays("Fly to Sentinel Hill"), "the arrow routes to Sven via Sentinel Hill: " .. arrowCaption())
+  TakeTaxiNode(2)
+  TaxiFrame:Hide()
+  MOCK.onTaxi = true
+  MOCK.advance(1)
+  MOCK.onTaxi = false
+  walkTo(1436, 56.6, 52.7)
+  check(questText(frame, "give him Morbent's Bane") and not questText(frame, "Auberdine - Stormwind Harbor"),
+    "landing at Sentinel Hill keeps the turn-in current")
+  check(arrowSays(" yd") and not arrowSays("Fly to"), "the arrow leads on foot to Sven: " .. arrowCaption())
+end
+
 local function allText(root)
   local out = {}
   for _, child in ipairs({ root:GetRegions() }) do
