@@ -65,13 +65,6 @@ def build():
     for inset, alpha in [(5, 100), (10, 42)]:
         d.rounded_rectangle((inset, inset, 1023-inset, 127-inset), radius=12,
                             outline=(202, 167, 98, alpha), width=1)
-    cx, cy = 498, 63
-    d.ellipse((cx-39, cy-39, cx+39, cy+39), outline=(214, 184, 119, 105), width=2)
-    d.ellipse((cx-32, cy-32, cx+32, cy+32), outline=(214, 184, 119, 45), width=1)
-    d.polygon([(cx-18,cy-17),(cx+18,cy-17),(cx+15,cy+9),(cx,cy+22),(cx-15,cy+9)],
-              fill=(210, 176, 104, 55), outline=(214, 184, 119, 165), width=2)
-    d.line((cx,cy-11,cx,cy+12), fill=(214, 184, 119, 170), width=2)
-    d.line((cx-9,cy-1,cx+9,cy-1), fill=(214, 184, 119, 170), width=2)
     Image.alpha_composite(ribbon, ink).save(OUT / "loot-ribbon.tga")
 
 
