@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "items": {},
+  "sources": {
+    "quest:93617:276339": {
+      "type": "quest",
+      "item": 276339,
+      "name": "Prey and Predator",
+      "quest": 93617,
+      "requiredLevel": 54,
+      "giver": 255693,
+      "giverName": "Kala'th",
+      "zone": "Mount Hyjal",
+      "map": 2482,
+      "x": 28.7,
+      "y": 43.0,
+      "evidence": "database-reference",
+      "referenceURL": "https://zephras.com/forever/enUS/quest/93617/"
+    }
+  }
+}

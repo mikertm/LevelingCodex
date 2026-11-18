@@ -10337,7 +10337,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 9, "nine tabs (" .. #tabs .. ")")
+  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -10931,4 +10931,529 @@ function S.euiSkinOn()
     win():Hide()
   end
   euiOnlyOnBacking()
+end
+
+local function lootSetup()
+  MOCK.level=30
+  MOCK.lootItems[900001]={name="Old Vest",stats={ITEM_MOD_STRENGTH_SHORT=10}}
+  MOCK.lootItems[900002]={name="Better Vest",stats={ITEM_MOD_STRENGTH_SHORT=100}}
+  MOCK.equipped[5]="item:900001"
+  MOCK.skills={{name="Cloth",rank=1,max=1}}
+  MOCK.event("PLAYER_LOGIN")
+  slash("loot")
+  check(win() and win():IsShown() and questText(win(),"Loot"),"Loot tab opens")
+end
+function S.lootTab()
+  lootSetup()
+  for _,name in ipairs({"Compare","Tracked","Profiles","Upgrades"}) do click(win(),name) end
+  check(questText(win(),"Level 30") and questText(win(),"Scoring profile") and questText(win(),"0 active"),
+    "the Loot header shows level context, scoring profile, and active targets")
+  MOCK.equipped[5]="item:900002"
+  if MOCK.event("PLAYER_EQUIPMENT_CHANGED",5)==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"paper doll refreshes after equipment changes")
+  click(win(),"Browse Ranged / relic")
+  local relic=MOCK.class=="PALADIN" or MOCK.class=="SHAMAN" or MOCK.class=="DRUID"
+  check(questText(win(),relic and "Relic upgrades" or "Ranged upgrades"),"paper doll chooses the class's ranged or relic category")
+end
+function S.lootGraphics()
+  lootSetup()
+  check(questText(win(),"Armor") and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "equipment slots have visible group headings")
+  check(questText(win(),"1 / 17") or questText(win(),"Equipment data unavailable"),
+    "the portrait panel summarizes how many equipment slots are filled")
+  local chestSlot=findButton(win(),function(label) return label=="Browse Chest" end)
+  MOCK.fire(chestSlot,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(chestSlot) and link=="item:900001",
+    "the equipment slot opens the native item tooltip")
+  MOCK.fire(chestSlot,"OnLeave")
+  local chestIcon,headIcon,model
+  local function walk(f)
+    for _,b in ipairs({f:GetChildren()}) do
+      if b:IsShown() then
+        if b:GetObjectType()=="PlayerModel" then model=b end
+        if b.tex and b.tipTitle=="Chest" then chestIcon=b.tex end
+        if b.tex and b.tipTitle=="Head" then headIcon=b.tex end
+        walk(b)
+      end
+    end
+  end
+  walk(win())
+  check(not model,"Loot uses a static portrait instead of inheriting player animations")
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chestTexture=canRead and 134400 or MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
+  check(chestIcon and chestIcon:GetTexture()==chestTexture,"native item IDs and unloaded-item slot art reach the renderer intact")
+  check(headIcon and headIcon:GetTexture()==MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Head"),"complete empty-slot texture paths stay intact")
+  local darkBackground
+  local function checkSurfaces(frame)
+    for _,r in ipairs({frame:GetRegions()}) do
+      if r:IsShown() then
+        check(not (r._path and r._path:find("loot-paper.tga",1,true)),"Loot backgrounds do not depend on the client's paper texture tint")
+        local color=r._color
+        if r:GetObjectType()=="Texture" and color then
+          local _,anchor=r:GetPoint(1)
+          local _,opposite=r:GetPoint(2)
+          if anchor==frame and opposite==frame and frame:GetWidth()>=500 and frame:GetHeight()>=420 then
+            darkBackground=darkBackground or (color[1]<0.22 and color[2]<0.22 and color[3]<0.22 and color[4]==1)
+          end
+        end
+      end
+    end
+    for _,child in ipairs({frame:GetChildren()}) do if child:IsShown() then checkSurfaces(child) end end
+  end
+  checkSurfaces(win())
+  check(darkBackground,"Loot uses an opaque dark background even in a bright game scene")
+end
+function S.lootCardViews()
+  lootSetup();click(win(),"Compare")
+  click(win(),"Equipped")
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chest=findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+  check(chest and chest:GetWidth()<400 and chest:GetHeight()>=44,"equipment is browsed in readable item cards")
+  click(win(),"Bags")
+  check(questText(win(),"No bag equipment") or questText(win(),"Bag items unavailable"),"an empty or unavailable bag view is explained")
+  if C_Container and canRead then
+    for i=1,7 do
+      local id=900010+i;local name="Bag Vest "..i
+      MOCK.lootItems[id]={name=name,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+      MOCK.bagItems[#MOCK.bagItems+1]={id=id,name=name,class="Armor",quality=2,level=1}
+    end
+    MOCK.lootItems[900018]={name="Bag Blade",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+    MOCK.bagItems[#MOCK.bagItems+1]={id=900018,name="Bag Blade",class="Weapon",quality=2,level=1}
+    MOCK.event("BAG_UPDATE_DELAYED");MOCK.advance(0.2)
+    click(win(),"Next items")
+    check(findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag cards remain reachable beyond the first page")
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"different kinds of gear can be compared from the same bag view")
+    local filter=LevelingCodexLootInventorySearch
+    filter:SetText("Blade");filter:GetScript("OnEnterPressed")(filter)
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and not findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag filtering finds items and resets paging")
+  end
+  click(win(),"Scoring settings")
+  local protection=findButton(win(),function(label) return label=="Protection" end)
+  check(protection and protection:GetWidth()>240 and protection:GetWidth()<300 and protection:GetHeight()>=80,
+    "specialization cards use the wider workspace")
+  click(win(),"Arms")
+  check(LevelingCodexCharDB.lootProfileKey=="arms","specialization cards apply their selected scoring profile")
+  click(win(),"Export profile")
+  check(LevelingCodexLootProfileCode and LevelingCodexLootProfileCode:IsShown() and #LevelingCodexLootProfileCode:GetText()>0,"profile sharing remains available")
+  click(win(),"Tracked");click(win(),"Browse upgrades")
+  check(questText(win(),"Your equipment"),"the empty target page leads directly to equipment browsing")
+end
+function S.lootDetailCards()
+  lootSetup();click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  click(win(),"Full comparison")
+  click(win(),"Upgrades");click(win(),"Browse Chest");click(win(),"Compare")
+  check(findButton(win(),function(label) return label=="Back to items" end)
+    and questText(win(),canRead and "Better Vest" or "Item 900002"),
+    "browsing upgrades preserves the selected comparison and its detail view")
+  if canRead then
+    check(questText(win(),"Equipped: 10") and questText(win(),"New: 100"),"stat cards show independently known before and after values")
+    local strength=findButton(win(),function(label) return label=="Strength comparison" end)
+    check(strength and strength:GetWidth()<400,"individual stat comparisons are grouped cards")
+    MOCK.fire(strength,"OnEnter")
+    check(GameTooltip:IsOwned(strength),"stat comparison details are available on focus or hover")
+    MOCK.fire(strength,"OnLeave")
+    MOCK.lootItems[900005]={name="Old Sword",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=10}}
+    MOCK.lootItems[900006]={name="Old Shield",slot="INVTYPE_SHIELD",classID=4,subclassID=6,stats={ITEM_MOD_STRENGTH_SHORT=5}}
+    MOCK.lootItems[900007]={name="New Two-hander",slot="INVTYPE_2HWEAPON",classID=2,subclassID=1,stats={ITEM_MOD_STRENGTH_SHORT=20}}
+    MOCK.equipped[16],MOCK.equipped[17]="item:900005","item:900006"
+    MOCK.event("PLAYER_EQUIPMENT_CHANGED",16);MOCK.advance(0.2)
+    edit:SetText("900007");edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"Equipped: 15") and questText(win(),"New: 20"),"two-hand comparisons include both replaced items")
+    edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+    MOCK.lootItems[900004]={name="Unknown Vest",loaded=false}
+    MOCK.equipped[5]="item:900004";MOCK.event("PLAYER_EQUIPMENT_CHANGED",5);MOCK.advance(0.2)
+  end
+  check(questText(win(),"Stat comparison unavailable"),"missing equipment facts never become a zero baseline in a graph")
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Sources")
+  check(findButton(win(),function(label) return label=="Source details 1" end),"acquisition details are organized into expandable source cards")
+  check(not questText(win(),"Materials:"),"source summaries start compact")
+  click(win(),"Source details 1")
+  check(questText(win(),"Database reference") or questText(win(),"Client reference"),"source evidence stays visible while browsing")
+  check(questText(win(),"Materials:") and questText(win(),"Bolt of Linen Cloth"),"expanding a crafting source reveals its actual materials")
+  click(win(),"Source details 1")
+  check(not questText(win(),"Materials:"),"source cards can be folded back to their summary")
+  click(win(),"Track source 1")
+  local target
+  for _,t in pairs(LevelingCodexCharDB.lootTargets or {}) do if t.id==2572 and t.sourceID=="craft:2389:2572" then target=t end end
+  check(target and questText(win(),"Source tracked"),"source card actions track the selected acquisition route")
+end
+-- A wrong slot handler, lost filter/page, or an item detail appended below the list
+-- would break this player-visible browse/back flow.
+function S.lootBrowse()
+  lootSetup()
+  check(questText(win(),"Your equipment"),"loot starts with the equipment paper doll")
+  check(win():GetWidth()>810,"Loot has room for a result list beside the item preview")
+  for _,name in ipairs({"Head","Neck","Shoulders","Back","Chest","Wrists","Hands","Waist","Legs","Feet",
+    "Ring 1","Ring 2","Trinket 1","Trinket 2","Main hand","Off hand","Ranged / relic"}) do
+    check(findButton(win(),function(label) return label=="Browse "..name end),"paper doll slot is clickable: "..name)
+  end
+  local function clickThroughArtwork(control)
+    local _,anchor,_,x,y=control:GetPoint(1)
+    for _,child in ipairs({control:GetParent():GetChildren()}) do
+      local _,relative,_,cx,cy=child:GetPoint(1)
+      if child.tex and child:IsShown() and child:IsMouseEnabled() and relative==anchor
+          and cx<x+control:GetWidth() and cx+child:GetWidth()>x
+          and cy>y-control:GetHeight() and cy-child:GetHeight()<y then
+        check(control:GetFrameLevel()>child:GetFrameLevel(),"the first click on an item icon reaches its row action")
+      end
+    end
+    control:Click()
+  end
+  local chest=findButton(win(),function(label) return label=="Browse Chest" end)
+  local redraws=0
+  chest:HookScript("OnHide",function() redraws=redraws+1 end)
+  MOCK.leftMouseDown=true
+  MOCK.event("PLAYER_REGEN_ENABLED");MOCK.advance(0.3)
+  check(redraws==0,"a background refresh does not replace a slot button during a click")
+  MOCK.leftMouseDown=false
+  clickThroughArtwork(chest)
+  check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
+  check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
+  local results=0
+  for _,control in ipairs(MOCK.buttons(win())) do
+    if control.codexLabel and control.codexLabel:find("^Inspect item ") then
+      results=results+1
+      check(control:GetWidth()>=320,"the results give item names and their acquisition text more room")
+    end
+  end
+  check(results==5,"five items fit on the first results page")
+  check(findButton(win(),function(label) return label=="Availability filters" end),"the visible level opens the filters directly")
+  check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
+  click(win(),"Change slot")
+  local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
+  check(shoulder and shoulder:GetWidth()>240 and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "the slot picker groups the slots in full-width columns")
+  MOCK.fire(shoulder,"OnEnter")
+  check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
+  MOCK.fire(shoulder,"OnLeave")
+  click(win(),"Back to results")
+  click(win(),"Availability filters")
+  for _,source in ipairs({"Quest reward","Boss drop","Raid drop","Vendor","Crafted","PvP"}) do
+    check(findButton(win(),function(label) return label==source end),source.." is visible when filters open")
+  end
+  local source=findButton(win(),function(label) return label=="Quest reward" end)
+  clickThroughArtwork(source)
+  check(findButton(win(),function(label) return label=="Quest reward" end).codexOn and LevelingCodexLootZone:IsShown(),
+    "one click selects a source and keeps location fields visible")
+  click(win(),"All sources")
+  click(win(),"Local / active")
+  check(findButton(win(),function(label) return label=="Local / active" end).codexOn,"local ordering is explicitly selectable")
+  click(win(),"Best upgrade")
+  check(findButton(win(),function(label) return label=="Best upgrade" end).codexOn,"upgrade ordering is explicitly selectable")
+  local level=LevelingCodexLootPlanLevel
+  level:SetText("60")
+  click(win(),"Show results")
+  check(questText(win(),"Available by level 60"),"Show results accepts a typed plan level without Enter")
+  click(win(),"Filters")
+  click(win(),"Use my level")
+  check(level:GetText()=="30","the player level can be restored directly")
+  click(win(),"Raise loot plan level")
+  check(level:GetText()=="31","the level stepper adjusts by one")
+  click(win(),"Lower loot plan level")
+  check(level:GetText()=="30","the level stepper can return to the original level")
+  level:SetText("0")
+  click(win(),"Show results")
+  check(level:IsShown() and questText(win(),"Enter a level from 1 to 60"),"invalid levels leave the filter controls available")
+  click(win(),"Use my level")
+  click(win(),"Show results")
+  check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"filter fields are hidden from results")
+  click(win(),"Next loot page")
+  check(questText(win(),"Page 2 of"),"results can be paged")
+  local row
+  for _,candidate in ipairs(MOCK.buttons(win())) do
+    if candidate.codexLabel and candidate.codexLabel:find("^Inspect item ") and not candidate.codexOn then
+      row=candidate;break
+    end
+  end
+  check(row,"a different result can be selected")
+  local label=row.codexLabel
+  clickThroughArtwork(row)
+  local active=findButton(win(),function(candidate) return candidate==label end)
+  check(active and active.codexOn and LevelingCodexLootSearch:IsShown() and questText(win(),"Selected item"),
+    "a single click changes the selection while keeping the results visible")
+  click(win(),"Full comparison")
+  click(win(),"Back to results")
+  check(questText(win(),"Page 2 of"),"returning from details retains the result page")
+  local search=LevelingCodexLootSearch
+  search:SetFocus()
+  if MOCK.event("BAG_UPDATE_DELAYED")==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  check(search:HasFocus(),"background equipment updates do not interrupt search typing")
+  search:SetText("Red Linen Robe");search:GetScript("OnEnterPressed")(search)
+  check(findButton(win(),function(label) return label=="Inspect item 2572" end),"chest browsing includes robes")
+  check(questText(win(),"Tailoring: Red Linen Robe"),
+    "the preview shows the actual recipe source before opening details")
+  local itemRow=findButton(win(),function(label) return label=="Inspect item 2572" end)
+  local routeRow=findButton(win(),function(label) return label=="Sources for item 2572" end)
+  local _,_,_,itemX=itemRow:GetPoint(1)
+  local _,_,_,routeX=routeRow:GetPoint(1)
+  check(itemX+itemRow:GetWidth()<=routeX,"the source shortcut has its own hit area beside the item")
+  check(questText(win(),"Crafted / Tailoring: Red Linen Robe"),"the source stays readable on the item row")
+  click(win(),"Sources for item 2572")
+  check(questText(win(),"Tailoring: Red Linen Robe") and questText(win(),"Bolt of Linen Cloth")
+    and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
+  click(win(),"Back to results")
+  check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
+  click(win(),"Inspect item 2572")
+  local _,_,_,_,beforeTrack=search:GetPoint(1)
+  click(win(),"Track this item")
+  local _,_,_,_,afterTrack=search:GetPoint(1)
+  check(beforeTrack==afterTrack and questText(win(),"Target tracked"),"tracking feedback keeps the result controls in place")
+  click(win(),"Full comparison");click(win(),"Sources")
+  check(questText(win(),"Crafted") and questText(win(),"Track route"),"item details retain the recipe and its track action")
+  click(win(),"Back to results")
+  search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
+  check(questText(win(),"No matching items"),"empty results explain the filters")
+  click(win(),"Filters")
+  check(LevelingCodexLootZone and LevelingCodexLootZone:IsShown(),"advanced filters can be opened")
+  local zone=LevelingCodexLootZone
+  zone:SetText("no-such-zone-123")
+  click(win(),"Show results")
+  check(questText(win(),"No matching items") and questText(win(),"Zone: no-such-zone-123"),"results show the applied filter")
+  click(win(),"Filters")
+  click(win(),"Reset filters")
+  click(win(),"Show results")
+  check(LevelingCodexLootSearch:GetText()=="" and not questText(win(),"No matching items"),"reset restores the slot list")
+  click(win(),"Back to character")
+  click(win(),"Browse Ring 2")
+  check(questText(win(),"Ring upgrades") and questText(win(),"Ring 1") and questText(win(),"Ring 2"),"paired slots show both equipped baselines")
+  click(win(),"Back to character")
+  click(win(),"Browse Off hand")
+  check(questText(win(),"Off hand upgrades"),"off hand opens its own equipment category")
+end
+function S.lootWeaponRoutes()
+  MOCK.lootItems[15225]={name="Sequoia Hammer of the Whale",slot="INVTYPE_WEAPONMAINHAND",
+    classID=2,subclassID=4,stats={ITEM_MOD_STAMINA_SHORT=6}}
+  MOCK.equipped[16]="item:15225:0:0:0:0:0:-15"
+  lootSetup()
+  click(win(),"Browse Main hand")
+  check(questText(win(),"One-hand + shield"),"Protection starts with a shield-compatible main-hand list")
+  local edit=LevelingCodexLootSearch
+  edit:SetText("Whirlwind Warhammer");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"No matching items"),"Protection does not include two-handers by default")
+  click(win(),"Weapon filters")
+  click(win(),"Two-hand")
+  click(win(),"Maces")
+  click(win(),"Show results")
+  check(questText(win(),"Whirlwind Warhammer") and questText(win(),"The Islander"),
+    "explicit weapon types show the reward and the beginning of its chain")
+  check(findButton(win(),function(label) return label=="Inspect item 6976" end),
+    "the two-handed mace result is selectable")
+  if type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo) then
+    check(questText(win(),"+18.7 DPS"),"the preview shows verified weapon DPS even with uncertain item effects")
+  end
+  check(questText(win(),"prevents a shield"),"the preview explains the shield trade-off")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map preview pickup")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453 and LevelingCodexLootSearch:IsShown(),
+      "the preview pins the next pickup without leaving the weapon list")
+    click(win(),"Clear loot map target")
+  end
+  click(win(),"Sources for item 6976")
+  check(questText(win(),"Whirlwind Weapon") and questText(win(),"The Summoning")
+    and questText(win(),"The Islander") and questText(win(),"Bath'rah the Windwatcher"),
+    "the source view shows the named chain and its reward contact")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map quest 1718")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453,"the chain-start pin leads to the Alliance starter")
+    click(win(),"Clear loot map target")
+  end
+  MOCK.questDone[1718]=true
+  click(win(),"Back to results")
+  if IsQuestFlaggedCompleted or C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+    check(questText(win(),"Next quest") and questText(win(),"The Affray"),"a completed chain starter advances the preview")
+  else
+    check(questText(win(),"The Islander"),"the route keeps its known starter when completion cannot be read")
+  end
+  click(win(),"Weapon filters")
+  click(win(),"Use profile default")
+  click(win(),"Axes")
+  click(win(),"Show results")
+  edit:SetText("Gutterblade");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"Raene Wolfrunner"),"the one-hand axe shows the start of the Raene chain")
+  click(win(),"Sources for item 17046")
+  check(questText(win(),"Reward quest pickup at Krolg") and questText(win(),"Turn in to Raene Wolfrunner"),
+    "the reward step distinguishes pickup from turn-in")
+end
+function S.lootLevelAvailability()
+  lootSetup()
+  MOCK.level=31
+  MOCK.event("PLAYER_LEVEL_UP",31);MOCK.advance(0.2)
+  click(win(),"Browse Main hand")
+  check(questText(win(),"Available by level 31"),"the list identifies the level used for source availability")
+  local edit=LevelingCodexLootSearch
+  for _,id in ipairs({"289294","274383","20003","276338"}) do
+    edit:SetText(id);edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"No matching items"),"unverified weapon "..id.." is hidden even when searched directly")
+  end
+  edit:SetText("6220");edit:GetScript("OnEnterPressed")(edit)
+  check(findButton(win(),function(label) return label=="Inspect item 6220" end),
+    "level-appropriate dungeon weapons remain discoverable")
+  edit:SetText("289294");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Filters");click(win(),"Show unverified sources");click(win(),"Show results")
+  check(findButton(win(),function(label) return label=="Inspect item 289294" end)
+    and questText(win(),"Source unverified"),"the explicit discovery filter labels unverified weapons")
+end
+function S.lootCompareVerdicts()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText("900002"); edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Estimated gear score" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
+  click(win(),"Equipped")
+  check(LevelingCodexLootItem:IsShown(),"item input stays visible after comparing")
+  click(win(),"Chest: "..(canRead and "Old Vest" or "Item 900001"))
+  check(findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+    and questText(win(),"Equipped baseline") and questText(win(),"Selected item"),
+    "one click compares another item beside the equipment picker")
+  click(win(),"Planning")
+  check(LevelingCodexLootPreviewLevel:IsShown(),"planning controls are still reachable")
+  click(win(),"Use live character")
+  check(not LevelingCodexLootPreviewLevel:IsShown(),"live mode closes the planning controls")
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item"); click(win(),"Tracked")
+  check(findButton(win(),function(label) return label:find(" - tracked",1,true) and (label:find("Better Vest",1,true) or label:find("900002",1,true)) end),"tracked item is listed")
+end
+function S.lootInputBounds()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText(string.rep("x",2049)); edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"valid item"),"invalid item input has a clear message")
+end
+function S.lootTracker()
+  S.lootCompareVerdicts();MOCK.advance(0.5)
+  check(_G.LevelingCodexLootTracker and LevelingCodexLootTracker:IsShown(),"tracked loot opens the optional tracker")
+  check(LevelingCodexLootTracker:GetHeight()<160,"a single target keeps the floating tracker compact")
+  check(questText(LevelingCodexLootTracker,"Source unverified"),"a target without verified sources explains what's missing")
+  check(not findButton(LevelingCodexLootTracker,function(label) return label=="Clear loot map" end),"a map clear action only appears for an active loot waypoint")
+  local target=findButton(LevelingCodexLootTracker,function(label) return label:find("^Loot target ") end)
+  check(target,"the tracked item has a hover target")
+  MOCK.fire(target,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(target) and link=="item:900002","hovering a tracked item opens its native stat tooltip")
+  MOCK.fire(target,"OnLeave")
+  check(not GameTooltip:IsShown(),"the tracker closes its own tooltip on leave")
+  slash("loot");click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Tailoring: Red Linen Robe"),"an item-only target shows a known recipe source")
+  click(LevelingCodexLootTracker,"Loot target Red Linen Robe")
+  check(questText(win(),"Bolt of Linen Cloth"),"the tracker opens the route it displays")
+  edit:SetText("276339");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Prey and Predator") and questText(LevelingCodexLootTracker,"Mount Hyjal"),
+    "the tracker shows the quest and zone even when the source is above the player's level")
+  click(win(),"Tracked")
+  check(questText(win(),"Prey and Predator") and questText(win(),"Mount Hyjal") and questText(win(),"Level 54"),
+    "the journal card shows the target's destination and required level")
+  check(findButton(win(),function(label) return label=="Map Cured Staghide Leggings" end),
+    "item-only tracking can expose the known source waypoint")
+  check(not findButton(win(),function(label) return label=="Map Red Linen Robe" end),
+    "a craft route without coordinates has no map action")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map Cured Staghide Leggings")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482,"the journal pins the source shown on the card")
+    check(not OpenWorldMap or MOCK.openedMap==2482,"mouse users still get the destination map")
+    click(win(),"Clear loot map target")
+    check(not MOCK.userWaypoint,"clearing the pin leaves the tracked item available")
+    if OpenWorldMap and InputUtil then
+      MOCK.blockControllerMap,MOCK.gamepadUI,MOCK.openedMap=true,true,nil
+      click(LevelingCodexLootTracker,"Map loot target Cured Staghide Leggings")
+      check(not chatHas("SetPreferredGamepadInteractTarget") and not MOCK.openedMap,
+        "the tracked reward does not open Blizzard's protected controller map")
+      check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482 and MOCK.superTracked,
+        "the controller action still sets and tracks the reward waypoint")
+      check(chatHas("Open your world map"),"the tracker tells controller users how to see the pin")
+      click(LevelingCodexLootTracker,"Clear loot map")
+      MOCK.blockControllerMap,MOCK.gamepadUI=nil,nil
+    end
+  end
+  click(LevelingCodexLootTracker,"Loot target Cured Staghide Leggings")
+  check(questText(win(),"Starts with Kala'th") and questText(win(),"Source requires level 54"),
+    "the shown quest route opens with its giver and availability")
+  check(not MOCK.questRewarded,"loot guidance never selects a reward")
+end
+function S.lootTooltips()
+  lootSetup()
+  GameTooltip:SetHyperlink("item:900002")
+  check(#(GameTooltip._lines or {})==1,"Codex adds one compact score line with no extra advice")
+  local count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"one annotation even with setter and item callbacks ("..count..")")
+  GameTooltip:SetHyperlink("item:900001")
+  count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"reused tooltip has one current annotation")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#(GameTooltip._lines or {})==1 and GameTooltip._lines[1]:find("Rank #",1,true),
+    "a verified catalog comparison has rank and score on one line")
+  click(win(),"Scoring settings")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines>1 and GameTooltip._lines[2]:find("Arms:",1,true),"other profile ranks are opt-in")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines==1,"the tooltip returns to one line when other profiles are disabled")
+  check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
+end
+function S.lootTooltipStaysOpen()
+  lootSetup()
+  for _,tip in ipairs({GameTooltip,ItemRefTooltip}) do
+    tip:SetOwner(UIParent,"ANCHOR_RIGHT")
+    tip:SetHyperlink("item:900002")
+    tip:AddLine("Shared tooltip detail")
+    MOCK.advance(0.3)
+    check(tip:IsShown(),tip:GetName().." remains open after delayed loot-data refresh")
+    for _,event in ipairs({"GET_ITEM_INFO_RECEIVED","BAG_UPDATE_DELAYED","PLAYER_EQUIPMENT_CHANGED","PLAYER_REGEN_ENABLED"}) do
+      MOCK.event(event,900002,true)
+      MOCK.advance(0.2)
+      check(tip:IsShown() and tip:IsOwned(UIParent),tip:GetName().." keeps its visibility and owner after "..event)
+      local callback=tip:GetScript("OnTooltipSetItem")
+      if callback then callback(tip) end
+      local ours,shared=0,0
+      for _,line in ipairs(tip._lines or {}) do
+        if line:find("Codex:",1,true) then ours=ours+1 end
+        if line=="Shared tooltip detail" then shared=shared+1 end
+      end
+      check(ours==1 and shared==1,"refresh callbacks preserve shared tooltip content without duplicate advice")
+    end
+    tip:Hide();MOCK.advance(0.3)
+    check(not tip:IsShown(),"a player-closed tooltip stays closed")
+    tip:SetHyperlink("item:900001")
+    check(tip:IsShown(),"the next item tooltip can open normally")
+    tip:Hide()
+  end
+end
+function S.lootPad()
+  if not GamepadMode then return end
+  MOCK.gamepadUI=true
+  lootSetup();click(win(),"Compare");MOCK.advance(0.6)
+  check(LevelingCodexLootItem and not LevelingCodexLootItem.padSkip,"controller can focus the item input")
+  MOCK.padRefuse=true;win():Hide();slash("loot");MOCK.advance(0.6)
+  check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(),"fallback controller can navigate Loot")
+  MOCK.combat=true;MOCK.event("PLAYER_REGEN_DISABLED");MOCK.combat=false;MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.6)
+  check(not MOCK.forbidden,"loot controller recovery is safe")
+end
+function S.lootCacheLate()
+  lootSetup();click(win(),"Compare")
+  MOCK.lootItems[900003]={name="Late Vest",loaded=false,stats={ITEM_MOD_STRENGTH_SHORT=50}}
+  local edit=LevelingCodexLootItem
+  edit:SetText("900003");edit:GetScript("OnEnterPressed")(edit)
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  MOCK.lootItems[900003].loaded=true;MOCK.event("GET_ITEM_INFO_RECEIVED",900003,true);MOCK.advance(1)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"late response does not replace the selected candidate")
 end

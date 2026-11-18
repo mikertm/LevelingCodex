@@ -60,7 +60,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
   "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
-  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED",
+  "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -120,8 +121,13 @@ function ChatFrameAddMessageEventFilter(event, filter)
   MOCK.chatFilters[event] = filter
 end
 function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
--- The world map: OpenWorldMap records the map it opened.
-function OpenWorldMap(map) MOCK.openedMap = map end
+-- Forever can block the map's controller focus change when an addon opens it.
+function OpenWorldMap(map)
+  MOCK.openedMap = map
+  if MOCK.blockControllerMap and (MOCK.gamepadUI or MOCK.gamepad) then
+    MOCK.event("ADDON_ACTION_BLOCKED", "LevelingCodex", "SetPreferredGamepadInteractTarget()")
+  end
+end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
   GetMapArtLayers = function(id)
@@ -503,6 +509,7 @@ function Frame:CreateFontString(name, layer, template)
   return fs
 end
 local SCRIPTS = {
+  OnTooltipSetItem=1, OnTooltipSetUnit=1, OnTooltipCleared=1,
   OnShow = 1, OnHide = 1, OnUpdate = 1, OnEvent = 1, OnEnter = 1, OnLeave = 1, OnClick = 1, OnMouseUp = 1,
   OnMouseDown = 1, OnDragStart = 1, OnDragStop = 1, OnMouseWheel = 1, OnKeyDown = 1, OnKeyUp = 1,
   OnGamePadButtonDown = 1, OnGamePadButtonUp = 1, OnGamePadStick = 1, OnEscapePressed = 1, OnEnterPressed = 1, OnTextChanged = 1,
@@ -592,6 +599,7 @@ end
 function Frame:GetNumChildren() return #self._children end
 function Frame:GetRegions() return unpack(self._regions) end
 function Frame:IsMouseOver() return MOCK.mouseOver[self] and true or false end
+function IsMouseButtonDown(button) return MOCK.leftMouseDown and button=="LeftButton" or false end
 function Frame:SetHitRectInsets() end
 function Frame:SetID(id) self._id = id end
 function Frame:GetID() return self._id or 0 end
@@ -852,14 +860,26 @@ MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
 MerchantFrame:SetSize(336, 447)
 MerchantFrame:Hide()
 
-GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
-GameTooltip:Hide()
-function GameTooltip:SetOwner(owner, anchor) self._owner = owner; self._lines = {} end
-function GameTooltip:SetText(s) ascii(s, "GameTooltip:SetText"); self._lines = { s } end
-function GameTooltip:AddLine(s) ascii(s, "GameTooltip:AddLine"); self._lines[#self._lines + 1] = s end
-function GameTooltip:AddDoubleLine(a, b) ascii(a, "GameTooltip"); ascii(b, "GameTooltip") end
-function GameTooltip:ClearLines() self._lines = {} end
-function GameTooltip:IsOwned(f) return self._owner == f end
+local function itemTooltip(name)
+  local tip=CreateFrame("Frame",name,UIParent)
+  tip:Hide()
+  function tip:SetOwner(owner,anchor) self._owner=owner;self._lines={} end
+  function tip:SetText(s) ascii(s,name..":SetText");self._lines={s} end
+  function tip:AddLine(s) ascii(s,name..":AddLine");self._lines[#self._lines+1]=s end
+  function tip:AddDoubleLine(a,b) ascii(a,name);ascii(b,name) end
+  function tip:ClearLines() self._lines={} end
+  function tip:IsOwned(f) return self._owner==f end
+  function tip:GetItem() return self._lootName,self._lootLink end
+  function tip:SetHyperlink(link)
+    self:ClearLines();self._lootLink=link;self._lootName="Item"
+    local clear=self:GetScript("OnTooltipCleared");if clear then clear(self) end
+    local set=self:GetScript("OnTooltipSetItem");if set then set(self) end
+    self:Show()
+  end
+  return tip
+end
+GameTooltip=itemTooltip("GameTooltip")
+ItemRefTooltip=itemTooltip("ItemRefTooltip")
 
 DEFAULT_CHAT_FRAME = CreateFrame("Frame", "ChatFrame1", UIParent)
 function DEFAULT_CHAT_FRAME:AddMessage(s)
@@ -1326,6 +1346,32 @@ end
 -- Modern clients (retail, and WoW: Forever by every add-on written for it) read item info through
 -- C_Item.GetItemInfo; scenario noGlobalItemInfo drops the old global, the minimal client drops C_Item.
 C_Item = { GetItemInfo = GetItemInfo }
+-- Equipment fixtures used only by loot scenarios; all existing item readers keep their behavior.
+MOCK.lootItems, MOCK.equipped = {}, {}
+local beforeLootItemInfo = GetItemInfo
+local function lootItem(ref)
+  local id=tonumber(tostring(ref):match("item:(%d+)")) or tonumber(ref)
+  return MOCK.lootItems[ref] or MOCK.lootItems[id]
+end
+function GetItemInfo(ref)
+  local it=lootItem(ref)
+  if not it then return beforeLootItemInfo(ref) end
+  if it.loaded==false then return end
+  return it.name,tostring(ref),2,20,it.level or 1,"Armor","Cloth",1,it.slot or "INVTYPE_CHEST",134400,0,it.classID or 4,it.subclassID or 1
+end
+C_Item.GetItemInfo=GetItemInfo
+function GetInventoryItemLink(unit,slot) return MOCK.equipped[slot] end
+function GetItemStats(ref,output)
+  local it=lootItem(ref)
+  if not it or it.loaded==false then return end
+  if output then for k,v in pairs(it.stats or {}) do output[k]=v end end
+  return it.stats or {}
+end
+C_Item.GetItemStats=GetItemStats
+C_TooltipInfo={GetHyperlink=function(ref)
+  local it=lootItem(ref)
+  if it and it.loaded~=false then return {lines={{leftText=it.effect or "Plain equipment"}}} end
+end}
 
 local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
 function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end

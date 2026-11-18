@@ -12,6 +12,7 @@ local A = ns.art
 local FONT_HEAD = "head" -- Morpheus, or the external UI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
+local tabWidths = {}
 
 local frame, scroll, content, tabs, levelText, nowBtn
 local viewLevel -- the level the window is showing (defaults to yours)
@@ -211,6 +212,36 @@ local function plate(x, y, w, h, bg, edge)
   f.paper:Hide(); f.shade:Hide(); f.glow:Hide()
 end
 
+-- Loot uses standalone illustrations over solid UI surfaces.
+-- Every file can fall back to a plain surface without a missing-texture square.
+local function picture(path, x, y, w, h)
+  if not A.hasFile(path) then return false end
+  local t = take("picture", newTex)
+  t:SetDrawLayer("BACKGROUND", 2)
+  t:SetTexture(path)
+  t:SetTexCoord(0, 1, 0, 1)
+  t:SetVertexColor(1, 1, 1, 1)
+  t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); t:SetSize(w, h)
+  return true
+end
+local function surface(x, y, w, h, bg, edge)
+  rect(x,y,w,h,bg)
+  edge = edge or C.edgeSoft
+  rect(x,y,w,1,edge,"border"); rect(x,y+h-1,w,1,edge,"border")
+  rect(x,y,1,h,edge,"border"); rect(x+w-1,y,1,h,edge,"border")
+end
+local function newFolio()
+  local f=CreateFrame("Frame",nil,content)
+  f:SetFrameLevel(content:GetFrameLevel()+1)
+  f.paper=f:CreateTexture(nil,"BACKGROUND");f.paper:SetAllPoints(f)
+  return f
+end
+local function folio(h,bg,w)
+  local f=take("folio",newFolio)
+  f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(w or W,h)
+  f.paper:SetColorTexture(rgba(bg))
+end
+
 local showTip, hideTip = A.showTip, A.hideTip
 
 -- Spell icons the way the game draws them: a black edge with a thin gold rim.
@@ -233,8 +264,10 @@ local function icon(name, x, y, size, title, text)
   local f = take("icon", newIcon)
   f:SetSize(size, size)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  f:EnableMouse(true) -- a decorative use may have made this pooled icon passive
   ns.setIcon(f.tex, name)
   f.tex:SetDesaturated(false)
+  f.tex:SetAlpha(1)
   f.tex:SetVertexColor(1, 1, 1)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
@@ -1342,6 +1375,14 @@ renderers.settings = function()
   providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
   tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
     "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+  tick("Loot tooltip advice",not db.noLootHints,function() db.noLootHints=not db.noLootHints end,
+    "Compare equipment against your current gear with your selected loot profile.")
+  tick("Mark gear upgrade rewards",not db.noLootRewards,function() db.noLootRewards=not db.noLootRewards end,
+    "A plus marks the strongest conclusive gear upgrade. Vendor value keeps its separate coin mark.")
+  tick("Show loot target tracker",not db.noLootTracker,function() db.noLootTracker=not db.noLootTracker;if ns.loot then ns.loot.refreshTracker() end end,
+    "A small panel lists your tracked items. Drag it to move it.")
+  tick("Loot notifications",db.lootNotifications,function() db.lootNotifications=not db.lootNotifications end,
+    "Off by default. Announce obtained targets and conclusively new bag upgrades once.")
   tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
     "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
   tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
@@ -1380,8 +1421,9 @@ local TABS = {
 
 -- Another file adds its own tab (before Settings): renderer(viewLevel) draws with ns.ui and
 -- returns the content height. TABS outlives the frame, so a theme rebuild keeps the tab.
-function ns.addTab(key, label, renderer)
+function ns.addTab(key, label, renderer, width)
   renderers[key] = renderer
+  tabWidths[key] = width
   for _, t in ipairs(TABS) do if t[1] == key then return end end
   table.insert(TABS, #TABS, { key, label })
 end
@@ -1392,6 +1434,8 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick, label)
   local hb = take("hit", newHit)
   hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
   hb.tipTitle, hb.tipText = tipTitle, tipText
+  -- A previous use may have installed a native item tooltip (the Loot browser).
+  hb:SetScript("OnEnter", showTip); hb:SetScript("OnLeave", hideTip)
   hb.codexLabel = label
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
@@ -1429,8 +1473,44 @@ local function questSearch(x, y, w, value, onChange, onSubmit)
   edit:SetScript("OnEnterPressed", function(self) self:ClearFocus(); onSubmit() end)
 end
 
+local function entry(key,x,y,w,value,onChange,onSubmit,maxBytes)
+  local edit=take("input:"..key,function()
+    local e=CreateFrame("EditBox","LevelingCodex"..key,overlay,"InputBoxTemplate")
+    e:SetAutoFocus(false)
+    e:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+    e:SetScript("OnHide",function(self) self:ClearFocus() end)
+    return e
+  end)
+  edit:SetScript("OnTextChanged",nil)
+  edit:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y); edit:SetSize(w,22)
+  edit:SetMaxLetters(maxBytes or 2048); edit.codexLabel=key
+  if edit:GetText()~=value then edit:SetText(value or "") end
+  edit:SetScript("OnTextChanged",function(self) if onChange then onChange(self:GetText()) end end)
+  edit:SetScript("OnEnterPressed",function(self) self:ClearFocus(); if onSubmit then onSubmit(self:GetText()) end end)
+  return edit
+end
+
+-- A static portrait avoids inheriting the player's animations, mounts, and camera.
+local function playerPortrait(x,y,size,class,live)
+  local tex=take("playerPortrait",function() return overlay:CreateTexture(nil,"ARTWORK") end)
+  tex:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y)
+  tex:SetSize(size,size)
+  tex:SetTexCoord(0,1,0,1)
+  if live then
+    local ok,result=ns.try(SetPortraitTexture,tex,"player")
+    if ok and result~=false then return end
+  end
+  ns.setIcon(tex,"classicon_"..class:lower())
+end
+local function interactivePoolKinds()
+  local kinds={"icon","btn","check","hit","edit"}
+  for kind in pairs(pools) do if kind:sub(1,6)=="input:" then kinds[#kinds+1]=kind end end
+  return kinds
+end
+
 -- The drawing helpers for tabs that live in other files.
-ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
+  entry = entry, playerPortrait = playerPortrait,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
@@ -1440,7 +1520,12 @@ function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
   local p = db.windowPos
-  frame:SetScale(db.windowScale or 1)
+  local scale = db.windowScale or 1
+  if tabWidths[activeTab] then
+    local screenWidth = UIParent:GetWidth()
+    if screenWidth and screenWidth > 32 then scale = math.min(scale, (screenWidth - 32) / frame:GetWidth()) end
+  end
+  frame:SetScale(scale)
   frame:ClearAllPoints()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
@@ -1448,6 +1533,12 @@ end
 refresh = function(professionSnapshot)
   if not (frame and frame:IsShown() and ns.D) then return end
   local me = UnitLevel("player")
+  local width = tabWidths[activeTab] or W
+  if content:GetWidth() ~= width then
+    content:SetWidth(width)
+    frame:SetWidth(width + 72)
+    ns.placeWindow()
+  end
   viewLevel = viewLevel or me
   if viewLevel < 1 then viewLevel = 1 elseif viewLevel > 60 then viewLevel = 60 end
   levelText:SetText("Level " .. viewLevel)
@@ -1458,6 +1549,15 @@ refresh = function(professionSnapshot)
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   local edit = pools.edit and pools.edit.list[1]
   local keepSearchFocus = edit and edit:IsShown() and edit:HasFocus()
+  local keepEntryFocus
+  for kind, pool in pairs(pools) do
+    if kind:sub(1,6) == "input:" then
+      for i = 1, pool.used do
+        local entry = pool.list[i]
+        if entry:IsShown() and entry:HasFocus() then keepEntryFocus = entry; break end
+      end
+    end
+  end
   releaseAll()
   local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
@@ -1469,11 +1569,11 @@ refresh = function(professionSnapshot)
   -- the controller's tags, from what each widget is now (pooled widgets change role between tabs,
   -- and some get their click after the helper drew them): padSkip = nothing to press, padX/padY =
   -- its centre in content coordinates
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
-      w.padSkip = (kind ~= "edit" and w:GetScript("OnClick") == nil) or nil
+      w.padSkip = (kind ~= "edit" and kind:sub(1,6) ~= "input:" and w:GetScript("OnClick") == nil) or nil
       local _, rel, _, x, y = w:GetPoint(1)
       if rel == content and x and y then
         w.padX, w.padY = x + (w:GetWidth() or 0) / 2, -y + (w:GetHeight() or 0) / 2
@@ -1482,8 +1582,38 @@ refresh = function(professionSnapshot)
   end
   if ns.gamepad then ns.gamepad.refresh(frame) end
   if keepSearchFocus and edit:IsShown() then edit:SetFocus() end
+  if keepEntryFocus and keepEntryFocus:IsShown() then keepEntryFocus:SetFocus() end
 end
 ns.refresh = refresh
+local lootRefreshQueued
+function ns.refreshLootTab(background)
+  if not (frame and frame:IsShown() and activeTab=="loot") then return end
+  if background then
+    local ok,down=ns.try(IsMouseButtonDown,"LeftButton")
+    down=ok and down==true
+    local hits=pools.hit
+    if not down and hits then
+      for i=1,hits.used do
+        local button=hits.list[i]
+        local supported,state=ns.try(button.GetButtonState,button)
+        if supported and state=="PUSHED" then down=true;break end
+      end
+    end
+    -- The renderer hides and reuses pooled buttons. Keep a pressed button intact
+    -- until its mouse-up can finish before applying delayed item/bag updates.
+    if down then
+      if not lootRefreshQueued then
+        lootRefreshQueued=true
+        ns.after(0.08,function()
+          lootRefreshQueued=nil
+          ns.refreshLootTab(true)
+        end)
+      end
+      return
+    end
+  end
+  refresh()
+end
 function ns.refreshQuestTab()
   if frame and frame:IsShown() and activeTab == "quests" then refresh() end
 end
@@ -1505,7 +1635,7 @@ end
 -- buttons, ticks and clickable strips, the header above it and the tabs below it.
 local function listFocusables()
   local out = {}
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
@@ -1513,7 +1643,8 @@ local function listFocusables()
     end
   end
   local chrome = frame.padChrome or {}
-  for _, c in ipairs({ { chrome.prev, W * 0.6 }, { chrome.now, W * 0.75 }, { chrome.next, W * 0.9 }, { chrome.close, W + 20 } }) do
+  local width = content:GetWidth()
+  for _, c in ipairs({ { chrome.prev, width * 0.6 }, { chrome.now, width * 0.75 }, { chrome.next, width * 0.9 }, { chrome.close, width + 20 } }) do
     if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40, fixed = true } end
   end
   local h = content:GetHeight() or 0
@@ -1853,6 +1984,7 @@ end
 function ns.rebuildForTheme()
   ns.useTheme(ns.themeName())
   ns.questRefresh()
+  if ns.loot then ns.loot.refreshTracker() end
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
@@ -1865,10 +1997,14 @@ function ns.rebuildForTheme()
   end
 end
 
-function ns.openTab(tab)
+function ns.openTab(tab, atTop)
   if not ns.D then return end
   ns.lastBanner = nil -- a banner click (or any direct opening) has used it
   if not frame then makeFrame() end
+  if atTop then
+    scrollPos[tab] = 0
+    if shownTab == tab then scroll:SetVerticalScroll(0) end
+  end
   activeTab = tab
   if frame:IsShown() then refresh() else frame:Show() end
 end

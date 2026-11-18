@@ -8,6 +8,12 @@ Optional integrations coordinate quest automation, place the step window beside 
 
 The Quests tab opens a journey board with connected area map previews and one selected quest panel. The previews use the client's map artwork and explored terrain; route cards show their zone, and dungeon cards label their entrance-area map. Browse six quest cards at a time within an area. The side rail opens route and dungeon tiles, quest-log categories, party panels and Options. Route previews leave your followed step alone; dungeon pickup plans stay separate from entering a run. Options groups route choices, display controls, helpers and party settings into focused pages.
 
+The **Loot** tab (`/codex loot`) finds equipment by slot, level and source, compares item links
+and bag items with equipped gear, and tracks where to get upgrades. Profiles follow talent
+paths or use your own weights and share codes. Tooltip advice, a separate gear-upgrade reward
+marker, enchant suggestions and an optional target tracker use the same comparison rules.
+Scores are advisory; unknown facts and unsupported effects remain labeled for review.
+
 See [CURSEFORGE_DESCRIPTION.md](CURSEFORGE_DESCRIPTION.md) for the full feature list and [RELEASING.md](RELEASING.md) for how releases are published.
 
 Fan-made. Not affiliated with or endorsed by Blizzard Entertainment.

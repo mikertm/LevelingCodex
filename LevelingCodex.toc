@@ -15,6 +15,7 @@ TalentTreeData.lua
 TalentPaths.lua
 PathMacros.lua
 ProfessionData.lua
+LootData.lua
 QuestData.lua
 QuestAlternateData.lua
 QuestData3040.lua
@@ -56,6 +57,12 @@ Quests.lua
 QuestSupport.lua
 QuestTravel.lua
 Professions.lua
+Loot.lua
+LootProfiles.lua
+LootItems.lua
+LootCompare.lua
+LootCatalog.lua
+LootTargets.lua
 Disenchant.lua
 Macros.lua
 Banner.lua
@@ -65,6 +72,10 @@ ProfessionTab.lua
 Gamepad.lua
 QuestGuide.lua
 QuestMap.lua
+LootTab.lua
+LootMap.lua
+LootHints.lua
+LootTracker.lua
 QuestPortrait.lua
 QuestParty.lua
 Pace.lua

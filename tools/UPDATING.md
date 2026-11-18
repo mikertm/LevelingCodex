@@ -19,6 +19,30 @@ test harness checks `Data.lua` against it without going online.
 
 ## The routine
 
+### Equipment catalog
+
+The online `update` path also fetches and rebuilds the Loot catalog for the selected client
+build. This can take several minutes because item tooltips are cached individually. Interrupted
+downloads resume from `tools/.cache/loot/<build>/`. Existing game tables and pinned quest records
+are reused; the generator never reads another installed addon's generated tables.
+
+To run the catalog separately:
+
+```
+python tools/lootdata.py fetch --build BUILD
+python tools/lootdata.py build --build BUILD
+python tools/lootdata.py audit
+python tools/lootdata.py --check
+python tools/lootdata.py coverage
+```
+
+`fetch` is the explicit network command. `build` requires cached inputs; audit/check/coverage
+read committed references offline. Commit `LootData.lua`, `tools/reference/loot.json`,
+`loot-manifest.json`, any evidence-backed `loot-overrides.json` changes, and the updated coverage
+audit together. Inspect incomplete stats, unmodeled effects, unknown requirements and missing
+locations separately from schema errors. Acquisition references are not confirmed drop rates;
+entrance locations must keep their entrance label. Update source notices when source terms change.
+
 1. **Fetch and compare.**
    ```
    python tools/gamedata.py update
