@@ -2,8 +2,7 @@ local _, ns = ...
 local L=ns.loot
 local target
 function L.mapTarget() return target end
-function L.showSourceOnMap(sourceID)
-  local s=ns.lootData and ns.lootData.sources[sourceID]
+local function showOnMap(s,sourceID)
   if not s or not s.map or type(s.x)~="number" or type(s.y)~="number" then return false,"This source has no verified map location" end
   if not C_Map or type(C_Map.SetUserWaypoint)~="function" then return false,"This client cannot set a map waypoint" end
   if L.call(C_Map.CanSetUserWaypointOnMap,s.map)==false then return false,"This map does not support waypoints" end
@@ -18,6 +17,12 @@ function L.showSourceOnMap(sourceID)
   if L.refreshTracker then L.refreshTracker() end
   return true,"Mapped "..(s.locationKind=="entrance" and "entrance: " or "")..(s.name or "loot source")
 end
+function L.showSourceOnMap(sourceID)
+  return showOnMap(ns.lootData and ns.lootData.sources[sourceID],sourceID)
+end
+function L.showQuestOnMap(sourceID,contact)
+  return showOnMap(contact,sourceID)
+end
 function L.clearMapTarget()
   if not target then return end
   local point=L.call(C_Map and C_Map.GetUserWaypoint)
@@ -27,14 +32,18 @@ function L.clearMapTarget()
   target=nil
   if L.refreshTracker then L.refreshTracker() end
 end
-function L.openQuestSource(quest)
+function L.questGuideSection(quest)
   local faction=L.call(UnitFactionGroup,"player")
   local route=LevelingCodexQuests and LevelingCodexQuests[(faction or "Alliance"):upper()]
   for _,section in ipairs(route and route.sections or {}) do
     for _,step in ipairs(section.steps or {}) do
-      if step.quest==quest then ns.openQuestGuide(section);return true end
+      if step.quest==quest then return section end
     end
   end
+end
+function L.openQuestSource(quest)
+  local section=L.questGuideSection(quest)
+  if section then ns.openQuestGuide(section);return true end
   if ns.say then ns.say("This quest is outside your current Codex route library.") end
   return false
 end

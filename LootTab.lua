@@ -137,6 +137,8 @@ local function setDetail(ref,source,page)
   local detail=section=="Compare" and compareDetail or upgradeDetail
   detail.ref,detail.offset,detail.expanded,detail.source=ref,0,source,source
   detail.page=page or (source and "Sources" or "Overview")
+  detail.questStep=nil
+  detail.weaponSlot=section=="Upgrades" and filters.weaponSlot or nil
   if section=="Upgrades" then view="detail" end
 end
 local function choose(ref,source,page)
@@ -150,6 +152,7 @@ local function slotTitle()
   return "Gear"
 end
 local function chooseSlot(n,key)
+  if filters.slot~=key then filters.weaponStyle,filters.weaponType=nil,nil end
   slotNumber=n;filters.slot=key;offset=0;browseItem=nil
   view="list";message=nil;refresh(true)
 end
@@ -225,8 +228,9 @@ local function baseline(y,ctx)
   itemIcon(current,26,y+11,24,"Currently equipped",nil,
     "Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[slotNumber] or "Chest"))
   line("Currently equipped",60,y+8,235,"small",C.dim)
-  line(table.concat(names,"  /  "),60,y+24,476,"body",current and quality(current.quality) or C.light)
-  local equipped=action(12,y,544,47,"Currently equipped",ns.plain(table.concat(names,"\n")))
+  local weapon=slotNumber>=16 and filters.slot~="INVTYPE_RELIC"
+  line(table.concat(names,"  /  "),60,y+24,weapon and 332 or 476,"body",current and quality(current.quality) or C.light)
+  local equipped=action(12,y,weapon and 384 or 544,47,"Currently equipped",ns.plain(table.concat(names,"\n")))
   if current and #slots==1 then itemTip(equipped,current) end
 end
 
@@ -239,6 +243,68 @@ end
 local function returnToList()
   view="list";message=nil
   refresh(true)
+end
+
+local WEAPON_STYLES={
+  {"shield","One-hand + shield","Browse one-handed weapons that leave room for a shield."},
+  {"twohand","Two-hand","Browse weapons that occupy both hands."},
+  {"all","Any handedness","Show one- and two-handed weapons."},
+}
+local function handednessLabel(style,ctx)
+  if style=="shield" and not L.prefersShield(ctx) then return "One-hand" end
+  for _,entry in ipairs(WEAPON_STYLES) do if entry[1]==style then return entry[2] end end
+  return "Any handedness"
+end
+local function hasWeaponFilters()
+  return filters.slot=="INVTYPE_WEAPON" or filters.slot=="INVTYPE_WEAPONOFFHAND" or filters.slot=="INVTYPE_RANGED"
+end
+
+local function weaponFilterPage(y,ctx)
+  line(slotTitle().." weapon filters",16,y+1,390,"head",C.gold)
+  button("Source filters",WIDTH-292,y,128,function() view="filters";refresh(true) end)
+  button("Show results",WIDTH-152,y,140,returnToList,true)
+  y=y+35
+  if filters.slot=="INVTYPE_WEAPON" then
+    U.surface(12,y,WIDTH-24,86,C.panel,C.edgeSoft)
+    line("Handedness",26,y+12,360,"body",C.gold)
+    button("Use profile default",WIDTH-204,y+8,176,function()
+      filters.weaponStyle=nil;resetResults()
+    end,not filters.weaponStyle,"Use the handedness preferred by your scoring profile.")
+    local style=L.weaponStyle(filters,ctx)
+    for i,entry in ipairs(WEAPON_STYLES) do
+      local key=entry[1]
+      button(handednessLabel(key,ctx),26+(i-1)*276,y+42,262,function()
+        filters.weaponStyle=key;resetResults()
+      end,style==key,entry[3])
+    end
+    y=y+98
+  end
+  local choices={"Any weapon type"}
+  local ranged=filters.slot=="INVTYPE_RANGED"
+  for i,entry in ipairs(L.weaponFamilies) do
+    if (ranged and i>=8) or (not ranged and i<8 and (filters.slot~="INVTYPE_WEAPONOFFHAND" or i<6)) then
+      choices[#choices+1]=entry[1]
+    end
+  end
+  if filters.slot=="INVTYPE_WEAPONOFFHAND" then choices[#choices+1]="Shields";choices[#choices+1]="Held items" end
+  local art={Axes="inv_axe_12",Maces="inv_hammer_08",Swords="inv_sword_15",Daggers="inv_weapon_shortblade_02",
+    ["Fist weapons"]="inv_weapon_hand_01",Polearms="inv_spear_05",Staves="inv_staff_08",Bows="inv_weapon_bow_07",
+    Guns="inv_weapon_rifle_07",Crossbows="inv_weapon_crossbow_02",Thrown="inv_throwingknife_02",Wands="inv_wand_02",
+    Shields="inv_shield_05",["Held items"]="inv_misc_book_09"}
+  local h=math.ceil(#choices/4)*44+54
+  U.surface(12,y,WIDTH-24,h,C.panel,C.edgeSoft)
+  line("Weapon type",26,y+12,360,"body",C.gold)
+  for i,label in ipairs(choices) do
+    local x=26+(i-1)%4*207
+    local yy=y+43+math.floor((i-1)/4)*44
+    local key=i>1 and label or nil
+    local on=filters.weaponType==key
+    U.surface(x,yy,197,34,on and C.btnOn or C.btnOff,on and C.accent or C.edgeSoft)
+    U.icon(art[label] or "inv_sword_04",x+8,yy+7,20,label,nil):EnableMouse(false)
+    line(label,x+38,yy+8,151,"body",on and C.light or C.dim)
+    action(x,yy,197,34,label,nil,function() filters.weaponType=key;resetResults() end,label).codexOn=on
+  end
+  return y+h+10
 end
 
 local function slotPicker(y)
@@ -290,6 +356,11 @@ local function filterPage(y,ctx)
     return true
   end
   line(slotTitle().." filters",left+4,y+1,350,"head",C.gold)
+  if hasWeaponFilters() then
+    button("Weapon filters",WIDTH-426,y,132,function()
+      if applyLevel() then view="weapons";refresh(true) end
+    end)
+  end
   button("Reset filters",WIDTH-282,y,116,resetFilters,false,"Clear all filters and the item search.")
   button("Show results",WIDTH-154,y,142,function()
     if applyLevel() then offset=0;browseItem=nil;returnToList() end
@@ -410,12 +481,51 @@ local function canMap(source)
   return source and source.map and type(source.x)=="number" and type(source.y)=="number" and L.showSourceOnMap
 end
 
+local function questDone(id,ctx)
+  if ctx.preview then return false end
+  local done=L.call(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted,id)
+  if done==nil then done=L.call(IsQuestFlaggedCompleted,id) end
+  return done==true or done==1
+end
+
+local function nextQuest(source,ctx)
+  local steps,complete=L.questRoute(source)
+  if questDone(source.quest,ctx) then return nil,nil,steps,complete end
+  for i,q in ipairs(steps) do
+    if not questDone(q.id,ctx) then return q,i,steps,complete end
+  end
+  return nil,nil,steps,complete
+end
+
+local function questPlace(contact)
+  if not contact or not contact.zone then return end
+  if canMap(contact) then return string.format("%s (%.1f, %.1f)",contact.zone,contact.x,contact.y) end
+  return contact.zone
+end
+
+local function pickup(source,quest,ctx)
+  return L.questContact(quest,false,ctx.faction)
+    or ((not quest or quest.id==source.quest) and source.giverName
+      and {name=source.giverName,zone=source.zone,map=source.map,x=source.x,y=source.y})
+end
+
 local function upgradeBadge(r,futureLevel)
   if futureLevel then return "Later level","Level "..futureLevel,C.dim end
   local gain
   if r.confidence=="complete" then
     if r.percent then gain=string.format("%+.1f%%",r.percent)
     elseif r.verdict=="upgrade" then gain="Empty slot" end
+  end
+  if r.verdict=="needsReview" then
+    local reason=r.reason or ""
+    local label="Score uncertain"
+    if reason:find("effects",1,true) then label="Effects unscored"
+    elseif reason:find("proficien",1,true) then label="Check training"
+    elseif reason:find("partner",1,true) then label="Check off hand"
+    elseif reason:find("stats",1,true) then label="Stats incomplete"
+    elseif reason:find("set bonus",1,true) then label="Set bonus" end
+    local dps=r.weaponDpsDelta
+    return label,dps and string.format("%+.1f DPS",dps),C.gold
   end
   return L.labels[r.verdict] or r.verdict,gain,verdictColor(r.verdict)
 end
@@ -424,7 +534,7 @@ local function previewItem(y,row,ctx)
   local top=y
   local x,w=SIDE,WIDTH-SIDE-12
   local item=L.item(row.item.id) or row.item
-  local r=L.compare(item,ctx)
+  local r=L.compare(item,ctx,nil,filters.weaponSlot)
   U.rect(x,y,3,75,C.accent,"border",1)
   line("Selected item",x+14,y+12,w-28,"small",C.dim)
   itemIcon(item,x+14,y+36,40,item.name,r.reason)
@@ -438,7 +548,16 @@ local function previewItem(y,row,ctx)
   line(verdict,x+24,y+8,125,"body",color)
   if gain then line(gain,x+151,y+8,w-177,"body",color,"RIGHT") end
   y=text(r.reason,y+36,"small",C.dim,x+14,w-28)
-  button("Full comparison",x+14,y+1,w-28,function() choose(item.id) end)
+  if item.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
+    y=text("Uses both hands and prevents a shield.",y,"small",C.gold,x+14,w-28)
+  end
+  local actionWidth=math.floor((w-36)/2)
+  button("Full comparison",x+14,y+1,actionWidth,function() choose(item.id) end)
+  button("Track this item",x+22+actionWidth,y+1,actionWidth,function()
+    local key,err=L.track(item.key)
+    message=err or (key and "Target tracked")
+    refresh()
+  end)
   y=y+37
 
   local route=row.sources[1]
@@ -450,21 +569,33 @@ local function previewItem(y,row,ctx)
     U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",x+25,y+31,28,kind,name):EnableMouse(false)
     line(kind..(count>0 and (" / +"..count.." more") or ""),x+63,y+28,w-86,"small",C.dim)
     y=text(name,y+44,"body",C.gold,x+63,w-86)
-    if place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
-    button("View sources",x+25,y+1,w-50,function() choose(item.id,route.id,"Sources") end,true)
+    if route.quest then
+      local quest,step,steps,complete=nextQuest(route,ctx)
+      local where=pickup(route,quest,ctx)
+      if quest and (#steps>1 or where) then
+        U.rect(x+25,y+2,w-50,1,C.edgeSoft,"border")
+        local label=complete and #steps>1 and (step==1 and "Start the chain" or "Next quest") or "Quest pickup"
+        line(label,x+25,y+10,w-50,"small",C.dim)
+        y=text(quest.name,y+27,"body",C.gold,x+25,w-50)
+        if where then
+          y=text(where.name,y-2,"small",C.light,x+25,w-50)
+          local location=questPlace(where)
+          if location then y=text(location,y-3,"small",C.dim,x+25,w-50) end
+        end
+      elseif where and #steps==0 then
+        y=text(where.name,y-2,"small",C.light,x+63,w-86)
+        if place then y=text(place,y-3,"small",C.dim,x+63,w-86) end
+      elseif questDone(route.quest,ctx) then y=text("Reward quest completed",y-2,"small",C.green,x+63,w-86)
+      elseif place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
+    elseif place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
+    button(route.quest and "View quest route" or "View sources",x+25,y+1,w-50,function() choose(item.id,route.id,"Sources") end,true).codexLabel="View sources"
     y=y+25
   else
     y=text(item.tradable and "Tradable. Source unverified." or "Source unverified",y+31,"body",C.dim,x+25,w-50)
   end
   U.surface(x+14,sourceTop,w-28,y+10-sourceTop,C.background,C.edgeSoft)
-  y=y+20
-  button("Track this item",x+14,y,w-28,function()
-    local key,err=L.track(item.key)
-    message=err or (key and "Target tracked")
-    refresh()
-  end)
-  U.surface(x,top,w,y+36-top,C.panel,C.edgeSoft)
-  return y+36
+  U.surface(x,top,w,y+20-top,C.panel,C.edgeSoft)
+  return y+20
 end
 
 local function browse(y,ctx)
@@ -476,6 +607,16 @@ local function browse(y,ctx)
   y=y+30
   U.surface(12,y,544,47,C.panel,C.edgeSoft)
   baseline(y,ctx)
+  if hasWeaponFilters() then
+    local style=L.weaponStyle(filters,ctx)
+    local label=filters.weaponType
+    if label and style~="all" then label=(style=="shield" and "1H " or "2H ")..label
+    elseif not label then label=style=="all" and "Any weapon type" or handednessLabel(style,ctx) end
+    local wep=button(label.." >",403,y+13,143,function() view="weapons";refresh(true) end,style~="all" or filters.weaponType~=nil,
+      "Filter by handedness and weapon type.")
+    wep.codexLabel="Weapon filters"
+    wep:SetFrameLevel(wep:GetFrameLevel()+1)
+  end
   y=y+56
 
   local tags=filterSummary(ctx)
@@ -488,6 +629,7 @@ local function browse(y,ctx)
   filter.codexLabel="Filters"
   y=y+29
 
+  filters.weaponSlot=(slotNumber==16 or slotNumber==17) and slotNumber or nil
   local page=L.candidates(filters,ctx,offset,PAGE)
   if offset>0 and offset>=page.total then
     offset=math.max(0,math.floor((page.total-1)/PAGE)*PAGE)
@@ -519,7 +661,7 @@ local function browse(y,ctx)
   U.rect(12,y+21,544,1,C.edgeSoft,"border")
   line("Item",24,y+4,188,"small",C.dim)
   line("Acquisition",277,y+4,144,"small",C.dim)
-  line("Upgrade value",452,y+4,99,"small",C.dim,"CENTER")
+  line("Comparison",452,y+4,99,"small",C.dim,"CENTER")
   y=y+25
   for i,row in ipairs(page.rows) do
     local it,r=row.item,row.result
@@ -545,7 +687,7 @@ local function browse(y,ctx)
       line(kind..(count>0 and (" +"..count) or ""),303,y+5,123,"small",C.light)
       line(name,303,y+22,123,"small",C.dim)
       line(">",429,y+13,11,"body",C.accent)
-      action(270,y+4,174,35,name,kind..(place and (" / "..place) or ""),
+      action(270,y+4,174,35,name,route.quest and "Open the quest route and pickup location." or kind..(place and (" / "..place) or ""),
         function() browseItem=it.id;choose(it.id,route.id) end,"Sources for item "..it.id)
     else
       line(row.item.tradable and "Tradable" or "Source unverified",277,y+13,160,"small",C.dim)
@@ -558,7 +700,9 @@ local function browse(y,ctx)
   end
   y=y+5
   if offset>0 then button("Previous loot page",12,y,138,function() offset=math.max(0,offset-PAGE);refresh(true) end) end
-  line("Page "..(math.floor(offset/PAGE)+1).." of "..math.ceil(page.total/PAGE),165,y+5,238,"small",C.dim,"CENTER")
+  if page.total>PAGE then
+    line("Page "..(math.floor(offset/PAGE)+1).." of "..math.ceil(page.total/PAGE),165,y+5,238,"small",C.dim,"CENTER")
+  end
   if offset+PAGE<page.total then button("Next loot page",418,y,138,function() offset=offset+PAGE;refresh(true) end) end
   return math.max(y+27,previewItem(top,current,ctx))
 end
@@ -578,6 +722,10 @@ local function statsReadable(it,r,ctx)
 end
 local function statOverview(it,r,y,ctx)
   y=text(r.reason,y,"small",r.verdict=="downgrade" and C.loss or C.dim)
+  if r.weaponDpsDelta then
+    y=text(string.format("Base weapon DPS  %.1f to %.1f  (%+.1f)",it.damage-r.weaponDpsDelta,it.damage,r.weaponDpsDelta),
+      y,"small",C.gold)
+  end
   local known=statsReadable(it,r,ctx)
   U.surface(4,y,U.W-8,78,C.panel,C.edgeSoft)
   line("Replacing",16,y+10,246,"small",C.dim)
@@ -639,7 +787,50 @@ local function statOverview(it,r,y,ctx)
   end
   return y
 end
-local function acquisition(it,y,ctx,detail)
+local function questRoutePanel(source,y,ctx,detail)
+  local nextStep,nextIndex,steps,complete=nextQuest(source,ctx)
+  if #steps<2 then return y end
+  local top,x,w=y,SIDE,WIDTH-SIDE-12
+  local chosen=nextStep or steps[#steps]
+  for _,quest in ipairs(steps) do if quest.id==detail.questStep then chosen=quest;break end end
+  local where=pickup(source,chosen,ctx)
+  line(complete and "Quest chain" or "Known quest steps",x+14,y+12,w-28,"head",C.gold)
+  y=y+45
+  local cardY=y
+  local title=chosen~=nextStep and "Selected step" or nextIndex==1 and complete and "Start the chain" or "Next quest"
+  line(title,x+25,y+8,w-50,"small",C.accent)
+  y=text(chosen.name,y+26,"body",C.gold,x+25,w-50)
+  if where then
+    y=text(where.name,y-1,"small",C.light,x+25,w-50)
+    local location=questPlace(where)
+    if location then y=text(location,y-2,"small",C.dim,x+25,w-50) end
+    if canMap(where) then
+      button("Map pickup",x+25,y,w-50,function()
+        local _,why=L.showQuestOnMap(source.id,where);message=why;refresh()
+      end,true).codexLabel="Map quest "..chosen.id
+      y=y+26
+    end
+  end
+  U.surface(x+14,cardY,w-28,y+7-cardY,C.background,C.edgeSoft)
+  y=y+17
+  for i,quest in ipairs(steps) do
+    local on=quest==chosen
+    local done=questDone(quest.id,ctx)
+    local contact=pickup(source,quest,ctx)
+    U.surface(x+14,y,w-28,30,on and C.btnOn or C.btnOff,on and C.accent or C.edgeSoft)
+    line(done and "+" or tostring(i),x+18,y+8,24,"small",done and C.green or C.dim,"CENTER")
+    line(quest.name,x+46,y+2,w-64,"small",on and C.light or C.gold)
+    line(i==#steps and "Gear reward" or (contact and contact.name or "Contact unverified"),x+46,y+15,w-64,"small",C.dim)
+    action(x+14,y,w-28,30,quest.name,done and "Quest complete." or "Show this quest's pickup.",function()
+      detail.questStep=quest.id;refresh()
+    end,"Loot quest "..quest.id).codexOn=on
+    y=y+34
+  end
+  U.surface(x,top,w,y+8-top,C.panel,C.edgeSoft)
+  return y+8
+end
+
+local function acquisition(it,y,ctx,detail,routeTop)
   local sources=L.sources(it.id,nil,ctx)
   -- Keep the route that the player opened first, with all other routes still available.
   if detail.source then
@@ -659,8 +850,10 @@ local function acquisition(it,y,ctx,detail)
   end
   local sourceOffset=detail.offset
   if sourceOffset>=#sources then sourceOffset=0 end
+  local selectedQuest
   for i=sourceOffset+1,math.min(#sources,sourceOffset+2) do
     local s=sources[i];local top=y;local open=detail.expanded==s.id
+    if s.quest and (open or not selectedQuest) then selectedQuest=s end
     local kind,name,place=sourceDetails(s)
     U.rect(5,y+1,U.W-10,60,C.btnOff)
     if open then U.rect(4,y,3,60,C.accent,"border",1) end
@@ -676,9 +869,28 @@ local function acquisition(it,y,ctx,detail)
     if open then
       if s.requiredLevel and s.requiredLevel>0 then y=text("Source requires level "..s.requiredLevel,y,"small",C.dim,17) end
       if s.faction and s.faction~="All" then y=text("Source faction: "..s.faction,y,"small",C.dim,17) end
-      if s.giverName then y=text("Starts with "..s.giverName,y,"small",C.dim,17) end
+      local facts=ns.lootData and ns.lootData.questFacts
+      local quest=facts and facts[s.quest]
+      local start=pickup(s,quest,ctx)
+      local finish=L.questContact(quest,true,ctx.faction)
+      if start then
+        local location=questPlace(start)
+        local label=quest and #quest.previous>0 and "Reward quest pickup at " or "Starts with "
+        y=text(label..start.name..(location and (" / "..location) or ""),y,"small",C.light,17)
+      end
+      if finish and (not start or finish.name~=start.name) then
+        local location=questPlace(finish)
+        y=text("Turn in to "..finish.name..(location and (" / "..location) or ""),y,"small",C.light,17)
+      end
       if s.locationKind=="entrance" then y=text("Map pin shows the dungeon entrance.",y,"small",C.dim,17) end
-      if s.prerequisites and #s.prerequisites>0 then y=text("Prerequisite quests: "..table.concat(s.prerequisites,", "),y,"small",C.dim,17) end
+      if s.prerequisites and #s.prerequisites>0 then
+        local names={}
+        for _,id in ipairs(s.prerequisites) do
+          local q=facts and facts[id]
+          names[#names+1]=q and q.name or L.call(C_QuestLog and C_QuestLog.GetTitleForQuestID,id) or ("Quest "..id)
+        end
+        y=text("Prerequisite quests: "..table.concat(names,", "),y,"small",C.dim,17)
+      end
       if s.cost then y=text("Cost: "..(ns.money and ns.money(s.cost) or tostring(s.cost)),y,"small",C.light,17) end
       if s.materials then
         local mats={};for name,n in pairs(s.materials) do mats[#mats+1]=n.." "..name end;table.sort(mats)
@@ -695,7 +907,7 @@ local function acquisition(it,y,ctx,detail)
         local _,why=L.showSourceOnMap(s.id);message=why;refresh()
       end).codexLabel="Map source "..i
     end
-    if s.quest and L.openQuestSource then
+    if s.quest and L.questGuideSection and L.questGuideSection(s.quest) then
       button("Open quest guide",356,y,195,function() L.openQuestSource(s.quest) end).codexLabel="Quest guide "..i
     end
     y=y+32;U.surface(4,top,U.W-8,y-top,C.panel,open and C.edge or C.edgeSoft);y=y+10
@@ -707,6 +919,7 @@ local function acquisition(it,y,ctx,detail)
     line((sourceOffset+1).."-"..math.min(#sources,sourceOffset+2).." of "..#sources.." sources",184,y+4,240,"small",C.dim);y=y+32
   end
   if it.tradable then y=text("Tradable: another player or the auction house may have it. Price unknown.",y,"small",C.dim) end
+  if selectedQuest then y=math.max(y,questRoutePanel(selectedQuest,routeTop,ctx,detail)) end
   return y
 end
 local function enchantOptions(it,y,ctx)
@@ -728,8 +941,9 @@ end
 local function details(detail,y,ctx)
   local it=L.item(detail.ref)
   if not it then return text("Enter a valid item link or item ID.",y) end
-  local r=L.compare(it,ctx)
+  local r=L.compare(it,ctx,nil,detail.weaponSlot)
   L.lastComparison=it.name..": "..(L.labels[r.verdict] or r.verdict).." - "..r.reason
+  local routeTop=y
   if section=="Upgrades" then
     button("Back to results",0,y,146,function() view="list";refresh(true) end)
     line(slotTitle().." upgrades",160,y+4,U.W-172,"small",C.dim);y=y+32
@@ -737,8 +951,13 @@ local function details(detail,y,ctx)
   local top=y
   itemIcon(it,16,y+16,40,it.name,r.reason)
   line(it.name,68,y+13,300,"head",quality(it.quality))
-  local pct=r.confidence=="complete" and r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent) or ""
-  U.T(ns.plain((L.labels[r.verdict] or r.verdict)..pct),68,y+41,300,"small",verdictColor(r.verdict))
+  local verdict,gain,color=upgradeBadge(r)
+  local value=r.confidence=="complete" and r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent)
+    or gain and (" / "..gain) or ""
+  line(verdict..value,68,y+41,300,"small",color)
+  if it.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
+    line("Uses both hands and prevents a shield.",68,y+57,300,"small",C.gold)
+  end
   local header=action(4,top,370,76,it.name,r.reason,nil,"Item comparison");itemTip(header,it,r.reason)
   button("Track this item",384,y+14,170,function() local key,err=L.track(it.key);message=err or (key and "Target tracked");refresh() end)
   if section=="Upgrades" then
@@ -752,7 +971,7 @@ local function details(detail,y,ctx)
     b.codexLabel=label
   end
   y=y+32
-  if detail.page=="Sources" then return acquisition(it,y,ctx,detail)
+  if detail.page=="Sources" then return acquisition(it,y,ctx,detail,routeTop)
   elseif detail.page=="Enchants" then return enchantOptions(it,y,ctx) end
   return statOverview(it,r,y,ctx)
 end
@@ -774,16 +993,23 @@ local function comparisonResult(y,ctx)
     local color=verdictColor(r.verdict)
     L.lastComparison=it.name..": "..(L.labels[r.verdict] or r.verdict).." - "..r.reason
     local score=r.confidence=="complete" and (r.percent and string.format("%+.1f%%",r.percent) or string.format("%+.1f",r.delta))
+    local status,dps=upgradeBadge(r)
     local equipped=#r.baseline==1 and r.baseline[1].key==it.key
     U.surface(inset,y,w-28,48,C.background,C.edgeSoft)
     U.rect(inset,y,3,48,color,"border",1)
-    line(equipped and "Already equipped" or L.labels[r.verdict] or r.verdict,inset+12,y+7,w-106,"body",color)
+    line(equipped and "Already equipped" or (dps and r.verdict=="needsReview" and status) or L.labels[r.verdict] or r.verdict,
+      inset+12,y+7,w-106,"body",color)
     if score then
       line("Estimated gear score",inset+12,y+29,w-110,"small",C.dim)
       line(score,x+w-103,y+14,79,"head",color,"RIGHT")
+    elseif dps then
+      line(dps,inset+12,y+29,w-28,"small",C.gold)
     end
     y=y+57
     if not score then y=text(r.reason,y-2,"small",C.dim,inset,w-28)+3 end
+    if it.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
+      y=text("Uses both hands and prevents a shield.",y,"small",C.gold,inset,w-28)
+    end
     local function gearCard(item,label,fallback,isCandidate)
       U.surface(inset,y,w-28,43,C.btnOff,C.edgeSoft)
       if isCandidate then U.rect(inset,y,2,43,C.accent,"border",1) end
@@ -1229,10 +1455,11 @@ local function render()
   if section=="Upgrades" then
     if view=="character" then y=character(y,ctx)
     elseif view=="detail" and upgradeDetail.ref then
-      sideBottom=detailSidebar(y,ctx)
+      if upgradeDetail.page~="Sources" then sideBottom=detailSidebar(y,ctx) end
       y=details(upgradeDetail,y,ctx)
     elseif view=="slots" then y=slotPicker(y)
     elseif view=="filters" then y=filterPage(y,ctx)
+    elseif view=="weapons" then y=weaponFilterPage(y,ctx)
     else y=browse(y,ctx) end
   elseif section=="Compare" then y=compare(y,ctx)
   elseif section=="Tracked" then y=tracked(y)

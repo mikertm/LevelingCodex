@@ -11174,6 +11174,54 @@ function S.lootBrowse()
   click(win(),"Browse Off hand")
   check(questText(win(),"Off hand upgrades"),"off hand opens its own equipment category")
 end
+function S.lootWeaponRoutes()
+  MOCK.lootItems[15225]={name="Sequoia Hammer of the Whale",slot="INVTYPE_WEAPONMAINHAND",
+    classID=2,subclassID=4,stats={ITEM_MOD_STAMINA_SHORT=6}}
+  MOCK.equipped[16]="item:15225:0:0:0:0:0:-15"
+  lootSetup()
+  click(win(),"Browse Main hand")
+  check(questText(win(),"One-hand + shield"),"Protection starts with a shield-compatible main-hand list")
+  local edit=LevelingCodexLootSearch
+  edit:SetText("Whirlwind Warhammer");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"No matching items"),"Protection does not include two-handers by default")
+  click(win(),"Weapon filters")
+  click(win(),"Two-hand")
+  click(win(),"Maces")
+  click(win(),"Show results")
+  check(questText(win(),"Whirlwind Warhammer") and questText(win(),"The Islander"),
+    "explicit weapon types show the reward and the beginning of its chain")
+  check(findButton(win(),function(label) return label=="Inspect item 6976" end),
+    "the two-handed mace result is selectable")
+  if type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo) then
+    check(questText(win(),"+18.7 DPS"),"the preview shows verified weapon DPS even with uncertain item effects")
+  end
+  check(questText(win(),"prevents a shield"),"the preview explains the shield trade-off")
+  click(win(),"Sources for item 6976")
+  check(questText(win(),"Whirlwind Weapon") and questText(win(),"The Summoning")
+    and questText(win(),"The Islander") and questText(win(),"Bath'rah the Windwatcher"),
+    "the source view shows the named chain and its reward contact")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map quest 1718")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453,"the chain-start pin leads to the Alliance starter")
+    click(win(),"Clear loot map target")
+  end
+  MOCK.questDone[1718]=true
+  click(win(),"Back to results")
+  if IsQuestFlaggedCompleted or C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+    check(questText(win(),"Next quest") and questText(win(),"The Affray"),"a completed chain starter advances the preview")
+  else
+    check(questText(win(),"The Islander"),"the route keeps its known starter when completion cannot be read")
+  end
+  click(win(),"Weapon filters")
+  click(win(),"Use profile default")
+  click(win(),"Axes")
+  click(win(),"Show results")
+  edit:SetText("Gutterblade");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"Raene Wolfrunner"),"the one-hand axe shows the start of the Raene chain")
+  click(win(),"Sources for item 17046")
+  check(questText(win(),"Reward quest pickup at Krolg") and questText(win(),"Turn in to Raene Wolfrunner"),
+    "the reward step distinguishes pickup from turn-in")
+end
 function S.lootCompareVerdicts()
   lootSetup(); click(win(),"Compare")
   local edit=_G.LevelingCodexLootItem

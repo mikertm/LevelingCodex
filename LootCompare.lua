@@ -86,7 +86,7 @@ function L.score(item, profile)
   return {value=value,complete=#warnings==0,warnings=warnings}
 end
 
-function L.compare(ref, ctx, baseline)
+function L.compare(ref, ctx, baseline, weaponSlot)
   ctx = ctx or (L.context and L.context())
   local item = type(ref) == "table" and ref or (L.item and L.item(ref))
   if not item then return result("needsReview","Item information is unavailable") end
@@ -97,6 +97,7 @@ function L.compare(ref, ctx, baseline)
   end
   local slots = baseline or (ctx.snapshot and ctx.snapshot.slots) or {}
   local locations = L.slotsFor(item.slot)
+  if item.slot=="INVTYPE_WEAPON" and (weaponSlot==16 or weaponSlot==17) then locations={weaponSlot} end
   if #locations == 0 then return result(item.slot and "cannotEquip" or "needsReview",item.slot and "This is not a supported equipment slot" or "Equipment slot information is unavailable",item) end
   local best, uncertain, refusal
   for _, slot in ipairs(locations) do
@@ -111,6 +112,10 @@ function L.compare(ref, ctx, baseline)
     else
       local r = result("needsReview",eligible.reasons[1] or "Comparison needs more information",item)
       r.eligibility=eligible.state; r.replacedSlots=replaced
+      local weapon=slots[slot]
+      if weapon and weapon.classID==2 and item.classID==2 and type(weapon.damage)=="number" and type(item.damage)=="number" then
+        r.weaponDpsDelta=item.damage-weapon.damage
+      end
       local score = L.score(item,ctx.profile)
       local old, complete = 0, score.complete and eligible.state=="yes" and not partnerMissing
       r.warnings=score.warnings
@@ -136,7 +141,7 @@ function L.compare(ref, ctx, baseline)
         if not best or r.delta>best.delta then best=r end
       else
         r.confidence="provisional"
-        if #r.warnings>0 then r.reason=r.warnings[1] end
+        if eligible.state=="yes" and #r.warnings>0 then r.reason=r.warnings[1] end
         if not uncertain or (r.delta or -math.huge)>(uncertain.delta or -math.huge) then uncertain=r end
       end
     end

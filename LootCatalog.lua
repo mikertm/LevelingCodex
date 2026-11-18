@@ -9,6 +9,26 @@ local CATEGORY_TYPES={
   INVTYPE_WEAPONOFFHAND={"INVTYPE_WEAPON","INVTYPE_WEAPONOFFHAND","INVTYPE_SHIELD","INVTYPE_HOLDABLE"},
   INVTYPE_RANGED={"INVTYPE_RANGED","INVTYPE_RANGEDRIGHT","INVTYPE_THROWN"},
 }
+L.weaponFamilies={
+  {"Axes",{[0]=true,[1]=true}}, {"Maces",{[4]=true,[5]=true}}, {"Swords",{[7]=true,[8]=true}},
+  {"Daggers",{[15]=true}}, {"Fist weapons",{[13]=true}}, {"Polearms",{[6]=true}}, {"Staves",{[10]=true}},
+  {"Bows",{[2]=true}}, {"Guns",{[3]=true}}, {"Crossbows",{[18]=true}}, {"Thrown",{[16]=true}}, {"Wands",{[19]=true}},
+}
+function L.prefersShield(ctx)
+  return ctx.profile and ctx.profile.role=="Tank" and (ctx.class=="WARRIOR" or ctx.class=="PALADIN")
+end
+function L.weaponStyle(filters,ctx)
+  if filters.weaponStyle then return filters.weaponStyle end
+  if filters.slot=="INVTYPE_WEAPON" and L.prefersShield(ctx) then return "shield" end
+  return "all"
+end
+local function matchesWeapon(item,style,family)
+  if style=="shield" and item.slot=="INVTYPE_2HWEAPON" then return false end
+  if style=="twohand" and item.slot~="INVTYPE_2HWEAPON" then return false end
+  if family=="Shields" then return item.slot=="INVTYPE_SHIELD" end
+  if family=="Held items" then return item.slot=="INVTYPE_HOLDABLE" end
+  return not family or item.classID==2 and family[item.subclassID]==true
+end
 local RANK_CATEGORY={}
 for group,types in pairs(CATEGORY_TYPES) do
   if group~="INVTYPE_WEAPONOFFHAND" then
@@ -103,6 +123,34 @@ function L.sourceLocation(source)
   local profession=source.profession
   return source.dungeon or source.zone or (profession and profession:sub(1,1)..profession:sub(2):lower())
 end
+
+function L.questRoute(source)
+  local facts=ns.lootData and ns.lootData.questFacts
+  local steps,seen={},{}
+  local id=source and source.quest
+  while id and facts and facts[id] and not seen[id] and #steps<24 do
+    local q=facts[id]
+    table.insert(steps,1,q);seen[id]=true
+    if #q.previous~=1 then return steps,#q.previous==0 end
+    id=q.previous[1]
+  end
+  return steps,false
+end
+
+function L.questContact(quest,turnIn,faction)
+  local contacts=quest and (turnIn and quest.finish or quest.start) or {}
+  local current=L.call(C_Map and C_Map.GetBestMapForUnit,"player")
+  local capital=faction=="Alliance" and 1453 or faction=="Horde" and 1454
+  local best
+  for _,where in ipairs(contacts) do
+    if not where.faction or where.faction==faction then
+      if where.map and where.map==current then return where end
+      if not best or where.map and (not best.map or where.map==capital) then best=where end
+    end
+  end
+  return best
+end
+
 function L.candidates(filters,ctx,offset,limit)
   local data=ns.lootData or {}; local f=filters or {}; ctx=ctx or L.context()
   local query=(f.search or ""):lower(); local rows={}
@@ -119,13 +167,20 @@ function L.candidates(filters,ctx,offset,limit)
     end
   else for _,it in pairs(data.items or {}) do all[#all+1]=it end end
   local sourceFiltered=(f.source and f.source~="all") or f.zone and f.zone~="" or f.dungeon and f.dungeon~="" or f.profession and f.profession~="" or f.style and f.style~="all"
+  local style=L.weaponStyle(f,ctx)
+  local family
+  if f.weaponType=="Shields" or f.weaponType=="Held items" then family=f.weaponType
+  elseif f.weaponType then
+    for _,entry in ipairs(L.weaponFamilies) do if entry[1]==f.weaponType then family=entry[2];break end end
+  end
   for _,it in ipairs(all) do
     if (it.requiredLevel or 0)<=(f.maxLevel or ctx.level) and (it.requiredLevel or 0)>=(f.minLevel or 0)
+      and matchesWeapon(it,style,family)
       and (query=="" or tostring(it.id)==query or it.name:lower():find(query,1,true)) then
       local sources=L.sources(it.id,sourceFilters,ctx)
       if #sources>0 or not sourceFiltered and (#(it.sourceIDs or {})==0 or it.tradable) then
         -- Offline catalog comparisons avoid item requests; only an opened detail reads the live item.
-        local r=L.compare(it,ctx)
+        local r=L.compare(it,ctx,nil,f.weaponSlot)
         local future=(f.maxLevel or ctx.level)>ctx.level and (it.requiredLevel or 0)>ctx.level
         if f.showIneligible or r.verdict~="cannotEquip" or future then
           local rank=0

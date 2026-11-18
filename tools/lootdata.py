@@ -90,6 +90,15 @@ def validate(ref):
                 errors.append('invalid source coordinates ' + str(key))
         if s.get('cost', 0) < 0 or any(n < 0 for n in s.get('materials', {}).values()):
             errors.append('invalid source cost ' + str(key))
+    for key, quest in ref.get('questFacts', {}).items():
+        if str(quest.get('id')) != key or not quest.get('name'):
+            errors.append('invalid quest identity ' + key)
+        for where in quest.get('start', []) + quest.get('finish', []):
+            if not where.get('name'):
+                errors.append('missing quest contact ' + key)
+            if 'map' in where and not all(isinstance(where.get(a), (int, float)) and 0 <= where[a] <= 100
+                                          for a in ('x', 'y')):
+                errors.append('invalid quest contact coordinates ' + key)
     return errors
 
 
@@ -181,6 +190,8 @@ def render(ref):
     if errors:
         raise ValueError('; '.join(errors[:10]))
     data = {k: ref[k] for k in ('schema', 'build', 'items', 'sources', 'enchants')}
+    if ref.get('questFacts'):
+        data['questFacts'] = ref['questFacts']
     data['coverage'] = coverage(ref)
     indexes = {k: collections.defaultdict(list) for k in ('bySlot', 'bySource', 'byCreature')}
     for key, item in sorted(ref['items'].items(), key=lambda kv: int(kv[0])):
@@ -397,6 +408,59 @@ def read_csv(cache, name):
         return list(csv.DictReader(f))
 
 
+def quest_facts(ref, quests, npcs, objects):
+    """Keep the recorded contacts and prerequisite links for reward quests."""
+    from questfacts import record, ZONES
+    zones = {area: (name, map_id) for name, (area, map_id) in ZONES.items()}
+    zones[17] = ('The Barrens', 1413)
+    zones[36] = ('Alterac Mountains', 1416)
+    capital_sides = {1453: 'Alliance', 1455: 'Alliance', 1457: 'Alliance',
+                     1454: 'Horde', 1456: 'Horde', 1458: 'Horde'}
+
+    def contacts(edges):
+        out = []
+        for kind, records in ((1, npcs), (2, objects)):
+            for id_ in sorted(set(edges.get(kind, {}).values())):
+                entity = record(records, id_)
+                if not entity.get('name'):
+                    continue
+                name = ascii_text(entity['name'])
+                mapped = False
+                for area, points in sorted(entity.get('spawns', {}).items()):
+                    if area not in zones:
+                        continue
+                    xy = next((p for p in points.values()
+                               if 0 <= p.get(1, -1) <= 100 and 0 <= p.get(2, -1) <= 100), None)
+                    if xy is None:
+                        continue
+                    zone, map_id = zones[area]
+                    where = {'name': name, 'zone': zone, 'map': map_id, 'x': round(xy[1], 2), 'y': round(xy[2], 2)}
+                    if map_id in capital_sides:
+                        where['faction'] = capital_sides[map_id]
+                    out.append(where)
+                    mapped = True
+                if not mapped:
+                    out.append({'name': name})
+        return out
+
+    pending = sorted({s['quest'] for s in ref['sources'].values() if s.get('quest')})
+    seen, facts = set(), {}
+    for id_ in pending:
+        if id_ in seen:
+            continue
+        seen.add(id_)
+        q = record(quests, id_)
+        if not q.get('name'):
+            continue
+        previous = sorted({p for field in ('preQuestSingle', 'preQuestGroup')
+                           for p in q.get(field, {}).values() if p > 0})
+        pending.extend(previous)
+        facts[str(id_)] = {'id': id_, 'name': ascii_text(q['name']),
+                           'start': contacts(q.get('startedBy', {})), 'finish': contacts(q.get('finishedBy', {})),
+                           'previous': previous}
+    return facts
+
+
 def fetch_catalog(args, cache):
     """Read existing pinned quest/game facts and fetch only independently served item tooltips."""
     from questfacts import lua_reader, entity, record, REV, ZONES
@@ -480,6 +544,7 @@ def fetch_catalog(args, cache):
             for n in (old.get(field) or {}).values():
                 source(item, kind, int(n))
     ref = {'schema': 1, 'build': build, 'items': items, 'sources': sources, 'enchants': {}}
+    ref['questFacts'] = quest_facts(ref, data['quest'], data['npc'], data['object'])
     # Existing profession output records are client-verified source links.
     game_ref = json.loads((ROOT/'tools/reference/forever.json').read_text())
     bosses={e[1].casefold() for instance in game_ref['quests']['instances'].values() for e in instance.get('encounters',[])}
