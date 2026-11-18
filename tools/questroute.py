@@ -364,6 +364,10 @@ def audit(data, ref, cap=20):
                                 step.get("optional") and step["type"] in {"complete", "turnin"}
                                 and step.get("quest") not in picked) or step.get("logOnly"):
                             continue
+                        # A leveling handoff can depend on a quest from a separate route. The
+                        # dungeon checklist checks its external prerequisites separately.
+                        if not section.get("category") and step.get("ifDone") and step["ifDone"] not in finished:
+                            continue
                         kind, quest = step["type"], step.get("quest")
                         # A clean-up note: quests the player abandons here if they still hold them.
                         active.difference_update(step.get("drop", []))

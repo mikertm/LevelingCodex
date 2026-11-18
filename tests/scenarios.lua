@@ -4607,6 +4607,29 @@ function S.questStranglethornRoad()
   check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
 end
 
+function S.questStranglethornStockpile()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 45.82, 8.18
+  MOCK.questLog = {
+    { questID = 574, objectives = { { text = "Kurzen Commandos 3/10" }, { text = "Kurzen Headshrinkers 0/6" } } },
+    { questID = 97047, objectives = { { text = "Compound Cage Key 0/1" }, { text = "Kurzen Fighter's Uniform 0/1" } } },
+  }
+  S.login()
+  slash("quests")
+  clickGuide("Stranglethorn: Rebels, Kurzen and Nesingwary")
+  local step = routeStep("Complete - Special Forces")
+  check(step, "the Stranglethorn route has a Stockpile objective for Special Forces")
+  step:Click()
+  local frame = questViewer()
+  check(questText(frame, "Kurzen Commandos 3/10"), "the guide shows live Special Forces progress")
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Compound Cage Key 0/1"),
+    "the cook's key is visible while clearing Special Forces")
+  MOCK.questLog[2].objectives[1].text = "Compound Cage Key 1/1"
+  MOCK.questLog[2].objectives[1].finished = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "Compound Cage Key") and questText(frame, "Kurzen Fighter's Uniform 0/1"),
+    "the grouped panel keeps only the uniform after looting the key")
+end
+
 local TICK = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local function shownTexture(root, path)
   for _, r in ipairs({ root:GetRegions() }) do

@@ -81,6 +81,61 @@ end
 
 B.dungeon = { add = add, tip = tip, enter = enter, copy = copy }
 
+do
+  local name = "The Drowned City"
+  local krazek = on.stv("Krazek", 26.94, 77.21)
+  local dibbs = on.hillsbrad("Loremaster Dibbs", 50.57, 57.09)
+  local timear = on.alterac("Archmage Timear", 15.37, 74.09)
+  local abra = on.alterac("Abra Cadabra", 12.01, 70.45)
+  local karnik = on.ironforge("Historian Karnik", 77.54, 11.82)
+  q(95787, "Take Two With Water", 40, 30, 95786, true)
+  q(95788, "Magics of the Drowned City", 40, 30, 95786, true)
+  q(95798, "The Web of Magic", 40, 30, 95788, true)
+  q(95799, "Findings for the Explorer's League", 40, 30, 95787, true)
+
+  add({ id = "dungeon-drowned-city", title = name, zone = M.stv, levels = { 35, 40 }, instanceID = 2970,
+    bosses = {
+      { name = "Zul'Alai", encounter = 3474,
+        tip = "Clear nearby patrols before pulling. Look for the first tablet down the left path after the fight." },
+      { name = "Var'Taka", encounter = 3475,
+        tip = "Check for the tablet near the room, then click the Glowing Pearl to open the way onward." },
+      { name = "Captain Dreadrise", encounter = 3476,
+        tip = "Interrupt Waterbolt Volley and break Abyssal Bubble to free its target. Click the Glowing Pearl after the fight." },
+      { name = "Deathless Guardians", encounter = 3478,
+        tip = "Interrupt the casters and loot the Ancient Gurubashi Idol if you have Timear's quest." },
+      { name = "Primeval Elemental (optional)", encounter = 3511,
+        tip = "Take the right-hand water tunnels in the Deep Archives. Kill the Undying Offerings to activate the elemental." },
+      { name = "Min'loth the Serpent", encounter = 3479,
+        tip = "Keep a dispel ready for the serpent phase. Check for the nearby tablet before you leave." },
+    },
+    sources = {
+      "https://news.blizzard.com/en-gb/article/24301455/explore-the-new-dungeons-of-world-of-warcraft-forever",
+      "https://www.wowhead.com/forever/guide/the-drowned-city-dungeon-overview-location-rewards",
+      "https://www.icy-veins.com/wow-forever/drowned-city-quests/",
+    } },
+    join(copy("stv-36", { 203, 204, 207, 205 }), copy("stv-41", { 205, 95786 }), {
+      finish(95786, dibbs, "Deliver Nimetz's report to Dibbs in Southshore's town hall."),
+      accept(95787, dibbs), accept(95788, dibbs),
+      accept(97130, timear, "Find Timear outside the Violet Hold in Dalaran while you are north of Stranglethorn."),
+      accept(95789, krazek), accept(95791, krazek),
+      enter(name, on.stv("Sunken Hollow", 21.4, 27.9),
+        "Swim out south of the Haunted Isle and dive by the large crab remains. Follow the cavern to the portal."),
+    }), {
+      objective(95787, nil, "Make rubbings of the four tablets. Look down the left path after Zul'Alai, in the pirate area by the skull, and near Var'Taka's and Min'loth's rooms.",
+        "First Tablet of I'lalai", "Second Tablet of I'lalai", "Third Tablet of I'lalai", "Fourth Tablet of I'lalai"),
+      objective(95788, nil, "Loot five fetishes from trolls as you clear the city.", "5 I'lalai Fetishes"),
+      objective(95789, nil, "Loot ten artifacts from the Saltseer pirates. Check the count before leaving with the group.", "10 Voodoo-Infused Artifacts"),
+      objective(95791, nil, "Kill three Saltseer Coroners along the pirate route and defeat Captain Dreadrise.", "3 Saltseer Coroners", "Captain Dreadrise"),
+      objective(97130, nil, "Loot the idol from the Deathless Guardians encounter.", "Ancient Gurubashi Idol"),
+    }, {
+      finish(95789, krazek), finish(95791, krazek),
+      finish(95787, dibbs), accept(95799, dibbs),
+      finish(95788, dibbs), accept(95798, dibbs),
+      finish(95798, abra), finish(97130, timear),
+      finish(95799, karnik, "Deliver the translations to Historian Karnik in the Hall of Explorers."),
+    })
+end
+
 -- A pickup whose prerequisite another guide or the route gives: shown once that quest is turned in
 -- (`ifDone`), so the guide still plays on its own.
 local function afterDone(id, step)

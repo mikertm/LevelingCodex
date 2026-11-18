@@ -146,7 +146,8 @@ end
 do
   local stv = on.stv
   local smotts = stv("Captain Hecklebury Smotts", 26.69, 73.61)
-  local fin = stv("Fin Fizracket", 27.61, 76.74)
+  local sprogger = stv("Sprogger", 26.66, 73.64)
+  local mokrash = stv("Mok'rash", 23.2, 72.1)
   local seahorn = stv("Fleet Master Seahorn", 27.17, 77.01)
   local oglethorpe = stv("Oglethorpe Obnoticus", 28.36, 76.35)
   local poobah = stv("Princess Poobah", 38.53, 80.58)
@@ -154,6 +155,8 @@ do
 
   q(8551, "The Captain's Chest", 47, 40)
   q(608, "The Bloodsail Buccaneers", 45, 37, 604)
+  B.elite(8551, "Gorlash")
+  B.elite(608, "the Bloodsail captains")
   q(3721, "An OOX of Your Own", 50, 45, { 648, 836, 2767 })
   q(8552, "The Monogrammed Sash", 50, 40)
   quest[8552].startItem = 3985
@@ -162,6 +165,9 @@ do
   q(630, "Message in a Bottle", 51, 45, 594)
   B.elite(630, "King Mukla")
   q(8553, "The Captain's Cutlass", 50, 40, 8552)
+  q(8554, "Facing Negolash", 50, 40, 8553)
+  local negolash = accept(8554, sprogger, "Sprogger sends you to the ruined lifeboat. Bring a group to fight Negolash once you have the bait.")
+  negolash.elite = "Negolash"
   q(4449, "Caught!", 45, 43)
   -- Picked up by the 40-50 route; only their turn-ins are here.
   q(2874, "Deliver to MacKinley", 45, 40, 2873)
@@ -185,18 +191,32 @@ do
     carried(finish(2767, oglethorpe, "Oglethorpe Obnoticus is in the hut on the pier past the bank. Report any robot rescues you finished.")),
     carried(finish(648, oglethorpe)), carried(finish(836, oglethorpe)),
     accept(3721, oglethorpe, "With all three robots home, Oglethorpe gives you a chicken for your own."), finish(3721, oglethorpe),
-    withItem(3985, accept(8552, stv(nil, 23.2, 71.9), "Bloodsail pirates around the bay can drop a Monogrammed Sash. Use it from your bags if you find one.")),
-    withItem(4098, accept(594, stv(nil, 32.4, 82.2), "Keep an eye on the beaches for a bottle with a message. Use it from your bags if you find one.")),
-    along(objective(608, stv(nil, 32.9, 88.2), "Swim out to the three Bloodsail ships south of Booty Bay. Stillwater is on the nearest, Keelhaul and Firallon on the others. Clear the deck before each captain.",
-      "Captain Stillwater", "Captain Keelhaul", "Fleet Master Firallon"), 8552),
+    action("collect", mokrash, "With a group, kill the elite sea giant Mok'rash northwest of Booty Bay for the Monogrammed Sash.",
+      { item = 3985, name = "Monogrammed Sash", unlessDone = 8552, optional = true }),
+    withItem(3985, accept(8552, mokrash, "Read the sash you looted from Mok'rash.")),
+    finish(8552, smotts), accept(8553, smotts), finish(8553, sprogger),
+    negolash,
+    action("collect", sprogger, "Bring ten Barbecued Buzzard Wings and five Junglevine Wine. Check the Auction House for the cooked wings and wine.",
+      { items = { { 4457, 10 }, { 4595, 5 } }, name = "Bait for Negolash", ifOnQuest = 8554 }),
+    objective(8554, stv("Ruined Lifeboat", 32.48, 81.98), "Put the food and wine into the ruined lifeboat to lure Negolash out. Kill him and loot Smotts' Cutlass.",
+      "Smotts' Cutlass"),
+    B.objectivePart(608, 2, stv("Captain Keelhaul", 29.32, 88.29), "Swim to the western Bloodsail ship for Captain Keelhaul. Clear the deck before pulling.",
+      "Captain Keelhaul"),
+    B.objectivePart(608, 3, stv("Fleet Master Firallon", 30.58, 90.63), "Board the southern ship and kill Fleet Master Firallon.",
+      "Fleet Master Firallon"),
+    B.objectivePart(608, 1, stv("Captain Stillwater", 32.87, 88.2), "Board the eastern ship and kill Captain Stillwater.",
+      "Captain Stillwater"),
+    action("collect", stv("Half-Buried Bottle", 36.56, 77.09),
+      "Look for a Half-Buried Bottle on the eastern mainland shore opposite Jaguero Isle. Open it for the Carefully Folded Note.",
+      { item = 4098, name = "Carefully Folded Note", unlessDone = 594 }),
+    withItem(4098, accept(594, nil, "Read the Carefully Folded Note from your bags.")),
     finish(594, poobah, "Princess Poobah is in a cage on Jaguero Isle, east across the water."),
     accept(630, poobah),
     objective(630, stv("King Mukla", 41.0, 83.9), "Kill the gorillas on Jaguero Isle until King Mukla stands alone, then kill him for the key.", "Shackle Key"),
     finish(630, poobah),
-    objective(8551, stv("Gorlash", 37.0, 69.7), "Swim back to the mainland and go north to the Crystalvein Mine. The ogre Gorlash guards Smotts' chest. He is elite, but a few levels below you now.",
+    objective(8551, stv("Gorlash", 37.0, 69.7), "Swim back to the mainland beach north of the island. Gorlash is an elite sea giant on the coast. Kill him for the chest.",
       "Smotts' Chest"),
-    finish(8551, smotts, "Swim or ride back to Booty Bay."), finish(8552, smotts), accept(8553, smotts),
-    finish(8553, stv("Sprogger", 26.66, 73.64), "Sprogger stands next to Smotts."),
+    finish(8551, smotts, "Swim or ride back to Booty Bay."), finish(8554, smotts),
     finish(608, seahorn),
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), SW_FLIGHT, "Fly to Stormwind."),
     action("collect", at("Auctioneer Jaxon", 61.16, 70.68, M.stormwind),

@@ -272,6 +272,8 @@ q(98417, "Vengeful Trail", 30, nil, nil, true)
 q(98418, "Shared Fury", 30, nil, 98417, true)
 q(1037, "Velinde Starsong", 30, 25, 1022)
 q(1038, "Velinde's Effects", 30, 25, 1037)
+q(1039, "The Barrens Port", 30, 25, 1038)
+B.quest[1039].optional = true
 
 local velene = ash("Sentinel Velene Starstrike", 49.8, 67.21)
 local shael = ash("Shael'dryn", 53.54, 46.29)
@@ -380,7 +382,8 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     finish(1037, thyntel, "Find Thyn'tel Bladeweaver on the Warrior's Terrace."), accept(1038, thyntel),
     objective(1038, at("Velinde's Locker", 62.3, 83.3, M.darnassus), "Search Velinde's Locker in her old home in the south-east of the city for her journal.",
       "Velinde's Journal"),
-    finish(1038, thyntel, "Bring the journal back to Thyn'tel. His next quest goes to Ratchet in the Barrens; leave it."),
+    finish(1038, thyntel, "Bring the journal back to Thyn'tel."),
+    accept(1039, thyntel, "If you plan to follow the Booty Bay route later, take the lead to Wharfmaster Dizzywig in Ratchet."),
     action("grind", astranaar, "If you still need level 30, finish a suggested chapter or run Blackfathom Deeps with a group.",
       { level = 30, suggest = { "wetlands", "southshore", "duskwood-late", "redridge-late" }, guide = "dungeon-blackfathom-deeps" }),
   })
