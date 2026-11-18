@@ -815,7 +815,9 @@ do
   q(5676, "Arcane Feedback", 20, 20, nil, nil, priest)
   side({ id = "priest-feedback", title = "Priest: Feedback", zone = m.stormwind,
     levels = { 20, 20 }, class = priest, start = "HUMAN", sources = priestSources, steps = {
-      accept(5676, laurena, "Find Laurena in the Cathedral of Light. If you have an Arcane Feedback referral, hand it in here."),
+      B.note(accept(5676, at("Brother Joshua", 49.53, 45.2, m.stormwind),
+        "Ask Brother Joshua in the Cathedral of Light for the Feedback referral. If he has no offer, check with Laurena nearby."),
+        "Quest records list Joshua as the giver. A Forever guide takes the quest directly from Laurena."),
       finish(5676, laurena, "Speak with Laurena in the cathedral to learn Feedback."),
     },
   })

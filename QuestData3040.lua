@@ -1060,8 +1060,8 @@ do
     finish(1178, on.barrens("Gazlowe", 62.68, 36.23), "Gazlowe has his office above the docks."),
     accept(1180, on.barrens("Gazlowe", 62.68, 36.23), "Gazlowe sends you on to Booty Bay."),
     finish(1111, diz), finish(1039, diz), accept(1040, diz),
-    action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from Ratchet's dock to Booty Bay. Use Next when you arrive.",
-      { name = "Ratchet - Booty Bay" }),
+    action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from Ratchet's dock to Booty Bay. Check the guide when it docks.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     taxi("getfp", gyll, "Booty Bay, Stranglethorn", "Learn the Booty Bay flight path from Gyll, up the ramps above the inn."),
     finish(1180, lozgil, "Wharfmaster Lozgil stands on the docks."), accept(1181, lozgil),
     finish(1040, ruzzgot), accept(1041, ruzzgot),
@@ -1503,7 +1503,7 @@ do
     along(objective(194, st(nil, 27.2, 16.1), "Stranglethorn Raptors hunt near the western coast.", "10 Stranglethorn Raptors"), 191, 187),
     finish(191, erlgadin), finish(187, ajeck), finish(194, hemet),
     action("hearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Hearth to Darkshire.", darkshire),
-  }, { alternate = true, suggest = { "needles-33", "theramore-33" } })
+  }, { alternate = true, suggest = { "needles-33", "theramore-33", "stv-36" } })
 
   local vimes = dm("Captain Garran Vimes", 68.21, 48.62)
   local tesoran = dm("Adjutant Tesoran", 68.05, 48.11)

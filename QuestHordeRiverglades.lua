@@ -688,7 +688,7 @@ do
   offer("desolace-41", "shendralas-pylons")
   offer("tanaris-41", "riverglades-eastsea", "shendralas-pylons")
   offer("feralas-43", "shendralas-pylons")
-  offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41")
+  offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41", "feralas-43")
   offer("riverglades-bolderok", "feralas-43", "stv-44", "swamp-45", "tanaris-46")
   offer("riverglades-eastsea", "feralas-43", "stv-44", "swamp-45")
   offer("shendralas-pylons", "feralas-43", "stv-44", "swamp-45", "tanaris-46")

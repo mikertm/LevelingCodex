@@ -571,8 +571,8 @@ local sepulcher = (function()
     action("goto", town.ucGate, "Ride the elevator up and leave the Undercity. Follow the road north to Brill."),
     finish(440, town.sevren, "Give Deliah's Ring to Magistrate Sevren in Brill."),
     action("train", nil, "Train spells for level", { level = 14 }),
-    action("boat", town.tower, "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin to Durotar. Use Next when you land.",
-      { name = "Tirisfal Glades - Durotar" }),
+    action("boat", town.tower, "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin to Durotar. Check the guide when you land.",
+      { name = "Tirisfal Glades - Durotar", skipOn = { M.durotar, M.orgrimmar } }),
     accept(840, B.at("Takrin Pathseeker", 50.84, 43.59, M.durotar), "Walk south from the zeppelin tower along the road to Razor Hill. Takrin Pathseeker stands by the road."),
     finish(840, B.at("Kargal Battlescar", 62.26, 19.38, M.barrens), "Take the road west from Razor Hill over the bridge into the Barrens. Kargal Battlescar waits at Far Watch Post."),
     accept(842, B.at("Kargal Battlescar", 62.26, 19.38, M.barrens)),
@@ -684,7 +684,8 @@ do
     end
   end
   steps[#steps + 1] = B.action("boat", town.tower,
-    "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin back to Durotar. Use Next when you land.")
+    "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin back to Durotar. Check the guide when you land.",
+    { skipOn = { M.durotar, M.orgrimmar } })
   steps[#steps + 1] = B.action("goto", B.at("The Crossroads", 51.5, 30.34, M.barrens),
     "From the landing, take the road west past Orgrimmar's gate and on through the Barrens to the Crossroads.")
 

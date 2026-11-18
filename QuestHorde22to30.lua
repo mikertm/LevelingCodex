@@ -339,7 +339,9 @@ local hillsbrad = (function()
     action("train", nil, "Visit your class trainer in the Undercity. Train spells for level", { level = 24 }),
   }
   local home = {
-    action("boat", at(nil, 60.8, 58.7, M.tirisfal), "Leave the Undercity and take the zeppelin to Orgrimmar from the tower west of the ruins."),
+    action("boat", at(nil, 60.96, 58.63, M.tirisfal),
+      "Leave the Undercity and take the Durotar zeppelin from the tower between the city and Brill.",
+      { skipOn = { M.durotar, M.orgrimmar } }),
     taxi("fly", tbPlaces.tal, "Thunder Bluff, Mulgore", "Enter Orgrimmar and fly to Thunder Bluff from Doras on the flight tower in the Valley of Strength."),
     -- Zangen and Tah on the central rise, the trainer, then Zamah below Spirit Rise last: Spirit Rise
     -- trainers (Shaman, Paladin) no longer cross the city twice.

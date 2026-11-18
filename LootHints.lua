@@ -105,22 +105,21 @@ local function itemTip(tip,ref)
   local _,link=call(tip.GetItem,tip);ref=link or ref
   if ref then L.annotate(tip,ref) end
 end
-local function unitTip(tip)
+local function vendorTip(tip)
   if ns.db().noLootHints then return end
   local _,unit=call(tip.GetUnit,tip)
-  local guid=unit and call(UnitGUID,unit)
+  if not unit or call(UnitCanAttack,"player",unit) then return end
+  local guid=call(UnitGUID,unit)
   local id=type(guid)=="string" and tonumber(guid:match("^Creature%-%d+%-%d+%-%d+%-%d+%-(%d+)"))
   if not id then return end
   local data=ns.lootData;local ids=data and data.byCreature[id]
   local seen,n={},0
   for _,sid in ipairs(ids or {}) do
-    local s=data.sources[sid];local it=s and data.items[s.item]
-    local drops=s and (s.type=="creature" or s.type=="rare" or s.type=="boss" or s.type=="dungeonTrash" or s.type=="raidTrash")
-    local prefix=s and s.type=="vendor" and "Codex vendor: " or drops and "Codex drop: "
-    if prefix and it and not seen[it.id] then
+    local s=data.sources[sid];local it=s and s.type=="vendor" and data.items[s.item]
+    if it and not seen[it.id] then
       local r=L.compare(it)
       if r.verdict=="upgrade" or r.verdict=="needsReview" then
-        tip:AddLine(ns.plain(prefix..it.name.." - "..L.labels[r.verdict]),1,0.82,0,true)
+        tip:AddLine(ns.plain("Codex vendor: "..it.name.." - "..L.labels[r.verdict]),1,0.82,0,true)
         seen[it.id]=true;n=n+1;if n>=3 then break end
       end
     end
@@ -132,7 +131,7 @@ local function hookTip(tip)
   local function clear(self) self.codexLootKey=nil;self.codexLootRef=nil end
   if type(tip.HookScript)=="function" then
     pcall(tip.HookScript,tip,"OnTooltipSetItem",function(self) itemTip(self) end)
-    pcall(tip.HookScript,tip,"OnTooltipSetUnit",unitTip)
+    pcall(tip.HookScript,tip,"OnTooltipSetUnit",vendorTip)
     pcall(tip.HookScript,tip,"OnTooltipCleared",clear)
     pcall(tip.HookScript,tip,"OnHide",clear)
   end

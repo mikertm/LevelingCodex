@@ -2,6 +2,8 @@
 
 Baseline: `ff73536` (fetched main, including `c49dd98`). The chapter table records each guide by its advertised entry level. An overlapping chapter is listed once, with its full level range, and its exit is checked again when the next band reaches that handoff.
 
+The follow-up records changes on top of this coverage. [Second-pass findings and checks](2026-11-18-quest-route-second-pass.md)
+
 ## Sources
 
 - **Client**: committed Forever quest IDs, map sizes and taxi nodes in [forever.json](../reference/forever.json). These establish client presence and geometry. They do not establish every server-side offer condition.

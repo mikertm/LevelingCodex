@@ -515,6 +515,7 @@ do
   local bibbly = ds("Bibbly F'utzbuckle", 62.33, 38.99)
   local smeed = ds("Smeed Scrabblescrew", 60.86, 61.86)
   local uthek = ds("Uthek the Wise", 36.22, 79.25)
+  local molkar = ds("Molkar", 35.68, 92.23)
   local sikewa = ds("Innkeeper Sikewa", 24.1, 68.2)
   local mailahii = ds("Mai'Lahii", 22.64, 71.97)
   local drulzegar = ds("Drulzegar Skraghook", 23.32, 72.87)
@@ -549,7 +550,7 @@ do
   need(1365, "Khan Dez'hepah", 35, 30)
   need(1368, "Gelkis Alliance", 33, 30)
   need(93225, "Carved Centaur Totems", 40, nil, nil, true)
-  need(94873, "Buying Friendship: Gelkis", 40, nil, 93225, true)
+  need(94873, "Buying Friendship: Gelkis", 45, nil, 93225, true)
   need(6142, "Clam Bait", 35, 31)
   need(6143, "Other Fish to Fry", 36, 32)
   need(5763, "Hunting in Stranglethorn", 31, 28)
@@ -609,18 +610,16 @@ do
     finish(1481, maurin), accept(1482, maurin, "Maurin now wants an Oracle Crystal from the Slitherblade naga on the north-west coast."),
     finish(1435, maurin), accept(1436, takata, "Keep Takata's answer for Keldran in Orgrimmar."),
     finish(1365, felgur),
-    finish(93225, gurda), note(accept(94873, gurda, "Take the Totem Tote to the Gelkis quartermaster."),
-      "quest database has no giver for this Forever quest; Gurda takes in the totems before it."),
+    finish(93225, gurda), accept(94873, gurda, "Take the Totem Tote to Molkar in Gelkis Village."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
     action("goto", graveyard, "Ride west from Smeed's camp down into the Kodo Graveyard."),
     along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")), 5501),
     along(objective(5501, graveyard, "Pick up Kodo Bones from the ground in the graveyard.", "10 Kodo Bones"), 5561),
     finish(5561, smeed),
-    action("goto", uthek, "Ride south-west to the Gelkis village."),
-    note(finish(94873, uthek, "Hand the Totem Tote to the Gelkis quartermaster in the village."),
-      "The quartermaster has no quest database record; the arrow points at Uthek the Wise in the same village."),
-    finish(1368, uthek, "Uthek the Wise welcomes you now that the Gelkis are friendly."),
+    action("goto", molkar, "Ride south-west through Gelkis Village to Molkar at its southern end."),
+    finish(94873, molkar, "Give Molkar the Totem Tote. You need at least Neutral standing with the Gelkis."),
+    finish(1368, uthek, "Ride north through the village to Uthek the Wise once the Gelkis are Friendly."),
     taxi("getfp", P.thalon, "Shadowprey Village, Desolace", "Ride west to Shadowprey Village on the coast and learn the flight path from Thalon."),
     action("sethearth", sikewa, "Bind at the Shadowprey inn.", shadowprey),
     accept(6142, mailahii), accept(6143, drulzegar),
@@ -703,7 +702,8 @@ do
     finish(1184, P.belgrom, "Belgrom Rockmaul waits in the Valley of Honor."),
     action("train", nil, "Visit your class trainer in Orgrimmar. Train spells for level", { level = 36 }),
     action("sethearth", P.gryshka, "Bind at the Orgrimmar inn in the Valley of Strength. You come back here after Stranglethorn.", P.org),
-    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the Grom'gol zeppelin from the tower north-east of the city.",
+      { skipOn = M.stv }),
     taxi("getfp", P.thysta, "Grom'gol, Stranglethorn", "Learn the Grom'gol flight path from Thysta."),
     accept(568, aggrogosh),
     accept(95773, aggrogosh, "He also wants the naga off Grom'gol's coast taught a lesson: you dive at the Vile Reef anyway."),
@@ -1169,7 +1169,8 @@ do
     questRecords,
   }, { "flats-33", "desolace-34", "dustwallow-33" }, {
     taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly from Freewind Post to Orgrimmar."),
-    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the Grom'gol zeppelin from the tower north-east of the city.",
+      { skipOn = M.stv }),
     taxi("getfp", P.thysta, "Grom'gol, Stranglethorn", "Learn the Grom'gol flight path from Thysta."),
     action("sethearth", thulbek, "Bind at the Grom'gol inn. This run starts and ends here.", gromgol),
     action("goto", hemet, "Follow the road north from Grom'gol to Nesingwary's Expedition, just west of the road."),
@@ -1197,7 +1198,8 @@ do
     finish(187, ajeck), finish(195, hemet),
     action("goto", aggrogosh, "Ride south back to Grom'gol."),
     finish(568, aggrogosh), finish(581, nimboya),
-    action("boat", st("Nez'raz", 31.4, 29.9), "Take the zeppelin from Grom'gol back to Orgrimmar."),
+    action("boat", st("Nez'raz", 31.4, 29.9), "Take the zeppelin from Grom'gol back to Durotar.",
+      { skipOn = { M.durotar, M.orgrimmar } }),
   })
 end
 
@@ -1210,6 +1212,7 @@ do
   local gurda = ds("Gurda Wildmane", 56.29, 59.68)
   local smeed = ds("Smeed Scrabblescrew", 60.86, 61.86)
   local uthek = ds("Uthek the Wise", 36.22, 79.25)
+  local molkar = ds("Molkar", 35.68, 92.23)
   local sikewa = ds("Innkeeper Sikewa", 24.1, 68.2)
   local mailahii = ds("Mai'Lahii", 22.64, 71.97)
   local drulzegar = ds("Drulzegar Skraghook", 23.32, 72.87)
@@ -1264,16 +1267,14 @@ do
     finish(1434, takata),
     finish(1481, maurin), accept(1482, maurin, "Maurin now wants an Oracle Crystal from the Slitherblade naga on the north-west coast."),
     finish(1365, felgur),
-    finish(93225, gurda), note(accept(94873, gurda, "Take the Totem Tote to the Gelkis quartermaster."),
-      "quest database has no giver for this Forever quest; Gurda takes in the totems before it."),
+    finish(93225, gurda), accept(94873, gurda, "Take the Totem Tote to Molkar in Gelkis Village."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
     withItem(13892, objective(5561, ds(nil, 52.5, 58.3), "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")),
     finish(5561, smeed),
-    action("goto", uthek, "Ride south-west to the Gelkis village."),
-    note(finish(94873, uthek, "Hand the Totem Tote to the Gelkis quartermaster in the village."),
-      "The quartermaster has no quest database record; the arrow points at Uthek the Wise in the same village."),
-    finish(1368, uthek, "Uthek the Wise welcomes you now that the Gelkis are friendly."),
+    action("goto", molkar, "Ride south-west through Gelkis Village to Molkar at its southern end."),
+    finish(94873, molkar, "Give Molkar the Totem Tote. You need at least Neutral standing with the Gelkis."),
+    finish(1368, uthek, "Ride north through the village to Uthek the Wise once the Gelkis are Friendly."),
     taxi("getfp", P.thalon, "Shadowprey Village, Desolace", "Ride west to Shadowprey Village on the coast and learn the flight path from Thalon."),
     action("sethearth", sikewa, "Bind at the Shadowprey inn.", shadowprey),
     accept(6142, mailahii), accept(6143, drulzegar),

@@ -863,11 +863,18 @@ function S.questMobTarget()
   local target = _G.LevelingCodexQuestTarget
   check(target and target:IsShown() and target:GetAttribute("macrotext") == "/targetexact Kobold Vermin",
     "an objective step targets the creatures it needs")
-  hover(target)
+  MOCK.fire(target, "OnEnter")
+  check(#GameTooltip._lines == 1 and GameTooltip._lines[1] == "Target Kobold Vermin",
+    "the target tooltip shows just the creature name")
+  MOCK.fire(target, "OnLeave")
   MOCK.ns.questMobs[7] = { "Kobold Vermin", "Kobold Worker" }
   MOCK.event("QUEST_LOG_UPDATE")
   check(target:GetAttribute("macrotext") == "/targetexact Kobold Worker\n/targetexact Kobold Vermin",
     "the first creature listed goes last, so it wins when both are near")
+  MOCK.fire(target, "OnEnter")
+  check(#GameTooltip._lines == 2 and GameTooltip._lines[2] == "Kobold Vermin, Kobold Worker",
+    "the compact tooltip still shows every supported target")
+  MOCK.fire(target, "OnLeave")
   local many = {}
   for i = 1, 30 do many[i] = "Kobold Tunnel Rat " .. i end
   MOCK.ns.questMobs[7] = many

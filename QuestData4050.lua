@@ -103,8 +103,8 @@ do
     action("hearth", inn, "Hearth back to Nijel's Point.", nijels),
     finish(1466, kreldig), accept(1467, kreldig, "Carry Leftwitch's package to Ironforge."),
     taxi("fly", B.at("Baldruc", 67.5, 51.3, 1445), "Theramore, Dustwallow Marsh", "Fly to Theramore."),
-    action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship from the Theramore docks to Menethil Harbor. Use Next when you land.",
-      { name = "Theramore - Menethil Harbor" }),
+    action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship from the Theramore docks to Menethil Harbor. Check the guide when it docks.",
+      { name = "Theramore - Menethil Harbor", skipOn = M.wetlands }),
     taxi("fly", B.at("Gryth Thurden", 55.5, 47.7, 1455), "Ironforge, Dun Morogh", "Fly to Ironforge."),
   })
 end
@@ -452,7 +452,11 @@ do
     taxi("getfp", on.blasted("Alexandra Constantine", 65.5, 24.3), "Nethergarde Keep, Blasted Lands", "Learn the Nethergarde flight path."),
     taxi("fly", B.at("Gyll", 27.5, 77.8, 1434), "Booty Bay, Stranglethorn", "Fly back to Booty Bay."),
     accept(2864, krazek, "Before the boat, see Krazek on the top floor of the inn: he has a letter for Tran'rek in Gadgetzan."),
-    action("boat", st(nil, 25.8, 73.1), "Take the boat from Booty Bay to Ratchet. Use Next when you land.", { name = "Booty Bay - Ratchet" }),
+    withGuide("riverglades-farholde", action("note", nil,
+      "If carrying Ruzzgot's or Lozgil's delivery, open the Farholde guide for the Powderfuse Port hand-ins. If you are continuing to Tanaris, abandon any of those deliveries before sailing.",
+      { name = "Powderfuse Port deliveries", drop = { 95327, 97332 } })),
+    action("boat", st(nil, 25.8, 73.1), "Take the boat from Booty Bay to Ratchet. Check the guide when it docks.",
+      { name = "Booty Bay - Ratchet", skipOn = M.barrens }),
   })
 end
 

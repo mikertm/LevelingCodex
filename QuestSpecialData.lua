@@ -176,6 +176,8 @@ do
   local samaul = at("Commander Samaul", 68.02, 48.71, dustwallow)
   local sentry = at("Sentry Point", 59.92, 40.9, dustwallow)
   local hendel = at("Private Hendel", 45.24, 24.65, dustwallow)
+  local tervoshSentry = at("Archmage Tervosh", sentry.x, sentry.y, dustwallow)
+  local tervoshCamp = at("Archmage Tervosh", hendel.x, hendel.y, dustwallow)
   local jaina = at("Lady Jaina Proudmoore", 66.27, 49.04, dustwallow)
 
   special({ id = "missing-diplomat", title = name, zone = m.stormwind, levels = { 28, 38 },
@@ -220,13 +222,13 @@ do
       finish(1264, samaul, "Take the Theramore boat from Menethil's south pier. From the docks in Theramore, go upstairs in Foothold Citadel to find Samaul."),
       accept(1265, samaul, "Ask Samaul about Hendel and Sentry Point."),
       goal(1265, sentry, "Follow the road northwest out of Theramore. Walk inside the first guard tower until you get exploration credit.", "Sentry Point explored"),
-      uncertain(finish(1265, sentry, "Look for Archmage Tervosh at Sentry Point. If he does not appear, check Jaina's tower in Theramore at 66.42, 49.26."),
+      uncertain(finish(1265, tervoshSentry, "Look for Archmage Tervosh at Sentry Point. If he does not appear, check Jaina's tower in Theramore at 66.42, 49.26."),
         "Reports place Tervosh at either Sentry Point or Jaina's tower after the exploration trigger."),
       accept(1266, nil, "Get the next lead from Tervosh where you turned in. If he has moved, check Jaina's tower in Theramore at 66.42, 49.26."),
       finish(1266, hendel, "Follow the road north past the next tower to the tents near the road. Find Hendel there and keep clear of Brackenwall Village."),
       accept(1324, hendel, "Set up your group before accepting. Level 35 Hendel and his guards can turn hostile immediately."),
       goal(1324, hendel, "Subdue Hendel and manage his guards. Stay nearby for the event and wait for Tervosh and Jaina to arrive.", "Subdue Private Hendel"),
-      uncertain(finish(1324, hendel, "Speak to Tervosh at the camp once Hendel surrenders. If Tervosh leaves, check Jaina's tower in Theramore."),
+      uncertain(finish(1324, tervoshCamp, "Speak to Tervosh at the camp once Hendel surrenders. If Tervosh leaves, check Jaina's tower in Theramore."),
         "The Forever spawn record places Tervosh in Theramore. The surrender scene can also bring him to Hendel's camp."),
       accept(1267, nil, "Ask Tervosh for the final introduction to Jaina. If he has left the camp, check her tower in Theramore at 66.42, 49.26."),
       finish(1267, jaina, "Speak to Jaina at the scene if she is still there. Otherwise return to the upper level of her tower in Theramore for the final reward."),

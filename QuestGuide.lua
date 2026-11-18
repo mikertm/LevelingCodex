@@ -1268,7 +1268,6 @@ local function targetTooltip(self)
   local names = self.targets or {}
   GameTooltip:SetText(#names > 1 and "Target the nearest of" or ("Target " .. tostring(names[1])))
   if #names > 1 then GameTooltip:AddLine(table.concat(names, ", "), 1, 1, 1, true) end
-  GameTooltip:AddLine("Key Bindings > AddOns can give it a key.")
   GameTooltip:Show()
 end
 

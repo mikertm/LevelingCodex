@@ -50,7 +50,7 @@ do
   P.kumisha = bl("Kum'isha the Collector", 51.98, 35.65)
   -- Kargath, the Searing Gorge and the Burning Steppes.
   P.thaltrak, P.thunderheart = bad("Thal'trak Proudtusk", 3.36, 48.06), bad("Thunderheart", 3.33, 48.26)
-  P.kalaran, P.maltrake = sg("Kalaran Windblade", 39.1, 39.0), sg("Squire Maltrake", 39.17, 39.0)
+  P.kalaran, P.maltrake = sg("Velarok Windblade", 39.06, 38.99), sg("Squire Maltrake", 39.17, 39.0)
   P.hansel, P.burninate = sg("Hansel Heavyhands", 38.58, 27.81), sg("Master Smith Burninate", 38.8, 28.51)
   P.scrange, P.lolo = sg("Taskmaster Scrange", 38.97, 27.51), sg("Lookout Captain Lolo Longstriker", 37.74, 26.56)
   P.notice, P.outhouse = sg("Wanted/Missing/Lost & Found", 37.65, 26.47), sg("Wooden Outhouse", 65.59, 62.17)
@@ -301,8 +301,8 @@ do
     finish(4449, P.outhouse),
     withItem(11818, accept(4451, P.outhouse, "Dark Iron dwarves sometimes drop the Grimesilt Outhouse Key. Use it from your bags if you have it.")),
     finish(4451, P.outhouse),
-    accept(3441, P.kalaran, "Ride west to the ridge above the Cauldron. Kalaran Windblade stands alone there."),
-    objective(3441, P.kalaran, "Talk to Kalaran again and follow his vengeance dialogue to the end for the story objective.", "Divine Retribution"),
+    accept(3441, P.kalaran, "Ride west to the ridge above the Cauldron. Velarok Windblade stands there."),
+    objective(3441, P.kalaran, "Speak with Windblade again and follow his dialogue about vengeance to the end.", "Divine Retribution"),
     finish(3441, P.kalaran), accept(3442, P.kalaran),
     taxi("getfp", P.grisha, F.thorium, "Ride north-west to Thorium Point and learn the flight path from Grisha."),
     accept(7723, P.hansel, "Hansel Heavyhands has three jobs for you."), accept(7724, P.hansel), accept(7727, P.hansel),
@@ -329,7 +329,7 @@ do
     objective(3452, sg(nil, 23.1, 37.1), "Ride west to the Twilight camp on Firewatch Ridge. The cultists there drop the Symbol of Ragnaros.",
       "Symbol of Ragnaros"),
     finish(3452, P.kalaran), accept(3453, P.kalaran),
-    finish(3453, P.kalaran, "Wait for Kalaran to finish the torch, then speak to him again."), accept(3454, P.kalaran),
+    finish(3453, P.kalaran, "Wait for Windblade to finish the torch, then speak to him again."), accept(3454, P.kalaran),
     finish(3454, P.torch, "Take the Torch of Retribution from beside him."),
     accept(3462, P.kalaran), finish(3462, P.maltrake), accept(3463, P.maltrake),
     along(objective(3463, sg(nil, 33.3, 54.5), "Equip the Torch of Retribution, then click the Sentry Brazier atop each of the four towers around the Cauldron: north and west first, then south and east.",
@@ -361,7 +361,8 @@ do
     taxi("fly", B.at("Gorrik", 4, 44.8, 1418), F.kargath, "Fly to Kargath."),
     finish(3822, P.thaltrak, "Give Thal'trak his brother's nose-ring."),
     taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), F.gromgol, "Fly to Grom'gol in Stranglethorn."),
-    action("boat", P.nezraz, "Take the zeppelin from the Grom'gol tower to Orgrimmar. Use Next when you land.", { name = "Grom'gol - Orgrimmar" }),
+    action("boat", P.nezraz, "Take the zeppelin from Grom'gol to Durotar. Check the guide when you land.",
+      { name = "Grom'gol - Orgrimmar", skipOn = { M.durotar, M.orgrimmar } }),
   })
 end
 

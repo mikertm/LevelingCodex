@@ -1,25 +1,20 @@
 # Leveling Codex
 
-## Unreleased
+## v0.28.0
 
-- Stabilized Loot equipment browsing with a static portrait and protected clicks from background redraws. Item tooltips show a single Codex score line, tracked items reveal their native stats on hover, and Compare planning stays beside the equipment list.
+### Find your next gear upgrade
 
-- Widened the Loot window and added a live item preview beside upgrade results. Item and slot artwork now sends the first click to its row, and the floating tracker uses compact rows with item icons and source names.
+- **New Loot Journal.** Click any slot on your equipment overview to see upgrades you can get at your current level. Each result shows how it compares and where to get it. Set a higher level in Filters to plan ahead.
+- **Pick the sources you want.** Toggle sources individually, or use **Clear sources** to build a shortlist. **Dungeon drop** includes bosses and regular dungeon enemies. You can also filter weapons by type and handedness. Protection Warriors start with weapons that leave room for a shield.
+- **Compare a drop before you swap.** Choose an item from your bags or paste an item link into **Compare** to see estimated score and stat changes. Your talent path sets the default scoring priorities. Change them under **Profiles**, where you can also turn on tooltip ranks for other specs.
+- **Follow a reward to its source.** Quest routes show known chain steps, quest givers, and pickup points. Save a target to the floating tracker and hover over it for item stats. In controller mode, **Map** sets the pin for you to view with your usual world-map button.
+- **Less tooltip clutter.** Enemy mouseovers use the game's normal tooltip. The quest guide's target button shows the creature names it can target.
 
-- Reworked Loot for a dark, opaque reading surface. Full-width results align items, sources, and upgrade verdicts, with separate screens for changing slots and filtering.
+### Quest routes and travel
 
-- Polished the Loot journal with an original teal banner, source shortcuts on results, expandable acquisition cards, and before-and-after stat graphs. Incomplete comparisons explain which information is missing.
-
-- Refined Loot into a textured parchment journal with restored equipment icons, a full-body character preview, grouped equipment cards, illustrated role choices, and an actionable target page. Fixed native texture IDs and complete texture paths being treated as icon names.
-
-- Redesigned Loot around a character paper doll: select an equipped or empty slot to browse upgrades, with compact source and play-style filters, readable item rows, and a focused details page that returns to the same results. Advanced filters and comparison planning are folded away; sources, enchants, tracked targets, and profile weights have clearer sections.
-
-- Fixed item and equipment tooltips disappearing during delayed loot-data updates. Shared tooltips retain their owner and other advice, with one Codex comparison per native tooltip build.
-
-- Added Loot: browse equipment and acquisition sources, compare links/bag/equipped items, track targets, and map source locations independently of quest progress.
-- Loot profiles follow talent paths and support manual choices, custom weights, and share codes. Comparisons cover paired rings/trinkets and weapon configurations, with explicit warnings for missing facts and unmodeled effects.
-- Added optional tooltip advice, a gear-upgrade quest reward mark beside the existing vendor-price hint, enchant suggestions, and a compact controller-accessible target tracker. Loot notifications are off by default.
-- Added a reproducible equipment catalog, source provenance, coverage matrices and offline audits. Dungeon entrance pins are labeled separately from boss locations.
+- **More Alliance quests in Stranglethorn Vale.** The guides add 36 quest entries across Rebel Camp, the Kurzen Stockpile, Booty Bay, and the southern shore. Grouped objectives cut down on repeat trips, and revised directions help you find keys, strongboxes, ships, and quest handoffs.
+- **New Drowned City checklist.** The optional Alliance dungeon guide shows which quests to pick up before diving in, then walks through the encounters and post-run turn-ins.
+- **Clearer travel steps.** Corrected the Thandol Span return directions and the Wetlands boat handoff. The Duskwood guide keeps **Armed and Ready** active when your flight lands at Sentinel Hill, even if a Westfall turn-in is ready nearby.
 
 ## v0.27.0
 

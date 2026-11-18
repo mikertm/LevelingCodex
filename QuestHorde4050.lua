@@ -146,14 +146,14 @@ do
     finish(1240, P.kinweelay, "Give Kin'weelay the head Nazeer sent from Dustwallow."),
     accept(95748, P.kinweelay, "Kin'weelay also wants a rubbing of the troll legends on a tablet in the Ruins of Zul'Kunda."),
     accept(584, nimboya, "Nimboya wants the heads of the two Bloodscalp leaders."),
-    action("boat", P.gromgolZeppelin, "Level 40 means new spells and your first mount. Take the zeppelin from the tower beside Grom'gol to Orgrimmar. Use Next when you land.",
-      { name = "Grom'gol - Orgrimmar" }),
+    action("boat", P.gromgolZeppelin, "Level 40 means new spells and your first mount. Take the zeppelin from the tower beside Grom'gol to Durotar and enter Orgrimmar.",
+      { name = "Grom'gol - Orgrimmar", skipOn = { M.durotar, M.orgrimmar } }),
   }, train(orgrimmarTrainers, 40), {
     accept(2981, og("Belgrom Rockmaul", 75.23, 34.24), "Belgrom Rockmaul in the Valley of Honor has word for Camp Mojache in Feralas. Take it if you pass him; you get there at 43."),
     action("note", nil, "Learn riding now if you can afford it. Orcs train with Kildar in the Valley of Honor, Trolls at Sen'jin Village, Tauren in Bloodhoof Village, Undead in Brill. Druids and paladins train their spells in Thunder Bluff; you pass it at 42.",
       { name = "Riding at 40" }),
     action("boat", P.orgrimmarZeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower to the north. Take the zeppelin back to Grom'gol.",
-      { name = "Orgrimmar - Grom'gol" }),
+      { name = "Orgrimmar - Grom'gol", skipOn = M.stv }),
     action("goto", st(nil, 24.0, 11.5), "Follow the coast north to the Ruins of Zul'Kunda."),
     note(objective(95748, st(nil, 23.0, 12.0), "Find the tablet named Fall of Gurubashi in the ruins and make a rubbing of the third legend.",
       "Third Troll Legend"), "Tablet spot from a published Forever guide; check it in game."),
@@ -279,7 +279,8 @@ do
     note(withItem(213127, accept(95384, P.dudd, "If a Skullsplitter Mystic dropped Partial Mystical Notes for you, read them next to Dudd Fizzlescroll.")),
       "Drop source and Dudd's spot from bindonforever (quest database-format data) and a published Forever guide; not in the cached quest database."),
     finish(95384, P.dudd, "Give Dudd the notes."),
-    action("boat", P.bootyPier, "Take the boat from the Booty Bay pier to Ratchet. Use Next when you land.", { name = "Booty Bay - Ratchet" }),
+    action("boat", P.bootyPier, "Take the boat from Booty Bay to Ratchet. Check the guide when it docks.",
+      { name = "Booty Bay - Ratchet", skipOn = M.barrens }),
     taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
   }, train(bluffTrainers, 42), {
     accept(1205, tb("Melor Stonehoof", 61.54, 80.92), "Melor Stonehoof wants Deadmire's tooth from Dustwallow Marsh."),
@@ -565,7 +566,8 @@ do
     action("collect", og("Auctioneer Thathung", 55.9, 62.71), "Buy 10 Gorilla Fangs at the Auction House if they are cheap: Witch Doctor Unbagwa in Stranglethorn wants them at 44. Use Next to skip and loot them from the Mistvale gorillas instead.",
       { item = 2799, count = 10, name = "Gorilla Fangs" }),
     finish(2976, og("Belgrom Rockmaul", 75.23, 34.24), "Belgrom Rockmaul is in the Valley of Honor."),
-    action("boat", P.orgrimmarZeppelin, "Leave Orgrimmar and take the zeppelin to Grom'gol.", { name = "Orgrimmar - Grom'gol" }),
+    action("boat", P.orgrimmarZeppelin, "Leave Orgrimmar and take the zeppelin to Grom'gol.",
+      { name = "Orgrimmar - Grom'gol", skipOn = M.stv }),
   }))
 end
 
@@ -1308,7 +1310,7 @@ do
   local scrange = sg("Taskmaster Scrange", 38.97, 27.51)
   local hansel = sg("Hansel Heavyhands", 38.58, 27.81)
   local lolo = sg("Lookout Captain Lolo Longstriker", 37.74, 26.56)
-  local kalaran = sg("Kalaran Windblade", 39.06, 38.99)
+  local kalaran = sg("Velarok Windblade", 39.06, 38.99)
   local outhouse = sg("Wooden Outhouse", 65.59, 62.17)
 
   need(7728, "STOLEN: Smithing Tuyere and Lookout's Spyglass", 48, 45)
@@ -1335,8 +1337,8 @@ do
     accept(7728, poster, "Read the board at Thorium Point."), accept(7729, poster),
     accept(7701, poster, "The board also wants Overseer Maltorius, an elite."),
     accept(7723, hansel), accept(7724, hansel), accept(7727, hansel),
-    accept(3441, kalaran, "Kalaran Windblade stands on the ledge south of Thorium Point."),
-    objective(3441, kalaran, "Talk to Kalaran again and follow his vengeance dialogue to the end for the story objective.", "Kalaran's story"),
+    accept(3441, kalaran, "Velarok Windblade stands on the ledge south of Thorium Point."),
+    objective(3441, kalaran, "Speak with Windblade again and follow his dialogue about vengeance to the end.", "Windblade's story"),
     finish(3441, kalaran), accept(3442, kalaran),
     action("goto", sg(nil, 43.0, 33.0), "Go down the ramp into the Cauldron."),
     along(objective(7729, sg(nil, 44.6, 35.5), "Kill Dark Iron Taskmasters and Slavers around the slave pens.",
