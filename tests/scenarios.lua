@@ -11128,13 +11128,20 @@ function S.lootBrowse()
   check(search:HasFocus(),"background equipment updates do not interrupt search typing")
   search:SetText("Red Linen Robe");search:GetScript("OnEnterPressed")(search)
   check(findButton(win(),function(label) return label=="Inspect item 2572" end),"chest browsing includes robes")
+  check(questText(win(),"Tailoring: Red Linen Robe"),
+    "the preview shows the actual recipe source before opening details")
+  local itemRow=findButton(win(),function(label) return label=="Inspect item 2572" end)
+  local routeRow=findButton(win(),function(label) return label=="Sources for item 2572" end)
+  local _,_,_,itemX=itemRow:GetPoint(1)
+  local _,_,_,routeX=routeRow:GetPoint(1)
+  check(itemX+itemRow:GetWidth()<=routeX,"the source shortcut has its own hit area beside the item")
   click(win(),"Sources for item 2572")
   check(questText(win(),"Tailoring: Red Linen Robe") and questText(win(),"Bolt of Linen Cloth")
     and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
   click(win(),"Back to results")
   check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
   click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Full comparison");click(win(),"Sources")
-  check(questText(win(),"Crafted:"),"item details retain the acquisition source")
+  check(questText(win(),"Crafted") and questText(win(),"Track route"),"item details retain the recipe and its track action")
   click(win(),"Back to results")
   search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
   check(questText(win(),"No matching items"),"empty results explain the filters")
@@ -11207,6 +11214,19 @@ function S.lootTracker()
   click(win(),"Track this item");MOCK.advance(0.5)
   check(questText(LevelingCodexLootTracker,"Prey and Predator") and questText(LevelingCodexLootTracker,"Mount Hyjal"),
     "the tracker shows the quest and zone even when the source is above the player's level")
+  click(win(),"Tracked")
+  check(questText(win(),"Prey and Predator") and questText(win(),"Mount Hyjal") and questText(win(),"Level 54"),
+    "the journal card shows the target's destination and required level")
+  check(findButton(win(),function(label) return label=="Map Cured Staghide Leggings" end),
+    "item-only tracking can expose the known source waypoint")
+  check(not findButton(win(),function(label) return label=="Map Red Linen Robe" end),
+    "a craft route without coordinates has no map action")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map Cured Staghide Leggings")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482,"the journal pins the source shown on the card")
+    click(win(),"Clear loot map target")
+    check(not MOCK.userWaypoint,"clearing the pin leaves the tracked item available")
+  end
   click(LevelingCodexLootTracker,"Loot target Cured Staghide Leggings")
   check(questText(win(),"Starts with Kala'th") and questText(win(),"Source requires level 54"),
     "the shown quest route opens with its giver and availability")

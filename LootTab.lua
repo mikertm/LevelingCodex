@@ -369,13 +369,29 @@ local function filterSummary(ctx)
   return tags
 end
 
-local function sourceSummary(row)
-  local s=row.sources[1]
-  if not s then return "Source unverified",row.item.tradable and "Tradable" or "" end
-  local name=s.dungeon or s.zone or s.profession or s.name or ""
-  if name==s.profession then name=name:sub(1,1)..name:sub(2):lower() end
-  local source=L.sourceNames[s.type] or s.type
-  return source..(#row.sources>1 and (" +"..(#row.sources-1)) or ""),name
+local function sourceDetails(source)
+  local kind=L.sourceNames[source.type] or source.type
+  local place=L.sourceLocation(source)
+  local name=source.name or place or kind
+  if place and (name==place or name:find(place..":",1,true)==1) then place=nil end
+  if source.requiredLevel and source.requiredLevel>0 then
+    place=(place and place.." / " or "").."Level "..source.requiredLevel
+  end
+  return kind,name,place
+end
+
+local function canMap(source)
+  return source and source.map and type(source.x)=="number" and type(source.y)=="number" and L.showSourceOnMap
+end
+
+local function upgradeBadge(r,futureLevel)
+  if futureLevel then return "Later level","Level "..futureLevel,C.dim end
+  local gain
+  if r.confidence=="complete" then
+    if r.percent then gain=string.format("%+.1f%%",r.percent)
+    elseif r.verdict=="upgrade" then gain="Empty slot" end
+  end
+  return L.labels[r.verdict] or r.verdict,gain,verdictColor(r.verdict)
 end
 
 local function previewItem(y,row,ctx)
@@ -383,36 +399,46 @@ local function previewItem(y,row,ctx)
   local x,w=SIDE,WIDTH-SIDE-12
   local item=L.item(row.item.id) or row.item
   local r=L.compare(item,ctx)
+  U.rect(x,y,3,75,C.accent,"border",1)
   line("Selected item",x+14,y+12,w-28,"small",C.dim)
-  itemIcon(item,x+14,y+37,46,item.name,r.reason)
-  local nameBottom=text(item.name,y+36,"body",quality(item.quality),x+72,w-86)
-  local imageHit=action(x+10,y+32,w-20,56,item.name,r.reason)
+  itemIcon(item,x+14,y+36,40,item.name,r.reason)
+  local nameBottom=text(item.name,y+35,"body",quality(item.quality),x+66,w-80)
+  local imageHit=action(x+10,y+31,w-20,50,item.name,r.reason)
   itemTip(imageHit,item,r.reason)
-  y=math.max(y+99,nameBottom+10)
-  local score=r.confidence=="complete" and r.percent
-  local color=verdictColor(r.verdict)
-  U.rect(x+14,y,w-28,28,C.btnOff)
-  line(L.labels[r.verdict] or r.verdict,x+24,y+7,w-48,"body",color)
-  if score then line(string.format("%+.1f%%",score),x+164,y+7,w-188,"body",color,"RIGHT") end
-  y=text(r.reason,y+39,"small",C.dim,x+14,w-28)
-  local source,where=sourceSummary(row)
+  y=math.max(y+87,nameBottom+6)
+  local verdict,gain,color=upgradeBadge(r,row.futureLevel)
+  U.surface(x+14,y,w-28,30,C.background,C.edgeSoft)
+  U.rect(x+14,y+1,2,28,color,"border",1)
+  line(verdict,x+24,y+8,125,"body",color)
+  if gain then line(gain,x+151,y+8,w-177,"body",color,"RIGHT") end
+  y=text(r.reason,y+36,"small",C.dim,x+14,w-28)
+  button("Full comparison",x+14,y+1,w-28,function() choose(item.id) end)
+  y=y+37
+
   local route=row.sources[1]
-  U.rect(x+14,y+4,w-28,1,C.edgeSoft,"border")
-  line("Where to get it",x+14,y+16,w-28,"small",C.dim)
-  line(source,x+14,y+35,w-28,"body",C.gold)
-  if where~="" then line(where,x+14,y+54,w-28,"small",C.dim) end
-  y=y+81
-  button("Full comparison",x+14,y,w-28,function() choose(item.id) end)
-  button("View sources",x+14,y+29,w-28,function()
-    choose(item.id,route and route.id,"Sources")
-  end,route~=nil)
-  button("Track this item",x+14,y+58,w-28,function()
+  local sourceTop=y
+  line("Where to get it",x+25,y+9,w-50,"small",C.dim)
+  if route then
+    local kind,name,place=sourceDetails(route)
+    local count=#row.sources-1
+    U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",x+25,y+31,28,kind,name):EnableMouse(false)
+    line(kind..(count>0 and (" / +"..count.." more") or ""),x+63,y+28,w-86,"small",C.dim)
+    y=text(name,y+44,"body",C.gold,x+63,w-86)
+    if place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
+    button("View sources",x+25,y+1,w-50,function() choose(item.id,route.id,"Sources") end,true)
+    y=y+25
+  else
+    y=text(item.tradable and "Tradable. Source unverified." or "Source unverified",y+31,"body",C.dim,x+25,w-50)
+  end
+  U.surface(x+14,sourceTop,w-28,y+10-sourceTop,C.background,C.edgeSoft)
+  y=y+20
+  button("Track this item",x+14,y,w-28,function()
     local key,err=L.track(item.key)
     message=err or (key and "Target tracked")
     refresh()
   end)
-  U.surface(x,top,w,y+92-top,C.panel,C.edgeSoft)
-  return y+92
+  U.surface(x,top,w,y+36-top,C.panel,C.edgeSoft)
+  return y+36
 end
 
 local function browse(y,ctx)
@@ -463,44 +489,45 @@ local function browse(y,ctx)
   for _,row in ipairs(page.rows) do
     if row.item.id==browseItem then current=row;break end
   end
-  U.rect(12,y,544,23,C.panel)
+  U.rect(12,y,544,23,C.background)
+  U.rect(12,y+21,544,1,C.edgeSoft,"border")
   line("Item",24,y+4,188,"small",C.dim)
-  line("Where to get it",273,y+4,144,"small",C.dim)
-  line("Comparison",460,y+4,87,"small",C.dim,"CENTER")
+  line("Acquisition",277,y+4,144,"small",C.dim)
+  line("Upgrade value",452,y+4,99,"small",C.dim,"CENTER")
   y=y+25
   for i,row in ipairs(page.rows) do
     local it,r=row.item,row.result
     local on=current==row
-    U.rect(12,y,544,43,on and C.btnOn or (i%2==0 and C.panel or C.btnOff))
-    if on then U.rect(12,y,3,43,C.accent,"border",1) end
-    U.rect(12,y+42,544,1,C.edgeSoft,"border")
+    U.surface(12,y,544,43,C.panel,C.edgeSoft)
+    if on then
+      U.rect(13,y+1,252,41,C.btnOn)
+      U.rect(12,y,3,43,C.accent,"border",1)
+    end
     itemIcon(it,21,y+6,30,it.name,r.reason)
     line(it.name,62,y+13,196,"body",quality(it.quality))
-    local source,where=sourceSummary(row)
     local route=row.sources[1]
-    local sourceIcon=route and SOURCE_ICONS[route.type]
-    if sourceIcon then U.icon(sourceIcon,273,y+14,14,source,where) end
-    local sourceX=sourceIcon and 295 or 273
-    line(source,sourceX,y+5,434-sourceX,"small",route and C.gold or C.dim)
-    if where~="" then line(where,sourceX,y+22,434-sourceX,"small",C.dim) end
-    local b=action(12,y,544,43,it.name,r.reason,function()
+    local b=action(12,y,route and 254 or 432,43,it.name,r.reason,function()
       browseItem=it.id;message=nil;refresh()
     end,"Inspect item "..it.id)
     b.codexOn=on
     itemTip(b,it,r.reason)
     if route then
-      line(">",435,y+13,12,"body",C.accent)
-      local shortcut=action(264,y,185,43,source.." / "..where,"Open this acquisition source.",
+      local kind,name,place=sourceDetails(route)
+      local count=#row.sources-1
+      U.surface(270,y+4,174,35,C.btnOff,C.edgeSoft)
+      U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",277,y+12,18,kind,nil):EnableMouse(false)
+      line(kind..(count>0 and (" +"..count) or ""),303,y+5,123,"small",C.light)
+      line(name,303,y+22,123,"small",C.dim)
+      line(">",429,y+13,11,"body",C.accent)
+      action(270,y+4,174,35,name,kind..(place and (" / "..place) or ""),
         function() browseItem=it.id;choose(it.id,route.id) end,"Sources for item "..it.id)
-      shortcut:SetFrameLevel(b:GetFrameLevel()+1)
+    else
+      line(row.item.tradable and "Tradable" or "Source unverified",277,y+13,160,"small",C.dim)
     end
-    local verdict=row.futureLevel and "Later level" or L.labels[r.verdict] or r.verdict
-    local color=row.futureLevel and C.dim or verdictColor(r.verdict)
-    line(verdict,452,y+5,99,"small",color,"CENTER")
-    local gain=row.futureLevel and ("Level "..row.futureLevel) or
-      (r.confidence=="complete" and r.percent and string.format("%+.1f%%",r.percent))
-      or (r.verdict=="upgrade" and "Empty slot" or nil)
-    if gain then line(gain,452,y+22,99,"small",C.dim,"CENTER") end
+    local verdict,gain,color=upgradeBadge(r,row.futureLevel)
+    U.rect(451,y+4,99,35,C.background)
+    line(gain or verdict,452,y+(gain and 5 or 13),97,"small",color,"CENTER")
+    if gain then line(verdict,452,y+22,97,"small",C.dim,"CENTER") end
     y=y+46
   end
   y=y+5
@@ -608,33 +635,43 @@ local function acquisition(it,y,ctx,detail)
   if sourceOffset>=#sources then sourceOffset=0 end
   for i=sourceOffset+1,math.min(#sources,sourceOffset+2) do
     local s=sources[i];local top=y;local open=detail.expanded==s.id
-    U.icon(SOURCE_ICONS[s.type] or "inv_misc_map_01",16,y+12,32,L.sourceNames[s.type] or s.type,s.name)
-    line((L.sourceNames[s.type] or s.type)..": "..(s.name or "Unknown source"),62,y+10,U.W-176,"body",C.gold)
-    local place=L.sourceLocation(s) or "Location unverified"
-    if s.requiredLevel and s.requiredLevel>0 then place=place.." / Level "..s.requiredLevel end
-    line(place,62,y+32,U.W-146,"small",C.dim)
-    line(open and "- Details" or "+ Details",U.W-104,y+13,88,"small",C.dim,"RIGHT")
-    local b=action(4,y,U.W-8,50,s.name,"Show source requirements, costs and materials.",function()
+    local kind,name,place=sourceDetails(s)
+    U.rect(5,y+1,U.W-10,60,C.btnOff)
+    if open then U.rect(4,y,3,60,C.accent,"border",1) end
+    U.icon(SOURCE_ICONS[s.type] or "inv_misc_map_01",17,y+14,32,kind,name):EnableMouse(false)
+    line(kind,63,y+8,U.W-182,"small",C.dim)
+    line(name,63,y+24,U.W-182,"body",C.gold)
+    if place then line(place,63,y+44,U.W-174,"small",C.dim) end
+    line(open and "- Details" or "+ Details",U.W-104,y+22,86,"small",C.accent,"RIGHT")
+    local b=action(4,y,U.W-8,60,name,"Show source requirements, costs and materials.",function()
       if open then detail.expanded=nil else detail.expanded=s.id end;refresh()
     end,"Source details "..i);b.codexOn=open
-    y=y+54
+    y=y+70
     if open then
-      if s.requiredLevel and s.requiredLevel>0 then y=text("Source requires level "..s.requiredLevel,y,"small",C.dim) end
-      if s.faction and s.faction~="All" then y=text("Source faction: "..s.faction,y,"small",C.dim) end
-      if s.giverName then y=text("Starts with "..s.giverName,y,"small",C.dim) end
-      if s.locationKind=="entrance" then y=text("Map location: dungeon entrance, not the boss room.",y,"small",C.dim) end
-      if s.prerequisites and #s.prerequisites>0 then y=text("Prerequisite quests: "..table.concat(s.prerequisites,", "),y,"small",C.dim) end
-      if s.cost then y=text("Cost: "..(ns.money and ns.money(s.cost) or tostring(s.cost)),y,"small") end
+      if s.requiredLevel and s.requiredLevel>0 then y=text("Source requires level "..s.requiredLevel,y,"small",C.dim,17) end
+      if s.faction and s.faction~="All" then y=text("Source faction: "..s.faction,y,"small",C.dim,17) end
+      if s.giverName then y=text("Starts with "..s.giverName,y,"small",C.dim,17) end
+      if s.locationKind=="entrance" then y=text("Map pin shows the dungeon entrance.",y,"small",C.dim,17) end
+      if s.prerequisites and #s.prerequisites>0 then y=text("Prerequisite quests: "..table.concat(s.prerequisites,", "),y,"small",C.dim,17) end
+      if s.cost then y=text("Cost: "..(ns.money and ns.money(s.cost) or tostring(s.cost)),y,"small",C.light,17) end
       if s.materials then
         local mats={};for name,n in pairs(s.materials) do mats[#mats+1]=n.." "..name end;table.sort(mats)
-        y=text("Materials: "..table.concat(mats,", "),y,"small")
+        y=text("Materials: "..table.concat(mats,", "),y,"small",C.light,17)
       end
     end
-    y=text(s.evidence=="client" and "Client reference" or "Database reference; server availability may vary",y,"small",C.dim)
-    button("Track source "..i,16,y,160,function() local key,err=L.track(it.key,s.id);message=err or (key and "Source tracked");refresh() end)
-    if s.map and L.showSourceOnMap then button("Map source "..i,186,y,160,function() local _,why=L.showSourceOnMap(s.id);message=why;refresh() end)
-    else line("Location not verified",186,y+4,160,"small",C.dim) end
-    if s.quest and L.openQuestSource then button("Quest guide "..i,356,y,196,function() L.openQuestSource(s.quest) end) end
+    U.rect(17,y,534,1,C.edgeSoft,"border")
+    y=text(s.evidence=="client" and "Client reference" or "Database reference; server availability may vary",y+7,"small",C.dim,17)
+    button("Track route",17,y,158,function()
+      local key,err=L.track(it.key,s.id);message=err or (key and "Source tracked");refresh()
+    end,true).codexLabel="Track source "..i
+    if canMap(s) then
+      button("Show on map",186,y,160,function()
+        local _,why=L.showSourceOnMap(s.id);message=why;refresh()
+      end).codexLabel="Map source "..i
+    end
+    if s.quest and L.openQuestSource then
+      button("Open quest guide",356,y,195,function() L.openQuestSource(s.quest) end).codexLabel="Quest guide "..i
+    end
     y=y+32;U.surface(4,top,U.W-8,y-top,C.panel,open and C.edge or C.edgeSoft);y=y+10
   end
   if #sources>2 then
@@ -844,48 +881,94 @@ local function compare(y,ctx)
   return math.max(y+30,sideBottom or 0)
 end
 local function tracked(y)
-  y=text("Your upgrade targets",y,"head",C.gold)
+  line("Your upgrade targets",16,y+1,420,"head",C.gold)
+  local enabled=not ns.db().noLootTracker
+  button(enabled and "Hide floating tracker" or "Show floating tracker",WIDTH-194,y,182,function()
+    ns.db().noLootTracker=enabled or nil
+    L.refreshTracker()
+    refresh()
+  end,enabled,"Toggle the separate tracker that stays visible while you play.")
+  y=y+34
   local all=L.targets()
   if #all==0 then
-    U.surface(12,y,544,134,C.panel,C.edgeSoft)
-    U.icon("inv_misc_bag_10",28,y+23,42,"Loot targets",nil)
-    line("No saved upgrades",86,y+18,452,"head",C.gold)
-    text("Track an item or a specific source to add it here and to your floating tracker.",y+45,"body",C.dim,86,446)
-    button("Browse upgrades",86,y+95,210,function() section="Upgrades";view="character";refresh(true) end,true)
-    button("Compare an item",306,y+95,226,function() section="Compare";input=nil;compareDetail={};refresh(true) end)
-    return y+146
+    U.surface(12,y,WIDTH-24,118,C.panel,C.edgeSoft)
+    U.rect(12,y,3,118,C.accent,"border",1)
+    U.icon("inv_misc_bag_10",31,y+28,58,"Loot targets",nil):EnableMouse(false)
+    line("No saved upgrades",109,y+24,462,"head",C.gold)
+    text("Track a piece of gear or a specific route to keep it handy here and in the floating tracker.",y+55,"body",C.dim,109,449)
+    button("Browse upgrades",WIDTH-251,y+28,222,function() section="Upgrades";view="character";refresh(true) end,true)
+    button("Compare an item",WIDTH-251,y+59,222,function() section="Compare";input=nil;compareDetail={};refresh(true) end)
+    return y+130
   end
-  for i,label in ipairs({"All","Active","Obtained","Dismissed"}) do
-    local key=label=="Active" and "tracked" or label:lower()
-    button(label,12+(i-1)*139,y,133,function() targetFilter=key;targetPage=0;refresh(true) end,targetFilter==key)
+  local counts={all=#all,tracked=0,obtained=0,dismissed=0}
+  for _,t in ipairs(all) do counts[t.state]=counts[t.state]+1 end
+  local states={{"all","All"},{"tracked","Active"},{"obtained","Obtained"},{"dismissed","Dismissed"}}
+  for i,state in ipairs(states) do
+    local key,label=unpack(state)
+    local x=12+(i-1)*142
+    button(label.." ("..counts[key]..")",x,y,134,function()
+      targetFilter=key;targetPage=0;refresh(true)
+    end,targetFilter==key).codexLabel=label
+    if targetFilter==key then U.rect(x+5,y+19,124,2,C.accent,"border",1) end
   end
   y=y+34
   local list=targetFilter=="all" and all or L.targets(targetFilter)
   if targetPage*3>=#list then targetPage=math.max(0,math.ceil(#list/3)-1) end
-  if #list==0 then return text("No targets in this group. Choose All to see your other targets.",y+20,"body",C.dim) end
+  if #list==0 then
+    U.surface(12,y,WIDTH-24,66,C.panel,C.edgeSoft)
+    return text("No targets in this group. Choose All to see your other targets.",y+22,"body",C.dim,27,WIDTH-54)+22
+  end
+  local live=L.context()
+  local stateLabel={tracked="Active",dismissed="Dismissed",obtained="Obtained"}
+  local stateColor={tracked=C.accent,dismissed=C.dim,obtained=C.green}
   for i=targetPage*3+1,math.min(#list,targetPage*3+3) do
     local t=list[i];local it=L.item(t.ref)
-    U.surface(4,y,U.W-8,92,C.btnOff,C.edgeSoft)
-    itemIcon(it,16,y+12,36,t.name,t.state)
-    line(t.name,64,y+10,U.W-194,"body",it and quality(it.quality) or C.light)
-    U.surface(U.W-114,y+10,98,20,C.panel,C.edgeSoft)
-    line(t.state,U.W-110,y+13,90,"small",C.dim,"CENTER")
-    local source,more=L.targetSource(t)
-    local route=source and ((L.sourceNames[source.type] or source.type)..": "..(source.name or L.sourceLocation(source) or "Unknown source"))
-    if more>0 then route=route.." (+"..more.." more)" end
-    line(route or "Source unverified",64,y+34,U.W-82,"small",C.dim)
-    local b=action(4,y,U.W-8,54,t.name,"Open this target's item details.",function()
+    local name=it and it.name or t.name
+    local color=stateColor[t.state]
+    U.surface(12,y,WIDTH-24,80,C.panel,C.edgeSoft)
+    U.rect(12,y,3,80,color,"border",1)
+    itemIcon(it,28,y+19,42,name,t.state)
+    local nameBottom=text(name,y+13,"body",it and quality(it.quality) or C.light,83,211)
+    local badgeY=math.min(y+55,math.max(y+39,nameBottom))
+    U.surface(83,badgeY,90,17,C.background,C.edgeSoft)
+    line(stateLabel[t.state],88,badgeY+2,80,"small",color,"CENTER")
+    U.rect(309,y+11,1,58,C.edgeSoft,"border")
+    U.rect(628,y+11,1,58,C.edgeSoft,"border")
+
+    local source,more=L.targetSource(t,live)
+    U.icon(source and SOURCE_ICONS[source.type] or "inv_misc_map_01",326,y+25,28,"Acquisition",nil):EnableMouse(false)
+    if source then
+      local kind,route,place=sourceDetails(source)
+      line(kind..(more>0 and (" / +"..more.." more") or ""),367,y+10,245,"small",C.dim)
+      line(route,367,y+29,245,"body",C.gold)
+      if place then line(place,367,y+52,245,"small",C.dim) end
+    else
+      line("Acquisition",367,y+13,245,"small",C.dim)
+      line(it and it.tradable and "Tradable. Source unverified." or "Source unverified",367,y+34,245,"body",C.dim)
+    end
+    local function openTarget()
       L.open("Compare",t.ref,source and source.id)
-    end,t.name.." - "..t.state)
+    end
+    local b=action(15,y,288,80,name,"Open this target's item details.",openTarget,t.name.." - "..t.state)
     if it then itemTip(b,it) end
-    button(t.state=="tracked" and "Dismiss" or "Restore",64,y+61,120,function() L.setTargetState(t.key,t.state=="tracked" and "dismissed" or "tracked");refresh() end)
-    button("Untrack",194,y+61,120,function() L.untrack(t.key);refresh() end)
-    if t.sourceID and L.showSourceOnMap then button("Map "..t.name,324,y+61,U.W-340,function() local _,why=L.showSourceOnMap(t.sourceID);message=why;refresh() end) end
-    y=y+104
+    local mapped=canMap(source)
+    button(source and "View source" or "View item",643,y+12,mapped and 96 or 200,openTarget,true)
+    if mapped then
+      button("Show on map",747,y+12,96,function()
+        local _,why=L.showSourceOnMap(source.id);message=why;refresh()
+      end,false,"Place a pin for this source.").codexLabel="Map "..t.name
+    end
+    button(t.state=="tracked" and "Dismiss" or "Restore",643,y+45,96,function()
+      L.setTargetState(t.key,t.state=="tracked" and "dismissed" or "tracked");refresh()
+    end)
+    button("Untrack",747,y+45,96,function() L.untrack(t.key);refresh() end,false,"Remove this target from your journal.")
+    y=y+88
   end
-  if targetPage>0 then button("Previous targets",12,y,150,function() targetPage=targetPage-1;refresh(true) end) end
-  line("Page "..(targetPage+1).." of "..math.ceil(#list/3),180,y+4,208,"small",C.dim,"CENTER")
-  if (targetPage+1)*3<#list then button("Next targets",406,y,150,function() targetPage=targetPage+1;refresh(true) end) end
+  if #list>3 then
+    if targetPage>0 then button("Previous targets",12,y,150,function() targetPage=targetPage-1;refresh(true) end) end
+    line("Page "..(targetPage+1).." of "..math.ceil(#list/3),WIDTH/2-104,y+4,208,"small",C.dim,"CENTER")
+    if (targetPage+1)*3<#list then button("Next targets",WIDTH-162,y,150,function() targetPage=targetPage+1;refresh(true) end) end
+  end
   return y+32
 end
 local function profiles(y,ctx)
@@ -1062,18 +1145,8 @@ local function workspaceSidebar(y,ctx)
     y=text("Loot targets",y+14,"head",C.gold,x+14,w-28)
     local count=#L.targets("tracked")
     y=text(count==1 and "1 active target" or (count.." active targets"),y+4,"body",C.dim,x+14,w-28)
-    if section~="Tracked" then
-      button("Open tracked items",x+14,y+4,w-28,function() section="Tracked";message=nil;refresh(true) end)
-      y=y+36
-    else
-      local enabled=not ns.db().noLootTracker
-      button(enabled and "Hide floating tracker" or "Show floating tracker",x+14,y+4,w-28,function()
-        ns.db().noLootTracker=enabled or nil
-        L.refreshTracker()
-        refresh()
-      end,enabled)
-      y=y+36
-    end
+    button("Open tracked items",x+14,y+4,w-28,function() section="Tracked";message=nil;refresh(true) end)
+    y=y+36
   end
   line("Scoring profile",x+14,y+6,w-28,"small",C.dim)
   y=text(ctx.profile.label,y+24,"body",C.gold,x+14,w-28)
@@ -1125,7 +1198,7 @@ local function render()
     button("Clear loot map target",12,y,260,function() L.clearMapTarget();refresh() end);y=y+32
   end
   local sideBottom
-  if section~="Compare" and not (section=="Upgrades" and (view=="list" or view=="filters")) then sideBottom=workspaceSidebar(y,ctx) end
+  if section~="Compare" and section~="Tracked" and not (section=="Upgrades" and (view=="list" or view=="filters")) then sideBottom=workspaceSidebar(y,ctx) end
   if section=="Upgrades" then
     if view=="character" then y=character(y,ctx)
     elseif view=="detail" and upgradeDetail.ref then y=details(upgradeDetail,y,ctx)
