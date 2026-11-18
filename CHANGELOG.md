@@ -1,5 +1,14 @@
 # Leveling Codex
 
+## v0.28.1
+
+### Alliance and Horde leveling routes
+
+- Reviewed the level 1–60 guides, including racial starts, alternate routes, and class and dungeon quests. Starter pickups now follow their prerequisites, and the Durotar coast and Silverpine routes need fewer trips.
+- Added nearby quests to existing loops, including Ambermill Investigations, Wanted! Marez Cowl, and Repurposed Totems. Updated directions for the Kurzen Stockpile and Krol'dok Stronghold.
+- Added missing turn-ins in Uldaman and the Plaguelands. Booty Bay now points players carrying Ruzzgot's or Lozgil's delivery to the Farholde guide before the trip to Ratchet.
+- More boat and zeppelin steps advance at the destination. Taking the flight marked by the guide keeps the selected route active on landing. Harlo's Wetlands pickup can reappear when you reach him after joining the route midway.
+
 ## v0.28.0
 
 ### Find your next gear upgrade
