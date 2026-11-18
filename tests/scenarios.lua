@@ -11137,13 +11137,28 @@ function S.lootBrowse()
   MOCK.fire(shoulder,"OnLeave")
   click(win(),"Back to results")
   click(win(),"Availability filters")
-  for _,source in ipairs({"Quest reward","Boss drop","Raid drop","Vendor","Crafted","PvP"}) do
+  for _,source in ipairs({"Quest reward","Dungeon drop","Raid drop","Vendor","Crafted","PvP"}) do
     check(findButton(win(),function(label) return label==source end),source.." is visible when filters open")
   end
-  local source=findButton(win(),function(label) return label=="Quest reward" end)
+  local function enabled(source)
+    return findButton(win(),function(label) return label==source end).codexOn
+  end
+  local source=findButton(win(),function(label) return label=="World drop" end)
+  check(source.codexOn and enabled("Dungeon drop") and enabled("Reputation"),"sources start enabled")
   clickThroughArtwork(source)
-  check(findButton(win(),function(label) return label=="Quest reward" end).codexOn and LevelingCodexLootZone:IsShown(),
-    "one click selects a source and keeps location fields visible")
+  check(not enabled("World drop") and enabled("Dungeon drop") and enabled("Reputation") and LevelingCodexLootZone:IsShown(),
+    "one click excludes a source without altering the others")
+  click(win(),"Show results")
+  check(questText(win(),"World drop excluded"),"results identify the excluded source")
+  click(win(),"Filters")
+  click(win(),"Clear sources")
+  check(not enabled("Dungeon drop") and not enabled("Reputation"),"clear sources turns off every tile")
+  click(win(),"Show results")
+  check(questText(win(),"No acquisition sources selected"),"no sources selected has a clear empty state")
+  click(win(),"Choose sources")
+  click(win(),"Dungeon drop");click(win(),"Reputation")
+  check(enabled("Dungeon drop") and enabled("Reputation") and not enabled("Raid drop"),
+    "dungeons and reputation can be enabled together")
   click(win(),"All sources")
   click(win(),"Local / active")
   check(findButton(win(),function(label) return label=="Local / active" end).codexOn,"local ordering is explicitly selectable")

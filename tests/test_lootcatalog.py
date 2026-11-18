@@ -99,19 +99,42 @@ class LootCatalogTests(unittest.TestCase):
           add(8,{type="object",map=1429},false)
           add(9,{type="vendor",map=1429,npc=20},false)
           ns.lootData.items[9].restrictions={text="Requires Revered"}
+          add(10,{type="world",requiredLevel=25},false)
+          add(11,{type="reputation",requiredLevel=30},false)
+          add(12,{type="dungeonTrash",instance=30},false)
+          add(13,{type="raidTrash",instance=99},false)
+          ns.lootData.items[10].name="World only"
+          ns.lootData.items[11].name="Standing reward"
+          ns.lootData.items[12].name="Dungeon trash"
+          ns.lootData.items[13].name="Raid trash"
+          ns.lootData.sources.alternate={id="alternate",item=5,type="world",requiredLevel=25}
+          ns.lootData.items[5].sourceIDs[2]="alternate"
         ''')
         lua.globals().load_module((ROOT/'LootCatalog.lua').read_text())
         lua.execute('''
           local L=ns.loot
           local now=L.candidates({})
-          assert(now.total==2 and now.rows[1].item.id==5 and now.rows[2].item.id==7)
-          local later=L.candidates({maxLevel=60,search="3"})
+          assert(now.total==5)
+          local later=L.candidates({maxLevel=60,search="Item 3"})
           assert(later.total==1 and later.rows[1].futureLevel==60)
           assert(L.candidates({search="1",showUnverified=true}).rows[1].availabilityUnverified)
           assert(L.candidates({search="2",showUnverified=true}).total==0)
           assert(L.candidates({search="8",source="object",showUnverified=true}).rows[1].availabilityUnverified)
           assert(L.candidates({search="1",source="vendor",showUnverified=true}).total==0)
           assert(L.candidates({search="9",showUnverified=true}).rows[1].availabilityUnverified)
+          local selected={dungeonTrash=true,reputation=true}
+          local covered={}
+          for _,row in ipairs(L.candidates({sources=selected,maxLevel=60,showUnverified=true}).rows) do
+            covered[row.item.id]=true
+            for _,source in ipairs(row.sources) do
+              assert(source.type~="world","the excluded route is removed even if another route qualifies")
+            end
+          end
+          assert(covered[5] and covered[11] and covered[12],"dungeon bosses, trash and reputation are included")
+          assert(not (covered[1] or covered[3] or covered[7] or covered[10] or covered[13]),
+            "unselected, unverified and raid sources do not leak in")
+          assert(L.candidates({sources={},showUnverified=true}).total==0,"no sources means no results")
+          assert(L.candidates({sources={raidTrash=true},maxLevel=60}).total==2,"raid filtering includes raid bosses")
         ''')
 
 if __name__=='__main__': unittest.main()

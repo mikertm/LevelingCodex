@@ -71,9 +71,14 @@ function L.catalogRank(item,ctx,result)
   end
   return rank
 end
-local function sourceAllowed(s,f,c)
+local function sourceCategory(s,raids)
+  if s.type=="boss" then return raids[s.instance] and "raidTrash" or "dungeonTrash" end
+  return s.type
+end
+local function sourceAllowed(s,f,c,raids)
   if s.faction and s.faction~="All" and s.faction~=c.faction then return false end
   if f.source and f.source~="all" and s.type~=f.source then return false end
+  if f.sources and not f.sources[sourceCategory(s,raids)] then return false end
   if f.zone and f.zone~="" and not (s.zone or ""):lower():find(f.zone:lower(),1,true) then return false end
   if f.dungeon and f.dungeon~="" and not (s.dungeon or ""):lower():find(f.dungeon:lower(),1,true) then return false end
   if f.profession and f.profession~="" and s.profession~=f.profession then return false end
@@ -115,16 +120,18 @@ end
 
 function L.sources(id,filters,ctx)
   local data=ns.lootData or {}; local it=data.items and data.items[id]
+  local access=data.access or {}
+  local raids=access.raids or {}
   ctx=ctx or L.context()
   filters=filters or {}
   local out,earliest,unknown={}
   for _,key in ipairs(it and it.sourceIDs or {}) do
     local s=data.sources[key]
-    if s and sourceAllowed(s,filters,ctx) then
+    if s and sourceAllowed(s,filters,ctx,raids) then
       if not filters.accessLevel then
         out[#out+1]=s
       else
-        local level=sourceLevel(s,it,ctx,data.access or {})
+        local level=sourceLevel(s,it,ctx,access)
         if level==nil then unknown=true
         elseif level<=filters.accessLevel then
           out[#out+1]=s
@@ -201,7 +208,7 @@ function L.candidates(filters,ctx,offset,limit)
       end
     end
   else for _,it in pairs(data.items or {}) do all[#all+1]=it end end
-  local sourceFiltered=(f.source and f.source~="all") or f.zone and f.zone~="" or f.dungeon and f.dungeon~="" or f.profession and f.profession~="" or f.style and f.style~="all"
+  local sourceFiltered=f.sources or (f.source and f.source~="all") or f.zone and f.zone~="" or f.dungeon and f.dungeon~="" or f.profession and f.profession~="" or f.style and f.style~="all"
   local style=L.weaponStyle(f,ctx)
   local family
   if f.weaponType=="Shields" or f.weaponType=="Held items" then family=f.weaponType

@@ -26,7 +26,7 @@ local function palette()
 end
 local ART="Interface\\AddOns\\LevelingCodex\\media\\"
 local section,view="Upgrades","character"
-local filters={slot="INVTYPE_CHEST",source="all",style="all",search=""}
+local filters={slot="INVTYPE_CHEST",style="all",search=""}
 local offset,slotNumber=0,5
 local input,message,code,editor,preview
 local levelDraft,levelError
@@ -53,7 +53,7 @@ local SLOT_ART={[1]="Head",[2]="Neck",[3]="Shoulder",[5]="Chest",[6]="Waist",[7]
 local ARMOR_SLOTS={1,3,15,5,9,10,6,7,8}
 local ACCESSORY_SLOTS={2,11,12,13,14}
 local WEAPON_SLOTS={16,17,18}
-local SOURCES={"quest","vendor","craft","boss","dungeonTrash","raidTrash","creature","rare","world","object","reputation","pvp"}
+local SOURCES={"quest","vendor","craft","dungeonTrash","raidTrash","reputation","creature","rare","world","object","pvp"}
 local STYLES={all="Any play style",solo="Solo",group="Group",buy="Buy / craft"}
 local SOURCE_ICONS={quest="inv_misc_book_09",boss="inv_helmet_03",dungeonTrash="inv_misc_bone_humanskull_01",
   raidTrash="inv_misc_bone_humanskull_01",creature="ability_hunter_beastcall",rare="ability_hunter_snipershot",
@@ -235,7 +235,7 @@ local function baseline(y,ctx)
 end
 
 local function resetFilters()
-  filters={slot=filters.slot,source="all",style="all",search=""}
+  filters={slot=filters.slot,style="all",search=""}
   levelDraft,levelError=nil,nil
   resetResults()
 end
@@ -368,26 +368,47 @@ local function filterPage(y,ctx)
   y=y+34
 
   U.surface(left,y,leftWidth,252,C.panel,C.edgeSoft)
-  line("Acquisition source",left+14,y+12,255,"body",C.gold)
-  choice("All sources",left+leftWidth-138,y+8,124,filters.source=="all",function()
-    filters.source="all";resetResults()
+  line("Acquisition sources",left+14,y+5,255,"body",C.gold)
+  line("Toggle each source on or off",left+14,y+22,255,"small",C.dim)
+  choice("All sources",left+leftWidth-246,y+8,108,not filters.sources,function()
+    filters.sources=nil;resetResults()
+  end)
+  button("Clear sources",left+leftWidth-130,y+8,116,function()
+    filters.sources={};resetResults()
   end)
   U.rect(left+14,y+39,leftWidth-28,1,C.edgeSoft,"border")
   local tileWidth,tileGap=162,10
+  local selected=filters.sources
+  local count=selected and 0 or #SOURCES
+  if selected then
+    for _,key in ipairs(SOURCES) do if selected[key] then count=count+1 end end
+  end
   for i,key in ipairs(SOURCES) do
     local x=left+14+(i-1)%3*(tileWidth+tileGap)
     local yy=y+50+math.floor((i-1)/3)*44
     local label=L.sourceNames[key]
-    local on=filters.source==key
-    U.surface(x,yy,tileWidth,36,on and C.btnOn or C.btnOff,on and C.accent or C.edgeSoft)
-    if on then U.rect(x,yy,3,36,C.accent,"border",1) end
-    U.icon(SOURCE_ICONS[key],x+8,yy+8,20,label,nil)
-    line(label,x+37,yy+11,tileWidth-46,"small",on and C.light or C.dim)
-    local b=action(x,yy,tileWidth,36,label,nil,function()
-      filters.source=key;resetResults()
+    local on=not selected or selected[key]==true
+    U.surface(x,yy,tileWidth,36,on and C.btnOff or C.background,on and C.edge or C.edgeSoft)
+    local icon=U.icon(SOURCE_ICONS[key],x+8,yy+8,20,label,nil)
+    icon.tex:SetDesaturated(not on)
+    line(label,x+36,yy+11,92,"small",on and C.light or C.dim)
+    U.surface(x+130,yy+10,26,16,on and C.btnOn or C.background,on and C.accent or C.edgeSoft)
+    line(on and "On" or "Off",x+132,yy+11,22,"small",on and C.light or C.dim,"CENTER")
+    local tip=key=="dungeonTrash" and "Includes dungeon bosses and regular enemies."
+      or key=="raidTrash" and "Includes raid bosses and regular enemies."
+    local b=action(x,yy,tileWidth,36,label,tip,function()
+      if not selected then
+        selected={}
+        for _,source in ipairs(SOURCES) do selected[source]=true end
+      end
+      selected[key]=not on or nil
+      filters.sources=selected
+      if not on and count==#SOURCES-1 then filters.sources=nil end
+      resetResults()
     end,label)
     b.codexOn=on
   end
+  line(count.." of "..#SOURCES.." selected",left+14,y+229,leftWidth-28,"small",count>0 and C.dim or C.gold)
 
   local inner=right+14
   local half=math.floor((rightWidth-36)/2)
@@ -456,7 +477,17 @@ end
 
 local function filterSummary()
   local tags={}
-  if filters.source~="all" then tags[#tags+1]=L.sourceNames[filters.source] or filters.source end
+  if filters.sources then
+    local included,excluded={},{}
+    for _,key in ipairs(SOURCES) do
+      local list=filters.sources[key] and included or excluded
+      list[#list+1]=L.sourceNames[key]
+    end
+    if #excluded==1 then tags[#tags+1]=excluded[1].." excluded"
+    elseif #included==0 then tags[#tags+1]="No sources selected"
+    elseif #included<=2 then tags[#tags+1]=table.concat(included," + ")
+    else tags[#tags+1]=#included.." source types selected" end
+  end
   if filters.style~="all" then tags[#tags+1]=STYLES[filters.style] end
   for _,key in ipairs({"zone","dungeon","profession"}) do
     if filters[key] and filters[key]~="" then
@@ -666,8 +697,13 @@ local function browse(y,ctx)
   if page.total==0 then
     U.surface(12,y,544,90,C.panel,C.edgeSoft)
     text("No matching items",y+14,"body",C.gold,24,512)
-    text("No matching gear with a source at this level.",y+41,"small",C.dim,24,512)
-    button("Clear search and filters",312,y+56,220,resetFilters)
+    if filters.sources and next(filters.sources)==nil then
+      text("No acquisition sources selected.",y+41,"small",C.dim,24,512)
+      button("Choose sources",312,y+56,220,openFilters,true)
+    else
+      text("No matching gear with these filters at this level.",y+41,"small",C.dim,24,512)
+      button("Clear search and filters",312,y+56,220,resetFilters)
+    end
     U.surface(SIDE,top,WIDTH-SIDE-12,124,C.panel,C.edgeSoft)
     text("Item preview",top+16,"head",C.gold,SIDE+14,246)
     text("Choose a result to see how it compares and where to get it.",top+49,"body",C.dim,SIDE+14,246)
