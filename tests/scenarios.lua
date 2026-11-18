@@ -11324,8 +11324,20 @@ function S.lootTracker()
   if C_Map and C_Map.SetUserWaypoint then
     click(win(),"Map Cured Staghide Leggings")
     check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482,"the journal pins the source shown on the card")
+    check(not OpenWorldMap or MOCK.openedMap==2482,"mouse users still get the destination map")
     click(win(),"Clear loot map target")
     check(not MOCK.userWaypoint,"clearing the pin leaves the tracked item available")
+    if OpenWorldMap and InputUtil then
+      MOCK.blockControllerMap,MOCK.gamepadUI,MOCK.openedMap=true,true,nil
+      click(LevelingCodexLootTracker,"Map loot target Cured Staghide Leggings")
+      check(not chatHas("SetPreferredGamepadInteractTarget") and not MOCK.openedMap,
+        "the tracked reward does not open Blizzard's protected controller map")
+      check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482 and MOCK.superTracked,
+        "the controller action still sets and tracks the reward waypoint")
+      check(chatHas("Open your world map"),"the tracker tells controller users how to see the pin")
+      click(LevelingCodexLootTracker,"Clear loot map")
+      MOCK.blockControllerMap,MOCK.gamepadUI=nil,nil
+    end
   end
   click(LevelingCodexLootTracker,"Loot target Cured Staghide Leggings")
   check(questText(win(),"Starts with Kala'th") and questText(win(),"Source requires level 54"),

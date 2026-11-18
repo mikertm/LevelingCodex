@@ -121,8 +121,13 @@ function ChatFrameAddMessageEventFilter(event, filter)
   MOCK.chatFilters[event] = filter
 end
 function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
--- The world map: OpenWorldMap records the map it opened.
-function OpenWorldMap(map) MOCK.openedMap = map end
+-- Forever can block the map's controller focus change when an addon opens it.
+function OpenWorldMap(map)
+  MOCK.openedMap = map
+  if MOCK.blockControllerMap and (MOCK.gamepadUI or MOCK.gamepad) then
+    MOCK.event("ADDON_ACTION_BLOCKED", "LevelingCodex", "SetPreferredGamepadInteractTarget()")
+  end
+end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
   GetMapArtLayers = function(id)

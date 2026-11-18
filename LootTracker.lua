@@ -97,7 +97,7 @@ local function make()
     local name=label(open,53,7,224,"GameFontHighlight",INK)
     local source=label(open,53,25,224,"GameFontHighlightSmall",GOLD)
     local place=label(open,53,42,224,"GameFontHighlightSmall",DIM)
-    local map=button(row,WIDTH-106,36,40,18,"Map","Open this target's source location.")
+    local map=button(row,WIDTH-106,36,40,18,"Map","Pin this target's source location.")
     map:SetFrameLevel(open:GetFrameLevel()+1)
     local remove=button(row,WIDTH-60,18,24,23,"X","Remove this target from your list.")
     rows[i]={frame=row,open=open,map=map,remove=remove,icon=icon,name=name,source=source,place=place,stripe=stripe,rim=rim,y=y}

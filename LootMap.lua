@@ -12,9 +12,14 @@ local function showOnMap(s,sourceID)
   if not ok then return false,"The game could not set this waypoint" end
   target={sourceID=sourceID,map=s.map,x=s.x,y=s.y,label=s.name,kind=s.locationKind or "source"}
   L.call(C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint,true)
-  if type(OpenWorldMap)=="function" then L.call(OpenWorldMap,s.map)
-  elseif WorldMapFrame then L.call(WorldMapFrame.Show,WorldMapFrame);L.call(WorldMapFrame.SetMapID,WorldMapFrame,s.map) end
+  local controller=ns.gamepad and ns.gamepad.inUse()
+  -- Opening the map in controller mode can taint Blizzard's protected focus change.
+  if not controller then
+    if type(OpenWorldMap)=="function" then L.call(OpenWorldMap,s.map)
+    elseif WorldMapFrame then L.call(WorldMapFrame.Show,WorldMapFrame);L.call(WorldMapFrame.SetMapID,WorldMapFrame,s.map) end
+  end
   if L.refreshTracker then L.refreshTracker() end
+  if controller then return true,"Pin set. Open your world map." end
   return true,"Mapped "..(s.locationKind=="entrance" and "entrance: " or "")..(s.name or "loot source")
 end
 function L.showSourceOnMap(sourceID)
