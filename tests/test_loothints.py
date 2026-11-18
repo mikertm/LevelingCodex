@@ -29,6 +29,7 @@ class LootHintTests(unittest.TestCase):
         lua=LuaRuntime(unpack_returned_tuples=True)
         lua.execute('''
           ns={loot={version=1,call=function(f,...) if f then return f(...) end end,
+            context=function() return {} end,catalogRank=function() end,
             labels={upgrade="Upgrade"},item=function(ref) return {id=1,key=ref,name="Item",slot="INVTYPE_CHEST",classID=4} end,
             compare=function() return {verdict="upgrade",delta=3,percent=5,confidence="complete"} end},
             db=function() return {} end,plain=tostring}

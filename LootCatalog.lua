@@ -9,6 +9,55 @@ local CATEGORY_TYPES={
   INVTYPE_WEAPONOFFHAND={"INVTYPE_WEAPON","INVTYPE_WEAPONOFFHAND","INVTYPE_SHIELD","INVTYPE_HOLDABLE"},
   INVTYPE_RANGED={"INVTYPE_RANGED","INVTYPE_RANGEDRIGHT","INVTYPE_THROWN"},
 }
+local RANK_CATEGORY={}
+for group,types in pairs(CATEGORY_TYPES) do
+  if group~="INVTYPE_WEAPONOFFHAND" then
+    for _,kind in ipairs(types) do RANK_CATEGORY[kind]=group end
+  end
+end
+RANK_CATEGORY.INVTYPE_SHIELD="INVTYPE_WEAPONOFFHAND"
+RANK_CATEGORY.INVTYPE_HOLDABLE="INVTYPE_WEAPONOFFHAND"
+
+local rankVersion,rankScores
+local function availableForRank(item,data,ctx)
+  if (item.requiredLevel or 0)>ctx.level then return false end
+  local routes=item.sourceIDs or {}
+  if item.tradable or #routes==0 then return true end
+  for _,id in ipairs(routes) do
+    local source=data.sources[id]
+    if source and (source.requiredLevel or 0)<=ctx.level
+      and (not source.faction or source.faction=="All" or source.faction==ctx.faction) then return true end
+  end
+  return false
+end
+function L.catalogRank(item,ctx,result)
+  local data=ns.lootData
+  if not (data and data.items[item.id] and item.slot and ctx.profile
+    and result.confidence=="complete" and type(result.delta)=="number") then return end
+  if not availableForRank(data.items[item.id],data,ctx) then return end
+  if rankVersion~=L.version then rankVersion=L.version;rankScores={} end
+  local category=RANK_CATEGORY[item.slot] or item.slot
+  local key=ctx.profile.key.."/"..category
+  local scores=rankScores[key]
+  if not scores then
+    scores={}
+    for _,kind in ipairs(CATEGORY_TYPES[category] or {category}) do
+      for _,id in ipairs(data.bySlot[kind] or {}) do
+        local peer=data.items[id]
+        if availableForRank(peer,data,ctx) then
+          local comparison=L.compare(peer,ctx)
+          if comparison.confidence=="complete" then scores[id]=comparison.delta end
+        end
+      end
+    end
+    rankScores[key]=scores
+  end
+  local rank=1
+  for id,delta in pairs(scores) do
+    if id~=item.id and delta>result.delta+0.001 then rank=rank+1 end
+  end
+  return rank
+end
 local function sourceAllowed(s,f,c)
   if f.accessLevel and (s.requiredLevel or 0)>f.accessLevel then return false end
   if s.faction and s.faction~="All" and s.faction~=c.faction then return false end
@@ -31,6 +80,28 @@ function L.sources(id,filters,ctx)
   end
   table.sort(out,function(a,b) return a.id<b.id end)
   return out
+end
+local ROUTE_ORDER={quest=1,vendor=2,craft=3,reputation=4,boss=5,rare=6,creature=7,
+  object=8,dungeonTrash=9,raidTrash=10,pvp=11,world=12}
+function L.targetSource(target,ctx)
+  local data=ns.lootData
+  if target.sourceID then
+    local source=data and data.sources[target.sourceID]
+    return source and source.item==target.id and source or nil,0
+  end
+  ctx=ctx or L.context()
+  local available=L.sources(target.id,{accessLevel=ctx.level},ctx)
+  local sources=#available>0 and available or L.sources(target.id,nil,ctx)
+  local best
+  for _,source in ipairs(sources) do
+    if not best or (ROUTE_ORDER[source.type] or 99)<(ROUTE_ORDER[best.type] or 99) then best=source end
+  end
+  return best,math.max(0,#sources-1)
+end
+
+function L.sourceLocation(source)
+  local profession=source.profession
+  return source.dungeon or source.zone or (profession and profession:sub(1,1)..profession:sub(2):lower())
 end
 function L.candidates(filters,ctx,offset,limit)
   local data=ns.lootData or {}; local f=filters or {}; ctx=ctx or L.context()

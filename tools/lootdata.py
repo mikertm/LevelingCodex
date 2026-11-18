@@ -240,6 +240,17 @@ def main():
     return bool(errors)
 
 
+def apply_overrides(ref, overrides):
+    for key, patch in overrides.get('items', {}).items():
+        ref['items'][key].update(patch)
+    for key, patch in overrides.get('sources', {}).items():
+        source = ref['sources'].setdefault(key, {'id': key})
+        source.update(patch)
+        sources = ref['items'][str(source['item'])]['sourceIDs']
+        if key not in sources:
+            sources.append(key)
+
+
 def build_command(args):
     cache = ROOT / 'tools/.cache/loot' / (args.build or json.loads((ROOT/'tools/reference/forever.json').read_text())['build'])
     if args.command == 'fetch':
@@ -270,8 +281,7 @@ def build_command(args):
     add_entrances(ref, load_lua_global(ROUTES, 'LevelingCodexQuests'))
     overrides = ROOT/'tools/reference/loot-overrides.json'
     if overrides.exists():
-        for key, patch in json.loads(overrides.read_text()).get('items', {}).items():
-            ref['items'][key].update(patch)
+        apply_overrides(ref, json.loads(overrides.read_text(encoding='utf-8')))
     errors = validate(ref)
     if errors:
         raise SystemExit('\n'.join(errors[:20]))

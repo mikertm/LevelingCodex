@@ -7,22 +7,38 @@ local SCORE_COLORS={
   upgrade={0.67,0.90,0.50}, downgrade={1.00,0.62,0.55},
   cannotEquip={1.00,0.62,0.55}, sidegrade={0.88,0.86,0.70},
 }
+local function scoreLine(item,ctx,r)
+  if r.confidence=="complete" then
+    local score=r.percent and string.format("%+.1f%% gear score",r.percent) or string.format("%+.1f gear score",r.delta)
+    local rank=L.catalogRank(item,ctx,r)
+    return rank and string.format("Rank #%d | %s",rank,score) or score
+  end
+  if r.verdict=="cannotEquip" then return "Cannot equip" end
+  if r.verdict=="loading" then return "Loading score" end
+  return "Score unavailable"
+end
 function L.annotate(tip,ref)
-  if ns.db().noLootHints or not tip or not ref then return end
+  local db=ns.db()
+  if db.noLootHints or not tip or not ref then return end
   local item=L.item(ref);if not item then return end
   if item.classID and item.classID~=2 and item.classID~=4 then return end
   -- Advice belongs to this native tooltip build, not the loot cache version. Async
   -- data events must not duplicate shared content; the client's clear/hide hooks reset it.
   local key=item.key
   if tip.codexLootKey==key then return end
-  local r=L.compare(item);tip.codexLootKey=key;tip.codexLootRef=ref
-  local score="Score unavailable"
-  if r.confidence=="complete" then
-    score=r.percent and string.format("%+.1f%% gear score",r.percent) or string.format("%.1f gear score",r.score)
-  elseif r.verdict=="cannotEquip" then score="Cannot equip"
-  elseif r.verdict=="loading" then score="Loading score" end
+  local ctx=L.context()
+  local r=L.compare(item,ctx);tip.codexLootKey=key;tip.codexLootRef=ref
   local color=SCORE_COLORS[r.verdict] or {0.74,0.80,0.84}
-  tip:AddLine(SCORE_ICON.."Codex: "..score,color[1],color[2],color[3])
+  tip:AddLine(SCORE_ICON.."Codex: "..scoreLine(item,ctx,r),color[1],color[2],color[3])
+  if db.lootTooltipProfiles and ctx.profile then
+    for _,path in ipairs((ns.TALENT_PATHS or {})[ctx.class] or {}) do
+      if path.key~=ctx.profile.key then
+        local other=L.context({profileKey=path.key})
+        local alternate=L.compare(item,other)
+        tip:AddLine(ns.plain(other.profile.label)..": "..scoreLine(item,other,alternate),0.74,0.80,0.84)
+      end
+    end
+  end
 end
 
 function L.showItemTooltip(owner,ref,anchor)

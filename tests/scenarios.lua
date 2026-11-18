@@ -10905,7 +10905,8 @@ end
 function S.lootTab()
   lootSetup()
   for _,name in ipairs({"Compare","Tracked","Profiles","Upgrades"}) do click(win(),name) end
-  check(questText(win(),"Estimated gear score"),"loot score is clearly labeled")
+  check(questText(win(),"Level 30") and questText(win(),"Scoring profile") and questText(win(),"0 active"),
+    "the Loot header shows level context, scoring profile, and active targets")
   MOCK.equipped[5]="item:900002"
   if MOCK.event("PLAYER_EQUIPMENT_CHANGED",5)==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
   MOCK.advance(0.2)
@@ -10956,6 +10957,7 @@ function S.lootGraphics()
 end
 function S.lootCardViews()
   lootSetup();click(win(),"Compare")
+  click(win(),"Equipped")
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
   local chest=findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
   check(chest and chest:GetWidth()<400 and chest:GetHeight()>=44,"equipment is browsed in readable item cards")
@@ -10972,14 +10974,14 @@ function S.lootCardViews()
     MOCK.event("BAG_UPDATE_DELAYED");MOCK.advance(0.2)
     click(win(),"Next items")
     check(findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag cards remain reachable beyond the first page")
-    click(win(),"Weapons")
     check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
-      and not findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"equipment groups select the right items and reset paging")
+      and findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"different kinds of gear can be compared from the same bag view")
+    local filter=LevelingCodexLootInventorySearch
+    filter:SetText("Blade");filter:GetScript("OnEnterPressed")(filter)
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and not findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag filtering finds items and resets paging")
   end
-  click(win(),"Equipped");click(win(),"Weapons")
-  check(questText(win(),"No equipped weapons"),"empty equipment groups are explained")
-  click(win(),"Armor")
-  click(win(),"Profiles")
+  click(win(),"Scoring settings")
   local protection=findButton(win(),function(label) return label=="Protection" end)
   check(protection and protection:GetWidth()<300 and protection:GetHeight()>=80,"specializations are distinct illustrated choices")
   click(win(),"Arms")
@@ -10994,6 +10996,11 @@ function S.lootDetailCards()
   local edit=LevelingCodexLootItem
   edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  click(win(),"Full comparison")
+  click(win(),"Upgrades");click(win(),"Browse Chest");click(win(),"Compare")
+  check(findButton(win(),function(label) return label=="Back to items" end)
+    and questText(win(),canRead and "Better Vest" or "Item 900002"),
+    "browsing upgrades preserves the selected comparison and its detail view")
   if canRead then
     check(questText(win(),"Equipped: 10") and questText(win(),"New: 100"),"stat cards show independently known before and after values")
     local strength=findButton(win(),function(label) return label=="Strength comparison" end)
@@ -11133,10 +11140,17 @@ function S.lootCompareVerdicts()
   check(edit,"item link input exists")
   edit:SetText("900002"); edit:GetScript("OnEnterPressed")(edit)
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
-  check(questText(win(),canRead and "Upgrade (" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
-  click(win(),"Gear / bags")
+  check(questText(win(),canRead and "Estimated gear score" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
+  click(win(),"Equipped")
+  check(LevelingCodexLootItem:IsShown(),"item input stays visible after comparing")
   click(win(),"Chest: "..(canRead and "Old Vest" or "Item 900001"))
-  check(findButton(win(),function(label) return label=="Track this item" end),"another equipped item can be checked without reopening Loot")
+  check(findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+    and questText(win(),"Equipped baseline") and questText(win(),"Selected item"),
+    "one click compares another item beside the equipment picker")
+  click(win(),"Planning")
+  check(LevelingCodexLootPreviewLevel:IsShown(),"planning controls are still reachable")
+  click(win(),"Use live character")
+  check(not LevelingCodexLootPreviewLevel:IsShown(),"live mode closes the planning controls")
   edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
   click(win(),"Track this item"); click(win(),"Tracked")
   check(findButton(win(),function(label) return label:find(" - tracked",1,true) and (label:find("Better Vest",1,true) or label:find("900002",1,true)) end),"tracked item is listed")
@@ -11152,7 +11166,7 @@ function S.lootTracker()
   S.lootCompareVerdicts();MOCK.advance(0.5)
   check(_G.LevelingCodexLootTracker and LevelingCodexLootTracker:IsShown(),"tracked loot opens the optional tracker")
   check(LevelingCodexLootTracker:GetHeight()<160,"a single target keeps the floating tracker compact")
-  check(questText(LevelingCodexLootTracker,"Choose a source"),"the tracker explains a target with no selected source")
+  check(questText(LevelingCodexLootTracker,"Source unverified"),"a target without verified sources explains what's missing")
   check(not findButton(LevelingCodexLootTracker,function(label) return label=="Clear loot map" end),"a map clear action only appears for an active loot waypoint")
   local target=findButton(LevelingCodexLootTracker,function(label) return label:find("^Loot target ") end)
   check(target,"the tracked item has a hover target")
@@ -11161,6 +11175,20 @@ function S.lootTracker()
   check(GameTooltip:IsOwned(target) and link=="item:900002","hovering a tracked item opens its native stat tooltip")
   MOCK.fire(target,"OnLeave")
   check(not GameTooltip:IsShown(),"the tracker closes its own tooltip on leave")
+  slash("loot");click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Tailoring: Red Linen Robe"),"an item-only target shows a known recipe source")
+  click(LevelingCodexLootTracker,"Loot target Red Linen Robe")
+  check(questText(win(),"Bolt of Linen Cloth"),"the tracker opens the route it displays")
+  edit:SetText("276339");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Prey and Predator") and questText(LevelingCodexLootTracker,"Mount Hyjal"),
+    "the tracker shows the quest and zone even when the source is above the player's level")
+  click(LevelingCodexLootTracker,"Loot target Cured Staghide Leggings")
+  check(questText(win(),"Starts with Kala'th") and questText(win(),"Source requires level 54"),
+    "the shown quest route opens with its giver and availability")
   check(not MOCK.questRewarded,"loot guidance never selects a reward")
 end
 function S.lootTooltips()
@@ -11174,6 +11202,16 @@ function S.lootTooltips()
   count=0
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"reused tooltip has one current annotation")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#(GameTooltip._lines or {})==1 and GameTooltip._lines[1]:find("Rank #",1,true),
+    "a verified catalog comparison has rank and score on one line")
+  click(win(),"Scoring settings")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines>1 and GameTooltip._lines[2]:find("Arms:",1,true),"other profile ranks are opt-in")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines==1,"the tooltip returns to one line when other profiles are disabled")
   check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
 end
 function S.lootTooltipStaysOpen()

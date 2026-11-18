@@ -33,7 +33,7 @@
       "dungeonTrash": 6423,
       "object": 15988,
       "pvp": 441,
-      "quest": 1842,
+      "quest": 1843,
       "raidTrash": 1053,
       "rare": 133,
       "reputation": 247,
@@ -2716,7 +2716,7 @@
     },
     "missingLocations": 9641,
     "missingStats": 2319,
-    "sources": 34200,
+    "sources": 34201,
     "unknownRestrictions": 656,
     "unmodeledEffects": 3091
   },

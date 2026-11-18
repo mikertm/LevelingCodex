@@ -56,16 +56,16 @@ def build():
     for y in range(128):
         for x in range(1024):
             sheen = 1 - abs(y - 44) / 92
-            glow = 1 - abs(x - 310) / 714
+            glow = max(0, 1 - abs(x - 245) / 540)
             grain = rng.randrange(-2, 3)
-            p[x, y] = (20 + int(12*sheen) + grain, 36 + int(23*sheen + 9*glow) + grain,
-                       38 + int(26*sheen + 13*glow) + grain, 255)
+            p[x, y] = (16 + int(8*sheen) + grain, 28 + int(18*sheen + 9*glow) + grain,
+                       33 + int(21*sheen + 11*glow) + grain, 255)
     ink = Image.new("RGBA", ribbon.size)
     d = ImageDraw.Draw(ink)
-    for inset, alpha in [(5, 140), (10, 60)]:
+    for inset, alpha in [(5, 100), (10, 42)]:
         d.rounded_rectangle((inset, inset, 1023-inset, 127-inset), radius=12,
                             outline=(202, 167, 98, alpha), width=1)
-    cx, cy = 952, 63
+    cx, cy = 498, 63
     d.ellipse((cx-39, cy-39, cx+39, cy+39), outline=(214, 184, 119, 105), width=2)
     d.ellipse((cx-32, cy-32, cx+32, cy+32), outline=(214, 184, 119, 45), width=1)
     d.polygon([(cx-18,cy-17),(cx+18,cy-17),(cx+15,cy+9),(cx,cy+22),(cx-15,cy+9)],

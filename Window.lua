@@ -1984,6 +1984,7 @@ end
 function ns.rebuildForTheme()
   ns.useTheme(ns.themeName())
   ns.questRefresh()
+  if ns.loot then ns.loot.refreshTracker() end
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
