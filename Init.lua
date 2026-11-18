@@ -177,6 +177,8 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     ns.say("minimap button " .. (db.noMinimap and "hidden." or "shown."))
   elseif cmd == "quests" then
     ns.openTab("quests")
+  elseif cmd == "loot" then
+    ns.loot.open()
   elseif cmd == "record" then
     ns.questRecord(rest)
   elseif cmd == "reset" then
@@ -220,6 +222,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.trackingDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.loot and ns.loot.debugLines() or {}) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end

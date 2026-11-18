@@ -1386,6 +1386,7 @@ local function onRoute(map, x, y)
 end
 
 local function updateMapPin()
+  if ns.loot and ns.loot.mapTarget and ns.loot.mapTarget() then return end
   local M = C_Map
   if type(M) ~= "table" or type(M.SetUserWaypoint) ~= "function" then return end
   local row = viewer and viewer:IsShown() and Q.current()
@@ -1451,6 +1452,7 @@ end
 
 -- Quests tab > Show on map: the world map at the current step's spot.
 function ns.showQuestStepOnMap()
+  if ns.loot and ns.loot.clearMapTarget then ns.loot.clearMapTarget() end
   local row = Q.current()
   local spot = row and Q.waypoint(row.step)
   local map = spot and spot.map

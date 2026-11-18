@@ -8,6 +8,19 @@ Built from **The Leveling Codex** guides — one researched leveling spec per cl
 
 ## Features
 
+### Loot and gear upgrades
+
+Find equipment by slot, level, zone, dungeon, profession and source. Compare an item link, bag
+item or reward against your equipped gear, inspect stat tradeoffs, map its source and track it.
+Loot profiles follow your talent path, with editable weights and import/export codes.
+
+Item tooltip advice, a separate gear-upgrade reward marker, enchant suggestions and an optional
+target tracker use the same comparison rules. Vendor-value coins stay independent. Notifications
+are off by default, and the tab supports keyboard and controller navigation.
+
+Gear scores are advisory estimates. Unknown stats, requirements, effects and locations remain
+clearly labeled. A percentage is an estimated gear-score change, not a promised damage gain.
+
 ### Step-by-step quest guide, levels 1-60
 A small step window tells you exactly what to do next — accept, kill, loot, turn in, fly, hearth, train — with an arrow that points the way. It reads your quest log, so it always picks up where you are.
 
