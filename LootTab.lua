@@ -36,7 +36,7 @@ local inventoryMode,inventoryPage,inventorySearch="Bags",0,""
 local planningFields
 local sharing=false
 local targetFilter,targetPage="all",0
-local PAGE=4
+local PAGE=5
 local WIDTH,SIDE=870,580
 local browseItem
 local SLOTS={
@@ -225,12 +225,12 @@ local function baseline(y,ctx)
     names[#names+1]=#slots>1 and (L.slotNames[n]..": "..name) or name
   end
   local current=ctx.snapshot.slots[slotNumber]
-  itemIcon(current,26,y+11,24,"Currently equipped",nil,
+  itemIcon(current,26,y+9,24,"Currently equipped",nil,
     "Interface\\PaperDoll\\UI-PaperDoll-Slot-"..(SLOT_ART[slotNumber] or "Chest"))
-  line("Currently equipped",60,y+8,235,"small",C.dim)
+  line("Currently equipped",60,y+5,235,"small",C.dim)
   local weapon=slotNumber>=16 and filters.slot~="INVTYPE_RELIC"
-  line(table.concat(names,"  /  "),60,y+24,weapon and 332 or 476,"body",current and quality(current.quality) or C.light)
-  local equipped=action(12,y,weapon and 384 or 544,47,"Currently equipped",ns.plain(table.concat(names,"\n")))
+  line(table.concat(names,"  /  "),60,y+20,weapon and 332 or 476,"body",current and quality(current.quality) or C.light)
+  local equipped=action(12,y,weapon and 384 or 544,42,"Currently equipped",ns.plain(table.concat(names,"\n")))
   if current and #slots==1 then itemTip(equipped,current) end
 end
 
@@ -538,19 +538,20 @@ local function previewItem(y,row,ctx)
   local x,w=SIDE,WIDTH-SIDE-12
   local item=L.item(row.item.id) or row.item
   local r=L.compare(item,ctx,nil,filters.weaponSlot)
-  U.rect(x,y,3,75,C.accent,"border",1)
-  line("Selected item",x+14,y+12,w-28,"small",C.dim)
-  itemIcon(item,x+14,y+36,40,item.name,r.reason)
-  local nameBottom=text(item.name,y+35,"body",quality(item.quality),x+66,w-80)
-  local imageHit=action(x+10,y+31,w-20,50,item.name,r.reason)
+  U.rect(x,y,3,64,C.accent,"border",1)
+  itemIcon(item,x+14,y+14,38,item.name,r.reason)
+  line("Selected item",x+64,y+11,w-78,"small",C.dim)
+  local nameBottom=text(item.name,y+27,"body",quality(item.quality),x+64,w-78)
+  local imageHit=action(x+10,y+8,w-20,math.max(48,nameBottom-y-10),item.name,r.reason)
   itemTip(imageHit,item,r.reason)
-  y=math.max(y+87,nameBottom+6)
+  y=math.max(y+64,nameBottom+3)
   local verdict,gain,color=upgradeBadge(r,row.futureLevel)
-  U.surface(x+14,y,w-28,30,C.background,C.edgeSoft)
-  U.rect(x+14,y+1,2,28,color,"border",1)
-  line(verdict,x+24,y+8,125,"body",color)
-  if gain then line(gain,x+151,y+8,w-177,"body",color,"RIGHT") end
-  y=text(r.reason,y+36,"small",C.dim,x+14,w-28)
+  U.surface(x+14,y,w-28,28,C.background,C.edgeSoft)
+  U.rect(x+14,y+1,2,26,color,"border",1)
+  line(verdict,x+24,y+6,143,"body",color)
+  if gain then line(gain,x+174,y+6,w-198,"body",color,"RIGHT") end
+  y=y+34
+  if r.reason and r.confidence~="complete" then y=text(r.reason,y,"small",C.dim,x+14,w-28) end
   if item.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
     y=text("Uses both hands and prevents a shield.",y,"small",C.gold,x+14,w-28)
   end
@@ -561,25 +562,28 @@ local function previewItem(y,row,ctx)
     message=err or (key and "Target tracked")
     refresh()
   end)
-  y=y+37
+  y=y+35
 
   local route=row.sources[1]
   local sourceTop=y
-  line("Where to get it",x+25,y+9,w-50,"small",C.dim)
+  line("Where to get it",x+25,y+9,w-50,"body",C.light)
   if route then
     local kind,name,place=sourceDetails(route)
     local count=#row.sources-1
-    U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",x+25,y+31,28,kind,name):EnableMouse(false)
-    line(kind..(count>0 and (" / +"..count.." more") or ""),x+63,y+28,w-86,"small",C.dim)
-    y=text(name,y+44,"body",C.gold,x+63,w-86)
+    U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",x+25,y+34,27,kind,name):EnableMouse(false)
+    line(kind..(count>0 and (" / +"..count.." more") or ""),x+62,y+31,w-85,"small",C.dim)
+    y=math.max(y+65,text(name,y+45,"body",C.gold,x+62,w-85))
+    local mapContact
     if route.quest then
       local quest,step,steps,complete=nextQuest(route,ctx)
       local where=pickup(route,quest,ctx)
+      if (quest or (#steps==0 and not questDone(route.quest,ctx))) and canMap(where)
+        and C_Map and C_Map.SetUserWaypoint then mapContact=where end
       if quest and (#steps>1 or where) then
         U.rect(x+25,y+2,w-50,1,C.edgeSoft,"border")
         local label=complete and #steps>1 and (step==1 and "Start the chain" or "Next quest") or "Quest pickup"
-        line(label,x+25,y+10,w-50,"small",C.dim)
-        y=text(quest.name,y+27,"body",C.gold,x+25,w-50)
+        line(label,x+25,y+8,w-50,"small",C.dim)
+        y=text(quest.name,y+23,"body",C.gold,x+25,w-50)
         if where then
           y=text(where.name,y-2,"small",C.light,x+25,w-50)
           local location=questPlace(where)
@@ -591,7 +595,16 @@ local function previewItem(y,row,ctx)
       elseif questDone(route.quest,ctx) then y=text("Reward quest completed",y-2,"small",C.green,x+63,w-86)
       elseif place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
     elseif place then y=text(place,y-2,"small",C.dim,x+63,w-86) end
-    button(route.quest and "View quest route" or "View sources",x+25,y+1,w-50,function() choose(item.id,route.id,"Sources") end,true).codexLabel="View sources"
+    local routeWidth=mapContact and math.floor((w-58)/2) or w-50
+    button(route.quest and "View quest route" or "View sources",x+25,y+1,routeWidth,function()
+      choose(item.id,route.id,"Sources")
+    end,true).codexLabel="View sources"
+    if mapContact then
+      button("Map pickup",x+33+routeWidth,y+1,routeWidth,function()
+        local _,why=L.showQuestOnMap(route.id,mapContact)
+        message=why;refresh()
+      end).codexLabel="Map preview pickup"
+    end
     y=y+25
   else
     y=text(item.tradable and "Tradable. Source unverified." or "Source unverified",y+31,"body",C.dim,x+25,w-50)
@@ -608,28 +621,29 @@ local function browse(y,ctx)
   line(slotTitle().." upgrades",132,y+1,272,"head",C.gold)
   button("Change slot",418,y,138,function() view="slots";refresh(true) end)
   y=y+30
-  U.surface(12,y,544,47,C.panel,C.edgeSoft)
+  U.surface(12,y,544,42,C.panel,C.edgeSoft)
   baseline(y,ctx)
   if hasWeaponFilters() then
     local style=L.weaponStyle(filters,ctx)
     local label=filters.weaponType
     if label and style~="all" then label=(style=="shield" and "1H " or "2H ")..label
     elseif not label then label=style=="all" and "Any weapon type" or handednessLabel(style,ctx) end
-    local wep=button(label.." >",403,y+13,143,function() view="weapons";refresh(true) end,style~="all" or filters.weaponType~=nil,
+    local wep=button(label.." >",403,y+10,143,function() view="weapons";refresh(true) end,style~="all" or filters.weaponType~=nil,
       "Filter by handedness and weapon type.")
     wep.codexLabel="Weapon filters"
     wep:SetFrameLevel(wep:GetFrameLevel()+1)
   end
-  y=y+56
+  y=y+50
 
   local tags=filterSummary()
-  U.entry("LootSearch",17,y,335,filters.search,function(v) filters.search=v end,resetResults,80)
+  U.entry("LootSearch",17,y,331,filters.search,function(v) filters.search=v end,resetResults,80)
   button("Search",361,y,76,resetResults,false,"Search by item name or ID.")
   local count=#tags+(filters.maxLevel and filters.maxLevel~=ctx.level and 1 or 0)
   local filterLabel=count>0 and ("Filters ("..count..")") or "Filters"
-  local filter=button(filterLabel,449,y,107,function()
+  local function openFilters()
     view="filters";levelDraft,levelError=nil,nil;refresh(true)
-  end,count>0)
+  end
+  local filter=button(filterLabel,449,y,107,openFilters,count>0)
   filter.codexLabel="Filters"
   y=y+29
 
@@ -639,12 +653,16 @@ local function browse(y,ctx)
     offset=math.max(0,math.floor((page.total-1)/PAGE)*PAGE)
     page=L.candidates(filters,ctx,offset,PAGE)
   end
-  line(page.total.." matching items",16,y,139,"small",C.dim)
-  local available="Available by level "..(filters.maxLevel or ctx.level)
-  local summary=#tags>0 and (available.."  /  "..table.concat(tags,"  /  ")) or available
-  line(summary,160,y,392,"small",C.dim,"RIGHT")
-  action(160,y-2,392,18,"Acquisition availability",ns.plain(summary))
-  y=y+18
+  local available="Available by level "..(filters.maxLevel or ctx.level).." >"
+  button(available,12,y,153,openFilters,filters.maxLevel and filters.maxLevel~=ctx.level,
+    "Set the level at which you want to find gear.").codexLabel="Availability filters"
+  line(page.total..(page.total==1 and " matching item" or " matching items"),176,y+3,132,"small",C.dim)
+  if #tags>0 then
+    local summary=table.concat(tags,"  /  ")
+    line(summary,311,y+3,239,"small",C.dim,"RIGHT")
+    action(306,y,250,22,"Active filters",ns.plain(summary),openFilters,"Active filters")
+  end
+  y=y+27
   if page.total==0 then
     U.surface(12,y,544,90,C.panel,C.edgeSoft)
     text("No matching items",y+14,"body",C.gold,24,512)
@@ -660,24 +678,22 @@ local function browse(y,ctx)
   for _,row in ipairs(page.rows) do
     if row.item.id==browseItem then current=row;break end
   end
-  U.rect(12,y,544,23,C.background)
-  U.rect(12,y+21,544,1,C.edgeSoft,"border")
-  line("Item",24,y+4,188,"small",C.dim)
-  line("Acquisition",277,y+4,144,"small",C.dim)
-  line("Comparison",452,y+4,99,"small",C.dim,"CENTER")
-  y=y+25
-  for i,row in ipairs(page.rows) do
+  U.rect(12,y+16,544,1,C.edgeSoft,"border")
+  line("Item and acquisition",21,y,300,"small",C.dim)
+  line("Comparison",447,y,105,"small",C.dim,"CENTER")
+  y=y+19
+  for _,row in ipairs(page.rows) do
     local it,r=row.item,row.result
     local on=current==row
-    U.surface(12,y,544,43,C.panel,C.edgeSoft)
+    U.surface(12,y,544,35,C.panel,on and C.edge or C.edgeSoft)
     if on then
-      U.rect(13,y+1,252,41,C.btnOn)
-      U.rect(12,y,3,43,C.accent,"border",1)
+      U.rect(13,y+1,349,33,C.btnOn)
+      U.rect(12,y,3,35,C.accent,"border",1)
     end
-    itemIcon(it,21,y+6,30,it.name,r.reason)
-    line(it.name,62,y+13,196,"body",quality(it.quality))
+    itemIcon(it,21,y+4,27,it.name,r.reason)
+    line(it.name,58,y+1,299,"body",quality(it.quality))
     local route=row.sources[1]
-    local b=action(12,y,route and 254 or 432,43,it.name,r.reason,function()
+    local b=action(12,y,350,35,it.name,r.reason,function()
       browseItem=it.id;message=nil;refresh()
     end,"Inspect item "..it.id)
     b.codexOn=on
@@ -685,21 +701,19 @@ local function browse(y,ctx)
     if route then
       local kind,name,place=sourceDetails(route)
       local count=#row.sources-1
-      U.surface(270,y+4,174,35,C.btnOff,C.edgeSoft)
-      U.icon(SOURCE_ICONS[route.type] or "inv_misc_map_01",277,y+12,18,kind,nil):EnableMouse(false)
-      line(kind..(count>0 and (" +"..count) or ""),303,y+5,123,"small",C.light)
-      line(name,303,y+22,123,"small",C.dim)
-      line(">",429,y+13,11,"body",C.accent)
-      action(270,y+4,174,35,name,route.quest and "Open the quest route and pickup location." or kind..(place and (" / "..place) or ""),
-        function() browseItem=it.id;choose(it.id,route.id) end,"Sources for item "..it.id)
+      local acquisition=kind~=name and (kind.." / "..name) or name
+      line(acquisition..(count>0 and (" +"..count) or ""),58,y+19,299,"small",C.dim)
+      local shortcut=button("Route >",369,y+6,70,function() browseItem=it.id;choose(it.id,route.id) end,on,
+        name..(place and (" / "..place) or ""))
+      shortcut.codexLabel="Sources for item "..it.id
     else
-      line("Source unverified",277,y+13,160,"small",C.dim)
+      line("Source unverified",58,y+19,299,"small",C.dim)
     end
     local verdict,gain,color=upgradeBadge(r,row.futureLevel)
-    U.rect(451,y+4,99,35,C.background)
-    line(gain or verdict,452,y+(gain and 5 or 13),97,"small",color,"CENTER")
-    if gain then line(verdict,452,y+22,97,"small",C.dim,"CENTER") end
-    y=y+46
+    U.rect(447,y+3,104,29,C.background)
+    line(gain or verdict,449,y+(gain and 2 or 9),100,"small",color,"CENTER")
+    if gain then line(verdict,449,y+17,100,"small",C.dim,"CENTER") end
+    y=y+38
   end
   y=y+5
   if offset>0 then button("Previous loot page",12,y,138,function() offset=math.max(0,offset-PAGE);refresh(true) end) end
@@ -1414,13 +1428,25 @@ end
 local function render()
   palette()
   local ctx=context();local p=ctx.profile
+  local mapPin=L.mapTarget and L.mapTarget()
+  local browseStatus=message and section=="Upgrades" and view=="list" and message
   U.surface(4,6,WIDTH-8,52,Theme.eui and C.panel or C.ribbon,C.edgeSoft)
   if not Theme.eui then U.picture(ART.."loot-ribbon.tga",7,7,WIDTH-12,50) end
   U.rect(4,6,3,52,C.accent,"border")
   U.icon("inv_chest_plate04",16,14,36,"Loot journal",nil)
-  line("Loot journal",65,10,280,"head",C.gold)
+  line("Loot journal",65,10,200,"head",C.gold)
   local class=ctx.class and ctx.class:sub(1,1)..ctx.class:sub(2):lower() or "Character"
-  line((ctx.preview and "Planning / " or "").."Level "..ctx.level.." "..class,65,35,350,"small",C.dim)
+  line((ctx.preview and "Planning / " or "").."Level "..ctx.level.." "..class,65,35,200,"small",C.dim)
+  if browseStatus then
+    local y=mapPin and 11 or 26
+    line(browseStatus,269,y,219,"small",C.gold,"RIGHT")
+    action(269,y-2,219,16,browseStatus,nil)
+  end
+  if mapPin then
+    button("Clear map pin",372,browseStatus and 28 or 21,116,function()
+      L.clearMapTarget();message=nil;refresh()
+    end,false,mapPin.label).codexLabel="Clear loot map target"
+  end
   local count=#L.targets("tracked")
   for _,summary in ipairs({
     {x=WIDTH-370,w=200,icon="inv_misc_book_11",title="Scoring profile",value=p and p.label or "Unavailable",tab="Profiles",label="Scoring settings",
@@ -1449,11 +1475,8 @@ local function render()
     local b=action(x,66,tabWidth,28,label,nil,function() section=label;message=nil;refresh(true) end,label);b.codexOn=on
   end
   local y=106
-  if message then y=text(message,y,"small",C.gold) end
+  if message and not browseStatus then y=text(message,y,"small",C.gold) end
   if not p then return text("Loot profiles are not available for this class.",y,"body",C.dim)+20 end
-  if L.mapTarget and L.mapTarget() then
-    button("Clear loot map target",12,y,260,function() L.clearMapTarget();refresh() end);y=y+32
-  end
   local sideBottom
   if section=="Upgrades" then
     if view=="character" then y=character(y,ctx)

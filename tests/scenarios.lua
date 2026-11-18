@@ -11077,6 +11077,15 @@ function S.lootBrowse()
   clickThroughArtwork(chest)
   check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
   check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
+  local results=0
+  for _,control in ipairs(MOCK.buttons(win())) do
+    if control.codexLabel and control.codexLabel:find("^Inspect item ") then
+      results=results+1
+      check(control:GetWidth()>=320,"the results give item names and their acquisition text more room")
+    end
+  end
+  check(results==5,"five items fit on the first results page")
+  check(findButton(win(),function(label) return label=="Availability filters" end),"the visible level opens the filters directly")
   check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
   click(win(),"Change slot")
   local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
@@ -11086,7 +11095,7 @@ function S.lootBrowse()
   check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
   MOCK.fire(shoulder,"OnLeave")
   click(win(),"Back to results")
-  click(win(),"Filters")
+  click(win(),"Availability filters")
   for _,source in ipairs({"Quest reward","Boss drop","Raid drop","Vendor","Crafted","PvP"}) do
     check(findButton(win(),function(label) return label==source end),source.." is visible when filters open")
   end
@@ -11147,12 +11156,18 @@ function S.lootBrowse()
   local _,_,_,itemX=itemRow:GetPoint(1)
   local _,_,_,routeX=routeRow:GetPoint(1)
   check(itemX+itemRow:GetWidth()<=routeX,"the source shortcut has its own hit area beside the item")
+  check(questText(win(),"Crafted / Tailoring: Red Linen Robe"),"the source stays readable on the item row")
   click(win(),"Sources for item 2572")
   check(questText(win(),"Tailoring: Red Linen Robe") and questText(win(),"Bolt of Linen Cloth")
     and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
   click(win(),"Back to results")
   check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
-  click(win(),"Inspect item 2572");click(win(),"Track this item");click(win(),"Full comparison");click(win(),"Sources")
+  click(win(),"Inspect item 2572")
+  local _,_,_,_,beforeTrack=search:GetPoint(1)
+  click(win(),"Track this item")
+  local _,_,_,_,afterTrack=search:GetPoint(1)
+  check(beforeTrack==afterTrack and questText(win(),"Target tracked"),"tracking feedback keeps the result controls in place")
+  click(win(),"Full comparison");click(win(),"Sources")
   check(questText(win(),"Crafted") and questText(win(),"Track route"),"item details retain the recipe and its track action")
   click(win(),"Back to results")
   search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
@@ -11196,6 +11211,12 @@ function S.lootWeaponRoutes()
     check(questText(win(),"+18.7 DPS"),"the preview shows verified weapon DPS even with uncertain item effects")
   end
   check(questText(win(),"prevents a shield"),"the preview explains the shield trade-off")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map preview pickup")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453 and LevelingCodexLootSearch:IsShown(),
+      "the preview pins the next pickup without leaving the weapon list")
+    click(win(),"Clear loot map target")
+  end
   click(win(),"Sources for item 6976")
   check(questText(win(),"Whirlwind Weapon") and questText(win(),"The Summoning")
     and questText(win(),"The Islander") and questText(win(),"Bath'rah the Windwatcher"),
