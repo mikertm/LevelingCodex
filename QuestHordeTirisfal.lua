@@ -649,7 +649,8 @@ do
   local ucEntrance = B.at("Undercity entrance", 61.8, 65.1, tirisfal)
   local steps = {
     B.action("boat", durotarTower,
-      "Take the zeppelin to Tirisfal Glades from the tower just outside Orgrimmar's south gate. Use Next when you land."),
+      "Take the zeppelin to Tirisfal Glades from the tower just outside Orgrimmar's south gate. Check the guide on landing.",
+      { skipOn = { tirisfal, undercity } }),
   }
   -- In Brill: Johaan (north), Terrence and Linnea on the way south-east, then Hadric's camp.
   local first = { [445] = 1, [96895] = 2, [356] = 3 }

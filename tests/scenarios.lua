@@ -3092,6 +3092,8 @@ function S.questFlightMorbent()
   MOCK.event("QUEST_ACCEPTED", 1, 325)
   local frame = questViewer()
   check(questText(frame, "give him Morbent's Bane"), "the Darkshire guide starts with Sven's turn-in")
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 153, isComplete = true }
+  MOCK.event("QUEST_LOG_UPDATE")
   local nodes = { { "Darkshire, Duskwood", "CURRENT" }, { "Sentinel Hill, Westfall", "REACHABLE" } }
   taxiMap(nodes)
   check(arrowSays("Fly to Sentinel Hill"), "the arrow routes to Sven via Sentinel Hill: " .. arrowCaption())
@@ -4578,6 +4580,57 @@ function S.questWetlandsAfterEarly()
   for _, name in ipairs({ "Razormaw Needling", "Trying Times", "War Banners", "Apprentice's Duties" }) do
     check(not questText(win(), name), name .. " is still on the route, not missed: " .. allText(win()))
   end
+end
+
+function S.questWetlandsHarloPickup()
+  MOCK.race, MOCK.level, MOCK.bind = "Skyborne", 29, "Menethil Harbor"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 10.85, 55.90
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 631 then break end
+        if step.quest and step.quest ~= 472 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - Fall of Dun Modr"), "Harlo's pickup stays available at the harbor after completing the raptor quests: " .. allText(frame))
+  click(frame, "Next")
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "Accept - Fall of Dun Modr"), "Next still skips Harlo's pickup")
+end
+
+function S.questTheramoreArrival()
+  MOCK.race, MOCK.level = "Human", 33
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 5.1, 63.4
+  S.login()
+  slash("quests")
+  clickGuide("Theramore and the Shimmering Flats")
+  local frame = questViewer()
+  check(questText(frame, "Menethil Harbor - Theramore Isle"), "the crossing starts at Menethil")
+  walkTo(1445, 67.5, 51.3)
+  check(questText(frame, "Theramore and the Shimmering Flats") and not questText(frame, "Menethil Harbor - Theramore Isle"),
+    "landing in Theramore continues the selected Shimmering Flats route: " .. allText(frame))
+  slash("quests")
+  clickGuide("Theramore and the Shimmering Flats")
+  check(not questText(frame, "Menethil Harbor - Theramore Isle"), "starting the route at the dock skips the completed crossing")
+end
+
+function S.questBootyBayArrival()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 50
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1413, 63.7, 38.6
+  MOCK.questDone[2873] = true
+  MOCK.questLog = { { questID = 2874, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Booty Bay, Stonard and the Blasted Lands")
+  local frame = questViewer()
+  check(questText(frame, "Ratchet - Booty Bay"), "the delivery route starts on the boat in Ratchet")
+  walkTo(1434, 25.8, 73.1)
+  check(questText(frame, "Turn in - Deliver to MacKinley"), "MacKinley is the next step after docking: " .. allText(frame))
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - Deliver to MacKinley"), "the turn-in stays current without pressing Next")
 end
 
 function S.questStranglethornRoad()

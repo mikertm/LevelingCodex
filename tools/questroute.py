@@ -18,7 +18,7 @@ STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
                "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "items", "skipOn", "maxLevel",
                "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop",
-               "elite"}
+               "elite", "recoverNearby"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -246,6 +246,9 @@ def audit(data, ref, cap=20):
                 for key in ("sticky", "nearest"):
                     if key in step and type(step[key]) is not bool:
                         fail(where, f"{key} must be a boolean")
+                if "recoverNearby" in step and (type(step["recoverNearby"]) is not bool or kind != "accept"
+                                               or step.get("x") is None or section.get("side")):
+                    fail(where, "recoverNearby needs a leveling quest pickup with coordinates")
                 path = step.get("path")
                 if path is not None and not (step.get("map") and isinstance(path, list) and path and all(
                         isinstance(p, list) and len(p) in (2, 3) and coord(p[0]) and coord(p[1])

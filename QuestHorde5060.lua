@@ -172,6 +172,7 @@ end
 -- 50-51: Booty Bay errands, Stonard and the Nethergarde bloodmages.
 do
   local stv, bl = on.stv, on.blasted
+  local mokrash = stv("Mok'rash", 23.2, 72.1)
   need(4502, "Volcanic Activity", 55, 49)
   need(2874, "Deliver to MacKinley", 45, 40, 2873)
   need(580, "Whiskey Slim's Lost Grog", 50, 40)
@@ -202,8 +203,8 @@ do
     "https://www.wowhead.com/forever/zone=4/blasted-lands",
     QUEST_RECORDS,
   }, { "searing-alt", "azshara-alt" }, {
-    action("boat", on.barrens(nil, 63.7, 38.6), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Use Next when you arrive.",
-      { name = "Ratchet - Booty Bay" }),
+    action("boat", on.barrens(nil, 63.7, 38.6), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Check the guide for MacKinley's delivery when it docks.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     finish(2874, stv("\"Sea Wolf\" MacKinley", 27.78, 77.07), "If you carried Stoley's bottle from Tanaris, hand it to MacKinley on the harbour walkway."),
     action("collect", P.kresky,
       "The goblin auction house stands beside MacKinley. If it sells them cheaply, buy the bloodmages' reagents now: 5 Snickerfang Jowls, 6 Blasted Boar Lungs, 6 Scorpok Pincers, 11 Basilisk Brains and 14 Vulture Gizzards, plus 15 Silk Cloth for the Searing Gorge outhouse. Use Next to hunt for them instead.",
@@ -214,17 +215,21 @@ do
     finish(836, P.oglethorpe),
     accept(3721, P.oglethorpe, "With all three robots safe, Oglethorpe gives you a mechanical chicken of your own."),
     finish(3721, P.oglethorpe),
-    withItem(3985, accept(8552, stv(nil, 27.1, 83.1), "Bloodsail pirates on the beaches south of town can drop a Monogrammed Sash. Use it from your bags if you have one.")),
+    action("collect", mokrash, "With a group, kill the elite sea giant Mok'rash northwest of Booty Bay for the Monogrammed Sash.",
+      { item = 3985, name = "Monogrammed Sash", unlessDone = 8552, optional = true }),
+    withItem(3985, accept(8552, mokrash, "Read the sash you looted from Mok'rash.")),
     finish(8552, P.smotts, "Captain Smotts waits on the wooden walkway inside the tunnel into town."),
     accept(8553, P.smotts), finish(8553, P.sprogger, "Sprogger stands right beside him."),
     accept(8554, P.sprogger, "Sprogger knows who took the captain's cutlass: the naga Negolash, out at the old lifeboat."),
-    note(onQuest(action("buy", stv("Nixxrax Fillamug", 27.04, 77.17),
-      "Buy 10 Barbecued Buzzard Wings and 5 Junglevine Wine from Nixxrax Fillamug at the inn. They are the bait for Negolash.",
-      { items = { { 4457, 10 }, { 4595, 5 } } }), 8554), "Vendor not confirmed in the quest data; check in game."),
+    action("collect", P.sprogger, "Bring ten Barbecued Buzzard Wings and five Junglevine Wine for bait. Check the Auction House for the cooked wings and wine.",
+      { items = { { 4457, 10 }, { 4595, 5 } }, name = "Bait for Negolash", ifOnQuest = 8554 }),
     objective(8554, stv("Ruined Lifeboat", 32.48, 81.98),
       "Swim east to the ruined lifeboat on the shore. Set out the wings and wine to call Negolash, then kill him for Smotts' Cutlass.",
       "Smotts' Cutlass"),
-    withItem(4098, accept(594, stv(nil, 32.5, 82.0), "Bottles wash up on these beaches. If you found a Message in a Bottle, use it from your bags.")),
+    action("collect", stv("Half-Buried Bottle", 36.56, 77.09),
+      "Look for the Half-Buried Bottle on the mainland shore west of Jaguero Isle. Open it for the Carefully Folded Note.",
+      { item = 4098, name = "Carefully Folded Note", unlessDone = 594 }),
+    withItem(4098, accept(594, nil, "Read the Carefully Folded Note before swimming to the island.")),
     finish(594, P.poobah, "Princess Poobah sits in a cage on Jaguero Isle, east across the water."),
     accept(630, P.poobah),
     objective(630, stv("King Mukla", 40.95, 83.9), "Clear the gorillas on the isle until King Mukla stands alone, then kill him for the Shackle Key.",
@@ -667,6 +672,8 @@ end
 -- 55-56: Jediga's payments, Shadow Hold, Timbermaw, Donova's Winterfall chain and Everlook.
 do
   local fw, ws = on.felwood, on.winterspring
+  local mauari = ws("Witch Doctor Mau'ari", 61.92, 38.3)
+  local evie = ws("Evie Whirlbrew", 60.75, 37.78)
   need(3542, "Delivery to Andron Gant", 52, 45, 3517)
   need(4506, "Corrupted Sabers", 54, 49, 4505)
   need(4521, "Wild Guardians", 56, 52)
@@ -687,6 +694,8 @@ do
   need(5087, "Winterfall Runners", 57, 52, 5086)
   need(5121, "High Chief Winterfall", 59, 52, 5087)
   need(4842, "Strange Sources", 56, 51, 980)
+  need(969, "Luck Be With You", 60, 55)
+  need(975, "Cache of Mau'ari", 60, 55, 969)
   need(3912, "Meet at the Grave", 52, 47, 3909)
   need(3913, "A Grave Situation", 52, 47, 3912)
   need(3914, "Linken's Sword", 52, 47, 3913)
@@ -737,6 +746,7 @@ do
     action("sethearth", P.vizzie, "Bind at the Everlook inn.", EVERLOOK_BIND),
     accept(3783, P.umi, "Umi Rumplesnicker wants thick yeti fur."),
     accept(5054, P.storm, "Storm Shadowhoof wants Ursius, a great Shardtooth bear, dead."),
+    accept(92859, evie, "If heading to Mount Hyjal, ask Evie for a potion to help you get past the demons in Darkwhisper Gorge."),
     objective(3783, ws(nil, 67.0, 43.0), "Ice Thistle yetis live in the hills east of Everlook.", "10 Thick Yeti Fur"),
     objective(4521, ws(nil, 57.0, 33.6), "Raging Owlbeasts roam the hills north-west of Everlook; Ragged Owlbeasts live along the road to the west.",
       "15 Raging Owlbeast", "15 Ragged Owlbeast"),
@@ -751,11 +761,18 @@ do
     finish(3914, P.linken, "Linken sits at the back of the refuge."), accept(3941, P.linken),
     finish(3941, P.collie, "J.D. Collie works in the cave."), accept(3942, P.collie, "Collie sends you to Eridan Bluewind in Felwood."),
     onQuest(action("hearth", P.vizzie, "Hearth to Everlook.", EVERLOOK_BIND), 3942),
+    accept(969, mauari, "Ask Mau'ari about shards before riding south through Frostwhisper Gorge."),
     objective(5055, on.winterspring("Brumeran", 62.54, 57.90), "Ride south into the valleys below Everlook. Brumeran roams there.", "Brumeran"),
+    objective(969, ws(nil, 62.8, 67.8), "Gather the shards from the ground in Frostwhisper Gorge on the way to the hot springs. Give the elite giants room.",
+      "Frostmaul Shards"),
     objective(4842, ws(nil, 59.82, 74.25), "Ride on south through Frostwhisper Gorge to the edge of Darkwhisper Gorge. Mind the giants on the way.",
       "Darkwhisper Gorge"),
     action("goto", P.storm, "Ride back north to Everlook."),
-    finish(5055, P.storm),
+    finish(5055, P.storm), finish(969, mauari), accept(975, mauari),
+    finish(975, mauari, "Give Mau'ari a moment to prepare the lucky charm, then speak to her again."),
+    objective(92859, ws(nil, 57.0, 39.0), "Hunt Chillwind chimaeras and Winterspring owls in the snow west of Everlook. Return to Evie for the potions.",
+      "5 Chillwind Chimaera Fur", "5 Winterspring Owl Feathers"),
+    finish(92859, evie, "Evie's potion reduces detection only in Winterspring. Give the demons room if you take the road through Darkwhisper Gorge to Mount Hyjal."),
     accept(6029, P.gregor, "Gregor Greystone has a report for the Bulwark and a book for Light's Hope Chapel."), accept(6030, P.gregor),
     accept(5601, P.jessica, "Jessica Redpath asks you to find her sister Pamela in Darrowshire."),
     taxi("fly", B.at("Brakkar", 34.44, 53.96, 1448), F.bloodvenom, "Fly to Bloodvenom Post."),
@@ -847,8 +864,8 @@ do
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
     QUEST_RECORDS,
   }, { "silithus-alt", "winterspring-alt" }, {
-    action("boat", P.durotarTower, "Leave Orgrimmar by the front gate and take the zeppelin to the Undercity from the tower outside. Use Next when you land.",
-      { name = "Orgrimmar - Undercity" }),
+    action("boat", P.durotarTower, "Leave Orgrimmar by the front gate and take the zeppelin to Tirisfal from the tower outside. Check the guide on landing.",
+      { name = "Orgrimmar - Undercity", skipOn = { M.tirisfal, M.undercity } }),
     action("goto", P.andron, "Take the lift down into the Undercity."),
     finish(3542, P.andron, "Give Andron Gant Jediga's last tablet."),
     finish(3568, P.cuely, "Chemist Cuely, in the Apothecarium, takes the filled vials if you carry them."), accept(3569, P.cuely),
@@ -976,6 +993,7 @@ do
   need(5168, "Heroes of Darrowshire", 56, 50, 5210)
   need(5846, "Of Love and Family", 58, 52, 5845)
   need(5236, "Return to the Bulwark", 58, 50, 5235)
+  need(5237, "Mission Accomplished!", 58, 50, 5236)
   need(6390, "A Plague Upon Thee", 55, 48, 5902)
   need(6025, "Unfinished Business", 58, 50, 6023)
   need(5049, "The Jeremiah Blues", 52, 50, 5023)
@@ -1022,7 +1040,9 @@ do
     objective(5051, P.jabberingGhoul, "A Jabbering Ghoul at the edge of Felstone Field carries the other half. Kill it, then join the two halves.",
       "Good Luck Charm"),
     finish(5051, P.janice),
-    finish(5236, P.vandis, "Ride west to the Bulwark."), finish(6390, P.mickey),
+    finish(5236, P.vandis, "Ride west to the Bulwark."),
+    accept(5237, P.derrington, "Ask High Executor Derrington about closing out the cauldron campaign. Use Next if he has no follow-up."),
+    finish(5237, P.derrington), finish(6390, P.mickey),
     action("goto", P.andron, "Ride west to the Undercity and take the lift down to Andron Gant."),
     accept(3564, P.andron, "Andron has a payment for Jediga in Azshara. You fly past Valormok in the next chapter."),
     taxi("fly", B.at("Georgia", 70.53, 47.55, 1423), F.lightsHope, "Fly from Michael Garrett to Light's Hope Chapel."),
@@ -1388,6 +1408,7 @@ do
     finish(5235, P.gahrron), accept(5236, P.gahrron),
     action("goto", P.vandis, "Ride back west to the Bulwark."),
     finish(5236, P.vandis),
+    accept(5237, P.derrington), finish(5237, P.derrington),
   })
 
   alternate("silithus-alt", "Silithus: Cenarion Hold", M.silithus, 55, 60, {

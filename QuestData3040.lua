@@ -134,7 +134,7 @@ do
   q(228, "Mor'Ladim", 35, 28, 227)
   q(229, "The Daughter Who Lived", 35, 28, 228)
   q(253, "Bride of the Embalmer", 30, 20, 252)
-  q(55, "Morbent Fel", 32, 18, 325)
+  q(55, "Morbent Fel", 32, 20, 325)
   q(215, "Jungle Secrets", 33, 30)
   q(583, "Welcome to the Jungle", 30, 28)
   q(185, "Tiger Mastery", 31, 28, 583)
@@ -390,8 +390,8 @@ do
     "https://www.wowhead.com/forever/zone=400/thousand-needles",
     "Cached quest records (revision 0f7d8ad)",
   }, {
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks in Theramore.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     action("note", nil, "Clean out your quest log: abandon the Blackfathom Deeps, Excavation Site and City of Dalaran quests unless you still plan to run them. All three dungeons are grey or nearly so at 33.",
       { name = "Quest log", drop = { 971, 1275, 95646, 95647, 98815, 92432 } }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
@@ -703,7 +703,7 @@ do
   rq(95288, "Smuggler's Paradise", 43, 38)
   rq(95293, "Smuggler's Special", 42, 38, 95288)
   rq(95294, "Smuggler's Bargain", 42, 38, 95293)
-  rq(94879, "Scraps of Knowledge", 38, 36)
+  rq(94879, "Scraps of Knowledge", 40, 36)
   rq(95934, "Proof of Profit", 42, 36)
   rq(95935, "Hail the Dragonslayer", 43, 36)
   quest[95935].startItem = 271612
@@ -738,8 +738,7 @@ do
       "8 Twilight Shadowmancers", "8 Twilight Neophytes", "8 Twilight Raiders"), 94881, 94961, 94885),
     along(objective(94881, twilight, "Loot trinkets from the Twilight cultists.", "25 Twilight Trinkets"), 94877, 94961),
     along(objective(94961, twilight, "Fuzzle wants food from the Twilight cultists. Pick it up while you fight.", "20 Morsels"), 94877, 94881),
-    along(note(objective(94879, twilight, "Pick up the Twilight pages lying around the cultists' camps for Ashe.", "Twilight Pages"),
-      "Page spots from a published guide's route (clicked during the Sunnyglade fights); check the count in game."), 94877, 94881),
+    along(objective(94879, twilight, "Pick up five Twilight Pages around the cultists' camps for Ashe.", "5 Twilight Pages"), 94877, 94881),
     withItem(266427, accept(94885, nil, "A cultist carries the Field Marshal's log. Read it when it drops.")),
     objective(95991, rg("Ghostmaw", 47.2, 56.7), "Ghostmaw, an elite, prowls the south edge of Sunnyglade. Bring a partner.", "Ghostmaw's Head"),
     along(objective(95643, rg(nil, 48.4, 48.4), "Kill the Empowered Brutes and Twilight Ritualists at the ritual site.", "5 Empowered Brutes", "5 Twilight Ritualists"),
@@ -1261,6 +1260,7 @@ do
   q(693, "Wand over Fist", 39, 30, 691)
   q(694, "Trelane's Defenses", 39, 30, 693)
   q(695, "An Apprentice's Enchantment", 39, 30, 694)
+  q(684, "Wanted!  Marez Cowl", 39, 30)
   q(685, "Wanted!  Otto and Falconcrest", 40, 30)
   q(657, "Hints of a New Plague?", 36, 30, 658)
   q(660, "Hints of a New Plague?", 37, 30, 657)
@@ -1295,6 +1295,7 @@ do
   q(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
   -- Elite targets: the route asks at the pickup whether to take them (Take it / Skip).
   B.elite(652, "Fozruk")
+  B.elite(684, "Marez Cowl")
   B.elite(685, "Otto and Lord Falconcrest")
   B.elite(694, "Boulderfist Shamans")
 
@@ -1315,6 +1316,7 @@ do
     taxi("fly", B.at("Cedrik Prose", 45.7, 46.1, 1417), "Refuge Pointe, Arathi", "Fly to Refuge Pointe."),
     accept(691, kryten, "Apprentice Kryten wants troll goods for Skuerto's research."),
     accept(685, ar("Wanted Board", 46.04, 47.76), "Read the wanted board: Otto and Lord Falconcrest hide in Stromgarde."),
+    accept(684, ar("Wanted Board", 46.04, 47.76), "Read the second notice on the same board. Marez Cowl is also in Stromgarde."),
     accept(657, quae, "Quae, at the farm east of Refuge Pointe, sends you to Kinelory."),
     finish(657, kinelory), accept(660, kinelory),
     objective(660, kinelory, "Protect Kinelory while she raids the Hammerfall supply. Let her pull ahead and stay close.", "Kinelory protected"),
@@ -1342,6 +1344,8 @@ do
       "Azure Agate"),
     objective(685, ar(nil, 26.0, 65.7), "Otto and Lord Falconcrest, both elites, hide in the Stromgarde ruins with the Syndicate. Bring a group.",
       "Otto's Head", "Falconcrest's Head"),
+    objective(684, ar("Marez Cowl", 29.6, 63.0), "Look for the elite mage Marez Cowl in the Syndicate-held ruins east of the keep. Loot her head.",
+      "Marez's Head"),
     finish(651, inner, "Bring the three keys to the Stone of Inner Binding on the hill east of Stromgarde."), accept(652, inner),
     note(objective(652, ar(nil, 44.5, 58.8), "Fozruk, a level 42 elite giant with a kobold escort, walks a long loop around Arathi. Wait for him on his path east of the stone and pull him away from the kobolds.",
       "Rod of Order"), "Patrol line from a published guide; quest database spawns him at 67.7, 37.6 near the Stone of East Binding."),
@@ -1358,7 +1362,7 @@ do
     along(objective(666, ar(nil, 22.7, 88.6), "Wear the Goggles of Gem Hunting and gather Elven Gems from the clams on the reef.", "10 Elven Gems"), 662, 664),
     finish(662, nilzlix), finish(664, steelgut), finish(666, draxlegauge), accept(668, draxlegauge), finish(668, obreen),
     accept(669, obreen, "Shakes O'Breen sends a sample gem to Fleet Master Seahorn in Booty Bay. Keep it: you are back there at 41."),
-    finish(694, kryten), accept(695, kryten), finish(695, skuerto), finish(685, nials),
+    finish(694, kryten), accept(695, kryten), finish(695, skuerto), finish(685, nials), finish(684, nials),
     taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly from Refuge Pointe to Southshore."),
     finish(661, hb("Phin Odelic", 50.35, 59.05)),
     finish(1052, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh the Devout stands near the inn."),
@@ -1430,8 +1434,8 @@ do
       "Archbishop Benedictus, in the Cathedral of Light, wants Amnennar the Coldbringer of Razorfen Downs destroyed. Take it now if you might run the dungeon: it is only offered here."), rfd),
     accept(1260, at("Angus Stern", 51.79, 93.64, M.stormwind), "Angus Stern, by the Mage Quarter's south gate, has a letter for his brother in Theramore."),
     taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     action("sethearth", janene, "Bind at the Theramore inn.", { bind = "Theramore Isle" }),
     finish(1260, stern, "Morgan Stern runs the inn's kitchen."), accept(1204, stern),
     accept(1206, jarl, "Ride north to Swamp Eye Jarl's shack again."),
@@ -1516,8 +1520,8 @@ do
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
     "Cached quest records (revision 0f7d8ad)",
   }, {
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
     action("sethearth", janene, "Bind at the Theramore inn.", theramore),
     accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."),

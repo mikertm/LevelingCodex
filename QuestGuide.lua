@@ -2464,6 +2464,7 @@ end
 -- with travel automation on, take it.
 local function takeFlight(nodes)
   local target = Q.flightTarget(nodes)
+  flight.suggested = target and Q.plain(target):lower()
   ns.markTaxi(target)
   if not (target and travelAllowed()) then return end
   local want = Q.plain(target):lower()
@@ -2623,7 +2624,9 @@ function ns.startQuestGuide()
   if type(TakeTaxiNode) == "function" then
     try(hooksecurefunc, "TakeTaxiNode", function(node)
       local row = Q.current()
-      flight = { to = Q.plain(try(TaxiNodeName, node)), from = flight.origin, map = row and row.step.map }
+      local destination = Q.plain(try(TaxiNodeName, node))
+      if destination:lower() == flight.suggested then Q.startGuidedFlight() end
+      flight = { to = destination, from = flight.origin, map = row and row.step.map }
       if recorder then flightTarget = Q.plain(try(TaxiNodeName, node)) end
       if ns.stats then ns.stats.count("flights") end
     end)

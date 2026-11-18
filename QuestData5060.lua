@@ -182,8 +182,8 @@ do
     "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), RATCHET, "If you are still in Tanaris, fly from Gadgetzan to Ratchet."),
-    action("boat", at(nil, 63.7, 38.6, M.barrens), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Use Next when you arrive.",
-      { name = "Ratchet - Booty Bay" }),
+    action("boat", at(nil, 63.7, 38.6, M.barrens), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Check the guide after docking.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     accept(8551, smotts, "Captain Hecklebury Smotts waits on the wooden walkway just inside the tunnel into town."),
     carried(finish(2874, stv("\"Sea Wolf\" MacKinley", 27.78, 77.07), "If you carried Stoley's bottle from Tanaris, give it to MacKinley.")),
     carried(finish(580, stv("Whiskey Slim", 27.14, 77.45), "Whiskey Slim sits upstairs in the inn. Hand in his port if you collected it.")),
@@ -777,7 +777,8 @@ do
       "Fly to Marshal's Refuge. Without that flight path, ride west from Gadgetzan and down the ramp into Un'Goro."),
     taxi("getfp", ug("Gryfe", 45.2, 5.8), MARSHAL, "Learn the Marshal's Refuge flight path."),
     accept(3881, williden), accept(3883, holanyee, "Hol'anyee Marshal, beside Williden, gives you a scraping vial for the Gorishi hive."),
-    accept(3882, spark), accept(4501, spraggle),
+    accept(3882, spark),
+    accept(4501, ug("Beware of Pterrordax", 43.53, 8.44), "Read the warning sign beside Spraggle."),
     accept(4492, spraggle, "Spraggle Frock's friend Ringo is lost near Fire Plume Ridge."), accept(4503, shizzle),
     accept(4243, karna, "Karna Remtravel, just south of the refuge, lost her robot A-Me 01 in the north-east."),
     action("note", ug(nil, 50, 30), "Diemetradons drop bones and scales, pterrordaxes drop scales. Kill them whenever they are on your way, and loot 25 Un'Goro Soil from the dirt piles: 5 for Pestlezugg, 20 for Darnassus.",
@@ -949,6 +950,7 @@ do
   local ws = on.winterspring
   local vizzie = ws("Innkeeper Vizzie", 61.4, 38.8)
   local mauari = ws("Witch Doctor Mau'ari", 61.92, 38.3)
+  local evie = ws("Evie Whirlbrew", 60.75, 37.78)
   local umi = ws("Umi Rumplesnicker", 60.88, 37.62)
   local gregor = ws("Gregor Greystone", 61.35, 38.97)
   local jaron = ws("Jaron Stoneshaper", 52.14, 30.43)
@@ -961,6 +963,9 @@ do
   q(977, "Are We There, Yeti?", 58, 52, 3783)
   q(5163, "Are We There, Yeti?", 58, 52, 977)
   q(969, "Luck Be With You", 60, 55)
+  q(975, "Cache of Mau'ari", 60, 55, 969)
+  q(92859, "Shroud of the Winter Wilds", 60, 55, nil, true)
+  quest[92859].optional = true
   q(4863, "Enraged Wildkin", 59, 53, 4861)
   q(4864, "Enraged Wildkin", 59, 53, 4863)
   q(5121, "High Chief Winterfall", 59, 52, 5087)
@@ -977,6 +982,7 @@ do
     accept(6030, gregor, "He also sends a book to Duke Nicholas Zverenhoff at Light's Hope Chapel. Keep both for the Plaguelands."),
     accept(3783, umi, "Umi Rumplesnicker, across the street, wants yeti fur."),
     accept(969, mauari, "Witch Doctor Mau'ari wants Frostmaul Shards from the gorge in the south."),
+    accept(92859, evie, "If heading to Mount Hyjal, ask Evie for a potion to help you get past the demons in Darkwhisper Gorge."),
     objective(3783, ws(nil, 67.0, 43.0), "Ice Thistle yetis live in the hills just east of Everlook.", "10 Thick Yeti Fur"),
     finish(3783, umi), accept(977, umi),
     objective(977, ws(nil, 69.9, 41.7), "The Ice Thistle Matriarch and Patriarch live in the yeti caves east of the village. They are a level or two above you.",
@@ -992,7 +998,11 @@ do
       "4 Frostmaul Shards"),
     objective(4842, ws(nil, 59.9, 74.0), "Test the hot spring at the south end of the gorge for Donova.", "Strange Sources"),
     action("hearth", vizzie, "Hearth to Everlook.", everlook),
-    finish(969, mauari), finish(977, umi),
+    objective(92859, ws(nil, 57.0, 39.0), "Hunt Chillwind chimaeras and Winterspring owls in the snow west of Everlook. Return to Evie for the potions.",
+      "5 Chillwind Chimaera Fur", "5 Winterspring Owl Feathers"),
+    finish(92859, evie, "Evie's potion reduces detection only in Winterspring. Give the demons room if you take the road through Darkwhisper Gorge to Mount Hyjal."),
+    finish(969, mauari), accept(975, mauari), finish(975, mauari, "Give Mau'ari a moment to prepare the lucky charm, then speak to her again."),
+    finish(977, umi),
     accept(5163, umi, "Umi has one last job: scare three of her friends with her mechanical yeti. Sprinkle in Gadgetzan and Quixxil in Un'Goro wait for your trip south at 59."),
     note(withItem(12928, B.objectivePart(5163, 1, ws("Legacki", 61.5, 38.6), "Use the mechanical yeti on Legacki, right here in Everlook.", "Legacki")),
       "Objective order (Legacki, Sprinkle, Quixxil) taken from quest database; check the quest log order in game."),
@@ -1283,6 +1293,7 @@ do
   local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
   local macdonnell = wpl("High Priestess MacDonnell", 42.97, 84.5)
   local dumah = wpl("Nathaniel Dumah", 43.42, 84.83)
+  local ashlam = wpl("Commander Ashlam Valorfist", 42.70, 84.03)
   local chambers = epl("Jessica Chambers", 71.8, 48.5)
   local lightsHope = { bind = "Light's Hope Chapel" }
 
@@ -1293,6 +1304,7 @@ do
   q(5281, "The Restless Souls", 60, 55)
   q(5382, "Doctor Theolen Krastinov, the Butcher", 60, 55)
   q(5226, "Return to Chillwind Point", 58, 50, 5225)
+  q(5238, "Mission Accomplished!", 58, 50, 5226)
   q(6389, "A Plague Upon Thee", 55, 48, 5904)
   q(6004, "Unfinished Business", 56, 50)
   q(6023, "Unfinished Business", 57, 50, 6004)
@@ -1337,7 +1349,9 @@ do
     action("hearth", chambers, "Hearth to Light's Hope Chapel.", lightsHope),
     finish(5211, carlin), finish(5181, carlin), finish(5168, carlin),
     taxi("fly", B.at("Bibilfaz Featherwhistle", 42.9, 85.1, 1422), CHILLWIND, "Fly to Chillwind Camp."),
-    finish(5226, macdonnell), finish(6389, dumah),
+    finish(5226, macdonnell),
+    accept(5238, ashlam, "Ask Commander Ashlam, beside MacDonnell, about closing out the cauldron campaign. Use Next if he has no follow-up."),
+    finish(5238, ashlam), finish(6389, dumah),
     finish(5846, wpl("Artist Renfray", 65.77, 75.37), "Ride east to Caer Darrow's lake shore. Artist Renfray's ghost stands on the island."),
     forDungeon(accept(5848, wpl("Artist Renfray", 65.77, 75.37), "Renfray says the painting hangs in Stratholme."), "dungeon-stratholme"),
     withGuide("dungeon-scholomance", forDungeon(accept(5382, wpl("Eva Sarkhoff", 70.22, 73.71),
@@ -1566,7 +1580,7 @@ do
       "Fly to Everlook. Without that flight path, ride through Timbermaw Hold from northern Felwood."),
   }, from("felwood-52", { 6603 }), from("winterspring-55", { 3783 }, "accept"),
     from("winterspring-54", { 6603, 5082, 5083, 5084, 5085, 5086, 5087, 4861 }),
-    from("winterspring-55", { 5087, 4861, 4863, 4864, 969 }), {
+    from("winterspring-55", { 5087, 4861, 4863, 4864, 969, 975 }), {
       accept(5121, on.winterspring("Donova Snowden", 31.27, 45.16), "Donova wants High Chief Winterfall dead. Bring a friend for his cave."),
       objective(5121, on.winterspring("High Chief Winterfall", 69.6, 38.3), "Fight into Winterfall Village, north-east of Everlook. High Chief Winterfall waits in the back cave.",
         "High Chief Winterfall"),

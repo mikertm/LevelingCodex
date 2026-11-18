@@ -849,6 +849,23 @@ local function calculate()
   end
   markPassed()
   markGrey(grey)
+  -- An explicitly marked pickup can still be done in place after a route reordering or join.
+  -- Keep the normal catch-up rules once the player leaves its giver.
+  local nearbyPickup
+  if x and y and not sideSection then
+    for i, row in ipairs(steps) do
+      local s = row.step
+      if row.section == fromSection and s.recoverNearby and row.state == "deferred" and not row.cut
+          and not row.grey and level >= (s.min or 1) and prerequisitesMet(s)
+          and (ns.db().questKeepGrey or not s.level or s.level > level - grey) then
+        local _, distance = Q.vector(s, map, x, y)
+        if distance and distance <= RADIUS then
+          row.state, nearbyPickup = "pending", i
+          break
+        end
+      end
+    end
+  end
   -- An elite quest's question waits for its pickup: none while the pickup is done, skipped, missed,
   -- grey or not for you yet.
   for _, row in ipairs(steps) do
@@ -915,6 +932,7 @@ local function calculate()
     leaveSide()
     return calculate() -- restore temporarily skipped rows to the browser and pickup queue
   end
+  mainIndex = nearbyPickup or mainIndex
   index = sideIndex or mainIndex
   if mainIndex then selected = steps[mainIndex].section end
 end
@@ -1016,16 +1034,25 @@ local function followSection(section)
   calculate()
 end
 
-local function resumeLocal(event)
+local guidedFlight
+
+function Q.startGuidedFlight()
+  if index and not review and not sideSection then guidedFlight = { step = steps[index].step } end
+end
+
+local function resumeLocal(event, previous)
   local map, x = Q.position()
   if not (map and x) or Q.inFlight() then return end
   local changed = map ~= lastZone
   lastZone = map
+  local arrivedByFlight = guidedFlight and guidedFlight.started and guidedFlight.step == previous
+  if changed or event == "PLAYER_CONTROL_GAINED" then guidedFlight = nil end
   if not changed and not checkLocalOnLog then return end
   -- The first log update can arrive after the player's position is available.
   checkLocalOnLog = event ~= "QUEST_LOG_UPDATE" or next(log) == nil
   local row = index and steps[index]
-  if sideSection or review or (row and ((row.requiredFor and row.step.map == map) or
+  local arrivedByBoat = previous and previous.type == "boat" and previous.skipOn and matches(previous.skipOn, map)
+  if arrivedByBoat or arrivedByFlight or sideSection or review or (row and ((row.requiredFor and row.step.map == map) or
       (row.step.map == map and row.section.zone ~= map))) then
     checkLocalOnLog = false
     return
@@ -1136,10 +1163,11 @@ function Q.update(event, id, newLevel)
   readCompleted()
   readStartItems()
   chooseSection()
+  local previous = index and steps[index].step
   calculate()
   if not event or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA"
       or event == "QUEST_LOG_UPDATE" or event == "QUEST_QUERY_COMPLETE" or event == "PLAYER_CONTROL_GAINED" then
-    resumeLocal(event)
+    resumeLocal(event, previous)
   end
   if event == "QUEST_TURNED_IN" and review and steps[review].step.quest == id then review = nil end
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then Q.enteredDungeon() end
@@ -1880,7 +1908,10 @@ function Q.learnFlights(nodes)
 end
 
 function Q.checkPosition()
-  if Q.inFlight() then return end
+  if Q.inFlight() then
+    if guidedFlight then guidedFlight.started = true end
+    return
+  end
   local map, x, y = Q.position()
   -- The map can still show the previous zone when the zone event fires.
   if x and map ~= lastZone then

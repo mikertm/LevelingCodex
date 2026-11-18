@@ -661,6 +661,8 @@ local function withGuide(id, step)
 end
 
 local west = {
+  action("note", nil, "If you are leveling in Westfall, drop Grove of the Ancients from your quest log. It ends in southern Darkshore.",
+    { name = "Quest log", ifOnQuest = 952, drop = { 952 } }),
   withItem(1972, accept(184, furlbrow, "Use the Westfall Deed you looted to start the quest.")),
   finish(184, furlbrow, "Hand the deed to Farmer Furlbrow by the wagon."),
   accept(109, furlbrow), accept(64, furlbrow), accept(36, verna), accept(151, verna),
@@ -982,6 +984,9 @@ wetCarnageHead.mobs = { "Carnage" }
 -- and the south bay last. Ends with the Ironforge and
 -- Stormwind turn-ins and the ship to Auberdine. Gap notes: tools/audits/2026-11-10-darkshore-ashenvale-wetlands-gaps.md;
 -- loop and gap pass: tools/audits/2026-11-12-alliance-duskwood-wetlands.md.
+local harloPickup = accept(472, wl("Harlo Barnaby", 10.85, 55.9),
+  "Ask Harlo Barnaby north of the keep for his message to Longbraid. Bring it to Dun Modr when you head east.")
+harloPickup.recoverNearby = true
 local wet = {
   taxi("fly", dungar, "Stormwind, Elwynn", "Fly from Darkshire to Stormwind."),
   wetFleet,
@@ -1025,6 +1030,7 @@ local wet = {
   accept(279, karl, "Karl Boran is on the docks west of the keep."),
   finish(469, wl("James Halloran", 8.51, 55.71), "Give Einar's bundle to James Halloran, the tanner by the north gate."),
   accept(484, wl("James Halloran", 8.51, 55.71), "James Halloran by the north gate wants young crocolisk skins. Done already if you ran the coast chapter."),
+  harloPickup,
   finish(98461, tarrel, "Give Hollee's note to Tarrel Rockweaver on the north bridge."), accept(305, tarrel),
   -- First trip north: the harbor timber, the murlocs and the young crocolisks in one loop.
   objectiveAt(98197, wl(nil, 12.1, 52.5), "Gather timber and iron from the harbor water beside Tarrel's bridge. Surface for air between dives.",
@@ -1050,7 +1056,6 @@ local wet = {
   finish(471, wl("James Halloran", 8.51, 55.71)),
   accept(98072, wl("James Halloran", 8.51, 55.71), "Take Halloran's whelp-scale order before leaving town. Do it with the Rotclaws, raptor teeth and eggs on the eastern Raptor Ridge loop."),
   forDungeon(accept(98815, wl("James Halloran", 8.51, 55.71), "Ask Halloran about Highland Hides for the Excavation Site."), "dungeon-excavation-site"),
-  accept(472, wl("Harlo Barnaby", 10.85, 55.9), "Harlo Barnaby, north of the keep, has a message for Longbraid at Dun Modr on your eastern loop."),
   objectiveAt(290, wl("Captain Halyndor", 15.45, 23.61), "Go north past the cursed wreck to the Intrepid. Climb the rudder and kill Captain Halyndor for his key. He reflects spells for a few seconds at a time.",
     "Intrepid Strongbox Key"),
   finish(290, wl("Intrepid's Locked Strongbox", 14.37, 24.02), "Enter the hole in the side of the hull and open the strongbox."),
@@ -2047,6 +2052,8 @@ q(931, "The Shimmering Frond", 10, 4)
 q(98392, "Darkness in the Glade", 12, 6, 937, true)
 q(98398, "The Oracle Tree", 12, 6, 98392, true)
 q(940, "Teldrassil", 11, 6, 98398)
+q(952, "Grove of the Ancients", 11, 6, 940)
+quest[952].optional = true
 q(2498, "Return to Denalan", 9, 4, 923)
 q(99050, "The Great Tree Provides", 10, 4, 99047, true)
 q(935, "Crown of the Earth", 11, 1, 7383)
@@ -2324,6 +2331,7 @@ te.teldrassil = {
   withItem("Lunar Pendant", objectivePart(98067, 1, te.d(nil, 33.9, 15.5), "Cross west to the Cenarion Enclave. Use the Lunar Pendant at the entrance to the Cenarion Hold depths.",
     "Cenarion Hold depths")),
   finish(935, te.fandral), accept(98046, te.fandral),
+  accept(952, te.fandral, "If you plan to level in Darkshore, take Fandral's message for Onu. Leave it here if you are sailing straight to Stormwind."),
   withItem("Lunar Pendant", objectivePart(98067, 2, te.d(nil, 41.4, 43.3), "Head south and use the Lunar Pendant at the bank.", "Darnassus Bank")),
   finish(98067, te.dalia, "Return the pendant to Sentinel Dalia in the Temple of the Moon."),
   finish(98046, te.lariia, "Bring the vessel to Lariia in the Temple of the Moon."), accept(98065, te.lariia),
@@ -2865,6 +2873,7 @@ local ds = (function()
       "Clear the Greymist murlocs at the huts on the shore to the south. Murkdeep, level 19, comes out after the waves; rest to full before he arrives.",
       "Murkdeep slain"),
     finish(948, onu, "Return to the road and find Onu at the Grove of the Ancients."),
+    finish(952, onu, "If you brought Fandral's message from Darnassus, deliver it to Onu here."),
     accept(944, onu), accept(98013, arbal),
     objectiveAt(1003, shore(nil, 40.2, 81.2),
       "Loot scalps from Grizzled Thistle Bears south of the grove as you head for Buzzbox 525.", "4 Grizzled Scalps"),
@@ -2946,8 +2955,8 @@ local ds = (function()
     finish(741, greywhisker, "Find Chief Archaeologist Greywhisker on the terrace south-west of the Temple of the Moon."),
     accept(942, greywhisker, "Greywhisker sends the fossil on to Menethil Harbor."),
     taxi("fly", te.caylais, "Auberdine, Darkshore", "Take the portal down, then fly or ride the ferry back to Auberdine."),
-    action("boat", shore(nil, 32.4, 44.1), "When you head for the Wetlands, take the Menethil ship from Auberdine's west pier. Use Next in Menethil Harbor.",
-      { name = "Auberdine - Menethil Harbor" }),
+    action("boat", shore(nil, 32.4, 44.1), "Take the Menethil ship from Auberdine's west pier. When it docks, check the guide for the fossil turn-in.",
+      { name = "Auberdine - Menethil Harbor", skipOn = wetlands }),
     finish(942, at("Archaeologist Flagongut", 10.84, 60.43, wetlands), "Give the fossil to Archaeologist Flagongut near the Menethil docks."),
     finish(968, at("Gerrig Bonegrip", 50.83, 5.62, ironforge), "Bring the book to Gerrig Bonegrip in the Forlorn Cavern the next time you are in Ironforge."),
   }

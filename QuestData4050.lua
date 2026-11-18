@@ -169,7 +169,7 @@ do
       "Buzzard Gizzard", "Crag Coyote Fang", "Rock Elemental Shard"), 720),
     accept(720, bl("Crumpled Map", 53.03, 33.94), "Pick up the crumpled map lying beside the road north of the dwarven camp."),
     accept(719, ryedol, "Prospector Ryedol and Sigrun share the camp in the middle of the Badlands."),
-    withGuide("dungeon-uldaman", accept(718, ryedol, "Ryedol also wants his supplies found. The Uldaman dig is in the cliffs north of his camp: plan the run here if you want it.")),
+    withGuide("dungeon-uldaman", accept(718, sigrun, "Ask Sigrun beside Ryedol about the missing supplies. If you plan to run Uldaman, the dig is in the cliffs north of the camp.")),
     finish(720, ryedol),
     objective(719, bl(nil, 43.5, 30.5), "Go northwest to the Shadowforge camp. Kill dwarves until Ryedol's lucky pick drops.", "Ryedol's Lucky Pick"),
     objective(718, bl("Supply Crate", 66.9, 23.4), "Cross to the northeast and loot the supply crate at the wrecked camp.", "Supply Crate"),
@@ -666,6 +666,7 @@ do
   local talonaxe = hl("Gryphon Master Talonaxe", 9.75, 44.47)
   local rhapsody = hl("Rhapsody Shindigger", 26.94, 48.59)
   local fraggar = hl("Fraggar Thundermantle", 14.83, 44.57)
+  local maret = hl("Farseer Maret Firetend", 14.34, 42.61)
   local gadgetzan = { bind = "Gadgetzan" }
 
   q(2944, "The Super Snapper FX", 48, 42, 2941)
@@ -676,6 +677,8 @@ do
   q(1469, "Rhapsody's Tale", 43, 38, 1452)
   q(2880, "Troll Necklace Bounty", 45, 40)
   q(2877, "Skulk Rock Clean-up", 48, 40)
+  q(86616, "Repurposed Totems", 48, nil, nil, true)
+  quest[86616].optional = true
   q(485, "Find OOX-09/HL!", 48, 43)
   quest[485].startItem = 8704
   q(836, "Rescue OOX-09/HL!", 48, 43, 485)
@@ -696,8 +699,8 @@ do
     objective(82, tn(nil, 35.7, 39.8), "Kill Centipaar silithids in and around the Noxious Lair until the insect parts drop.", "Centipaar Insect Parts"),
     finish(82, pestlezugg, "Alchemist Pestlezugg is in the house beside the inn."),
     taxi("fly", B.at("Baldruc", 67.5, 51.3, 1445), "Theramore, Dustwallow Marsh", "Fly to Theramore."),
-    action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship to Menethil Harbor. Use Next when you land.",
-      { name = "Theramore - Menethil Harbor" }),
+    action("boat", on.dustwallow(nil, 71.5, 56.3), "Take the ship to Menethil Harbor. Check the guide when it docks.",
+      { name = "Theramore - Menethil Harbor", skipOn = M.wetlands }),
     taxi("fly", B.at("Cedrik Prose", 45.7, 46.1, 1417), "Refuge Pointe, Arathi", "Fly to Refuge Pointe."),
     action("goto", hl(nil, 9.0, 47.0), "Ride west out of Arathi through Hillsbrad and take the pass north into the Hinterlands. Aerie Peak is just inside."),
     taxi("getfp", B.at("Guthrum Thunderfist", 11.1, 46.2, 1425), "Aerie Peak, The Hinterlands", "Learn the Aerie Peak flight path from Guthrum Thunderfist."),
@@ -712,6 +715,7 @@ do
     along(objective(3661, hl(nil, 28.1, 58.1), "Kill wildkin on the hills east of the camp for feathers.", "15 Wildkin Feather"), 2880),
     along(B.objectivePart(2988, 3, hl(nil, 32.0, 57.3), "The third cage sits in the eastern troll camp.", "Third Witherbark Cage"), 2880),
     finish(2880, fraggar, "Back at Aerie Peak, hand Fraggar the necklaces."),
+    accept(86616, maret, "For the Altar of Zul circuit, ask Maret for her totem order before riding east."),
     finish(2988, talonaxe), accept(2989, talonaxe),
     withItem(8704, accept(485, nil, "If a troll dropped the OOX-09/HL beacon, use it.")),
     objective(2877, hl(nil, 57.7, 42.8), "Ride east to Skulk Rock and kill the oozes in and around it.", "10 Green Sludges", "10 Jade Oozes"),
@@ -723,8 +727,11 @@ do
     objective(580, hl(nil, 77.9, 65.5), "Search the wreck at Pupellyverbos Port for Whiskey Slim's grog.", "Pupellyverbos Port"),
     note(finish(626, hl("Cortello's Treasure", 80.8, 46.82), "Follow the last riddle to Cortello's treasure north along the coast. Its guardian is level 50; bring help or use Next."),
       "Guard level from the classic data."),
-    objective(2989, hl(nil, 48.8, 68.4), "Ride back west to the Altar of Zul and do as Talonaxe asked there.", "Altar of Zul"),
+    along(objective(2989, hl(nil, 48.8, 68.4), "Ride back west to the Altar of Zul and do as Talonaxe asked there.", "Altar of Zul"), 86616),
+    objective(86616, hl("Vilebranch Totem", 50, 63), "Look for the Vilebranch Totems on the approach north of the altar. Check the surrounding camp for any you still need.",
+      "12 Vilebranch Totems"),
     finish(2877, fraggar, "Ride west to Aerie Peak for the last turn-ins."), finish(2989, talonaxe),
+    finish(86616, maret),
     dungeon("zul-farrak", accept(2990, talonaxe,
       "Talonaxe offers Thadius Grimshade's errand only now, right after the Altar of Zul. Take it if you plan Zul'Farrak: Thadius waits in Nethergarde Keep.")),
     withGuide("dungeon-sunken-temple", taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), "Stormwind, Elwynn",
@@ -860,8 +867,8 @@ do
     finish(2605, marin), accept(2606, marin), finish(2606, sprinkle), accept(2641, sprinkle),
     finish(5863, andi), finish(3362, tranrek),
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), "Ratchet, The Barrens", "Fly to Ratchet for the boat to Booty Bay."),
-    action("boat", at(nil, 63.7, 38.6, M.barrens), "Take the boat from the Ratchet dock to Booty Bay. Use Next when you land.",
-      { name = "Ratchet - Booty Bay" }),
+    action("boat", at(nil, 63.7, 38.6, M.barrens), "Take the boat from Ratchet to Booty Bay. Check the guide for the deliveries when it docks.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     finish(2874, on.stv("\"Sea Wolf\" MacKinley", 27.78, 77.07), "Give Stoley's message to MacKinley."),
     finish(648, on.stv("Oglethorpe Obnoticus", 28.36, 76.35), "Report the third robot to Oglethorpe on the dock by the bank."),
     action("note", nil, "Uldaman and Zul'Farrak are grey for you now. Abandon A Sign of Hope and Thadius Grimshade if you still carry them.",

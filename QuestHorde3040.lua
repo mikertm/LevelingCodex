@@ -331,7 +331,8 @@ do
     accept(1431, on.orgrimmar("Craven Drok", 51.3, 45.9), "Craven Drok has a message for Keldran."),
     finish(1431, P.keldran, "Keldran stands in the Valley of Spirits, on the west side of the city."),
     accept(1432, P.keldran, "Keep his message for Takata Steelblade at Ghost Walker Post in Desolace."),
-    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades from the tower north-east of the city. Then walk into the Undercity."),
+    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades from the tower north-east of the city. Then walk into the Undercity.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     accept(1164, P.genavie, "Genavie Callow, beside the bat handler east of the Trade Quarter, wants three Syndicate heads from Arathi."),
     dungeon("razorfen-kraul", accept(1109, P.faranell,
       "Master Apothecary Faranell in the Apothecarium has a guano errand inside Razorfen Kraul. Take it only if you plan to run the dungeon.")),
@@ -664,15 +665,15 @@ do
   local crank = st("Crank Fizzlebub", 27.12, 77.21)
   local lozgil = st("Wharfmaster Lozgil", 26.35, 73.56)
   local drizzlik = st("Drizzlik", 28.3, 77.6)
-  local wendel = st("Wendel Mathers", 44.3, 7.9)
-  local zimmix = st("Zimmix Sputterspark", 23.5, 12.8)
+  local wendel = st("Wendel Mathers", 44.27, 7.9)
+  local zimmix = st("Zimmix Sputterspark", 23.46, 12.79)
   local bloodscalp = st(nil, 24.7, 12.1)
   local headhunters = st(nil, 22.7, 10.9)
   local shadowmaw = st(nil, 37.6, 36.4)
   local scooty = st("Scooty", 27.6, 77.48)
-  local gemmil = st("Gemmil", 32.8, 28.5)
+  local gemmil = st("Gemmil", 32.78, 28.43)
   local nerrist = st("Nerrist", 32.7, 29.23)
-  local weeds = st(nil, 34.8, 31.6)
+  local weeds = st(nil, 33.7, 30.4)
 
   need(568, "The Defense of Grom'gol", 36, 33)
   need(569, "The Defense of Grom'gol", 37, 33, 568)
@@ -718,8 +719,7 @@ do
     accept(97328, st("Thoroughly Scavenged Supplies", 31.55, 12.95), "Ride back west past the camp and search the scavenged supplies."),
     along(objective(191, st(nil, 28.8, 14.1), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 194, 97328),
     along(objective(194, st(nil, 25.8, 16.1), "Stranglethorn Raptors hunt nearer the coast.", "10 Stranglethorn Raptors"), 191),
-    note(accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp at the Ruins of Zul'Kunda."),
-      "Zimmix has no quest database record; the spot comes from the Alliance route's map point."),
+    accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp at the Ruins of Zul'Kunda."),
     along(objective(581, bloodscalp, "Kill Bloodscalp trolls along the coast for their tusks.", "9 Bloodscalp Tusks"), 596, 97329, 97328),
     along(objective(596, bloodscalp, "Every kind of Bloodscalp also carries Bloody Bone Necklaces.", "25 Bloody Bone Necklaces"), 581, 97329, 97328),
     along(objective(97329, bloodscalp, "One of the trolls carries Zimmix's Primitive Key.", "Primitive Key"), 581, 596),
@@ -739,10 +739,8 @@ do
     finish(568, aggrogosh), finish(95773, aggrogosh), accept(569, aggrogosh),
     finish(581, nimboya), accept(582, nimboya),
     finish(596, kinweelay), finish(629, kinweelay),
-    note(accept(97453, gemmil, "Gemmil, a troll child in the camp, wants the carnivorous weeds south of Grom'gol cut back."),
-      "Gemmil and the weeds have no quest database records; both spots come from a published guide."),
-    note(objective(97453, weeds, "On the way east, kill Carnivorous Weeds in the jungle south-east of the camp.", "6 Carnivorous Weeds"),
-      "Weed spot from a published guide (Wowhead Forever: south of Grom'gol); check in game."),
+    accept(97453, gemmil, "Gemmil, a troll child in the camp, wants the carnivorous weeds south of Grom'gol cut back."),
+    objective(97453, weeds, "On the way east, kill Carnivorous Weeds just south-east of the camp. More grow north-east near 33.6, 28.0.", "6 Carnivorous Weeds"),
     along(objective(569, st(nil, 37.0, 31.0), "Ride east to the Mosh'Ogg camp. Kill Brutes and Witch Doctors.", "10 Mosh'Ogg Brutes", "5 Mosh'Ogg Witch Doctors"), 570, 192),
     along(objective(192, shadowmaw, "Shadowmaw Panthers stalk unseen in the jungle south of the ogres. A Catseye Elixir from the Auction House makes them easier to find.", "10 Shadowmaw Panthers"), 570, 569),
     along(objective(570, shadowmaw, "Collect Shadowmaw Claws from the panthers and a Pristine Tigress Fang from the tigresses there.", "8 Shadowmaw Claws",
@@ -773,13 +771,14 @@ do
     accept(196, hemet, "Hemet's next raptors are the Jungle Stalkers farther south. Keep it for your return at 40."),
     objective(188, st("Sin'Dall", 32.2, 17.4), "Sin'Dall, a white tigress, prowls the hilltop south-west of the camp. Kill her for her paw.", "Paw of Sin'Dall"),
     finish(188, ajeck),
-    note(accept(97047, wendel, "Ride east to Wendel Mathers on the slope above the Kurzen compound. His cook is locked inside."),
-      "Wendel has no quest database record; the spot comes from the Alliance route's map point."),
-    objective(97047, st(nil, 48.8, 5.4), "Loot a Kurzen Fighter's Uniform and the compound's cage key from the Kurzen guards, then free the cook.",
-      "Kurzen Fighter's Uniform", "Compound Cage Key"),
+    accept(97047, wendel, "Ride east to Wendel Mathers on the north side of the Kurzen compound before entering the Stockpile."),
+    B.objectivePart(97047, 1, st(nil, 48.8, 5.4), "Inside the Stockpile, descend to the lower level and loot the Compound Cage Key from Kurzen Elites or Subchiefs.",
+      "Compound Cage Key"),
+    B.objectivePart(97047, 2, st("Kurzen Supply Crate", 49.62, 7.74), "Take the uniform from the Kurzen Supply Crate before going back to Wendel.",
+      "Kurzen Fighter's Uniform"),
     finish(97047, wendel), accept(97048, wendel, "Keep his note for Captain Aransas in Booty Bay."),
     along(objective(213, st(nil, 44.6, 22.1), "Ride south to the Venture Co. dig. Kill Geologists for Tumbled Crystals.", "8 Tumbled Crystals"), 1182),
-    objective(1182, st("Cozzle's Footlocker", 43.3, 20.3), "Open Cozzle's Footlocker in the Venture Co. camp for the blueprints.", "Fuel Regulator Blueprints"),
+    objective(1182, st("Foreman Cozzle's Footlocker", 43.34, 20.34), "Kill Foreman Cozzle on the platform at 42.7, 18.4 for his key. Use it to open the footlocker in the hut to the south.", "Fuel Regulator Blueprints"),
     action("goto", nimboya, "Ride west back to Grom'gol."),
     finish(582, nimboya), accept(638, nimboya, "Nimboya sends you to Zengu in Hammerfall. Keep it for Arathi."),
     taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
@@ -790,7 +789,7 @@ do
     accept(600, crank, "Crank Fizzlebub now wants Singing Blue Crystals from the Venture Co. mine in the middle of the jungle. Keep it for your return at 40."),
     finish(1182, revilgaz),
     finish(575, drizzlik, "Bring Drizzlik his skins."),
-    finish(97048, st("Captain Aransas", 27.4, 76.3), "Captain Aransas waits by the docks."),
+    finish(97048, st("Captain Aransas", 27.69, 76.66), "Captain Aransas waits by the docks."),
     action("hearth", P.gryshka, "Hearth to Orgrimmar.", P.org),
   }, P.orgTrainers))
 end
@@ -944,7 +943,8 @@ do
     "https://www.wowhead.com/forever/quest=92519",
     questRecords,
   }, { "badlands-39" }, withTrainers({
-    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades, then walk into the Undercity."),
+    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades, then walk into the Undercity.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     finish(97985, P.calder, "Bring Stormheart's heart to Calder Gray in the Apothecarium."),
     accept(232, zinge, "From level 38, Apothecary Zinge, a few steps from Calder, has a purchase order for Alessandro Luca."),
     finish(232, luca, "Alessandro Luca keeps a shop south-west of the bat handler, off the Trade Quarter's ring."),

@@ -660,7 +660,7 @@ do
   q(2962, "The Only Cure is More Green Glow", 30, 20, 2926)
   q(2930, "Data Rescue", 30, 25)
   q(2929, "The Grand Betrayal", 35, 25)
-  q(2904, "A Fine Mess", 30)
+  q(2904, "A Fine Mess", 30, 24)
   fromItem(2945, 9326, 34, 28, "Grime-Encrusted Ring")
   q(2947, "Return of the Ring", 34, 28, 2945)
   q(2948, "Gnome Improvement", 35, 28, 2947)
@@ -729,7 +729,7 @@ do
   fromItem(1100, 5791, 34, 29, "Lonebrow's Journal")
   q(1101, "The Crone of the Kraul", 34, 29, 1100)
   q(1142, "Mortality Wanes", 30, 25)
-  q(1144, "Willix the Importer", 30)
+  q(1144, "Willix the Importer", 30, 23)
   add({ id = "dungeon-razorfen-kraul", title = name, zone = barrens, levels = { 29, 38 }, instanceID = 47,
     links = { "warrior-fire-hardened-mail", "shaman-air-totem" },
     bosses = {

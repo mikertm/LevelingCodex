@@ -128,10 +128,12 @@ do
 
   q(4641, "Your Place In The World", 1, 1)
   q(788, "Cutting Teeth", 2, 1)
+  q(97279, "Wayward Weapons", 2, 1, nil, true)
+  quest[97279].optional = true
   q(790, "Sarkoth", 5, 1)
   q(804, "Sarkoth", 5, 1, 790)
   q(789, "Sting of the Scorpid", 3, 1, 788)
-  q(4402, "Galgar's Cactus Apple Surprise", 3, 1)
+  q(4402, "Galgar's Cactus Apple Surprise", 3, 1, 788)
   q(5441, "Lazy Peons", 4, 3)
   q(6394, "Thazz'ril's Pick", 4, 3, 5441)
   q(792, "Vile Familiars", 4, 2, nil, nil, { "WARRIOR", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE" })
@@ -162,10 +164,21 @@ do
     accept(1485, ruzan, "Warlocks: Ruzan stands beside Kaltunk."),
     finish(4641, gornek, "Go into the Den, the large hut just west, and find Gornek."),
     accept(788, gornek),
+    accept(97279, gornek),
+    accept(790, hanazua, "Hana'zua lies wounded under the trees north-west of the Den."),
+    along(objective(788, du(nil, 43.9, 65.8),
+      "Kill Mottled Boars around the valley. Pick up training weapons as you pass.",
+      "10 Mottled Boars"), 97279),
+    objective(790, du(nil, 40.6, 66.8), "Sarkoth is a large scorpid on the slope west of the Den. Kill him for his claw.",
+      "Sarkoth's Mangled Claw"),
+    finish(790, hanazua), accept(804, hanazua),
+    objective(1485, du(nil, 43.9, 58.4), "Kill Vile Familiars in the imp camp at the north end of the valley for their heads.",
+      "6 Vile Familiar Heads"),
+    finish(788, gornek), finish(804, gornek), accept(789, gornek),
   }
   for _, letter in ipairs(letters) do
     local id = letter[1]
-    q(id, letter[2], 1, 1, nil, id > 90000 or nil, letter[3])
+    q(id, letter[2], 1, 1, 788, id > 90000 or nil, letter[3])
     quest[id].race = letter[4]
     valley[#valley + 1] = accept(id, gornek)
     valley[#valley + 1] = finish(id, letter[5], "Read the letter and hand it to your class trainer around the Den.")
@@ -173,16 +186,6 @@ do
   for _, step in ipairs({
     action("train", nil, "Visit your class trainer around the Den. Train spells for level", { level = 2 }),
     accept(4402, galgar, "Galgar cooks by the fire just north of the Den."),
-    accept(790, hanazua, "Hana'zua lies wounded under the trees north-west of the Den."),
-    along(objective(788, du(nil, 43.9, 65.8),
-      "Kill Mottled Boars around the valley. Pick up Cactus Apples from the base of cactuses as you pass.",
-      "10 Mottled Boars"), 4402),
-    objective(790, du(nil, 40.6, 66.8), "Sarkoth is a large scorpid on the slope west of the Den. Kill him for his claw.",
-      "Sarkoth's Mangled Claw"),
-    finish(790, hanazua), accept(804, hanazua),
-    objective(1485, du(nil, 43.9, 58.4), "Kill Vile Familiars in the imp camp at the north end of the valley for their heads.",
-      "6 Vile Familiar Heads"),
-    finish(788, gornek), finish(804, gornek), accept(789, gornek),
     finish(1485, ruzan), accept(1499, ruzan),
     finish(1499, zureetha, "Find Zureetha outside the Den to learn Summon Imp."),
     accept(792, zureetha),
@@ -197,6 +200,8 @@ do
       "12 Vile Familiars"), 789),
     objective(4402, du(nil, 44.7, 64.9), "Finish collecting Cactus Apples from the cactuses on the way back south.",
       "10 Cactus Apples"),
+    objective(97279, du(nil, 44.36, 64.91),
+      "Pick up any remaining training weapons from the ground near the boars north-east of the Den.", "6 Abandoned Training Weapons"),
     finish(4402, galgar), finish(789, gornek),
     finish(792, zureetha),
     accept(794, zureetha),
@@ -211,6 +216,7 @@ do
       "2 Felstalker Hooves"),
     finish(6394, thazzril),
     finish(794, zureetha), accept(805, zureetha),
+    finish(97279, du("Kzan Thornslash", 40.47, 68.0), "Give the training weapons to Kzan in the Den before leaving for Sen'jin."),
     accept(96652, du(nil, 42.79, 69.13), "Click the Lost Journal lying on the barrel beside Zureetha."),
     accept(5649, kenjai),
     finish(1516, canaga), accept(1517, canaga),
@@ -282,7 +288,7 @@ do
   for _, id in ipairs({ 97905, 97907, 97908 }) do quest[id].optional = true end
   q(806, "Dark Storms", 12, 4, 823)
   q(784, "Vanquish the Betrayers", 7, 3)
-  q(825, "From The Wreckage....", 8, 3)
+  q(825, "From The Wreckage....", 8, 3, 784)
   q(830, "The Admiral's Orders", 7, 1)
   quest[830].startItem = 4881
   q(831, "The Admiral's Orders", 7, 1, 830)
@@ -353,7 +359,7 @@ do
     finish(96655, torka, "Learn Cooking from Cook Torka by the Razor Hill barracks."),
     accept(96825, torka), accept(815, torka),
     finish(96821, garthok, "Gar'Thok stands in front of the barracks in Razor Hill."),
-    accept(784, garthok), accept(825, garthok),
+    accept(784, garthok),
     finish(823, orgnil), accept(99048, orgnil),
     accept(791, furl, "Climb the watchtower on the west side of town to reach Furl."),
     accept(96822, turroc),
@@ -380,25 +386,22 @@ do
       "Climb the keep's main tower to Lieutenant Benedict at the top. Kill him and loot the Admiral's Orders.",
       "Lieutenant Benedict"),
     withItem(4881, accept(830, du(nil, 59.75, 58.27), "Read Admiral Proudmoore's Orders from your bags.")),
-    objective(825, du(nil, 61.96, 55.46),
-      "Swim out to the gnomish wreckage east of the keep and loot the tools from the crates.", "3 Gnomish Tools"),
-    finish(784, garthok), finish(830, garthok), finish(825, garthok),
+    finish(784, garthok), accept(825, garthok), finish(830, garthok),
     accept(831, garthok), accept(837, garthok),
     finish(99049, orgnil), finish(791, furl),
     finish(97907, du("Krunn", 51.81, 40.88),
       "Miners: Krunn, the Razor Hill mining trainer, takes the lesson once your Mining skill has grown a little."),
     finish(96822, turroc),
     action("train", nil, "Visit your class trainer in Razor Hill. Train spells for level", { level = 10 }),
-    along(objective(96825, du(nil, 48.8, 49.0),
-      "Go west into the Razormane Grounds. Kill Razormane Quilboars and Scouts and pick Prickly Pear Fruit from the cactuses.",
-      "8 Prickly Pear Fruit"), 837),
-    action("goto", du(nil, 59.8, 83.4), "Head back south past Sen'jin to the hills by the southern coast."),
+    objective(825, du(nil, 61.96, 55.46),
+      "Head south-east from Razor Hill to the coast above Tiragarde Keep. Swim out to the wreck and take the Gnomish Tools from the crates.", "3 Gnomish Tools"),
+    objective(97223, du(nil, 68.78, 71.63),
+      "Follow the coast south to the Bloodtalon Matriarch's nest and take her eggs.", "Eggs of the Bloodtalon Matriarch"),
+    action("goto", du(nil, 59.8, 83.4), "Follow the coast south-west past Sen'jin to the hills above the shore."),
     along(objective(817, du(nil, 59.8, 83.4),
       "Kill Durotar Tigers for their fur and Bloodtalon Taillashers for eggs in the hills south of Sen'jin.",
       "4 Durotar Tiger Furs"), 815, 818),
     objective(815, du(nil, 61.0, 82.0), "Finish the Taillasher Eggs from the raptors here.", "3 Taillasher Eggs"),
-    objective(97223, du(nil, 68.78, 71.63),
-      "Follow the coast east to the Bloodtalon Matriarch's nest and take her eggs.", "Eggs of the Bloodtalon Matriarch"),
     action("goto", du(nil, 63.0, 82.5), "Wade across the shallows to the Echo Isles."),
     along(objective(826, du(nil, 67.2, 88.8),
       "Kill Hexed and Voodoo Trolls across the Echo Isles. Pick up the Forgotten Loa Idols on the ground as you go.",
@@ -414,9 +417,11 @@ do
     finish(818, vornal), finish(817, velrin), finish(97223, xarti),
     finish(96876, ukor, "Return Ukor's pack to him on the road west of Sen'jin."),
     along(objective(837, du(nil, 49.2, 49.0),
-      "Back in the Razormane Grounds, finish the Quilboars and Scouts and the pears.",
+      "Take the road north toward Razor Hill, then cut west into the Razormane Grounds. Kill Quilboars and Scouts and pick Prickly Pear Fruit from the cactuses.",
       "4 Razormane Quilboars", "4 Razormane Scouts"), 96825),
-    finish(96825, torka), finish(815, torka),
+    along(objective(96825, du(nil, 48.8, 49.0),
+      "Pick any remaining fruit from the cactuses before returning to Razor Hill.", "8 Prickly Pear Fruit"), 837),
+    finish(96825, torka), finish(815, torka), finish(825, garthok),
   }
   local north = {
     accept(806, orgnil),

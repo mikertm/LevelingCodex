@@ -370,7 +370,9 @@ do
     finish(2240, stormpike), finish(1360, krom),
     finish(2279, magellas), accept(2439, magellas), finish(2439, dinita, "Dinita Stonemantle works in the Vault of Ironforge."),
     finish(2198, talvash, "Talvash del Kissel is in the Mystic Ward."),
-    accept(2199, talvash, "His next step wants five Silver Bars and a later visit back to Uldaman."),
+    accept(2199, talvash, "Talvash wants five Silver Bars for his information about the necklace."),
+    objective(2199, talvash, "Bring five Silver Bars from Mining or the Auction House.", "5 Silver Bars"),
+    finish(2199, talvash, "Finish at Talvash. His next quest is for a separate return to Uldaman."),
   })
 end
 
@@ -378,16 +380,16 @@ end
 do
   local name = "Krol'dok Stronghold"
   local rg = on.riverglades
-  local brant = rg("Demar Brant", 66.6, 81.0)
-  local ashe = rg("Ashe Amberhall", 66.6, 81.0)
-  local riftan = rg("Sergeant Riftan", 30.6, 49.0)
-  local dumas = rg("Alphonse Dumas", 64.4, 82.0)
-  local sable = rg("Melanie Sable", 66.2, 83.2)
-  fromItem(94980, 267138, "Krol'dok Moulding", 44, 40, nil, true)
-  need(94981, "Key Ingredients", 44, 40, 94980, true)
-  need(94997, "Lingering Essence", 44, 38, 94983, true)
-  need(94998, "Curios of Curiosity", 44, 38, 94997, true)
-  fromItem(94926, 266889, "Drop the Hammer", 44, 40, nil, true)
+  local brant = rg("Demar Brant", 66.67, 81.01)
+  local ashe = rg("Ashe Amberhall", 66.75, 81.1)
+  local riftan = rg("Sergeant Riftan", 30.71, 49.06)
+  local dumas = rg("Alphonse Dumas", 64.46, 82.03)
+  local sable = rg("Melanie Sable", 66.21, 83.36)
+  fromItem(94980, 267138, "Krol'dok Moulding", 41, 40, nil, true)
+  need(94981, "Key Ingredients", 41, 40, 94980, true)
+  need(94997, "Lingering Essence", 42, 38, 94983, true)
+  need(94998, "Curios of Curiosity", 42, 38, 94997, true)
+  fromItem(94926, 266889, "Drop the Hammer", 45, 40, nil, true)
   local prep = copy("riverglades-shroud", { 94886, 94907 })
   insertAfter(prep, 94886, "accept", { accept(94982, brant, "Brant wants the Eye of Mugg from the stronghold's overlord.") })
   insertAfter(prep, 94886, "turnin", { accept(94983, riftan, "Riftan wants bangles from the Twilight's Hammer inside Krol'dok.") })
@@ -420,18 +422,18 @@ do
     uncertain(withItem(267138, accept(94980, nil, "If a Krol'dok Moulding drops for you, use it.")),
       "The moulding is party loot; which mob drops it is not published."),
     uncertain(withItem(266889, accept(94926, nil, "If Komuk's Warmaul drops, use it to start Drop the Hammer.")),
-      "Quest giver item found in the client data; drop source and hand-in not published."),
+      "Quest starter from the client data. Confirm where Komuk's Warmaul drops."),
   }, {
     finish(94983, riftan, "Riftan waits at the edge of the Twilight's Shroud."),
-    uncertain(accept(94997, riftan, "Take the satchel of mementos back to Ashe."), "Giver of the follow-up not confirmed."),
-    finish(94984, ashe), uncertain(finish(94997, ashe), "Follow-up chain from published notes; check in game."),
-    uncertain(accept(94998, ashe), "Follow-up chain from published notes; check in game."),
-    uncertain(finish(94998, sable, "Melanie Sable, the enchanter at Farholde Keep, studies the curios."), "Hand-in from published notes."),
+    accept(94997, riftan, "Take the satchel of mementos back to Ashe."),
+    finish(94984, ashe), finish(94997, ashe),
+    accept(94998, ashe),
+    finish(94998, sable, "Melanie Sable, the enchanter at Farholde Keep, studies the curios."),
     finish(94982, brant),
-    uncertain(finish(94980, dumas, "Alphonse Dumas at Farholde Keep can cast the moulding into a key."), "Hand-in from published notes."),
-    uncertain(accept(94981, dumas, "He needs 4 Thick Leather and 12 Iron Bars for the Krol'dok Compound Key."), "Quest name and giver from published notes."),
-    uncertain(finish(94981, dumas), "Quest name and giver from published notes."),
-    uncertain(finish(94926, nil, "Hand in Drop the Hammer where the quest log points."), "Hand-in not published."),
+    finish(94980, dumas, "Alphonse Dumas at Farholde Keep can cast the moulding into a key."),
+    accept(94981, dumas, "He needs 4 Thick Leather and 12 Iron Bars for the Krol'dok Compound Key. Bring them from your professions or buy them at the Auction House."),
+    finish(94981, dumas),
+    finish(94926, brant, "Show Komuk's maul to Demar Brant at Farholde Keep."),
   })
 end
 

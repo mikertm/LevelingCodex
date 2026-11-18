@@ -47,6 +47,8 @@ q(441, "Raleigh and the Undercity", 16, 10, 440)
 q(530, "A Husband's Revenge", 20, 10, 441)
 q(1013, "The Book of Ur", 26, 16)
 q(516, "Beren's Peril", 21, 16)
+q(479, "Ambermill Investigations", 16, 10, 482)
+quest[479].ifDone = 482
 q(95981, "Watching the Roads", 20, nil, nil, true)
 q(98299, "Stop the Spread", 20, nil, nil, true)
 q(493, "Journey to Hillsbrad Foothills", 20, 19)
@@ -234,7 +236,8 @@ local sepulcher = (function()
   local dalar = sp("Dalar Dawnweaver", 44.2, 39.81)
   local stone = sp("Offering Stone", 58.12, 69.77)
   return {
-    action("boat", zeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower north-east of the city. Take the zeppelin to Tirisfal Glades."),
+    action("boat", zeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower north-east of the city. Take the zeppelin to Tirisfal Glades.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     accept(441, sevren, "If you carry Deliah's ring from the Sepulcher, Magistrate Sevren in Brill's town hall sends it on to the Undercity."),
     finish(441, raleigh, "Enter the Undercity through the ruined city south of Brill. Raleigh stands in the Trade Quarter."),
     accept(530, raleigh),
@@ -242,6 +245,7 @@ local sepulcher = (function()
     action("goto", karos, "Fly to the Sepulcher if you know the route. Otherwise leave the Undercity, follow the road west then south into Silverpine Forest and up to the Sepulcher."),
     taxi("getfp", karos, "The Sepulcher, Silverpine Forest", "Learn the Sepulcher flight path from Karos Razok."),
     accept(516, allister), accept(95981, allister),
+    accept(479, allister, "If you finished Dalaran's Intentions in the earlier Silverpine guide, ask Allister for the Ambermill investigation."),
     accept(98299, dalar, "Dalar Dawnweaver, just north of Allister, wants the sick refugees at the Greymane Wall put down."),
     accept(493, sp("Apothecary Renferrel", 42.8, 40.86)),
     finish(3301, sp("Mura Runetotem", 42.91, 41.99)),
@@ -259,8 +263,12 @@ local sepulcher = (function()
     withItem(210713, objectiveAt(95885, stone, "Heal up, then use the Tortured Soul at the Offering Stone and kill the spirit it releases.")),
     finish(95885, stone),
     objectiveAt(516, sp(nil, 58.3, 71.3), "Finish the Ravenclaw kills inside and outside the cave.", "6 Ravenclaw Drudgers", "6 Ravenclaw Guardians"),
-    objectiveAt(95981, sp(nil, 63.3, 76.0), "Kill Dalaran Watchers and Wizards at the Dalaran camp south-east of Beren's Peril. A second camp sits at Ambermill (64, 58).",
-      "8 Dalaran Watchers", "8 Dalaran Wizards"),
+    along(objectiveAt(95981, sp(nil, 64.1, 57.7),
+      "Go north to the camp above Ambermill for Watchers and Wizards. Another camp lies south-east of the cave at 63, 76.",
+      "8 Dalaran Watchers", "8 Dalaran Wizards"), 479),
+    objectiveAt(479, sp(nil, 61.1, 64.9),
+      "Loot pendants from the Protectors, Mages and Conjurors in Ambermill. Return to Allister on the Sepulcher stop after Tarren Mill.",
+      "8 Dalaran Pendants"),
   }
 end)()
 
@@ -281,7 +289,7 @@ local hillsbrad = (function()
     finish(493, lydon),
     finish(1065, lydon),
     accept(1066, lydon, "If you brought Zamah's note, Lydon now wants blood from the Syndicate mages."),
-    accept(496, lydon), accept(501, lydon),
+    accept(496, lydon),
     finish(494, darthalia), accept(527, darthalia),
     accept(549, hb("WANTED", 62.63, 20.75), "Read the WANTED poster outside the town hall."),
     accept(498, krusk),
@@ -296,6 +304,7 @@ local hillsbrad = (function()
     finish(498, krusk), finish(549, darthalia),
     finish(1066, lydon), finish(496, lydon), accept(499, lydon), accept(1067, lydon),
     finish(499, hb("Umpi", 61.55, 19.14), "Give the elixir to Umpi beside Lydon."),
+    accept(501, lydon, "Take Lydon's lion-blood order now. You will pass the Starving Mountain Lions on the way to Hillsbrad Fields."),
     along(objectiveAt(501, hb(nil, 53.1, 35.3), "Head west toward Hillsbrad Fields. Kill Starving Mountain Lions in the hills along the way.", "10 Vials of Mountain Lion Blood"), 527),
     objectivePart(527, 4, hb("Farmer Getz", 35.21, 37.53), "Kill Farmer Getz in the house at the east edge of the fields.", "Farmer Getz slain"),
     objectivePart(527, 3, hb("Farmer Ray", 33.68, 35.44), "Kill Farmer Ray in the farmhouse to the north-west.", "Farmer Ray slain"),
@@ -319,7 +328,7 @@ local hillsbrad = (function()
     objectiveAt(546, hb(nil, 34.5, 42.5), "Finish the skulls on any Hillsbrad humans around the fields and orchards.", "30 Hillsbrad Human Skulls"),
     finish(529, darthalia, "Return to Tarren Mill."), finish(546, samsa),
     taxi("fly", fm.sepulcher, "The Sepulcher, Silverpine Forest", "Fly from Zarise to the Sepulcher."),
-    finish(516, allister), finish(95981, allister),
+    finish(516, allister), finish(95981, allister), finish(479, allister),
     forDungeon(accept(1098, at("High Executor Hadrec", 43.42, 40.86, M.silverpine), "High Executor Hadrec wants two deathstalkers found inside Shadowfang Keep."),
       "dungeon-shadowfang-keep"),
     finish(98299, dalar, "Tell Dalar Dawnweaver the refugees are dealt with."),
