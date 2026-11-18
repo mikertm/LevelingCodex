@@ -1,5 +1,5 @@
 {
- "build": "1.60.1.70888",
+ "build": "1.60.1.70959",
  "product": "wowf",
  "source": "https://wago.tools",
  "classes": {
@@ -5389,7 +5389,7 @@
       "rank": 1,
       "level": 6,
       "line": "Marksmanship",
-      "cost": "25",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5403,7 +5403,7 @@
       "rank": 2,
       "level": 12,
       "line": "Marksmanship",
-      "cost": "35",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5417,7 +5417,7 @@
       "rank": 3,
       "level": 20,
       "line": "Marksmanship",
-      "cost": "50",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5431,7 +5431,7 @@
       "rank": 4,
       "level": 28,
       "line": "Marksmanship",
-      "cost": "80",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5445,7 +5445,7 @@
       "rank": 5,
       "level": 36,
       "line": "Marksmanship",
-      "cost": "105",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5459,7 +5459,7 @@
       "rank": 6,
       "level": 44,
       "line": "Marksmanship",
-      "cost": "135",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5473,7 +5473,7 @@
       "rank": 7,
       "level": 52,
       "line": "Marksmanship",
-      "cost": "160",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -5487,7 +5487,7 @@
       "rank": 8,
       "level": 60,
       "line": "Marksmanship",
-      "cost": "190",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_impalingbolt",
@@ -6890,7 +6890,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 3."
+      "desc": "Stamina increased by 30."
      },
      {
       "id": 4196,
@@ -6899,7 +6899,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 5."
+      "desc": "Stamina increased by 50."
      },
      {
       "id": 4197,
@@ -6908,7 +6908,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 7."
+      "desc": "Stamina increased by 70."
      },
      {
       "id": 4198,
@@ -6917,7 +6917,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 10."
+      "desc": "Stamina increased by 100."
      },
      {
       "id": 4199,
@@ -6926,7 +6926,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 13."
+      "desc": "Stamina increased by 130."
      },
      {
       "id": 4200,
@@ -6935,7 +6935,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 17."
+      "desc": "Stamina increased by 170."
      },
      {
       "id": 4201,
@@ -6944,7 +6944,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 21."
+      "desc": "Stamina increased by 210."
      },
      {
       "id": 4202,
@@ -6953,7 +6953,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 26."
+      "desc": "Stamina increased by 260."
      },
      {
       "id": 5048,
@@ -6962,7 +6962,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 32."
+      "desc": "Stamina increased by 320."
      },
      {
       "id": 5049,
@@ -6971,7 +6971,7 @@
       "line": "Beast Training",
       "icon": "spell_nature_unyeildingstamina",
       "offgcd": true,
-      "desc": "Stamina increased by 40."
+      "desc": "Stamina increased by 400."
      }
     ],
     "Growl": [
@@ -8575,7 +8575,7 @@
       "level": 25,
       "talent": true,
       "line": "Beast Mastery",
-      "cost": "80",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8589,7 +8589,7 @@
       "rank": 2,
       "level": 36,
       "line": "Beast Mastery",
-      "cost": "105",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8603,7 +8603,7 @@
       "rank": 3,
       "level": 48,
       "line": "Beast Mastery",
-      "cost": "135",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -8617,7 +8617,7 @@
       "rank": 4,
       "level": 60,
       "line": "Beast Mastery",
-      "cost": "190",
+      "cost": "11%",
       "power": "Mana",
       "cooldown": "6 sec",
       "icon": "ability_hunter_animalhandler",
@@ -11264,70 +11264,70 @@
       "rank": 1,
       "level": 1,
       "pet": "Generic",
-      "desc": "Stamina increased by 3."
+      "desc": "Health increased by 30."
      },
      {
       "id": 4188,
       "rank": 2,
       "level": 12,
       "pet": "Generic",
-      "desc": "Stamina increased by 5."
+      "desc": "Health increased by 50."
      },
      {
       "id": 4189,
       "rank": 3,
       "level": 18,
       "pet": "Generic",
-      "desc": "Stamina increased by 7."
+      "desc": "Health increased by 70."
      },
      {
       "id": 4190,
       "rank": 4,
       "level": 24,
       "pet": "Generic",
-      "desc": "Stamina increased by 10."
+      "desc": "Health increased by 100."
      },
      {
       "id": 4191,
       "rank": 5,
       "level": 30,
       "pet": "Generic",
-      "desc": "Stamina increased by 13."
+      "desc": "Health increased by 130."
      },
      {
       "id": 4192,
       "rank": 6,
       "level": 36,
       "pet": "Generic",
-      "desc": "Stamina increased by 17."
+      "desc": "Health increased by 170."
      },
      {
       "id": 4193,
       "rank": 7,
       "level": 42,
       "pet": "Generic",
-      "desc": "Stamina increased by 21."
+      "desc": "Health increased by 210."
      },
      {
       "id": 4194,
       "rank": 8,
       "level": 48,
       "pet": "Generic",
-      "desc": "Stamina increased by 26."
+      "desc": "Health increased by 260."
      },
      {
       "id": 5041,
       "rank": 9,
       "level": 54,
       "pet": "Generic",
-      "desc": "Health increased by 32."
+      "desc": "Health increased by 320."
      },
      {
       "id": 5042,
       "rank": 10,
       "level": 60,
       "pet": "Generic",
-      "desc": "Health increased by 40."
+      "desc": "Health increased by 400."
      }
     ],
     "Growl": [
@@ -28650,11 +28650,11 @@
      "spell": 408498,
      "icon": "spell_shaman_maelstromweapon",
      "ranks": [
-      "When you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 4%. Stacks up to 5 times. Lasts 30 sec.",
-      "When you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 8%. Stacks up to 5 times. Lasts 30 sec.",
-      "When you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 12%. Stacks up to 5 times. Lasts 30 sec.",
-      "When you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 16%. Stacks up to 5 times. Lasts 30 sec.",
-      "When you deal damage with a melee attack, you have a chance to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec."
+      "When you deal damage with a melee attack, you have a {(20ws*6/60)*100}% chance (based on weapon speed) to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec.",
+      "When you deal damage with a melee attack, you have a {(20ws*7/60)*100}% chance (based on weapon speed) to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec.",
+      "When you deal damage with a melee attack, you have a {(20ws*8/60)*100}% chance (based on weapon speed) to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec.",
+      "When you deal damage with a melee attack, you have a {(20ws*9/60)*100}% chance (based on weapon speed) to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec.",
+      "When you deal damage with a melee attack, you have a {(20ws*10/60)*100}% chance (based on weapon speed) to reduce the cast time and Mana cost of your next Lightning Bolt spell by 20%. Stacks up to 5 times. Lasts 30 sec."
      ],
      "node": 104741,
      "prereq": []
@@ -28682,9 +28682,9 @@
      "spell": 415140,
      "icon": "spell_nature_mentalquickness",
      "ranks": [
-      "Increases your Attack Power by an amount equal to 50% of your Intellect.",
-      "Increases your Attack Power by an amount equal to 100% of your Intellect.",
-      "Increases your Attack Power by an amount equal to 150% of your Intellect."
+      "Increases your Attack Power by an amount equal to 33% of your Intellect.",
+      "Increases your Attack Power by an amount equal to 66% of your Intellect.",
+      "Increases your Attack Power by an amount equal to 100% of your Intellect."
      ],
      "node": 104755,
      "prereq": []
@@ -28873,7 +28873,7 @@
      "spell": 17364,
      "icon": "ability_shaman_stormstrike",
      "ranks": [
-      "Instantly strike for 150% weapon damage and increase the damage you deal to the target with your next Lightning Bolt, Chain Lightning, or Earth Shock spell by 20% for 12 sec."
+      "Instantly strike for 100% weapon damage and increase the damage you deal to the target with your next Lightning Bolt, Chain Lightning, or Earth Shock spell by 20% for 12 sec."
      ],
      "node": 104743,
      "prereq": []
@@ -29786,7 +29786,7 @@
       "cost": "30",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 3.23 to 13.04 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 3.23 to 13.04 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      },
      {
       "id": 8027,
@@ -29796,7 +29796,7 @@
       "cost": "55",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 5.22 to 19.16 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 5.22 to 19.16 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      },
      {
       "id": 8030,
@@ -29806,7 +29806,7 @@
       "cost": "80",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 8.3 to 28.64 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 8.3 to 28.64 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      },
      {
       "id": 16339,
@@ -29816,7 +29816,7 @@
       "cost": "105",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 13.86 to 45.76 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 13.86 to 45.76 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      },
      {
       "id": 16341,
@@ -29826,7 +29826,7 @@
       "cost": "130",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 23.36 to 75.04 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 23.36 to 75.04 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      },
      {
       "id": 16342,
@@ -29836,7 +29836,7 @@
       "cost": "155",
       "power": "Mana",
       "icon": "spell_fire_flametounge",
-      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 31.44 to 99.92 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. When applied to main hand, disables any benefit you personally receive from Flametongue Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with fire. Each hit causes 31.44 to 99.92 additional Fire damage, based on the speed of the weapon. Slower weapons cause more fire damage per swing. Lasts for 60 minutes."
      }
     ],
     "Flurry": [
@@ -31345,9 +31345,9 @@
       "line": "Enhancement",
       "cost": "8%",
       "power": "Mana",
-      "cooldown": "6 sec",
+      "cooldown": "8 sec",
       "icon": "ability_shaman_stormstrike",
-      "desc": "Instantly strike for 150% weapon damage and increase the damage you deal to the target with your next Lightning Bolt, Chain Lightning, or Earth Shock spell by 20% for 12 sec."
+      "desc": "Instantly strike for 100% weapon damage and increase the damage you deal to the target with your next Lightning Bolt, Chain Lightning, or Earth Shock spell by 20% for 12 sec."
      }
     ],
     "Strength of Earth Totem": [
@@ -31642,7 +31642,7 @@
       "cost": "90",
       "power": "Mana",
       "icon": "spell_nature_cyclone",
-      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 46 extra melee attack power. When applied to main hand, disables any benefit you personally receive from Windfury Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 46 extra melee attack power. Lasts for 60 minutes."
      },
      {
       "id": 8235,
@@ -31652,7 +31652,7 @@
       "cost": "115",
       "power": "Mana",
       "icon": "spell_nature_cyclone",
-      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 119 extra melee attack power. When appied to main hand, disables any benefit you personally receive from Windfury Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 119 extra melee attack power. Lasts for 60 minutes."
      },
      {
       "id": 10486,
@@ -31662,7 +31662,7 @@
       "cost": "140",
       "power": "Mana",
       "icon": "spell_nature_cyclone",
-      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 249 extra melee attack power. When applied to main hand, disables any benefit you personally receive from Windfury Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 249 extra melee attack power. Lasts for 60 minutes."
      },
      {
       "id": 16362,
@@ -31672,7 +31672,7 @@
       "cost": "165",
       "power": "Mana",
       "icon": "spell_nature_cyclone",
-      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 333 extra melee attack power. When applied to main hand, disables any benefit you personally receive from Windfury Totem. Lasts for 60 minutes."
+      "desc": "Imbue the Shaman's weapon with wind. Each hit has a 20% chance of granting you 2 extra attacks with 333 extra melee attack power. Lasts for 60 minutes."
      }
     ],
     "Windwall Totem": [
@@ -32497,9 +32497,9 @@
      "spell": 17804,
      "icon": "spell_shadow_lifedrain02",
      "ranks": [
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 4% per each of your other Affliction effects active on the target, up to a maximum increase of 12%.",
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 8% per each of your other Affliction effects active on the target, up to a maximum increase of 24%.",
-      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your other Affliction effects active on the target, up to a maximum increase of 36%."
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 4% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 12%.",
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 8% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 24%.",
+      "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 36%."
      ],
      "node": 105911,
      "prereq": []
@@ -32549,7 +32549,7 @@
      "spell": 1316697,
      "icon": "ability_deathknight_hemorrhagicfever",
      "ranks": [
-      "Tears the target apart from within, inflicting 36 Shadow damage every 1 sec and increasing the damage they take from your other Shadow damage over time effects by 10% for 6 sec."
+      "Tears the target apart from within for 6 sec, inflicting 25.2 Shadow damage every 1 sec. While channeling, your Siphon Life, Corruption, and Bane of Agony effects on the target deal their periodic damage 100% faster."
      ],
      "node": 105909,
      "prereq": [
@@ -32710,7 +32710,6 @@
       "cost": "5%",
       "power": "Mana",
       "icon": "ability_warlock_baneofhavoc",
-      "offgcd": true,
       "desc": "Afflicts the target for 5 min, causing 15% of all damage done by the Warlock to other targets to also be dealt to the cursed target. Bane of Havoc is limited to 1 target, and only one Bane per Warlock can be active on any one target."
      }
     ],
@@ -34909,7 +34908,7 @@
       "talent": true,
       "line": "Affliction",
       "icon": "spell_shadow_lifedrain02",
-      "desc": "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your other Affliction effects active on the target, up to a maximum increase of 36%."
+      "desc": "Increases the damage done or health drained by your Drain Life, Drain Soul, and Wrack spells by 12% per each of your Corruption, Siphon Life, and Bane of Agony effects active on the target, up to a maximum increase of 36%."
      }
     ],
     "Subjugate Demon": [
@@ -35048,7 +35047,7 @@
       "cost": "200",
       "power": "Mana",
       "icon": "ability_deathknight_hemorrhagicfever",
-      "desc": "Tears the target apart from within, inflicting 36 Shadow damage every 1 sec and increasing the damage they take from your other Shadow damage over time effects by 10% for 6 sec."
+      "desc": "Tears the target apart from within for 6 sec, inflicting 25.2 Shadow damage every 1 sec. While channeling, your Siphon Life, Corruption, and Bane of Agony effects on the target deal their periodic damage 100% faster."
      }
     ]
    },
@@ -35246,28 +35245,28 @@
       "rank": 1,
       "level": 1,
       "pet": "Imp",
-      "desc": "Deals 4.4 to 4.4 Fire damage to a target."
+      "desc": "Deals 6.6 to 6.6 Fire damage to a target."
      },
      {
       "id": 7799,
       "rank": 2,
       "level": 8,
       "pet": "Imp",
-      "desc": "Deals 7.7 to 7.7 Fire damage to a target."
+      "desc": "Deals 12.1 to 12.1 Fire damage to a target."
      },
      {
       "id": 7800,
       "rank": 3,
       "level": 18,
       "pet": "Imp",
-      "desc": "Deals 13.2 to 13.2 Fire damage to a target."
+      "desc": "Deals 16.5 to 16.5 Fire damage to a target."
      },
      {
       "id": 7801,
       "rank": 4,
       "level": 28,
       "pet": "Imp",
-      "desc": "Deals 18.7 to 18.7 Fire damage to a target."
+      "desc": "Deals 19.8 to 19.8 Fire damage to a target."
      },
      {
       "id": 7802,
@@ -39331,8 +39330,8 @@
     "Anvil": {
      "spell": 1263041,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Bronze Bar",
@@ -41422,8 +41421,8 @@
     "Coarse Grinding Stone": {
      "spell": 3326,
      "yellow": 50,
-     "green": 62,
-     "grey": 75,
+     "green": 70,
+     "grey": 90,
      "mats": [
       [
        "Coarse Stone",
@@ -51915,8 +51914,8 @@
     "Sharpening Wheel": {
      "spell": 1230171,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Rough Stone",
@@ -55356,8 +55355,8 @@
     "Lodestone": {
      "spell": 1230161,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Rough Stone",
@@ -55419,8 +55418,8 @@
     "Rock Garden": {
      "spell": 1262975,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Heavy Stone",
@@ -56759,7 +56758,7 @@
      "mats": [
       [
        "Bolt of Silk Cloth",
-       5
+       6
       ],
       [
        "Black Dye",
@@ -59564,8 +59563,8 @@
     "Faction Banner": {
      "spell": 1229504,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Bolt of Linen Cloth",
@@ -62975,7 +62974,7 @@
      "mats": [
       [
        "Bolt of Silk Cloth",
-       4
+       5
       ],
       [
        "Heavy Leather",
@@ -63065,7 +63064,7 @@
      "mats": [
       [
        "Bolt of Woolen Cloth",
-       4
+       5
       ],
       [
        "Green Dye",
@@ -66361,7 +66360,7 @@
      "mats": [
       [
        "Bolt of Mageweave",
-       4
+       5
       ],
       [
        "Red Dye",
@@ -66597,7 +66596,7 @@
      "mats": [
       [
        "Bolt of Woolen Cloth",
-       4
+       5
       ],
       [
        "Red Dye",
@@ -69003,8 +69002,8 @@
     "Spinning Wheel": {
      "spell": 1263032,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",
@@ -71042,8 +71041,8 @@
     "Arcane Salvager": {
      "spell": 1263056,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Vision Dust",
@@ -71060,7 +71059,7 @@
      ],
      "icon": "inv_eng_bottledelements",
      "category": "Camping",
-     "tool": "Runed Truesilver Rod",
+     "tool": "Runed Golden Rod",
      "plan": {
       "item": "Blueprint: Arcane Salvager",
       "skill": 140
@@ -75776,8 +75775,8 @@
     "Enchanted Lute": {
      "spell": 1230643,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Simple Wood",
@@ -78254,8 +78253,8 @@
     "Greenhouse": {
      "spell": 1262980,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",
@@ -78295,8 +78294,8 @@
     "Incense Candle": {
      "spell": 1229705,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Peacebloom",
@@ -78744,8 +78743,8 @@
     "Camp Chair": {
      "spell": 1229517,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Light Leather",
@@ -78766,8 +78765,8 @@
     "Field Guide": {
      "spell": 1262985,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Medium Leather",
@@ -81048,8 +81047,8 @@
     "Camp Tent": {
      "spell": 1229432,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Light Leather",
@@ -92320,7 +92319,7 @@
       "Spiritcaller Boots",
       1
      ],
-     "icon": "inv_misc_desecrated_mailboots",
+     "icon": "temp",
      "category": "Mail Boots",
      "plan": {
       "item": "Pattern: Spiritcaller Boots",
@@ -92422,7 +92421,7 @@
       "Spiritcaller Gloves",
       1
      ],
-     "icon": "inv_misc_desecrated_mailglove",
+     "icon": "temp",
      "category": "Mail Gauntlets",
      "plan": {
       "item": "Pattern: Spiritcaller Gloves",
@@ -92524,7 +92523,7 @@
       "Spiritcaller Kilt",
       1
      ],
-     "icon": "inv_misc_desecrated_mailpants",
+     "icon": "temp",
      "category": "Mail Legguards",
      "plan": {
       "item": "Pattern: Spiritcaller Kilt",
@@ -92592,7 +92591,7 @@
       "Spiritcaller Mantle",
       1
      ],
-     "icon": "inv_misc_desecrated_mailshoulder",
+     "icon": "temp",
      "category": "Mail Pauldrons",
      "plan": {
       "item": "Pattern: Spiritcaller Mantle",
@@ -93973,9 +93972,9 @@
     },
     "Tanning Rack": {
      "spell": 1263031,
-     "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "yellow": 125,
+     "green": 125,
+     "grey": 125,
      "mats": [
       [
        "Medium Leather",
@@ -93998,7 +93997,7 @@
      "category": "Camping",
      "plan": {
       "item": "Blueprint: Tanning Rack",
-      "skill": 140
+      "skill": 125
      }
     },
     "Thick Armor Kit": {
@@ -97599,10 +97598,10 @@
     "Small Lustrous Pearl": "inv_misc_gem_pearl_03",
     "Soul Dust": "inv_enchant_dustsoul",
     "Spider's Silk": "spell_nature_web",
-    "Spiritcaller Boots": "inv_misc_desecrated_mailboots",
-    "Spiritcaller Gloves": "inv_misc_desecrated_mailglove",
-    "Spiritcaller Kilt": "inv_misc_desecrated_mailpants",
-    "Spiritcaller Mantle": "inv_misc_desecrated_mailshoulder",
+    "Spiritcaller Boots": null,
+    "Spiritcaller Gloves": null,
+    "Spiritcaller Kilt": null,
+    "Spiritcaller Mantle": null,
     "Spitfire Bracers": "inv_bracer_05",
     "Spitfire Breastplate": "inv_chest_leather_02",
     "Spitfire Gauntlets": "inv_gauntlets_11",
@@ -98992,7 +98991,7 @@
      "icon": "inv_potion_62",
      "category": "Elixirs",
      "plan": {
-      "item": "Recipe: Elixir of Greater Firepower",
+      "item": "Recipe: Elixir of Holy Power",
       "skill": 250
      }
     },
@@ -99836,8 +99835,8 @@
     "Fermenter": {
      "spell": 1263005,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Leaded Vial",
@@ -101951,8 +101950,8 @@
     "Mana Well": {
      "spell": 1230564,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Peacebloom",
@@ -109902,8 +109901,8 @@
     "Reagent Bot": {
      "spell": 1230656,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Handful of Copper Bolts",
@@ -109976,8 +109975,8 @@
     "Repair Bot": {
      "spell": 1263034,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Whirring Bronze Gizmo",
@@ -113479,8 +113478,8 @@
     "First Aid Kit": {
      "spell": 1230117,
      "yellow": 20,
-     "green": 22,
-     "grey": 25,
+     "green": 20,
+     "grey": 20,
      "mats": [
       [
        "Linen Bandage",
@@ -114078,8 +114077,8 @@
     "Toxin Study": {
      "spell": 1262996,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Anti-Venom",
@@ -114781,8 +114780,8 @@
     "Cookie's Feast": {
      "spell": 1262978,
      "yellow": 145,
-     "green": 147,
-     "grey": 150,
+     "green": 145,
+     "grey": 145,
      "mats": [
       [
        "Mystery Meat",
@@ -115181,8 +115180,8 @@
     "Expert Campfire": {
      "spell": 1291341,
      "yellow": 205,
-     "green": 212,
-     "grey": 220,
+     "green": 205,
+     "grey": 205,
      "mats": [
       [
        "Thick Logs",
@@ -115743,8 +115742,8 @@
     "Journeyman Campfire": {
      "spell": 1283400,
      "yellow": 95,
-     "green": 100,
-     "grey": 105,
+     "green": 95,
+     "grey": 95,
      "mats": [
       [
        "Star Wood",
@@ -118023,8 +118022,8 @@
     "Fishing Rack": {
      "spell": 1262990,
      "yellow": 140,
-     "green": 142,
-     "grey": 145,
+     "green": 140,
+     "grey": 140,
      "mats": [
       [
        "Simple Wood",

@@ -1,5 +1,5 @@
 {
-  "build": "1.60.1.70888",
+  "build": "1.60.1.70959",
   "coverage": {
     "bySlot": {
       "INVTYPE_2HWEAPON": 962,
@@ -19,7 +19,7 @@
       "INVTYPE_SHIELD": 399,
       "INVTYPE_SHOULDER": 759,
       "INVTYPE_THROWN": 35,
-      "INVTYPE_TRINKET": 307,
+      "INVTYPE_TRINKET": 308,
       "INVTYPE_WAIST": 931,
       "INVTYPE_WEAPON": 808,
       "INVTYPE_WEAPONMAINHAND": 435,
@@ -39,7 +39,7 @@
       "reputation": 247,
       "vendor": 4266
     },
-    "items": 12378,
+    "items": 12379,
     "matrix": {
       "DRUID/Alliance": {
         "1": {
@@ -60,7 +60,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 117,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 93,
+          "INVTYPE_TRINKET": 94,
           "INVTYPE_WAIST": 204,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -210,7 +210,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 115,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 94,
+          "INVTYPE_TRINKET": 95,
           "INVTYPE_WAIST": 206,
           "INVTYPE_WEAPON": 391,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -360,7 +360,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 118,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 95,
+          "INVTYPE_TRINKET": 96,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -508,7 +508,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 116,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 96,
+          "INVTYPE_TRINKET": 97,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 391,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -656,7 +656,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 118,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 94,
+          "INVTYPE_TRINKET": 95,
           "INVTYPE_WAIST": 202,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -804,7 +804,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 116,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 95,
+          "INVTYPE_TRINKET": 96,
           "INVTYPE_WAIST": 204,
           "INVTYPE_WEAPON": 391,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -952,7 +952,7 @@
           "INVTYPE_SHIELD": 149,
           "INVTYPE_SHOULDER": 117,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 92,
+          "INVTYPE_TRINKET": 93,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 394,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -1101,7 +1101,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 115,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 92,
+          "INVTYPE_TRINKET": 93,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 392,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -1250,7 +1250,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 118,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 98,
+          "INVTYPE_TRINKET": 99,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -1398,7 +1398,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 116,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 99,
+          "INVTYPE_TRINKET": 100,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 391,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -1546,7 +1546,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 118,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 93,
+          "INVTYPE_TRINKET": 94,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 395,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -1694,7 +1694,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 116,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 94,
+          "INVTYPE_TRINKET": 95,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -1842,7 +1842,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 117,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 91,
+          "INVTYPE_TRINKET": 92,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -1991,7 +1991,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 115,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 93,
+          "INVTYPE_TRINKET": 94,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 391,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -2140,7 +2140,7 @@
           "INVTYPE_SHIELD": 148,
           "INVTYPE_SHOULDER": 118,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 94,
+          "INVTYPE_TRINKET": 95,
           "INVTYPE_WAIST": 202,
           "INVTYPE_WEAPON": 394,
           "INVTYPE_WEAPONMAINHAND": 172,
@@ -2288,7 +2288,7 @@
           "INVTYPE_SHIELD": 151,
           "INVTYPE_SHOULDER": 116,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 95,
+          "INVTYPE_TRINKET": 96,
           "INVTYPE_WAIST": 204,
           "INVTYPE_WEAPON": 392,
           "INVTYPE_WEAPONMAINHAND": 171,
@@ -2436,7 +2436,7 @@
           "INVTYPE_SHIELD": 149,
           "INVTYPE_SHOULDER": 117,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 94,
+          "INVTYPE_TRINKET": 95,
           "INVTYPE_WAIST": 203,
           "INVTYPE_WEAPON": 396,
           "INVTYPE_WEAPONMAINHAND": 181,
@@ -2584,7 +2584,7 @@
           "INVTYPE_SHIELD": 152,
           "INVTYPE_SHOULDER": 115,
           "INVTYPE_THROWN": 17,
-          "INVTYPE_TRINKET": 95,
+          "INVTYPE_TRINKET": 96,
           "INVTYPE_WAIST": 205,
           "INVTYPE_WEAPON": 393,
           "INVTYPE_WEAPONMAINHAND": 177,
@@ -2718,21 +2718,21 @@
     "missingStats": 2319,
     "sources": 34201,
     "unknownRestrictions": 656,
-    "unmodeledEffects": 3091
+    "unmodeledEffects": 3092
   },
   "excluded": [],
   "hashes": {
-    "Item.csv": "037ac6248ce1fceaad391fb0ec717cdb7ae1e8999e8c976c11b086a05deb5c57",
-    "ItemSparse.csv": "ced52fc6e5ca345805cfe3c015c05426c138aebd23ff1ad8a26cff5f1fe08be9"
+    "Item.csv": "32ee11866ddee06477a4830105b084f68e972644fd6b067d77c859168cbf9df3",
+    "ItemSparse.csv": "0e194578bca2289558a133fe6d4184b1baba848327c0fa0442ba2846b9b39a55"
   },
   "notes": "Derived factual records. Acquisition reference is not proof of live server tuning; unknowns remain unknown.",
-  "retrieved": "2026-11-16",
+  "retrieved": "2026-11-18",
   "schema": 1,
   "sources": [
     {
       "fields": "identity,slot,subclass,restrictions",
-      "revision": "1.60.1.70888",
-      "url": "https://wago.tools/db2/Item/csv?build=1.60.1.70888"
+      "revision": "1.60.1.70959",
+      "url": "https://wago.tools/db2/Item/csv?build=1.60.1.70959"
     },
     {
       "fields": "acquisition facts; reference evidence, not confirmed live drop rates",
@@ -2741,7 +2741,7 @@
     },
     {
       "fields": "name,stats,requirements,effects",
-      "revision": "2026-11-16",
+      "revision": "2026-11-18",
       "url": "https://nether.wowhead.com/forever/tooltip/item/{id}"
     }
   ]
