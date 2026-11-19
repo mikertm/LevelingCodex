@@ -123,7 +123,8 @@ do
     steps = {
       action("goto", og(nil, 38.5, 78.2),
         "Take The Lessons of Ta'zo from the painted rock beside the mage hut in the Valley of Spirits. Keep it until you visit the Undercity."),
-      action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades from the tower outside Orgrimmar, then ride south into the Undercity. Do this on the route's Undercity visit at 24 if you like."),
+      action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades from the tower outside Orgrimmar, then ride south into the Undercity. Do this on the route's Undercity visit at 24 if you like.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       accept(79094, owen, "Give the book to Owen Thadd in the inner ring of the Magic Quarter."),
       finish(79094, owen),
       accept(97286, owen, "Ask Owen Thadd for Research Access now that you have donated a book."),
@@ -141,7 +142,8 @@ do
   B.hordeSide({ id = "mage-spellfire-robes", title = "Mage: Spellfire Robes", zone = M.undercity,
     levels = { 15, 17 }, class = mage, start = MAGES, sources = sources, steps = {
       accept(1959, uthelnay, "Orcs and Trolls: Uthel'nay in Orgrimmar's Valley of Spirits sends you to the Undercity. Skip this if you are already there."),
-      only(action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades and ride south into the Undercity."), { race = { "ORC", "TROLL" } }),
+      only(action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades and ride south into the Undercity.",
+        { skipOn = { M.tirisfal, M.undercity } }), { race = { "ORC", "TROLL" } }),
       finish(1959, anastasia, "Anastasia Hartwell stands in the Magic Quarter."),
       accept(1960, anastasia, "Take the quest, then pick up the Cantation of Manifestation and the Chest of Containment Coffers behind Anastasia."),
       withItem(7308, objective(1960, uc(nil, 53.0, 74.7),

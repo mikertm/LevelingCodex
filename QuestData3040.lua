@@ -74,6 +74,7 @@ do
   road(M.darkshore, M.stormwind, auberdineSouth, "Take the Stormwind ship from Auberdine's south pier")
   road(M.stormwind, M.dustwallow, stormwindPier, "Take the Auberdine ship, then fly south to Theramore")
   -- Overland legs out of the Alliance towns.
+  road(M.westfall, M.stv, on.westfall(nil, 68, 63), "Take the east bridge into Duskwood, then follow the south road to Stranglethorn")
   road(M.duskwood, M.stv, on.duskwood(nil, 44.7, 87.5), "Follow the road south into Stranglethorn")
   road(M.stv, M.duskwood, on.stv(nil, 40.6, 3.5), "Follow the road north into Duskwood")
   road(M.duskwood, M.deadwind, on.duskwood(nil, 87.7, 41.1), "Take the east road out of Darkshire into Deadwind Pass")
@@ -151,9 +152,11 @@ do
     "https://bindonforever.com/zones/duskwood",
     "Cached quest records (revision 0f7d8ad)",
   }, {
+    -- The ship is for players finishing the Wetlands delivery in Auberdine.
     action("boat", on.darkshore("Thamarian", 32.67, 42.11),
-      "Take the Stormwind ship from Auberdine's south pier. Use Next when you reach Stormwind Harbor.",
-      { name = "Auberdine - Stormwind Harbor", skipOn = M.stormwind }),
+      "Take the Stormwind ship from Auberdine's south pier. Check the guide when it docks.",
+      { name = "Auberdine - Stormwind Harbor", skipOn = { M.stormwind, M.westfall, M.duskwood, M.stv,
+        M.elwynn, M.redridge, M.ironforge, M.dunMorogh, M.lochModan, M.wetlands } }),
     action("note", nil, "Clean out your quest log. If you never ran the Deadmines, abandon its quests now: they are grey and the 30s need the room.",
       { name = "Quest log", drop = { 166, 167, 168, 214, 2040, 92753 } }),
     accept(538, at("Milton Sheaf", 77.07, 30.21, M.stormwind),
@@ -208,8 +211,10 @@ do
       "Mor'Ladim, a level 35 elite, walks the cemetery paths. He hits hard but moves slowly: bring help.", "Mor'Ladim's Skull"),
       "Patrol path and difficulty need an in-game check."),
     finish(55, sven, "Ride back west to Sven for the Morbent Fel turn-in."),
-    action("goto", on.stv(nil, 40.6, 3.5), "Follow the main road south out of Duskwood into Stranglethorn Vale."),
-    accept(215, on.stv("Private Thorsen", 37.98, 3.41), "Check the Rebel Camp first. Private Thorsen also patrols the road around 40.3, 8.4."),
+    action("goto", on.stv(nil, 40.6, 3.5),
+      "From Sentinel Hill, take the east bridge into Duskwood. Follow the road south into Stranglethorn Vale and on to Rebel Camp."),
+    accept(215, on.stv("Private Thorsen", 37.98, 3.41),
+      "From Sentinel Hill, cross the east bridge into Duskwood. Follow the road south into Stranglethorn Vale to Rebel Camp. Check for Private Thorsen in camp or on patrol around 40.3, 8.4."),
     finish(215, on.stv("Lieutenant Doren", 38.04, 3.01)),
     accept(583, barnil, "Follow the road south to Nesingwary's Expedition, west of the road."),
     finish(583, at("Hemet Nesingwary", 35.66, 10.81, M.stv)),

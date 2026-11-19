@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.28.2
+
+### Travel and guide resumes
+
+- Reloading at Sentinel Hill during the Darkshire chapter now points you across Duskwood to Rebel Camp for **Jungle Secrets**.
+- Added arrival checks to 41 boat, zeppelin, and airship crossings, including the Skyborne skycutter and Horde dungeon, class, and attunement trips. Each leg of a round trip advances at its own destination.
+- Fixed earlier travel steps reappearing when you resume the relevant guides at Ironforge, Refuge Pointe, Everlook, Thunder Bluff, or on the Westfall coast.
+
 ## v0.28.1
 
 ### Alliance and Horde leveling routes

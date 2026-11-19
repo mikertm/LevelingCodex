@@ -341,7 +341,7 @@ local hillsbrad = (function()
   local home = {
     action("boat", at(nil, 60.96, 58.63, M.tirisfal),
       "Leave the Undercity and take the Durotar zeppelin from the tower between the city and Brill.",
-      { skipOn = { M.durotar, M.orgrimmar } }),
+      { skipOn = { M.durotar, M.orgrimmar, M.thunderBluff } }),
     taxi("fly", tbPlaces.tal, "Thunder Bluff, Mulgore", "Enter Orgrimmar and fly to Thunder Bluff from Doras on the flight tower in the Valley of Strength."),
     -- Zangen and Tah on the central rise, the trainer, then Zamah below Spirit Rise last: Spirit Rise
     -- trainers (Shaman, Paladin) no longer cross the city twice.

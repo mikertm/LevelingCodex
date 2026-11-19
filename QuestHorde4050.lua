@@ -280,7 +280,7 @@ do
       "Drop source and Dudd's spot from bindonforever (quest database-format data) and a published Forever guide; not in the cached quest database."),
     finish(95384, P.dudd, "Give Dudd the notes."),
     action("boat", P.bootyPier, "Take the boat from Booty Bay to Ratchet. Check the guide when it docks.",
-      { name = "Booty Bay - Ratchet", skipOn = M.barrens }),
+      { name = "Booty Bay - Ratchet", skipOn = { M.barrens, M.thunderBluff } }),
     taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
   }, train(bluffTrainers, 42), {
     accept(1205, tb("Melor Stonehoof", 61.54, 80.92), "Melor Stonehoof wants Deadmire's tooth from Dustwallow Marsh."),

@@ -3126,6 +3126,29 @@ local function allText(root)
   return table.concat(out, " | ")
 end
 
+function S.questDarkshireStranglethornHandoff()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1436, 56.55, 52.70
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 215 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Darkshire") and questText(frame, "Levels 30-32"), "reload keeps the Darkshire chapter at Sentinel Hill")
+  check(not questText(frame, "Auberdine - Stormwind Harbor"), "Sentinel Hill resumes without the Auberdine ship")
+  check(questText(frame, "Follow the road south into Stranglethorn Vale"), "the next step is the overland approach to Rebel Camp: " .. allText(frame))
+  check(arrowSays("bridge into Duskwood"), "the arrow leads across the Westfall bridge: " .. arrowCaption())
+  walkTo(1431, 8, 64)
+  check(arrowSays("road south into Stranglethorn"), "in Duskwood the arrow leads to the south road: " .. arrowCaption())
+  walkTo(1434, 40.6, 3.5)
+  check(questText(frame, "Accept - Jungle Secrets"), "crossing the border leads to Thorsen's pickup")
+end
+
 -- Dungeon ahead: before a run's first pickup the route asks whether to plan it. Plan adds its
 -- quests, Skip (Next) leaves them out, and a ready run leads the step text with find a group.
 function S.questDungeonChoice()
@@ -4638,6 +4661,100 @@ function S.questBootyBayArrival()
   check(questText(frame, "Turn in - Deliver to MacKinley"), "MacKinley is the next step after docking: " .. allText(frame))
   MOCK.event("QUEST_LOG_UPDATE")
   check(questText(frame, "Turn in - Deliver to MacKinley"), "the turn-in stays current without pressing Next")
+end
+
+function S.questSkycutterDalaranJoin()
+  MOCK.race, MOCK.level = "Skyborne", 12
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1416, 12.3, 56.3
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "valanaar" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 94946 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 94946, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Valanaar")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Turn in to Denaaris Stargale"),
+    "starting Valanaar at the Dalaran dock leads to Denaaris: " .. allText(frame))
+end
+
+function S.questRagefireZeppelinRoundTrip()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 14
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1458, 56.25, 92.2
+  MOCK.questLog = { { questID = 5722 }, { questID = 5723 }, { questID = 5726, isComplete = true } }
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Ragefire Chasm")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Enter the Undercity"), "joining in the Undercity leads to Varimathras: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 5725 }
+  MOCK.event("QUEST_ACCEPTED", #MOCK.questLog, 5725)
+  check(questTextStarts(frame, "Leave the Undercity and take the zeppelin"),
+    "accepting the books quest keeps the return zeppelin: " .. allText(frame))
+  walkTo(1411, 50.8, 13.8)
+  check(questTextStarts(frame, "Bring the insignia to Thrall"),
+    "landing in Durotar advances the return leg to Thrall: " .. allText(frame))
+end
+
+function S.questHordeCozyWestfallJoin()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 25
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1436, 37.3, 89.2
+  MOCK.questLog = { { questID = 79007, isComplete = true } }
+  S.login()
+  slash("quests")
+  guidesView("Special")
+  click(win(), "Cozy Sleeping Bag")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Search the Burned-Out Remains in the burned field"),
+    "joining in Westfall leads to the farmstead: " .. allText(frame))
+end
+
+function S.questWinterspringIronforgeJoin()
+  MOCK.race, MOCK.level = "Human", 56
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1455, 55.5, 47.7
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "winterspring-55" then
+      for _, step in ipairs(section.steps) do
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  clickGuide("Winterspring: Everlook and the Southern Valleys")
+  local frame = questViewer()
+  check(not questTextStarts(frame, "Walk back through Timbermaw Hold")
+      and not questTextStarts(frame, "Fly to Auberdine") and not questText(frame, "Auberdine - Menethil Harbor"),
+    "restarting from Ironforge passes the earlier travel legs: " .. allText(frame))
+end
+
+function S.questHillsbradThunderBluffJoin()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 24
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1456, 47, 49.82
+  LevelingCodexCharDB = { questFlights = { ["Tarren Mill, Hillsbrad"] = true } }
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "hillsbrad" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and step.quest ~= 1067 and step.quest ~= 1086 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 1067, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Hillsbrad Foothills")
+  local frame = questViewer()
+  check(not questTextStarts(frame, "Leave the Undercity and take the Durotar zeppelin"),
+    "joining in Thunder Bluff skips the older zeppelin leg: " .. allText(frame))
+  check(questText(frame, "Turn in - Return to Thunder Bluff"), "Zamah's local hand-in is available: " .. allText(frame))
 end
 
 function S.questStranglethornRoad()

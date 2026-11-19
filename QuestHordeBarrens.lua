@@ -668,9 +668,11 @@ do
     steps = {
       accept(79007, tower, "From level 14, search the Burned-Out Remains at the burned watchtower beside the road south of Camp Taurajo. The chain crosses Alliance land: most players finish its last legs in their 30s."),
       action("boat", at("Snurk Bucksquick", 50.7, 12.9, durotar),
-        "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+        "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city.",
+        { skipOn = { stv, westfall } }),
       uncertain(action("goto", at(nil, 14.6, 23.0, stv),
-        "From Grom'gol, ride north-west to the coast. Swim north along the shore into Westfall and keep clear of the naga and murlocs in the water."),
+        "From Grom'gol, ride north-west to the coast. Swim north along the shore into Westfall and keep clear of the naga and murlocs in the water.",
+        { skipOn = westfall }),
         "Coast point from reference guide A's Horde route; the road north through Duskwood and west past Raven Hill also works."),
       action("goto", at(nil, 37.3, 89.2, westfall),
         "Come ashore on Westfall's south coast and ride north to Alexston Farmstead. Stay away from Sentinel Hill to the east: its guards attack Horde."),

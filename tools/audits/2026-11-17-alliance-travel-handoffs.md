@@ -20,3 +20,9 @@ A follow-up can protect an active guided trip through arrival, then let the rout
 - All 15 existing flight, zone-entry, and chapter-handoff scenarios selected for this audit passed, including `questFlightMorbent`, `questFlightBack`, `questZoneResume`, `questWetlandsEnd`, and `questDuskwoodZoneEntry`.
 - The offline Alliance route data audit returned zero errors and 259 warnings. The arrival findings above came from the client mock.
 - In game, check arrival before pressing Next on the three ships above. For Sentinel Hill, keep an unrelated Westfall turn-in ready alongside **Armed and Ready**.
+
+## Sentinel Hill reload in v0.28.1
+
+After a reload at Sentinel Hill, the level 30–32 Darkshire chapter showed the Auberdine ship with Jungle Secrets immediately ahead. The ship only skipped on the Stormwind destination, and Sentinel Hill is on the Westfall map. The Darkshire departure now skips the ship on the nearby Eastern Kingdoms maps. The Stranglethorn approach points from Westfall to the east bridge into Duskwood, then down the southern road to Rebel Camp. The Jungle Secrets pickup carries the same directions for players whose progress already passed the travel step. [Westfall map](https://wow.zamimg.com/images/wow/maps/enus/original/40.jpg) · [Duskwood map](https://wow.zamimg.com/images/wow/maps/enus/original/10.jpg)
+
+The reload scenario failed on `v0.28.1` and passed with the updated route. It walks through both borders to Thorsen's pickup. The existing Wetlands scenario still offers the ship after the Nord'el delivery in Auberdine, and the Sven flight handoff still passes at Sentinel Hill.
