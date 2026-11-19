@@ -1090,7 +1090,7 @@ def main():
                              "questStepTypes", "questBuyItems", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questPreviewAhead", "questDanger", "questParty", "questPartySync", "questPartyGoal", "questPartyChat", "questPartyChatSteps", "questPartyHeartbeat", "questPartyTab", "questPartyShare", "questPartyCatchUp",
                              "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent",
-                             "questDarkshireStranglethornHandoff", "questDungeonChoice",
+                             "questDarkshireStranglethornHandoff", "questDarkshirePantherSuggestion", "questDarkshireSouthshorePreview", "questDungeonChoice",
                              "questBossSteps", "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",
                              "questEliteChain", "questEliteFresh", "questSovikDungeon", "questSovikRoute", "questSovikWithoutRigWars",
                              "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",

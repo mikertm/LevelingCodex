@@ -372,15 +372,10 @@ local function makeViewer()
       quiet = true
       ns.questRefresh()
     else
-      local run = Q.readyRun()
-      local suggestion = not run and Q.suggestions()[1]
-      local related = not run and not suggestion and Q.relatedGuide()
-      if run then
-        Q.jump(run)
-        quiet = true
-        ns.questRefresh()
+      local suggestion = Q.suggestions()[1]
+      local related = not suggestion and Q.relatedGuide()
+      if suggestion then ns.followSuggestedQuestSection(suggestion)
       elseif related then ns.openQuestGuide(related)
-      elseif suggestion then ns.followSuggestedQuestSection(suggestion)
       elseif ns.questSetupDue() then ns.openQuestSetup() end
     end
   end, 35)

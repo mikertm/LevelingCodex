@@ -1592,7 +1592,8 @@ function Q.suggestions(browse)
   end
   for _, id in ipairs(suggestions or {}) do offer(sectionsById[id]) end
   local map = not Q.inFlight() and Q.position()
-  if map and selected and selected.zone ~= map then
+  -- A chapter can send you into another zone for its own steps.
+  if map and selected and selected.zone ~= map and (not row or row.step.map ~= map) then
     for _, section in ipairs(sections) do
       if section.zone == map then offer(section) end
     end

@@ -3149,6 +3149,69 @@ function S.questDarkshireStranglethornHandoff()
   check(questText(frame, "Accept - Jungle Secrets"), "crossing the border leads to Thorsen's pickup")
 end
 
+function S.questDarkshirePantherSuggestion()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 73.9, 44.4
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 185 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 185, isComplete = true }, { questID = 190, objectives = {
+    { text = "Young Panther slain: 1/10", numFulfilled = 1, numRequired = 10 },
+  } } }
+  S.login()
+  local frame = questViewer()
+  walkTo(1434, 41.5, 12.0)
+  check(questText(frame, "Darkshire") and questText(frame, "Young Panthers prowl east of the camp"),
+    "entering Stranglethorn keeps the Darkshire chapter on Panther Mastery: " .. allText(frame))
+  check(not findButton(frame, function(label) return label == "Try Stranglethorn Early: Rebel Camp and Nesingwary" end),
+    "the step window does not offer a route switch during its own Stranglethorn hunt")
+  slash("quests")
+  check(guideButton("Stranglethorn Early: Rebel Camp and Nesingwary"), "the longer route is still available in Quests")
+end
+
+function S.questDarkshireSouthshorePreview()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 73.9, 44.4
+  LevelingCodexDB = { questPreview = 10, questDungeonPlan = { ["dungeon-gnomeregan"] = true } }
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.flight == "Stormwind, Elwynn" then break end
+        if step.quest and step.quest ~= 185 and step.quest ~= 190 then MOCK.questDone[step.quest] = true end
+      end
+    elseif section.id == "dungeon-gnomeregan" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.phase == "prepare" and step.quest ~= 2929 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 185, isComplete = true }, { questID = 190, isComplete = true }, { questID = 2929 } }
+  S.login()
+  local frame = questViewer()
+  walkTo(1434, 35.55, 10.55)
+  check(questText(frame, "Turn in - Tiger Mastery"), "Darkshire keeps the first hunts active in Stranglethorn")
+  for _, id in ipairs({ 185, 190 }) do
+    table.remove(MOCK.questLog, 1)
+    MOCK.questDone[id] = true
+    MOCK.event("QUEST_TURNED_IN", id)
+  end
+  check(questText(frame, "Fly to Stormwind") and questText(frame, "Next section: Southshore, Alterac and Refuge Pointe"),
+    "Stormwind is current and Southshore is a preview after the hunts: " .. allText(frame))
+  check(questText(frame, "Dungeon quests ready"), "a dungeon is ready alongside the outdoor route")
+  click(frame, "Try Stranglethorn Early: Rebel Camp and Nesingwary")
+  check(questText(frame, "Stranglethorn Early") and questText(frame, "Levels 30-35"),
+    "the Stranglethorn button opens the longer outdoor route while a dungeon is ready: " .. allText(frame))
+  click(frame, "Run Gnomeregan")
+  check(questText(frame, "Gnomeregan"), "the dungeon icon still opens its own guide")
+end
+
 -- Dungeon ahead: before a run's first pickup the route asks whether to plan it. Plan adds its
 -- quests, Skip (Next) leaves them out, and a ready run leads the step text with find a group.
 function S.questDungeonChoice()
