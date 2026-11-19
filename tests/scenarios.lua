@@ -7290,6 +7290,33 @@ local function installedMacroBody(name)
   return macro and macro.body
 end
 
+function S.druidMacros()
+  local function has(name, text)
+    local body = installedMacroBody(name)
+    return body and body:find(text, 1, true)
+  end
+
+  MOCK.level = 60
+  if not MOCK.minimal then
+    -- A character can log in with an old macro and no record of who made it.
+    MOCK.macros = { { name = "Heal up", icon = 134400, perChar = true,
+      body = "#showtooltip\n/cancelform\n/cast [@player,combat] Regrowth; [@player] Healing Touch" } }
+    LevelingCodexCharDB.made = nil
+  end
+  slash("macros")
+  check(has("Heal up", "[@player,combat] reset=combat Rejuvenation, Regrowth"), "combat Heal up starts with self Rejuvenation")
+  check(has("Heal up", "[@player,nocombat] reset=combat Healing Touch, Regrowth"), "out of combat Heal up starts with self Healing Touch")
+  check(has("Fight Cat", "/dismount") and has("Fight Cat", "Rake,Claw,Claw,Claw,Ferocious Bite"),
+    "Fight Cat shifts and retains the full rotation")
+  check(has("Prowl Cat", "[noform:3,known:1066][noform:2,noknown:1066] Cat Form")
+      and has("Prowl Cat", "[combat] Shifting Power; [nostealth] Prowl; Ravage"),
+    "Prowl Cat accounts for both Cat slots and keeps its existing abilities")
+  check(has("Panic Bear", "/dismount") and has("Panic Bear", "[noform:1] Dire Bear Form")
+      and has("Panic Bear", "/cast Frenzied Regeneration\n/cast Enrage"),
+    "Panic Bear shifts before its emergency abilities")
+  check(has("Cancel Form", "Moonkin Form\n/cancelform"), "Cancel Form is created with a form-sensitive tooltip")
+end
+
 function S.warriorPackMacros()
   local function has(name, text)
     local body = installedMacroBody(name)

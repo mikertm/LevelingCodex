@@ -1107,6 +1107,7 @@ def main():
         for cls in CLASSES:
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/warrior-macros" % variant, "WARRIOR", minimal, ["login", "warriorPackMacros"]))
+        runs.append(("DRUID/%s/druid-macros" % variant, "DRUID", minimal, ["login", "druidMacros"]))
         runs.append(("WARRIOR/%s/talent-path-api" % variant, "WARRIOR", minimal, ["login", "talentPathApi"]))
         if minimal:
             runs.append(("WARRIOR/minimal/quest-announcement-preview", "WARRIOR", True, ["questPartyAnnouncementPreview"]))

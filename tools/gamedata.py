@@ -1262,8 +1262,10 @@ def macro_spells(body):
         line = line.strip()
         m = re.match(r"#show(?:tooltip)?\s+(.*)", line)
         if m:
-            if m.group(1).strip():
-                out.append(("#show", m.group(1).strip()))
+            for clause in m.group(1).split(";"):
+                spell = re.sub(r"\[[^\]]*\]", "", clause).strip()
+                if spell:
+                    out.append(("#show", spell))
             continue
         m = re.match(r"/(cast|castsequence|use|castrandom)\s+(.*)", line)
         if not m:
@@ -1391,6 +1393,9 @@ def audit_macros(macros, R, spell_level, rows_of, add, prefix, strict=False):
                     add("info", "%s: uses '%s' (an item?)" % (where, s))
                 else:
                     add("error", "%s: '%s' is not a spell this class has" % (where, s))
+            elif cmd == "#show":
+                # An option may show a later spell or a form used by another path.
+                continue
             elif lv > m["hi"]:
                 add("error", "%s: %s is only learned at %d, after the macro's levels" % (where, name, lv))
             elif lv > m["lo"]:

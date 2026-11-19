@@ -1,5 +1,14 @@
 # Leveling Codex
 
+## v0.28.3
+
+### Druid macros
+
+- **Fight Cat, Fight Bear, and Prowl Cat** can dismount and shift before their usual attacks or Prowl. Cat shifting accounts for whether you have learned Aquatic Form.
+- **Heal Up** starts with instant Rejuvenation in combat and Healing Touch between fights from level 12. Press again for Regrowth. Both sequences heal you even with an enemy targeted.
+- **Panic Bear** can dismount and shift into Bear or Dire Bear Form before using Frenzied Regeneration and Enrage. **Cancel Form** returns you to caster form and is available from level 10 on every Druid path.
+- Run `/codex macros` to update your existing Codex macros and add Cancel Form.
+
 ## v0.28.2
 
 ### Travel and guide resumes
