@@ -107,8 +107,8 @@ local function font(parent, y, width, template)
   return fs
 end
 
-function ns.moveQuestStep(back)
-  if back then Q.back() else Q.next() end
+function ns.moveQuestStep(back, skipBoss)
+  if back then Q.back() else Q.next(skipBoss) end
   quiet = true
   ns.questRefresh()
 end
@@ -357,10 +357,14 @@ local function makeViewer()
   viewer.buttons[#viewer.buttons + 1] = runButton
   runButton:Hide()
   nextButton = primary("Next", 44, 222, function(_, mouse)
-    ns.moveQuestStep(mouse == "RightButton")
+    local row = Q.current()
+    ns.moveQuestStep(mouse == "RightButton", row and row.step.optionalBoss)
   end)
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   nextButton:SetLabel("Next step", true)
+  viewer.markBoss = primary("Mark defeated", 158, 108, function() ns.moveQuestStep(false) end)
+  viewer.markBoss.tipTitle = "Record a boss kill manually"
+  viewer.markBoss:Hide()
   suggestionButton = primary("", 16, 318, function()
     local row = Q.current()
     if row and row.step.type == "plan" then
@@ -775,6 +779,10 @@ function Q.label(step)
   return name and (verb .. " - " .. name) or verb
 end
 
+function Q.bossSkipLabel(step)
+  if step.optionalBoss then return step.optionalBoss == "rare" and "Skip rare" or "Skip boss" end
+end
+
 -- One objective as a checklist row: the goal, its count and whether it's done. The log says
 -- "2/10 Mottled Raptor slain" (Forever), "Mottled Raptor slain: 2/10" (classic) or has no count.
 -- `flat` keeps the log's own words for Q.detail (the Quests tab and tooltips).
@@ -941,6 +949,11 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   local function add(block) out[#out + 1] = block end
   if step.type == "plan" then add({ kind = "text", text = Q.planText(step) }); return out end
   if step.type == "elite" then add({ kind = "text", text = Q.eliteText(step) }); return out end
+  if step.type == "boss" and step.optionalBoss then
+    local warning = step.skipBossTip or (step.optionalBoss == "rare"
+      and "Optional spawn. Skip rare if you don't see the boss." or "Optional encounter. Use Skip boss if your group passes it.")
+    add({ kind = "note", tone = "warn", text = warning })
+  end
   local _, _, _, level = Q.rows()
   if requiredFor then add({ kind = "note", tone = "warn", text = "Required for " .. requiredFor.name .. "." }) end
   if step.type == "accept" and not Q.log(step.quest) then
@@ -952,6 +965,12 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   end
   if step.min and level < step.min then add({ kind = "note", tone = "warn", text = "Requires level " .. step.min .. "." }) end
   add({ kind = "text", text = Q.text(step) })
+  if step.abilities and #step.abilities > 0 then
+    add({ kind = "heading", text = "Watch for" })
+    for _, ability in ipairs(step.abilities) do
+      add({ kind = "note", text = ability[1] .. " - " .. ability[2] })
+    end
+  end
   if step.type == "complete" then addGoals(out, Q.log(step.quest), step.objectiveIndex, step.objectives) end
   local have, need = itemCounts(step)
   if have then add(itemGoal("In your bags", have, need, false, "You have " .. have .. "/" .. need .. ".")) end
@@ -1236,6 +1255,7 @@ local function stepTargets(step)
     return name and { name }
   end
   if step.type == "boss" then
+    if step.targets then return step.targets end
     local name = targetName((step.name:gsub(" %(.*$", "")))
     return name and { name }
   end
@@ -1885,11 +1905,17 @@ function ns.questRefresh()
       title:SetTextColor(ns.rgba(C.gold))
       for _, b in ipairs(viewer.buttons) do b:Repaint() end
       nextButton:Repaint()
+      viewer.markBoss:Repaint()
       suggestionButton:Repaint()
       theme = ns.themeVersion
     end
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
-    levels:SetText("Levels " .. sec.levels[1] .. "-" .. sec.levels[2])
+    local bossTally
+    if row and row.step.type == "boss" then
+      local down, total = Q.bossProgress(sec)
+      if total > 0 then bossTally = down .. "/" .. total .. " bosses" end
+    end
+    levels:SetText(bossTally or "Levels " .. sec.levels[1] .. "-" .. sec.levels[2])
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
@@ -1964,9 +1990,11 @@ function ns.questRefresh()
     if compact then
       -- compact: at the right of the title, the first unfinished goal's count, else how far the step
       -- is (kept live by the tick); the title is sized after it, so a long zone name can't overlap
-      local right = ""
-      for _, b in ipairs(blocks) do
-        if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
+      local right = bossTally or ""
+      if not bossTally then
+        for _, b in ipairs(blocks) do
+          if b.kind == "goal" and b.count and not b.done and not b.small then right = b.count; break end
+        end
       end
       if right == "" and row then
         right = nextDistance(row.step)
@@ -2015,10 +2043,18 @@ function ns.questRefresh()
     nextButton:SetShown(row ~= nil)
     local choosing = row and row.step.type == "plan"
     local eliteAsk = row and row.step.type == "elite"
-    nextButton.codexLabel = (choosing or eliteAsk) and "Skip" or "Next"
-    nextButton:SetLabel(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", true)
+    local boss = row and row.step.type == "boss" and row.step == Q.autoStep()
+    local skipBoss = boss and Q.bossSkipLabel(row.step)
+    nextButton.codexLabel = skipBoss or (choosing or eliteAsk) and "Skip" or boss and "Mark defeated" or "Next"
+    nextButton:SetLabel(choosing and "Skip run" or (nextButton.codexLabel == "Next" and "Next step" or nextButton.codexLabel), true)
     runButton:SetShown(run ~= nil)
-    nextButton:SetWidth(run and 190 or 222)
+    local buttonWidth = run and 190 or 222
+    nextButton:SetWidth(skipBoss and buttonWidth - 114 or buttonWidth)
+    viewer.markBoss:SetShown(skipBoss ~= nil and skipBoss ~= false)
+    if skipBoss then
+      viewer.markBoss:ClearAllPoints()
+      viewer.markBoss:SetPoint("BOTTOMLEFT", 44 + buttonWidth - 108, 9)
+    end
     if run then
       runButton.codexLabel = "Run " .. run.title
       runButton.tipTitle = "Find a group for " .. Q.plain(run.title)
@@ -2486,11 +2522,13 @@ local function takeFlight(nodes)
 end
 
 -- A boss died: ENCOUNTER_END (encounterID, name, difficulty, size, success) or BOSS_KILL
--- (encounterID, name). A rare without an encounter is passed with Next. Never the combat log:
+-- (encounterID, name). A rare without an encounter can be marked defeated or skipped. Never the combat log:
 -- Forever blocks addons from registering or unregistering COMBAT_LOG_EVENT_UNFILTERED ("blocked
 -- from an action only available to the Blizzard UI", reported as UNKNOWN()).
 local function bossEvent(event, a, b, e)
-  if event == "ENCOUNTER_END" then
+  if event == "ENCOUNTER_START" then
+    return Q.bossStarted(tonumber(a), b)
+  elseif event == "ENCOUNTER_END" then
     if e == 1 or e == true then return Q.bossDown(tonumber(a), b) end
   elseif event == "BOSS_KILL" then
     return Q.bossDown(tonumber(a), b)
@@ -2498,7 +2536,7 @@ local function bossEvent(event, a, b, e)
 end
 
 local function handle(event, a, b, c, d, e)
-  if event == "ENCOUNTER_END" or event == "BOSS_KILL" then
+  if event == "ENCOUNTER_START" or event == "ENCOUNTER_END" or event == "BOSS_KILL" then
     if bossEvent(event, a, b, e) then ns.questRefresh() end
     return
   end
@@ -2612,7 +2650,7 @@ function ns.startQuestGuide()
     "QUEST_QUERY_COMPLETE", "PLAYER_CONTROL_GAINED",
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED",
-    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_END", "BOSS_KILL",
+    "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL",
     "PLAYER_REGEN_DISABLED" }) do
     pcall(events.RegisterEvent, events, ev)
   end

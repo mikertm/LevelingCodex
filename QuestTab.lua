@@ -213,8 +213,10 @@ local function stepButtons(current, x, y, w)
   -- On a Dungeon ahead step, Next leaves the run out, so it says Skip (like the step window's).
   local choosing = current and current.step.type == "plan"
   local eliteAsk = current and current.step.type == "elite"
-  U.btn(choosing and "Skip run" or eliteAsk and "Skip" or "Next step", x + each + 8, y, each,
-    function() ns.moveQuestStep(false) end, false,
+  local boss = current and current.step.type == "boss" and current.step == Q.autoStep()
+  local skipBoss = boss and Q.bossSkipLabel(current.step)
+  U.btn(choosing and "Skip run" or eliteAsk and "Skip" or skipBoss or (boss and "Mark defeated" or "Next step"), x + each + 8, y, each,
+    function() ns.moveQuestStep(false, skipBoss) end, false,
     choosing and "The run stays out of your route. Guides > Dungeons can plan it later."
     or eliteAsk and "The guide passes this elite quest and the quests that need it." or nil)
   U.btn("Show on map", x + 2 * (each + 8), y, each, ns.showQuestStepOnMap, false,
@@ -314,13 +316,15 @@ end
 ----------------------------------------------------------------------------
 
 local function followGuide(section, phase)
-  Q.jump(section, nil, phase)
+  local bosses = phase == "inside" and Q.bossRows(section)
+  local firstBoss = bosses and bosses[1]
+  Q.jump(section, nil, phase, firstBoss and firstBoss.state ~= "filtered" and firstBoss or nil)
   ns.showQuestViewer()
 end
 
 local function showGuide(section, row)
   librarySection, pageFrom = section, nil
-  board.section, board.leg, board.stepPage, board.phase, board.bosses = nil, nil, 1, nil, false
+  board.section, board.leg, board.stepPage, board.phase, board.bosses, board.bossPreview = nil, nil, 1, nil, nil, nil
   board.searchRow, board.phase = row, row and row.step.phase or nil
   U.refreshTop()
 end
@@ -838,6 +842,53 @@ local function tileGrid(list, y, dungeon, key)
   return y + math.ceil(math.min(4, #list) / 2) * (h + 12)
 end
 
+local function bossPage(section, bosses, current, y)
+  y = y + U.sectionTitle("BOSSES IN ORDER", y)
+  local done, total = Q.bossProgress(section)
+  local active
+  for i, row in ipairs(bosses) do if row == current then active = i; break end end
+  local i = board.bossPreview or active or (total > 0 and done == total and #bosses or 1)
+  local row = bosses[i]
+  local each = (W - 16) / 3
+  if i > 1 then
+    U.btn("Previous boss", 0, y, each, function() board.bossPreview = i - 1; U.refreshTop() end)
+  end
+  if board.bossPreview and active then
+    U.btn("Current boss", each + 8, y, each, function() board.bossPreview = nil; U.refreshTop() end)
+  end
+  if i < #bosses then
+    U.btn("Next boss", W - each, y, each, function() board.bossPreview = i + 1; U.refreshTop() end)
+  end
+  local top = y + 32
+  y = top + 12
+  local status = row.state == "done" and "Defeated" or row.state == "skipped" and "Skipped" or i == active and "Current"
+  if status then badge(status, W - 102, y, 90, row.state == "done" and C.green or C.gold) end
+  y = y + U.T(done .. "/" .. total .. " bosses", 12, y, W - 124, "label", C.gold) + 8
+  y = y + U.T(Q.plain(row.step.name), 12, y, W - 24, "head", C.light) + 8
+  for _, block in ipairs(Q.detailBlocks(row.step)) do
+    local color = (block.kind == "heading" or block.tone == "warn") and C.gold or C.light
+    y = y + U.T(Q.plain(block.text), 12, y, W - 24, "small", color) + 5
+  end
+  if i == active then
+    local skip = Q.bossSkipLabel(row.step)
+    local width = (W - 32) / 2
+    if skip then
+      U.btn(skip, 12, y, width, function() Q.leaveReview(); ns.moveQuestStep(false, true) end, true)
+    end
+    U.btn("Mark defeated", skip and 20 + width or 12, y, width, function() Q.leaveReview(); ns.moveQuestStep(false) end)
+    y = y + 28
+  elseif row.state == "pending" then
+    U.btn("Follow from this boss", 12, y, W - 24, function()
+      board.bossPreview = nil
+      Q.jump(section, nil, "inside", row)
+      ns.showQuestViewer()
+    end)
+    y = y + 28
+  end
+  U.box(0, top, W, y - top + 8, C.panel, i == active and C.accent or C.edgeSoft)
+  return y + 20
+end
+
 local function guidePage(rows, section)
   local back = pageFrom == "route"
   U.btn(back and "Back to the route" or "Back to guides", 0, 0, 150, function()
@@ -904,26 +955,24 @@ local function guidePage(rows, section)
       if onIt and current and current.section == section and (current.step.phase or "prepare") == value then labels[i] = labels[i] .. " (now)" end
     end
     y = y + U.segments(0, y, W, labels, lit, function(i)
-      board.phase, board.leg, board.stepPage = phases[i], nil, 1; U.refreshTop()
+      board.phase, board.leg, board.stepPage, board.bosses, board.bossPreview = phases[i], nil, 1, nil, nil
+      U.refreshTop()
     end) + 10
-    if section.bosses and #section.bosses > 0 then
-      U.btn(board.bosses and "Quest checklist" or "Bosses in order", 0, y, W, function() board.bosses = not board.bosses; U.refreshTop() end)
+    local bosses = Q.bossRows(section)
+    if bosses then
+      local showing = board.bosses == true or (board.bosses == nil and phase == "inside")
+      U.btn(showing and "Quest checklist" or "Bosses in order", 0, y, W, function()
+        board.bosses, board.bossPreview = not showing, nil
+        U.refreshTop()
+      end)
       y = y + 30
-      if board.bosses then
-        y = y + U.sectionTitle("BOSSES IN ORDER", y)
-        local first, ph = pager(y, #section.bosses, 4, "bossPage", "bosses")
-        y = y + ph
-        for i = first, math.min(first + 3, #section.bosses) do
-          local boss = section.bosses[i]
-          y = y + U.T(i .. ". " .. Q.plain(boss.name), 0, y, W, "body", C.gold) + 5
-          y = y + U.T(Q.plain(boss.tip), 0, y, W, "small", C.light) + 16
-        end
-        return y
-      end
+      if showing then return bossPage(section, bosses, current, y) end
     end
     list = {}
     for _, row in ipairs(rows) do
-      if row.section == section and (row.step.phase or "prepare") == phases[lit] then list[#list + 1] = row end
+      if row.section == section and row.step.type ~= "boss" and (row.step.phase or "prepare") == phases[lit] then
+        list[#list + 1] = row
+      end
     end
     U.T(({ prepare = "BEFORE YOU GO", inside = "INSIDE", after = "AFTER THE RUN" })[phases[lit]], 0, y, W, "label", C.gold)
     y = y + 24
@@ -1260,7 +1309,8 @@ function ns.openQuestRoute()
 end
 
 function ns.openQuestGuide(section)
-  board.section, board.leg, board.stepPage, board.phase, board.bosses, board.searchRow = nil, nil, 1, nil, false, nil
+  board.section, board.leg, board.stepPage, board.phase, board.bosses, board.bossPreview = nil, nil, 1, nil, nil, nil
+  board.searchRow = nil
   sub, librarySection, query, draft, pageFrom = "guides", section, "", "", nil
   ns.openTab("quests")
   U.refreshTop()

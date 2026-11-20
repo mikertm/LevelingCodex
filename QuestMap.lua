@@ -130,7 +130,10 @@ function ns.questKindStyle(kind, step)
   local style = KIND_STYLE[kind]
   if style then
     local label = style[1]
-    if kind == "dungeon" and step and step.type == "boss" then label = "Boss" end
+    if kind == "dungeon" and step and step.type == "boss" then
+      if step.optionalBoss == "rare" then return { label = "Rare", color = KIND_STYLE.collect[2] } end
+      label = "Boss"
+    end
     if kind == "kill" and step and step.type == "elite" then label = "Elite" end
     if kind == "travel" and step and TRAVEL_WORD[step.type] then label = TRAVEL_WORD[step.type] end
     return { label = label, color = style[2] }

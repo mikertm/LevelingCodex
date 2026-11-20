@@ -42,6 +42,7 @@ QuestHordeClassHunterRogue.lua
 QuestHordeClassCasters.lua
 QuestHordeClassDruidShaman.lua
 QuestHordeClass3060.lua
+DungeonEncounters.lua
 QuestClassData.lua
 QuestMobData.lua
 QuestNPCData.lua
