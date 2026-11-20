@@ -3481,8 +3481,8 @@ function S.questBossSteps()
   check(questText(frame, "Boss - Rhahk'Zor"), "a wipe (ENCOUNTER_END without success) changes nothing")
   MOCK.event("ENCOUNTER_END", 2741, "Rhahk'Zor", 1, 5, 1)
   check(questText(frame, "Boss - Miner Johnson"), "ENCOUNTER_END ticks the boss off")
-  click(frame, "Next")
-  check(questText(frame, "Boss - Sneed's Shredder"), "Next passes a rare that isn't there")
+  click(frame, "Skip rare")
+  check(questText(frame, "Boss - Sneed's Shredder"), "Skip rare passes a rare that isn't there")
   MOCK.event("ENCOUNTER_END", 2742, "Sneed's Shredder", 1, 5, 1)
   check(questText(frame, "Boss - Gilnid"), "ENCOUNTER_END ticks the next boss off")
   MOCK.event("BOSS_KILL", 2743, "Gilnid")
@@ -3499,6 +3499,95 @@ function S.questBossSteps()
   MOCK.instanceName, MOCK.instanceID = "Deadmines", 36
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check(questText(frame, "Boss - Edwin VanCleef"), "running back in keeps the bosses already down")
+end
+
+function S.questStockadeBossGuide()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 26, nil
+  MOCK.instanceName, MOCK.instanceID = "Stormwind Stockade", 34
+  MOCK.questLog = {
+    { questID = 377, objectives = { { text = "Hand of Dextren Ward: 0/1" } } },
+    { questID = 388, objectives = { { text = "Red Wool Bandana: 0/10" } } },
+  }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Boss - Targorr the Dread") and questText(frame, "0/5 bosses") and questText(frame, "Thrash")
+    and not questText(frame, "Chain Lightning"), "the step window shows the current fight's mechanics")
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "The Stockade")
+  check(questText(win(), "0/5 bosses") and questText(win(), "Thrash") and not questText(win(), "Chain Lightning"),
+    "the inside page starts on one encounter")
+  click(win(), "Quest checklist")
+  check(questText(win(), "INSIDE"), "the quest checklist is available during the run")
+  click(win(), "Bosses in order")
+  click(win(), "Next boss")
+  check(questText(win(), "Shield Slam") and questText(frame, "Boss - Targorr the Dread"),
+    "previewing Kam in the board leaves the followed boss alone")
+  click(win(), "Current boss")
+  MOCK.event("BOSS_KILL", 2757, "Kam Deepfury")
+  check(questText(win(), "1/5 bosses") and questText(win(), "Thrash"), "a kill out of order counts without moving the current boss")
+  MOCK.event("ENCOUNTER_END", 2756, "Targorr the Dread", 1, 5, 1)
+  check(questText(win(), "2/5 bosses") and questText(win(), "Chain Lightning") and questText(frame, "Bloodlust"),
+    "both views advance to Hamhock and show his abilities")
+  MOCK.event("BOSS_KILL", 2758, "Hamhock")
+  check(questText(frame, "Smoke Bomb"), "Bazil's card calls out his stun")
+  MOCK.event("BOSS_KILL", 2760, "Bazil Thredd")
+  check(questText(frame, "Skip rare if you don't see the boss") and hasButton(frame, "Skip rare")
+    and hasButton(frame, "Mark defeated") and hasButton(win(), "Skip rare"), "Bruegal is clearly optional in both views")
+  click(frame, "Compact")
+  check(questText(frame, "Rare") and hasButton(frame, "Skip rare"), "compact mode still calls out the rare and the skip")
+  click(frame, "Expand")
+  click(win(), "Skip rare")
+  check(questText(win(), "4/5 bosses") and questText(frame, "Intimidating Shout")
+    and questText(frame, "Hand of Dextren Ward 0/1") and questText(frame, "Red Wool Bandana 0/10"),
+    "skipping Bruegal advances without counting a kill or losing quest goals")
+  click(win(), "Previous boss")
+  check(questText(win(), "Skipped") and questText(win(), "Bruegal Ironknuckle"), "the board records a skip")
+  click(frame, "Back")
+  check(hasButton(frame, "Mark defeated"), "Back lets the player revisit the rare")
+  click(frame, "Mark defeated")
+  check(questText(win(), "Defeated") and questText(frame, "Boss - Dextren Ward"),
+    "a player who found Bruegal can record the kill manually")
+  click(win(), "Current boss")
+  MOCK.event("BOSS_KILL", 2759, "Dextren Ward")
+  click(win(), "Inside")
+  check(questText(win(), "5/5 bosses"), "the board retains the completed clear")
+end
+
+function S.questDungeonEncounterGuides()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 42, nil
+  MOCK.instanceName, MOCK.instanceID = "Scarlet Monastery", 189
+  S.login()
+  local frame = questViewer()
+  check(not questText(frame, "Boss - Interrogator Vishas"), "a shared map does not assume the Graveyard")
+  MOCK.event("ENCOUNTER_START", 450, "High Inquisitor Whitemane", 1, 5)
+  check(questText(frame, "Boss - High Inquisitor Fairbanks") and hasButton(frame, "Skip boss"),
+    "a Cathedral encounter selects the wing and identifies Fairbanks as optional")
+  click(frame, "Skip boss")
+  check(questText(frame, "Boss - Mograine and Whitemane") and questText(frame, "Scarlet Resurrection")
+    and questText(frame, "0/1 bosses"), "both phases are one encounter")
+  MOCK.event("BOSS_KILL", nil, "Scarlet Commander Mograine")
+  check(questText(frame, "Boss - Mograine and Whitemane"), "Mograine's first fall does not finish the encounter")
+  MOCK.event("ENCOUNTER_END", 450, "High Inquisitor Whitemane", 1, 5, 1)
+  check(not questText(frame, "Boss - Mograine and Whitemane"), "the successful encounter advances both phases")
+  MOCK.event("ENCOUNTER_START", 446, "Houndmaster Loksey", 1, 5)
+  check(questText(frame, "Boss - Houndmaster Loksey") and questText(frame, "Bloodlust"), "another wing selects its own boss guide")
+  click(frame, "Return to leveling")
+  MOCK.event("BOSS_KILL", 446, "Houndmaster Loksey")
+  check(not questText(frame, "Boss - Arcanist Doan"), "leaving the guide prevents an encounter from reopening it")
+
+  MOCK.instanceName, MOCK.instanceID = "Uldaman", 70
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Boss - Revelosh") and questText(frame, "Chain Lightning"), "Alliance Uldaman has ability notes")
+  MOCK.event("BOSS_KILL", 547, "Alternate encounter name")
+  check(questText(frame, "Boss - The Lost Dwarves") and questText(frame, "1/8 bosses"), "the numeric encounter ID advances the Alliance guide")
+
+  MOCK.instanceName, MOCK.instanceID = "Dire Maul: North", 429
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Tribute run: leave Mol'dar alive") and questText(frame, "0/1 bosses"), "the named wing opens with Tribute instructions")
+  for _ = 1, 6 do click(frame, "Skip boss") end
+  check(questText(frame, "Boss - King Gordok") and questText(frame, "Mortal Strike")
+    and questText(frame, "0/1 bosses"), "Tribute skips all six optional fights and keeps the required boss")
 end
 
 -- A step's `path`: the arrow leads through the way in, in order, then to the step's own spot;

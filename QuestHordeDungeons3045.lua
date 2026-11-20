@@ -393,12 +393,10 @@ end
 -- Scarlet Monastery: Cathedral. Mograine and Whitemane end Into The Scarlet Monastery.
 do
   local name = "Scarlet Monastery: Cathedral"
-  local smEncounters = { ["High Inquisitor Fairbanks"] = 449, ["Scarlet Commander Mograine"] = 450,
-    ["High Inquisitor Whitemane"] = 450 }
   add({ id = "dungeon-scarlet-monastery-cathedral", title = name, zone = M.tirisfal, levels = { 37, 44 },
     instanceID = 189, instance = "Scarlet Monastery",
     links = { "dungeon-scarlet-monastery-library", "dungeon-scarlet-monastery-armory", "dungeon-scarlet-monastery-graveyard" },
-    bosses = bosses("dungeon-scarlet-monastery-cathedral", smEncounters),
+    bosses = H.bosses("dungeon-scarlet-monastery-cathedral"),
     sources = { "https://questing.wiki/wow-forever/dungeons/scarlet-monastery/quests/", qdb } }, {
       accept(1048, varimathras, "If you don't carry it yet, take Into The Scarlet Monastery from Varimathras in the Royal Quarter."),
       note("The Scarlet Key", "The Cathedral door needs The Scarlet Key from Arcanist Doan's strongbox at the end of the Library. A rogue's lockpicking or an engineer's charge also opens it."),

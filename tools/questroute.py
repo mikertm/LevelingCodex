@@ -52,6 +52,24 @@ def audit(data, ref, cap=20):
     def ascii_text(value):
         return isinstance(value, str) and value.isascii() and all(32 <= ord(c) < 127 for c in value)
 
+    def boss_shape(boss):
+        if (not isinstance(boss, dict) or not ascii_text(boss.get("name")) or not ascii_text(boss.get("tip"))
+                or set(boss) - {"name", "tip", "npc", "encounter", "optional", "abilities", "skip", "finishName", "targets"}
+                or boss.get("optional") not in (None, "rare", "optional")):
+            return False
+        if "skip" in boss and (not boss.get("optional") or not ascii_text(boss["skip"])):
+            return False
+        if "finishName" in boss and not ascii_text(boss["finishName"]):
+            return False
+        if "targets" in boss and (not isinstance(boss["targets"], list) or not boss["targets"]
+                                  or not all(ascii_text(name) for name in boss["targets"])):
+            return False
+        abilities = boss.get("abilities", [])
+        return isinstance(abilities, list) and bool(abilities) and all(
+            isinstance(ability, list) and len(ability) == 2 and all(ascii_text(text) and text.strip() for text in ability)
+            for ability in abilities
+        )
+
     def coord(value):
         return type(value) in (float, int) and 0 <= value <= 100
 
@@ -122,9 +140,10 @@ def audit(data, ref, cap=20):
             if not section.get("sources"):
                 warn(label, "no sources listed")
             if "bosses" in section and (category != "dungeon" or not isinstance(section["bosses"], list) or any(
-                    not isinstance(boss, dict) or not ascii_text(boss.get("name")) or not ascii_text(boss.get("tip"))
-                    or set(boss) - {"name", "tip", "npc", "encounter"} for boss in section["bosses"])):
-                fail(label, "bosses must be a dungeon guide's list of { name, tip } in printable ASCII")
+                    not boss_shape(boss) for boss in section["bosses"])):
+                bosses = section["bosses"] if isinstance(section["bosses"], list) else []
+                missing = [boss.get("name", "?") for boss in bosses if isinstance(boss, dict) and not boss_shape(boss)]
+                fail(label, "invalid boss entries or missing ability notes: " + ", ".join(missing))
             # The instance and its boss encounters, from the client (GetInstanceInfo, ENCOUNTER_END).
             instances = game.get("instances") or {}
             dungeon = instances.get(str(section.get("instanceID")))
@@ -141,6 +160,8 @@ def audit(data, ref, cap=20):
                         continue
                     if enc not in encounters:
                         fail(label, f"boss {boss.get('name')}: encounter {enc} is not one of {dungeon['name']}'s")
+                    if enc in used:
+                        fail(label, f"encounter {enc} is listed as more than one boss")
                     used.add(enc)
                 missing = [name for id_, name in dungeon["encounters"] if id_ not in used]
                 if missing:

@@ -30,8 +30,8 @@ local collectItems = {} -- item -> last count, for collect and buy steps
 local routeItems = {} -- every item a route step names (Q.routeItems: the vendor keeps them)
 local runOwn = {} -- run -> quests a route step ties to it (forDungeon): the ones that need the dungeon
 local eliteQuests, elitePrior = {}, {} -- quest -> its elite's name (leveling steps); quest -> the earlier quest with that elite
-local killed = {} -- boss row key -> true: bosses down this dungeon visit
-local inInstance, lastInstance -- the dungeon you're in now (instance ID), and the last one you entered
+local bossResults, bossRows = {}, {} -- results by row key, ordered boss rows by section
+local inInstance, lastInstance, dungeonOptOut
 local questNames = {}
 local greyRows = {} -- outleveled pickups this pass
 local chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}
@@ -282,9 +282,8 @@ end
 
 local LEAD_IN = { ["goto"] = true, fly = true, getfp = true, boat = true }
 
--- A dungeon run's bosses (`bosses`) as steps of type "boss" in the inside phase: after its last
--- inside step, else before its first after step. Its quest objectives inside show beside them
--- as "On the way" lines (row.sticky) instead of being steps of their own.
+-- Keep the dungeon's quest walkthrough in order. Auto-opening the dungeon can start at its
+-- first encounter, where inside quest objectives also appear as "On the way" goals.
 local function addBossRows(section, first)
   local lastInside, firstAfter
   for i = first, #steps do
@@ -295,10 +294,18 @@ local function addBossRows(section, first)
   end
   local at = lastInside and lastInside + 1 or firstAfter or #steps + 1
   local pos = steps[at - 1] and steps[at - 1].section == section and steps[at - 1].pos or 0
+  local rows = {}
+  bossRows[section] = rows
   for n, boss in ipairs(section.bosses) do
-    table.insert(steps, at + n - 1, { section = section, pos = pos, key = section.id .. ":boss:" .. n,
+    -- Older dungeon guides put the rare/optional qualifier in the name.
+    local qualifier = boss.name:match(" %((%a+)[^()]*%)$")
+    local optional = boss.optional or (qualifier == "rare" or qualifier == "optional") and qualifier
+    local row = { section = section, pos = pos, key = section.id .. ":boss:" .. n,
       step = { type = "boss", name = boss.name, text = boss.tip, npc = boss.npc, encounter = boss.encounter,
-        phase = "inside" } })
+        finishName = boss.finishName, targets = boss.targets, skipBossTip = boss.skip,
+        abilities = boss.abilities, optionalBoss = optional, phase = "inside" } }
+    rows[n] = row
+    table.insert(steps, at + n - 1, row)
   end
 end
 
@@ -309,6 +316,7 @@ local function buildRoute()
   race, class = (raceToken or ""):upper(), classToken
   route = LevelingCodexQuests and LevelingCodexQuests[(faction or ""):upper()]
   sections, sectionsById, steps, startItems, flightHubs, collectItems = {}, {}, {}, {}, {}, {}
+  bossRows = {}
   routeItems = {}
   questNames, chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}, {}
   eliteQuests, elitePrior = {}, {}
@@ -488,7 +496,7 @@ local function inDungeon(section)
   local name, kind, _, _, _, _, _, instanceID = try(GetInstanceInfo)
   if kind ~= "party" then return false end
   if type(instanceID) == "number" and instanceID > 0 then return instanceID == section.instanceID end
-  return name == (section.instance or section.title)
+  return type(name) == "string" and (name == section.instance or name == section.title)
 end
 
 local function awaitingObjectives(step, entry)
@@ -582,9 +590,9 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   if row.section.category ~= "dungeon" and not included(s) then return "filtered" end
   if sideHidden(row.section) then return "filtered" end
   if s.type == "boss" then
-    -- Down (or passed with Next) this visit; only shown while you're in its dungeon.
-    if killed[row.key] or visited[row.key] then return "done" end
-    if skips[row.key] then return "skipped" end
+    -- The result remains available to the dungeon page after leaving the instance.
+    local result = bossResults[row.key]
+    if result then return result == "skipped" and "skipped" or "done" end
     return inDungeon(row.section) and "pending" or "filtered"
   end
   local gate = gated(s)
@@ -1173,53 +1181,92 @@ function Q.update(event, id, newLevel)
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then Q.enteredDungeon() end
 end
 
--- Zoning into a dungeon: a new dungeon clears the bosses counted down, and one with a guide
--- opens it at its inside part (Settings > Open a dungeon's guide when you enter it). Once per
--- entry, so Return to leveling inside sticks; dying and running back in keeps the count.
+local function followDungeon(section)
+  if ns.db().noDungeonOpen or dungeonOptOut then return end
+  if sideSection == section and sideFrom >= PHASE.inside then return end
+  local bosses = bossRows[section]
+  Q.jump(section, nil, "inside", bosses and bosses[1])
+  if sideSection == section then
+    ns.say(Q.plain(section.title .. ": the step window follows its guide, boss by boss. Return to leveling takes you back."))
+    return true
+  end
+end
+
+-- Separate wings can share a Map ID. Prefer an explicit wing name or a guide the player
+-- already chose. If the client only reports the parent dungeon, a boss event identifies the wing.
 function Q.enteredDungeon()
   local name, kind, _, _, _, _, _, instanceID = try(GetInstanceInfo)
   if kind ~= "party" then inInstance = nil; return end
   local here = (type(instanceID) == "number" and instanceID > 0) and instanceID or name
   if here == inInstance then return end
-  inInstance = here
+  inInstance, dungeonOptOut = here, nil
   if here ~= lastInstance then
-    killed = {}
+    bossResults = {}
     if ns.stats then ns.stats.count("dungeons") end
   end
   lastInstance = here
   if ns.db().noDungeonOpen then return end
+  local subzone = try(GetSubZoneText)
+  local candidate, count, followed = nil, 0, nil
   for _, section in ipairs(sections) do
     if section.category == "dungeon" and inDungeon(section) and not sideHidden(section) then
-      if sideSection ~= section then
-        Q.jump(section, nil, "inside")
-        if sideSection == section then
-          ns.say(Q.plain(section.title .. ": the step window follows its guide, boss by boss. Return to leveling takes you back."))
-        end
+      local wing = section.title:match(": (.+)$")
+      if name == section.title or subzone == section.title or (wing and subzone == wing) then
+        return followDungeon(section)
       end
-      return section
+      if section == sideSection then followed = section end
+      candidate, count = section, count + 1
     end
+  end
+  if followed or count == 1 then return followDungeon(followed or candidate) end
+  if count > 1 and name then
+    ns.say(Q.plain(name .. " has multiple guides. Choose your wing in Quests > Dungeons, or begin a boss encounter."))
   end
 end
 
--- A boss died: ENCOUNTER_END / BOSS_KILL (encounter ID, name; an NPC ID matches too). Marks the
--- matching boss of the dungeon you're in.
-function Q.bossDown(encounter, name, npc)
-  local hit = false
+local function dungeonBoss(encounter, name, npc)
   local wanted = type(name) == "string" and Q.plain(name):lower()
-  for _, row in ipairs(steps) do
-    local s = row.step
-    if s.type == "boss" and not killed[row.key] and inDungeon(row.section) then
-      local bossName = s.name:gsub(" %(.*$", ""):lower()
-      if (encounter and s.encounter == encounter) or (npc and s.npc == npc) or (wanted and wanted == bossName) then
-        killed[row.key], hit = true, true
+  local byName
+  for section, rows in pairs(bossRows) do
+    if inDungeon(section) then
+      for _, row in ipairs(rows) do
+        local s = row.step
+        if encounter and s.encounter == encounter then return row end
+        local bossName = s.finishName or s.name:gsub(" %(.*$", "")
+        if wanted == bossName:lower() or (npc and s.npc == npc) then byName = row end
       end
     end
   end
-  if hit then
-    calculate()
-    if ns.stats then ns.stats.count("bosses") end
+  return byName
+end
+
+function Q.bossStarted(encounter, name)
+  local row = dungeonBoss(encounter, name)
+  return row and followDungeon(row.section)
+end
+
+-- Only a completed encounter counts. BOSS_KILL and ENCOUNTER_END can report the same fight.
+function Q.bossDown(encounter, name, npc)
+  local row = dungeonBoss(encounter, name, npc)
+  if not row or bossResults[row.key] == "defeated" then return false end
+  bossResults[row.key] = "defeated"
+  if review and steps[review] == row then review = nil end
+  if not followDungeon(row.section) then calculate() end
+  if ns.stats then ns.stats.count("bosses") end
+  return true
+end
+
+function Q.bossRows(section) return bossRows[section] end
+
+function Q.bossProgress(section)
+  local done, total = 0, 0
+  for _, row in ipairs(bossRows[section] or {}) do
+    if not row.step.optionalBoss then
+      total = total + 1
+      if row.state == "done" then done = done + 1 end
+    end
   end
-  return hit
+  return done, total
 end
 
 function Q.current()
@@ -1776,7 +1823,7 @@ local function hasMoreObjectives(row, i)
   return false
 end
 
-function Q.next()
+function Q.next(skipBoss)
   local row, i = Q.current()
   if not row then return end
   local manual = not review
@@ -1794,6 +1841,8 @@ function Q.next()
     Q.setElite(row.step.eliteQuest, false) -- Next on an elite quest skips it and the quests that need it
     ns.say(Q.plain((row.step.name or "The quest") .. " is skipped (" .. (row.step.elite or "an elite")
       .. " is elite). Back asks again."))
+  elseif row.step.type == "boss" then
+    bossResults[row.key] = skipBoss and row.step.optionalBoss and "skipped" or "manual"
   elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth"
       or row.step.type == "note" then
     local skips = row.section.side and sideSkips or skipTable()
@@ -1830,6 +1879,7 @@ function Q.back()
   if row then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key], visited[row.key] = nil, nil
+    if row.step.type == "boss" and bossResults[row.key] ~= "defeated" then bossResults[row.key] = nil end
     -- Back to an elite quest's question asks it again.
     if row.step.type == "elite" and Q.eliteMode() == "ask" then Q.clearElite(row.step.eliteQuest) end
     if not sideSection then selected = row.section end
@@ -1867,6 +1917,7 @@ function Q.jump(section, row, phase, resumeRow)
 end
 
 function Q.returnToRoute()
+  if inInstance and sideSection and inDungeon(sideSection) then dungeonOptOut = true end
   leaveSide()
   review = nil
   calculate()

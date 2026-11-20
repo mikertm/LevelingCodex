@@ -60,7 +60,10 @@ end
 local function bosses(id, ids, more)
   local list = {}
   for _, boss in ipairs(H.bosses(id)) do
-    list[#list + 1] = { name = boss.name, tip = boss.tip, npc = boss.npc, encounter = ids[boss.name] }
+    local copy = {}
+    for key, value in pairs(boss) do copy[key] = value end
+    copy.encounter = ids[boss.name] or boss.encounter
+    list[#list + 1] = copy
   end
   for _, extra in ipairs(more or {}) do table.insert(list, extra[1], extra[2]) end
   return list
