@@ -933,7 +933,7 @@ function S.stepSound()
     "debug says when the step sound played")
 end
 
--- The step window colours each step by kind: a chip, the title in that colour, a stripe down the left.
+-- The step window colours each step by kind: a chip and a tinted title row.
 function S.stepKinds()
   local kind = MOCK.ns.questStepKind
   check(kind({ type = "accept" }) == "accept" and kind({ type = "turnin" }) == "turnin"
@@ -950,14 +950,24 @@ function S.stepKinds()
     end
     return walk(frame)
   end
-  local function near(c, r, g, b) return c and math.abs(c[1] - r) < 0.01 and math.abs(c[2] - g) < 0.01 and math.abs(c[3] - b) < 0.01 end
   check(frame.chip and frame.chip.text._text == "Accept" and shown("A Threat Within") and not shown("Accept - A Threat Within"),
     "an accept step: the chip says Accept, the title shows the name alone")
-  check(near(frame.stripe._color, 1, 0.82, 0), "the stripe is gold for a pickup")
+  local band = frame.statusBand
+  check(band and band:IsShown(), "the step kind has a tint behind the title row")
+  local _, _, _, left, top = band:GetPoint(2)
+  local _, _, _, chipLeft, chipTop = frame.chip:GetPoint()
+  check(left < chipLeft and chipLeft - left <= 4 and top > chipTop and band:GetHeight() >= frame.chip:GetHeight(),
+    "the band is inset around the chip, beside the portrait")
+  local accept = frame.chip.plate._color
+  check(accept[1] > accept[2], "the chip is gold for a pickup")
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.event("QUEST_LOG_UPDATE")
-  check(frame.chip.text._text == "Turn in" and near(frame.stripe._color, 0.45, 0.85, 0.4), "a turn-in step: green")
+  local turnin = frame.chip.plate._color
+  check(frame.chip.text._text == "Turn in" and turnin[2] > turnin[1] and turnin[2] > turnin[3], "a turn-in step: green")
+  click(frame, "Compact")
+  local _, _, _, compactLeft = band:GetPoint(2)
+  check(band:IsShown() and compactLeft < left, "the title tint follows the chip in compact mode")
 end
 
 -- Up next rows: the step's icon and how far it is, updating as you move.
@@ -1016,6 +1026,7 @@ function S.questPortrait()
   S.login()
   local frame = questViewer()
   local p = frame.portrait
+  check(p.rim and p.rim._color[1] == MOCK.ns.C.edgeSoft[1], "the portrait has a rim in the active theme's edge colour")
   if MOCK.minimal then
     check(p and p:IsShown() and p.icon:IsShown() and not (p.model and p.model:IsShown()), "no models: the icon")
     return
@@ -1071,7 +1082,7 @@ function S.questPortrait()
   MOCK.npcGUID, MOCK.modelFails = nil, nil
   MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
   MOCK.event("QUEST_LOG_UPDATE")
-  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
+  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the well shows the icon")
   LevelingCodexDB.noQuestPortrait = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(not p:IsShown(), "the setting hides it")
@@ -1090,7 +1101,8 @@ function S.stepButtons()
     check(GameTooltip._lines[1] == name, name .. " names itself on hover")
     MOCK.fire(b, "OnLeave")
   end
-  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact", "Next" }) do
+  check(nextB.rim and nextB.shade and nextB.bevel, "Next has an inset face, shading and a raised top edge")
+  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact" }) do
     local b = findButton(frame, function(l) return l == name end)
     check(b and not b.edgeLines, name .. " has no outline")
     if b.icon then check(not (b.bg and b.bg:IsShown()), name .. " is just its art") end
@@ -1109,6 +1121,7 @@ function S.stepButtons()
   click(win(), "Settings")
   click(win(), "Codex (gold)") -- Settings' theme switch
   check(math.abs(nextB.fill._color[1] - before) > 0.1, "a theme switch repaints Next")
+  check(frame.portrait.rim._color[1] == MOCK.ns.C.edgeSoft[1], "a theme switch repaints the portrait rim")
   click(frame, "Next")
   check(findButton(frame, function(l) return l == "Back" end), "Next still moves on")
 end

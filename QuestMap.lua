@@ -104,7 +104,7 @@ local function setIcon(tex, step, size)
 end
 M.setIcon = setIcon
 
--- What a step asks of you, for the step window's chip, stripe and title colour: "accept",
+-- What a step asks of you, for the step window's chip and title row colours: "accept",
 -- "turnin", "kill", "collect", "travel", "dungeon" or "other".
 local KIND_OF = { accept = "accept", turnin = "turnin", collect = "collect", buy = "collect",
   ["goto"] = "travel", fly = "travel", getfp = "travel", boat = "travel", hearth = "travel", sethearth = "travel",

@@ -342,7 +342,7 @@ function A.segment(parent)
   return b
 end
 
--- The step window's buttons, in the theme's colours (Repaint() after a theme switch); no outlines.
+-- The step window's buttons, in the theme's colours (Repaint() after a theme switch).
 -- A small icon button: Blizzard's art alone (it has its own frame) with a hover glow; without the
 -- art, a short label on a flat dark plate.
 -- In the external UI theme the back arrow and the close art are external UI's page and close buttons.
@@ -379,20 +379,36 @@ function A.iconButton(parent, file, fallback)
   return b
 end
 
--- The primary button (the step window's Next step and its offers): the theme's button colour with its
--- ink; SetLabel(text, arrow) adds a ">" after the text when arrow is true.
+-- A raised face for the step window's Next step and its offers. SetLabel(text, arrow) can add a ">".
 function A.primaryButton(parent)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(120, 24)
-  b.fill = b:CreateTexture(nil, "BACKGROUND")
-  b.fill:SetAllPoints()
+  b.rim = b:CreateTexture(nil, "BACKGROUND")
+  b.rim:SetAllPoints()
+  b.fill = b:CreateTexture(nil, "BORDER")
+  b.fill:SetPoint("TOPLEFT", 1, -1)
+  b.fill:SetPoint("BOTTOMRIGHT", -1, 2)
+  b.shade = b:CreateTexture(nil, "ARTWORK")
+  b.shade:SetAllPoints(b.fill)
+  ns.fade(b.shade, "VERTICAL", 0, 0, 0, 0.28, 0)
+  b.bevel = b:CreateTexture(nil, "ARTWORK", nil, 1)
+  b.bevel:SetPoint("TOPLEFT", 1, -1)
+  b.bevel:SetPoint("TOPRIGHT", -1, -1)
+  b.bevel:SetHeight(1)
+  b.bevel:SetColorTexture(1, 1, 1, 0.35)
   b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   b.label:SetPoint("CENTER")
   local hl = b:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetAllPoints()
-  hl:SetColorTexture(1, 1, 1, 0.15)
+  hl:SetAllPoints(b.fill)
+  hl:SetColorTexture(1, 1, 1, 0.12)
+  local pressed = b:CreateTexture(nil, "ARTWORK", nil, 2)
+  pressed:SetAllPoints(b.fill)
+  pressed:SetColorTexture(0, 0, 0, 0.24)
+  pressed:Hide()
+  ns.try(b.SetPushedTexture, b, pressed)
   b.SetLabel = function(self, text, arrow) self.label:SetText(arrow and (text .. " >") or text) end
   b.Repaint = function(self)
+    self.rim:SetColorTexture(rgba(C.edgeSoft))
     self.fill:SetColorTexture(rgba(C.btnOn))
     self.label:SetTextColor(rgba(C.btnOnInk))
     ns.skinSupport.fonts(self)
