@@ -1060,7 +1060,7 @@ def main():
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questDuskwoodZoneEntry",
-                             "questDuskwoodDagger",
+                             "questDuskwoodDagger", "questSouthshoreForebodingPlans", "questHordeMissedPickup",
                              "questRecorder",
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",

@@ -955,6 +955,7 @@ function Q.detailBlocks(step, requiredFor, withStickies)
   end
   local _, _, _, level = Q.rows()
   if requiredFor then add({ kind = "note", tone = "warn", text = "Required for " .. requiredFor.name .. "." }) end
+  if Q.awaitingPickup(step) then add({ kind = "note", tone = "warn", text = "Pick up this quest first." }) end
   if step.type == "accept" and not Q.log(step.quest) then
     local count, max = Q.logCapacity()
     if max and count >= max then

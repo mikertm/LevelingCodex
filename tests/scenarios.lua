@@ -4184,6 +4184,77 @@ function S.questDuskwoodHandoff()
     "at level 26 the route names the return, flight master and onward flight")
 end
 
+function S.questSouthshoreForebodingPlans()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 33, 1424, 48.14, 59.11
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "hillsbrad-32" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 505 and step.type == "turnin" then break end
+        if step.quest and step.quest ~= 505 and step.quest ~= 510 and step.quest ~= 564 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 505, isComplete = true }, { questID = 564, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Syndicate Assassins"), "resume at Maleb with Syndicate Assassins ready")
+
+  table.remove(MOCK.questLog, 1)
+  MOCK.questDone[505] = true
+  MOCK.event("QUEST_TURNED_IN", 505)
+  check(questText(frame, "Turn in - Costly Menace") and not questText(frame, "Turn in - Foreboding Plans"),
+    "the Southshore route passes Maleb's hand-in if Foreboding Plans was never picked up: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Pick up this quest first."), "reviewing the hand-in explains why it is unavailable")
+  click(frame, "Next")
+  questQueue("Missed quests")
+  check(questText(win(), "Foreboding Plans"), "the earlier pickup in Alterac is available under Missed pickups")
+
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 510, isComplete = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - Foreboding Plans"), "Maleb's hand-in returns once Foreboding Plans is in the log")
+  table.remove(MOCK.questLog)
+  MOCK.questDone[510] = true
+  MOCK.event("QUEST_TURNED_IN", 510)
+  check(questText(frame, "Turn in - Costly Menace"), "turning in the plans advances the Southshore route")
+end
+
+function S.questHordeMissedPickup()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 48
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1424, 61.44, 19.06
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "hinterlands-48" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 7816 and step.type == "turnin" then break end
+        if step.quest and step.quest ~= 7816 and step.quest ~= 2933 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 7816, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Gammerita, Mon!"), "resume at the preceding hand-in")
+  MOCK.questLog, MOCK.questDone[7816] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 7816)
+  if questTextStarts(frame, "Fly to Tarren Mill.") then click(frame, "Next") end
+  check(questText(frame, "Accept - Venom Bottles") and not questText(frame, "Turn in - Venom Bottles"),
+    "recover the missed pickup before sending the player to Lydon: " .. allText(frame))
+  check(not questText(frame, "Complete - Undamaged Venom Sac"), "do not preview an objective for an unaccepted follow-up")
+
+  MOCK.questLog = { { questID = 2933, isComplete = true } }
+  MOCK.event("QUEST_ACCEPTED", 1, 2933)
+  check(questText(frame, "Turn in - Venom Bottles"), "a real quest in the log can be turned in")
+  MOCK.questLog, MOCK.questDone[2933] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 2933)
+  check(questText(frame, "Accept - Undamaged Venom Sac"), "the actual hand-in unlocks the follow-up")
+end
+
 function S.questLakeshireHandoff()
   MOCK.race, MOCK.level, MOCK.questMap, MOCK.bind = "Skyborne", 22, 1433, "Lakeshire"
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do

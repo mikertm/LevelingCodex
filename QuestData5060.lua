@@ -315,7 +315,7 @@ do
     objective(3367, sg(nil, 74.4, 19.3), "Walk Dorius north-east toward the Loch Modan path. Stay close and kill the Dark Irons who ambush him.",
       "Escort Dorius"),
     finish(3367, sg("Singed Letter", 74.45, 19.29), "Read the letter left where Dorius fell."),
-    accept(3368, sg("Singed Letter", 74.45, 19.29)),
+    accept(3368, sg("Singed Letter", 74.45, 19.29), "Read the Singed Letter again to accept the follow-up for Curator Thorius in Ironforge."),
     withItem(10000, accept(3181, nil, "If you killed Margol the Rager for his horn, use it from your bags.")),
     taxi("fly", B.at("Thorgrum Borrelson", 33.9, 51, 1432), THELSAMAR, "Fly to Thelsamar for Pebblebitty, or use Next if you have no horn."),
     finish(3181, at("Mountaineer Pebblebitty", 18.18, 84.01, M.lochModan), "Pebblebitty guards the Badlands gate at the south end of Loch Modan."),

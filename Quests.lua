@@ -503,6 +503,11 @@ local function awaitingObjectives(step, entry)
   return entry and entry.readyKnown and not entry.ready and step.phase == "after" and step.type == "turnin"
 end
 
+function Q.awaitingPickup(step)
+  local id = step.quest
+  return id and (step.type == "complete" or step.type == "turnin") and not log[id] and not turnedIn[id]
+end
+
 -- The town your hearthstone is set to (GetBindLocation), nil when the client doesn't say.
 function Q.bindLocation()
   local bind = try(GetBindLocation)
@@ -901,6 +906,9 @@ local function calculate()
     if row.section == fromSection then reached = true end
     local s = row.step
     local entry = s.quest and log[s.quest]
+    -- Apply this after catch-up and grey filtering so missed work keeps its progress status.
+    row.waitingForPickup = row.state == "pending" and Q.awaitingPickup(s) or nil
+    if row.waitingForPickup then row.state = "blocked" end
     if row.state == "pending" then
       if row.section.side then
         if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom
@@ -927,7 +935,7 @@ local function calculate()
     end
     local side = row.section.side
     local elsewhere = side and row.section ~= sideSection or not side and fromSection
-      and (not reached or row.state == "deferred")
+      and (not reached or row.state == "deferred" or (row.requiredFor and not here(row)))
     if elsewhere and s.type == "accept" and not turnedIn[s.quest] and not row.cut
         and not entry and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1)
         and (not side or (not row.section.category and row.state == "pending" and not seen[row.section] and prerequisitesMet(s)))
@@ -1796,15 +1804,24 @@ end
 
 function Q.upcoming(i, count)
   local result = {}
-  local section = steps[i].section
+  local current = steps[i]
+  local section = current.section
   local start = resumeAt and steps[resumeAt].section or section
+  -- Preview work from a pickup in this sequence, even before the player accepts it.
+  -- An earlier pickup brought back for catch-up isn't part of that sequence.
+  local pickups = {}
+  if current.step.type == "accept" and current.state == "pending" and not current.requiredFor then
+    pickups[current.step.quest] = true
+  end
   for n = i + 1, #steps do
     local row = steps[n]
+    local s = row.step
     if section.side and row.section ~= section then break end
-    if row.state == "pending" and not row.step.sticky and not row.sticky
-        and (not sidePrepare or (row.step.phase == "prepare" and row.step.type ~= "dungeon")) and (row.section == section or
+    if (row.state == "pending" or (row.waitingForPickup and pickups[s.quest])) and not s.sticky and not row.sticky
+        and (not sidePrepare or (s.phase == "prepare" and s.type ~= "dungeon")) and (row.section == section or
         follows(row.section, start) or row.requiredFor) then
       result[#result + 1] = row
+      if s.type == "accept" and not row.requiredFor and prerequisitesMet(s) then pickups[s.quest] = true end
       if #result == (count or 2) then break end
     end
   end

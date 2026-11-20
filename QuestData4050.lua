@@ -336,7 +336,7 @@ do
     accept(617, bloads, "Privateer Bloads wants reeds from the naga on the west coast."),
     accept(95322, ruzzgot, "After delivering the lion hides to Friz at Powderfuse Port, ask Ruzzgot by the tunnel about the missing Bloodsail trunk."),
     finish(595, st("Bloodsail Correspondence", 27.28, 69.52), "Walk north out of town to the shore camp and read the Bloodsail papers on the barrel."),
-    accept(597, st("Bloodsail Correspondence", 27.28, 69.52)),
+    accept(597, st("Bloodsail Correspondence", 27.28, 69.52), "Read the Bloodsail Correspondence again and accept its follow-up before going back to Crazz."),
     objective(610, st("\"Pretty Boy\" Duncan", 27.4, 69.4), "Kill \"Pretty Boy\" Duncan in the same camp and take Catelyn's blade.", "Catelyn's Blade"),
     objective(95322, st("Bloodsail Trunk", 29.9, 71.0), "Look for the Bloodsail Trunk behind a tree on the hill just outside Booty Bay.", "Bloodsail Trunk"),
     finish(95322, ruzzgot), accept(95325, ruzzgot),

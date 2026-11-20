@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.29.1
+
+### Quest guide fixes
+
+- Fixed the guide sending you to objectives or turn-ins for quests you never picked up, including **Foreboding Plans** and **Venom Bottles**.
+- Earlier pickups you still need for a follow-up can appear under **Quests > Quest log > Missed pickups**.
+- Clarified how to accept separate quests from objects such as the Syndicate Documents, Corpse Laden Boat, and Bloodsail Correspondence.
+
 ## v0.29.0
 
 ### Dungeon encounter guides
