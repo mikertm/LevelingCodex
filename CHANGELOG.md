@@ -1,5 +1,17 @@
 # Leveling Codex
 
+## v0.29.0
+
+### Dungeon encounter guides
+
+- Dungeon guides show boss mechanics and progress in the Quests tab and step window. The guide follows supported encounters when they start and marks bosses defeated when the game reports a kill.
+- Optional bosses and rare spawns can be skipped or marked defeated manually.
+
+### Quest step guide
+
+- The NPC portrait sits in a recessed frame that matches your theme. The step's status color now fades behind the title, and the **Next step** button is beveled with hover and press feedback.
+- Stranglethorn routes keep their own guide suggestions on cross-zone steps. Those suggestions stay available when a dungeon checklist is ready.
+
 ## v0.28.3
 
 ### Druid macros

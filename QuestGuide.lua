@@ -269,11 +269,13 @@ local function makeViewer()
   viewer.titleIcon:SetSize(16, 16)
   viewer.titleIcon:SetPoint("TOPLEFT", 16, -27)
   viewer.titleIcon:Hide()
-  -- The step's kind (QuestMap.lua): a stripe down the left edge and a chip before the title.
-  viewer.stripe = viewer:CreateTexture(nil, "ARTWORK")
-  viewer.stripe:SetPoint("TOPLEFT", 5, -5)
-  viewer.stripe:SetPoint("BOTTOMLEFT", 5, 5)
-  viewer.stripe:SetWidth(3)
+  -- The step's kind tints the title row, with the strongest colour behind the chip.
+  viewer.statusBand = viewer:CreateTexture(nil, "ARTWORK", nil, -2)
+  viewer.statusBand:SetPoint("TOPRIGHT", -13, -24)
+  viewer.statusRule = viewer:CreateTexture(nil, "ARTWORK", nil, -1)
+  viewer.statusRule:SetPoint("BOTTOMLEFT", viewer.statusBand, "BOTTOMLEFT")
+  viewer.statusRule:SetPoint("BOTTOMRIGHT", viewer.statusBand, "BOTTOMRIGHT")
+  viewer.statusRule:SetHeight(1)
   viewer.chip = CreateFrame("Frame", nil, viewer)
   viewer.chip:SetSize(40, 14)
   viewer.chip.plate = viewer.chip:CreateTexture(nil, "ARTWORK")
@@ -330,7 +332,7 @@ local function makeViewer()
   -- Hide) that name themselves on hover; the offer button above is a primary button too.
   local function icon(label, x, file, fallback, action)
     local b = A.iconButton(viewer, file, fallback)
-    b:SetPoint("BOTTOMLEFT", x, 9)
+    b:SetPoint("BOTTOMLEFT", x, 12)
     b.codexLabel, b.tipTitle = label, label
     b:SetScript("OnClick", action)
     return b
@@ -338,7 +340,7 @@ local function makeViewer()
   local function primary(label, x, width, action, bottom)
     local b = A.primaryButton(viewer)
     b:SetSize(width, 24)
-    b:SetPoint("BOTTOMLEFT", x, bottom or 9)
+    b:SetPoint("BOTTOMLEFT", x, bottom or 12)
     b:SetLabel(label)
     b.codexLabel = label
     b:SetScript("OnClick", action)
@@ -363,6 +365,8 @@ local function makeViewer()
   nextButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   nextButton:SetLabel("Next step", true)
   viewer.markBoss = primary("Mark defeated", 158, 108, function() ns.moveQuestStep(false) end)
+  viewer.markBoss:ClearAllPoints()
+  viewer.markBoss:SetPoint("BOTTOMLEFT", nextButton, "BOTTOMRIGHT", 6, 0)
   viewer.markBoss.tipTitle = "Record a boss kill manually"
   viewer.markBoss:Hide()
   suggestionButton = primary("", 16, 318, function()
@@ -382,7 +386,7 @@ local function makeViewer()
       elseif related then ns.openQuestGuide(related)
       elseif ns.questSetupDue() then ns.openQuestSetup() end
     end
-  end, 35)
+  end, 39)
 
   -- The completion bar under the step's title: a thin track, the fill in the theme's accent and the
   -- percent at its end. A new value slides in over 0.5 s (ease-out); hover for the counts, click
@@ -1902,6 +1906,7 @@ function ns.questRefresh()
       nextButton:Repaint()
       viewer.markBoss:Repaint()
       suggestionButton:Repaint()
+      viewer.portrait:Repaint()
       theme = ns.themeVersion
     end
     fitHeader(sec.title:match("^([^:]+):") or sec.title)
@@ -1914,8 +1919,8 @@ function ns.questRefresh()
     title:SetWidth(318 - math.ceil(tonumber(try(levels.GetStringWidth, levels)) or 70) - 10)
     local run, runCount = Q.readyRun()
     local blocks = {}
-    viewer.titleIcon:SetShown(row and ns.questMap.setIcon(viewer.titleIcon, row.step, 16) or false)
-    -- the step's kind: a stripe, a chip (dark plate, light label) and the title in its colour
+    local hasIcon = row and ns.questMap.setIcon(viewer.titleIcon, row.step, 16)
+    -- The step's kind colours the band behind the chip and title.
     local kind = row and ns.questStepKind(row.step)
     local style = kind and ns.questKindStyle(kind, row.step)
     goalColor = style and style.color or nil
@@ -1927,13 +1932,16 @@ function ns.questRefresh()
     if cb.icon and A.hasFile(fold) then cb.icon:SetTexture(fold)
     elseif cb.label then cb.label:SetText(compact and "+" or "-") end
     local portrait = viewer.portrait:ShowFor(not compact and row and row.step or nil, kind)
-    if portrait then viewer.titleIcon:Hide() end
-    local x = portrait and 64 or (icon and 36 or 16)
-    viewer.stripe:SetShown(style ~= nil)
+    viewer.titleIcon:SetShown(hasIcon and not portrait or false)
+    local x = portrait and 64 or (hasIcon and 36 or 16)
+    viewer.statusBand:SetShown(style ~= nil)
+    viewer.statusRule:SetShown(style ~= nil)
     viewer.chip:SetShown(style ~= nil)
     if style then
       local r, g, b = style.color[1], style.color[2], style.color[3]
-      viewer.stripe:SetColorTexture(r, g, b, 1)
+      viewer.statusBand:SetPoint("TOPLEFT", x - 3, -24)
+      ns.fade(viewer.statusBand, "HORIZONTAL", r, g, b, 0.22, 0)
+      ns.fade(viewer.statusRule, "HORIZONTAL", r, g, b, 0.55, 0)
       viewer.chip.plate:SetColorTexture(r * 0.3, g * 0.3, b * 0.3, 0.9)
       viewer.chip.text:SetText(style.label)
       viewer.chip.text:SetTextColor(r + (1 - r) * 0.5, g + (1 - g) * 0.5, b + (1 - b) * 0.5)
@@ -2000,6 +2008,7 @@ function ns.questRefresh()
     end
     releaseAll()
     cursor = 28 + math.max(14, title:GetStringHeight()) + 2
+    if style then viewer.statusBand:SetHeight(cursor - 24) end
     local xpX, xpY = LEFT, nil
     if portrait then xpX, xpY = 64, cursor end
     -- a turn-in's XP, when the game says how much (the quest must be in your log)
@@ -2046,10 +2055,6 @@ function ns.questRefresh()
     local buttonWidth = run and 190 or 222
     nextButton:SetWidth(skipBoss and buttonWidth - 114 or buttonWidth)
     viewer.markBoss:SetShown(skipBoss ~= nil and skipBoss ~= false)
-    if skipBoss then
-      viewer.markBoss:ClearAllPoints()
-      viewer.markBoss:SetPoint("BOTTOMLEFT", 44 + buttonWidth - 108, 9)
-    end
     if run then
       runButton.codexLabel = "Run " .. run.title
       runButton.tipTitle = "Find a group for " .. Q.plain(run.title)
@@ -2071,7 +2076,8 @@ function ns.questRefresh()
         or suggestion and ("Try " .. suggestion.title) or related and ("Plan " .. related.title) or "Set up the guide"
       suggestionButton:SetLabel(suggestionButton.codexLabel)
     end
-    viewer:SetHeight(compact and (cursor + (offer and 64 or 38)) or math.max(140, cursor + (offer and 64 or 38)))
+    local height = cursor + (offer and 68 or 42)
+    viewer:SetHeight(compact and height or math.max(140, height))
     applyComfort()
     ns.skinSupport.fonts(viewer) -- the theme's fonts, for rows made this time too (each string once)
     viewer:Show()
