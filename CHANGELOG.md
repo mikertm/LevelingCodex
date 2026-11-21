@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## v0.30.5
+
+### Quest guide fixes
+
+- Buy and collect steps (such as the Southshore cloth and thread errands) no longer come back after you log out once you've handed the items in.
+- Logging in no longer jumps to a later guide in the same zone (the 39-40 Arathi guide at level 34): the guide that fits your level keeps the step.
+
 ## v0.30.4
 
 ### Quest guide fix
