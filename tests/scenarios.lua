@@ -1453,7 +1453,12 @@ function S.arrowArrival()
   S.login()
   local arrow = _G.LevelingCodexQuestArrow
   check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "away from the step the arrow points")
-  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step
+  local willemX, yardsPerPercent = 48.17, 34.70833 -- Elwynn map width / 100
+  MOCK.questX, MOCK.questY = willemX + 25 / yardsPerPercent, 42.94
+  MOCK.advance(0.5)
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown() and questText(arrow, "25 yd"),
+    "the arrow still points to Deputy Willem inside the old 35-yard radius")
+  MOCK.questX = willemX + 7 / yardsPerPercent
   MOCK.advance(0.5)
   check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
   check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
@@ -1465,13 +1470,13 @@ function S.arrowArrival()
     "the icon bobs 8 px (went from " .. low .. " to " .. high .. ")")
   low, high, jump = bobRun(arrow, 2.5) -- three more loops
   check(high > 7.5 and jump < 0.6, "the bob goes on smoothly, also at its turns (biggest step " .. jump .. " px)")
-  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.questX = willemX + 9 / yardsPerPercent
   MOCK.advance(0.5)
   check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "leaving the spot brings the arrow back")
   local _, _, _, _, y = arrow.here:GetPoint()
   check(y == 0, "and the icon is back on its centre for the next arrival")
   LevelingCodexDB.noArrowBounce = true
-  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.questX = willemX
   MOCK.advance(0.5)
   low, high = bobRun(arrow, 1)
   check(arrow.here:IsShown() and low == 0 and high == 0, "with the animation off the icon stays still")

@@ -12,6 +12,7 @@ local itemButton, itemPending, updateItemButton -- itemButton false = the client
 local recorder, objectiveCounts, onTaxi, flightPaths, flightTarget
 local events = CreateFrame("Frame")
 local ARROW_TEXTURE = "Interface\\AddOns\\LevelingCodex\\media\\quest-arrow.tga"
+local ARROW_ARRIVAL_YARDS = 8
 local BAR_TEXTURE = "Interface\\TargetingFrame\\UI-StatusBar"
 local BAR_TRACK = 282 -- the bar's track width (the percent sits to its right)
 local RING_TEXTURE = "Interface\\TaxiFrame\\UI-Taxi-Icon-Highlight"
@@ -741,7 +742,7 @@ local function paintArrow()
   if spawn and yards and yards <= Q.arrived() then
     arrive(key .. ":" .. spawnName, goal, spawnName .. " nearby")
     return
-  elseif yards and yards <= Q.arrived() and not travel then
+  elseif yards and yards <= ARROW_ARRIVAL_YARDS and not travel then
     local npc = which == "" and type(goal.npc) == "string" and Q.plain(goal.npc) or nil
     arrive(key, goal, (npc and (npc .. "\n") or "") .. "Arrived" .. which)
     return
@@ -750,7 +751,7 @@ local function paintArrow()
   if spawn and bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
-  elseif yards and yards <= Q.arrived() then
+  elseif travel and yards and yards <= Q.arrived() then
     arrowText:SetText(travel)
   elseif bearing then
     arrowBearing, arrowFacing = bearing, false

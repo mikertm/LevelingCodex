@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.30.2
+
+### Quest guide fix
+
+- The quest arrow keeps pointing until you are within 8 yards of the final waypoint, so it can guide you closer to quest NPCs in cities and buildings.
+
 ## v0.30.1
 
 ### Quest guide fix
