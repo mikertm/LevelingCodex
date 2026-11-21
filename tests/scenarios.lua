@@ -2016,6 +2016,20 @@ function S.questBuyItems()
   check(not questText(frame, "Buy - Thread and spices"), "it ticks off once the bags hold every item")
 end
 
+-- A buy step stays behind you once a later step of its guide is done, even with empty bags
+-- (the items were handed in before a logout).
+function S.questBuyUsedUp()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "buy", items = { { 2320, 1 } }, name = "Used up thread",
+        text = "Buy Fine Thread.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.questDone[783] = true
+  S.login()
+  check(not questText(questViewer(), "Buy - Used up thread"), "a buy step before a finished step doesn't come back")
+end
+
 -- Step types and gates: collect/buy by bag count, abandon, skipOn, profession, maxLevel, sticky goals.
 function S.questStepTypes()
   local northshire

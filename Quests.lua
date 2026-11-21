@@ -604,7 +604,9 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   if gate then return gate end
   if s.type == "abandon" and not (s.quest and log[s.quest]) then return "done" end
   if (s.type == "collect" or s.type == "buy") and (s.item or s.items) then
-    if (s.quest and turnedIn[s.quest]) or haveItems(s) then
+    -- Items get handed in and used up: once a later step of its guide is done (a reload after the
+    -- hand-in finds empty bags), the errand is behind you.
+    if (s.quest and turnedIn[s.quest]) or haveItems(s) or (later and not s.ifDone and not s.ifOnQuest) then
       visited[row.key] = true -- keep it done when the items get used up later
       return "done"
     end
@@ -1007,10 +1009,14 @@ local function activeStep(section, localMap)
     -- alternate already being followed and manual resume still use its active quests.
     local outleveledAlternate = row.section.alternate and row.section ~= selected and level > row.section.levels[2]
     if not row.section.side and (not section or row.section == section) and activeGoal(row, entry)
-        and (not localMap or (not outleveledAlternate and row.section.zone == map and (not s.map or s.map == map)
+        and (not localMap or (not outleveledAlternate and (row.section.zone == map or row.section == selected)
+          and (not s.map or s.map == map)
           and (entry.ready or #entry.objectives > 0))) then
+      -- A guide that fits your level wins: the 31-34 Hillsbrad guide works Arathi quests too, and
+      -- a later Arathi guide (39-40) must not take over at login just because it sits in that zone.
       local rank = (map and s.map == map and 4 or 0)
         + (map and row.section.zone == map and 2 or 0) + (row.section == selected and 1 or 0)
+        + (localMap and levelFits(row.section) and 8 or 0)
       if not score or rank > score then best, score = i, rank end
     end
   end
