@@ -83,7 +83,7 @@ do
   road(M.swamp, M.blasted, on.swamp(nil, 34.2, 66.4), "Take the road south from the Swamp into the Blasted Lands")
   road(M.wetlands, M.arathi, on.wetlands(nil, 50.2, 13.6), "Cross Thandol Span north into Arathi")
   road(M.arathi, M.wetlands, on.arathi(nil, 43.4, 92.1), "Cross Thandol Span south into the Wetlands")
-  road(M.hillsbrad, M.arathi, on.hillsbrad(nil, 82.4, 39.6), "Take the east road out of Hillsbrad into Arathi")
+  road(M.hillsbrad, M.arathi, on.hillsbrad(nil, 87.36, 49.62), "Take the east road out of Hillsbrad into Arathi")
   road(M.arathi, M.hillsbrad, on.arathi(nil, 17.1, 35.3), "Take the west road into Hillsbrad")
   road(M.hillsbrad, M.alterac, on.hillsbrad(nil, 54.6, 40.9), "Climb the north road into the Alterac Mountains")
   road(M.hillsbrad, M.hinterlands, on.hillsbrad(nil, 86.4, 32.0), "Take the northeast pass into the Hinterlands")
@@ -335,7 +335,7 @@ do
     finish(555, jessen),
     accept(98463, hb("Barkeep Kelly", 51.57, 58.57), "Barkeep Kelly, behind the inn's bar, has gossip for a barkeep in Booty Bay. You get there at 36."),
     finish(505, maleb), finish(510, maleb), finish(564, darren),
-    action("goto", hb(nil, 82.4, 39.6), "Take the east road out of Hillsbrad through Thoradin's Wall into Arathi."),
+    action("goto", hb(nil, 87.36, 49.62), "Take the east road out of Hillsbrad through Thoradin's Wall into Arathi."),
     taxi("getfp", ar("Cedrik Prose", 45.7, 46.1), "Refuge Pointe, Arathi", "Follow the road to Refuge Pointe and learn its flight path."),
     accept(681, nials), finish(690, ar("Skuerto", 46.65, 47.01)),
     finish(659, quae, "Quae hides in the farmhouse ruins east of Refuge Pointe."), accept(658, quae),

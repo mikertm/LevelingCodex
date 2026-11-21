@@ -163,7 +163,7 @@ do
   road(M.ashenvale, M.azshara, B.on.ashenvale(nil, 94.6, 47.8), "Take the east road out of Ashenvale into Azshara")
   road(M.felwood, M.winterspring, B.on.felwood(nil, 64.6, 8.2), "Go through Timbermaw Hold to Winterspring")
   road(M.hillsbrad, M.alterac, B.on.hillsbrad(nil, 54.6, 40.9), "Climb the north road into the Alterac Mountains")
-  road(M.hillsbrad, M.arathi, B.on.hillsbrad(nil, 82.4, 39.6), "Take the east road out of Hillsbrad into Arathi")
+  road(M.hillsbrad, M.arathi, B.on.hillsbrad(nil, 87.36, 49.62), "Take the east road out of Hillsbrad into Arathi")
   road(M.arathi, M.hillsbrad, B.on.arathi(nil, 17.1, 35.3), "Take the west road into Hillsbrad")
   road(M.hillsbrad, M.hinterlands, B.on.hillsbrad(nil, 86.4, 32.0), "Take the northeast pass into the Hinterlands")
   road(M.wpl, M.epl, B.on.wpl(nil, 69.4, 49.6), "Take the east road into the Eastern Plaguelands")
@@ -397,7 +397,7 @@ do
     finish(547, humbert),
     finish(509, P.lydon), accept(513, P.lydon, "Keep the composite for Master Apothecary Faranell in the Undercity."),
     accept(676, tallow, "Tallow wants Boulderfist ogres killed on your way to Hammerfall."),
-    action("goto", hb(nil, 82.4, 39.6), "Take the east road out of Tarren Mill through Thoradin's Wall into Arathi."),
+    action("goto", hb(nil, 87.36, 49.62), "Take the east road out of Tarren Mill through Thoradin's Wall into Arathi."),
     objective(676, ar(nil, 34.6, 45.0), "Kill Boulderfist Ogres and Enforcers at their camp in western Arathi.", "8 Boulderfist Ogres", "10 Boulderfist Enforcers"),
     objective(1164, ar(nil, 55.5, 37.5), "Follow the road east to Dabyrie's Farmstead. Kill Fardel, Marcel and Kenata Dabyrie in and around the farmhouses.",
       "Fardel's Head", "Marcel's Head", "Kenata's Head"),
