@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## v0.30.3
+
+### Quest guide fixes
+
+- Both Horde Brackenwall routes now send you to Darkfang spiders near the Theramore Infiltrators for the 6 Acidic Venom Sacs required by **The Black Shield**.
+- **Jarl Needs Eyes** now shows the Forever requirement of 40 Unpopped Darkmist Eyes on both factions' routes.
+
 ## v0.30.2
 
 ### Quest guide fix

@@ -4228,6 +4228,31 @@ function S.questSouthshoreForebodingPlans()
   check(questText(frame, "Turn in - Costly Menace"), "turning in the plans advances the Southshore route")
 end
 
+function S.questBrackenwallVenom()
+  local checked = 0
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "dustwallow-37" or section.id == "dustwallow-33" then
+      local objectives, positions = {}, {}
+      for index, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest then
+          objectives[step.quest], positions[step.quest] = step, index
+        end
+      end
+      local spies, shield, eyes = objectives[1201], objectives[1322], objectives[1206]
+      check(spies and shield and eyes and positions[1322] == positions[1201] + 1,
+        section.id .. " collects venom while the player is near the Theramore Infiltrators")
+      check(spies.also and spies.also[1] == 1322 and not eyes.also,
+        section.id .. " shows venom progress with the infiltrators and keeps Jarl's hunt separate")
+      check(shield.mobs and shield.mobs[1] == "Darkfang Venomspitter",
+        section.id .. " targets Darkfang spiders at the venom stop")
+      check(shield.objectives[1] == "6 Acidic Venom Sacs" and eyes.objectives[1] == "40 Unpopped Darkmist Eyes",
+        section.id .. " shows the Forever quest counts before live progress loads")
+      checked = checked + 1
+    end
+  end
+  check(checked == 2, "both Horde Brackenwall routes are covered")
+end
+
 function S.questHordeMissedPickup()
   MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 48
   MOCK.questMap, MOCK.questX, MOCK.questY = 1424, 61.44, 19.06

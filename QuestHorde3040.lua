@@ -796,6 +796,13 @@ end
 
 -- Dustwallow from Brackenwall Village at 37: the Shady Rest, the Black Shield, Swamp Eye Jarl and the
 -- Theramore docks; then Ratchet, Thunder Bluff and the camp outside Razorfen Downs.
+local function dustwallowVenom()
+  local step = objective(1322, on.dustwallow(nil, 38.7, 26.0),
+    "Hunt Darkfang spiders in the reeds near the Theramore Infiltrators for Acidic Venom Sacs.", "6 Acidic Venom Sacs")
+  step.mobs = { "Darkfang Venomspitter", "Darkfang Creeper", "Giant Darkfang Spider" }
+  return step
+end
+
 do
   local dm = on.dustwallow
   local krog = dm("Krog", 36.42, 31.88)
@@ -851,7 +858,8 @@ do
     note(objective(1273, ogron, "Follow Ogron to Reethe and stay with him through the questioning. Fight off the ambush that follows."),
       "The escort's path is not in quest database; check in game."),
     accept(1177, mudcrush, "Mudcrush Durtfeet, a friendly ogre south of the village, is hungry for murloc heads."),
-    objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"),
+    along(objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"), 1322),
+    dustwallowVenom(),
     accept(1270, stinky, "Ride north-east to \"Stinky\" Ignatz in the bog. His escape is an escort."),
     note(objective(1270, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers bog samples and fight off the attackers."),
       "Escort route from the classic quest; check in game."),
@@ -860,8 +868,7 @@ do
     accept(1238, dirt, "Search the loose dirt beside Jarl's shack."),
     objective(1177, dm(nil, 56.8, 15.6), "Ride north to the coast and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
     action("goto", spiders, "Ride west along the north of the marsh to the Darkmist spider caves north of Brackenwall."),
-    along(objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "20 Unpopped Darkmist Eyes"), 1322),
-    along(objective(1322, dm(nil, 33.0, 22.1), "The same spiders carry Acidic Venom Sacs.", "5 Acidic Venom Sacs"), 1206),
+    objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "40 Unpopped Darkmist Eyes"),
     finish(1201, nazeer), accept(1202, nazeer), finish(1238, nazeer),
     finish(1322, dogol), accept(1323, dogol), finish(1323, krog),
     finish(1273, krog), accept(1276, krog, "Keep the shield for Mosarn in Thunder Bluff."),
@@ -1323,7 +1330,8 @@ do
     note(objective(1273, ogron, "Follow Ogron to Reethe and stay with him through the questioning. Fight off the ambush that follows."),
       "The escort's path is not in quest database; check in game."),
     accept(1177, mudcrush, "Mudcrush Durtfeet, a friendly ogre south of the village, is hungry for murloc heads."),
-    objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"),
+    along(objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"), 1322),
+    dustwallowVenom(),
     accept(1270, dm("\"Stinky\" Ignatz", 46.88, 17.52), "Ride north-east to \"Stinky\" Ignatz in the bog. His escape is an escort."),
     note(objective(1270, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers bog samples and fight off the attackers."),
       "Escort route from the classic quest; check in game."),
@@ -1332,8 +1340,7 @@ do
     accept(1238, dm("Loose Dirt", 55.44, 25.92), "Search the loose dirt beside Jarl's shack."),
     objective(1177, dm(nil, 56.8, 15.6), "Ride north to the coast and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
     action("goto", spiders, "Ride west along the north of the marsh to the Darkmist spider caves north of Brackenwall."),
-    along(objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "20 Unpopped Darkmist Eyes"), 1322),
-    along(objective(1322, dm(nil, 33.0, 22.1), "The same spiders carry Acidic Venom Sacs.", "5 Acidic Venom Sacs"), 1206),
+    objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "40 Unpopped Darkmist Eyes"),
     finish(1201, nazeer), accept(1202, nazeer), finish(1238, nazeer),
     finish(1322, dogol), accept(1323, dogol), finish(1323, krog),
     finish(1273, krog), accept(1276, krog, "Keep the shield for Mosarn in Thunder Bluff."),
