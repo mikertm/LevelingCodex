@@ -9082,12 +9082,12 @@ function S.profLearnedSwitch()
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
   end
-  check(profText():find("STEP 100%-112"), "clicked route preview")
+  check(profText():find("STEP PREVIEW"), "clicked route preview")
   MOCK.setSkill("Blacksmithing", 98, 150)
   MOCK.advance(1.2)
   MOCK.setSkill("Blacksmithing", 97, 150)
   MOCK.advance(1.2)
-  check(profText():find("DO THIS NOW") and not profText():find("STEP 100%-112"), "rank change clears the preview permanently")
+  check(profText():find("CURRENT STEP") and not profText():find("STEP PREVIEW"), "rank change clears the preview permanently")
   MOCK.removeSkill("Mining")
   MOCK.removeSkill("Blacksmithing")
   MOCK.advance(1.2)
@@ -9192,20 +9192,20 @@ function S.profTab()
   click(win(), "To 300")
   local t = profText()
   check(t:find("Blacksmithing 97 / 150"), "skill header")
-  check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
-  check(t:find("Learn at 95"), "learn level")
+  check(t:find("Rough Bronze Leggings") and t:find("About 3 crafts to skill 100"), "now card")
+  check(t:find("(skill 95)"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
   check(t:find("1620 Thorium Bar"), "shopping list counts the 100 Thorium Bars the two Imperial Plate quests take")
   check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
   end
-  check(profText():find("STEP 100%-112") and profText():find("make 24 more"), "clicked step shows; the note says how many more stones")
+  check(profText():find("STEP PREVIEW") and profText():find("make 24 more"), "clicked step shows; the note says how many more stones")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^95%-100") then b:Click(); break end
   end
-  check(profText():find("DO THIS NOW") and profText():find("about 3 more to 100"), "clicking your own step goes back to it")
-  check(t:find("THE WHOLE ROUTE"), "route list")
+  check(profText():find("CURRENT STEP") and profText():find("About 3 crafts to skill 100"), "clicking your own step goes back to it")
+  check(t:find("LEVELING ROUTE"), "route list")
   check(t:find("TRAIN EXPERT") == nil, "Expert not due at 97")
   click(win(), "Mining")
   t = profText()
@@ -9267,13 +9267,15 @@ function S.profBrowse()
   t = profText()
   check(t:find("Alchemy  -  not learned", 1, true) and t:find("Any Alchemy trainer", 1, true), "where to learn it")
   check(t:find("FIRST STEP", 1, true) and t:find("Minor Arcane Elixir", 1, true), "its first step")
-  check(t:find("THE WHOLE ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
+  check(t:find("LEVELING ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
     "its route and shopping list from 1")
-  check(not t:find("DO THIS NOW", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
+  check(not t:find("CURRENT STEP", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^90%-120") then b:Click(); break end
   end
-  check(profText():find("STEP 90-120", 1, true) and profText():find("Elixir of Wisdom", 1, true), "a step can be opened")
+  t = profText()
+  check(t:find("STEP PREVIEW", 1, true) and t:find("Skill 90-120", 1, true) and
+    t:find("Elixir of Wisdom", 1, true), "a step can be opened")
   click(win(), "Other guides")
   click(win(), "Herbalism")
   t = profText()
@@ -9281,7 +9283,7 @@ function S.profBrowse()
     t:find("Elwynn Forest", 1, true), "a gathering guide lists its first nodes without colours")
   MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
   t = profText()
-  check(t:find("Herbalism 1 / 75", 1, true) and t:find("DO THIS NOW", 1, true), "learning it turns the page into your guide")
+  check(t:find("Herbalism 1 / 75", 1, true) and t:find("CURRENT STEP", 1, true), "learning it turns the page into your guide")
   click(win(), "Mining")
   check(profText():find("Mining 140 / 225", 1, true), "your own guides are a click away")
   MOCK.removeSkill("Herbalism"); MOCK.advance(1.2)
@@ -9302,7 +9304,7 @@ function S.profTabCases()
   MOCK.level = 30
   MOCK.setSkill("Blacksmithing", 300, 300)
   click(win(), "Blacksmithing")
-  check(profText():find("ROUTE DONE"), "route done at 300")
+  check(profText():find("ROUTE COMPLETE"), "route done at 300")
   MOCK.removeSkill("Blacksmithing")
   MOCK.removeSkill("Mining")
   MOCK.advance(1.2)
@@ -9452,7 +9454,7 @@ function S.herbalismTab()
   MOCK.race = "Skyborne"
   click(win(), "Herbalism")
   check(profText():find("Zephras Isle"), "Skyborne starter zone")
-  check(text:find("THE WHOLE ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
+  check(text:find("LEVELING ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
   check(text:find("20  Incense Candle") and text:find("140  Greenhouse") and
     text:find("300  Seed Hybridizer"), "camp unlocks")
   check(not text:find("Smelt") and not text:find("SHOPPING LIST"), "gathering route has no crafting advice")
@@ -9463,7 +9465,7 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 65, 75); MOCK.advance(1.2)
   check(profText():find("Peacebloom  1  green"), "Forever's herbs turn green at skill + 65")
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
+  check(profText():find("ROUTE COMPLETE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
   local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
@@ -9541,7 +9543,7 @@ function S.firstAidTab()
   check(text:find("Heavy Runecloth Bandage", 1, true) and text:find("22 Runecloth", 1, true),
     "the last bandage step and cloth estimate")
   MOCK.setSkill("First Aid", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "First Aid route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "First Aid route ends at 300")
 end
 
 function S.alchemyTab()
@@ -9572,7 +9574,7 @@ function S.alchemyTab()
     check(content:find("you can make 2", 1, true), "bag estimate is limited by the vial")
   end
   MOCK.setSkill("Alchemy", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Alchemy route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Alchemy route ends at 300")
 end
 
 function S.skinningLeatherworkingTab()
@@ -9594,7 +9596,7 @@ function S.skinningLeatherworkingTab()
   card = toast()
   check(card and card:IsShown() and MOCK.textUnder(card):find("NEW STEP"), "Skinning step card")
   MOCK.setSkill("Skinning", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE"), "Skinning cap")
+  check(profText():find("ROUTE COMPLETE"), "Skinning cap")
   click(win(), "Leatherworking")
   content = profText()
   check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
@@ -9669,7 +9671,7 @@ function S.cookingTab()
   check(text:find("Nightfin Soup", 1, true) and text:find("Gikkix", 1, true) and
     shoppingText():find("17 Raw Nightfin Snapper", 1, true), "Nightfin Soup finishes the route at a Cooking Fire")
   MOCK.setSkill("Cooking", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Cooking route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Cooking route ends at 300")
 end
 
 function S.fishingTab()
@@ -9703,7 +9705,7 @@ function S.fishingTab()
   check(text:find("Tidefury Cove", 1, true) and not text:find("UNLOCK ARTISAN", 1, true) and
     not text:find("Feralas Ahi", 1, true), "raising the cap clears the quest objectives and leaves the final water")
   MOCK.setSkill("Fishing", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Fishing route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Fishing route ends at 300")
 end
 
 function S.engineeringTab()
@@ -9728,7 +9730,7 @@ function S.engineeringTab()
   check(content:find("Thorium Tube", 1, true) and content:find("Xizzer Fizzbolt", 1, true) and
     content:find("binds on pickup", 1, true), "the last stretch names the bind-on-pickup schematic vendor")
   MOCK.setSkill("Engineering", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Engineering route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Engineering route ends at 300")
 end
 
 local function tailoring() click(win(), "Tailoring"); return profText() end
@@ -9765,7 +9767,7 @@ function S.tailorTab()
   check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
   local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
   check(cloth and tonumber(cloth) == 5 * tonumber(bolts), "Runecloth row: 5 per bolt (" .. tostring(cloth) .. ", " .. tostring(bolts) .. ")")
-  check(t:find("make them from Silk Cloth %(4 each%)"), "step card: bolts are made from Silk Cloth")
+  check(t:find("Make them from Silk Cloth %(4 each%)"), "step card: bolts are made from Silk Cloth")
   local now, linen = textY(win(), "^Silk Cloth  %-  you need this now"), textY(win(), "^Linen Cloth$")
   check(now and linen and now < linen, "this step's cloth (Silk) first, marked")
   check(t:find("Humanoids level 27%-39"), "silk mob levels")
@@ -9779,7 +9781,7 @@ function S.tailorTab()
     check(not over, "shopping rows don't overlap: " .. tostring(over))
     MOCK.bags["Bolt of Silk Cloth"] = 12
     local held = tailoring()
-    check(held:find("make them from Silk Cloth %(4 each%): your 0 make 0") and not held:find("your 48"),
+    check(held:find("Make them from Silk Cloth %(4 each%): your 0 make 0") and not held:find("your 48"),
       "step card: held bolts aren't cloth that makes more bolts")
     MOCK.bags["Bolt of Silk Cloth"] = nil
   else
@@ -9834,7 +9836,7 @@ function S.tailorTabCases()
     "Runecloth finish: the vendor patterns need a Loom")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
-  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  check(t:find("ROUTE COMPLETE") and not t:find("you need this now"), "route done at 300")
   MOCK.setSkill("Tailoring", 150, 225)
   win():Hide()
 end
@@ -9892,7 +9894,7 @@ function S.enchantTab()
   openAt(30, "Professions")
   local t = enchanting()
   check(t:find("Enchanting 150 / 225"), "Enchanting header")
-  check(t:find("Enchant Bracer %- Lesser Stamina") and t:find("about 5 more to 155"), "step at 150")
+  check(t:find("Enchant Bracer %- Lesser Stamina") and t:find("About 5 crafts to skill 155"), "step at 150")
   check(t:find("Enchant your own bracers"), "what to enchant")
   check(t:find("\nDISENCHANTING\n"), "disenchanting section")
   if GetItemCount then
@@ -9932,10 +9934,10 @@ function S.enchantTabCases()
   check(shoppingText():find("Strange Dust %(for %d+ motes"), "Motes counted as Strange Dust")
   check(shoppingText():find("\n1 Mote of Magic"), "the rod's first Mote stays on the list: it must be bought")
   if GetItemCount then
-    check(not t:find("make them from Strange Dust"), "skill 1, no rod: no 'make them from' (Dust to Motes needs the rod)")
+    check(not t:find("Make them from Strange Dust"), "skill 1, no rod: no 'make them from' (Dust to Motes needs the rod)")
     MOCK.setSkill("Enchanting", 12, 75)
     MOCK.bags = { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 4 }
-    check(enchanting():find("make them from Strange Dust %(1 makes 3%): your 4 make 12"), "Motes: 1 dust makes 3")
+    check(enchanting():find("Make them from Strange Dust %(1 makes 3%): your 4 make 12"), "Motes: 1 dust makes 3")
     MOCK.bags = { ["Runed Arcanite Rod"] = 1 }
     MOCK.setSkill("Enchanting", 265, 300)
     check(enchanting():find("Rod: Runed Truesilver Rod %(you have it%)"), "an Arcanite rod counts for the Truesilver one")
@@ -9947,7 +9949,7 @@ function S.enchantTabCases()
   check(t:find("Enchant Shield %- Greater Stamina") and t:find("Mythrin'dir") and t:find("any shield"), "skill 265: shield, formula vendor")
   MOCK.setSkill("Enchanting", 300, 300)
   t = enchanting()
-  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  check(t:find("ROUTE COMPLETE") and not t:find("you need this now"), "route done at 300")
   MOCK.setSkill("Enchanting", 150, 225)
   win():Hide()
 end
@@ -10151,7 +10153,7 @@ function S.craftAlchemy()
   check(row == TradeSkillSkill1, "oil is skipped while a leaded vial is missing")
   MOCK.bags["Leaded Vial"] = 1; MOCK.advance(1)
   _, row = trace:GetPoint(1)
-  check(row == TradeSkillSkill2 and MOCK.textUnder(hint):find("you can make 2", 1, true),
+  check(row == TradeSkillSkill2 and MOCK.textUnder(hint):find("You can make 2", 1, true),
     "make two Stonescale Oil from one eel and the only vial, even when grey")
   MOCK.bags["Stonescale Oil"] = 2; MOCK.advance(1)
   _, row = trace:GetPoint(1)
@@ -10168,7 +10170,7 @@ function S.craftLeatherworking()
   local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
   check(hint and hint:IsShown() and MOCK.textUnder(hint):find("Wicked Leather Gauntlets"), "Leatherworking hint")
   local status = MOCK.textUnder(hint)
-  check(status:find("Not learned yet") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
+  check(status:find("Recipe not learned") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
     "missing Leatherworking recipe names the pattern vendors")
   MOCK.trade.recipes[2] = { "Wicked Leather Gauntlets", "optimal", 3 }
   MOCK.trade.layout(); MOCK.advance(1)
@@ -10178,7 +10180,8 @@ function S.craftLeatherworking()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Skinning", 20, 75
   MOCK.trade.recipes = { { "Camp Chair", "optimal", 3 } }
   MOCK.trade.layout(); MOCK.advance(1)
-  check(not hint:IsShown() and not trace:IsShown(), "Skinning gathering route has no crafting overlay")
+  check(hint:IsShown() and not trace:IsShown() and MOCK.textUnder(hint):find("Skin starter beasts", 1, true),
+    "switching to Skinning replaces the recipe trace with gathering advice")
   closeCraft()
 end
 
@@ -10189,8 +10192,8 @@ function S.craftTrace()
   local tr, h = _G.LevelingCodexCraftTrace, _G.LevelingCodexCraftHint
   check(h and h:IsShown(), "card beside the crafting window")
   local text = MOCK.textUnder(h)
-  check(text:find("Rough Bronze Leggings") and text:find("About 3 more to 100") and text:find("materials for 4"), "card text")
-  check(text:find("orange"), "live colour on the card")
+  check(text:find("Rough Bronze Leggings") and text:find("About 3 crafts to skill 100") and text:find("Materials for 4 crafts"), "card text")
+  check(text:find("Orange"), "live colour on the card")
   check(tr and tr:IsShown(), "row traced")
   local _, rel = tr:GetPoint(1)
   check(rel == TradeSkillSkill4, "trace on the Rough Bronze Leggings row (its text has a colour code and a count)")
@@ -10198,24 +10201,61 @@ function S.craftTrace()
   check(not tr:IsShown() and not h:IsShown(), "trace and card hide with the window")
 end
 
-function S.craftHerbalism()
+function S.craftGathering()
   openCraft()
   local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
   check(hint and hint:IsShown() and trace and trace:IsShown(), "crafting guide before switching professions")
-  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Herbalism", 20, 75
-  MOCK.trade.recipes = { { "Incense Candle", "optimal", 2 } }
-  MOCK.trade.layout()
-  MOCK.event("TRADE_SKILL_UPDATE")
-  MOCK.advance(0.6)
-  check(not hint:IsShown() and not trace:IsShown(), "Herbalism camp recipes do not show a crafting guide")
+  for _, profession in ipairs({
+    { "Mining", 80, 150, "Silver Vein", "Rock Garden" },
+    { "Mining", 185, 225, "Mithril Deposit" },
+    { "Herbalism", 20, 75, "Peacebloom", "Incense Candle" },
+    { "Fishing", 150, 225, "Fish at Booty Bay or Tidefury Cove", "Fishing Rack" },
+    { "Skinning", 170, 225, "Skin yetis and worgen", "Field Guide" },
+  }) do
+    MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = unpack(profession, 1, 3)
+    MOCK.trade.recipes = profession[5] and { { profession[5], "optimal", 2 } } or {}
+    MOCK.trade.layout()
+    MOCK.advance(0.6)
+    check(hint:IsShown() and not trace:IsShown() and MOCK.textUnder(hint):find(profession[4], 1, true),
+      profession[1] .. " provides gathering advice without outlining a camp recipe")
+  end
   closeCraft()
+  TradeSkillFrame:Show(); MOCK.advance(0.6)
+  check(hint:IsShown(), "a gathering-only window may open without a crafting event")
+  TradeSkillFrame:Hide()
+  check(not hint:IsShown(), "gathering hint closes with the window")
+end
+
+function S.craftProfessionBook()
+  MOCK.setSkill("Mining", 185, 225)
+  MOCK.setSkill("Fishing", 150, 225)
+  MOCK.professionSpells = { "Fishing", "Mining", "Heroic Strike" }
+  local tip = GameTooltip
+  tip:SetOwner(UIParent, "ANCHOR_RIGHT")
+  tip:SetSpellBookItem(1, "spell")
+  local function lines() return table.concat(tip._lines, "\n") end
+  check(lines():find("Fishing 150 / 225", 1, true) and lines():find("Tidefury Cove", 1, true), "Fishing's native profession tooltip")
+  tip:SetSpellBookItem(2, "spell")
+  check(lines():find("Mithril Deposit", 1, true) and not lines():find("Tidefury Cove", 1, true), "switching tooltips replaces the advice")
+  local spellBook = C_SpellBook
+  C_SpellBook = { GetSpellBookItemName = function() return "Find Minerals" end }
+  tip:SetSpellBookItem(2, 0)
+  check(lines():find("Mining 185 / 225", 1, true), "the modern spellbook's tracking spell identifies Mining")
+  C_SpellBook = spellBook
+  tip:SetSpellBookItem(3, "spell")
+  check(lines() == "Heroic Strike", "ordinary spell tooltips are untouched")
+  LevelingCodexDB.noCraftGuide = true
+  tip:SetSpellBookItem(1, "spell")
+  check(lines() == "Fishing", "profession hints follow the setting")
+  LevelingCodexDB.noCraftGuide = nil
+  tip:Hide()
 end
 
 function S.craftNotLearned()
   if not craftReady() then return end
   table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("Not learned yet"), "not learned")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Recipe not learned"), "not learned")
   check(not LevelingCodexCraftTrace:IsShown(), "nothing to trace")
   closeCraft()
   table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
@@ -10226,7 +10266,7 @@ function S.craftGrey()
   if not craftReady() then return end
   MOCK.trade.recipes[4][2] = "trivial"; MOCK.trade.layout()
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("Grey now: next is Heavy Grinding Stone"), "grey: move on")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Next in the guide: Heavy Grinding Stone"), "grey: move on")
   closeCraft()
   MOCK.trade.recipes[4][2] = "optimal"; MOCK.trade.layout()
 end
@@ -10239,7 +10279,7 @@ function S.craftScrolled()
   openCraft()
   local h = LevelingCodexCraftHint
   check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen")
-  check(MOCK.textUnder(h):find("It's in the list: scroll to it.", 1, true), "the card says to scroll to it")
+  check(MOCK.textUnder(h):lower():find("scroll to the recipe.", 1, true), "the card says to scroll to it")
   MOCK.trade.offset = 11; MOCK.trade.layout() -- the player scrolls to it
   MOCK.advance(2.3)
   check(LevelingCodexCraftTrace:IsShown(), "traced once the player scrolls to it")
@@ -10285,7 +10325,8 @@ function S.craftHandsOff()
     check(MOCK.trade.offset == 0 and MOCK.trade.selected == 0, who .. ": the list stays where the player left it")
     local h = LevelingCodexCraftHint
     local text = h and h:IsShown() and MOCK.textUnder(h) or ""
-    check(text:find("It's in the list: scroll to it.", 1, true), who .. ": the card says to scroll to it")
+    local instruction = C_TradeSkillUI and "Check filters or scroll to the recipe." or "Scroll to the recipe."
+    check(text:find(instruction, 1, true), who .. ": the card says where to find the recipe")
     check(not text:find("Show it"), who .. ": no Show it button")
     closeCraft()
   end
@@ -10318,7 +10359,8 @@ function S.craftSmelting()
   MOCK.trade.layout()
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("MINING 80") and text:find("Smelt Silver") and text:find("About 20 more to 100"), "smelting card")
+  check(text:find("MINING  80 / 150", 1, true) and text:find("Smelt Silver") and
+    text:find("About 20 crafts to skill 100"), "smelting card")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill3, "Smelt Silver row traced")
   closeCraft()
@@ -10405,7 +10447,7 @@ function S.profTrainer()
   MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
   MOCK.trainer[2].category, MOCK.trainer[4].category = "available", "available"
   MOCK.event("TRAINER_UPDATE")
-  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (130-140)"),
+  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (129-140)"),
     "what to learn now for the route, and the cost")
   check(questText(card, "You have 10s: 4s short"), "and when money is short")
   MOCK.trainer[2].category, MOCK.trainer[4].category = "used", "used"
@@ -10413,7 +10455,7 @@ function S.profTrainer()
   MOCK.trainer[3].category, MOCK.trainer[6].category = "available", "available"
   MOCK.money = 100000
   MOCK.event("TRAINER_UPDATE")
-  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-130)"),
+  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-129)"),
     "the next rank comes first")
   MOCK.chat = {}
   slash("debug")
@@ -10936,14 +10978,26 @@ function S.craftFiltered()
   table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
   MOCK.knownSpells[2668] = true
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("not in the list: clear the search"), "known but filtered")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Recipe hidden"), "known but filtered")
   closeCraft()
   MOCK.knownSpells[2668] = nil
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Not learned yet") and text:find("Instead: Runed Copper Belt"), "not learned shows the alternative")
+  check(text:find("Recipe not learned") and text:find("Alternative: Runed Copper Belt"), "not learned shows the alternative")
+  local hint, knownSpell = LevelingCodexCraftHint, IsPlayerSpell
+  local expanded = hint:GetHeight()
+  IsPlayerSpell = nil
+  MOCK.advance(0.6)
+  text = MOCK.textUnder(hint)
+  check(text:find("Recipe unavailable") and not text:find("Recipe not learned"), "unknown recipe knowledge is shown as unavailable")
+  IsPlayerSpell = knownSpell
+  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 0 })
+  MOCK.trade.layout(); MOCK.advance(0.6)
+  text = MOCK.textUnder(hint)
+  check(text:find("Missing materials") and not text:find("Alternative:") and hint:GetHeight() < expanded,
+    "a visible recipe without materials has a shorter hint and no stale alternative")
   closeCraft()
-  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
+  MOCK.trade.recipes[#MOCK.trade.recipes][3] = 4
   MOCK.trade.layout()
 end
 
@@ -10954,7 +11008,7 @@ function S.craftClassicStubs()
   S.retailAPI()
   GetNumTradeSkills = function() return 0 end
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("materials for 4"), "recipe read through C_TradeSkillUI")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Materials for 4 crafts"), "recipe read through C_TradeSkillUI")
   closeCraft()
   GetNumTradeSkills = count
   C_TradeSkillUI = nil
@@ -11026,7 +11080,7 @@ function S.craftTailoring()
   local restore = tailorWindow()
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make Bolts of Silk Cloth first: your 46 Silk Cloth make 11.", 1, true), "bolts first with only the cloth")
+  check(text:find("46 Silk Cloth in your bags can make 11 Bolts of Silk Cloth.", 1, true), "bolts first with only the cloth")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the bolt row is outlined (grey, but still the one to make)")
   MOCK.bags["Bolt of Silk Cloth"] = 11; MOCK.advance(1)
@@ -11040,7 +11094,7 @@ function S.craftTailoring()
   MOCK.bags = { ["Silk Cloth"] = 46 }
   local vest = table.remove(MOCK.trade.recipes, 3); MOCK.trade.layout(); MOCK.advance(1)
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Earthen Vest") and text:find("Not learned yet") and not text:find("first"),
+  check(text:find("Earthen Vest") and text:find("Recipe not learned") and not text:find("first"),
     "the step's recipe not learned: say so, not bolts first")
   table.insert(MOCK.trade.recipes, vest)
   table.remove(MOCK.trade.recipes, 1); MOCK.trade.layout(); MOCK.advance(1)
@@ -11068,7 +11122,7 @@ function S.craftEnchanting()
     { "Dust to Motes", "trivial", 3 } }, {})
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make your Runed Silver Rod first: every enchant from here needs it.", 1, true), "rod first")
+  check(text:find("Make this rod first for Enchant Bracer - Lesser Stamina.", 1, true), "rod first")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the rod row is outlined")
   MOCK.bags["Runed Truesilver Rod"] = 1; MOCK.advance(1)
@@ -11079,18 +11133,19 @@ function S.craftEnchanting()
   MOCK.bags = {}
   table.remove(MOCK.trade.recipes, 2); MOCK.trade.layout(); MOCK.advance(1)
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Not learned yet") and not text:find("first"), "the step's recipe missing: not learned, not the rod")
+  check(text:find("Recipe not learned") and not text:find("first"), "the step's recipe missing: not learned, not the rod")
   enchantWindow(270, 300, { { "Runed Truesilver Rod", "trivial", 0 }, { "Enchant Shield - Greater Stamina", "optimal", 0 } }, {})
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make your Runed Truesilver Rod first") and not text:find("Grey now"), "a grey rod still needed")
+  check(text:find("Make this rod first for Enchant Shield - Greater Stamina.", 1, true) and
+    not text:find("No skill points"), "a grey rod still needed")
   check(LevelingCodexCraftTrace:IsShown(), "the grey rod is outlined")
   enchantWindow(1, 75, { { "Runed Copper Rod", "optimal", 0 }, { "Dust to Motes", "optimal", 5 } }, { ["Strange Dust"] = 5 })
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Runed Copper Rod") and not text:find("Make Motes of Magic first"), "skill 1: the rod, not Motes (Dust to Motes needs the rod)")
+  check(text:find("Runed Copper Rod") and not text:find("Make this first"), "skill 1: the rod, not Motes (Dust to Motes needs the rod)")
   enchantWindow(12, 75, { { "Dust to Motes", "trivial", 5 }, { "Enchant Bracer - Inferior Stamina", "optimal", 0 } },
     { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 5 })
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make Motes of Magic first: your 5 Strange Dust make 15.", 1, true), "Motes first: 3 per dust")
+  check(text:find("5 Strange Dust in your bags can make 15 Motes of Magic.", 1, true), "Motes first: 3 per dust")
   closeCraft()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected = unpack(saved)
   MOCK.bags = {}
@@ -11125,14 +11180,14 @@ function S.craftSmeltingCases()
   check(t:find("Smelt Bronze") and not t:find("Smelt Tin"), "66: Smelt Bronze, the better chance")
   t = at(100, { { "Smelt Copper", "trivial", 9 }, { "Smelt Tin", "trivial", 2 }, { "Smelt Bronze", "easy", 1 },
                 { "Smelt Silver", "medium", 3 } })
-  check(t:find("Smelt Silver") and t:find("chance of a point") and not t:find("About %d+ more"), "100: a chance, not a count")
+  check(t:find("Smelt Silver") and t:find("chance of a point") and not t:find("crafts to skill", 1, true), "100: a chance, not a count")
   t = at(145, { { "Smelt Copper", "trivial", 9 }, { "Smelt Bronze", "trivial", 1 }, { "Smelt Silver", "trivial", 3 },
                 { "Smelt Iron", "trivial", 5 } })
-  check(t:find("no points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
+  check(t:find("no skill points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
   t = at(184, { { "Smelt Gold", "easy", 3 } })
   check(t:find("Smelt Gold") and t:find("chance of a point"), "184: Gold still gives points")
   t = at(185, { { "Smelt Gold", "trivial", 3 } })
-  check(t:find("no points at 185"), "185: Gold is grey, mine instead")
+  check(t:find("no skill points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
 end

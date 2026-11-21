@@ -1199,8 +1199,8 @@ renderers.settings = function()
   y = y + 12
 
   head("PROFESSIONS")
-  tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open a crafting profession or Smelting, the Codex outlines the recipe to make for your skill and shows how many more to make.")
+  tick("Show profession hints", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
+    "Show your current step in the profession book and profession windows. Crafting hints outline the recommended recipe.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
     "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
   y = y + 12

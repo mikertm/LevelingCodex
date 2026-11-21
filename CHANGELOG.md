@@ -1,5 +1,14 @@
 # Leveling Codex
 
+## v0.30.0
+
+### Profession guides
+
+- Hover over a profession in the game's profession book to see your skill and current leveling step. Mining, Herbalism, Fishing and Skinning also show what to gather or where to go.
+- Open a profession window for a compact guide beside the list. It shows recipe difficulty, estimated crafts, materials and prerequisites, or gathering advice when the route calls for it.
+- The Professions tab has a skill progress bar, separate material and bag counts, and clearer leveling route previews.
+- Audited all 12 guides against the latest Forever client data. Blacksmithing switches to Bronze Warhammer at 129, and the guides include updated Cooking alternatives, gathering routes, Fishing Rack and Seed Hybridizer advice.
+
 ## v0.29.1
 
 ### Quest guide fixes

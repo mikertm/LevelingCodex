@@ -1242,8 +1242,10 @@ def main():
             runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
             runs.append(("WARRIOR/full/craft-scrollbox", "WARRIOR", False, CRAFT_SCROLLBOX))
             for mode in ("classic", "retail"):
-                runs.append(("WARRIOR/full/craft-herbalism-" + mode, "WARRIOR", False,
-                             ["makeCraftWindow:" + mode, "login", "craftHerbalism"]))
+                runs.append(("WARRIOR/full/craft-gathering-" + mode, "WARRIOR", False,
+                             ["makeCraftWindow:" + mode, "login", "craftGathering"]))
+            runs.append(("WARRIOR/full/craft-profession-book", "WARRIOR", False,
+                         ["login", "craftProfessionBook"]))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

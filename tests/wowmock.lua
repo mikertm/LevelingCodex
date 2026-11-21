@@ -881,6 +881,13 @@ end
 GameTooltip=itemTooltip("GameTooltip")
 ItemRefTooltip=itemTooltip("ItemRefTooltip")
 
+function GameTooltip:SetSpellBookItem(slot)
+  self._spellName = (MOCK.professionSpells or {})[slot]
+  self:SetText(self._spellName or "")
+  return self._spellName ~= nil
+end
+function GameTooltip:GetSpell() return self._spellName end
+
 DEFAULT_CHAT_FRAME = CreateFrame("Frame", "ChatFrame1", UIParent)
 function DEFAULT_CHAT_FRAME:AddMessage(s)
   if type(s) ~= "string" then error("AddMessage: string expected", 2) end
