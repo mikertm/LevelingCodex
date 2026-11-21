@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.30.4
+
+### Quest guide fix
+
+- The Hillsbrad to Arathi step now points at the gap in Thoradin's Wall on the road instead of a spot in the hills north of Durnhold Keep, on both factions' routes.
+
 ## v0.30.3
 
 ### Quest guide fixes
