@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.30.1
+
+### Quest guide fix
+
+- Returning to Southshore with Brewer's Trade ready to turn in no longer switches you from Soothing Turtle Bisque to the older Coastal Patrols route. The guide keeps following your current route when you have outleveled the alternate.
+
 ## v0.30.0
 
 ### Profession guides

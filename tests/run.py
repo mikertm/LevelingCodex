@@ -1077,7 +1077,7 @@ def main():
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
-                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
+                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questSouthshoreTurnin", "questPinCapacity", "questLibraryResume",
                              "questIntegrationAuto", "questIntegrationTracker", "questIntegrationDB", "questIntegrationNearest",
                              "questIntegrationNearestItem", "questIntegrationNearestPart", "questIntegrationNearestError",
                              "questIntegrationTrackerLive", "questIntegrationNearestFallback", "questIntegrationNearestCleared",

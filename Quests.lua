@@ -1003,8 +1003,11 @@ local function activeStep(section, localMap)
   for i, row in ipairs(steps) do
     local s = row.step
     local entry = s.quest and log[s.quest]
+    -- Automatic zone catch-up should not start an outleveled alternate. An
+    -- alternate already being followed and manual resume still use its active quests.
+    local outleveledAlternate = row.section.alternate and row.section ~= selected and level > row.section.levels[2]
     if not row.section.side and (not section or row.section == section) and activeGoal(row, entry)
-        and (not localMap or (row.section.zone == map and (not s.map or s.map == map)
+        and (not localMap or (not outleveledAlternate and row.section.zone == map and (not s.map or s.map == map)
           and (entry.ready or #entry.objectives > 0))) then
       local rank = (map and s.map == map and 4 or 0)
         + (map and row.section.zone == map and 2 or 0) + (row.section == selected and 1 or 0)

@@ -6001,6 +6001,26 @@ function S.questAlternateSharedPickup()
   check(not questText(questViewer(), "Accept - Shared Alternate Pickup"), "game completion is shared across alternates")
 end
 
+function S.questSouthshoreTurnin()
+  local turtle = { questID = 555, objectives = { { text = "Turtle Meat: 1/10" } } }
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 33, 1416
+  MOCK.questLog = { turtle, { questID = 98071, isComplete = true } }
+  for _, id in ipairs({ 98059, 647, 98219, 536, 559, 560, 561, 562, 659 }) do MOCK.questDone[id] = true end
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turtle Meat 1/10"), "the level 33 route is following the turtle objective")
+
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1424, 52.13, 58.74
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Turtle Meat 1/10"), "the ready turn-in does not switch to the older Southshore alternate")
+  MOCK.questDone[98071], MOCK.questLog = true, { turtle }
+  MOCK.event("QUEST_TURNED_IN", 98071)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turtle Meat 1/10"), "turning in Brewer's Trade keeps the turtle objective in view")
+end
+
 function S.questPinCapacity()
   MOCK.level, MOCK.questMap = 13, 1436
   for i = 1, 4 do MOCK.questLog[i] = { questID = 999030 + i, title = "Pin test " .. i } end
