@@ -1391,11 +1391,12 @@ function pages.scan(W, top, H)
   text("Scan all uses", lx + 14, sy + 4, 100, "dim", ns.C.dim)
   segments(lx + 114, sy, lw - 128, { "Paged scan", "Instant scan" }, A().scanAllKind() == "instant" and 2 or 1,
     function(i) db.auctionScanAll = i == 2 and "instant" or nil end, "Scan all uses ")
-  sy = sy + 30
+  sy = sy + 26
   sy = sy + check("Search my guide's items when I open it", lx + 10, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end)
   if A().count() > 0 then
     local armed = forgetAt and now() - forgetAt < 5
-    button(armed and "Click again to forget" or "Forget prices", lx + 14, sy + 4, 180, function()
+    -- in the card's title row: the settings fill the card's height below it
+    button(armed and "Click again to forget" or "Forget prices", lx + lw - 14 - 170, y + 8, 170, function()
       if forgetAt and now() - forgetAt < 5 then A().forget(); forgetAt = nil; view.lookup = nil else forgetAt = now() end
     end, { label = "Forget prices", tip = "Forget prices", tipText = "Forget this realm's price history." })
   end
