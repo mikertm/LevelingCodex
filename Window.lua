@@ -15,6 +15,7 @@ local W = 568 -- content width
 local tabWidths = {}
 
 local frame, scroll, content, tabs, levelText, nowBtn
+local subBar, subButtons, page -- the sub-tab strip above the page (a group with more than one tab)
 local viewLevel -- the level the window is showing (defaults to yours)
 local activeTab = "level"
 local scrollPos, shownTab = {}, nil -- scroll offset per tab, and the tab currently drawn
@@ -1122,6 +1123,14 @@ local function questButtonOptions(y, x, w)
   return y
 end
 
+-- Settings come in pages, picked by the strip at the top (kept for the session).
+local SETTINGS_PAGES = { "General", "Questing", "Map and arrow", "Group", "Helpers" }
+local settingsPage = "General"
+local function settingsPageIndex()
+  for i, name in ipairs(SETTINGS_PAGES) do if name == settingsPage then return i end end
+  return 1
+end
+
 renderers.settings = function()
   local db = LevelingCodexDB
   local toast = ns.getToast()
@@ -1140,274 +1149,294 @@ renderers.settings = function()
     y = y + 28
   end
   local function head(str) T(str, 0, y, W, "label", C.gold); y = y + 20 end
-
-  head("THEME")
-  local th = ns.themeKey or "forever"
-  row("Forever (teal)", 0, 150, th == "forever", function() ns.setTheme("forever") end,
-    "WoW: Forever's logo teal for the accents and highlights.")
-  row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
-    "The guide site's gold for the accents and highlights.")
-  if ns.skinSupport.available() then
-    row("External skin", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
-      "Use your installed UI skin's panels, accent colour and font. Its skin settings can turn this off for the Codex.")
-  end
-  y = y + 40
-
-  head("CONTROLLER BUTTON NAMES")
-  local p = db.pad or "xbox"
-  row("Xbox", 0, 120, p == "xbox", function() db.pad = "xbox" end)
-  row("PlayStation", 126, 120, p == "ps", function() db.pad = "ps" end)
-  row("Switch", 252, 120, p == "switch", function() db.pad = "switch" end)
-  y = y + 40
-
-  head("LEVEL-UP BANNER")
-  tick("Show the level-up banner", not db.noToast, function() db.noToast = not db.noToast end)
-  row("Test level-up", 0, 120, toast and toast.testing, function()
-    local t = ns.getToast()
-    if t and t.unlocked then ns.setToastUnlocked(false) end
-    testBanner(viewLevel or UnitLevel("player"))
-  end, "Plays a level-up for the level shown in the header and keeps the banner up: drag it where you want it, change its size below, right-click it to close.")
-  local unlocked = toast and toast.unlocked
-  row(unlocked and "Lock banner" or "Move banner", 126, 120, unlocked, function()
-    local t = ns.getToast()
-    ns.setToastUnlocked(not (t and t.unlocked))
-  end, "Shows the banner so you can drag it anywhere. Press again to lock it there.")
-  row("Reset", 252, 80, false, function() db.toastPos = nil; db.toastScale = 1; ns.placeToast() end)
-  y = y + 32
-  T("Size", 0, y + 4, 60, "body", C.light)
-  row("-", 60, 28, false, function() db.toastScale = math.max(0.5, (db.toastScale or 1) - 0.1); ns.placeToast() end)
-  T(math.floor((db.toastScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
-  row("+", 146, 28, false, function() db.toastScale = math.min(2, (db.toastScale or 1) + 0.1); ns.placeToast() end)
-  y = y + 40
-
-  head("MESSAGES AND MACROS")
-  tick("Level-up messages in chat", not db.quiet, function() db.quiet = not db.quiet end)
-  tick("Keep my Codex macros up to date", not db.noAutoMacros, function() db.noAutoMacros = not db.noAutoMacros end,
-    "After a level-up, macros the Codex made switch to the right version for your new level. Your own macros are never touched.")
-  y = y + 12
-
-  head("TALENT WINDOW GUIDE")
-  tick("Trace my talent in the talent window", not db.noTalentGuide, function() db.noTalentGuide = not db.noTalentGuide end,
-    "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
-  y = y + 12
-
-  head("TRAINERS")
-  tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
-    "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
-  tick("Show what to learn at profession trainers", not db.noProfTrainer, function() db.noProfTrainer = not db.noProfTrainer end,
-    "At a profession trainer, a card lists the next rank when you can train it and the recipes your route needs from this trainer, and names the trainer or vendor for one it doesn't teach.")
-  y = y + 12
-
-  head("PROFESSIONS")
-  tick("Show profession hints", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "Show your current step in the profession book and profession windows. Crafting hints outline the recommended recipe.")
-  tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
-    "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
-  y = y + 12
-
-  head("GATHERING")
-  tick("Keep Find Herbs / Find Minerals on", not db.noAutoTrack, function()
-    db.noAutoTrack = not db.noAutoTrack
-    if not db.noAutoTrack then ns.restoreTracking() end
-  end, "WoW: Forever turns gathering tracking off when you log in, zone or die. The Codex turns the one you had back on (out of combat), unless you picked another tracking such as Track Beasts.")
-  y = y + 12
-
-  head("CONTROLLER")
-  tick("Use Forever's controller navigation", db.padNative ~= false, function()
-    db.padNative = (db.padNative == false) and nil or false
-    ns.gamepad.repick()
-  end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
-  y = y + 12
-
-  head("VENDOR")
-  tick("Sell grey items at vendors", not db.noAutoSell, function() db.noAutoSell = not db.noAutoSell end,
-    "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
-  tick("Repair at vendors", not db.noAutoRepair, function() db.noAutoRepair = not db.noAutoRepair end,
-    "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
-  tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
-    "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
-  tick("Include profession supplies", not db.noProfShop, function() db.noProfShop = not db.noProfShop end,
-    "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
-  y = y + 12
-
-  head("QUEST GUIDE")
-  tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
-    "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")
-  tick("Keep grey quests in the route", db.questKeepGrey, function() db.questKeepGrey = not db.questKeepGrey; ns.updateQuestSettings() end,
-    "Off: pickups that have gone grey for your level leave the route (unless a later quest needs them) and are listed under Quests > Missed quests > Outleveled.")
-  tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
-    "Side errands the route can skip, such as Forever's Camping 101 profession introductions.")
-  -- Elite quests: ask at each pickup (default), or take or skip them all.
-  T("Elite quests", 0, y + 5, 110, "body", C.ink)
-  local Q = ns.quests
-  y = y + segments(116, y, W - 116, Q.ELITE_LABELS, Q.eliteModeIndex(), function(i)
-    Q.setEliteMode(i)
-    ns.updateQuestSettings()
-    refresh()
-  end, Q.ELITE_TIPS) + 8
-  tick("Skip hearthstone binding steps", db.questSkipBind, function()
-    db.questSkipBind = not db.questSkipBind
-    ns.updateQuestSettings()
-  end, "Keep your hearthstone where it is. Bind steps tick off by themselves when your hearthstone is already set to that inn; hearth steps say where yours is set.")
-  tick("Play a sound when a step completes", not db.questNoSound, function() db.questNoSound = not db.questNoSound end)
-  tick("Show class quests", not db.noClassQuests, function() db.noClassQuests = not db.noClassQuests; ns.updateQuestSettings() end,
-    "Your class's quest chains (pets, forms, totems, class spells) as their own sections in the Quests tab. They also show under Missed quests when you reach their level.")
-  y = questButtonOptions(y, 0, W)
-  tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
-  tick("Show the NPC portrait", not db.noQuestPortrait, function()
-    db.noQuestPortrait = not db.noQuestPortrait
-    ns.questRefresh()
-  end, "A small 3D portrait of the quest giver, the one you turn in to, or the creature to hunt, beside the step's title.")
-  tick("Colour the arrow by direction", not db.noArrowColor, function()
-    db.noArrowColor = not db.noArrowColor
-    ns.questRefresh()
-  end, "Green when you're heading for the step, gold when it's off to your side, red when it's behind you.")
-  tick("Animate the arrow on arrival", not db.noArrowBounce, function() db.noArrowBounce = not db.noArrowBounce end,
-    "When you reach the step's spot (or its mob or object), the arrow turns into the step's icon, bobbing gently over a gold ring that pulses once.")
-  tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,
-    "Drag the arrow to put it anywhere on screen; Ctrl+mouse wheel over it changes its size. Locked, it stays where it is.")
-  T("Arrow size", 0, y + 4, 90, "body", C.light)
-  local function arrowSize(step)
-    db.questArrowScale = math.floor(math.max(0.6, math.min(2, (tonumber(db.questArrowScale) or 1) + step)) * 10 + 0.5) / 10
-    ns.placeQuestArrow()
-  end
-  row("-", 90, 28, false, function() arrowSize(-0.1) end)
-  T(math.floor((tonumber(db.questArrowScale) or 1) * 100 + 0.5) .. "%", 122, y + 4, 50, "body", C.gold, "CENTER")
-  row("+", 176, 28, false, function() arrowSize(0.1) end)
-  row("Reset arrow", 216, 120, false, function()
-    db.questArrowPos, db.questArrowScale = nil, nil
-    ns.placeQuestArrow()
-  end, "Puts the arrow back above the step window at its normal size.")
-  y = y + 36
-  if ns.questSupport.usable() then
-    tick("Point the arrow at the nearest objective", not db.noNearestSpawn, function()
-      db.noNearestSpawn = not db.noNearestSpawn
+  -- Each section draws on one page of Settings (the strip at the top picks the page).
+  local sections = {}
+  sections[#sections + 1] = { "THEME", "General", function()
+    local th = ns.themeKey or "forever"
+    row("Forever (teal)", 0, 150, th == "forever", function() ns.setTheme("forever") end,
+      "WoW: Forever's logo teal for the accents and highlights.")
+    row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
+      "The guide site's gold for the accents and highlights.")
+    if ns.skinSupport.available() then
+      row("External skin", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
+        "Use your installed UI skin's panels, accent colour and font. Its skin settings can turn this off for the Codex.")
+    end
+    y = y + 40
+  end }
+  sections[#sections + 1] = { "CONTROLLER BUTTON NAMES", "General", function()
+    local p = db.pad or "xbox"
+    row("Xbox", 0, 120, p == "xbox", function() db.pad = "xbox" end)
+    row("PlayStation", 126, 120, p == "ps", function() db.pad = "ps" end)
+    row("Switch", 252, 120, p == "switch", function() db.pad = "switch" end)
+    y = y + 40
+  end }
+  sections[#sections + 1] = { "LEVEL-UP BANNER", "General", function()
+    tick("Show the level-up banner", not db.noToast, function() db.noToast = not db.noToast end)
+    row("Test level-up", 0, 120, toast and toast.testing, function()
+      local t = ns.getToast()
+      if t and t.unlocked then ns.setToastUnlocked(false) end
+      testBanner(viewLevel or UnitLevel("player"))
+    end, "Plays a level-up for the level shown in the header and keeps the banner up: drag it where you want it, change its size below, right-click it to close.")
+    local unlocked = toast and toast.unlocked
+    row(unlocked and "Lock banner" or "Move banner", 126, 120, unlocked, function()
+      local t = ns.getToast()
+      ns.setToastUnlocked(not (t and t.unlocked))
+    end, "Shows the banner so you can drag it anywhere. Press again to lock it there.")
+    row("Reset", 252, 80, false, function() db.toastPos = nil; db.toastScale = 1; ns.placeToast() end)
+    y = y + 32
+    T("Size", 0, y + 4, 60, "body", C.light)
+    row("-", 60, 28, false, function() db.toastScale = math.max(0.5, (db.toastScale or 1) - 0.1); ns.placeToast() end)
+    T(math.floor((db.toastScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
+    row("+", 146, 28, false, function() db.toastScale = math.min(2, (db.toastScale or 1) + 0.1); ns.placeToast() end)
+    y = y + 40
+  end }
+  sections[#sections + 1] = { "MESSAGES AND MACROS", "General", function()
+    tick("Level-up messages in chat", not db.quiet, function() db.quiet = not db.quiet end)
+    tick("Keep my Codex macros up to date", not db.noAutoMacros, function() db.noAutoMacros = not db.noAutoMacros end,
+      "After a level-up, macros the Codex made switch to the right version for your new level. Your own macros are never touched.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "TALENT WINDOW GUIDE", "Helpers", function()
+    tick("Trace my talent in the talent window", not db.noTalentGuide, function() db.noTalentGuide = not db.noTalentGuide end,
+      "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "TRAINERS", "Helpers", function()
+    tick("Show what to train at my class trainer", not db.noTrainerGuide, function() db.noTrainerGuide = not db.noTrainerGuide end,
+      "At your class trainer, a card above the window lists the guide's spells you can learn now and what they cost. The Codex never buys anything for you.")
+    tick("Show what to learn at profession trainers", not db.noProfTrainer, function() db.noProfTrainer = not db.noProfTrainer end,
+      "At a profession trainer, a card lists the next rank when you can train it and the recipes your route needs from this trainer, and names the trainer or vendor for one it doesn't teach.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "PROFESSIONS", "Helpers", function()
+    tick("Show profession hints", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
+      "Show your current step in the profession book and profession windows. Crafting hints outline the recommended recipe.")
+    tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
+      "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "GATHERING", "Helpers", function()
+    tick("Keep Find Herbs / Find Minerals on", not db.noAutoTrack, function()
+      db.noAutoTrack = not db.noAutoTrack
+      if not db.noAutoTrack then ns.restoreTracking() end
+    end, "WoW: Forever turns gathering tracking off when you log in, zone or die. The Codex turns the one you had back on (out of combat), unless you picked another tracking such as Track Beasts.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "CONTROLLER", "General", function()
+    tick("Use Forever's controller navigation", db.padNative ~= false, function()
+      db.padNative = (db.padNative == false) and nil or false
+      ns.gamepad.repick()
+    end, "Off: the Codex moves its own highlight with the D-pad instead of Forever's focus glow. Turn it off if Forever's controller navigation misbehaves in the Codex.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "VENDOR", "Helpers", function()
+    tick("Sell grey items at vendors", not db.noAutoSell, function() db.noAutoSell = not db.noAutoSell end,
+      "When you open a vendor, grey items with a sell price are sold one by one. Items a guide step needs and your Hearthstone are kept. Hold Alt to stop it.")
+    tick("Repair at vendors", not db.noAutoRepair, function() db.noAutoRepair = not db.noAutoRepair end,
+      "Repairs all your gear with your own money when you open a vendor that repairs. Hold Alt to stop it.")
+    tick("Show what to buy for the guide", not db.noShopCard, function() db.noShopCard = not db.noShopCard end,
+      "At a vendor, a card lists items your coming steps need that this vendor sells, with one button to buy them. Nothing is bought until you click it.")
+    tick("Include profession supplies", not db.noProfShop, function() db.noProfShop = not db.noProfShop end,
+      "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "QUEST GUIDE", "Questing", function()
+    tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
+      "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")
+    tick("Keep grey quests in the route", db.questKeepGrey, function() db.questKeepGrey = not db.questKeepGrey; ns.updateQuestSettings() end,
+      "Off: pickups that have gone grey for your level leave the route (unless a later quest needs them) and are listed under Quests > Missed quests > Outleveled.")
+    tick("Show optional quests", db.questOptional, function() db.questOptional = not db.questOptional; ns.updateQuestSettings() end,
+      "Side errands the route can skip, such as Forever's Camping 101 profession introductions.")
+    -- Elite quests: ask at each pickup (default), or take or skip them all.
+    T("Elite quests", 0, y + 5, 110, "body", C.ink)
+    local Q = ns.quests
+    y = y + segments(116, y, W - 116, Q.ELITE_LABELS, Q.eliteModeIndex(), function(i)
+      Q.setEliteMode(i)
+      ns.updateQuestSettings()
+      refresh()
+    end, Q.ELITE_TIPS) + 8
+    tick("Skip hearthstone binding steps", db.questSkipBind, function()
+      db.questSkipBind = not db.questSkipBind
+      ns.updateQuestSettings()
+    end, "Keep your hearthstone where it is. Bind steps tick off by themselves when your hearthstone is already set to that inn; hearth steps say where yours is set.")
+    tick("Play a sound when a step completes", not db.questNoSound, function() db.questNoSound = not db.questNoSound end)
+    tick("Show class quests", not db.noClassQuests, function() db.noClassQuests = not db.noClassQuests; ns.updateQuestSettings() end,
+      "Your class's quest chains (pets, forms, totems, class spells) as their own sections in the Quests tab. They also show under Missed quests when you reach their level.")
+    y = questButtonOptions(y, 0, W)
+  end }
+  sections[#sections + 1] = { "ARROW AND PORTRAIT", "Map and arrow", function()
+    tick("Show the quest arrow", not db.noQuestArrow, function() db.noQuestArrow = not db.noQuestArrow; ns.questRefresh() end)
+    tick("Show the NPC portrait", not db.noQuestPortrait, function()
+      db.noQuestPortrait = not db.noQuestPortrait
       ns.questRefresh()
-    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need using your installed quest-data provider.")
-  end
-  tick("Track the step's quest in the quest tracker", not db.noQuestWatch, function() db.noQuestWatch = not db.noQuestWatch; ns.questRefresh() end,
-    "Adds the current step's quest to the game's objective tracker. Quests you track yourself are left alone.")
-  tick("Warn about elites and rares near the step", not db.noDangerWarnings, function() db.noDangerWarnings = not db.noDangerWarnings; ns.questRefresh() end,
-    "The step window names hostile elites and rares close to the current step until you outlevel them.")
-  y = y + 6
-  head("PARTY")
-  tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
-    "The step window lists your party: who is on your step (with their kill or loot count), how many steps ahead or behind the others are, and who isn't sharing a step. Party members need the Codex to share theirs.")
-  tick("Share guide quests with my party", ns.questSharing(), ns.toggleQuestSharing,
-    "On by default. When you accept a quest from your guide, the Codex offers it to party members who don't have it yet.")
-  tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
-    "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
-  tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
-    "Off by default. Icons and clickable quest links mark accepted quests, finished objectives and turn-ins. Next and Back stay quiet.")
-  tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
-    "Off by default. Quest loot goes to party chat with your progress count and quest link. An item that starts a quest includes its item link when available.")
-  tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
-    "Off by default. Finished objectives and quests ready to turn in use distinct status messages and quest links. At most a line a second, never in a raid.")
-  tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
-    "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
-  btn("Preview quest announcements", 0, y, 260, ns.previewQuestAnnouncements, false, "Show sample icons, links and progress privately. Nothing is sent to the party.")
-  y = y + 28
-  -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
-  T("Ping sound", 0, y + 5, 110, "body", C.ink)
-  local pingLabels, pingTips = {}, {
-    "A quiet chime (the game's friend-online sound).",
-    "The game's party invite sound.",
-    "The game's ready-check sound: the loudest.",
-  }
-  for i, sound in ipairs(ns.PARTY_PINGS) do pingLabels[i] = sound[1] end
-  y = y + segments(116, y, W - 116, pingLabels, ns.partyPingIndex(), function(i)
-    db.partyPingSound = i
-    ns.playPartyPing(i)
+    end, "A small 3D portrait of the quest giver, the one you turn in to, or the creature to hunt, beside the step's title.")
+    tick("Colour the arrow by direction", not db.noArrowColor, function()
+      db.noArrowColor = not db.noArrowColor
+      ns.questRefresh()
+    end, "Green when you're heading for the step, gold when it's off to your side, red when it's behind you.")
+    tick("Animate the arrow on arrival", not db.noArrowBounce, function() db.noArrowBounce = not db.noArrowBounce end,
+      "When you reach the step's spot (or its mob or object), the arrow turns into the step's icon, bobbing gently over a gold ring that pulses once.")
+    tick("Lock the arrow", db.questArrowLocked, function() db.questArrowLocked = not db.questArrowLocked end,
+      "Drag the arrow to put it anywhere on screen; Ctrl+mouse wheel over it changes its size. Locked, it stays where it is.")
+    T("Arrow size", 0, y + 4, 90, "body", C.light)
+    local function arrowSize(step)
+      db.questArrowScale = math.floor(math.max(0.6, math.min(2, (tonumber(db.questArrowScale) or 1) + step)) * 10 + 0.5) / 10
+      ns.placeQuestArrow()
+    end
+    row("-", 90, 28, false, function() arrowSize(-0.1) end)
+    T(math.floor((tonumber(db.questArrowScale) or 1) * 100 + 0.5) .. "%", 122, y + 4, 50, "body", C.gold, "CENTER")
+    row("+", 176, 28, false, function() arrowSize(0.1) end)
+    row("Reset arrow", 216, 120, false, function()
+      db.questArrowPos, db.questArrowScale = nil, nil
+      ns.placeQuestArrow()
+    end, "Puts the arrow back above the step window at its normal size.")
+    y = y + 36
+    if ns.questSupport.usable() then
+      tick("Point the arrow at the nearest objective", not db.noNearestSpawn, function()
+        db.noNearestSpawn = not db.noNearestSpawn
+        ns.questRefresh()
+      end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need using your installed quest-data provider.")
+    end
+    tick("Track the step's quest in the quest tracker", not db.noQuestWatch, function() db.noQuestWatch = not db.noQuestWatch; ns.questRefresh() end,
+      "Adds the current step's quest to the game's objective tracker. Quests you track yourself are left alone.")
+    tick("Warn about elites and rares near the step", not db.noDangerWarnings, function() db.noDangerWarnings = not db.noDangerWarnings; ns.questRefresh() end,
+      "The step window names hostile elites and rares close to the current step until you outlevel them.")
+    y = y + 6
+  end }
+  sections[#sections + 1] = { "PARTY", "Group", function()
+    tick("Show my party's steps", not db.noPartySteps, function() db.noPartySteps = not db.noPartySteps; ns.questRefresh() end,
+      "The step window lists your party: who is on your step (with their kill or loot count), how many steps ahead or behind the others are, and who isn't sharing a step. Party members need the Codex to share theirs.")
+    tick("Share guide quests with my party", ns.questSharing(), ns.toggleQuestSharing,
+      "On by default. When you accept a quest from your guide, the Codex offers it to party members who don't have it yet.")
+    tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
+      "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
+    tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
+      "Off by default. Icons and clickable quest links mark accepted quests, finished objectives and turn-ins. Next and Back stay quiet.")
+    tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
+      "Off by default. Quest loot goes to party chat with your progress count and quest link. An item that starts a quest includes its item link when available.")
+    tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
+      "Off by default. Finished objectives and quests ready to turn in use distinct status messages and quest links. At most a line a second, never in a raid.")
+    tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
+      "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+    btn("Preview quest announcements", 0, y, 260, ns.previewQuestAnnouncements, false, "Show sample icons, links and progress privately. Nothing is sent to the party.")
+    y = y + 28
+    -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
+    T("Ping sound", 0, y + 5, 110, "body", C.ink)
+    local pingLabels, pingTips = {}, {
+      "A quiet chime (the game's friend-online sound).",
+      "The game's party invite sound.",
+      "The game's ready-check sound: the loudest.",
+    }
+    for i, sound in ipairs(ns.PARTY_PINGS) do pingLabels[i] = sound[1] end
+    y = y + segments(116, y, W - 116, pingLabels, ns.partyPingIndex(), function(i)
+      db.partyPingSound = i
+      ns.playPartyPing(i)
+      refresh()
+    end, pingTips) + 8
+    if ns.questSupport.announces("objectives") or ns.questSupport.announces("items") then
+      y = y - 4 + T("Your quest tracker already announces finished objectives and quest-starting items, so the Codex avoids repeating them.",
+        28, y - 4, W - 28, "small", C.dim) + 6
+    end
+  end }
+  sections[#sections + 1] = { "STEP WINDOW AND MAP", "Map and arrow", function()
+    T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
+    row("-", 150, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() - 1) end,
+      "Fewer of the next steps the step window lists under the current one.")
+    T(tostring(ns.questPreviewCount()), 182, y + 4, 30, "body", C.gold, "CENTER")
+    row("+", 216, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() + 1) end,
+      "More of the next steps the step window lists under the current one (0-10). The list runs on into the next section.")
+    y = y + 36
+    tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
+      "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
+    tick("Show the completion bar", not db.noStepBar, function() db.noStepBar = not db.noStepBar; ns.questRefresh() end,
+      "A thin bar under the step's title fills as you get through the guide; hover it for the counts, click it for the route.")
+    tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
+      "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
+    tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,
+      "Pins for the current step and the next two on your world map; hover one for its step.")
+    tick("Route line on the minimap", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
+      "Gold dots on the minimap run from you to the current step, through a cave or tunnel's way in.")
+    tick("Route line on the world map", not db.noWorldMapLine, function()
+      db.noWorldMapLine = not db.noWorldMapLine
+      ns.questRefresh()
+    end, "The same gold dots on your world map, from you to the current step, on the map you're on.")
+    tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
+    -- The step window's size (down to half for small screens) and background, as steppers.
+    local function stepper(label, value, change)
+      T(label, 0, y + 4, 150, "body", C.light)
+      btn("-", 156, y, 28, function() change(-0.1); refresh() end, false).codexLabel = label .. " -"
+      T(math.floor(value * 100 + 0.5) .. "%", 188, y + 4, 46, "body", C.gold, "CENTER")
+      btn("+", 238, y, 28, function() change(0.1); refresh() end, false).codexLabel = label .. " +"
+      y = y + 30
+    end
+    stepper("Step window size", tonumber(db.questViewerScale) or 1, ns.setQuestViewerScale)
+    stepper("Step window background", tonumber(db.questViewerAlpha) or 1, ns.setQuestViewerAlpha)
+    T("Ctrl+mouse wheel over the step window also changes its size.", 0, y - 2, W, "small", C.dim)
+    y = y + 18
+    tick("Fade the step window in combat", not db.noQuestFade, function() db.noQuestFade = not db.noQuestFade end,
+      "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
+    tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
+      "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
+  end }
+  sections[#sections + 1] = { "QUEST HELPERS", "Questing", function()
+    local providerKey = ns.questSupport.keyName()
+    local holdBack = "Hold Alt" .. (providerKey and (" or " .. providerKey) or "") .. " to stop it."
+    local function providerNote(on, text)
+      if on then y = y - 4 + T(text, 28, y - 4, W - 28, "small", C.dim) + 6 end
+    end
+    tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
+      "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. " .. holdBack)
+    providerNote(ns.questSupport.autoAccept(), "Your quest tracker's auto-accept is on and handles quest pickups.")
+    tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
+      "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
+    providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
+    tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
+      "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+    tick("Loot tooltip advice",not db.noLootHints,function() db.noLootHints=not db.noLootHints end,
+      "Compare equipment against your current gear with your selected loot profile.")
+    tick("Mark gear upgrade rewards",not db.noLootRewards,function() db.noLootRewards=not db.noLootRewards end,
+      "A plus marks the strongest conclusive gear upgrade. Vendor value keeps its separate coin mark.")
+    tick("Show loot target tracker",not db.noLootTracker,function() db.noLootTracker=not db.noLootTracker;if ns.loot then ns.loot.refreshTracker() end end,
+      "A small panel lists your tracked items. Drag it to move it.")
+    tick("Loot notifications",db.lootNotifications,function() db.lootNotifications=not db.lootNotifications end,
+      "Off by default. Announce obtained targets and conclusively new bag upgrades once.")
+    tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
+      "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
+    tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
+      "For a long trip the arrow leads to a flight master when flying is quicker, and the flight map marks the flight to take. It only uses flight paths you have.")
+    tick("Lead me to flight paths I don't have", not db.noFlightLearn, function() db.noFlightLearn = not db.noFlightLearn; ns.questRefresh() end,
+      "When a flight master you haven't talked to is close to the way, the arrow stops there first so you learn the flight path. Works once the game has listed your flight paths, or you opened a flight map this session.")
+    tick("Auto-fly: take the guide's flights and binds", db.questAutoTravel, function() db.questAutoTravel = not db.questAutoTravel end,
+      "Off by default. On: at a flight master the Codex takes the flight the guide marks (a Fly step's, or the one the arrow names), and at the step's innkeeper during a bind step it picks the bind option (accept the game's popup yourself: addons may not). Hold Alt to stop it.")
+    y = y + 12
+  end }
+  sections[#sections + 1] = { "MINIMAP BUTTON", "General", function()
+    tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
+      "Drag the Level 60 badge around the edge of the minimap to put it where you like; it remembers the spot. The Codex is also in the addons button under the clock.")
+    row("Reset position", 0, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
+    y = y + 40
+  end }
+  sections[#sections + 1] = { "THIS WINDOW", "General", function()
+    T("Size", 0, y + 4, 60, "body", C.light)
+    row("-", 60, 28, false, function() db.windowScale = math.max(0.6, (db.windowScale or 1) - 0.1); ns.placeWindow() end)
+    T(math.floor((db.windowScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
+    row("+", 146, 28, false, function() db.windowScale = math.min(1.6, (db.windowScale or 1) + 0.1); ns.placeWindow() end)
+    row("Reset position", 186, 140, false, function() db.windowPos = nil; ns.placeWindow() end)
+    y = y + 40
+    T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started. /codex debug lists what the Codex can see, for bug reports.", 0, y, W, "small", C.dim)
+    y = y + 40
+  end }
+  y = y + segments(0, y, W, SETTINGS_PAGES, settingsPageIndex(), function(i)
+    settingsPage = SETTINGS_PAGES[i]
     refresh()
-  end, pingTips) + 8
-  if ns.questSupport.announces("objectives") or ns.questSupport.announces("items") then
-    y = y - 4 + T("Your quest tracker already announces finished objectives and quest-starting items, so the Codex avoids repeating them.",
-      28, y - 4, W - 28, "small", C.dim) + 6
+  end) + 16
+  for _, section in ipairs(sections) do
+    if section[2] == SETTINGS_PAGES[settingsPageIndex()] then
+      head(section[1])
+      section[3]()
+    end
   end
-  T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
-  row("-", 150, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() - 1) end,
-    "Fewer of the next steps the step window lists under the current one.")
-  T(tostring(ns.questPreviewCount()), 182, y + 4, 30, "body", C.gold, "CENTER")
-  row("+", 216, 28, false, function() ns.setQuestPreview(ns.questPreviewCount() + 1) end,
-    "More of the next steps the step window lists under the current one (0-10). The list runs on into the next section.")
-  y = y + 36
-  tick("Pin the current step on the map", not db.noQuestMapPin, function() db.noQuestMapPin = not db.noQuestMapPin; ns.questRefresh() end,
-    "Puts the game's own map waypoint on the current step, so it shows on your world map and minimap. A waypoint you placed yourself is never replaced.")
-  tick("Show the completion bar", not db.noStepBar, function() db.noStepBar = not db.noStepBar; ns.questRefresh() end,
-    "A thin bar under the step's title fills as you get through the guide; hover it for the counts, click it for the route.")
-  tick("Show steps on the minimap", not db.noMinimapSteps, function() db.noMinimapSteps = not db.noMinimapSteps; ns.questRefresh() end,
-    "The current step's icon on the minimap (an arrow on its edge when it's farther), and small numbered pins for the next two steps.")
-  tick("Show steps on the world map", not db.noWorldMapSteps, function() db.noWorldMapSteps = not db.noWorldMapSteps; ns.questRefresh() end,
-    "Pins for the current step and the next two on your world map; hover one for its step.")
-  tick("Route line on the minimap", not db.noMinimapLine, function() db.noMinimapLine = not db.noMinimapLine end,
-    "Gold dots on the minimap run from you to the current step, through a cave or tunnel's way in.")
-  tick("Route line on the world map", not db.noWorldMapLine, function()
-    db.noWorldMapLine = not db.noWorldMapLine
-    ns.questRefresh()
-  end, "The same gold dots on your world map, from you to the current step, on the map you're on.")
-  tick("Lock the quest step window", db.questLocked, function() db.questLocked = not db.questLocked end)
-  -- The step window's size (down to half for small screens) and background, as steppers.
-  local function stepper(label, value, change)
-    T(label, 0, y + 4, 150, "body", C.light)
-    btn("-", 156, y, 28, function() change(-0.1); refresh() end, false).codexLabel = label .. " -"
-    T(math.floor(value * 100 + 0.5) .. "%", 188, y + 4, 46, "body", C.gold, "CENTER")
-    btn("+", 238, y, 28, function() change(0.1); refresh() end, false).codexLabel = label .. " +"
-    y = y + 30
-  end
-  stepper("Step window size", tonumber(db.questViewerScale) or 1, ns.setQuestViewerScale)
-  stepper("Step window background", tonumber(db.questViewerAlpha) or 1, ns.setQuestViewerAlpha)
-  T("Ctrl+mouse wheel over the step window also changes its size.", 0, y - 2, W, "small", C.dim)
-  y = y + 18
-  tick("Fade the step window in combat", not db.noQuestFade, function() db.noQuestFade = not db.noQuestFade end,
-    "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
-  tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
-    "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
-  local providerKey = ns.questSupport.keyName()
-  local holdBack = "Hold Alt" .. (providerKey and (" or " .. providerKey) or "") .. " to stop it."
-  local function providerNote(on, text)
-    if on then y = y - 4 + T(text, 28, y - 4, W - 28, "small", C.dim) + 6 end
-  end
-  tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
-    "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. " .. holdBack)
-  providerNote(ns.questSupport.autoAccept(), "Your quest tracker's auto-accept is on and handles quest pickups.")
-  tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
-    "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
-  providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
-  tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
-    "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
-  tick("Loot tooltip advice",not db.noLootHints,function() db.noLootHints=not db.noLootHints end,
-    "Compare equipment against your current gear with your selected loot profile.")
-  tick("Mark gear upgrade rewards",not db.noLootRewards,function() db.noLootRewards=not db.noLootRewards end,
-    "A plus marks the strongest conclusive gear upgrade. Vendor value keeps its separate coin mark.")
-  tick("Show loot target tracker",not db.noLootTracker,function() db.noLootTracker=not db.noLootTracker;if ns.loot then ns.loot.refreshTracker() end end,
-    "A small panel lists your tracked items. Drag it to move it.")
-  tick("Loot notifications",db.lootNotifications,function() db.lootNotifications=not db.lootNotifications end,
-    "Off by default. Announce obtained targets and conclusively new bag upgrades once.")
-  tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
-    "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
-  tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
-    "For a long trip the arrow leads to a flight master when flying is quicker, and the flight map marks the flight to take. It only uses flight paths you have.")
-  tick("Lead me to flight paths I don't have", not db.noFlightLearn, function() db.noFlightLearn = not db.noFlightLearn; ns.questRefresh() end,
-    "When a flight master you haven't talked to is close to the way, the arrow stops there first so you learn the flight path. Works once the game has listed your flight paths, or you opened a flight map this session.")
-  tick("Auto-fly: take the guide's flights and binds", db.questAutoTravel, function() db.questAutoTravel = not db.questAutoTravel end,
-    "Off by default. On: at a flight master the Codex takes the flight the guide marks (a Fly step's, or the one the arrow names), and at the step's innkeeper during a bind step it picks the bind option (accept the game's popup yourself: addons may not). Hold Alt to stop it.")
-  y = y + 12
-
-  head("MINIMAP BUTTON")
-  tick("Minimap button", not db.noMinimap, function() db.noMinimap = not db.noMinimap; ns.updateMini() end,
-    "Drag the Level 60 badge around the edge of the minimap to put it where you like; it remembers the spot. The Codex is also in the addons button under the clock.")
-  row("Reset position", 0, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
-  y = y + 40
-
-  head("THIS WINDOW")
-  T("Size", 0, y + 4, 60, "body", C.light)
-  row("-", 60, 28, false, function() db.windowScale = math.max(0.6, (db.windowScale or 1) - 0.1); ns.placeWindow() end)
-  T(math.floor((db.windowScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
-  row("+", 146, 28, false, function() db.windowScale = math.min(1.6, (db.windowScale or 1) + 0.1); ns.placeWindow() end)
-  row("Reset position", 186, 140, false, function() db.windowPos = nil; ns.placeWindow() end)
-  y = y + 40
-  T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started. /codex debug lists what the Codex can see, for bug reports.", 0, y, W, "small", C.dim)
-  return y + 40
+  return y
 end
 
 ----------------------------------------------------------------------------
@@ -1426,6 +1455,61 @@ function ns.addTab(key, label, renderer, width)
   tabWidths[key] = width
   for _, t in ipairs(TABS) do if t[1] == key then return end end
   table.insert(TABS, #TABS, { key, label })
+end
+
+-- The tabs under the window are groups: a group of several tabs shows them as a strip of choices
+-- above the page and opens the one you used last. A tab no group names (a new file's) stands alone,
+-- in TOP_ORDER's place when it has one, else before Settings.
+local GROUPS = {
+  leveling = { label = "Leveling", tabs = { "level", "talents", "trainer", "macros", "tips" } },
+  stats = { label = "Stats", tabs = { "stats", "gold" } },
+}
+local TOP_ORDER = { "leveling", "quests", "journey", "professions", "loot", "stats", "settings" }
+local groupOf = {}
+for key, g in pairs(GROUPS) do
+  g.key = key
+  for _, tab in ipairs(g.tabs) do groupOf[tab] = g end
+end
+local lastInGroup = {}
+
+local function tabLabel(key)
+  for _, t in ipairs(TABS) do if t[1] == key then return t[2] end end
+end
+
+-- The registered tabs of a group, in its order.
+local function groupTabs(g)
+  local out = {}
+  for _, key in ipairs(g.tabs) do if tabLabel(key) then out[#out + 1] = key end end
+  return out
+end
+
+local function topKey(tab) return groupOf[tab] and groupOf[tab].key or tab end
+
+-- The tab row: { key, label, first tab } in TOP_ORDER, then anything else before Settings.
+local function topTabs()
+  local out, seen = {}, {}
+  local function add(key)
+    if seen[key] then return end
+    local g = GROUPS[key]
+    if g then
+      local list = groupTabs(g)
+      if #list > 0 then
+        seen[key] = true
+        out[#out + 1] = { key, #list > 1 and g.label or tabLabel(list[1]), list[1] }
+      end
+    elseif tabLabel(key) and not groupOf[key] then
+      seen[key] = true
+      out[#out + 1] = { key, tabLabel(key), key }
+    end
+  end
+  for _, key in ipairs(TOP_ORDER) do if key ~= "settings" then add(key) end end
+  for _, t in ipairs(TABS) do add(topKey(t[1])) end
+  add("settings")
+  -- Settings last, whatever came after it
+  for i, t in ipairs(out) do
+    if t[1] == "settings" and i < #out then table.remove(out, i); out[#out + 1] = t; break end
+  end
+  return out
 end
 
 -- An invisible row button with a tooltip (route rows and the like). `label` names it for the
@@ -1544,7 +1628,29 @@ refresh = function(professionSnapshot)
   levelText:SetText("Level " .. viewLevel)
   nowBtn:SetLook(viewLevel == me)
   nowBtn:SetLabel(viewLevel == me and "You" or "Back to " .. me)
-  for _, t in ipairs(tabs) do t:SetSelected(t.key == activeTab) end
+  for _, t in ipairs(tabs) do t:SetSelected(t.key == topKey(activeTab)) end
+  local g = groupOf[activeTab]
+  if g then lastInGroup[g.key] = activeTab end
+  local list = g and groupTabs(g) or {}
+  local strip = #list > 1
+  for _, b in pairs(subButtons) do b:Hide() end
+  if strip then
+    local each = math.floor(((tonumber(frame:GetWidth()) or 0) - 32 - 4 * (#list - 1)) / #list)
+    for i, key in ipairs(list) do
+      local b = subButtons[key]
+      b.order = i
+      b:ClearAllPoints()
+      b:SetPoint("TOPLEFT", subBar, "TOPLEFT", (i - 1) * (each + 4), 0)
+      b:SetSize(each, 24)
+      b.codexOn = key == activeTab
+      b:SetLook(b.codexOn)
+      b:Show()
+    end
+  end
+  subBar:SetShown(strip)
+  page:ClearAllPoints()
+  page:SetPoint("TOPLEFT", 14, strip and -130 or -100)
+  page:SetPoint("BOTTOMRIGHT", -14, 14)
   -- remember where the tab we're leaving (or redrawing) was scrolled to
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   local edit = pools.edit and pools.edit.list[1]
@@ -1649,6 +1755,10 @@ local function listFocusables()
   end
   local h = content:GetHeight() or 0
   for i, t in ipairs(tabs) do out[#out + 1] = { frame = t, x = i * W / #tabs, y = h + 40, fixed = true } end
+  local shown = {}
+  for _, b in pairs(subButtons or {}) do if b:IsShown() then shown[#shown + 1] = b end end
+  table.sort(shown, function(a, b) return (a.order or 0) < (b.order or 0) end)
+  for i, b in ipairs(shown) do out[#out + 1] = { frame = b, x = i * width / (#shown + 1), y = -20, fixed = true } end
   return out
 end
 
@@ -1788,7 +1898,7 @@ local function makeFrame()
   frame.padChrome = { prev = prevB, now = nowBtn, next = nextB, close = close }
 
   -- the page: a dark inset with the scrolling content
-  local page = inset(frame)
+  page = inset(frame)
   page:SetPoint("TOPLEFT", 14, -100)
   page:SetPoint("BOTTOMRIGHT", -14, 14)
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
@@ -1808,14 +1918,35 @@ local function makeFrame()
   -- tabs hang below the window, like the character sheet's
   tabs = {}
   local prev
-  for i, t in ipairs(TABS) do
+  for i, t in ipairs(topTabs()) do
     local b = A.tab(frame, t[2])
     if i == 1 then b:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 16, 8)
     else b:SetPoint("LEFT", prev, "RIGHT", -12, 0) end
     b.key = t[1]
-    b:SetScript("OnClick", function() activeTab = t[1]; refresh() end)
+    b:SetScript("OnClick", function()
+      local last = lastInGroup[t[1]]
+      activeTab = (last and renderers[last]) and last or t[3]
+      refresh()
+    end)
     tabs[#tabs + 1] = b
     prev = b
+  end
+  -- the strip of a group's tabs, between the header and the page
+  subBar = CreateFrame("Frame", nil, frame)
+  subBar:SetPoint("TOPLEFT", 16, -100)
+  subBar:SetPoint("TOPRIGHT", -16, -100)
+  subBar:SetHeight(24)
+  subBar:Hide()
+  subButtons = {}
+  for _, g in pairs(GROUPS) do
+    for _, key in ipairs(groupTabs(g)) do
+      local b = A.segment(subBar)
+      b:SetLabel(tabLabel(key))
+      b.codexLabel = tabLabel(key)
+      b:SetScript("OnClick", function() activeTab = key; refresh() end)
+      b:Hide()
+      subButtons[key] = b
+    end
   end
   -- Too many tabs for the window's width: every tab shrinks by the same share (12 px overlap each).
   local total, avail = -12 * (#tabs - 1), (tonumber(frame:GetWidth()) or 0) - 32

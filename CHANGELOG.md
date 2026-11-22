@@ -2,6 +2,11 @@
 
 ## v0.31.0
 
+### A tidier Codex window
+
+- The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Journey, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.
+- Settings is split into pages instead of one long list: General, Questing, Map and arrow, Group, and Helpers (trainers, professions, gathering and the vendor).
+
 ### New: the Journey tab, your adventure journal
 
 - A book in four pages instead of one long scroll: Overview (your journey in numbers, the road from 1 to 60, the latest chapter, where you are and who you travel with), Map, Story and Companions.
