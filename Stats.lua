@@ -573,7 +573,7 @@ local function render()
   top = y
   y = y + 10
   heading("ZONES")
-  U.segments(W - 14 - 160, y - 4, 160, { "Time", "Gold" }, byGold and 2 or 1, function(i)
+  U.segments(W - 14 - 160, y - 4, 160, { "Time", "Money" }, byGold and 2 or 1, function(i)
     zoneView = i == 2 and "gold" or "time"
     U.refresh()
   end, { "Where your leveling time went.", "Gold earned and spent in each zone, and net gold per hour there." })

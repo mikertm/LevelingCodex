@@ -33,8 +33,26 @@ local function findButton(root, pred)
   end
 end
 
+-- Tabs that sit in a group's strip (the tab under the window opens the group).
+local TAB_GROUP = { ["This Level"] = "Leveling", Talents = "Leveling", Trainer = "Leveling", Macros = "Leveling",
+  Tips = "Leveling", Gold = "Stats" }
+
 local function click(root, text, mouse)
   local b = findButton(root, function(l) return l == text end)
+  if not b and root == win() and TAB_GROUP[text] then
+    local group = findButton(root, function(l) return l == TAB_GROUP[text] end)
+    if group then group:Click(mouse) end
+    b = findButton(root, function(l) return l == text end)
+  end
+  -- Settings come in pages: look through each one.
+  if not b and root == win() and findButton(root, function(l) return l == "Map and arrow" end) then
+    for _, page in ipairs({ "General", "Questing", "Map and arrow", "Group", "Helpers" }) do
+      local control = findButton(root, function(l) return l == page end)
+      if control then control:Click() end
+      b = findButton(root, function(l) return l == text end)
+      if b then break end
+    end
+  end
   -- Follow the redesigned board's visible navigation when an older scenario asks for a
   -- control that moved to an area, a focused options page, or another grid page.
   if not b and root == win() then
@@ -2317,6 +2335,7 @@ function S.questPreviewAhead()
   check(LevelingCodexDB.questPreview == 2 and seg("2 steps").codexOn and not questText(frame, Q.label(ahead[8].step)),
     "and back to 2")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   local function stepsButton(label)
     for _, b in ipairs(MOCK.buttons(win())) do
       if labelOf(b) == label and b.tipText and b.tipText:find("steps the step window lists", 1, true) then return b end
@@ -3415,6 +3434,7 @@ function S.questEliteModes()
   check(not questText(frame, "Elite quest") and questText(frame, 'Accept - WANTED: "Hogger"'),
     "Always take goes straight to the pickup: " .. allText(frame))
   click(win(), "Settings")
+  click(win(), "Questing")
   local function lit(label)
     local b = findButton(win(), function(l) return l == label end)
     return b and b.codexOn
@@ -3771,6 +3791,7 @@ function S.questIntegrationAuto()
   check(MOCK.gossipPicked == nil, "an older quest tracker's autoaccept counts too")
   slash("quests")
   click(win(), "Settings")
+  click(win(), "Questing")
   check(questText(win(), "Your quest tracker's auto-accept is on and handles quest pickups."), "the tickbox says quest tracker handles it")
 
   MOCK.makeQuestProvider({}) -- auto-accept off, key Shift
@@ -3895,6 +3916,7 @@ function S.questIntegrationDB()
   S.login()
   slash("quests")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   check(not questText(win(), "Point the arrow at the nearest objective"), "no setting without quest database")
   MOCK.chat = {}
   slash("debug")
@@ -3912,6 +3934,7 @@ function S.questIntegrationDB()
   slash("debug")
   check(chatHas("quest database: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable quest database is reported")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   check(questText(win(), "Point the arrow at the nearest objective"), "the setting shows with quest database")
 end
 
@@ -4436,6 +4459,7 @@ function S.questButtonOptions()
   local frame, item, target = questButtonFixture()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Quest item position: Right")
   check(item:GetLeft() ~= nil and select(1, item:GetPoint()) == "TOPLEFT", "item can move to the right")
   check(select(1, target:GetPoint()) == "TOPRIGHT", "target keeps its own left placement")
@@ -4514,6 +4538,7 @@ function S.questButtonSavedLayout()
     "buttons follow the panel when it is dragged")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Compact step window")
   check(math.abs(select(5, target:GetPoint()) - ((600 - frame:GetHeight()) * 0.7 + 1)) < 0.001,
     "bottom placement follows compact mode's new height")
@@ -4525,6 +4550,7 @@ function S.questButtonInvalidLayout()
   check(select(1, item:GetPoint()) == "TOPRIGHT" and select(1, target:GetPoint()) == "TOPRIGHT", "invalid sides fall back to the left")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   check(questOffsetSlider("Quest item horizontal offset"):GetValue() == 0
     and questOffsetSlider("Target horizontal offset"):GetValue() == UIParent:GetWidth()
     and questOffsetSlider("Target vertical offset"):GetValue() == 0, "invalid offsets fall back or clamp to the slider range")
@@ -4548,6 +4574,7 @@ function S.questButtonDragging()
   local frame, item, target = questButtonFixture()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Unlock button dragging")
   local itemMover, targetMover = _G.LevelingCodexQuestItemMover, _G.LevelingCodexQuestTargetMover
   check(itemMover and itemMover:IsShown() and targetMover and targetMover:IsShown(), "unlock shows both drag handles")
@@ -4604,6 +4631,7 @@ function S.questButtonDragPreview()
   S.login()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Unlock button dragging")
   local mover = _G.LevelingCodexQuestItemMover
   check(mover and mover:IsShown() and not (_G.LevelingCodexQuestItem and _G.LevelingCodexQuestItem:IsShown()),
@@ -4627,6 +4655,7 @@ function S.questButtonMinimalLayout()
   check(target and target:IsShown(), "target works without optional APIs")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Target position: Right")
   check(select(1, target:GetPoint()) == "TOPLEFT", "minimal client can reposition the target")
   questOffsetSlider("Target horizontal offset"):SetValue(18)
@@ -4645,6 +4674,7 @@ function S.questButtonController()
   S.login()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   local function press(button) MOCK.fire(win(), "OnGamePadButtonDown", button) end
   local function adjust()
     local minus, plus = "Quest item horizontal offset -", "Quest item horizontal offset +"
@@ -7185,6 +7215,7 @@ function S.padBackup()
     if how == "setting" then LevelingCodexDB.padNative = false end
     if how == "no manager" then GamepadMode = nil; MOCK.gamepad = true end
     openAt(30, "Settings")
+    click(win(), "Helpers")
     MOCK.advance(0.6)
     check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(), "highlight shown (" .. how .. ")")
     check(reachSkillUpTick(), "D-pad reaches the skill-up tick (" .. how .. ")")
@@ -7209,6 +7240,7 @@ function S.padBackupScroll()
   if not D() or not GamepadMode then return end
   LevelingCodexDB.padNative = false; MOCK.gamepadUI = true
   openAt(30, "Settings")
+  click(win(), "Map and arrow")
   for _ = 1, 80 do -- down past the first screen (the content shows about 480 px)
     local t = LevelingCodexPadFocus.target
     if t.padY and t.padY > 600 then break end
@@ -9061,7 +9093,7 @@ function S.tabGlow()
   openAt(20, "Tips")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.glow then
-      local selected = labelOf(b) == "Tips"
+      local selected = labelOf(b) == "Leveling"
       check(b.glow:IsShown() == not selected, "hover glow " .. (selected and "off" or "on") .. " for " .. labelOf(b))
     end
   end
@@ -9549,6 +9581,7 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
   check(profText():find("ROUTE COMPLETE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
+  click(win(), "Helpers")
   local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
 end
@@ -9875,6 +9908,7 @@ function S.tailorTab()
   check(profText():find("Tailoring 150 / 225"), "the picked profession stays after reopening")
   MOCK.staleUnder(win(), "Professions")
   click(win(), "Settings")
+  click(win(), "Helpers")
   local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("every profession the Codex guides", 1, true),
     "Settings: skill-up cards cover every guided profession")
@@ -10923,7 +10957,7 @@ function S.statsTab()
   MOCK.fire(split, "OnLeave")
   check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
   check(findButton(win(), function(l) return l == "Time" end), "zones switch between time and gold")
-  click(win(), "Gold")
+  click(win(), "Money")
   check(questText(win(), "Earned") and questText(win(), "Spent"), "the gold view has its key")
   if not MOCK.minimal then
     local zone = findButton(win(), function(l) return l == "Zone Elwynn Forest" end)
@@ -10951,7 +10985,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 11, "eleven tabs (" .. #tabs .. ")")
+  check(#tabs == 7, "seven tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -11557,6 +11591,7 @@ end
 function S.euiThemePick()
   if not D() then return end
   openAt(30, "Settings")
+  click(win(), "General")
   check(findButton(win(), function(l) return l == "External skin" end), "Settings offers the external UI theme")
   local before = LevelingCodexDB.theme
   click(win(), "Forever (teal)")
@@ -11567,6 +11602,7 @@ function S.euiThemePick()
   local v = _G.LevelingCodexQuestViewer
   if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the external UI panel") end
   click(win(), "Settings")
+  click(win(), "General")
   click(win(), "External skin")
   check(LevelingCodexDB.euiTheme == "ellesmere", "external UI chosen again")
   check(win().euiSkin and win().euiSkin:IsShown(), "the external UI shell is back")
@@ -11584,6 +11620,7 @@ function S.euiAccent()
   MOCK.advance(0.5)
   check(not (win() and win():IsShown()), "an accent change leaves the window closed")
   openAt(30, "Settings")
+  click(win(), "General")
   local accent = MOCK.ns.C.accent
   check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows external UI's new accent")
   local function shells()
@@ -12198,4 +12235,134 @@ function S.lootCacheLate()
   MOCK.lootItems[900003].loaded=true;MOCK.event("GET_ITEM_INFO_RECEIVED",900003,true);MOCK.advance(1)
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
   check(questText(win(),canRead and "Better Vest" or "Item 900002"),"late response does not replace the selected candidate")
+end
+
+-- Journey: the adventure journal records the start, new zones, a trail, levels, quests, deaths,
+-- dungeons, bosses and companions, each as an ASCII line of the story.
+local function journeyHas(kind, pat)
+  local j = LevelingCodexCharDB.journey
+  for _, e in ipairs(j and j.events or {}) do
+    if (not kind or e.k == kind) and (not pat or e.s:find(pat, 1, true)) then return e end
+  end
+end
+
+function S.journeyRecord()
+  MOCK.mapInfo = STATS_MAPS
+  LevelingCodexCharDB = { journey = "broken" } -- a broken saved shape starts a fresh journal
+  S.login()
+  MOCK.advance(3)
+  local j = LevelingCodexCharDB.journey
+  check(type(j) == "table" and j.version == 1, "a broken journal starts fresh")
+  check(journeyHas("start", "begins in"), "the first zone starts the journey")
+  if not MOCK.minimal then
+    check(j.zones[1429], "Elwynn Forest is a land you have explored")
+    local before = j.points
+    for i = 1, 6 do MOCK.questX = 48 + i * 2; MOCK.advance(2.1) end
+    check(j.points > before and j.trail[1429] and #j.trail[1429] >= 1, "walking leaves a trail (" .. j.points .. ")")
+    MOCK.questX = 48
+  end
+  MOCK.level = MOCK.level + 1
+  MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
+  local up = journeyHas("level")
+  check(up and up.l == MOCK.level and up.s:find(tostring(MOCK.level), 1, true), "a level-up is a moment")
+  -- the minimal client knows none of the optional events (turn-ins, deaths, dungeons)
+  if MOCK.minimal then return end
+  MOCK.event("QUEST_TURNED_IN", 166, 100, 0)
+  check(journeyHas(nil, "Conquered Edwin VanCleef and saved Westfall"), "a famous turn-in has its own line")
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  local q = journeyHas(nil, nil)
+  for _, e in ipairs(j.events) do if e.q == 783 then q = e end end
+  check(q and q.q == 783 and #q.s > 10 and q.d and q.d:find("^Quest: "), "a turn-in reads as a line of the story")
+  MOCK.event("PLAYER_DEAD")
+  check(journeyHas("death") and j.deaths == 1, "a death is remembered")
+  MOCK.party, MOCK.partyMembers = true, { { name = "Bo", level = 6, class = "MAGE" } }
+  MOCK.advance(6)
+  check(journeyHas("pal", "Bo") and j.pals.Bo and j.pals.Bo.class == "MAGE", "a party member becomes a companion")
+  MOCK.instanceName, MOCK.instanceID = "The Deadmines", 36
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  check(journeyHas("dungeon", "The Deadmines") and journeyHas("dungeon", "with Bo"), "a dungeon run names who came")
+  MOCK.event("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1)
+  MOCK.event("BOSS_KILL", 1, "Edwin VanCleef")
+  local bosses = 0
+  for _, e in ipairs(j.events) do if e.k == "boss" then bosses = bosses + 1 end end
+  check(bosses == 1 and journeyHas("boss", "saved Westfall"), "a boss is written once, a famous one in its own words")
+  MOCK.instanceName, MOCK.instanceID = nil, nil
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%"), "moments are ASCII with no template left: " .. e.s)
+  end
+end
+
+-- Journey: the tab draws the cover, the road, the map, the story and companions; filters and the
+-- world map trail.
+function S.journeyTab()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  for i = 1, 4 do MOCK.questX = 40 + i * 3; MOCK.advance(2.1) end
+  MOCK.event("PLAYER_DEAD")
+  MOCK.level = MOCK.level + 1
+  MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
+  MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
+  slash("")
+  click(win(), "Journey")
+  local pages = {
+    { nil, "THE JOURNEY OF", "THE ROAD TO 60", "WHERE YOU ARE", "FELLOW ADVENTURERS",
+      "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level },
+    { "Map", "THE MAP", "YOUR JOURNAL" },
+    { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
+    { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
+  }
+  for _, p in ipairs(pages) do
+    if p[1] then click(win(), p[1]) end
+    for i = 2, #p do check(questText(win(), p[i]), "the Journey " .. (p[1] or "Overview") .. " page has " .. p[i]) end
+  end
+  check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
+  if MOCK.minimal then return end -- no optional events, no map positions
+  check(questText(win(), "Brought down Hogger"), "the story has the turn-in")
+  click(win(), "Deaths")
+  check(not questText(win(), "Brought down Hogger") and questText(win(), "Elwynn Forest"),
+    "the Deaths filter leaves quests out")
+  click(win(), "All")
+  local moment = findButton(win(), function(l) return l:find("^Moment ") end)
+  check(MOCK.minimal or moment, "a moment with a spot can be shown on the map")
+  if moment then moment:Click() end
+  check(MOCK.minimal or findButton(win(), function(l) return l:find("^Pin ") end), "moments are pinned on the map")
+  check(questText(win(), "LANDS EXPLORED"), "a moment opens the Map page")
+  if not MOCK.minimal then
+    MOCK.worldMapID = 1429
+    WorldMapFrame:Show()
+    MOCK.advance(2.1)
+    local trail = _G.LevelingCodexJourneyTrail
+    local shown = 0
+    for _, r in ipairs(trail and { trail:GetRegions() } or {}) do if r:IsShown() then shown = shown + 1 end end
+    check(trail and trail:IsShown() and shown > 2, "the world map shows the trail (" .. shown .. ")")
+    click(win(), "Show my trail on the world map")
+    MOCK.advance(2.1)
+    check(not trail:IsShown(), "the setting hides the world map trail")
+    WorldMapFrame:Hide()
+  end
+  click(win(), "Erase the journal")
+  click(win(), "Click again to erase")
+  check(#LevelingCodexCharDB.journey.events == 0, "two clicks erase the journal")
+end
+
+-- Journey: past the point limit the busiest zone's trail is thinned, never cut off.
+function S.journeyThin()
+  local p = {}
+  for i = 1, 60 do p[#p + 1] = string.format("%03d%03d", i * 10, 500) end
+  local run = table.concat(p)
+  local runs = {}
+  for i = 1, 4 do runs[i] = { l = 5, p = run } end
+  LevelingCodexCharDB = { journey = { version = 1, started = 0, zones = {}, order = {}, trail = { [1429] = runs },
+    points = 240, walked = 0, events = {}, pals = {}, deaths = 0 } }
+  local journey = LevelingCodexCharDB.journey
+  S.login()
+  if MOCK.minimal then return end
+  -- a lower cap (the module's own table), so a few samples cross it
+  local J = MOCK.ns.journey
+  J.MAX_POINTS = 200
+  MOCK.questX = 20; MOCK.advance(2.1)
+  MOCK.questX = 30; MOCK.advance(2.1)
+  check(journey.points <= 200, "the trail is thinned under the cap (" .. tostring(journey.points) .. ")")
+  check(#journey.trail[1429] >= 4, "every run is kept")
 end

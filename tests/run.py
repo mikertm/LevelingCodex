@@ -1181,6 +1181,10 @@ def main():
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
         runs.append(("WARRIOR/%s/gold-mount" % variant, "WARRIOR", minimal, ["goldMountFund"]))
         runs.append(("WARRIOR/%s/auction" % variant, "WARRIOR", minimal, ["auctionTools"]))
+        runs.append(("WARRIOR/%s/journey-record" % variant, "WARRIOR", minimal, ["journeyRecord"]))
+        runs.append(("WARRIOR/%s/journey-tab" % variant, "WARRIOR", minimal, ["journeyTab"]))
+        if not minimal:
+            runs.append(("WARRIOR/full/journey-thin", "WARRIOR", False, ["journeyThin"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))
         runs.append(("WARRIOR/%s/pace" % variant, "WARRIOR", minimal, ["paceCard"]))

@@ -4,8 +4,8 @@
 
 ### Gold
 
-- New **Gold** tab with a **mount fund**: how much of your riding goal you have, what's left, and about how long it takes at this session's net gold per hour. Set the goal amount and level with the - and + buttons. A riding trainer's price is noted when you visit one, and reaching the goal level tells you in chat where the fund stands.
-- **Stats > Zones** has a **Time | Gold** switch: gold earned and spent in each zone, net gold, and net gold per hour there.
+- New **Gold** page (next to Stats) with a **mount fund**: how much of your riding goal you have, what's left, and about how long it takes at this session's net gold per hour. Set the goal amount and level with the - and + buttons. A riding trainer's price is noted when you visit one, and reaching the goal level tells you in chat where the fund stands.
+- **Stats > Zones** has a **Time | Money** switch: gold earned and spent in each zone, net gold, and net gold per hour there.
 
 ### Auction tools
 
@@ -14,6 +14,24 @@
 - **Item tooltips** show the auction price, the usual price, the trend and the vendor price. Hold Shift for low, median and high and how many were listed.
 - **Sell helper**: put an item in the auction house's sell box and the card suggests one copper under the lowest listing, and its **Use ... each** button fills it in. You still press Post yourself: the Codex never buys, bids or posts.
 - The **Gold** tab shows how many prices you have, what your guide needs with today's prices, and switches for the tooltip lines, the card and the automatic searches.
+### A tidier Codex window
+
+- The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Journey, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.
+- Settings is split into pages instead of one long list: General, Questing, Map and arrow, Group, and Helpers (trainers, professions, gathering and the vendor).
+
+### New: the Journey tab, your adventure journal
+
+- A book in four pages instead of one long scroll: Overview (your journey in numbers, the road from 1 to 60, the latest chapter, where you are and who you travel with), Map, Story and Companions.
+- A storybook of your character's journey that writes itself as you play: every level, every new land, quests turned in, dungeon runs and bosses, deaths, flight paths and the friends you grouped with, each told as a line of the story ("Conquered Edwin VanCleef and saved Westfall", "Heroically did the chores: murloc duty in Hillsbrad Foothills").
+- Chapters by level (Chapter I, II, III...), newest first: each opens with the line of its level-up, names the land where most of it happened, shows the time, quests, foes and falls of that level, and tells its moments in order along a timeline. Filters for Quests, Battles, Travels and Deaths.
+- The map: your trail on each zone you visited, coloured by your level then, with stars where you levelled up and skulls where you fell, and every land you explored as a row of chips. Click a moment in the story to see where it happened.
+- The same trail on the world map (Journey > Show my trail on the world map), plus the road from 1 to 60, the journey in numbers (quests, foes, lands, miles walked, dungeons, deaths) and your fellow adventurers.
+
+## v0.30.7
+
+### Dungeon guides
+
+- Alliance Stratholme now lists Ezra Grimm and Magistrate Barthilas, and Alliance Scholomance lists Marduk Blackpool and Vectus, like the Horde guides. Each ticks off when it dies.
 
 ## v0.30.6
 

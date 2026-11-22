@@ -681,12 +681,7 @@ do
     bosses = bosses("dungeon-scholomance", { ["Kirtonos the Herald (summoned)"] = 2805, ["Jandice Barov"] = 2804,
       Rattlegore = 2811, ["Ras Frostwhisper"] = 2810, ["Doctor Theolen Krastinov"] = 2802, ["Lorekeeper Polkelt"] = 2808,
       ["Lady Illucia Barov and Lord Alexei Barov"] = 2807, ["The Ravenian"] = 2812, ["Instructor Malicia"] = 2803,
-      ["Darkmaster Gandling"] = 2801 }, {
-      { 4, { name = "Marduk Blackpool", encounter = 2809,
-        tip = "He shares the balcony above the Viewing Room with Vectus. Pull him on his own if you can." } },
-      { 5, { name = "Vectus", encounter = 2813, npc = 10432,
-        tip = "On the same balcony. Dawn's Gambit, placed in the Viewing Room, turns the students below into skeletons; clear them before you take him." } },
-    }),
+      ["Darkmaster Gandling"] = 2801 }),
     sources = { "https://www.wowhead.com/forever/zone=2057", "https://questing.wiki/wow-forever/dungeons/scholomance/quests/" } }, {
     B.withGuide("scholomance-key-horde", tip("Skeleton Key", "Scholomance needs the Skeleton Key. One key holder opens the door for the whole group.")),
     taxi("fly", lightsHopeFlights, "Light's Hope Chapel, Eastern Plaguelands", "Fly to Light's Hope Chapel. Without that flight path, ride east from the Undercity through both Plaguelands."),
@@ -762,12 +757,7 @@ do
     links = { "dungeon-scholomance" },
     bosses = bosses("dungeon-stratholme", { ["The Unforgiven"] = 472, ["Timmy the Cruel"] = 474, ["Cannon Master Willey"] = 475,
       ["Archivist Galford"] = 477, Balnazzar = 478, ["Baroness Anastari"] = 479, ["Nerub'enkan"] = 480,
-      ["Maleki the Pallid"] = 481, ["Ramstein the Gorger"] = 483, ["Baron Rivendare"] = 484 }, {
-      { 2, { name = "Ezra Grimm", encounter = 2797,
-        tip = "Opening the tobacco box in his smoke shop calls him. Fight him in the shop doorway and loot the tobacco after." } },
-      { 7, { name = "Magistrate Barthilas", encounter = 482,
-        tip = "He stands at the way into the dead side. Clear the area around him before you pull." } },
-    }),
+      ["Maleki the Pallid"] = 481, ["Ramstein the Gorger"] = 483, ["Baron Rivendare"] = 484 }),
     sources = { "https://www.wowhead.com/forever/zone=2017", "https://www.wowhead.com/forever/quest=5214",
       "https://questing.wiki/wow-forever/dungeons/stratholme/quests/" } }, {
     taxi("fly", lightsHopeFlights, "Light's Hope Chapel, Eastern Plaguelands", "Fly to Light's Hope Chapel."),
