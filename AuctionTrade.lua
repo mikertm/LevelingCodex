@@ -57,7 +57,8 @@ function T.notes()
   return t
 end
 function T.isHidden(id) return T.notes().hidden[id] and true or false end
-function T.hide(id, on) T.notes().hidden[id] = on and true or nil; T.refresh() end
+local notesVersion = 0
+function T.hide(id, on) T.notes().hidden[id] = on and true or nil; notesVersion = notesVersion + 1; T.refresh() end
 function T.hiddenCount()
   local n = 0
   for _ in pairs(T.notes().hidden) do n = n + 1 end
@@ -295,14 +296,20 @@ end
 -- under the usual price of two days or more (profit = usual after the 5% cut - low).
 -- kind = "vendor" / "flip" keeps one kind; hidden = also the ones you hid. Deals under the Min
 -- profit setting (per item) are left out.
+local dealCache = {}
 function T.deals(kind, hidden)
+  local key = table.concat({ ns.auction.version or 0, notesVersion, kind or "", hidden and 1 or 0, T.flipPct(), T.minProfit(),
+    ns.auction.realmKey and ns.auction.realmKey() or "" }, ":")
+  if dealCache.key == key then return dealCache.list end
   local out = {}
   local items = ns.auction.store().items
   local flip, minProfit, notes = T.flipPct(), T.minProfit(), T.notes()
   for id, it in pairs(items) do
     local p = type(it) == "table" and (hidden or not notes.hidden[id]) and ns.auction.price(id)
     if p and p.n > 0 and p.low and p.low > 0 then
-      local vendor = vendorPrice(id, p)
+      -- the stored vendor price (Auction.lua fills it a little at a time): asking the item cache
+      -- for thousands of scanned items on every redraw would stutter the game
+      local vendor = p.vendor and p.vendor > 0 and p.vendor or nil
       if vendor and vendor > p.low then
         out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "vendor", low = p.low, worth = vendor,
           profit = vendor - p.low, n = p.n, source = p.source, at = p.at }
@@ -324,8 +331,32 @@ function T.deals(kind, hidden)
     if a.profit ~= b.profit then return a.profit > b.profit end
     return a.id < b.id
   end)
+  dealCache.key, dealCache.list = key, kept
   return kept
 end
+
+-- The sniper found a price: a deal worth the Worth at least setting is said once per price, with a
+-- chime, and marked live on the Deals page for 2 minutes.
+local alerted = {}
+T.live = {}
+function T.alert(id)
+  if T.isHidden(id) then return end
+  for _, d in ipairs(T.deals()) do
+    if d.id == id then
+      T.live[id] = now()
+      if alerted[id] ~= d.low then
+        alerted[id] = d.low
+        local snipe = ns.auction.sniper
+        snipe.found = (snipe.found or 0) + 1
+        if type(PlaySound) == "function" then pcall(PlaySound, 18019, "SFX") end
+        ns.say("Deal: " .. Q.plain(d.name) .. " listed at " .. ns.money(d.low) .. ", +" .. ns.money(d.profit)
+          .. " each. Deals > Check to buy it.")
+      end
+      return true
+    end
+  end
+end
+function T.isLive(id) return T.live[id] and now() - T.live[id] < 120 or false end
 
 -- The buying state per item: { stage = "search"|"ready"|"pricing"|"confirm"|"none", qty, total, unit,
 -- auction, commodity, limit }.

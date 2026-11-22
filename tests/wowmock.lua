@@ -1656,6 +1656,8 @@ C_AuctionHouse.CancelAuction = function(auctionID)
   error("CancelAuction: not yours", 2)
 end
 function GetRealmName() return "Mockrealm" end
+-- A millisecond clock, like the client's (the full scan reads rows within a time budget).
+function debugprofilestop() return os.clock() * 1000 end
 function MOCK.openAuction()
   AuctionHouseFrame:Show()
   MOCK.event("AUCTION_HOUSE_SHOW")
@@ -1947,7 +1949,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
-  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation" }
+  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

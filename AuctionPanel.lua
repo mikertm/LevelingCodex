@@ -441,9 +441,20 @@ function pages.deals(W, top, H)
   text(#rows .. (#rows == 1 and " deal" or " deals") .. (#rows > 0 and (", about +" .. ns.money(profit) .. " buying one of each") or ""),
     x + 400, y + 4, w - 400, "small", #rows > 0 and GREEN or ns.C.dim, "RIGHT")
   y = y + 30
-  text("Check searches the listings, Buy shows the total first, a commodity asks you to confirm. Profits count the 5% cut.",
-    x, y, w, "dim", ns.C.dim)
-  y = y + 20
+  -- the sniper
+  local sn = A().sniper
+  button(sn.on and "Stop sniping" or "Snipe deals", x, y, 150, function() A().toggleSnipe() end,
+    { label = "Snipe deals", lit = sn.on, enabled = A().snipeAvailable(), tip = "Snipe deals",
+      tipText = "Searches the items worth watching one a second, lap after lap, and chimes when one is listed as a deal. Buying stays a click." })
+  local status
+  if sn.on then
+    status = "Watching " .. #sn.list .. " items: " .. ns.thousands(sn.checked) .. " searches, " .. (sn.found or 0) .. " deals found"
+      .. (sn.current and (", now " .. Q.plain(sn.current)) or "")
+  else
+    status = "Check searches the listings, Buy shows the total first, a commodity asks you to confirm. Profits count the 5% cut."
+  end
+  text(status, x + 160, y + 4, w - 160, "dim", sn.on and GREEN or ns.C.dim)
+  y = y + 30
   local bottom = top + H - 30
   if #rows == 0 then
     text("No deals in your prices yet. Scan all on the Scan page finds listings under vendor price and far under their usual price.",
@@ -454,7 +465,8 @@ function pages.deals(W, top, H)
       local name = Q.plain(d.name)
       text(name, rx + 42, ry + 5, 230, "body")
       local vendor = d.kind == "vendor"
-      text(vendor and "UNDER VENDOR" or "FLIP", rx + 280, ry + 7, 110, "dim", vendor and GREEN or ns.C.accent)
+      text((T().isLive(d.id) and "LIVE  " or "") .. (vendor and "UNDER VENDOR" or "FLIP"), rx + 280, ry + 7, 140, "dim",
+        T().isLive(d.id) and GREEN or (vendor and GREEN or ns.C.accent))
       local sub = "Listed " .. ns.money(d.low) .. (vendor and ", vendor pays " or ", usual ") .. ns.money(d.worth)
         .. "  -  " .. (vendor and "+" or "about +") .. ns.money(d.profit) .. " each (" .. d.pct .. "%)" .. "  -  " .. (d.source and ("Auctionator, " .. A().age(d.at)) or (ns.thousands(d.n) .. " listed"))
       text(sub, rx + 42, ry + 21, rw - 270, "dim", ns.C.dim)
@@ -648,13 +660,20 @@ function pages.scan(W, top, H)
   card(lx, top, lw, 132, "FULL SCAN")
   text("Last full scan:", lx + 14, top + 34, 110, "small", ns.C.dim)
   text(age, lx + 124, top + 34, lw - 138, "small", ageColor)
-  text(ns.thousands(A().count()) .. " items priced", lx + 14, top + 52, lw - 28, "small")
-  local done, total = A().fullProgress()
+  text(ns.thousands(A().count()) .. " items priced. One full scan per 15 min (a server limit).", lx + 14, top + 52, lw - 28, "small")
+  local done, total, phase = A().fullProgress()
   if done then
-    bar(lx + 14, top + 72, lw - 28, 8, total and total > 0 and done / total or 0, ns.C.accent)
+    bar(lx + 14, top + 72, lw - 28, 8, total and total > 0 and done / total or 0, phase == "filing" and GREEN or ns.C.accent)
+  else
+    local speeds, lit = {}, nil
+    for i, e in ipairs(A().SPEEDS) do speeds[i] = e[1]; if e[2] == A().budget() then lit = i end end
+    text("Speed", lx + 14, top + 70, 50, "dim", ns.C.dim)
+    segments(lx + 64, top + 66, lw - 78, speeds, lit, function(i) db.auctionScanSpeed = A().SPEEDS[i][2] end, "Scan speed ")
   end
   local ok, why = A().canFullScan()
-  local label = done and (total and ("Scanning " .. ns.thousands(done) .. " of " .. ns.thousands(total)) or "Waiting for the auction house...")
+  local label = done and (phase == "filing" and ("Saving prices " .. ns.thousands(done) .. " of " .. ns.thousands(total or 0))
+    or (phase == "reading" and total and ("Reading " .. ns.thousands(done) .. " of " .. ns.thousands(total)))
+    or "Waiting for the auction house...")
     or (ok and "Scan all" or why)
   button(label, lx + 14, top + 90, lw - 28, function() A().fullScan() end,
     { label = "Scan all", enabled = ok, tip = "Scan all", tipText = "Reads every listing at once. The auction house allows one every 15 minutes." })

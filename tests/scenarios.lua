@@ -11070,8 +11070,10 @@ function S.auctionTools()
   click(AuctionHouseFrame, "Codex")
   click(panel, "Scan")
   check(questText(panel, "FULL SCAN") and questText(panel, "LOOK UP AN ITEM"), "the Scan page")
+  click(panel, "Scan speed Fast")
+  check(LevelingCodexDB.auctionScanSpeed == 16, "Scan speed sets how much of a frame a scan may use")
   click(panel, "Scan all")
-  MOCK.advance(2)
+  MOCK.advance(4)
   check(MOCK.replicated == 1 and chatHas("Full scan: 3 listings, 2 items priced"), "Scan all scans the whole auction house")
   check(select(2, MOCK.ns.auction.canFullScan()) == "Next full scan in 15 min", "a second full scan waits")
   click(panel, "Scan all")
@@ -11107,6 +11109,29 @@ function S.auctionTools()
   check(not findButton(AuctionHouseFrame, function(l) return l == "Codex" end) and not panel:IsShown(), "the setting takes the tab away")
   MOCK.closeAuction()
   MOCK.removeSkill("Tailoring")
+end
+
+-- A big full scan is read a slice at a time (never all in one frame) and still files every item.
+function S.auctionBigScan()
+  S.login()
+  if MOCK.minimal then return end
+  local clock = debugprofilestop
+  debugprofilestop = nil -- a fixed number of rows a frame without the clock
+  MOCK.auctions = {}
+  for i = 1, 5000 do
+    local id = 30000 + (i % 1200)
+    MOCK.auctions[i] = { id = id, name = "Thing " .. id, count = 1 + i % 5, buyout = 100 + i }
+  end
+  MOCK.openAuction()
+  MOCK.advance(2)
+  MOCK.ns.auction.fullScan()
+  MOCK.advance(15)
+  local debug = table.concat(MOCK.ns.auctionDebugLines(), "\n")
+  local frames = tonumber(debug:match("items, (%d+) frames"))
+  check(chatHas("Full scan: 5,000 listings, 1,200 items priced"), "the big scan files every item")
+  check(frames and frames >= 20, "it spread over frames (" .. tostring(frames) .. ")")
+  debugprofilestop = clock
+  MOCK.closeAuction()
 end
 
 -- With Auctionator loaded: its prices through its public API, no searches of the Codex's own
@@ -11296,6 +11321,21 @@ function S.auctionTrade()
   check(questText(win(), "SELLING AND DEALS") and questText(win(), "Deals worth at least"), "the Gold tab has the selling settings")
   click(win(), "5%")
   check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
+  -- the sniper
+  click(card, "Deals")
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 1, buyout = 20 }
+  local before = #MOCK.browsed
+  click(card, "Snipe deals")
+  check(MOCK.ns.auction.sniper.on and chatHas("Sniping deals: watching"), "Snipe deals starts watching")
+  MOCK.advance(20)
+  check(#MOCK.browsed > before + 3 and chatHas("Deal: Wool Cloth listed at 20c"), "the sniper finds a deal and says so")
+  local chimed = false
+  for _, snd in ipairs(MOCK.sounds or {}) do if snd.id == 18019 then chimed = true end end
+  check(chimed and T.isLive(2592), "with a chime, marked live")
+  click(card, "Snipe deals")
+  local after = #MOCK.browsed
+  MOCK.advance(5)
+  check(not MOCK.ns.auction.sniper.on and #MOCK.browsed <= after + 1, "a second click stops it")
   for _, pg in ipairs({ "Overview", "Deals", "Selling", "Scan" }) do click(card, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
   MOCK.closeAuction()
