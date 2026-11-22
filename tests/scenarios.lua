@@ -11189,6 +11189,23 @@ function S.auctionBigScan()
   local frames = tonumber(debug:match("items, (%d+) frames"))
   check(chatHas("Full scan: 5,000 listings, 1,200 items priced"), "the big scan files every item")
   check(frames and frames >= 20, "it spread over frames (" .. tostring(frames) .. ")")
+  -- an item that errors while its price is saved is skipped; the scan still finishes
+  do
+    local A = MOCK.ns.auction
+    local record = A.record
+    A.record = function(id, ...)
+      if id == 30007 then error("broken item") end
+      return record(id, ...)
+    end
+    A.store().fullAt, A.store().fullTriedAt = 0, 0
+    MOCK.advance(1)
+    A.fullScan()
+    MOCK.advance(15)
+    A.record = record
+    check(chatHas("Full scan: 5,000 listings, 1,199 items priced") and not A.scanning(),
+      "a broken item is skipped and the scan finishes")
+    check(table.concat(MOCK.ns.auctionDebugLines(), " "):find("auction scan error: row", 1, true), "/codex debug names the error")
+  end
   debugprofilestop = clock
   MOCK.closeAuction()
 end
@@ -11246,11 +11263,16 @@ function S.auctionAuctionator()
   MOCK.advance(8)
   local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
   local scanTab = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
+  local rail = _G.LevelingCodexAHTabRail
+  local rp = rail and rail._points[1]
   local sp = scanTab and scanTab._points[1]
   local cp = codexTab._points[1]
-  check(sp and sp[1] == "BOTTOMLEFT" and sp[2] == AuctionHouseFrame and sp[3] == "BOTTOMRIGHT"
-    and cp and cp[1] == "BOTTOMLEFT" and cp[3] == "TOPLEFT" and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(),
-    "with Auctionator's tabs the row is full: the Codex tabs stand in a column up the right edge from the bottom corner")
+  check(rail and rail:IsShown() and rp and rp[1] == "BOTTOMLEFT" and rp[2] == AuctionHouseFrame and rp[3] == "BOTTOMRIGHT"
+    and sp and sp[2] == rail and cp and cp[2] == rail and cp[5] > sp[5]
+    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel() and rail:GetFrameLevel() < codexTab:GetFrameLevel(),
+    "with Auctionator's tabs the row is full: the Codex tabs stand on a rail up the right edge from the bottom corner")
+  check(codexTab.side and codexTab.side.icon:IsShown() and codexTab.artRegions[1]._alpha == 0,
+    "side tabs: an icon and a plate, the bottom-tab art faded out")
   check(table.concat(MOCK.ns.auctionPanelDebugLines(), " "):find("column up the right edge", 1, true), "/codex debug says where the tabs went")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")

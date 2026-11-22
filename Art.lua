@@ -327,16 +327,24 @@ function A.segment(parent)
       self:SetAlpha((on or self.plate) and 1 or 0.6)
     end
     local fs = self.label or (self.GetFontString and self:GetFontString())
+    -- the tick only when the label still fits beside it: a narrow choice ("Auto", "1m") keeps its
+    -- label centred inside the button and shows it lit by the gold edge alone
+    local roomy = self.tick and true or false
+    if roomy and fs and fs.GetStringWidth then
+      local bw = tonumber(self.GetWidth and self:GetWidth()) or 0
+      local sw = tonumber(fs:GetStringWidth()) or 0
+      roomy = bw <= 0 or sw + 2 * 20 <= bw
+    end
     if fs then
       if on then fs:SetTextColor(litInk[1], litInk[2], litInk[3]) else fs:SetTextColor(0.75, 0.75, 0.75) end
       -- clear of the tick, which sits at the left edge of a lit choice
       if fs.ClearAllPoints and fs.SetPoint then
         fs:ClearAllPoints()
-        fs:SetPoint("CENTER", self, "CENTER", (on and self.tick) and 9 or 0, 0)
+        fs:SetPoint("CENTER", self, "CENTER", (on and roomy) and 9 or 0, 0)
       end
     end
     for _, edge in ipairs(self.goldEdges) do edge:SetShown(on and true or false) end
-    if self.tick then self.tick:SetShown(on and true or false) end
+    if self.tick then self.tick:SetShown((on and roomy) and true or false) end
   end
   b:SetLook(false)
   return b

@@ -86,6 +86,80 @@ local function edges(b)
   return l, r or (l + (tonumber((try(b.GetWidth, b))) or 0))
 end
 
+-- Side tabs: with Auctionator's tabs the row is full, so the Codex tabs stand in a rail fixed to
+-- the auction house's right edge (the dialog's gold border, its left edge over the window's), each
+-- a full-width plate with an icon and its label; the open one lit with a gold bar. The bottom-tab
+-- art (A.tab's) is faded out while they're side tabs and back when they return to the row.
+local SIDE_ICONS = { overview = ns.ADDON_ICON, market = "INV_Scroll_03", deals = "INV_Misc_Coin_01",
+  selling = "INV_Misc_Bag_10", scan = "INV_Misc_Spyglass_03" }
+local SIDE_W, SIDE_H, SIDE_GAP, SIDE_PAD = 128, 28, 3, 13
+local rail
+local function sideParts(tab, i)
+  if tab.side then return tab.side end
+  local sd = {}
+  sd.bg = tab:CreateTexture(nil, "BACKGROUND")
+  sd.bg:SetAllPoints()
+  sd.edge = tab:CreateTexture(nil, "BORDER")
+  sd.edge:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
+  sd.edge:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", 0, 0)
+  sd.edge:SetHeight(1)
+  sd.bar = tab:CreateTexture(nil, "ARTWORK")
+  sd.bar:SetPoint("TOPLEFT", tab, "TOPLEFT", 0, 0)
+  sd.bar:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", 0, 0)
+  sd.bar:SetWidth(3)
+  sd.icon = tab:CreateTexture(nil, "ARTWORK")
+  sd.icon:SetSize(18, 18)
+  sd.icon:SetPoint("LEFT", tab, "LEFT", 8, 0)
+  ns.setIcon(sd.icon, SIDE_ICONS[P.PAGES[i][1]] or ns.ADDON_ICON)
+  sd.hl = tab:CreateTexture(nil, "HIGHLIGHT")
+  sd.hl:SetAllPoints()
+  sd.hl:SetColorTexture(1, 0.82, 0, 0.1)
+  tab.side = sd
+  return sd
+end
+local function sideStyle(tab, i, side, on)
+  local own = {}
+  if tab.side then for _, t in pairs(tab.side) do own[t] = true end end
+  for _, r in ipairs(tab.artRegions or {}) do
+    if has(r, "SetAlpha") then r:SetAlpha(side and 0 or 1) end
+  end
+  if not side then
+    if tab.side then for _, t in pairs(tab.side) do t:Hide() end end
+    return
+  end
+  local sd = sideParts(tab, i)
+  for _, t in pairs(sd) do t:Show() end
+  local C = ns.C
+  sd.bg:SetColorTexture(on and 0.2 or 0.06, on and 0.16 or 0.05, on and 0.08 or 0.04, on and 0.95 or 0.9)
+  sd.edge:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.25)
+  sd.bar:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1)
+  sd.bar:SetShown(on and true or false)
+  sd.icon:SetDesaturated(not on)
+  sd.icon:SetAlpha(on and 1 or 0.75)
+  tab.label:ClearAllPoints()
+  tab.label:SetPoint("LEFT", tab, "LEFT", 32, 0)
+  if on then tab.label:SetTextColor(1, 1, 1) else tab.label:SetTextColor(1, 0.82, 0) end
+end
+local function makeRail()
+  if rail then return rail end
+  rail = ns.art.frame("Frame", "LevelingCodexAHTabRail", root)
+  rail.fill = rail:CreateTexture(nil, "BACKGROUND")
+  rail.fill:SetPoint("TOPLEFT", rail, "TOPLEFT", 4, -4)
+  rail.fill:SetPoint("BOTTOMRIGHT", rail, "BOTTOMRIGHT", -4, 4)
+  rail.fill:SetColorTexture(0.03, 0.03, 0.03, 0.96)
+  rail.border = ns.art.backdrop(rail, "dialog", { 0, 0, 0, 0 }, { 1, 1, 1, 1 })
+  if not rail.border then
+    rail.edges = {}
+    for k = 1, 4 do rail.edges[k] = rail:CreateTexture(nil, "BORDER") end
+    rail.edges[1]:SetPoint("TOPLEFT"); rail.edges[1]:SetPoint("TOPRIGHT"); rail.edges[1]:SetHeight(2)
+    rail.edges[2]:SetPoint("BOTTOMLEFT"); rail.edges[2]:SetPoint("BOTTOMRIGHT"); rail.edges[2]:SetHeight(2)
+    rail.edges[3]:SetPoint("TOPRIGHT"); rail.edges[3]:SetPoint("BOTTOMRIGHT"); rail.edges[3]:SetWidth(2)
+    rail.edges[4]:SetPoint("TOPLEFT"); rail.edges[4]:SetPoint("BOTTOMLEFT"); rail.edges[4]:SetWidth(2)
+    for _, e in ipairs(rail.edges) do e:SetColorTexture(ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.8) end
+  end
+  return rail
+end
+
 -- The first Codex tab right of the rightmost shown tab, with the same gap as the two before it;
 -- the others in a row after it.
 local placedBelow -- true while the tabs sit in their own row under the others
@@ -124,13 +198,27 @@ local function place()
     -- a column up the auction house's right edge from its bottom corner, Codex on top
     placedBelow = true
     local n = #tabs
-    tabs[n]:ClearAllPoints()
-    tabs[n]:SetPoint("BOTTOMLEFT", root, "BOTTOMRIGHT", -2, 8)
-    for i = n - 1, 1, -1 do
+    local r = makeRail()
+    r:ClearAllPoints()
+    r:SetSize(SIDE_W + 2 * SIDE_PAD, n * SIDE_H + (n - 1) * SIDE_GAP + 2 * SIDE_PAD)
+    r:SetPoint("BOTTOMLEFT", root, "BOTTOMRIGHT", -7, 0)
+    pcall(r.SetFrameLevel, r, level + 1)
+    r:Show()
+    for i = 1, n do
       tabs[i]:ClearAllPoints()
-      tabs[i]:SetPoint("BOTTOMLEFT", tabs[i + 1], "TOPLEFT", 0, 2)
+      tabs[i]:SetSize(SIDE_W, SIDE_H)
+      tabs[i]:SetPoint("TOPLEFT", r, "TOPLEFT", SIDE_PAD, -SIDE_PAD - (i - 1) * (SIDE_H + SIDE_GAP))
+      sideStyle(tabs[i], i, true, tabs[i].lit)
     end
     return
+  end
+  if rail then rail:Hide() end
+  for i, t in ipairs(tabs) do
+    if t.side then
+      t:SetSize(t.rowW or 90, 32)
+      sideStyle(t, i, false)
+      t:SetSelected(t.lit or false)
+    end
   end
   if last then
     local gap = prev and math.max(-20, math.min(10, last.l - prev.r)) or 0
@@ -168,13 +256,22 @@ local function makeTabs()
       tab:HookScript("OnEnter", ns.art.showTip)
       tab:HookScript("OnLeave", ns.art.hideTip)
     end
+    tab.artRegions = {}
+    for _, r in ipairs({ tab:GetRegions() }) do
+      if r ~= tab.label then tab.artRegions[#tab.artRegions + 1] = r end
+    end
+    tab.rowW = tonumber((try(tab.GetWidth, tab))) or 90
     tabs[i], ours[tab] = tab, true
   end
 end
 
 -- Lights the tab of the page showing (none when the panel is closed).
 local function lightTabs(on)
-  for i, tab in ipairs(tabs) do tab:SetSelected(on and P.PAGES[i][1] == page or false) end
+  for i, tab in ipairs(tabs) do
+    tab.lit = on and P.PAGES[i][1] == page or false
+    tab:SetSelected(tab.lit)
+    if placedBelow then sideStyle(tab, i, true, tab.lit) end
+  end
 end
 
 ----------------------------------------------------------------------------
@@ -1642,7 +1739,7 @@ function ns.auctionPanelDebugLines()
     local l, t = tonumber((try(tabs[1].GetLeft, tabs[1]))), tonumber((try(tabs[1].GetTop, tabs[1])))
     local name = placedAfter and has(placedAfter, "GetName") and placedAfter:GetName()
     where = (tabs[1]:IsVisible() and "visible" or "not visible") .. " at " .. (l and math.floor(l) or "?") .. ", " .. (t and math.floor(t) or "?")
-      .. (placedBelow and ", in a column up the right edge from the bottom corner (the tab row is full)"
+      .. (placedBelow and ", in a column up the right edge from the bottom corner, on a rail fixed to the window (the tab row is full)"
         or (", after " .. (placedAfter and (name or "an unnamed tab") or "nothing (bottom left)")))
   end
   local rootName = type(root) == "table" and has(root, "GetName") and root:GetName() or (root and "unnamed frame" or "none")
