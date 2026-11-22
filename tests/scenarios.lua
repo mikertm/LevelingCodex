@@ -11246,11 +11246,16 @@ function S.auctionAuctionator()
   MOCK.advance(8)
   local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
   local scanTab = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
+  local rail = _G.LevelingCodexAHTabRail
+  local rp = rail and rail._points[1]
   local sp = scanTab and scanTab._points[1]
   local cp = codexTab._points[1]
-  check(sp and sp[1] == "BOTTOMLEFT" and sp[2] == AuctionHouseFrame and sp[3] == "BOTTOMRIGHT"
-    and cp and cp[1] == "BOTTOMLEFT" and cp[3] == "TOPLEFT" and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(),
-    "with Auctionator's tabs the row is full: the Codex tabs stand in a column up the right edge from the bottom corner")
+  check(rail and rail:IsShown() and rp and rp[1] == "BOTTOMLEFT" and rp[2] == AuctionHouseFrame and rp[3] == "BOTTOMRIGHT"
+    and sp and sp[2] == rail and cp and cp[2] == rail and cp[5] > sp[5]
+    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel() and rail:GetFrameLevel() < codexTab:GetFrameLevel(),
+    "with Auctionator's tabs the row is full: the Codex tabs stand on a rail up the right edge from the bottom corner")
+  check(codexTab.side and codexTab.side.icon:IsShown() and codexTab.artRegions[1]._alpha == 0,
+    "side tabs: an icon and a plate, the bottom-tab art faded out")
   check(table.concat(MOCK.ns.auctionPanelDebugLines(), " "):find("column up the right edge", 1, true), "/codex debug says where the tabs went")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")
