@@ -1,6 +1,7 @@
--- AuctionPanel.lua: the Codex tab in the auction house's tab row (ns.auctionPanel, P).
--- One tab button after the last tab hanging under the auction house (Blizzard's, Auctionator's),
--- and a panel over the auction house's content with four pages: Overview, Deals, Selling, Scan.
+-- AuctionPanel.lua: the Codex tabs in the auction house's tab row (ns.auctionPanel, P).
+-- Four tab buttons after the last tab hanging under the auction house (Blizzard's, Auctionator's):
+-- Codex (the overview), Deals, Quick Sell and Scan, each showing its page on a panel over the
+-- auction house's content.
 -- Taint: the Codex never calls Blizzard's SetDisplayMode, never hides Blizzard's frames and never
 -- joins its Tabs list. Clicking another tab (an OnClick hook) or the auction house changing mode
 -- (hooksecurefunc on SetDisplayMode) hides the panel. Every post, purchase and cancel is one click
@@ -12,9 +13,16 @@ local try = Q.try
 local P = {}
 ns.auctionPanel = P
 
-P.PAGES = { { "overview", "Overview" }, { "deals", "Deals" }, { "selling", "Selling" }, { "scan", "Scan" } }
+P.PAGES = {
+  { "overview", "Codex", "Your visit, market data and what your guide needs." },
+  { "deals", "Deals", "Listings under vendor price or far under their usual price, and the deal sniper." },
+  { "selling", "Quick Sell", "Post your bags at the right price, and watch your auctions for undercuts." },
+  { "scan", "Scan", "Full and paged scans, quick searches, settings and item look-up." },
+}
 local page, reopen, picked = "overview", false, false
-local root, tab, panel, body, lookupBox
+local root, panel, body, lookupBox
+local tabs, ours = {}, {}
+local placedAfter, shows = nil, 0 -- tabs[i] = the button for P.PAGES[i]; ours[button] = true
 local hooked = {}
 local offsets, wheelKey = {}, nil
 local view = { deals = nil, hidden = false, lookup = nil }
@@ -25,7 +33,7 @@ local function now() return tonumber(time and time()) or 0 end
 local function A() return ns.auction end
 local function T() return ns.auctionTrade end
 
-function P.enabled() return not ns.db().noAuctionCard end
+function P.enabled() return not ns.db().noAuctionTabs end
 function P.shown() return panel ~= nil and panel:IsShown() and root ~= nil and root:IsShown() and true or false end
 function P.page() return page end
 
@@ -37,7 +45,7 @@ function P.page() return page end
 local function tabsOf(r)
   local list, seen = {}, {}
   local function add(b)
-    if type(b) == "table" and b ~= tab and not seen[b] and has(b, "IsShown") then seen[b] = true; list[#list + 1] = b end
+    if type(b) == "table" and not ours[b] and not seen[b] and has(b, "IsShown") then seen[b] = true; list[#list + 1] = b end
   end
   if type(r.Tabs) == "table" then for _, b in ipairs(r.Tabs) do add(b) end end
   if has(r, "GetChildren") then
@@ -58,16 +66,24 @@ local function edges(b)
   return l, r or (l + (tonumber((try(b.GetWidth, b))) or 0))
 end
 
--- Right of the rightmost shown tab, with the same gap as the two before it.
+-- The first Codex tab right of the rightmost shown tab, with the same gap as the two before it;
+-- the others in a row after it.
 local function place()
+  local tab = tabs[1]
   if not tab or not root then return end
+  -- only buttons in the row under the auction house (a stray "*Tab*" button elsewhere would
+  -- carry the Codex tabs off with it)
+  local bottom = tonumber((try(root.GetBottom, root)))
   local shown = {}
   for _, b in ipairs(tabsOf(root)) do
     if b:IsShown() then
       local l, r = edges(b)
-      if l and r then shown[#shown + 1] = { b = b, l = l, r = r } end
+      local t = tonumber((try(b.GetTop, b)))
+      local inRow = not (bottom and t) or math.abs(t - bottom) <= 40
+      if l and r and inRow then shown[#shown + 1] = { b = b, l = l, r = r } end
     end
   end
+  placedAfter = shown[#shown] and shown[#shown].b or nil
   table.sort(shown, function(a, b) return a.r < b.r end)
   tab:ClearAllPoints()
   local last, prev = shown[#shown], shown[#shown - 1]
@@ -76,6 +92,10 @@ local function place()
     tab:SetPoint("LEFT", last.b, "RIGHT", gap, 0)
   else
     tab:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 12, 2)
+  end
+  for i = 2, #tabs do
+    tabs[i]:ClearAllPoints()
+    tabs[i]:SetPoint("LEFT", tabs[i - 1], "RIGHT", -8, 0)
   end
 end
 
@@ -92,16 +112,24 @@ local function hookTabs()
   end
 end
 
-local function makeTab()
-  tab = ns.art.tab(root, "Codex")
-  tab.codexLabel = "Codex"
-  tab.tipTitle = "Leveling Codex"
-  tab.tipText = "Deals, quick selling, undercuts and price scans."
-  tab:SetScript("OnClick", function() picked = true; P.open() end)
-  if has(tab, "HookScript") then
-    tab:HookScript("OnEnter", ns.art.showTip)
-    tab:HookScript("OnLeave", ns.art.hideTip)
+local function makeTabs()
+  for i, pg in ipairs(P.PAGES) do
+    local tab = ns.art.tab(root, pg[2])
+    tab.codexLabel = pg[2]
+    tab.tipTitle = i == 1 and "Leveling Codex" or ("Codex: " .. pg[2])
+    tab.tipText = pg[3]
+    tab:SetScript("OnClick", function() picked = true; P.open(pg[1]) end)
+    if has(tab, "HookScript") then
+      tab:HookScript("OnEnter", ns.art.showTip)
+      tab:HookScript("OnLeave", ns.art.hideTip)
+    end
+    tabs[i], ours[tab] = tab, true
   end
+end
+
+-- Lights the tab of the page showing (none when the panel is closed).
+local function lightTabs(on)
+  for i, tab in ipairs(tabs) do tab:SetSelected(on and P.PAGES[i][1] == page or false) end
 end
 
 ----------------------------------------------------------------------------
@@ -361,14 +389,14 @@ function pages.overview(W, top, H)
   else
     text("No deals in your prices yet.", rx + 14, oy, lw - 120, "small", ns.C.dim)
   end
-  button("Deals", rx + lw - 100, oy - 4, 86, function() page = "deals" end, { label = "See deals" })
+  button("Deals", rx + lw - 100, oy - 4, 86, function() P.open("deals") end, { label = "See deals" })
   oy = oy + 28
   if #sells > 0 then
     text(#sells .. (#sells == 1 and " item" or " items") .. " to sell, about " .. ns.money(worth), rx + 14, oy, lw - 120, "small")
   else
     text("Nothing priced to sell in your bags.", rx + 14, oy, lw - 120, "small", ns.C.dim)
   end
-  button("Selling", rx + lw - 100, oy - 4, 86, function() page = "selling" end, { label = "See selling" })
+  button("Quick Sell", rx + lw - 100, oy - 4, 86, function() P.open("selling") end, { label = "See selling" })
   oy = oy + 28
   local mine, under = T().mine.list, T().undercutCount()
   if #mine > 0 then
@@ -376,7 +404,7 @@ function pages.overview(W, top, H)
   else
     text("You have nothing listed.", rx + 14, oy, lw - 120, "small", ns.C.dim)
   end
-  button("Undercuts", rx + lw - 100, oy - 4, 86, function() page = "selling"; T().checkUndercuts() end,
+  button("Undercuts", rx + lw - 100, oy - 4, 86, function() P.open("selling"); T().checkUndercuts() end,
     { label = "Check undercuts", enabled = #mine > 0 })
   -- for your guide
   y = y + 140
@@ -465,7 +493,7 @@ function pages.deals(W, top, H)
   y = y + 30
   local bottom = top + H - 30
   if #rows == 0 then
-    text("No deals in your prices yet. Scan all on the Scan page finds listings under vendor price and far under their usual price.",
+    text("No deals in your prices yet. Scan all on the Scan tab finds listings under vendor price and far under their usual price.",
       x, y + 6, w, "small", ns.C.dim, nil, true)
   else
     list("deals", rows, x, y, w, 40, bottom - y, function(d, rx, ry, rw)
@@ -486,7 +514,7 @@ function pages.deals(W, top, H)
         tip = d.name, tipText = "Check searches its listings; then Buy, and Confirm for a commodity." })
       local hidden = T().isHidden(d.id)
       button(hidden and "Unhide" or "Hide", rx + rw - 60, ry + 9, 56, function() T().hide(d.id, not hidden) end,
-        { label = (hidden and "Unhide " or "Hide ") .. d.name, tip = "Hide", tipText = "Leave it out of Deals and Selling." })
+        { label = (hidden and "Unhide " or "Hide ") .. d.name, tip = "Hide", tipText = "Leave it out of Deals and Quick Sell." })
     end)
   end
   local n = T().hiddenCount()
@@ -558,7 +586,7 @@ function pages.selling(W, top, H)
         { label = "Post " .. row.name, enabled = not s.blocked and T().available(), lit = armed })
       local hidden = T().isHidden(row.id)
       button(hidden and "Unhide" or "Hide", bx + 126, iy + 11, 46, function() T().hide(row.id, not hidden) end,
-        { label = (hidden and "Unhide " or "Hide ") .. row.name, tip = "Hide", tipText = "Leave it out of Selling and Deals." })
+        { label = (hidden and "Unhide " or "Hide ") .. row.name, tip = "Hide", tipText = "Leave it out of Quick Sell and Deals." })
     end)
   end
   local n = T().hiddenCount()
@@ -773,13 +801,18 @@ function P.refresh()
   body.tint:SetColorTexture(C.bg[1], C.bg[2], C.bg[3], 0.92)
   local W = math.max(600, (tonumber((try(root.GetWidth, root))) or 800) - 8)
   local H = math.max(300, (tonumber((try(root.GetHeight, root))) or 538) - 50)
-  -- header: the title, your gold, the pages
+  -- header: the title (the page's tab), your gold, the scan age
   icon(ns.ADDON_ICON, 16, 8, 22)
-  text("LEVELING CODEX", 44, 11, 200, "title", C.gold)
+  local title, line = "LEVELING CODEX", P.PAGES[1][3]
+  for _, pg in ipairs(P.PAGES) do
+    if pg[1] == page then
+      line = pg[3]
+      if pg[1] ~= "overview" then title = "CODEX " .. pg[2]:upper() end
+    end
+  end
+  text(title, 44, 11, 300, "title", C.gold)
+  text(line, 44, 38, W - 380, "dim", C.dim)
   text(money(tonumber(try(GetMoney)) or 0), W - 316, 12, 300, "body", C.light, "RIGHT")
-  local labels, lit = {}, 1
-  for i, pg in ipairs(P.PAGES) do labels[i] = pg[2]; if pg[1] == page then lit = i end end
-  segments(16, 36, 440, labels, lit, function(i) page = P.PAGES[i][1] end)
   local age, ageColor = scanAge()
   text("Full scan " .. age, W - 316, 41, 300, "dim", ageColor, "RIGHT")
   rect(16, 64, W - 32, 1, { C.edge[1], C.edge[2], C.edge[3], 0.4 }, "BORDER")
@@ -797,7 +830,7 @@ function P.open(name)
   if name then page = name end
   if not panel then makePanel() end
   panel:Show()
-  if tab then tab:SetSelected(true) end
+  lightTabs(true)
   local deselect = PanelTemplates_DeselectTab
   if type(deselect) == "function" and type(root.Tabs) == "table" then
     for _, b in ipairs(root.Tabs) do pcall(deselect, b) end
@@ -807,7 +840,7 @@ end
 
 function P.close(clicked)
   if panel and panel:IsShown() then panel:Hide() end
-  if tab then tab:SetSelected(false) end
+  lightTabs(false)
   local selectTab = PanelTemplates_SelectTab
   if clicked and type(selectTab) == "function" and type(root) == "table" and type(root.Tabs) == "table" then
     for _, b in ipairs(root.Tabs) do if b == clicked then pcall(selectTab, b) end end
@@ -817,18 +850,19 @@ end
 -- AUCTION_HOUSE_SHOW (Auction.lua): the tab, and the Codex tab again when it was open last time.
 function P.onShow(r)
   root = r
+  shows = shows + 1
   if type(root) ~= "table" then return end
   if not P.enabled() then
-    if tab then tab:Hide() end
+    for _, tab in ipairs(tabs) do tab:Hide() end
     P.close()
     return
   end
-  if not tab then makeTab() end
-  tab:Show()
+  if #tabs == 0 then makeTabs() end
+  for _, tab in ipairs(tabs) do tab:Show() end
   hookTabs()
   place()
   -- Auctionator and other add-ons add their tabs a moment later
-  ns.after(1, function() if root and root:IsShown() and tab then hookTabs(); place() end end)
+  ns.after(1, function() if root and root:IsShown() and tabs[1] then hookTabs(); place() end end)
   picked = false
   if reopen then
     P.open()
@@ -847,7 +881,17 @@ function P.onClose()
 end
 
 function ns.auctionPanelDebugLines()
-  return { "auction tab: " .. (tab and "made" or "not made") .. (P.shown() and (", showing " .. page) or "")
+  local where = "nowhere"
+  if tabs[1] then
+    local l, t = tonumber((try(tabs[1].GetLeft, tabs[1]))), tonumber((try(tabs[1].GetTop, tabs[1])))
+    local name = placedAfter and has(placedAfter, "GetName") and placedAfter:GetName()
+    where = (tabs[1]:IsVisible() and "visible" or "not visible") .. " at " .. (l and math.floor(l) or "?") .. ", " .. (t and math.floor(t) or "?")
+      .. ", after " .. (placedAfter and (name or "an unnamed tab") or "nothing (bottom left)")
+  end
+  local rootName = type(root) == "table" and has(root, "GetName") and root:GetName() or (root and "unnamed frame" or "none")
+  return { "auction tabs: " .. (#tabs > 0 and (#tabs .. " made, " .. where) or "not made") .. ", auction house " .. tostring(rootName)
+    .. ", opened " .. shows .. "x, " .. (type(root) == "table" and #tabsOf(root) or 0) .. " tabs seen"
+    .. (P.shown() and (", showing " .. page) or "")
     .. (P.enabled() and "" or ", turned off") .. (reopen and ", reopens" or "")
     .. (P.lastError and (", last error: " .. Q.plain(P.lastError)) or "") }
 end

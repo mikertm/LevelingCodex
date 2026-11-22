@@ -485,7 +485,7 @@ function T.cancel(row)
   end
   if not pcall(C.CancelAuction, row.auction) then ns.say("The auction house didn't cancel it."); return "failed" end
   last.cancels = last.cancels + 1
-  ns.say("Cancelled " .. Q.plain(row.name) .. ": it comes back by mail. Relist it from Selling once it's in your bags.")
+  ns.say("Cancelled " .. Q.plain(row.name) .. ": it comes back by mail. Relist it from Quick Sell once it's in your bags.")
   ns.after(1, T.queryOwned)
   return "cancelled"
 end
@@ -713,7 +713,7 @@ ns.gold.addSection(20, function(y)
   y = y + 10
   U.T("SELLING AND DEALS", 14, y, W - 28, "label", C.gold)
   y = y + 20
-  y = y + U.T("At the auction house the Codex tab lists what to sell from your bags and deals to buy. Every post and purchase is one click on its button. It never posts below what a vendor pays.",
+  y = y + U.T("At the auction house the Codex tabs (Codex, Deals, Quick Sell, Scan) list what to sell from your bags and deals to buy. Every post and purchase is one click on its button. It never posts below what a vendor pays.",
     14, y, W - 28, "small", C.light) + 8
   local function row(label, list, current, key)
     U.T(label, 14, y + 5, 110, "small", C.light)

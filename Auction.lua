@@ -1222,8 +1222,8 @@ ns.gold.addSection(10, function(y)
   end
   tick("Price lines on item tooltips", not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
     "The lowest price seen, the usual price, the trend and the vendor price. Hold Shift for low, median, high and how many were listed.")
-  tick("Add a Codex tab to the auction house", not db.noAuctionCard, function()
-    db.noAuctionCard = not db.noAuctionCard
+  tick("Add the Codex tabs to the auction house", not db.noAuctionTabs, function()
+    db.noAuctionTabs = not db.noAuctionTabs
     if ns.auctionPanel and open then ns.auctionPanel.onShow(root) end
   end, "Its pages: Overview, Deals, Selling and Scan.")
   tick("Search for my guide's items when I open it", not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end,
