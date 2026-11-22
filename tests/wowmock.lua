@@ -1534,11 +1534,18 @@ local function auctionLater(fn) C_Timer.After(MOCK.auctionDelay or 0.5, fn) end
 local function auctionLink(a) return "|cffffffff|Hitem:" .. a.id .. "::::::::|h[" .. a.name .. "]|h|r" end
 local browseText, browsePage
 C_AuctionHouse = {
+  -- MOCK.replicateSilent: the server ignores the scan (throttled: no rows, no event);
+  -- MOCK.replicateNoEvent: the rows arrive but REPLICATE_ITEM_LIST_UPDATE doesn't;
+  -- MOCK.replicateRows: rows another addon's scan left (GetNumReplicateItems answers before any scan).
   ReplicateItems = function()
     MOCK.replicated = (MOCK.replicated or 0) + 1
-    auctionLater(function() MOCK.event("REPLICATE_ITEM_LIST_UPDATE") end)
+    if MOCK.replicateSilent then return end
+    auctionLater(function()
+      MOCK.replicateRows = true
+      if not MOCK.replicateNoEvent then MOCK.event("REPLICATE_ITEM_LIST_UPDATE") end
+    end)
   end,
-  GetNumReplicateItems = function() return #MOCK.auctions end,
+  GetNumReplicateItems = function() return MOCK.replicateRows and #MOCK.auctions or 0 end,
   GetReplicateItemInfo = function(i)
     local a = MOCK.auctions[i + 1]
     if a then return a.name, 134400, a.count or 1, 1, true, 1, "", 0, 0, a.buyout, 0, false, nil, "Seller", "Seller", 0, a.id, true end
@@ -1559,9 +1566,11 @@ C_AuctionHouse = {
     local all = C_AuctionHouse.browseAll()
     return not MOCK.browsePage or browsePage * MOCK.browsePage >= #all
   end,
+  -- MOCK.browseDrop = n: the next n requests for more are dropped (a busy server)
   RequestMoreBrowseResults = function()
     MOCK.moreRequested = (MOCK.moreRequested or 0) + 1
     if C_AuctionHouse.HasFullBrowseResults() then return end
+    if (MOCK.browseDrop or 0) > 0 then MOCK.browseDrop = MOCK.browseDrop - 1; return end
     browsePage = browsePage + 1
     local page = browsePage
     auctionLater(function()

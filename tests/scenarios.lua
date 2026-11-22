@@ -11103,6 +11103,41 @@ function S.auctionTools()
     and MOCK.ns.auction.store().pagedAt, "the paged scan reads every page, with no cooldown")
   MOCK.browsePage = nil
   check(MOCK.ns.auction.canScanAll(), "another paged scan can start at once")
+  -- a busy server drops a request for the next page: the scan asks again instead of stopping
+  MOCK.browsePage, MOCK.browseDrop = 1, 1
+  local asked = MOCK.moreRequested or 0
+  click(panel, "Scan all")
+  MOCK.advance(12)
+  check(chatHas("Paged scan: 2 items priced in 2 pages") and (MOCK.moreRequested or 0) >= asked + 2
+    and not chatHas("paged scan stopped"), "a dropped page is asked for again")
+  MOCK.browsePage = nil
+  -- the instant scan gets no answer (the server's limit, or another addon used it): the paged
+  -- scan takes over, and Scan all doesn't offer the instant scan again for 15 minutes
+  local store = MOCK.ns.auction.store()
+  store.fullAt, store.fullTriedAt = store.fullAt - 3600, nil
+  MOCK.replicateSilent, MOCK.replicateRows = true, nil
+  check(select(2, MOCK.ns.auction.canScanAll()) == "instant", "the instant scan is due again")
+  local pagedBefore = store.pagedAt
+  click(panel, "Scan all")
+  MOCK.advance(70)
+  check(chatHas("Reading page by page instead") and store.pagedAt ~= pagedBefore, "no answer: the paged scan takes over")
+  MOCK.advance(5)
+  check(select(2, MOCK.ns.auction.canScanAll()) == "paged", "the unanswered scan still counts toward the 15 minutes")
+  local dbg = table.concat(MOCK.ns.auctionDebugLines(), "\n")
+  check(dbg:find("no answer in 60 s", 1, true) and dbg:find("last asked for", 1, true), "/codex debug says what the full scan did")
+  -- the rows arrive without REPLICATE_ITEM_LIST_UPDATE: the row count answers instead
+  MOCK.replicateSilent, MOCK.replicateNoEvent = nil, true
+  store.fullAt, store.fullTriedAt = store.fullAt - 3600, nil
+  click(panel, "Scan all")
+  MOCK.advance(6)
+  check(chatHas("Full scan: 3 listings, 2 items priced") and MOCK.replicated == 3, "the full scan reads rows that came without the event")
+  MOCK.replicateNoEvent = nil
+  -- another addon's full scan (Auctionator's): the Codex files its rows too
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 4306, name = "Silk Cloth", count = 1, buyout = 1500 }
+  MOCK.event("REPLICATE_ITEM_LIST_UPDATE")
+  MOCK.advance(4)
+  check(chatHas("Read another addon's full scan: 4 listings, 3 items priced"), "another addon's full scan is read")
+  table.remove(MOCK.auctions)
   LevelingCodexAHLookup:SetText("linen")
   click(panel, "Look up")
   check(questText(panel, "Lowest now") and questText(panel, "Linen Cloth") and questText(panel, "Listed"), "the look-up shows the item's prices")
@@ -11413,6 +11448,22 @@ function S.auctionMarket()
     and questText(panel, "PRICE CHART") and questText(panel, "-50%"), "the Market page lists gainers and losers with a chart")
   click(panel, "Chart Wool Cloth")
   check(questText(panel, "usual 3s") and questText(panel, "BUY") and questText(panel, "Range (days)"), "a click charts the item with its signal")
+  check(questText(panel, "Since last look") and questText(panel, "Listed") and questText(panel, "Swings"), "the chart's figures")
+  -- a price saved before the readings were kept is the first reading: one search gives a change
+  do
+    local A = MOCK.ns.auction
+    local it = A.store().items[2592]
+    local keep = it.tk
+    it.tk, it.at, it.low, it.n = nil, it.at - 3600, 900, 4
+    A.record(2592, "Wool Cloth", 1000, 6)
+    local tk = A.ticks(2592)
+    check(#tk == 2 and tk[1].low == 900 and tk[2].low == 1000, "the old price seeds the readings")
+    A.record(2592, "Wool Cloth", 1100, 5)
+    check(#A.ticks(2592) == 3 or A.ticks(2592)[1].low == 900, "a search soon after keeps the earlier reading to compare with")
+    local r = MOCK.ns.auctionMarket.row(2592)
+    check(r and r.move and r.wasN, "since last look and listed have two readings")
+    it.tk = keep
+  end
   local lines = 0
   local function count(f)
     for _, r in ipairs({ f:GetRegions() }) do if r._isLine and r:IsShown() and r._start and r._finish then lines = lines + 1 end end
@@ -11424,7 +11475,15 @@ function S.auctionMarket()
   check(questText(panel, "HOT RIGHT NOW") and questText(panel, "BUY AND SELL SIGNALS") and questText(panel, "HOT"), "hot items and signals")
   local before = #MOCK.browsed
   click(panel, "Recheck movers")
-  MOCK.advance(6)
+  local function recheckText()
+    local b = findButton(panel, function(l) return l == "Recheck movers" end)
+    return b and b:GetText() or ""
+  end
+  check(recheckText():find("Working 0 / ", 1, true), "a quick refresh shows its progress on the button (" .. recheckText() .. ")")
+  MOCK.advance(8)
+  check(recheckText() == "Done", "the button says Done when its searches are back (" .. recheckText() .. ")")
+  MOCK.advance(5)
+  check(recheckText() == "Recheck movers", "then it goes back to its name")
   local silk = false
   for i = before + 1, #MOCK.browsed do if MOCK.browsed[i] == "Silk Cloth" then silk = true end end
   check(silk and chatHas("Rechecking"), "Recheck movers searches the page's items again from the header")

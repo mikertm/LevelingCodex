@@ -733,9 +733,13 @@ local function chartCard(x, y, w, h, id)
   local lo, hi
   for _, pt in ipairs(pts) do lo, hi = math.min(lo or pt.v, pt.v), math.max(hi or pt.v, pt.v) end
   stat("Against days", r and r.trend and M().pctText(r.trend) or "--", M().pctColor(r and r.trend))
-  stat("Since last scan", r and r.move and M().pctText(r.move) or "--", M().pctColor(r and r.move))
-  stat("Supply", r and r.supply and M().pctText(r.supply) or "--", r and r.supply and (r.supply <= -10 and ORANGE or ns.C.light))
-  stat("Swings", r and r.vol and (math.floor(r.vol * 100 + 0.5) .. "%") or "--", r and r.vol and r.vol >= 0.25 and ns.C.accent)
+  -- "Since last look" and "Listed" compare the last two readings (a search or a scan each);
+  -- "Swings" is how far the daily prices spread, from two days of prices on
+  stat("Since last look", r and r.move and M().pctText(r.move) or "needs 2 looks", r and r.move and M().pctColor(r.move) or ns.C.dim)
+  local listed = r and r.wasN and ((r.wasN .. " -> " .. (r.n or 0)) .. (r.supply and r.supply ~= 0 and (" (" .. M().pctText(r.supply) .. ")") or ""))
+    or (p and p.n and (p.n .. " now")) or "--"
+  stat("Listed", listed, r and r.supply and (r.supply <= -10 and ORANGE or ns.C.light))
+  stat("Swings", r and r.vol and (math.floor(r.vol * 100 + 0.5) .. "%") or "needs 2 days", r and r.vol and (r.vol >= 0.25 and ns.C.accent or ns.C.light) or ns.C.dim)
   stat(kind == "days" and "Range (days)" or "Range (scans)", lo and (ns.money(lo) .. " - " .. ns.money(hi)) or "--")
   local vendor = p and p.vendor
   stat("Vendor pays", vendor and vendor > 0 and ns.money(vendor) or "--")
@@ -1326,11 +1330,38 @@ function P.refresh()
   text(line, 262, 9, W - 262 - 16 - 270, "dim", C.dim, nil, true)
   local r = P.REFRESH[page]
   if r then
-    button(r[1], W - 16 - 116 - 6 - 140, 8, 140, function() ns.say(r[3]()) end, { label = r[1], tip = r[1], tipText = r[2] })
+    local bx = W - 16 - 116 - 6 - 140
+    local bdone, btotal, bfinished, bat = A().batchProgress(page)
+    local blabel = r[1]
+    if bdone and not bfinished then
+      blabel = btotal > 0 and ("Working " .. bdone .. " / " .. btotal) or "Working..."
+    elseif bfinished then
+      blabel = "Done"
+    end
+    button(blabel, bx, 8, 140, function()
+      local said = r[3]()
+      A().startBatch(page)
+      ns.say(said)
+      P.refresh()
+    end, { label = r[1], tip = r[1], tipText = r[2] })
+    if bdone then
+      -- a bar under the button: how many of the searches it queued have come back
+      local frac = bfinished and 1 or (btotal > 0 and bdone / btotal or 0.1)
+      bar(bx, 32, 140, 4, frac, bfinished and GREEN or C.accent)
+      if bfinished and not view.batchTimer then
+        view.batchTimer = true
+        ns.after(4, function()
+          view.batchTimer = nil
+          local b = A().batch
+          if b and b.doneAt and now() - b.doneAt >= 3.5 then A().endBatch() end
+          P.refresh()
+        end)
+      end
+    end
   end
   local done, total, phase = A().fullProgress()
   scanAllButton(done and (phase == "filing" and "Saving..." or "Scanning...") or nil, W - 16 - 116, 8, 116)
-  if done then bar(W - 16 - 116 - 6 - 140, 32, 262, 3, total and total > 0 and done / total or 0.5, phase == "filing" and GREEN or C.accent) end
+  if done then bar(W - 16 - 116, 32, 116, 3, total and total > 0 and done / total or 0.5, phase == "filing" and GREEN or C.accent) end
   drawTicker(16, 40, W - 32 - 200)
   local age, ageColor = scanAge()
   text(money(tonumber(try(GetMoney)) or 0), W - 16 - 190, 38, 190, "small", C.light, "RIGHT")

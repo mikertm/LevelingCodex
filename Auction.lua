@@ -127,7 +127,8 @@ local function tick(it, low, n)
   local tk = type(it.tk) == "table" and it.tk or {}
   it.tk = tk
   local t, k = now(), #tk
-  if k >= 3 and t - (tonumber(tk[k - 2]) or 0) < A.TICK_GAP then
+  -- a reading soon after the last replaces it, as long as an earlier one stays to compare with
+  if k >= 6 and t - (tonumber(tk[k - 2]) or 0) < A.TICK_GAP then
     tk[k - 1], tk[k] = low, n
   else
     tk[k + 1], tk[k + 2], tk[k + 3] = t, low, n
@@ -161,6 +162,7 @@ function A.record(id, name, low, n, med, high)
     it.name = name
     if indexFor == s then nameIndex[name:lower()] = id end
   end
+  local oldLow, oldAt, oldN = tonumber(it.low), tonumber(it.at), tonumber(it.n)
   it.n, it.at, it.ator = tonumber(n) or 0, now(), nil
   -- the vendor price, kept for the deal finder (the item cache may not hold every listed item);
   -- a full scan leaves it for later (A.recordFast)
@@ -168,6 +170,10 @@ function A.record(id, name, low, n, med, high)
   if vendor and vendor > 0 then it.vendor = vendor end
   local d = today()
   if low then
+    -- an item priced before the readings were kept: its last price is the first reading
+    if type(it.tk) ~= "table" and oldLow and oldAt and oldAt < now() then
+      it.tk = { oldAt, oldLow, oldN or 0 }
+    end
     tick(it, low, tonumber(n) or 0)
     it.low, it.med, it.high = low, med or it.med, high or it.high
     local rec = it.days[d]
@@ -315,7 +321,11 @@ end
 function A.canFullScan()
   if not open then return false, "Open the auction house first." end
   if job and job.kind == "full" then return false, "Scanning..." end
-  local fullAt = tonumber(A.store().fullAt)
+  -- the cooldown runs from the last scan that was asked for, answered or not: the server counts
+  -- the request (another addon's too), so asking again sooner only gets no answer
+  local s = A.store()
+  local fullAt = math.max(tonumber(s.fullAt) or 0, tonumber(s.fullTriedAt) or 0)
+  if fullAt == 0 then fullAt = nil end
   local wait = fullAt and fullAt + A.FULL_COOLDOWN - now()
   if wait and wait > 0 then return false, "Next full scan in " .. math.max(1, math.ceil(wait / 60)) .. " min" end
   local C = api()
@@ -420,6 +430,17 @@ end
 -- are left for later, so the item cache isn't asked thousands of times at once).
 local function readFull()
   local j = job
+  -- rows that arrive with no scan of ours running: another addon's full scan (Auctionator's),
+  -- read and filed all the same
+  if not j and open and has(api(), "GetNumReplicateItems") then
+    local n = tonumber(try(api().GetNumReplicateItems)) or 0
+    local lp = last.passive
+    if n > 0 and not (lp and lp.n == n and now() - lp.at < 300) then
+      last.passive = { n = n, at = now() }
+      j = { kind = "full", started = now(), modern = true, passive = true }
+      job = j
+    end
+  end
   if not j or j.kind ~= "full" or j.reading then return end
   j.reading = true
   local function count()
@@ -459,8 +480,10 @@ local function readFull()
         end
         A.store().fullAt = now()
         job = nil
-        last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0 }
-        ns.say("Full scan: " .. ns.thousands(total) .. " listings, " .. ns.thousands(items) .. " items priced.")
+        last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0,
+          passive = j.passive, how = j.how }
+        ns.say((j.passive and "Read another addon's full scan: " or "Full scan: ") .. ns.thousands(total) .. " listings, "
+          .. ns.thousands(items) .. " items priced.")
         finished("full")
         A.fillVendors()
         ns.after(SEARCH_GAP, A.pump)
@@ -470,30 +493,47 @@ local function readFull()
   settle()
 end
 
+A.FULL_WAIT = 60 -- seconds the instant scan waits for an answer before the paged scan takes over
+
 function A.fullScan()
   local ok, why = A.canFullScan()
   if not ok then ns.say(why); return false end
   local C = api()
-  local j = { kind = "full", started = now(), modern = has(C, "ReplicateItems") }
+  local j = { kind = "full", started = now(), modern = has(C, "ReplicateItems"), polls = 0 }
   job = j
+  local before = j.modern and tonumber(try(C.GetNumReplicateItems)) or 0
   local sent
   if j.modern then sent = pcall(C.ReplicateItems)
   else sent = pcall(QueryAuctionItems, "", nil, nil, 0, nil, nil, true, false) end
   if not sent then
     job = nil
+    last.full = { at = now(), failed = "refused" }
     ns.say("The auction house refused the full scan.")
     finished("full")
     return false
   end
+  A.store().fullTriedAt = now()
   ns.say("Full scan started: the auction house can take a minute to answer.")
-  ns.after(90, function()
-    if job == j and not j.reading then
-      job = nil
-      last.full = { at = now(), failed = "no answer" }
+  -- the answer is REPLICATE_ITEM_LIST_UPDATE, but the client doesn't always send it: the row count
+  -- is checked every second too (a new count = the answer)
+  local function poll()
+    if job ~= j or j.reading then return end
+    j.polls = j.polls + 1
+    local n = j.modern and tonumber(try(C.GetNumReplicateItems)) or 0
+    if n > 0 and n ~= before then j.how = "polled"; readFull(); return end
+    if now() - j.started < A.FULL_WAIT then ns.after(1, poll); return end
+    job = nil
+    last.full = { at = now(), failed = "no answer in " .. A.FULL_WAIT .. " s (" .. j.polls .. " checks, " .. n .. " rows)" }
+    last.instantFailed = last.full
+    finished("full")
+    if A.canPagedScan() then
+      ns.say("The full scan got no answer (the server allows one every 15 min, and other addons' scans count). Reading page by page instead.")
+      A.pagedScan()
+    else
       ns.say("The full scan got no answer from the auction house. Try again in a few minutes.")
-      finished("full")
     end
-  end)
+  end
+  ns.after(1, poll)
   finished("start")
   return true
 end
@@ -511,27 +551,46 @@ function A.canPagedScan()
   return true
 end
 
+-- No page for A.PAGE_RETRY seconds (a busy or throttled server drops a request without a word):
+-- ask again, up to A.PAGE_TRIES times, before giving up.
+A.PAGE_RETRY, A.PAGE_TRIES = 6, 3
+local function browseQuery(text, order)
+  return { searchString = text, sorts = { { sortOrder = order, reverseSort = false } }, filters = {}, itemClassFilters = {} }
+end
 local function pagedTimeout(j)
-  ns.after(20, function()
-    if job == j and now() - (j.lastPage or j.started) >= 20 then
+  local asked = j.asked or 0
+  ns.after(A.PAGE_RETRY, function()
+    if job ~= j or j.reading or (j.asked or 0) ~= asked then return end
+    if now() - (j.lastPage or j.started) < A.PAGE_RETRY then return end
+    if (j.retries or 0) >= A.PAGE_TRIES then
       job = nil
-      last.full = { at = now(), failed = "the auction house stopped answering", paged = true }
+      last.full = { at = now(), failed = "the auction house stopped answering after " .. j.pages .. " pages", paged = true }
       ns.say("The paged scan stopped: the auction house didn't answer. Prices so far are kept.")
       finished("full")
       ns.after(SEARCH_GAP, A.pump)
+      return
     end
+    j.retries = (j.retries or 0) + 1
+    j.asked = (j.asked or 0) + 1
+    local C = api()
+    if j.pages == 0 then
+      pcall(C.SendBrowseQuery, browseQuery("", j.order))
+    else
+      j.waiting = true
+      pcall(C.RequestMoreBrowseResults)
+    end
+    pagedTimeout(j)
   end)
 end
-
 function A.pagedScan()
   local ok, why = A.canPagedScan()
   if not ok then ns.say(why); return false end
   queue = {}
   local C = api()
   local order = type(Enum) == "table" and type(Enum.AuctionHouseSortOrder) == "table" and Enum.AuctionHouseSortOrder.Name or 1
-  local j = { kind = "paged", started = now(), pages = 0, done = 0, seen = {}, items = 0 }
+  local j = { kind = "paged", started = now(), pages = 0, done = 0, seen = {}, items = 0, order = order }
   job = j
-  if not pcall(C.SendBrowseQuery, { searchString = "", sorts = { { sortOrder = order, reverseSort = false } }, filters = {} }) then
+  if not pcall(C.SendBrowseQuery, browseQuery("", order)) then
     job = nil
     ns.say("The auction house refused the paged scan.")
     finished("full")
@@ -599,10 +658,11 @@ local function readPage(rows)
     if has(C, "HasFullBrowseResults") and try(C.HasFullBrowseResults) == false then
       ns.after(0.3, function()
         if job ~= j then return end
-        j.waiting = true
+        j.waiting, j.retries = true, 0
+        j.asked = (j.asked or 0) + 1
         if not pcall(C.RequestMoreBrowseResults) then j.stuck = true end
+        pagedTimeout(j)
       end)
-      pagedTimeout(j)
       refreshCard()
       return
     end
@@ -630,7 +690,7 @@ local function sendSearch(name)
   local C = api()
   if has(C, "SendBrowseQuery") then
     local order = type(Enum) == "table" and type(Enum.AuctionHouseSortOrder) == "table" and Enum.AuctionHouseSortOrder.Price or 0
-    return pcall(C.SendBrowseQuery, { searchString = name, sorts = { { sortOrder = order, reverseSort = false } }, filters = {} }), true
+    return pcall(C.SendBrowseQuery, browseQuery(name, order)), true
   end
   if type(QueryAuctionItems) == "function" then
     if try(CanSendAuctionQuery) == false then return nil end
@@ -737,6 +797,8 @@ function A.pump()
     if job == j then
       job = nil
       last.search = { name = name, at = now(), failed = "no answer" }
+      A.searchCount = A.searchCount + 1
+      finished("search")
       ns.after(SEARCH_GAP, A.pump)
     end
   end)
@@ -745,6 +807,7 @@ end
 local function searchDone(results)
   local j = job
   job = nil
+  A.searchCount = A.searchCount + 1
   last.search = { name = j.name, at = now(), results = results }
   -- searched but not listed: the item is known and there is none for sale
   local id = A.idFor(j.name)
@@ -879,6 +942,29 @@ function A.suggest(id)
 end
 
 -- The searches still waiting, and the one running: n, name.
+-- A quick refresh's progress (the header buttons: Update, Recheck deals, Reprice bags...):
+-- A.startBatch(key) after the click queued its searches; A.batchProgress(key) -> done, total,
+-- finished (true once nothing it queued is waiting or running, nor an undercut check).
+A.searchCount = 0
+function A.startBatch(key)
+  local waiting = #queue + (job and job.kind == "search" and 1 or 0)
+  A.batch = { key = key, base = A.searchCount, total = waiting, at = now() }
+  return A.batch
+end
+function A.batchProgress(key)
+  local b = A.batch
+  if not b or b.key ~= key then return end
+  local T = ns.auctionTrade
+  local busy = #queue > 0 or (job and job.kind == "search") or (T and T.mine and T.mine.checking)
+  -- the sniper keeps searching for ever: its own searches don't hold a batch open
+  if snipe.on and #queue == 0 and not (T and T.mine and T.mine.checking) then busy = false end
+  local done = math.min(b.total, A.searchCount - b.base)
+  if not busy and not b.doneAt then b.doneAt = now() end
+  if b.doneAt and busy then b.doneAt = nil end
+  return done, b.total, b.doneAt ~= nil, b.doneAt
+end
+function A.endBatch() A.batch = nil end
+
 function A.queued()
   return #queue, job and job.kind == "search" and job.name or nil
 end
@@ -1199,7 +1285,7 @@ function ns.startAuction()
     if event == "AUCTION_HOUSE_SHOW" then onShow()
     elseif event == "AUCTION_HOUSE_CLOSED" then onClose()
     elseif not open then return
-    elseif event == "REPLICATE_ITEM_LIST_UPDATE" then readFull()
+    elseif event == "REPLICATE_ITEM_LIST_UPDATE" then if job then job.how = job.how or "event" end; readFull()
     elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then readBrowse()
     elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" then if job and job.kind == "paged" then readBrowse(arg) end
     elseif event == "AUCTION_ITEM_LIST_UPDATE" then
@@ -1227,7 +1313,17 @@ function ns.auctionDebugLines()
   end
   if last.full then
     out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
-      .. (last.full.frames or 0) .. " frames, " .. (last.full.seconds or 0) .. " s"))
+      .. (last.full.frames or 0) .. " frames, " .. (last.full.seconds or 0) .. " s"
+      .. (last.full.pages and (", " .. last.full.pages .. " pages") or "")
+      .. (last.full.passive and ", another addon's scan" or last.full.how and (", answer by " .. last.full.how) or "")))
+  end
+  if A.store().fullTriedAt then
+    out[#out + 1] = "auction full scan last asked for " .. A.age(A.store().fullTriedAt)
+      .. (last.instantFailed and last.instantFailed ~= last.full and ("; the last unanswered one: " .. last.instantFailed.failed .. ", " .. A.age(last.instantFailed.at)) or "")
+  end
+  if job and (job.kind == "full" or job.kind == "paged") then
+    out[#out + 1] = "auction scan running: " .. job.kind .. ", " .. (now() - (job.started or now())) .. " s, "
+      .. (job.kind == "paged" and (job.pages .. " pages, " .. (job.retries or 0) .. " retries") or ((job.polls or 0) .. " checks, phase " .. tostring(job.phase)))
   end
   if last.search then
     out[#out + 1] = "auction search: " .. Q.plain(last.search.name) .. " - " .. (last.search.failed or (last.search.results .. " results"))
