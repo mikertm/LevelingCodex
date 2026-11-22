@@ -65,23 +65,35 @@ local function after(s, first)
   return rest:match("^[%s%.%-_|]+([^%s%.%-_|,]+)")
 end
 
+-- Forever: UnitFullName("player") returns name, surname (elsewhere the second value is the realm,
+-- so it is read only on a client with Forever's surname APIs).
+local function foreverSurname(first)
+  local forever = (C_NameUtil and C_NameUtil.ReplaceSurnameSeparatorWithLinkSeparator)
+    or (C_PlayerInfo and C_PlayerInfo.ShouldDisplaySurname)
+  if not forever or type(UnitFullName) ~= "function" then return nil end
+  local ok, name, sur = pcall(UnitFullName, "player")
+  if not ok or type(sur) ~= "string" or sur == "" then return nil end
+  if GetRealmName then
+    local okR, realm = pcall(GetRealmName)
+    if okR and type(realm) == "string" and (realm == sur or realm:gsub("%s", "") == sur) then return nil end
+  end
+  -- a full name in the first value carries the surname after the first name; keep just the surname
+  if type(name) == "string" and first and sur:find(first, 1, true) == 1 then sur = after(sur, first) or sur end
+  return sur
+end
+
 function Vo.names()
   local raw = try(UnitName, "player")
   local first, last = split(type(raw) == "string" and raw or nil)
   first = first or "Adventurer"
+  -- the surname is the book's, whatever the nameplate setting (ShouldDisplaySurname) says
+  if not last then last = foreverSurname(first) end
   if not last then
     for _, src in ipairs({ { UnitNameUnmodified, "player" }, { UnitPVPName, "player" }, { GetUnitName, "player", false } }) do
       if type(src[1]) == "function" then
         local ok, s = pcall(src[1], src[2], src[3])
         last = ok and after(s, first) or nil
         if last then break end
-      end
-    end
-    if last then
-      local show = C_PlayerInfo and C_PlayerInfo.ShouldDisplaySurname
-      if type(show) == "function" then
-        local ok, on = pcall(show)
-        if ok and on == false then last = nil end
       end
     end
   end
@@ -612,8 +624,13 @@ function ns.journeyVoiceDebugLines()
     return (s:gsub("[^\32-\126]", function(c) return "\\" .. c:byte() end))
   end
   local pvp = type(UnitPVPName) == "function" and select(2, pcall(UnitPVPName, "player")) or nil
+  local full = "none"
+  if type(UnitFullName) == "function" then
+    local ok, a, b = pcall(UnitFullName, "player")
+    full = ok and (show(a) .. "' / '" .. show(b)) or "error"
+  end
   local top = Vo.traits()[1]
   return { "journey voice: " .. Vo.style() .. ", name '" .. show(first) .. "' + '" .. show(last or "-") .. "' from UnitName '"
-    .. show(raw) .. "', UnitPVPName '" .. show(pvp) .. "', NameUtil " .. tostring(C_NameUtil ~= nil)
+    .. show(raw) .. "', UnitFullName '" .. full .. "', UnitPVPName '" .. show(pvp) .. "', NameUtil " .. tostring(C_NameUtil ~= nil)
     .. ", top trait " .. (top and (top[1] .. " " .. string.format("%.1f", top[2])) or "none") }
 end

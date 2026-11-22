@@ -13174,6 +13174,17 @@ function S.journeyVoice()
   local j = LevelingCodexCharDB.journey
   local first, last = J.voice.names()
   check(first == "Tester" and last == nil, "a name without a surname reads as a first name")
+  -- Forever: UnitFullName gives name, surname, whatever the nameplate setting says
+  local savedFull, savedPI = _G.UnitFullName, _G.C_PlayerInfo
+  rawset(_G, "C_PlayerInfo", setmetatable({ ShouldDisplaySurname = function() return false end }, { __index = savedPI }))
+  rawset(_G, "UnitFullName", function(unit) if unit == "player" then return "Tester", "Brightwood" end end)
+  check(select(2, J.voice.names()) == "Brightwood", "Forever's UnitFullName surname is read")
+  if GetRealmName then
+    rawset(_G, "UnitFullName", function(unit) if unit == "player" then return "Tester", GetRealmName() end end)
+    check(select(2, J.voice.names()) ~= GetRealmName(), "a realm in UnitFullName is not a surname")
+  end
+  rawset(_G, "UnitFullName", savedFull)
+  rawset(_G, "C_PlayerInfo", savedPI)
   check(J.voice.setSurname("Ashford") and select(2, J.voice.names()) == "Ashford", "a last name can be set")
   check(not J.voice.setSurname("Ash<ford>"), "a last name is letters only")
   check(J.voice.epithet(j) == nil or type(J.voice.epithet(j)) == "string", "the epithet is a word or nothing")
@@ -13218,19 +13229,20 @@ function S.journeyVoice()
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
--- The window's height: Settings steps it, Fit the screen fills the screen, Normal puts it back.
+-- The window's height: it starts filling the screen, Short puts the old height back, Settings steps it.
 function S.windowHeight()
   S.login()
   slash("")
   local f = _G.LevelingCodexFrame
-  check(math.floor(f:GetHeight() + 0.5) == 620, "the window starts at 620 (" .. tostring(f:GetHeight()) .. ")")
+  check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "the window starts filling the screen (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Settings")
+  click(win(), "Short")
+  check(math.floor(f:GetHeight() + 0.5) == 620, "Short makes it 620 (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Height +")
   check(math.floor(f:GetHeight() + 0.5) == 700, "Height + makes it taller (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Fit the screen")
   check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "Fit the screen fills the screen (" .. tostring(f:GetHeight()) .. ")")
-  click(win(), "Normal")
-  check(math.floor(f:GetHeight() + 0.5) == 620, "Normal puts it back")
+  click(win(), "Short")
   local grip = _G.LevelingCodexSizeGrip
   check(grip, "the window has a size grip")
   if grip then

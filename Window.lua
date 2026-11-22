@@ -1430,11 +1430,12 @@ renderers.settings = function()
     T(hNow .. " px", 92, y + 4, 50, "body", C.gold, "CENTER")
     hb = row("+", 146, 28, false, function() db.windowHeight = ns.windowHeight() + 80; ns.placeWindow() end)
     if hb then hb.codexLabel = "Height +" end
-    row("Fit the screen", 186, 140, false, function() db.windowHeight = 9999; ns.placeWindow() end,
-      "As tall as your screen allows, so long pages need less scrolling.")
-    row("Normal", 334, 90, false, function() db.windowHeight = nil; ns.placeWindow() end)
+    row("Fit the screen", 186, 140, false, function() db.windowHeight = nil; ns.placeWindow() end,
+      "As tall as your screen allows, so long pages need less scrolling (the default).")
+    row("Short", 334, 90, false, function() db.windowHeight = ns.WINDOW_H; ns.placeWindow() end,
+      "The older, shorter window (" .. ns.WINDOW_H .. " px).")
     y = y + 40
-    T("Drag the grip in the window's bottom right corner to make it taller or shorter. Size scales everything down or up.", 0, y, W, "small", C.dim)
+    T("Drag the grip in the window's bottom right corner to make it taller or shorter. Size scales everything down or up: a smaller size fits more of each page on screen.", 0, y, W, "small", C.dim)
     y = y + 30
     T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started. /codex debug lists what the Codex can see, for bug reports.", 0, y, W, "small", C.dim)
     y = y + 40
@@ -1619,14 +1620,15 @@ function ns.refreshTab(key)
 end
 
 -- The window's height: db.windowHeight (Settings > This window, or the corner grip), kept on screen.
-ns.WINDOW_H, ns.WINDOW_MIN_H = 620, 460
+-- Without a saved height it fills the screen (ns.WINDOW_FIT), so long pages need less scrolling.
+ns.WINDOW_H, ns.WINDOW_MIN_H, ns.WINDOW_FIT = 620, 460, 9999
 local function screenRoom(scale)
   local h = tonumber(UIParent:GetHeight())
   if not h or h < 200 then return nil end
   return math.floor((h - 70) / (scale or 1)) -- the banner above and the tabs below stay on screen
 end
 function ns.windowHeight(scale)
-  local want = tonumber(ns.db().windowHeight) or ns.WINDOW_H
+  local want = tonumber(ns.db().windowHeight) or ns.WINDOW_FIT
   local room = screenRoom(scale or (frame and frame:GetScale()) or 1)
   if room then want = math.min(want, room) end
   return math.floor(math.max(ns.WINDOW_MIN_H, want))
