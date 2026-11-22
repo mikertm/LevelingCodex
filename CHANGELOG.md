@@ -10,6 +10,7 @@
 - **Map layers:** switches under the map turn the trail and each kind of moment on and off, with how many of each the map holds. Your choice is kept.
 - **What happened here:** the right page lists the moments on that map, newest first; click one to mark it on the map.
 - Continents (Eastern Kingdoms, Kalimdor) no longer show up as lands explored.
+- An emote aimed at someone else ("Max thanks Takria Doyouknow") is no longer written as a kind word to you: only one that says "you" or "your" counts, and the ones an earlier build wrote are taken out.
 - Companion names are written in ink, so a priest's white no longer vanishes on the paper. Friends and strangers moved under the list, and their names open their page too.
 
 ### Gold

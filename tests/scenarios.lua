@@ -13117,6 +13117,10 @@ function S.journeyTales()
   local waves = 0
   for _, e in ipairs(j.events) do if e.k == "emote" then waves = waves + 1 end end
   check(waves == 1, "a wave is written once a day per person")
+  MOCK.event("CHAT_MSG_TEXT_EMOTE", "Max Deadlift thanks Takria Doyouknow.", "Max Deadlift")
+  check(not journeyHas("emote", "Doyouknow") and not j.people["Max Deadlift"], "an emote at someone else is not about you")
+  check(MOCK.ns.journey.tales.aimedAtYou("Bo bows before you.") and MOCK.ns.journey.tales.aimedAtYou("Bo admires your hat."),
+    "an emote that says you or your is about you")
   MOCK.guild = "Dawn Watch"
   MOCK.event("PLAYER_GUILD_UPDATE")
   check(journeyHas("guild", "Dawn Watch"), "joining a guild")

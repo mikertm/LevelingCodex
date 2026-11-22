@@ -287,11 +287,36 @@ local function tradeDone()
 end
 
 local emoteDay, emotesToday, emoted = nil, 0, {}
+-- An emote aimed at you says "you" or "your" as a word: "Bo waves at you", not "Bo thanks Doyouknow"
+-- (someone else's emote that only contains the letters).
+function T.aimedAtYou(text)
+  local low = " " .. tostring(text or ""):lower() .. " "
+  return low:find("%f[%a]you%f[%A]") ~= nil or low:find("%f[%a]your%f[%A]") ~= nil
+end
+
+-- Take out emotes an older build kept that were aimed at someone else, and the kind words they counted.
+local function dropStrayEmotes()
+  local j = journal()
+  local events = j.events
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if type(e) == "table" and e.k == "emote" and not T.aimedAtYou(e.s) then
+      table.remove(events, i)
+      local p = type(e.who) == "string" and j.people[e.who]
+      if type(p) == "table" then
+        p.waves = math.max(0, (tonumber(p.waves) or 1) - 1)
+        if p.waves == 0 then p.waves = nil end
+        if not p.waves and not p.trades and not p.duels and not p.rez then j.people[e.who] = nil end
+      end
+    end
+  end
+end
+
 local function textEmote(text, sender)
   if type(text) ~= "string" or type(sender) ~= "string" or sender == "" then return end
   local self = me()
   local short = sender:match("^([^%-]+)") or sender
-  if short == self or not text:find("you", 1, true) then return end
+  if short == self or not T.aimedAtYou(text) then return end
   local day = math.floor(now() / 86400)
   if day ~= emoteDay then emoteDay, emotesToday, emoted = day, 0, {} end
   if emoted[short] or emotesToday >= 6 then return end
@@ -643,6 +668,7 @@ function ns.startJourneyTales()
     local ok, err = pcall(HANDLERS[event], ...)
     if not ok and not T.errored then T.errored = true; ns.say("journey error: " .. plain(err)) end
   end)
+  pcall(dropStrayEmotes)
   pcall(enteredWorld)
   pcall(guildCheck, true)
   pcall(purse)
