@@ -1,6 +1,7 @@
 # Leveling Codex
 
 ## v0.31.0
+- The Scan tab offers both scans: Paged scan (smooth, any time) and Instant scan (everything at once, every 15 minutes), with a note that an instant scan can make the game hitch while it loads the data.
 - Full auction scans no longer hitch the game: every item the scan loaded made the loot comparisons re-read your gear and bags ten times a second. Item data the loot code didn't ask for now waits until the scan is done.
 - A scan that stops mid-way (it could sit at "Reading" for good) is restarted where it was after 8 seconds; /codex debug shows the rows read, slow frames and restarts while a scan runs.
 - The Journey book fills your screen, so long pages need less scrolling; the other tabs keep their usual height (Settings > This window: Auto, Fit the screen for every tab, or Short).

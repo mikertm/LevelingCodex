@@ -1328,11 +1328,11 @@ function pages.scan(W, top, H)
   local lx, rx = 16, 16 + lw + 16
   -- full scan
   local age, ageColor = scanAge()
-  card(lx, top, lw, 132, "FULL SCAN")
+  card(lx, top, lw, 150, "FULL SCAN")
   text("Last scan:", lx + 14, top + 34, 70, "small", ns.C.dim)
   text(age, lx + 84, top + 34, 120, "small", ageColor)
   text(ns.thousands(A().count()) .. " items priced", lx + 200, top + 34, lw - 214, "small", ns.C.light, "RIGHT")
-  text("Instant every 15 min; paged any time in between.", lx + 14, top + 51, lw - 28, "dim", ns.C.dim)
+  text("Paged: smooth, any time. Instant: every listing at once, every 15 min.", lx + 14, top + 51, lw - 28, "dim", ns.C.dim)
   local done, total, phase, pages = A().fullProgress()
   if done then
     local frac = total and total > 0 and done / total or ((pages or 0) % 10) / 10
@@ -1348,9 +1348,25 @@ function pages.scan(W, top, H)
     or (phase == "reading" and total and ("Reading " .. ns.thousands(done) .. " of " .. ns.thousands(total)))
     or "Waiting for the auction house...")
     or nil
-  scanAllButton(label, lx + 14, top + 90, lw - 28)
+  if label then
+    scanAllButton(label, lx + 14, top + 90, lw - 28)
+  else
+    -- two choices: the paged scan reads a page at a time and keeps the game smooth; the instant
+    -- scan gets everything in one go, but the game loads every item it lists and may hitch
+    local half = math.floor((lw - 36) / 2)
+    local okP, whyP = A().canPagedScan()
+    button(okP and "Paged scan" or whyP, lx + 14, top + 90, half, function() A().pagedScan() end,
+      { label = "Paged scan", enabled = okP, tip = "Paged scan",
+        tipText = "Reads the auction house page by page. Smooth while it runs, no cooldown; takes a little longer." })
+    local okF, whyF = A().canFullScan()
+    button(okF and "Instant scan" or whyF, lx + 22 + half, top + 90, half, function() A().fullScan() end,
+      { label = "Instant scan", enabled = okF, tip = "Instant scan",
+        tipText = "Asks the server for every listing at once (once every 15 minutes). The game then loads each item it lists, so it can hitch or pause for a while. Nothing is wrong: it settles once the data is in." })
+  end
+  text("An instant scan can make the game hitch while it loads the data. That's normal.",
+    lx + 14, top + 120, lw - 28, "dim", ns.C.dim)
   -- quick searches
-  local y = top + 144
+  local y = top + 162
   local waiting, running = A().queued()
   card(lx, y, lw, 132, "QUICK SEARCHES")
   text(running and ("Searching " .. Q.plain(running) .. ", " .. waiting .. " waiting") or (waiting > 0 and (waiting .. " waiting") or "Nothing waiting."),
