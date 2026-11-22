@@ -1431,7 +1431,7 @@ renderers.settings = function()
     hb = row("+", 146, 28, false, function() db.windowHeight = ns.windowHeight() + 80; ns.placeWindow() end)
     if hb then hb.codexLabel = "Height +" end
     row("Auto", 186, 70, false, function() db.windowHeight = nil; ns.placeWindow() end,
-      "The default: Journey and Loot fill the screen, the other tabs keep " .. ns.WINDOW_H .. " px.")
+      "The default: the Journey book fills the screen, the other tabs keep " .. ns.WINDOW_H .. " px.")
     row("Fit the screen", 260, 120, false, function() db.windowHeight = ns.WINDOW_FIT; ns.placeWindow() end,
       "Every tab as tall as your screen allows.")
     row("Short", 384, 70, false, function() db.windowHeight = ns.WINDOW_H; ns.placeWindow() end,
@@ -1622,16 +1622,17 @@ function ns.refreshTab(key)
 end
 
 -- The window's height: db.windowHeight (Settings > This window, or the corner grip), kept on screen.
--- Without a saved height (Auto) the wide book tabs (Journey, Loot) fill the screen (ns.WINDOW_FIT)
--- and the others keep ns.WINDOW_H.
+-- Without a saved height (Auto) the long tabs (ns.TALL_TABS: the Journey book) fill the screen
+-- (ns.WINDOW_FIT) and the others keep ns.WINDOW_H.
 ns.WINDOW_H, ns.WINDOW_MIN_H, ns.WINDOW_FIT = 620, 460, 9999
+ns.TALL_TABS = { journey = true }
 local function screenRoom(scale)
   local h = tonumber(UIParent:GetHeight())
   if not h or h < 200 then return nil end
   return math.floor((h - 70) / (scale or 1)) -- the banner above and the tabs below stay on screen
 end
 function ns.windowHeight(scale)
-  local want = tonumber(ns.db().windowHeight) or (tabWidths[activeTab] and ns.WINDOW_FIT) or ns.WINDOW_H
+  local want = tonumber(ns.db().windowHeight) or (ns.TALL_TABS[activeTab] and ns.WINDOW_FIT) or ns.WINDOW_H
   local room = screenRoom(scale or (frame and frame:GetScale()) or 1)
   if room then want = math.min(want, room) end
   return math.floor(math.max(ns.WINDOW_MIN_H, want))
@@ -1660,6 +1661,8 @@ refresh = function(professionSnapshot)
     content:SetWidth(width)
     frame:SetWidth(width + 72)
     ns.placeWindow()
+  elseif math.abs((frame:GetHeight() or 0) - ns.windowHeight()) > 1 then
+    ns.placeWindow() -- a tab with another height (the Journey book is tall)
   end
   viewLevel = viewLevel or me
   if viewLevel < 1 then viewLevel = 1 elseif viewLevel > 60 then viewLevel = 60 end
