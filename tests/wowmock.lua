@@ -352,6 +352,7 @@ function Region:GetCenter()
   return self._cx or 500, self._cy or 500
 end
 function Region:GetLeft() return self._left or 0 end
+function Region:GetRight() return self._right or ((self._left or 0) + (self._w or 0)) end
 function Region:GetTop() return self._top or 700 end
 function Region:GetBottom() return self._bottom or 100 end
 function Region:IsShown() return self._shown end

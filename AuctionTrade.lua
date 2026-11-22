@@ -343,12 +343,12 @@ function T.deals(kind, hidden)
       -- for thousands of scanned items on every redraw would stutter the game
       local vendor = p.vendor and p.vendor > 0 and p.vendor or nil
       if vendor and vendor > p.low then
-        out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "vendor", low = p.low, worth = vendor,
+        out[#out + 1] = { id = id, name = p.name or ns.auction.nameOf(id) or ("item " .. id), kind = "vendor", low = p.low, worth = vendor,
           profit = vendor - p.low, n = p.n, source = p.source, at = p.at }
       elseif p.usual and p.days and p.days >= 2 and p.low <= p.usual * (100 - flip) / 100 then
         local profit = math.floor(p.usual * (1 - T.CUT)) - p.low
         if profit > 0 then
-          out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "flip", low = p.low, worth = p.usual,
+          out[#out + 1] = { id = id, name = p.name or ns.auction.nameOf(id) or ("item " .. id), kind = "flip", low = p.low, worth = p.usual,
             profit = profit, n = p.n, source = p.source, at = p.at }
         end
       end

@@ -972,15 +972,43 @@ end
 -- thousands of items: asking the item cache for all of them at once stutters the game). 0 = the
 -- item sells for nothing; an item the cache hasn't loaded is asked again next time.
 local filling
-function A.fillVendors()
+-- An item's name: the store's, else the item cache's (kept once it loads), else nil. A page-by-page
+-- scan or another addon's scan files items by ID only, so their names come from here.
+function A.nameOf(id)
+  id = tonumber(id)
+  local it = id and A.store().items[id]
+  if type(it) == "table" and type(it.name) == "string" and it.name ~= "" then return it.name end
+  local name = id and ns.itemInfo(id)
+  if type(name) == "string" and name ~= "" then
+    if type(it) == "table" then it.name = name end
+    if indexFor == A.store() then nameIndex[name:lower()] = id end
+    return name
+  end
+  if id and type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+    pcall(C_Item.RequestLoadItemDataByID, id)
+  end
+end
+
+-- An item's icon without waiting for the item cache (GetItemIconByID knows every item).
+function A.iconOf(id)
+  id = tonumber(id)
+  if not id then return end
+  local f = type(C_Item) == "table" and C_Item.GetItemIconByID or GetItemIconByID
+  local icon = type(f) == "function" and try(f, id) or nil
+  if icon then return icon end
+  local _, _, _, _, _, _, _, _, _, path = ns.itemInfo(id)
+  return path
+end
+
+function A.fillVendors(again)
   if filling then return end
   local ids = {}
   for id, it in pairs(A.store().items) do
-    if type(it) == "table" and it.vendor == nil then ids[#ids + 1] = id end
+    if type(it) == "table" and (it.vendor == nil or not it.name) then ids[#ids + 1] = id end
   end
   if #ids == 0 then return end
   filling = true
-  local k = 0
+  local k, missing = 0, 0
   local function step()
     for _ = 1, 40 do
       k = k + 1
@@ -989,12 +1017,25 @@ function A.fillVendors()
         filling = nil
         A.version = A.version + 1
         refreshCard()
+        -- items the cache was asked to load: their names come a moment later
+        again = (again or 0) + 1
+        if missing > 0 and again <= 3 then ns.after(5, function() A.fillVendors(again) end) end
         return
       end
       local it = A.store().items[id]
       if type(it) == "table" then
-        local v = tonumber((select(11, ns.itemInfo(id))))
+        local name, _, _, _, _, _, _, _, _, _, v = ns.itemInfo(id)
+        v = tonumber(v)
         if v then it.vendor = v end
+        if not it.name then
+          if type(name) == "string" and name ~= "" then
+            it.name = name
+            if indexFor == A.store() then nameIndex[name:lower()] = id end
+          else
+            missing = missing + 1
+            A.nameOf(id)
+          end
+        end
       end
     end
     ns.after(0.1, step)

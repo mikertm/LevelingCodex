@@ -88,6 +88,7 @@ end
 
 -- The first Codex tab right of the rightmost shown tab, with the same gap as the two before it;
 -- the others in a row after it.
+local placedBelow -- true while the tabs sit in their own row under the others
 local function place()
   local tab = tabs[1]
   if not tab or not root then return end
@@ -108,6 +109,28 @@ local function place()
   for _, t in ipairs(tabs) do if has(t, "SetFrameLevel") then pcall(t.SetFrameLevel, t, level + 2) end end
   tab:ClearAllPoints()
   local last, prev = shown[#shown], shown[#shown - 1]
+  -- a row too long to take them (Auctionator adds four tabs): a second row under it, ending at the
+  -- auction house's bottom right corner
+  local width = 0
+  for i, t in ipairs(tabs) do width = width + (tonumber((try(t.GetWidth, t))) or 90) - (i > 1 and 8 or 0) end
+  local rootRight, rootBottom = tonumber((try(root.GetRight, root))), tonumber((try(root.GetBottom, root)))
+  local rowBottom
+  for _, e in ipairs(shown) do
+    local b = tonumber((try(e.b.GetBottom, e.b)))
+    if b then rowBottom = math.min(rowBottom or b, b) end
+  end
+  placedBelow = nil
+  if last and rootRight and rootBottom and rowBottom and last.r + 10 + width > rootRight + 4 then
+    placedBelow = true
+    local n = #tabs
+    tabs[n]:ClearAllPoints()
+    tabs[n]:SetPoint("TOPRIGHT", root, "BOTTOMRIGHT", -8, rowBottom - rootBottom + 6)
+    for i = n - 1, 1, -1 do
+      tabs[i]:ClearAllPoints()
+      tabs[i]:SetPoint("RIGHT", tabs[i + 1], "LEFT", 8, 0)
+    end
+    return
+  end
   if last then
     local gap = prev and math.max(-20, math.min(10, last.l - prev.r)) or 0
     tab:SetPoint("LEFT", last.b, "RIGHT", gap, 0)
@@ -492,8 +515,7 @@ local function scanAllButton(label, x, y, w)
 end
 
 local function itemIcon(id)
-  local _, _, _, _, _, _, _, _, _, path = ns.itemInfo(id)
-  return path or "INV_Misc_QuestionMark"
+  return A().iconOf(id) or "INV_Misc_QuestionMark"
 end
 
 ----------------------------------------------------------------------------
@@ -709,7 +731,7 @@ local function chartCard(x, y, w, h, id)
   local p = A().price(id)
   local r = M().row(id)
   icon(itemIcon(id), x + 14, y + 30, 28)
-  local name = (p and p.name) or (r and r.name) or ("item " .. id)
+  local name = (p and p.name) or A().nameOf(id) or (r and r.name) or ("item " .. id)
   text(Q.plain(name), x + 50, y + 30, w - 150, "body", ns.C.gold)
   local sig = M().SIGNALS[r and r.signal or "new"]
   pill(sig[1], x + w - 92, y + 30, 78, sig[2])
@@ -1439,7 +1461,8 @@ function ns.auctionPanelDebugLines()
     local l, t = tonumber((try(tabs[1].GetLeft, tabs[1]))), tonumber((try(tabs[1].GetTop, tabs[1])))
     local name = placedAfter and has(placedAfter, "GetName") and placedAfter:GetName()
     where = (tabs[1]:IsVisible() and "visible" or "not visible") .. " at " .. (l and math.floor(l) or "?") .. ", " .. (t and math.floor(t) or "?")
-      .. ", after " .. (placedAfter and (name or "an unnamed tab") or "nothing (bottom left)")
+      .. (placedBelow and ", in their own row at the bottom right corner (the tab row is full)"
+        or (", after " .. (placedAfter and (name or "an unnamed tab") or "nothing (bottom left)")))
   end
   local rootName = type(root) == "table" and has(root, "GetName") and root:GetName() or (root and "unnamed frame" or "none")
   return { "auction tabs: " .. (#tabs > 0 and (#tabs .. " made, " .. where) or "not made") .. ", auction house " .. tostring(rootName)
