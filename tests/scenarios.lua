@@ -13170,20 +13170,24 @@ function S.journeyVoice()
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
--- The window's height: it starts filling the screen, Short puts the old height back, Settings steps it.
+-- The window's height: Auto keeps the plain tabs at 620 and lets the Journey book fill the screen;
+-- Fit the screen and Short apply to every tab; Settings steps it.
 function S.windowHeight()
   S.login()
   slash("")
   local f = _G.LevelingCodexFrame
-  check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "the window starts filling the screen (" .. tostring(f:GetHeight()) .. ")")
+  check(math.floor(f:GetHeight() + 0.5) == 620, "a plain tab starts at 620 (" .. tostring(f:GetHeight()) .. ")")
+  click(win(), "Journey")
+  check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "the Journey book fills the screen (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Settings")
-  click(win(), "Short")
-  check(math.floor(f:GetHeight() + 0.5) == 620, "Short makes it 620 (" .. tostring(f:GetHeight()) .. ")")
+  check(math.floor(f:GetHeight() + 0.5) == 620, "back on a plain tab it is 620 again (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Height +")
   check(math.floor(f:GetHeight() + 0.5) == 700, "Height + makes it taller (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Fit the screen")
   check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "Fit the screen fills the screen (" .. tostring(f:GetHeight()) .. ")")
   click(win(), "Short")
+  check(math.floor(f:GetHeight() + 0.5) == 620, "Short makes it 620 (" .. tostring(f:GetHeight()) .. ")")
+  click(win(), "Auto")
   local grip = _G.LevelingCodexSizeGrip
   check(grip, "the window has a size grip")
   if grip then
