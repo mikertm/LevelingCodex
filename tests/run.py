@@ -1186,6 +1186,7 @@ def main():
         runs.append(("WARRIOR/%s/auction-trade" % variant, "WARRIOR", minimal, ["auctionTrade"]))
         if not minimal:
             runs.append(("WARRIOR/full/auction-big-scan", "WARRIOR", False, ["auctionBigScan"]))
+            runs.append(("WARRIOR/full/auction-market", "WARRIOR", False, ["auctionMarket"]))
         runs.append(("WARRIOR/%s/journey-record" % variant, "WARRIOR", minimal, ["journeyRecord"]))
         runs.append(("WARRIOR/%s/journey-tab" % variant, "WARRIOR", minimal, ["journeyTab"]))
         runs.append(("WARRIOR/%s/journey-deeds" % variant, "WARRIOR", minimal, ["journeyDeeds"]))

@@ -11069,11 +11069,13 @@ function S.auctionTools()
   local panel = _G.LevelingCodexAHPanel
   check(panel and panel:IsShown() and questText(panel, "LEVELING CODEX"), "the Codex tab shows its panel")
   check(tabButton._points[1] and tabButton._points[1][2] == AuctionHouseFrame.Tabs[3], "the tab sits after the last tab")
+  local market = findButton(AuctionHouseFrame, function(l) return l == "Market" end)
   local deals = findButton(AuctionHouseFrame, function(l) return l == "Deals" end)
   local sell = findButton(AuctionHouseFrame, function(l) return l == "Quick Sell" end)
   local scan = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
-  check(deals and sell and scan and deals:GetParent() == AuctionHouseFrame and deals._points[1][2] == tabButton
-    and sell._points[1][2] == deals and scan._points[1][2] == sell, "Deals, Quick Sell and Scan are tabs of their own after Codex")
+  check(market and deals and sell and scan and deals:GetParent() == AuctionHouseFrame and market._points[1][2] == tabButton
+    and deals._points[1][2] == market and sell._points[1][2] == deals and scan._points[1][2] == sell,
+    "Market, Deals, Quick Sell and Scan are tabs of their own after Codex")
   click(AuctionHouseFrame, "Deals")
   check(panel:IsShown() and questText(panel, "CODEX DEALS"), "the Deals tab opens its page")
   click(AuctionHouseFrame, "Codex")
@@ -11372,6 +11374,103 @@ function S.auctionTrade()
   check(not MOCK.ns.auction.sniper.on and #MOCK.browsed <= after + 1, "a second click stops it")
   for _, pg in ipairs({ "Codex", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+  MOCK.closeAuction()
+end
+
+-- The Market tab: movers from days and from readings, the chart, hot items, the ticker; the
+-- sniper following the Deals choices, checking a deal it finds and showing its potential profit;
+-- a flip bought, posted and sold (the game's chat line) in the trade record; each page's refresh.
+function S.auctionMarket()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local t = time()
+  local function hist(name, before, low, n, vendor)
+    return { name = name, low = low, med = low, n = n, at = t, vendor = vendor,
+      days = { [day - 2] = { low = before, med = before }, [day - 1] = { low = before, med = before }, [day] = { low = low, med = low } } }
+  end
+  LevelingCodexDB = LevelingCodexDB or {}
+  local items = {
+    [2589] = hist("Linen Cloth", 100, 150, 30), [2592] = hist("Wool Cloth", 300, 150, 4),
+    [4338] = hist("Mageweave Cloth", 500, 200, 3),
+    [4306] = { name = "Silk Cloth", low = 1500, n = 5, at = t, days = {}, tk = { t - 3600, 1000, 20, t - 60, 1500, 5 } },
+  }
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = items } } }
+  MOCK.money = 100000
+  MOCK.auctions = { { id = 4338, name = "Mageweave Cloth", count = 3, buyout = 600 },
+    { id = 2589, name = "Linen Cloth", count = 30, buyout = 4500 }, { id = 4306, name = "Silk Cloth", count = 5, buyout = 7500 } }
+  S.login()
+  local M = MOCK.ns.auctionMarket
+  check(#M.gainers() == 2 and #M.losers() == 2, "movers from days and from readings (" .. #M.gainers() .. " up, " .. #M.losers() .. " down)")
+  check(M.row(4306).move == 50 and M.row(4306).supply == -75 and M.row(4306).signal == "hot", "a price up 50% with the supply down 75% is hot")
+  check(M.row(2592).signal == "buy", "a price far under its usual says buy")
+  MOCK.openAuction()
+  MOCK.advance(2)
+  click(AuctionHouseFrame, "Codex")
+  local panel = _G.LevelingCodexAHPanel
+  check(questText(panel, "MARKET MOVERS") and questText(panel, "YOUR TRADES") and questText(panel, "+50%"), "Overview shows the movers")
+  check(questText(panel, "Silk Cloth|r 15s "), "the ticker names the moves")
+  click(AuctionHouseFrame, "Market")
+  check(questText(panel, "CODEX MARKET") and questText(panel, "TOP GAINERS") and questText(panel, "TOP LOSERS")
+    and questText(panel, "PRICE CHART") and questText(panel, "-50%"), "the Market page lists gainers and losers with a chart")
+  click(panel, "Chart Wool Cloth")
+  check(questText(panel, "usual 3s") and questText(panel, "BUY") and questText(panel, "Range (days)"), "a click charts the item with its signal")
+  local lines = 0
+  local function count(f)
+    for _, r in ipairs({ f:GetRegions() }) do if r._isLine and r:IsShown() and r._start and r._finish then lines = lines + 1 end end
+    for _, c in ipairs({ f:GetChildren() }) do count(c) end
+  end
+  count(panel)
+  check(lines >= 2, "the chart draws its price as a line (" .. lines .. " segments)")
+  click(panel, "Hot and signals")
+  check(questText(panel, "HOT RIGHT NOW") and questText(panel, "BUY AND SELL SIGNALS") and questText(panel, "HOT"), "hot items and signals")
+  local before = #MOCK.browsed
+  click(panel, "Recheck movers")
+  MOCK.advance(6)
+  local silk = false
+  for i = before + 1, #MOCK.browsed do if MOCK.browsed[i] == "Silk Cloth" then silk = true end end
+  check(silk and chatHas("Rechecking"), "Recheck movers searches the page's items again from the header")
+  -- the sniper on flips only
+  click(AuctionHouseFrame, "Deals")
+  click(panel, "Flips")
+  local sn = MOCK.ns.auction.sniper
+  click(panel, "Snipe deals")
+  check(sn.on and sn.kind == "flip", "the sniper takes the kind chosen on the page")
+  local T = MOCK.ns.auctionTrade
+  MOCK.advance(12)
+  check(T.dealLabel(4338) == "Buy 3 for 6s", "a deal the sniper finds is checked at once (" .. T.dealLabel(4338) .. ")")
+  check(questText(panel, "+8s 25c") and questText(panel, "potential, 3 under the limit") and questText(panel, "potential profit"),
+    "its row and the sniper show the potential profit")
+  local watched = #sn.list
+  click(panel, "Under vendor")
+  check(sn.kind == "vendor" and (not sn.on or #sn.list ~= watched), "a new choice changes what the sniper watches")
+  if sn.on then click(panel, "Snipe deals") end
+  click(panel, "All deals")
+  check(findButton(panel, function(l) return l == "Recheck deals" end) and findButton(panel, function(l) return l == "Scan all" end),
+    "the Deals page has its own refresh next to Scan all")
+  -- buy, post and sell a flip
+  click(panel, "Deal Mageweave Cloth")
+  MOCK.advance(1)
+  click(panel, "Deal Mageweave Cloth")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 1, "the deal is bought")
+  MOCK.auctions = {}
+  MOCK.bagItems = { { name = "Mageweave Cloth", id = 4338, quality = 1, level = 1, sell = 0, count = 3, class = "Trade Goods" } }
+  MOCK.event("BAG_UPDATE_DELAYED")
+  click(AuctionHouseFrame, "Quick Sell")
+  check(findButton(panel, function(l) return l == "Reprice bags" end), "Quick Sell has Reprice bags")
+  for _ = 1, 4 do click(panel, "Raise Mageweave Cloth") end
+  click(panel, "Post Mageweave Cloth")
+  click(panel, "Post Mageweave Cloth")
+  check(#MOCK.posted == 1, "the flip is posted")
+  MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Mageweave Cloth.")
+  local rec = M.record()
+  check(rec.wins == 1 and rec.profit > 0 and rec.flips[1].name == "Mageweave Cloth", "the sale closes the post as a won flip")
+  click(AuctionHouseFrame, "Market")
+  click(panel, "Your trades")
+  check(questText(panel, "NET PROFIT") and questText(panel, "FLIPS WON") and questText(panel, "100%") and questText(panel, "SOLD")
+    and questText(panel, "BOUGHT") and questText(panel, "POSTED"), "Your trades shows the record and the log")
+  for _, pg in ipairs({ "Codex", "Market", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
+  check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+  check(table.concat(MOCK.ns.auctionMarketDebugLines(), " "):find("1 won", 1, true), "/codex debug sums the record")
   MOCK.closeAuction()
 end
 

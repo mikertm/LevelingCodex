@@ -119,6 +119,34 @@ function A.count()
   return n
 end
 
+-- Recent readings for the market view (AuctionMarket.lua): it.tk = { t, low, n, t, low, n, ... },
+-- oldest first, at most A.TICKS readings; a reading within A.TICK_GAP of the newest one replaces
+-- its price and quantity, so two readings are always that far apart (a move "since the last scan").
+A.TICK_GAP, A.TICKS = 15 * 60, 6
+local function tick(it, low, n)
+  local tk = type(it.tk) == "table" and it.tk or {}
+  it.tk = tk
+  local t, k = now(), #tk
+  if k >= 3 and t - (tonumber(tk[k - 2]) or 0) < A.TICK_GAP then
+    tk[k - 1], tk[k] = low, n
+  else
+    tk[k + 1], tk[k + 2], tk[k + 3] = t, low, n
+  end
+  while #tk > A.TICKS * 3 do table.remove(tk, 1); table.remove(tk, 1); table.remove(tk, 1) end
+end
+
+-- The recent readings, oldest first: { { t, low, n } }.
+function A.ticks(id)
+  local it = tonumber(id) and A.store().items[tonumber(id)]
+  local out = {}
+  local tk = type(it) == "table" and type(it.tk) == "table" and it.tk or {}
+  for i = 1, #tk - 2, 3 do
+    local t, low, n = tonumber(tk[i]), tonumber(tk[i + 1]), tonumber(tk[i + 2])
+    if t and low then out[#out + 1] = { t = t, low = low, n = n or 0 } end
+  end
+  return out
+end
+
 -- Files a reading. med/high only when the reading had every listing (a full scan or a search page).
 A.version = 0 -- bumped by every change to the prices (for caches)
 function A.record(id, name, low, n, med, high)
@@ -140,6 +168,7 @@ function A.record(id, name, low, n, med, high)
   if vendor and vendor > 0 then it.vendor = vendor end
   local d = today()
   if low then
+    tick(it, low, tonumber(n) or 0)
     it.low, it.med, it.high = low, med or it.med, high or it.high
     local rec = it.days[d]
     if type(rec) ~= "table" then rec = {}; it.days[d] = rec end
@@ -616,19 +645,29 @@ end
 -- makes a deal is said in chat with a chime (AuctionTrade.lua's T.alert). It only searches:
 -- buying stays a click.
 A.SNIPE_GAP, A.SNIPE_SIZE = 1, 200
-local snipe = { on = false, list = {}, i = 0, checked = 0, laps = 0 }
+local snipe = { on = false, list = {}, i = 0, checked = 0, laps = 0, kind = nil }
 A.sniper = snipe
 
+-- The watch list follows the Deals page's choices: snipe.kind ("vendor" = items a vendor pays for,
+-- "flip" = items with two days of history, nil = both) and Worth at least (an item whose best deal
+-- couldn't make that much is left out). A.retarget() rebuilds it when a choice changes.
 function A.snipeList()
   local T = ns.auctionTrade
   local hidden = T and T.notes().hidden or {}
+  local kind, minProfit = snipe.kind, T and T.minProfit() or 0
   local rows = {}
   for id, it in pairs(A.store().items) do
     if type(it) == "table" and type(it.name) == "string" and not hidden[id] then
       local days = 0
       for _ in pairs(type(it.days) == "table" and it.days or {}) do days = days + 1 end
-      local worth = tonumber(it.vendor) or (days >= 2 and tonumber(it.med or it.low)) or nil
-      if worth and worth > 0 then rows[#rows + 1] = { it.name, worth } end
+      local vendor = tonumber(it.vendor)
+      vendor = vendor and vendor > 0 and vendor or nil
+      local usual = days >= 2 and tonumber(it.med or it.low) or nil
+      local worth
+      if kind == "vendor" then worth = vendor
+      elseif kind == "flip" then worth = usual and math.floor(usual * 0.95)
+      else worth = vendor or (usual and math.floor(usual * 0.95)) end
+      if worth and worth > 0 and worth > minProfit then rows[#rows + 1] = { it.name, worth } end
     end
   end
   table.sort(rows, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
@@ -656,6 +695,19 @@ function A.toggleSnipe(on)
   A.pump()
   refreshCard()
   return true
+end
+
+-- A choice on the Deals page changed (kind, Worth at least, Flip at, hiding): a running sniper
+-- watches the new list from its start.
+function A.retarget(kind)
+  snipe.kind = kind
+  if not snipe.on then return end
+  snipe.list, snipe.i = A.snipeList(), 0
+  if #snipe.list == 0 then
+    snipe.on = false
+    ns.say("Sniper stopped: nothing matches those choices yet.")
+  end
+  refreshCard()
 end
 
 function A.pump()
@@ -888,15 +940,22 @@ end
 
 -- Searches every item in your bags you could sell whose price is older than 30 minutes.
 -- Returns how many it queued.
-function A.scanBags()
+-- force = every one of them, however fresh (the page Refresh buttons).
+function A.scanBags(force)
   if not open then return 0 end
   local names = {}
   local T = ns.auctionTrade
   for _, row in ipairs(T and T.sellable(true, true) or {}) do
     local p = A.price(row.id)
-    if not (p and not p.source and p.at and now() - p.at < A.FRESH) then names[#names + 1] = row.name end
+    if force or not (p and not p.source and p.at and now() - p.at < A.FRESH) then names[#names + 1] = row.name end
   end
   return queueNames(names)
+end
+
+-- Searches these names again now (the Market and Deals Refresh buttons). Returns how many it queued.
+function A.searchNames(names)
+  if not open then return 0 end
+  return queueNames(names or {})
 end
 
 -- Searches what your guide needs now, even with Auctionator loaded. Returns how many it queued.
@@ -953,7 +1012,14 @@ function A.find(text)
 end
 
 -- The Codex tab redraws when prices change.
-refreshCard = function() if ns.auctionPanel then ns.auctionPanel.refresh() end end
+-- Prices arrive a search at a time (the sniper: one a second), so the redraws they ask for are
+-- folded into one 0.2 s later; a click still redraws at once (AuctionPanel.lua's buttons).
+local redrawDue = false
+refreshCard = function()
+  if redrawDue or not ns.auctionPanel then return end
+  redrawDue = true
+  ns.after(0.2, function() redrawDue = false; ns.auctionPanel.refresh() end)
+end
 A.refresh = function() refreshCard() end
 
 ----------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 -- AuctionPanel.lua: the Codex tabs in the auction house's tab row (ns.auctionPanel, P).
--- Four tab buttons after the last tab hanging under the auction house (Blizzard's, Auctionator's):
--- Codex (the overview), Deals, Quick Sell and Scan, each showing its page on a panel over the
--- auction house's content.
+-- Five tab buttons after the last tab hanging under the auction house (Blizzard's, Auctionator's):
+-- Codex (the overview), Market (movers, hot items, charts, your trades), Deals, Quick Sell and Scan,
+-- each showing its page on a panel over the auction house's content. The header carries the
+-- page's quick refresh, Scan all and the ticker on every page.
 -- Taint: the Codex never calls Blizzard's SetDisplayMode, never hides Blizzard's frames and never
 -- joins its Tabs list. Clicking another tab (an OnClick hook) or the auction house changing mode
 -- (hooksecurefunc on SetDisplayMode) hides the panel. Every post, purchase and cancel is one click
@@ -15,6 +16,7 @@ ns.auctionPanel = P
 
 P.PAGES = {
   { "overview", "Codex", "Your visit, market data and what your guide needs." },
+  { "market", "Market", "Biggest movers, hot items, price charts and your wins and losses." },
   { "deals", "Deals", "Listings under vendor price or far under their usual price, and the deal sniper." },
   { "selling", "Quick Sell", "Post your bags at the right price, and watch your auctions for undercuts." },
   { "scan", "Scan", "Full and paged scans, quick searches, settings and item look-up." },
@@ -25,8 +27,11 @@ local tabs, ours = {}, {}
 local placedAfter, shows = nil, 0 -- tabs[i] = the button for P.PAGES[i]; ours[button] = true
 local hooked = {}
 local offsets, wheelKey = {}, nil
-local view = { deals = nil, hidden = false, lookup = nil }
+local view = { deals = nil, hidden = false, lookup = nil, market = nil, marketMode = "movers" }
+local ticker
 local forgetAt
+local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 }
+local function M() return ns.auctionMarket end
 
 local function has(t, name) return type(t) == "table" and type(t[name]) == "function" end
 local function now() return tonumber(time and time()) or 0 end
@@ -268,6 +273,123 @@ local function bar(x, y, w, h, pct, color)
   if pct > 0 then rect(x, y, math.max(1, math.floor(w * math.min(1, pct))), h, color or ns.C.accent, "BORDER") end
 end
 
+-- A line from x1, y1 to x2, y2 (y grows down): the client's Line where it has one, else dots.
+local function seg(x1, y1, x2, y2, color, thick)
+  local r, g, b, a = color[1], color[2], color[3], color[4] or 1
+  if has(body, "CreateLine") then
+    local l = take("line", function() return body:CreateLine(nil, "ARTWORK") end)
+    l:SetStartPoint("TOPLEFT", body, x1, -y1)
+    l:SetEndPoint("TOPLEFT", body, x2, -y2)
+    l:SetThickness(thick or 2)
+    l:SetColorTexture(r, g, b, a)
+    return
+  end
+  local dx, dy = x2 - x1, y2 - y1
+  local steps = math.max(1, math.floor(math.sqrt(dx * dx + dy * dy) / 2))
+  for i = 0, steps do
+    rect(math.floor(x1 + dx * i / steps), math.floor(y1 + dy * i / steps), thick or 2, thick or 2, { r, g, b, a }, "ARTWORK")
+  end
+end
+
+-- An invisible button over x, y, w, h: a tooltip, and a click when onClick is given.
+local function hit(x, y, w, h, title, tipText, onClick, label)
+  local b = take("hit", function()
+    local f = CreateFrame("Button", nil, body)
+    f:SetScript("OnEnter", ns.art.showTip)
+    f:SetScript("OnLeave", ns.art.hideTip)
+    return f
+  end)
+  b:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
+  b:SetSize(math.max(1, w), math.max(1, h))
+  b:SetFrameLevel(body:GetFrameLevel() + 3)
+  b.tipTitle, b.tipText, b.codexLabel = title, tipText, label
+  b:SetScript("OnClick", onClick and function() onClick(); P.refresh() end or nil)
+  return b
+end
+
+-- A tag: text on a faint plate of its colour, w wide (centred).
+local function pill(s, x, y, w, color)
+  local c = color or ns.C.accent
+  rect(x, y, w, 16, { c[1], c[2], c[3], 0.16 }, "BORDER")
+  rect(x, y, 2, 16, { c[1], c[2], c[3], 0.9 }, "ARTWORK")
+  text(s, x + 3, y + 2, w - 4, "dim", c, "CENTER")
+end
+
+-- A line chart of points = { { v, label, sub } } (oldest first) in x, y, w, h.
+-- opts: usual (a dashed line), mini (no labels, grid or hover), color, title (hover heading).
+local function lineChart(points, x, y, w, h, opts)
+  opts = opts or {}
+  local n = #points
+  if not opts.mini then rect(x, y, w, h, { 0, 0, 0, 0.35 }) end
+  if n < 2 then
+    if not opts.mini then text(n == 1 and "One reading so far: scan again later to draw a line." or "No prices recorded yet.",
+      x + 8, y + h / 2 - 6, w - 16, "dim", ns.C.dim, "CENTER") end
+    return
+  end
+  local lo, hi = math.huge, 0
+  for _, pt in ipairs(points) do lo, hi = math.min(lo, pt.v), math.max(hi, pt.v) end
+  if opts.usual then lo, hi = math.min(lo, opts.usual), math.max(hi, opts.usual) end
+  if hi == lo then hi, lo = hi + math.max(1, hi * 0.05), math.max(0, lo - math.max(1, lo * 0.05)) end
+  local padL, padR, padT, padB = 4, opts.mini and 4 or 66, opts.mini and 2 or 10, opts.mini and 2 or 18
+  local cw, chh = w - padL - padR, h - padT - padB
+  local function px(i) return x + padL + math.floor(cw * (i - 1) / (n - 1) + 0.5) end
+  local function py(v) return y + padT + math.floor(chh * (hi - v) / (hi - lo) + 0.5) end
+  local up = points[n].v >= points[1].v
+  local color = opts.color or (up and GREEN or RED)
+  if not opts.mini then
+    -- grid and price labels
+    for k = 0, 3 do
+      local gy = y + padT + math.floor(chh * k / 3 + 0.5)
+      rect(x + padL, gy, cw, 1, { 1, 1, 1, 0.06 }, "BORDER")
+      text(ns.money(math.floor(hi - (hi - lo) * k / 3 + 0.5)), x + w - padR + 6, gy - 6, padR - 8, "dim", ns.C.dim)
+    end
+    -- the area under the line
+    local slot = math.max(1, math.floor(cw / (n - 1)))
+    for i = 1, n do
+      local top = py(points[i].v)
+      local cx = px(i) - (i == 1 and 0 or math.floor(slot / 2))
+      local cw2 = (i == 1 or i == n) and math.ceil(slot / 2) or slot
+      rect(cx, top, math.max(1, cw2), y + padT + chh - top, { color[1], color[2], color[3], 0.10 }, "BORDER")
+    end
+  end
+  if opts.usual then
+    local uy = py(opts.usual)
+    for dx = 0, cw - 6, 10 do rect(x + padL + dx, uy, 6, 1, { 1, 0.82, 0, opts.mini and 0.35 or 0.55 }, "ARTWORK") end
+    if not opts.mini then text("usual", x + padL + 4, uy - 12, 60, "dim", ns.C.gold) end
+  end
+  for i = 2, n do seg(px(i - 1), py(points[i - 1].v), px(i), py(points[i].v), color, opts.mini and 1.5 or 2) end
+  if opts.mini then return end
+  for i = 1, n do
+    local last = i == n
+    local sz = last and 6 or 4
+    rect(px(i) - sz / 2, py(points[i].v) - sz / 2, sz, sz, last and ns.C.gold or color, "OVERLAY")
+    local slot = math.max(6, math.floor(cw / (n - 1)))
+    hit(px(i) - slot / 2, y, slot, h, points[i].label, ns.money(points[i].v) .. (points[i].sub and ("\n" .. points[i].sub) or ""))
+  end
+  text(points[1].label or "", x + padL, y + h - 14, 120, "dim", ns.C.dim)
+  text(points[n].label or "", x + w - padR - 124, y + h - 14, 120, "dim", ns.C.dim, "RIGHT")
+end
+
+-- An item's points for a chart: its days (two or more), else its readings since the first scan.
+local function daysAgo(day)
+  local d = math.floor(now() / 86400) - day
+  return d <= 0 and "today" or (d == 1 and "yesterday" or (d .. " days ago"))
+end
+local function chartPoints(id)
+  local hist, pts = A().history(id), {}
+  if #hist >= 2 then
+    for _, d in ipairs(hist) do
+      pts[#pts + 1] = { v = d.med or d.low, label = daysAgo(d.day),
+        sub = d.low and d.med and d.low ~= d.med and ("lowest " .. ns.money(d.low)) or nil }
+    end
+    return pts, "days"
+  end
+  for _, t in ipairs(A().ticks(id)) do
+    pts[#pts + 1] = { v = t.low, label = A().age(t.t), sub = t.n and (ns.thousands(t.n) .. " listed") or nil }
+  end
+  return pts, "scans"
+end
+
 -- A paged list: rows from offsets[key], as many as fit in height; returns the height used.
 -- The mouse wheel scrolls the page's main list (the last one drawn with more rows than fit).
 local function list(key, rows, x, y, w, rowH, height, draw)
@@ -317,6 +439,30 @@ local function makePanel()
   body:SetAllPoints()
   body.tint = body:CreateTexture(nil, "BACKGROUND")
   body.tint:SetAllPoints()
+  -- the ticker: the biggest moves scrolling past (clipped where the client can clip a frame)
+  ticker = CreateFrame("Frame", nil, body)
+  ticker:SetHeight(18)
+  ticker:SetFrameLevel(body:GetFrameLevel() + 2)
+  if has(ticker, "SetClipsChildren") and pcall(ticker.SetClipsChildren, ticker, true) then ticker.clips = true end
+  ticker.base = ticker:CreateTexture(nil, "BACKGROUND")
+  ticker.base:SetAllPoints()
+  ticker.base:SetColorTexture(0, 0, 0, 0.5)
+  ticker.label = ticker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  ticker.label:SetPoint("LEFT", ticker, "LEFT", 6, 0)
+  ticker.label:SetText("MARKET")
+  ticker.strip = CreateFrame("Frame", nil, ticker)
+  ticker.strip:SetPoint("TOPLEFT", ticker, "TOPLEFT", 62, 0)
+  ticker.strip:SetPoint("BOTTOMRIGHT", ticker, "BOTTOMRIGHT", -4, 0)
+  if has(ticker.strip, "SetClipsChildren") and pcall(ticker.strip.SetClipsChildren, ticker.strip, true) then ticker.clips = true end
+  ticker.a = ticker.strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  ticker.b = ticker.strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  for _, fs in ipairs({ ticker.a, ticker.b }) do fs:SetWordWrap(false); fs:SetJustifyH("LEFT") end
+  ticker:SetScript("OnUpdate", function(self)
+    if not self.wide or not self.clips then return end
+    local off = (tonumber(GetTime and GetTime()) or 0) * 32 % self.wide
+    self.a:ClearAllPoints(); self.a:SetPoint("LEFT", self.strip, "LEFT", -off, 0)
+    self.b:ClearAllPoints(); self.b:SetPoint("LEFT", self.strip, "LEFT", self.wide - off, 0)
+  end)
   panel:Hide()
 end
 
@@ -324,7 +470,6 @@ end
 -- Pieces the pages share
 ----------------------------------------------------------------------------
 
-local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 }
 
 local function money(c) return ns.auction.coins(c) end
 
@@ -357,18 +502,63 @@ end
 
 local pages = {}
 
+local function signed(c)
+  c = math.floor(tonumber(c) or 0)
+  return (c < 0 and "-" or "+") .. ns.money(math.abs(c))
+end
+
+-- Opens the Market page with an item charted.
+local function chartItem(id, mode)
+  view.market = id
+  if mode then view.marketMode = mode end
+  P.open("market")
+end
+
+-- A mover's tooltip: now, usual, the change and its basis, supply, the signal.
+local function moverTip(r)
+  local lines = { "Now " .. ns.money(r.last) .. (r.usual and (", usual " .. ns.money(r.usual)) or "") }
+  if r.trend then lines[#lines + 1] = "Against earlier days: " .. M().pctText(r.trend) end
+  if r.move then lines[#lines + 1] = "Since the reading " .. A().age(now() - (r.moveAge or 0)):gsub(" ago$", "") .. " before: " .. M().pctText(r.move) end
+  lines[#lines + 1] = ns.thousands(r.n) .. " listed" .. (r.supply and (" (" .. M().pctText(r.supply) .. ")") or "")
+  local sig = M().SIGNALS[r.signal]
+  if sig then lines[#lines + 1] = sig[1] .. ": " .. sig[3] end
+  lines[#lines + 1] = "Click to chart it."
+  return table.concat(lines, "\n")
+end
+
+-- One mover: icon, name, a little line, the price and the change as a tag (22 px).
+local function moverRow(r, x, y, w, opts)
+  opts = opts or {}
+  local sel = view.market == r.id and P.page() == "market"
+  if sel then rect(x, y, w, 21, { ns.C.accent[1], ns.C.accent[2], ns.C.accent[3], 0.14 }, "BORDER") end
+  icon(itemIcon(r.id), x + 4, y + 3, 16)
+  local right = opts.compact and 56 or 196
+  text(Q.plain(r.name), x + 24, y + 4, w - 24 - right, "small", sel and ns.C.gold or ns.C.light)
+  if not opts.compact then
+    lineChart((chartPoints(r.id)), x + w - 190, y + 3, 58, 15, { mini = true })
+    text(ns.money(r.last), x + w - 126, y + 4, 70, "small", ns.C.light, "RIGHT")
+  end
+  if opts.tag then
+    local sig = M().SIGNALS[r.signal] or M().SIGNALS.new
+    pill(sig[1], x + w - 52, y + 3, 50, sig[2])
+  else
+    pill(M().pctText(r.change), x + w - 52, y + 3, 50, M().pctColor(r.change))
+  end
+  hit(x, y, w, 21, r.name, moverTip(r), function() chartItem(r.id) end, "Chart " .. r.name)
+end
+
 function pages.overview(W, top, H)
   local lw = math.floor((W - 48) / 2)
   local lx, rx = 16, 16 + lw + 16
   local L = T().ledger()
   -- this visit
   local y = top
-  card(lx, y, lw, 128, "THIS VISIT", "gold now " .. ns.money(tonumber(try(GetMoney)) or 0))
-  local ly = y + 34
+  card(lx, y, lw, 112, "THIS VISIT", "gold now " .. ns.money(tonumber(try(GetMoney)) or 0))
+  local ly = y + 32
   local function line(label, value, color)
     text(label, lx + 14, ly, 150, "small", ns.C.dim)
     text(value, lx + 160, ly, lw - 174, "small", color or ns.C.light, "RIGHT")
-    ly = ly + 18
+    ly = ly + 17
   end
   line("Posted", L.posts .. (L.posts == 1 and " auction, " or " auctions, ") .. money(L.posted))
   line("Deposits paid", money(L.deposits))
@@ -377,28 +567,51 @@ function pages.overview(W, top, H)
     local f = ns.gold.fund()
     if f.have then
       line("Mount fund", ns.money(f.have) .. " of " .. ns.money(f.goal) .. " (" .. f.pct .. "%)", f.ready and GREEN)
-      bar(lx + 14, ly + 2, lw - 28, 6, f.pct / 100, f.ready and GREEN or ns.C.accent)
+      bar(lx + 14, ly + 1, lw - 28, 5, f.pct / 100, f.ready and GREEN or ns.C.accent)
     end
   end
   -- market data
-  y = y + 140
+  y = y + 124
   local age, ageColor = scanAge()
-  card(lx, y, lw, 112, "MARKET DATA")
-  text(ns.thousands(A().count()) .. " items priced on " .. Q.plain(GetRealmName and GetRealmName() or "this realm"), lx + 14, y + 34, lw - 28, "small")
-  text("Full scan:", lx + 14, y + 52, 80, "small", ns.C.dim)
-  text(age, lx + 90, y + 52, lw - 104, "small", ageColor)
-  scanAllButton(nil, lx + 14, y + 76, math.floor((lw - 36) / 2))
-  button("Scan my bags", lx + 22 + math.floor((lw - 36) / 2), y + 76, math.floor((lw - 36) / 2), function()
+  card(lx, y, lw, 96, "MARKET DATA")
+  text(ns.thousands(A().count()) .. " items priced on " .. Q.plain(GetRealmName and GetRealmName() or "this realm"), lx + 14, y + 32, lw - 28, "small")
+  text("Last scan:", lx + 14, y + 49, 80, "small", ns.C.dim)
+  text(age, lx + 90, y + 49, lw - 104, "small", ageColor)
+  scanAllButton(nil, lx + 14, y + 68, math.floor((lw - 36) / 2))
+  button("Scan my bags", lx + 22 + math.floor((lw - 36) / 2), y + 68, math.floor((lw - 36) / 2), function()
     ns.say("Searching " .. A().scanBags() .. " items from your bags.")
   end, { tip = "Scan my bags", tipText = "Searches each item you could sell whose price is older than 30 minutes." })
-  -- opportunities
+  -- your trades
+  y = y + 108
+  local rec = M().record()
+  local th = top + H - y
+  card(lx, y, lw, th, "YOUR TRADES", "kept between visits")
+  button("See trades", lx + lw - 104, y + 6, 92, function() view.marketMode = "trades"; P.open("market") end, { label = "See trades" })
+  local ty = y + 34
+  if #T().notes().log == 0 then
+    text("Buys from Deals, posts from Quick Sell and every sale the game reports are kept here, with your wins and losses.",
+      lx + 14, ty, lw - 28, "small", ns.C.dim, nil, true)
+  else
+    local third = math.floor((lw - 28) / 3)
+    local function stat(i, label, value, color)
+      text(label, lx + 14 + (i - 1) * third, ty, third - 6, "dim", ns.C.dim)
+      text(value, lx + 14 + (i - 1) * third, ty + 13, third - 6, "body", color or ns.C.light)
+    end
+    stat(1, "Net", signed(rec.net), rec.net >= 0 and GREEN or RED)
+    stat(2, "Flips won", rec.winRate and (rec.winRate .. "%  (" .. rec.wins .. " of " .. (rec.wins + rec.losses) .. ")") or "none sold yet")
+    stat(3, "Still holding", #rec.holdings > 0 and signed(rec.unrealized) or "nothing", rec.unrealized >= 0 and GREEN or RED)
+    if rec.best and ty + 40 < y + th - 8 then
+      text("Best flip: " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit), lx + 14, ty + 36, lw - 28, "dim", GREEN)
+    end
+  end
+  -- money to make
   y = top
   local deals = T().deals()
   local sells = T().sellable()
   local worth = 0
   for _, r in ipairs(sells) do if not r.sell.blocked then worth = worth + r.sell.price * r.count end end
-  card(rx, y, lw, 128, "MONEY TO MAKE")
-  local oy = y + 34
+  card(rx, y, lw, 112, "MONEY TO MAKE")
+  local oy = y + 32
   if #deals > 0 then
     text(#deals .. (#deals == 1 and " deal" or " deals") .. ": best +" .. ns.money(deals[1].profit) .. " each on " .. Q.plain(deals[1].name),
       rx + 14, oy, lw - 120, "small", GREEN)
@@ -406,14 +619,14 @@ function pages.overview(W, top, H)
     text("No deals in your prices yet.", rx + 14, oy, lw - 120, "small", ns.C.dim)
   end
   button("Deals", rx + lw - 100, oy - 4, 86, function() P.open("deals") end, { label = "See deals" })
-  oy = oy + 28
+  oy = oy + 26
   if #sells > 0 then
     text(#sells .. (#sells == 1 and " item" or " items") .. " to sell, about " .. ns.money(worth), rx + 14, oy, lw - 120, "small")
   else
     text("Nothing priced to sell in your bags.", rx + 14, oy, lw - 120, "small", ns.C.dim)
   end
   button("Quick Sell", rx + lw - 100, oy - 4, 86, function() P.open("selling") end, { label = "See selling" })
-  oy = oy + 28
+  oy = oy + 26
   local mine, under = T().mine.list, T().undercutCount()
   if #mine > 0 then
     text(#mine .. " of yours listed" .. (under > 0 and (", " .. under .. " undercut") or ""), rx + 14, oy, lw - 120, "small", under > 0 and RED or ns.C.light)
@@ -422,30 +635,46 @@ function pages.overview(W, top, H)
   end
   button("Undercuts", rx + lw - 100, oy - 4, 86, function() P.open("selling"); T().checkUndercuts() end,
     { label = "Check undercuts", enabled = #mine > 0 })
+  -- market movers
+  y = y + 124
+  card(rx, y, lw, 112, "MARKET MOVERS")
+  button("Market", rx + lw - 100, y + 6, 86, function() view.marketMode = "movers"; P.open("market") end, { label = "See market" })
+  local half = math.floor((lw - 34) / 2)
+  local ups, downs = M().gainers(4), M().losers(4)
+  if #ups == 0 and #downs == 0 then
+    text("Nothing moving yet: a price moves here once it has been scanned twice. Scan all, and again later.",
+      rx + 14, y + 34, lw - 28, "small", ns.C.dim, nil, true)
+  else
+    text("UP", rx + 14, y + 30, half, "dim", GREEN)
+    text("DOWN", rx + 20 + half, y + 30, half, "dim", RED)
+    for i, r in ipairs(ups) do moverRow(r, rx + 10, y + 42 + (i - 1) * 17 - 2, half, { compact = true }) end
+    for i, r in ipairs(downs) do moverRow(r, rx + 20 + half, y + 42 + (i - 1) * 17 - 2, half, { compact = true }) end
+  end
   -- for your guide
-  y = y + 140
+  y = y + 124
   local needs = A().pricedNeeds()
-  local gh = H - (y - top)
+  local gh = top + H - y
   card(rx, y, lw, gh, "FOR YOUR GUIDE")
-  local gy = y + 32
+  local gy = y + 30
   if #needs == 0 then
     text("Your guide needs nothing from the auction house right now.", rx + 14, gy, lw - 28, "small", ns.C.dim, nil, true)
   else
     local total, unknown = 0, 0
-    for i, w in ipairs(needs) do
-      if gy + 32 > y + gh - 40 then break end
-      icon(w.id and itemIcon(w.id) or "INV_Misc_Bag_10", rx + 14, gy, 22)
-      text(Q.plain(w.need .. " x " .. w.name), rx + 42, gy, lw - 56, "small")
-      text(Q.plain(A().rowPrice(w)), rx + 42, gy + 13, lw - 56, "dim", ns.C.dim)
-      gy = gy + 30
-    end
     for _, w in ipairs(needs) do
       local each = w.p and ((w.p.n > 0 and w.p.low) or w.p.usual)
       if each then total = total + each * w.need else unknown = unknown + 1 end
     end
+    local room = gh - 30 - 50
+    for _, w in ipairs(needs) do
+      if gy + 26 > y + 30 + room then break end
+      icon(w.id and itemIcon(w.id) or "INV_Misc_Bag_10", rx + 14, gy, 20)
+      text(Q.plain(w.need .. " x " .. w.name), rx + 40, gy, lw - 54, "small")
+      text(Q.plain(A().rowPrice(w)), rx + 40, gy + 12, lw - 54, "dim", ns.C.dim)
+      gy = gy + 26
+    end
     if total > 0 then
       text("About " .. ns.money(total) .. " in all" .. (unknown > 0 and (", " .. unknown .. " not priced yet") or ""), rx + 14, gy, lw - 28, "small", ns.C.gold)
-      gy = gy + 18
+      gy = gy + 16
     end
     local v1 = A().auctionator()
     if v1 and has(v1, "MultiSearch") then
@@ -465,6 +694,191 @@ function pages.overview(W, top, H)
 end
 
 ----------------------------------------------------------------------------
+-- Market
+----------------------------------------------------------------------------
+
+local MARKET_VIEWS = { { "movers", "Movers" }, { "hot", "Hot and signals" }, { "trades", "Your trades" } }
+
+-- The chart card: the item, its signal, a line of its days (or readings), and its numbers.
+local function chartCard(x, y, w, h, id)
+  card(x, y, w, h, "PRICE CHART")
+  if not id then
+    text("Click an item on the left to chart it.", x + 14, y + 36, w - 28, "small", ns.C.dim, nil, true)
+    return
+  end
+  local p = A().price(id)
+  local r = M().row(id)
+  icon(itemIcon(id), x + 14, y + 30, 28)
+  local name = (p and p.name) or (r and r.name) or ("item " .. id)
+  text(Q.plain(name), x + 50, y + 30, w - 150, "body", ns.C.gold)
+  local sig = M().SIGNALS[r and r.signal or "new"]
+  pill(sig[1], x + w - 92, y + 30, 78, sig[2])
+  hit(x + w - 92, y + 30, 78, 16, sig[1], sig[3])
+  local now1 = r and r.last or (p and p.low)
+  text((now1 and ("Now " .. ns.money(now1)) or "None listed") .. (p and p.usual and ("  -  usual " .. ns.money(p.usual)) or "")
+    .. (p and ("  -  " .. ns.thousands(p.n) .. " listed") or ""), x + 50, y + 46, w - 64, "dim", ns.C.dim)
+  local pts, kind = chartPoints(id)
+  local ch = math.max(60, h - 66 - 104)
+  lineChart(pts, x + 12, y + 66, w - 24, ch, { usual = p and p.days and p.days >= 2 and p.usual or nil })
+  local sy = y + 66 + ch + 8
+  local col = math.floor((w - 28) / 2)
+  local i = 0
+  local function stat(label, value, color)
+    local cx = x + 14 + (i % 2) * col
+    local cy = sy + math.floor(i / 2) * 16
+    text(label, cx, cy, 86, "dim", ns.C.dim)
+    text(value, cx + 86, cy, col - 90, "small", color or ns.C.light)
+    i = i + 1
+  end
+  local lo, hi
+  for _, pt in ipairs(pts) do lo, hi = math.min(lo or pt.v, pt.v), math.max(hi or pt.v, pt.v) end
+  stat("Against days", r and r.trend and M().pctText(r.trend) or "--", M().pctColor(r and r.trend))
+  stat("Since last scan", r and r.move and M().pctText(r.move) or "--", M().pctColor(r and r.move))
+  stat("Supply", r and r.supply and M().pctText(r.supply) or "--", r and r.supply and (r.supply <= -10 and ORANGE or ns.C.light))
+  stat("Swings", r and r.vol and (math.floor(r.vol * 100 + 0.5) .. "%") or "--", r and r.vol and r.vol >= 0.25 and ns.C.accent)
+  stat(kind == "days" and "Range (days)" or "Range (scans)", lo and (ns.money(lo) .. " - " .. ns.money(hi)) or "--")
+  local vendor = p and p.vendor
+  stat("Vendor pays", vendor and vendor > 0 and ns.money(vendor) or "--")
+  local by = sy + 3 * 16 + 4
+  local bw = math.floor((w - 32) / 2)
+  button("Search it now", x + 12, by, bw, function()
+    if A().searchNow(name) then ns.say("Searching " .. Q.plain(name) .. ".") end
+  end, { label = "Search " .. name, enabled = A().isOpen(), tip = "Search it now", tipText = "A fresh price, added to its line." })
+  local deal
+  for _, d in ipairs(T().deals()) do if d.id == id then deal = d end end
+  local mineHas = false
+  for _, row in ipairs(T().sellable()) do if row.id == id then mineHas = true end end
+  if deal then
+    button("Deal: +" .. ns.money(deal.profit) .. " each", x + 20 + bw, by, bw, function() P.open("deals") end, { label = "See deal " .. name })
+  elseif mineHas then
+    button("Sell yours", x + 20 + bw, by, bw, function() P.open("selling") end, { label = "Sell " .. name })
+  end
+end
+
+-- A card listing rows of movers, paged by key.
+local function moverCard(key, title, sub, rows, x, y, w, h, opts)
+  card(x, y, w, h, title, sub)
+  if #rows == 0 then
+    text(opts and opts.empty or "Nothing yet.", x + 14, y + 34, w - 28, "small", ns.C.dim, nil, true)
+    return
+  end
+  list(key, rows, x + 6, y + 30, w - 12, 22, h - 36, function(r, rx2, ry, rw) moverRow(r, rx2, ry, rw, opts) end)
+end
+
+local function tile(x, y, w, h, label, value, sub, color)
+  rect(x, y, w, h, ns.C.panel)
+  rect(x, y, 2, h, { (color or ns.C.accent)[1], (color or ns.C.accent)[2], (color or ns.C.accent)[3], 0.9 }, "BORDER")
+  text(label, x + 10, y + 6, w - 16, "dim", ns.C.dim)
+  text(value, x + 10, y + 20, w - 16, "title", color or ns.C.light)
+  if sub then text(sub, x + 10, y + h - 15, w - 16, "dim", ns.C.dim) end
+end
+
+local KIND_TAGS = { buy = { "BOUGHT", { 0.35, 0.8, 0.85 } }, post = { "POSTED", { 0.85, 0.85, 0.85 } }, sold = { "SOLD", GREEN },
+  expired = { "EXPIRED", ORANGE }, cancel = { "CANCELLED", RED } }
+
+local function tradesView(W, y, bottom)
+  local rec = M().record()
+  local x, w = 16, W - 32
+  local tw = math.floor((w - 24) / 4)
+  local closed = rec.wins + rec.losses
+  tile(x, y, tw, 52, "NET PROFIT", signed(rec.net), "flips, sales and lost deposits", rec.net >= 0 and GREEN or RED)
+  tile(x + (tw + 8), y, tw, 52, "FLIPS WON", rec.winRate and (rec.winRate .. "%") or "--",
+    closed > 0 and (rec.wins .. " won, " .. rec.losses .. " lost") or "no flip sold yet", rec.winRate and (rec.winRate >= 50 and GREEN or RED))
+  tile(x + 2 * (tw + 8), y, tw, 52, "STILL HOLDING", #rec.holdings > 0 and signed(rec.unrealized) or "--",
+    #rec.holdings .. (#rec.holdings == 1 and " item if sold now" or " items if sold now"), rec.unrealized >= 0 and GREEN or RED)
+  tile(x + 3 * (tw + 8), y, tw, 52, "DEPOSITS LOST", ns.money(rec.lost), rec.sales .. (rec.sales == 1 and " sale" or " sales") .. " in all", rec.lost > 0 and ORANGE)
+  y = y + 62
+  -- profit over time
+  local pts, run = {}, 0
+  for i = #rec.flips, 1, -1 do
+    local f = rec.flips[i]
+    run = run + f.profit
+    pts[#pts + 1] = { v = run, label = A().age(f.t), sub = Q.plain(f.name) .. " " .. signed(f.profit) }
+  end
+  local chh = 84
+  card(x, y, w, chh + 34, "PROFIT FROM FLIPS", rec.best and ("best " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit)) or nil)
+  if #pts >= 2 then
+    local base = 0
+    for _, pt in ipairs(pts) do base = math.min(base, pt.v) end
+    local shifted = {}
+    for i, pt in ipairs(pts) do shifted[i] = { v = pt.v - base, label = pt.label, sub = pt.sub } end
+    lineChart(shifted, x + 12, y + 28, w - 24, chh, { color = run >= 0 and GREEN or RED })
+  else
+    text("Buy a deal and sell it again: each flip adds a point here, the line climbing with every win.",
+      x + 14, y + 36, w - 28, "small", ns.C.dim, nil, true)
+  end
+  y = y + chh + 44
+  local hw = math.floor((w - 16) / 2)
+  local h = bottom - y
+  card(x, y, hw, h, "HOLDINGS", "bought, not sold yet")
+  if #rec.holdings == 0 then
+    text("Nothing the Codex bought is waiting to sell.", x + 14, y + 34, hw - 28, "small", ns.C.dim, nil, true)
+  else
+    list("holdings", rec.holdings, x + 6, y + 30, hw - 12, 30, h - 36, function(hd, ix, iy, iw)
+      icon(itemIcon(hd.id), ix + 4, iy + 4, 20)
+      text(Q.plain(hd.qty .. " x " .. hd.name), ix + 30, iy + 2, iw - 130, "small")
+      text("paid " .. ns.money(hd.each) .. (hd.worth and (", worth " .. ns.money(hd.worth)) or ""), ix + 30, iy + 15, iw - 130, "dim", ns.C.dim)
+      text(hd.pnl and signed(hd.pnl) or "--", ix + iw - 96, iy + 8, 92, "small", hd.pnl and (hd.pnl >= 0 and GREEN or RED) or ns.C.dim, "RIGHT")
+      hit(ix, iy, iw, 28, hd.name, "Click to chart it.", function() chartItem(hd.id, "movers") end, "Chart " .. hd.name)
+    end)
+  end
+  local rx = x + hw + 16
+  card(rx, y, hw, h, "RECENT TRADES")
+  local recent = M().recent(60)
+  if #recent == 0 then
+    text("Nothing yet. Buys from Deals, posts from Quick Sell and the sales the game reports land here.",
+      rx + 14, y + 34, hw - 28, "small", ns.C.dim, nil, true)
+  else
+    list("trades", recent, rx + 6, y + 30, hw - 12, 22, h - 36, function(e, ix, iy, iw)
+      local tag = KIND_TAGS[e.k] or KIND_TAGS.post
+      pill(tag[1], ix + 2, iy + 3, 70, tag[2])
+      text(Q.plain((e.qty or 1) .. " x " .. (e.name or "?")), ix + 78, iy + 4, iw - 78 - 140, "small")
+      text(e.each and (ns.money(e.each) .. " each") or "", ix + iw - 210, iy + 4, 120, "dim", ns.C.dim, "RIGHT")
+      text(A().age(e.t), ix + iw - 86, iy + 4, 82, "dim", ns.C.dim, "RIGHT")
+    end)
+  end
+end
+
+function pages.market(W, top, H)
+  local db = ns.db()
+  local mode = view.marketMode or "movers"
+  local labels, lit = {}, 1
+  for i, v in ipairs(MARKET_VIEWS) do labels[i] = v[2]; if v[1] == mode then lit = i end end
+  segments(16, top, 380, labels, lit, function(i) view.marketMode = MARKET_VIEWS[i][1] end)
+  local mins, minLit = {}, nil
+  for i, e in ipairs(M().MINPRICES) do mins[i] = e[1]; if e[2] == M().minPrice() then minLit = i end end
+  if mode ~= "trades" then
+    text("Price at least", W - 16 - 230 - 90, top + 4, 86, "small", ns.C.dim, "RIGHT")
+    segments(W - 16 - 230, top, 230, mins, minLit, function(i) db.auctionMarketMin = M().MINPRICES[i][2]; offsets = {} end, "Price at least ")
+  end
+  local y = top + 30
+  local bottom = top + H
+  if mode == "trades" then return tradesView(W, y, bottom) end
+  local lw = math.floor((W - 48) * 0.52)
+  local rw = W - 48 - lw
+  local rx = 16 + lw + 16
+  local h1 = math.floor((bottom - y - 12) / 2)
+  local first
+  if mode == "movers" then
+    local ups, downs = M().gainers(), M().losers()
+    first = ups[1] or downs[1]
+    moverCard("gainers", "TOP GAINERS", #ups .. " rising", ups, 16, y, lw, h1,
+      { empty = "Nothing rising yet. A price moves here once it has been read twice: Scan all now, and again later." })
+    moverCard("losers", "TOP LOSERS", #downs .. " falling", downs, 16, y + h1 + 12, lw, bottom - y - h1 - 12,
+      { empty = "Nothing falling yet." })
+  else
+    local hot, sig = M().hot(), M().signals()
+    first = hot[1] or sig[1]
+    moverCard("hot", "HOT RIGHT NOW", "big moves, supply drying up", hot, 16, y, lw, h1,
+      { tag = true, empty = "Nothing hot yet: this needs two readings of an item. Scan all now, and again later." })
+    moverCard("signals", "BUY AND SELL SIGNALS", "far from their usual price", sig, 16, y + h1 + 12, lw, bottom - y - h1 - 12,
+      { tag = true, empty = "No signals yet: these need two days of prices." })
+  end
+  if not view.market or not A().store().items[view.market] then view.market = first and first.id or nil end
+  chartCard(rx, y, rw, bottom - y, view.market)
+end
+
+----------------------------------------------------------------------------
 -- Deals
 ----------------------------------------------------------------------------
 
@@ -477,60 +891,78 @@ function pages.deals(W, top, H)
   for i, k in ipairs(KINDS) do if k[2] == view.deals then lit = i end end
   local labels = {}
   for i, k in ipairs(KINDS) do labels[i] = k[1] end
-  segments(x, top, 330, labels, lit, function(i) view.deals = KINDS[i][2]; offsets.deals = 0 end)
+  segments(x, top, 330, labels, lit, function(i) view.deals = KINDS[i][2]; offsets.deals = 0; A().retarget(view.deals) end)
   local mins, minLit = {}, nil
   for i, e in ipairs(T().MINPROFITS) do mins[i] = e[1]; if e[2] == T().minProfit() then minLit = i end end
-  text("Worth at least", x + 350, top + 4, 100, "small", ns.C.dim)
-  segments(x + 450, top, w - 450, mins, minLit, function(i) db.auctionMinProfit = T().MINPROFITS[i][2] end, "At least ")
+  text("Worth at least", x + 344, top + 4, 100, "small", ns.C.dim, "RIGHT")
+  segments(x + 450, top, w - 450, mins, minLit, function(i) db.auctionMinProfit = T().MINPROFITS[i][2]; A().retarget(view.deals) end, "At least ")
   local y = top + 30
   local flips, flipLit = {}, nil
   for i, e in ipairs(T().FLIPS) do flips[i] = e[1]; if e[2] == T().flipPct() then flipLit = i end end
   text("A flip is listed under its usual by", x, y + 4, 210, "small", ns.C.dim)
-  segments(x + 214, y, 170, flips, flipLit, function(i) db.auctionFlipPct = T().FLIPS[i][2] end, "Flip at ")
+  segments(x + 214, y, 180, flips, flipLit, function(i) db.auctionFlipPct = T().FLIPS[i][2]; A().retarget(view.deals) end, "Flip at ")
   local rows = T().deals(view.deals, view.hidden)
   local profit = 0
-  for _, d in ipairs(rows) do profit = profit + d.profit end
-  text(#rows .. (#rows == 1 and " deal" or " deals") .. (#rows > 0 and (", about +" .. ns.money(profit) .. " buying one of each") or ""),
-    x + 400, y + 4, w - 400, "small", #rows > 0 and GREEN or ns.C.dim, "RIGHT")
+  for _, d in ipairs(rows) do profit = profit + (T().potential(d)) end
+  text(#rows .. (#rows == 1 and " deal" or " deals") .. (#rows > 0 and (", about +" .. ns.money(profit) .. " to make") or ""),
+    x + 404, y + 4, w - 404, "small", #rows > 0 and GREEN or ns.C.dim, "RIGHT")
   y = y + 30
   -- the sniper
   local sn = A().sniper
-  button(sn.on and "Stop sniping" or "Snipe deals", x, y, 150, function() A().toggleSnipe() end,
-    { label = "Snipe deals", lit = sn.on, enabled = A().snipeAvailable(), tip = "Snipe deals",
-      tipText = "Searches the items worth watching one a second, lap after lap, and chimes when one is listed as a deal. Buying stays a click." })
-  local status
+  rect(x, y - 2, w, 50, sn.on and { GREEN[1], GREEN[2], GREEN[3], 0.07 } or { 1, 1, 1, 0.03 })
+  button(sn.on and "Stop sniping" or "Snipe deals", x + 6, y + 4, 140, function() A().retarget(view.deals); A().toggleSnipe() end,
+    { label = "Snipe deals", lit = sn.on, enabled = A().snipeAvailable(), h = 36, tip = "Snipe deals",
+      tipText = "Searches the items your choices above can make a deal on, one a second, lap after lap. A deal chimes, is checked at once (how many, and the total) and waits for your Buy click." })
+  local kindName = view.deals == "vendor" and "under-vendor" or (view.deals == "flip" and "flip" or "deal")
   if sn.on then
-    status = "Watching " .. #sn.list .. " items: " .. ns.thousands(sn.checked) .. " searches, " .. (sn.found or 0) .. " deals found"
-      .. (sn.current and (", now " .. Q.plain(sn.current)) or "")
+    local n, total, best = T().sniperHaul()
+    text("Watching " .. #sn.list .. " " .. kindName .. " items at " .. (T().minProfit() > 0 and (ns.money(T().minProfit()) .. "+") or "any profit")
+      .. ": " .. ns.thousands(sn.checked) .. " searches" .. ((sn.laps or 0) > 0 and (", lap " .. (sn.laps + 1)) or "")
+      .. (sn.current and (", now " .. Q.plain(sn.current)) or ""), x + 156, y + 4, w - 162, "small", GREEN)
+    if n > 0 then
+      text(n .. (n == 1 and " live deal" or " live deals") .. ": +" .. ns.money(total) .. " potential profit"
+        .. (best and (", best " .. Q.plain(best.name) .. " +" .. ns.money(best.amount)) or ""), x + 156, y + 22, w - 162, "body", ns.C.gold)
+    else
+      text("No live deal yet. Each one found chimes, shows LIVE and is checked for you.", x + 156, y + 22, w - 162, "dim", ns.C.dim)
+    end
   else
-    status = "Check searches the listings, Buy shows the total first, a commodity asks you to confirm. Profits count the 5% cut."
+    text("The sniper watches what your choices above can make: change them and it follows.", x + 156, y + 4, w - 162, "small", ns.C.light)
+    text("Check finds the listings, Buy shows the total, a commodity asks to confirm. Profits count the 5% cut.",
+      x + 156, y + 22, w - 162, "dim", ns.C.dim)
   end
-  text(status, x + 160, y + 4, w - 160, "dim", sn.on and GREEN or ns.C.dim)
-  y = y + 30
+  y = y + 56
   local bottom = top + H - 30
   if #rows == 0 then
-    text("No deals in your prices yet. Scan all on the Scan tab finds listings under vendor price and far under their usual price.",
+    text("No deals in your prices yet. Scan all finds listings under vendor price and far under their usual price.",
       x, y + 6, w, "small", ns.C.dim, nil, true)
   else
     list("deals", rows, x, y, w, 40, bottom - y, function(d, rx, ry, rw)
-      icon(itemIcon(d.id), rx + 6, ry + 5, 28)
+      local live = T().isLive(d.id)
+      if live then rect(rx, ry, 3, 38, GREEN, "BORDER") end
+      icon(itemIcon(d.id), rx + 8, ry + 5, 28)
       local name = Q.plain(d.name)
-      text(name, rx + 42, ry + 5, 230, "body")
+      text(name, rx + 44, ry + 4, 220, "body", live and ns.C.gold or ns.C.light)
       local vendor = d.kind == "vendor"
-      text((T().isLive(d.id) and "LIVE  " or "") .. (vendor and "UNDER VENDOR" or "FLIP"), rx + 280, ry + 7, 140, "dim",
-        T().isLive(d.id) and GREEN or (vendor and GREEN or ns.C.accent))
+      pill(vendor and "UNDER VENDOR" or "FLIP", rx + 270, ry + 4, 92, vendor and GREEN or ns.C.accent)
+      if live then pill("LIVE", rx + 366, ry + 4, 40, GREEN) end
       local sub = "Listed " .. ns.money(d.low) .. (vendor and ", vendor pays " or ", usual ") .. ns.money(d.worth)
-        .. "  -  " .. (vendor and "+" or "about +") .. ns.money(d.profit) .. " each (" .. d.pct .. "%)" .. "  -  " .. (d.source and ("Auctionator, " .. A().age(d.at)) or (ns.thousands(d.n) .. " listed"))
-      text(sub, rx + 42, ry + 21, rw - 270, "dim", ns.C.dim)
+        .. "  -  +" .. ns.money(d.profit) .. " each (" .. d.pct .. "%)  -  " .. (d.source and ("Auctionator, " .. A().age(d.at)) or (ns.thousands(d.n) .. " listed"))
+      text(sub, rx + 44, ry + 22, rw - 44 - 360, "dim", ns.C.dim)
+      hit(rx + 40, ry, 220, 18, d.name, "Click to chart it.", function() chartItem(d.id) end, "Chart " .. d.name)
+      -- potential profit
+      local amount, qty, exact = T().potential(d)
+      text("+" .. ns.money(amount), rx + rw - 352, ry + 4, 128, "body", GREEN, "RIGHT")
+      text(exact and ("potential, " .. qty .. " under the limit") or "each, Check for more", rx + rw - 352, ry + 22, 128, "dim", ns.C.dim, "RIGHT")
       local b = T().buying[d.id]
       button(T().dealLabel(d.id), rx + rw - 216, ry + 9, 150, function()
         local x2 = T().buying[d.id]
         if not x2 or x2.stage == "none" then T().check(d) else T().buy(d.id) end
       end, { label = "Deal " .. d.name, enabled = not b or b.stage == "ready" or b.stage == "confirm" or b.stage == "none",
+        lit = b and (b.stage == "ready" or b.stage == "confirm"),
         tip = d.name, tipText = "Check searches its listings; then Buy, and Confirm for a commodity." })
       local hidden = T().isHidden(d.id)
-      button(hidden and "Unhide" or "Hide", rx + rw - 60, ry + 9, 56, function() T().hide(d.id, not hidden) end,
-        { label = (hidden and "Unhide " or "Hide ") .. d.name, tip = "Hide", tipText = "Leave it out of Deals and Quick Sell." })
+      button(hidden and "Unhide" or "Hide", rx + rw - 60, ry + 9, 56, function() T().hide(d.id, not hidden); A().retarget(view.deals) end,
+        { label = (hidden and "Unhide " or "Hide ") .. d.name, tip = "Hide", tipText = "Leave it out of Deals, Quick Sell and the sniper." })
     end)
   end
   local n = T().hiddenCount()
@@ -555,29 +987,33 @@ function pages.selling(W, top, H)
   -- settings
   local cuts, cutLit = {}, nil
   for i, e in ipairs(T().UNDERCUTS) do cuts[i] = e[1]; if e[2] == T().undercut()[2] then cutLit = i end end
-  text("Undercut", x, top + 4, 60, "small", ns.C.dim)
-  segments(x + 62, top, 200, cuts, cutLit, function(i) db.auctionUndercut = T().UNDERCUTS[i][2] end, "Undercut ")
+  text("Undercut", x, top + 4, 58, "small", ns.C.dim)
+  segments(x + 60, top, 184, cuts, cutLit, function(i) db.auctionUndercut = T().UNDERCUTS[i][2] end, "Undercut ")
   local durs, durLit = {}, nil
   for i, e in ipairs(T().DURATIONS) do durs[i] = e[1]; if e[2] == T().duration() then durLit = i end end
-  text("Post for", x + 276, top + 4, 56, "small", ns.C.dim)
-  segments(x + 334, top, lw - 334, durs, durLit, function(i) db.auctionDuration = T().DURATIONS[i][2] end, "Post for ")
+  text("Post for", x + 254, top + 4, 54, "small", ns.C.dim)
+  segments(x + 310, top, math.max(150, lw - 310), durs, durLit, function(i) db.auctionDuration = T().DURATIONS[i][2] end, "Post for ")
   local y = top + 30
   local nextRow = T().nextPost()
   button(nextRow and ("Post next: " .. nextRow.count .. " x " .. Q.plain(nextRow.name) .. " at " .. ns.money(nextRow.sell.price))
     or "Nothing to post", x, y, lw, function() T().postNext() end,
-    { label = "Post next", enabled = nextRow ~= nil and T().available(), h = 26, tip = "Post next",
+    { label = "Post next", enabled = nextRow ~= nil and T().available(), h = 26, lit = nextRow ~= nil, tip = "Post next",
       tipText = "Posts the most valuable item in the list. Click again for the next one." })
   y = y + 34
   local rows = T().sellable(false, view.hidden)
   if #rows == 0 then
-    text("Nothing priced to sell in your bags. Scan my bags prices what you carry.", x, y + 4, lw, "small", ns.C.dim, nil, true)
+    text("Nothing priced to sell in your bags. Reprice bags, top right, prices what you carry.", x, y + 4, lw, "small", ns.C.dim, nil, true)
   else
     list("selling", rows, x, y, lw, 44, bottom - y, function(row, ix, iy, iw)
       local s = row.sell
       icon(row.icon or itemIcon(row.id), ix + 6, iy + 6, 30)
-      text(Q.plain(row.count .. " x " .. row.name), ix + 44, iy + 5, 170, "body")
-      local _, label, color = T().status(row.id, s)
-      text(label, ix + 216, iy + 7, iw - 216 - 176, "dim", color)
+      local bx = ix + iw - 172
+      local tagX = bx - 96 - (s.custom and 48 or 0)
+      text(Q.plain(row.count .. " x " .. row.name), ix + 44, iy + 5, tagX - ix - 50, "body")
+      hit(ix + 40, iy, tagX - ix - 44, 20, row.name, "Click to chart it.", function() chartItem(row.id) end, "Chart " .. row.name)
+      local _, label, color, short = T().status(row.id, s)
+      pill(short or label, tagX, iy + 5, 92, color)
+      hit(tagX, iy + 5, 92, 16, label, "How the market looks for selling it now.")
       local sub
       if s.blocked then sub = "A vendor pays " .. ns.money(s.vendor) .. " each: sell it there"
       else
@@ -587,8 +1023,7 @@ function pages.selling(W, top, H)
         sub = sub .. "  -  " .. ns.money(s.price * row.count) .. " in all"
         if s.paid then sub = sub .. "  -  paid " .. ns.money(s.paid) end
       end
-      text(sub, ix + 44, iy + 23, iw - 44 - 176, "dim", s.blocked and RED or (s.loss and ORANGE or ns.C.dim))
-      local bx = ix + iw - 172
+      text(sub, ix + 44, iy + 24, bx - ix - 50 - (s.custom and 48 or 0), "dim", s.blocked and RED or (s.loss and ORANGE or ns.C.dim))
       if s.custom then
         button("Auto", bx - 46, iy + 11, 42, function() T().nudge(row.id, nil) end,
           { label = "Reset " .. row.name, tip = "Auto price", tipText = "Back to the undercut price." })
@@ -623,7 +1058,7 @@ function pages.selling(W, top, H)
   button(mine.checking and "Checking..." or "Check undercuts", rx + 12, top + 32, 160, function() T().checkUndercuts() end,
     { label = "Check undercuts", enabled = not mine.checking and #mine.list > 0, tip = "Check undercuts",
       tipText = "Searches each item you have listed for the cheapest listing that isn't yours." })
-  button("Refresh", rx + 178, top + 32, rw - 190, function() T().queryOwned() end)
+  button("Refresh", rx + 178, top + 32, rw - 190, function() T().queryOwned() end, { label = "Refresh auctions" })
   local under = T().undercutCount()
   text(#mine.list == 0 and (mine.at and "You have nothing listed." or "Reading your auctions...")
     or (#mine.list .. " listed" .. (under > 0 and (", " .. under .. " undercut") or "")), rx + 12, top + 62, rw - 24, "small",
@@ -635,15 +1070,15 @@ function pages.selling(W, top, H)
     local st = state and OWNED_STATES[state]
     local sub = row.unit and ("yours " .. ns.money(row.unit)) or ""
     if state == "undercut" or state == "cheapest" then sub = sub .. ", cheapest " .. ns.money(cheapest) end
-    text(sub, ix + 6, iy + 19, iw - 140, "dim", ns.C.dim)
-    if st then text(st[1], ix + iw - 140, iy + 19, 66, "dim", st[2], "RIGHT") end
+    text(sub, ix + 6, iy + 20, iw - 150, "dim", ns.C.dim)
+    if st then pill(st[1], ix + iw - 146, iy + 18, 76, st[2]) end
     if not row.sold then
       local armed = T().armed("cancel:" .. row.auction)
       button(armed and "Sure?" or "Cancel", ix + iw - 66, iy + 8, 62, function() T().cancel(row) end,
         { label = "Cancel " .. row.name, lit = armed, tip = "Cancel", tipText = "Two clicks. The deposit is lost; the item comes back by mail." })
     end
   end)
-  text("Cancelling loses the deposit; the item comes back by mail.", rx + 12, top + H - 22, rw - 24, "dim", ns.C.dim)
+  text("A cancelled auction loses its deposit.", rx + 12, top + H - 22, rw - 24, "dim", ns.C.dim)
 end
 
 ----------------------------------------------------------------------------
@@ -681,28 +1116,6 @@ local function makeLookupBox()
   end
 end
 
--- The item's days as bars, with the low and high marked.
-local function chart(id, x, y, w, h)
-  local hist = A().history(id)
-  rect(x, y, w, h, { 0, 0, 0, 0.35 })
-  if #hist < 1 then
-    text("No days recorded yet.", x + 8, y + h / 2 - 6, w - 16, "dim", ns.C.dim)
-    return
-  end
-  local lo, hi = math.huge, 0
-  for _, d in ipairs(hist) do local v = d.med or d.low; lo, hi = math.min(lo, v), math.max(hi, v) end
-  local n = #hist
-  local slot = math.floor((w - 8) / math.max(n, 7))
-  for i, d in ipairs(hist) do
-    local v = d.med or d.low
-    local bh = hi > lo and math.floor(6 + (h - 28) * (v - lo) / (hi - lo)) or math.floor((h - 20) / 2)
-    local c = i == n and ns.C.gold or ns.C.accent
-    rect(x + 4 + (i - 1) * slot + 1, y + h - 14 - bh, math.max(2, slot - 3), bh, { c[1], c[2], c[3], 0.9 }, "BORDER")
-  end
-  text("high " .. ns.money(hi), x + 6, y + 3, w - 12, "dim", ns.C.dim, "RIGHT")
-  text(n .. (n == 1 and " day" or " days") .. ", low " .. ns.money(lo), x + 6, y + h - 13, w - 12, "dim", ns.C.dim)
-end
-
 function pages.scan(W, top, H)
   local db = ns.db()
   local lw = math.floor((W - 48) / 2)
@@ -710,9 +1123,10 @@ function pages.scan(W, top, H)
   -- full scan
   local age, ageColor = scanAge()
   card(lx, top, lw, 132, "FULL SCAN")
-  text("Last scan:", lx + 14, top + 34, 110, "small", ns.C.dim)
-  text(age, lx + 124, top + 34, lw - 138, "small", ageColor)
-  text(ns.thousands(A().count()) .. " items priced. Instant scans every 15 min, paged scans any time.", lx + 14, top + 52, lw - 28, "small")
+  text("Last scan:", lx + 14, top + 34, 70, "small", ns.C.dim)
+  text(age, lx + 84, top + 34, 120, "small", ageColor)
+  text(ns.thousands(A().count()) .. " items priced", lx + 200, top + 34, lw - 214, "small", ns.C.light, "RIGHT")
+  text("Instant every 15 min; paged any time in between.", lx + 14, top + 51, lw - 28, "dim", ns.C.dim)
   local done, total, phase, pages = A().fullProgress()
   if done then
     local frac = total and total > 0 and done / total or ((pages or 0) % 10) / 10
@@ -798,8 +1212,13 @@ function pages.scan(W, top, H)
   end
   local verdict, vc = A().verdict(p, vendor)
   if verdict then text(verdict, rx + 14, ly + 2, lw - 28, "small", vc); ly = ly + 20 end
-  local ch = math.min(110, top + H - ly - 44)
-  if ch > 40 then chart(v.id, rx + 14, ly + 4, lw - 28, ch); ly = ly + ch + 10 end
+  local ch = math.min(130, top + H - ly - 70)
+  if ch > 40 then
+    lineChart((chartPoints(v.id)), rx + 14, ly + 4, lw - 28, ch, { usual = p.days and p.days >= 2 and p.usual or nil })
+    ly = ly + ch + 10
+    button("Open in Market", rx + 14, ly, lw - 28, function() chartItem(v.id, "movers") end, { label = "Chart " .. (p.name or v.name) })
+    ly = ly + 26
+  end
   button("Search it now", rx + 14, ly, lw - 28, function()
     if A().searchNow(p.name or v.name) then ns.say("Searching " .. Q.plain(p.name or v.name) .. ".") end
   end, { enabled = A().isOpen() })
@@ -809,6 +1228,83 @@ end
 -- Drawing, opening and closing
 ----------------------------------------------------------------------------
 
+-- Each page's quick refresh, in the header next to Scan all: { label, tooltip, run() -> chat line }.
+local function namesOf(rows, n)
+  local out, seen = {}, {}
+  for _, r in ipairs(rows) do
+    if #out >= n then break end
+    if r.name and not seen[r.name] then seen[r.name] = true; out[#out + 1] = r.name end
+  end
+  return out
+end
+P.REFRESH = {
+  overview = { "Update", "Searches your bags and what your guide needs again, and reads your auctions.", function()
+    local n = A().scanBags(true) + A().scanNeeds()
+    T().queryOwned()
+    return "Updating: " .. n .. " searches queued, your auctions read again."
+  end },
+  market = { "Recheck movers", "Searches the items on this page again now, so their lines and changes are fresh.", function()
+    local rows = {}
+    local lists = view.marketMode == "hot" and { M().hot(15), M().signals(15) } or { M().gainers(15), M().losers(15) }
+    if view.marketMode == "trades" then
+      lists = { M().record().holdings }
+    end
+    for _, l in ipairs(lists) do for _, r in ipairs(l) do rows[#rows + 1] = r end end
+    if view.market then local p = A().price(view.market); if p and p.name then table.insert(rows, 1, { name = p.name }) end end
+    return "Rechecking " .. A().searchNames(namesOf(rows, 30)) .. " items."
+  end },
+  deals = { "Recheck deals", "Searches each deal on the list again: gone ones drop off, new prices show.", function()
+    return "Rechecking " .. A().searchNames(namesOf(T().deals(view.deals, view.hidden), 30)) .. " deals."
+  end },
+  selling = { "Reprice bags", "Searches everything you could sell again, reads your auctions and checks them for undercuts.", function()
+    local n = A().scanBags(true)
+    T().queryOwned()
+    if #T().mine.list > 0 then ns.after(1, T().checkUndercuts) end
+    return "Repricing " .. n .. " items from your bags."
+  end },
+  scan = { "Scan my bags", "Each item you could sell whose price is older than 30 minutes.", function()
+    return "Searching " .. A().scanBags() .. " items from your bags."
+  end },
+}
+
+-- The ticker's text: name, price and change of the biggest moves, coloured.
+local function hex(c) return string.format("|cff%02x%02x%02x", math.floor(c[1] * 255), math.floor(c[2] * 255), math.floor(c[3] * 255)) end
+local function tickerText()
+  local rows = M().ticker(16)
+  if #rows == 0 then return nil end
+  local parts = {}
+  for _, r in ipairs(rows) do
+    parts[#parts + 1] = "|cffffd100" .. Q.plain(r.name) .. "|r " .. ns.money(r.last) .. " " .. hex(M().pctColor(r.change)) .. M().pctText(r.change) .. "|r"
+  end
+  return table.concat(parts, "      ") .. "      "
+end
+
+local function drawTicker(x, y, w)
+  ticker:ClearAllPoints()
+  ticker:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
+  ticker:SetWidth(w)
+  ticker:Show()
+  local s = tickerText()
+  ticker.wide = nil
+  ticker.a:ClearAllPoints(); ticker.a:SetPoint("LEFT", ticker.strip, "LEFT", 0, 0)
+  ticker.b:ClearAllPoints(); ticker.b:SetPoint("LEFT", ticker.strip, "LEFT", 0, 0)
+  ticker.b:Hide()
+  if not s then
+    ticker.a:SetText("Prices start moving here once items have been scanned twice: Scan all now, and again later.")
+    ticker.a:SetTextColor(0.6, 0.6, 0.6)
+    return
+  end
+  ticker.a:SetText(s)
+  ticker.a:SetTextColor(0.9, 0.9, 0.9)
+  local sw = tonumber(ticker.a:GetStringWidth()) or 0
+  if ticker.clips and sw > w - 70 then
+    ticker.b:SetText(s)
+    ticker.b:SetTextColor(0.9, 0.9, 0.9)
+    ticker.b:Show()
+    ticker.wide = math.max(1, sw)
+  end
+end
+
 function P.refresh()
   if not P.shown() then return end
   releaseAll()
@@ -817,7 +1313,7 @@ function P.refresh()
   body.tint:SetColorTexture(C.bg[1], C.bg[2], C.bg[3], 0.92)
   local W = math.max(600, (tonumber((try(root.GetWidth, root))) or 800) - 8)
   local H = math.max(300, (tonumber((try(root.GetHeight, root))) or 538) - 50)
-  -- header: the title (the page's tab), your gold, the scan age
+  -- header: the title (the page's tab), the page's refresh and Scan all; the ticker, your gold, the scan age
   icon(ns.ADDON_ICON, 16, 8, 22)
   local title, line = "LEVELING CODEX", P.PAGES[1][3]
   for _, pg in ipairs(P.PAGES) do
@@ -826,13 +1322,21 @@ function P.refresh()
       if pg[1] ~= "overview" then title = "CODEX " .. pg[2]:upper() end
     end
   end
-  text(title, 44, 11, 300, "title", C.gold)
-  text(line, 44, 38, W - 380, "dim", C.dim)
-  text(money(tonumber(try(GetMoney)) or 0), W - 316, 12, 300, "body", C.light, "RIGHT")
+  text(title, 44, 11, 220, "title", C.gold)
+  text(line, 262, 9, W - 262 - 16 - 270, "dim", C.dim, nil, true)
+  local r = P.REFRESH[page]
+  if r then
+    button(r[1], W - 16 - 116 - 6 - 140, 8, 140, function() ns.say(r[3]()) end, { label = r[1], tip = r[1], tipText = r[2] })
+  end
+  local done, total, phase = A().fullProgress()
+  scanAllButton(done and (phase == "filing" and "Saving..." or "Scanning...") or nil, W - 16 - 116, 8, 116)
+  if done then bar(W - 16 - 116 - 6 - 140, 32, 262, 3, total and total > 0 and done / total or 0.5, phase == "filing" and GREEN or C.accent) end
+  drawTicker(16, 40, W - 32 - 200)
   local age, ageColor = scanAge()
-  text("Full scan " .. age, W - 316, 41, 300, "dim", ageColor, "RIGHT")
-  rect(16, 64, W - 32, 1, { C.edge[1], C.edge[2], C.edge[3], 0.4 }, "BORDER")
-  local top = 74
+  text(money(tonumber(try(GetMoney)) or 0), W - 16 - 190, 38, 190, "small", C.light, "RIGHT")
+  text("Last scan " .. age, W - 16 - 190, 51, 190, "dim", ageColor, "RIGHT")
+  rect(16, 66, W - 32, 1, { C.edge[1], C.edge[2], C.edge[3], 0.4 }, "BORDER")
+  local top = 76
   local draw = pages[page] or pages.overview
   local ok, err = pcall(draw, W, top, H - top - 4)
   if not ok then

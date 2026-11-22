@@ -48,6 +48,7 @@ local function start()
   ns.startGold()
   ns.startAuction()
   ns.startAuctionTrade()
+  if ns.startAuctionMarket then ns.startAuctionMarket() end
   ns.startJourney()
   ns.startJourneyDeeds()
   ns.startJourneyTales()
@@ -235,6 +236,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.auctionDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.auctionTradeDebugLines()) do out[#out + 1] = line end
+  if ns.auctionMarketDebugLines then for _, line in ipairs(ns.auctionMarketDebugLines()) do out[#out + 1] = line end end
   for _, line in ipairs(ns.auctionPanelDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end

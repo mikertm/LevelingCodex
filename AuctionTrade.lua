@@ -53,7 +53,7 @@ function T.notes()
   local s = ns.auction.store()
   if type(s.trade) ~= "table" then s.trade = {} end
   local t = s.trade
-  for _, k in ipairs({ "hidden", "set", "paid" }) do if type(t[k]) ~= "table" then t[k] = {} end end
+  for _, k in ipairs({ "hidden", "set", "paid", "log" }) do if type(t[k]) ~= "table" then t[k] = {} end end
   return t
 end
 function T.isHidden(id) return T.notes().hidden[id] and true or false end
@@ -116,15 +116,16 @@ function T.nudge(id, dir)
 end
 
 -- How the market looks for selling this item: key, label, colour { r, g, b }.
+-- The fourth return is a short tag for the Quick Sell rows (the label goes in its tooltip).
 T.STATUS = {
-  vendor = { "Vendor pays more", { 1, 0.35, 0.3 } },
-  none = { "None listed: name your price", { 1, 0.82, 0 } },
-  high = { "Above usual: sell now", { 0.3, 0.9, 0.35 } },
-  few = { "Few listed: good spot", { 0.3, 0.9, 0.35 } },
-  fair = { "Fair price", { 0.85, 0.85, 0.85 } },
-  falling = { "Falling: sell soon", { 1, 0.82, 0 } },
-  low = { "Below usual: hold?", { 1, 0.55, 0.2 } },
-  new = { "New: little history", { 0.6, 0.6, 0.6 } },
+  vendor = { "Vendor pays more", { 1, 0.35, 0.3 }, "VENDOR IT" },
+  none = { "None listed: name your price", { 1, 0.82, 0 }, "NONE LISTED" },
+  high = { "Above usual: sell now", { 0.3, 0.9, 0.35 }, "SELL NOW" },
+  few = { "Few listed: good spot", { 0.3, 0.9, 0.35 }, "FEW LISTED" },
+  fair = { "Fair price", { 0.85, 0.85, 0.85 }, "FAIR" },
+  falling = { "Falling: sell soon", { 1, 0.82, 0 }, "FALLING" },
+  low = { "Below usual: hold?", { 1, 0.55, 0.2 }, "BELOW USUAL" },
+  new = { "New: little history", { 0.6, 0.6, 0.6 }, "NEW" },
 }
 function T.status(id, sell)
   sell = sell or T.sellPrice(id)
@@ -142,7 +143,7 @@ function T.status(id, sell)
     else key = "fair" end
   end
   local e = T.STATUS[key]
-  return key, e[1], e[2]
+  return key, e[1], e[2], e[3]
 end
 
 ----------------------------------------------------------------------------
@@ -200,6 +201,36 @@ end
 local last = { posts = 0, buys = 0, posted = 0, deposits = 0, spent = 0, cancels = 0 }
 -- This session at the auction house: { posts, posted (value), deposits, buys, spent, cancels }.
 function T.ledger() return last end
+
+-- The trade record, kept with the realm's prices (AuctionMarket.lua reads wins and losses from it):
+-- notes.log = { { t, k = "post"|"buy"|"sold"|"expired"|"cancel", id, name, qty, each, dep, done } },
+-- oldest first, at most T.LOG_SIZE. A post is open until a sale, an expiry or a cancel closes it
+-- (done = that kind).
+T.LOG_SIZE = 400
+local function stamp() return tonumber(time and time()) or 0 end
+T.logVersion = 0
+function T.logTrade(kind, id, name, qty, each, dep)
+  local log = T.notes().log
+  log[#log + 1] = { t = stamp(), k = kind, id = tonumber(id), name = type(name) == "string" and name or nil,
+    qty = math.max(1, tonumber(qty) or 1), each = tonumber(each), dep = tonumber(dep) }
+  while #log > T.LOG_SIZE do table.remove(log, 1) end
+  T.logVersion = T.logVersion + 1
+  return log[#log]
+end
+
+-- Closes the oldest open post of that name (a sale, an expiry or a cancel) and logs it with the
+-- post's quantity, price and deposit; without one it logs what it was given.
+function T.closePost(name, kind, id, qty, each)
+  if type(name) ~= "string" then return end
+  local lower = name:lower()
+  for _, e in ipairs(T.notes().log) do
+    if e.k == "post" and not e.done and type(e.name) == "string" and e.name:lower() == lower then
+      e.done = kind
+      return T.logTrade(kind, e.id, e.name, e.qty, e.each, e.dep)
+    end
+  end
+  return T.logTrade(kind, id or (ns.auction.idFor and ns.auction.idFor(name)), name, qty, each)
+end
 local armed = {} -- key -> time of the first click of a two-click action
 
 local function arm(key)
@@ -270,6 +301,7 @@ function T.post(row)
     if paid.qty <= 0 then notes.paid[row.id] = nil end
   end
   last.post = { name = row.name, qty = qty, price = sell.price, deposit = deposit }
+  T.logTrade("post", row.id, row.name, qty, sell.price, deposit)
   ns.say("Posted " .. qty .. " " .. Q.plain(row.name) .. " at " .. ns.money(sell.price) .. " each"
     .. (deposit and deposit > 0 and (" (deposit " .. ns.money(deposit) .. ")") or "") .. ".")
   return "posted"
@@ -339,22 +371,51 @@ end
 -- chime, and marked live on the Deals page for 2 minutes.
 local alerted = {}
 T.live = {}
+-- A new deal is also checked at once (its listings searched, as the Check button does), so its row
+-- shows how many are under the limit, the total and the potential profit, and Buy is one click.
 function T.alert(id)
   if T.isHidden(id) then return end
-  for _, d in ipairs(T.deals()) do
+  local snipe = ns.auction.sniper
+  for _, d in ipairs(T.deals(snipe.kind)) do
     if d.id == id then
       T.live[id] = now()
       if alerted[id] ~= d.low then
         alerted[id] = d.low
-        local snipe = ns.auction.sniper
         snipe.found = (snipe.found or 0) + 1
         if type(PlaySound) == "function" then pcall(PlaySound, 18019, "SFX") end
         ns.say("Deal: " .. Q.plain(d.name) .. " listed at " .. ns.money(d.low) .. ", +" .. ns.money(d.profit)
-          .. " each. Deals > Check to buy it.")
+          .. " each. Checking how many...")
+        if not T.buying[id] or T.buying[id].stage == "none" then
+          ns.after(0.3, function() if ns.auction.isOpen() and not (T.buying[id] and T.buying[id].stage ~= "none") then T.check(d) end end)
+        end
       end
       return true
     end
   end
+end
+
+-- What a deal could make: amount, qty, exact. Once checked, every listing under the limit bought
+-- and resold at its worth (after the cut for a flip); before that, one at the lowest price.
+function T.potential(d)
+  local b = T.buying[d.id]
+  local net = d.kind == "vendor" and d.worth or math.floor(d.worth * (1 - T.CUT))
+  if b and (b.stage == "ready" or b.stage == "confirm" or b.stage == "pricing") and b.qty and b.total then
+    return math.max(0, net * b.qty - b.total), b.qty, true
+  end
+  return d.profit, 1, false
+end
+
+-- The live deals the sniper found this session: count, potential profit in all, the best one.
+function T.sniperHaul()
+  local n, total, best = 0, 0, nil
+  for _, d in ipairs(T.deals(ns.auction.sniper.kind)) do
+    if T.isLive(d.id) then
+      local amount = T.potential(d)
+      n, total = n + 1, total + amount
+      if not best or amount > best.amount then best = { name = d.name, amount = amount } end
+    end
+  end
+  return n, total, best
 end
 function T.isLive(id) return T.live[id] and now() - T.live[id] < 120 or false end
 
@@ -485,9 +546,18 @@ function T.cancel(row)
   end
   if not pcall(C.CancelAuction, row.auction) then ns.say("The auction house didn't cancel it."); return "failed" end
   last.cancels = last.cancels + 1
+  T.closePost(row.name, "cancel", row.id, row.qty, row.unit)
   ns.say("Cancelled " .. Q.plain(row.name) .. ": it comes back by mail. Relist it from Quick Sell once it's in your bags.")
   ns.after(1, T.queryOwned)
   return "cancelled"
+end
+
+-- What a deal's search saw goes into the prices: a deal that is gone (none listed, or none cheap
+-- enough any more) leaves the Deals list instead of staying as "Gone".
+local function observed(id, cheapest, listed)
+  if not id then return end
+  if cheapest then ns.auction.record(id, nil, cheapest, listed)
+  else ns.auction.record(id, nil, nil, 0) end
 end
 
 -- Search results: how many cost no more than the limit, and what they come to.
@@ -504,16 +574,19 @@ local function readCommodity(id)
     undercutRead(id, best)
   end
   if not b or b.stage ~= "search" then return end
-  local qty, total = 0, 0
+  local qty, total, cheapest, listed = 0, 0, nil, 0
   for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
     local r = try(C.GetCommoditySearchResultInfo, id, i)
     local unit, n = type(r) == "table" and tonumber(r.unitPrice), type(r) == "table" and tonumber(r.quantity)
-    if unit and n and unit <= b.limit and not r.containsOwnerItem then
-      qty, total = qty + n, total + unit * n
+    if unit and n and not r.containsOwnerItem then
+      listed = listed + n
+      if not cheapest or unit < cheapest then cheapest = unit end
+      if unit <= b.limit then qty, total = qty + n, total + unit * n end
     end
   end
   b.commodity = true
   if qty > 0 then b.stage, b.qty, b.total = "ready", qty, total else b.stage, b.why = "none", "gone" end
+  observed(id, cheapest, listed)
   T.refresh()
 end
 
@@ -534,11 +607,15 @@ local function readItems(key)
   end
   local b = id and buying[id]
   if not b or b.stage ~= "search" then return end
-  local best
+  local best, cheapest, listed = nil, nil, 0
   for i = 1, tonumber(try(C.GetNumItemSearchResults, key)) or 0 do
     local r = try(C.GetItemSearchResultInfo, key, i)
     local buyout = type(r) == "table" and tonumber(r.buyoutAmount)
     local n = type(r) == "table" and math.max(1, tonumber(r.quantity) or 1)
+    if buyout and not r.containsOwnerItem then
+      listed = listed + n
+      if not cheapest or buyout / n < cheapest then cheapest = math.floor(buyout / n) end
+    end
     if buyout and buyout / n <= b.limit and not r.containsOwnerItem and (not best or buyout / n < best.unit) then
       best = { auction = r.auctionID, total = buyout, qty = n, unit = buyout / n }
     end
@@ -546,6 +623,7 @@ local function readItems(key)
   b.commodity = false
   if best then b.stage, b.qty, b.total, b.auction = "ready", best.qty, best.total, best.auction
   else b.stage, b.why = "none", "gone" end
+  observed(id, cheapest, listed)
   T.refresh()
 end
 
@@ -556,6 +634,7 @@ local function boughtFor(id, b)
   last.buys = last.buys + 1
   last.spent = last.spent + b.total
   last.buy = { name = b.deal.name, qty = b.qty, total = b.total }
+  T.logTrade("buy", id, b.deal.name, b.qty, math.floor(b.total / math.max(1, b.qty) + 0.5))
   local notes = T.notes()
   local old = type(notes.paid[id]) == "table" and notes.paid[id]
   local qty, cost = b.qty, b.total
@@ -713,7 +792,7 @@ ns.gold.addSection(20, function(y)
   y = y + 10
   U.T("SELLING AND DEALS", 14, y, W - 28, "label", C.gold)
   y = y + 20
-  y = y + U.T("At the auction house the Codex tabs (Codex, Deals, Quick Sell, Scan) list what to sell from your bags and deals to buy. Every post and purchase is one click on its button. It never posts below what a vendor pays.",
+  y = y + U.T("At the auction house the Codex tabs (Codex, Market, Deals, Quick Sell, Scan) chart the market, list what to sell from your bags and deals to buy, and keep your wins and losses. Every post and purchase is one click on its button. It never posts below what a vendor pays.",
     14, y, W - 28, "small", C.light) + 8
   local function row(label, list, current, key)
     U.T(label, 14, y + 5, 110, "small", C.light)
