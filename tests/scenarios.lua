@@ -12618,6 +12618,82 @@ function S.journeyTab()
   check(#LevelingCodexCharDB.journey.events == 0, "two clicks erase the journal")
 end
 
+-- The Journey as a book: a wide spread with a lore line per land, chapter prose, the preface, and the
+-- road's own moments (a first mount, a new home, an inn, milestones). The bind you log in with is no new home.
+function S.journeyLore()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.bind = "Goldshire"
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local j = LevelingCodexCharDB.journey
+  -- every line of lore is short ASCII in our own voice
+  for name, lines in pairs(J.lore.ZONES) do
+    for _, line in ipairs(lines) do
+      check(not line:find("[\128-\255]") and #line <= 130, "the lore for " .. name .. " is short ASCII")
+    end
+  end
+  check(J.lore.zoneLine("Elwynn Forest") and J.lore.zoneLine("Nowhere") == nil, "a land has its line of lore")
+  check(J.firstVisitLine("Stormwind City") and not J.firstVisitLine("Westfall"), "a great city has its own first visit")
+  check(J.levelLine(20, "Elwynn Forest"):find("no longer a beginner", 1, true), "level 20 reads as a milestone")
+  slash("")
+  click(win(), "Journey")
+  check(math.floor(_G.LevelingCodexFrame:GetWidth() + 0.5) == 972, "the Journey opens as a wide book ("
+    .. tostring(_G.LevelingCodexFrame:GetWidth()) .. ")")
+  for _, t in ipairs({ "THE JOURNEY OF", "OVERVIEW", "- 2 -", "- 3 -", "TODAY'S ENTRY", "THE ROAD TO 60" }) do
+    check(questText(win(), t), "the book's Overview spread has " .. t)
+  end
+  click(win(), "Story")
+  check(questText(win(), "is the story of Tester"), "the Story opens with the preface")
+  check(questText(win(), "- 4 -"), "the Story spread has its page numbers")
+  click(win(), "Map")
+  check(questText(win(), "THE MAP"), "the Map spread draws")
+  if not MOCK.minimal then
+    check(questText(win(), J.lore.zoneLine("Elwynn Forest")), "the Map page tells the land's lore")
+    check(questText(win(), "Moments written here"), "the Map page counts what happened in the land")
+  end
+  click(win(), "Trophies")
+  check(questText(win(), "THE LEDGER  -  BATTLES") and questText(win(), "FIRSTS"), "the Trophies page flows both sheets")
+  click(win(), "Companions")
+  check(questText(win(), "FRIENDS AND STRANGERS"), "the Companions spread draws")
+  if MOCK.minimal then return end
+  -- the bind at login is not a new home; a new one is
+  check(j.home == "Goldshire" and not journeyHas("home"), "the bind you log in with is no new home")
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(not journeyHas("home"), "binding the same inn again writes nothing")
+  MOCK.bind = "Sentinel Hill"
+  MOCK.event("HEARTHSTONE_BOUND")
+  check(journeyHas("home", "Sentinel Hill"), "a new home is a moment")
+  -- the first mount, once
+  MOCK.mounted = true
+  MOCK.advance(10.5)
+  MOCK.advance(10.5)
+  local mounts = 0
+  for _, e in ipairs(j.events) do if e.k == "mount" then mounts = mounts + 1 end end
+  check(mounts == 1, "the first ride is written once (" .. mounts .. ")")
+  -- an inn's fire, then not again for a while
+  MOCK.subZone, MOCK.resting = "Lion's Pride Inn", true
+  MOCK.event("PLAYER_UPDATE_RESTING")
+  MOCK.event("PLAYER_UPDATE_RESTING")
+  local rests = 0
+  for _, e in ipairs(j.events) do if e.k == "rest" then rests = rests + 1 end end
+  check(rests == 1 and journeyHas("rest", "Lion's Pride Inn"), "resting at an inn is a moment, once (" .. rests .. ")")
+  -- a milestone fires when a count crosses it, not at the first reading
+  check(type(j.marks) == "table" and j.marks.deaths == 0, "the first reading only seeds the milestones")
+  j.deaths = 9
+  MOCK.event("PLAYER_DEAD")
+  MOCK.event("PLAYER_ALIVE")
+  MOCK.advance(10.5)
+  check(journeyHas("milestone", "10th time"), "the tenth fall is a milestone")
+  -- the chapter's prose reads the chapter
+  local prose = J.lore.chapterProse(MOCK.level, j.events, nil, true)
+  check(prose:find("Elwynn Forest", 1, true) and prose:find("still", 1, true), "the chapter prose names the land and the open page")
+  check(not prose:find("%", 1, true), "the chapter prose fills every word")
+  click(win(), "Story")
+  check(questText(win(), "Saddled up") or questText(win(), "Rode out of"), "the story has the first ride")
+  for _, e in ipairs(j.events) do check(not e.s:find("[\128-\255]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
+end
+
 -- Journey deeds: firsts, close calls, rares, upgrades and profession caps become moments and
 -- fill the Trophies page; the Overview opens with today's entry.
 function S.journeyDeeds()

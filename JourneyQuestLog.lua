@@ -129,7 +129,7 @@ local function listRow(V, q, x, y, w, on, plevel)
     U.rect(x, y, 3, 24, C.gold)
   end
   local lvl = tonumber(q.entry.level)
-  U.T(lvl and lvl > 0 and ("[" .. lvl .. "]") or "[?]", x + 8, y + 5, 34, "small", diff[3])
+  U.T(lvl and lvl > 0 and ("[" .. lvl .. "]") or "[?]", x + 8, y + 5, 34, "small", C.book and diff[2] or diff[3])
   local _, fs = U.T(q.title, x + 40, y + 5, w - 96, "small", on and C.light or (q.row and C.light or C.dim))
   if fs.SetWordWrap then fs:SetWordWrap(false) end
   if q.entry.ready then
@@ -266,7 +266,8 @@ local QUOTES = { "Every quest is a promise made to someone in Azeroth.", "Somewh
   "A full log is a busy hero.", "Each page here is a road not yet walked." }
 
 local function questLogPage(V, y)
-  local U, C, W = V.U, V.C, V.W
+  local LV, RV = V.L, V.R
+  local U, C, W = LV.U, LV.C, LV.W
   local D = J.draw
   local quests = L.quests()
   local count, max = Q.logCapacity()
@@ -275,26 +276,26 @@ local function questLogPage(V, y)
     if q.entry.ready then ready = ready + 1 end
     if not q.row then outside = outside + 1 end
   end
-  -- the banner
+  -- the left page: the banner, then the list
   local top = y
-  U.icon("INV_Misc_Book_08", 16, y + 14, 34, "Quest Log", "Every quest in your log, as the game's quest log keeps them.")
-  U.T("THE QUEST LOG", 64, y + 12, W - 180, "label", C.inkSoft)
-  U.T(#quests == 1 and "One quest in hand" or (#quests .. " quests in hand"), 64, y + 26, W - 180, "head", C.ink)
-  if max then U.T(count .. " of " .. max, W - 130, y + 14, 116, "head", C.ink, "RIGHT") end
+  U.icon("INV_Misc_Book_08", 14, y + 14, 34, "Quest Log", "Every quest in your log, as the game's quest log keeps them.")
+  U.T("THE QUEST LOG", 58, y + 12, W - 140, "label", C.inkSoft)
+  U.T(#quests == 1 and "One quest in hand" or (#quests .. " quests in hand"), 58, y + 26, W - 140, "head", C.ink)
+  if max then U.T(count .. " of " .. max, W - 100, y + 14, 86, "head", C.ink, "RIGHT") end
   local facts = {}
   if ready > 0 then facts[#facts + 1] = ready .. " ready to turn in" end
   if tracked > 0 then facts[#facts + 1] = tracked .. " tracked" end
   if outside > 0 then facts[#facts + 1] = outside .. " not in your guide" end
-  local h = U.T(#facts > 0 and table.concat(facts, "  -  ") or QUOTES[(#quests % #QUOTES) + 1], 64, y + 50, W - 80, "small", C.inkSoft)
+  local h = U.T(#facts > 0 and table.concat(facts, "  -  ") or QUOTES[(#quests % #QUOTES) + 1], 58, y + 50, W - 72, "small", C.inkSoft)
   y = y + 50 + h + 12
   D.page(U, C, 0, top, W, y - top)
-  y = y + 10
+  y = y + 12
   if #quests == 0 then
-    local t2 = y
-    y = y + 16 + U.T("Your quest log is empty. Somewhere a quest giver is waiting with a golden mark over their head.",
-      16, y + 16, W - 32, "body", C.ink) + 16
-    D.page(U, C, 0, t2, W, y - t2)
-    return y + 10
+    local ry = y
+    ry = ry + 16 + RV.U.T("Your quest log is empty. Somewhere a quest giver is waiting with a golden mark over their head.",
+      16, ry + 16, RV.W - 32, "body", RV.C.ink) + 16
+    D.page(RV.U, RV.C, 0, y, RV.W, ry - y)
+    return y, ry + 10
   end
   local found
   for _, q in ipairs(quests) do if q.id == selected then found = q end end
@@ -303,24 +304,22 @@ local function questLogPage(V, y)
     found = found or quests[1]
     selected = found.id
   end
-  -- the list (left) and the page (right)
-  local lw = 236
-  local px, pw = lw + 10, W - lw - 10
   local ly = y
   local heading
   for _, q in ipairs(quests) do
     if q.heading ~= heading then
       heading = q.heading
       if ly > y then ly = ly + 4 end
-      U.T(heading:upper(), 12, ly + 8, lw - 24, "label", C.gold)
+      U.T(heading:upper(), 12, ly + 8, W - 24, "label", C.gold)
       ly = ly + 26
     end
-    ly = ly + listRow(V, q, 4, ly, lw - 8, q.id == selected, V.lvl)
+    ly = ly + listRow(LV, q, 4, ly, W - 8, q.id == selected, V.lvl)
   end
   ly = ly + 8
-  U.box(0, y, lw, ly - y, C.panel, C.edge)
-  local ph = questPage(V, found, px, y, pw)
-  return math.max(ly, y + ph) + 10
+  U.box(0, y, W, ly - y, C.panel, C.edge)
+  -- the right page: the chosen quest
+  local ph = questPage(RV, found, 0, top, RV.W)
+  return ly + 10, top + ph + 10
 end
 
 J.addPage("Quest Log", "Every quest in your log, as the game's quest log keeps them, each a page of the journal.",

@@ -432,7 +432,9 @@ function D.today()
     out[#out + 1] = s:sub(1, 1):upper() .. s:sub(2) .. "."
   end
   for _, e in ipairs(firsts) do out[#out + 1] = e.s .. "." end
-  if J.tales and J.tales.todayLines then for _, l in ipairs(J.tales.todayLines(since)) do out[#out + 1] = l end end
+  if J.tales and J.tales.todayLines then
+    for _, l in ipairs(J.tales.todayLines(since)) do out[#out + 1] = (l:gsub("^%l", string.upper)) end
+  end
   if c.close > 0 then out[#out + 1] = c.close == 1 and "One fight came far too close." or (c.close .. " fights came far too close.") end
   if c.death > 0 then
     out[#out + 1] = c.death == 1 and "You fell once, and got back up." or ("You fell " .. c.death .. " times, and got back up every time.")
