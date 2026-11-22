@@ -10989,6 +10989,75 @@ function S.goldMountFund()
   check(questText(win(), "You have it"), "with the gold at the goal level it says go buy it")
 end
 
+-- The auction tools: quick searches for what the guide needs, a full scan, the price history and its
+-- trend, tooltip lines, the sell helper (fills the price only on a click) and the Gold tab's card.
+function S.auctionTools()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  LevelingCodexDB = LevelingCodexDB or {}
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = {
+    [2592] = { name = "Wool Cloth", low = 90, med = 100, n = 4, at = 1700000000 - 86400,
+      days = { [day - 2] = { low = 90, med = 100 }, [day - 1] = { low = 95, med = 100 } } } } } } }
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.advance(1.2)
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "AUCTION HOUSE"), "the Gold tab has the auction house card")
+  if MOCK.minimal then
+    check(not _G.LevelingCodexAuctionCard, "no auction card without the auction house API")
+    return
+  end
+  check(questText(win(), "1 item priced on Mockrealm"), "the seeded history counts")
+  GameTooltip:SetOwner(UIParent)
+  GameTooltip:SetHyperlink("item:2592")
+  local function tipHas(text)
+    for _, line in ipairs(GameTooltip._lines or {}) do if line:find(text, 1, true) then return true end end
+    return false
+  end
+  check(tipHas("Codex AH: ") and tipHas("usual"), "the tooltip has the saved price")
+  MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 },
+    { id = 2589, name = "Linen Cloth", count = 10, buyout = 1500 },
+    { id = 2592, name = "Wool Cloth", count = 5, buyout = 1000 } }
+  MOCK.openAuction()
+  MOCK.advance(8)
+  local card = _G.LevelingCodexAuctionCard
+  check(card and card:IsShown() and questText(card, "CODEX PRICES"), "a card shows at the auction house")
+  local searchedLinen = false
+  for _, name in ipairs(MOCK.browsed) do if name == "Linen Cloth" then searchedLinen = true end end
+  check(searchedLinen, "it searched for the cloth the Tailoring step needs")
+  check(questText(card, "Linen Cloth  -  1s each"), "the card prices the cloth from the search")
+  click(card, "Scan all")
+  MOCK.advance(2)
+  check(MOCK.replicated == 1 and chatHas("Full scan: 3 listings, 2 items priced"), "Scan all scans the whole auction house")
+  check(card.scan._disabled and select(2, MOCK.ns.auction.canFullScan()) == "Next full scan in 15 min", "a second full scan waits")
+  card.scan:Click()
+  MOCK.advance(2)
+  check(MOCK.replicated == 1, "the second click doesn't scan again")
+  GameTooltip:SetHyperlink("item:2592")
+  check(tipHas("Codex trend: up 100% (3 days)"), "the tooltip shows the trend against earlier days")
+  MOCK.shift = true
+  GameTooltip:SetHyperlink("item:2589")
+  check(tipHas("low / median / high") and tipHas("listed: 30"), "Shift adds low, median, high and how many are listed")
+  MOCK.shift = false
+  MOCK.sellItem = 2589
+  MOCK.advance(1)
+  check(questText(card, "SELLING Linen Cloth") and card.use:IsShown() and card.use.codexLabel == "Use 99c each", "the sell helper offers one copper under the lowest")
+  check(MOCK.auctionPrice == nil, "nothing is filled in before the click")
+  click(card, "Use 99c each")
+  check(MOCK.auctionPrice == 99 and chatHas("press Post yourself"), "the click fills the price and you post it")
+  MOCK.closeAuction()
+  check(not card:IsShown(), "the card hides with the auction house")
+  click(win(), "Gold")
+  check(questText(win(), "FOR YOUR GUIDE") and questText(win(), "Linen Cloth"), "the Gold tab lists what the guide needs with prices")
+  click(win(), "Price lines on item tooltips")
+  GameTooltip:SetHyperlink("item:2589")
+  check(not tipHas("Codex AH"), "the setting turns the tooltip lines off")
+  click(win(), "Forget prices")
+  click(win(), "Forget prices")
+  check(questText(win(), "No price history yet"), "Forget prices clears the history")
+  MOCK.removeSkill("Tailoring")
+end
+
 -- Without saved data the tab says it counts from login.
 function S.statsTabLost()
   slash("")

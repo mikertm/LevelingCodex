@@ -83,6 +83,7 @@ Pace.lua
 QuestTab.lua
 Stats.lua
 Gold.lua
+Auction.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua
