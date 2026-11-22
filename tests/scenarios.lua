@@ -12453,6 +12453,7 @@ function S.journeyTab()
     { nil, "THE JOURNEY OF", "THE ROAD TO 60", "WHERE YOU ARE", "FELLOW ADVENTURERS",
       "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level },
     { "Map", "THE MAP", "YOUR JOURNAL" },
+    { "Trophies", "FIRSTS", "NEMESES", "CRAFT MILESTONES" },
     { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
     { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
   }
@@ -12488,6 +12489,98 @@ function S.journeyTab()
   click(win(), "Erase the journal")
   click(win(), "Click again to erase")
   check(#LevelingCodexCharDB.journey.events == 0, "two clicks erase the journal")
+end
+
+-- Journey deeds: firsts, close calls, rares, upgrades and profession caps become moments and
+-- fill the Trophies page; the Overview opens with today's entry.
+function S.journeyDeeds()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.bagItems = { { name = "Linen Scrap", id = 2589, quality = 1 } }
+  MOCK.lootItems[7001] = { name = "Worn Tunic", quality = 1, itemLevel = 5 }
+  MOCK.lootItems[7002] = { name = "Defias Vest", quality = 2, itemLevel = 18 }
+  MOCK.equipped[5] = "|cffffffff|Hitem:7001::::::::|h[Worn Tunic]|h|r"
+  MOCK.setSkill("Tailoring", 70, 75)
+  S.login()
+  MOCK.advance(3)
+  local j = LevelingCodexCharDB.journey
+  check(not journeyHas("first"), "what you carried at login is no first")
+  if MOCK.minimal then
+    slash("")
+    click(win(), "Journey")
+    click(win(), "Trophies")
+    check(questText(win(), "FIRSTS"), "the Trophies page draws in the minimal client")
+    return
+  end
+  -- firsts: a bag, then a green
+  MOCK.bagSlots = { [1] = 6 }
+  MOCK.bagItems[2] = { name = "Gnoll Paw Charm", id = 5001, quality = 2 }
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(j.firsts.green and j.firsts.green.n == "Gnoll Paw Charm" and journeyHas("first", "Gnoll Paw Charm"),
+    "a first green is a moment")
+  check(j.firsts.bag and not j.firsts.bag.had, "a first bag is a moment")
+  check(not j.firsts.blue, "a green is not a blue")
+  -- a close call
+  MOCK.target = { name = "Kobold Vermin", hostile = true }
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.health = 9
+  MOCK.event("UNIT_HEALTH", "player")
+  MOCK.health = 40
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  local close = journeyHas("close")
+  check(close and close.pct == 9 and close.who == "Kobold Vermin", "a fight under 15% health is a close call")
+  -- a fight that stays above 15% is not
+  MOCK.event("PLAYER_REGEN_DISABLED"); MOCK.health = 50; MOCK.event("UNIT_HEALTH", "player"); MOCK.event("PLAYER_REGEN_ENABLED")
+  check(j.closeCalls == 1, "an easy fight is no close call")
+  MOCK.health = 100
+  -- a rare you fought
+  MOCK.target = { name = "Mother Fang", hostile = true, kind = "rare" }
+  MOCK.targetGUID = "Creature-0-1-2-3-471-0001"
+  MOCK.event("PLAYER_TARGET_CHANGED")
+  MOCK.target.dead = true
+  MOCK.event("UNIT_HEALTH", "target")
+  MOCK.event("UNIT_HEALTH", "target")
+  check(journeyHas("rare", "Mother Fang") and j.rares == 1, "a rare you fought is written once")
+  MOCK.target, MOCK.targetGUID = nil, nil
+  -- an upgrade you keep on
+  MOCK.equipped[5] = "|cff1eff00|Hitem:7002::::::::|h[Defias Vest]|h|r"
+  MOCK.event("PLAYER_EQUIPMENT_CHANGED", 5, false)
+  MOCK.advance(30)
+  check(not journeyHas("upgrade"), "an upgrade waits to see if it stays on")
+  MOCK.advance(32)
+  local up = journeyHas("upgrade", "Defias Vest")
+  check(up and up.d == "Item level 5 to 18", "a piece kept on is an upgrade")
+  -- a profession cap
+  MOCK.setSkill("Tailoring", 75, 75)
+  check(journeyHas("cap", "Tailoring"), "reaching a tier's cap is a moment")
+  -- a death names the foe you fought last
+  MOCK.target = { name = "Kobold Tunneler", hostile = true }
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.event("PLAYER_DEAD")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.target = nil
+  local death = journeyHas("death")
+  check(death and death.who == "Kobold Tunneler", "a death remembers who did it")
+  check(j.closeCalls == 1, "a fight you died in is no close call")
+  slash("")
+  click(win(), "Journey")
+  check(questText(win(), "TODAY'S ENTRY") and questText(win(), "Gnoll Paw Charm"), "the Overview opens with today's entry")
+  click(win(), "Trophies")
+  for _, t in ipairs({ "FIRSTS", "NEMESES", "CLOSE CALLS", "BOSSES AND RARES", "GEAR UPGRADES", "CRAFT MILESTONES",
+    "Gnoll Paw Charm", "Kobold Tunneler", "Mother Fang", "Defias Vest", "still out there" }) do
+    check(questText(win(), t), "the Trophies page has " .. t)
+  end
+  click(win(), "Story")
+  check(questText(win(), "Kobold Vermin"), "the story has the close call")
+  local plate = findButton(win(), function(l) return l:find("^Plate level ") end)
+  check(plate, "a chapter shows its map plate")
+  if plate then plate:Click(); check(questText(win(), "LANDS EXPLORED"), "a plate opens the Map page") end
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are ASCII with no template left: " .. e.s)
+  end
 end
 
 -- Journey: past the point limit the busiest zone's trail is thinned, never cut off.

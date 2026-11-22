@@ -31,11 +31,15 @@
 
 ### New: the Journey tab, your adventure journal
 
-- A book in four pages instead of one long scroll: Overview (your journey in numbers, the road from 1 to 60, the latest chapter, where you are and who you travel with), Map, Story and Companions.
+- A book in five pages instead of one long scroll: Overview (today's entry, your journey in numbers, the road from 1 to 60, the latest chapter, where you are and who you travel with), Story, Map, Trophies and Companions.
+- **Today's entry** opens the Overview: this session told as a few sentences (how long, the levels and lands, quests, foes, bosses and rares, your firsts, close calls and falls).
 - A storybook of your character's journey that writes itself as you play: every level, every new land, quests turned in, dungeon runs and bosses, deaths, flight paths and the friends you grouped with, each told as a line of the story ("Conquered Edwin VanCleef and saved Westfall", "Heroically did the chores: murloc duty in Hillsbrad Foothills").
 - Chapters by level (Chapter I, II, III...), newest first: each opens with the line of its level-up, names the land where most of it happened, shows the time, quests, foes and falls of that level, and tells its moments in order along a timeline. Filters for Quests, Battles, Travels and Deaths.
 - The map: your trail on each zone you visited, coloured by your level then, with stars where you levelled up and skulls where you fell, and every land you explored as a row of chips. Click a moment in the story to see where it happened.
 - The same trail on the world map (Journey > Show my trail on the world map), plus the road from 1 to 60, the journey in numbers (quests, foes, lands, miles walked, dungeons, deaths) and your fellow adventurers.
+- More moments: your **first bag** and your **first green, blue and epic**, **close calls** (a fight you walked away from under 15% health), **gear upgrades** you keep wearing for a minute, **rares** you slay, and each **profession tier taken to its cap**. A death now names who did it.
+- Each chapter of the story shows a small map of where that level happened, with that level's trail and pins. Click it to open the Map page. The Treasures filter shows your firsts and upgrades.
+- **Trophies** page: your four firsts as cards (the ones still to come stay greyed), your nemeses (who killed you most), close calls, bosses and rares, gear upgrades and craft milestones.
 
 ## v0.30.7
 

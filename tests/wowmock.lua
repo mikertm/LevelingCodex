@@ -64,7 +64,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
   "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
   "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
-  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED" }) do
+  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "UNIT_HEALTH" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -933,6 +933,7 @@ end
 function UnitName(unit)
   local m = MOCK.partyMember(unit)
   if m then return m.name, m.realm end
+  if unit == "target" and MOCK.target then return MOCK.target.name end
   return "Tester"
 end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
@@ -1294,6 +1295,16 @@ function IsPlayerSpell(id) return MOCK.knownSpells[id] or false end
 
 -- Your target's GUID ("Creature-0-1-2-3-<npcID>-<spawn>"): MOCK.targetGUID.
 function UnitGUID(unit) if unit == "target" then return MOCK.targetGUID elseif unit == "npc" then return MOCK.npcGUID end end
+-- Health and the target (Journey's close calls and rares): MOCK.health / MOCK.healthMax (player),
+-- MOCK.target = { name, hostile, dead, kind = "rare"|"rareelite"|..., tapDenied } (nil = no target),
+-- MOCK.wornQuality[slot] for GetInventoryItemQuality.
+function UnitHealth(unit) if unit == "player" then return MOCK.health or 100 end return 100 end
+function UnitHealthMax(unit) return unit == "player" and (MOCK.healthMax or 100) or 100 end
+function UnitCanAttack(a, b) return b == "target" and MOCK.target and MOCK.target.hostile or false end
+function UnitIsDead(unit) return unit == "target" and MOCK.target and MOCK.target.dead or false end
+function UnitClassification(unit) return unit == "target" and MOCK.target and MOCK.target.kind or "normal" end
+function UnitIsTapDenied(unit) return unit == "target" and MOCK.target and MOCK.target.tapDenied or false end
+function GetInventoryItemQuality(unit, slot) return MOCK.wornQuality and MOCK.wornQuality[slot] end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace() local r = MOCK.race or "Human"; return r, r end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
@@ -1324,7 +1335,8 @@ local function fromServer(fn)
   if MOCK.serverDelay then C_Timer.After(MOCK.serverDelay, fn) else fn() end
 end
 C_Container = {
-  GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or 0 end,
+  -- MOCK.bagSlots[bag] = n: an equipped bag 1-4 with n empty slots
+  GetContainerNumSlots = function(bag) return bag == 0 and #MOCK.bagItems or (MOCK.bagSlots and MOCK.bagSlots[bag]) or 0 end,
   GetContainerItemInfo = function(bag, slot)
     local it = bag == 0 and MOCK.bagItems[slot]
     if not it or it.empty then return end
@@ -1374,7 +1386,7 @@ function GetItemInfo(ref)
   local it=lootItem(ref)
   if not it then return beforeLootItemInfo(ref) end
   if it.loaded==false then return end
-  return it.name,tostring(ref),2,20,it.level or 1,"Armor","Cloth",1,it.slot or "INVTYPE_CHEST",134400,0,it.classID or 4,it.subclassID or 1
+  return it.name,tostring(ref),it.quality or 2,it.itemLevel or 20,it.level or 1,"Armor","Cloth",1,it.slot or "INVTYPE_CHEST",134400,0,it.classID or 4,it.subclassID or 1
 end
 C_Item.GetItemInfo=GetItemInfo
 function GetInventoryItemLink(unit,slot) return MOCK.equipped[slot] end
@@ -1893,6 +1905,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetPhysicalScreenSize",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
+  "UnitHealth", "UnitHealthMax", "UnitClassification", "UnitIsTapDenied", "GetInventoryItemQuality",
   "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
