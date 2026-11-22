@@ -3,7 +3,7 @@
 -- the quests in their log (addon messages); the step window lists every party member against your
 -- step (Settings > Show my party's steps) and Quests > Party shows each one in full, with the
 -- quests one of you has and the other doesn't. Opt-in helpers: share a guide quest with the party
--- when you accept it, say in party chat where you are flying, and Questie-like party chat lines for
+-- when you accept it, say in party chat where you are flying, and quest tracker-like party chat lines for
 -- the steps you finish, the quest items you pick up and your quest progress.
 local _, ns = ...
 local Q = ns.quests
@@ -390,19 +390,19 @@ local function accepted(a, b)
 end
 
 -- Settings > Say my flights in party chat.
+local chat
 local function announceFlight(node)
   if not ns.db().questAnnounceFlights or not inParty() then return end
   local name = Q.plain(try(TaxiNodeName, node) or "")
   if name == "" then return end
   local left = ns.questFlightEstimate and ns.questFlightEstimate()
   local eta = left and (" (about " .. math.floor(left / 60) .. ":" .. string.format("%02d", math.floor(left % 60)) .. ")") or ""
-  try(SendChatMessage, "Flying to " .. (name:match("^[^,]+") or name) .. eta .. ".", "PARTY")
+  chat("flight", (name:match("^[^,]+") or name) .. eta .. ".", nil, "flight")
 end
 
--- Party chat announcements (Settings > Party, each off by default), said as "Codex: ...".
--- Chat can't take the client's escape codes: colours, links and textures go, and the |4 and |1
--- grammar codes keep their first form for a count of 1 and their last otherwise. The client's own
--- text (quest and item names in its language) is left as it is: party chat draws every language.
+-- Party transport uses a standard raid marker and validated native links. Custom
+-- textures belong only in the receiving client's chat filter, never SendChatMessage.
+-- Native names stay localized; arbitrary text loses markup and grammar escapes.
 local function chatText(text, count)
   local function form(forms)
     local list = {}
@@ -413,7 +413,144 @@ local function chatText(text, count)
   text = text:gsub("|4([^;]*);", form)
   text = text:gsub("|1([^;]*);([^;]*);", function(one, many) return count == 1 and one or many end)
   text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|H.-|h(.-)|h", "%1"):gsub("|T.-|t", "")
-  return (text:gsub("|", ""):sub(1, 240))
+  return (text:gsub("|", ""):gsub("[%z\1-\31\127]", " "))
+end
+
+local STYLES = {
+  accepted = { "Accepted", "ffd9b35b", "accept" },
+  item = { "Loot", "ff77ccec", "loot" },
+  found = { "Found quest item", "ff77ccec", "loot" },
+  objective = { "Objective complete", "ff84d88a", "check" },
+  ready = { "Ready to turn in", "ffd9b35b", "turnin" },
+  turnin = { "Turned in", "ff53d8cb", "check" },
+  travel = { "Travel complete", "ff77ccec", "fly" },
+  flight = { "Flying to", "ff77ccec", "fly" },
+  step = { "Step complete", "ffd9b35b", "accept" },
+}
+local CHAT_MARK = "{rt6} Codex: "
+
+-- Shorten plain fields at UTF-8 boundaries; hyperlinks are shortened only by
+-- replacing the entire link with its readable label, never by slicing markup.
+local function clipped(text, limit)
+  if #text <= limit then return text end
+  local n = math.max(0, limit - 3)
+  while n > 0 and (text:byte(n + 1) or 0) >= 128 and (text:byte(n + 1) or 0) < 192 do n = n - 1 end
+  return text:sub(1, n) .. "..."
+end
+
+local function reference(kind, id, name, link)
+  local label = "[" .. clipped(chatText(name):gsub("%[", "("):gsub("%]", ")"), 70) .. "]"
+  local valid
+  if type(link) == "string" and not (issecretvalue and issecretvalue(link)) then
+    local color = link:match("^|c(%x%x%x%x%x%x%x%x)")
+    local body = link:gsub("^|c%x%x%x%x%x%x%x%x", ""):gsub("|r$", "")
+    local payload = body:match("^|H(" .. kind .. ":%d+[:%d%-]*)|h%b[]|h$")
+    if payload and tonumber(payload:match("^[^:]+:(%d+)")) == id then
+      valid = "|c" .. (color or "ffffff00") .. "|H" .. payload .. "|h" .. label .. "|h|r"
+    end
+  end
+  return { label = label, link = valid }
+end
+
+local questLinks = {}
+local function questRef(id, entry, name)
+  local link = id and (try(C_QuestLog and C_QuestLog.GetQuestLink, id) or try(GetQuestLink, id))
+  local ref = reference("quest", id, name or questTitle(id, entry), link)
+  if id then
+    if ref.link then questLinks[id] = ref
+    elseif questLinks[id] then return questLinks[id] end
+  end
+  return ref
+end
+
+local function itemRef(item, fallback)
+  local name, link = ns.itemInfo(item)
+  return reference("item", item, type(name) == "string" and name or fallback or "Quest item", link)
+end
+
+local function announcement(kind, parts, count)
+  local style = STYLES[kind] or STYLES.step
+  local prefix = CHAT_MARK .. style[1] .. ": "
+  local fields, plain, total = {}, {}, #prefix
+  for i, part in ipairs(type(parts) == "table" and parts or { parts }) do
+    local ref = type(part) == "table"
+    fields[i] = ref and (part.link or part.label) or clipped(chatText(part, count), 180)
+    plain[i] = ref and part.label or fields[i]
+    total = total + #fields[i]
+  end
+  for i = 1, #fields do
+    if total <= 255 then break end
+    if fields[i] ~= plain[i] then
+      total = total - #fields[i] + #plain[i]
+      fields[i] = plain[i]
+    end
+  end
+  while total > 255 do
+    local longest
+    for i = 1, #fields do
+      if fields[i] == plain[i] and #fields[i] > 3 and (not longest or #fields[i] > #fields[longest]) then longest = i end
+    end
+    if not longest then return end
+    local shorter = clipped(fields[longest], math.max(3, #fields[longest] - (total - 255)))
+    total = total - #fields[longest] + #shorter
+    fields[longest], plain[longest] = shorter, shorter
+  end
+  return prefix .. table.concat(fields)
+end
+
+local function chatIcon(path)
+  if type(path) ~= "string" then return "" end
+  if not path:find("\\", 1, true) then path = ns.iconPath(path) end
+  return ns.art.hasFile(path) and ("|T" .. path .. ":14:14|t ") or ""
+end
+
+local function decorated(text)
+  if type(text) ~= "string" or text:sub(1, #CHAT_MARK) ~= CHAT_MARK then return end
+  local label, body = text:sub(#CHAT_MARK + 1):match("^([^:]+): (.*)$")
+  for _, style in pairs(STYLES) do
+    if label == style[1] then
+      local statusIcon = style[3] == "check" and "Interface\\RaidFrame\\ReadyCheck-Ready" or ns.questMap.ICONS[style[3]]
+      return chatIcon(ns.ADDON_ICON or "Achievement_Level_60") .. "|cff53d8cbCodex|r "
+        .. chatIcon(statusIcon) .. "|c" .. style[2] .. label .. ":|r " .. body
+    end
+  end
+end
+
+local function announcementFilter(_, _, text, author, ...)
+  local display = decorated(text)
+  if display then return false, display, author, ... end
+end
+
+local filtersAdded = {}
+local function registerAnnouncementFilters(attempt)
+  if type(ChatFrameAddMessageEventFilter) ~= "function" then return end
+  local retry
+  for _, event in ipairs({ "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER" }) do
+    if not filtersAdded[event] then
+      local ok = ns.try(ChatFrameAddMessageEventFilter, event, announcementFilter)
+      if ok then filtersAdded[event] = true else retry = true end
+    end
+  end
+  if retry and attempt < 3 then ns.after(1, function() registerAnnouncementFilters(attempt + 1) end) end
+end
+
+function ns.previewQuestAnnouncements()
+  local row = myRow()
+  local id = row and row.step.quest or 783
+  local ref = questRef(id, Q.log(id))
+  ns.say("Quest announcement preview (only you can see this):")
+  for _, sample in ipairs({
+    { "accepted", { ref } },
+    { "item", { "Quest item: 4/8 - ", ref } },
+    { "objective", { "Objective: 10/10 - ", ref } },
+    { "ready", { ref } },
+    { "turnin", { ref } },
+    { "found", { itemRef(1307), " - starts ", ref } },
+    { "flight", { "Stormwind (about 2:15)." } },
+  }) do
+    local line = decorated(announcement(sample[1], sample[2]))
+    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then DEFAULT_CHAT_FRAME:AddMessage(line) end
+  end
 end
 
 -- One line a second at most, queued; a line with the same key (a newer count of the same objective)
@@ -434,11 +571,10 @@ local function pump()
   pump()
 end
 
-local function chat(key, text, count)
+chat = function(key, text, count, kind)
   if not inParty() then return end
-  text = chatText(text, count)
-  if text == "" then return end
-  text = "Codex: " .. text
+  text = announcement(kind, text, count)
+  if not text then return end
   for _, line in ipairs(queue) do
     if key and line.key == key then line.text = text; return end
   end
@@ -462,6 +598,7 @@ end
 local function readSnapshot()
   local snap = {}
   for id, entry in pairs(Q.logEntries()) do
+    questRef(id, entry) -- Keep native links while the quest is still in the log, including across turn-in.
     local objs = {}
     for i, obj in ipairs(entry.objectives or {}) do
       objs[i] = { have = objectiveCount(obj), done = obj.finished == true or obj.finished == 1 }
@@ -472,7 +609,7 @@ local function readSnapshot()
 end
 
 -- Quest items you picked up (each new count), finished objectives and quests ready to turn in.
--- One line per objective; a quest that is now ready says only that. Questie's own lines win:
+-- One line per objective; a quest that is now ready says only that. quest tracker's own lines win:
 -- with its objective announcements on, a finished objective is left to it. `said[questID]` marks
 -- the quests that got a line, so a finished step for one isn't said as well.
 local readFrom -- the log table the snapshot was read from (each quest log read makes a new one)
@@ -486,24 +623,23 @@ local function announceLog(said)
   local items, progress = db.questAnnounceItems, db.questAnnounceProgress
   if not old or GetTime() < quietUntil or not (items or progress) or not inParty() then return end
   local log = Q.logEntries()
-  local questieObjectives = ns.questie.announces("objectives")
+  local providerObjectives = ns.questSupport.announces("objectives")
   for id, now in pairs(snap) do
     local before, entry = old[id], log[id]
     if before and entry then
-      local title = questTitle(id, entry)
       if progress and now.ready and not before.ready then
-        chat("ready:" .. id, title .. " is ready to turn in.")
+        chat("ready:" .. id, { questRef(id, entry) }, nil, "ready")
         said[id] = true
       else
         for i, obj in ipairs(entry.objectives or {}) do
           local was, is = before.objs[i], now.objs[i]
           local rose = was and is and is.have and was.have and is.have > was.have
           local doneNow = was and is and is.done and not was.done
-          if rose and items and obj.type == "item" and not (doneNow and questieObjectives) then
-            chat("obj:" .. id .. ":" .. i, chatText(obj.text, is.have) .. " (" .. title .. ")")
+          if rose and items and obj.type == "item" and not (doneNow and providerObjectives) then
+            chat("obj:" .. id .. ":" .. i, { chatText(obj.text, is.have), " - ", questRef(id, entry) }, is.have, doneNow and "objective" or "item")
             said[id] = true
-          elseif doneNow and progress and not questieObjectives then
-            chat("obj:" .. id .. ":" .. i, chatText(obj.text, is.have) .. " (" .. title .. ")")
+          elseif doneNow and progress and not providerObjectives then
+            chat("obj:" .. id .. ":" .. i, { chatText(obj.text, is.have), " - ", questRef(id, entry) }, is.have, "objective")
             said[id] = true
           end
         end
@@ -526,22 +662,21 @@ local function startsQuest(item)
   return starterQuest[item]
 end
 
--- A route item that starts a quest turning up in your bags (left to Questie when it says those).
+-- A route item that starts a quest turning up in your bags (left to quest tracker when it says those).
 local function announceStarters()
   local now = {}
   for item, has in pairs(Q.starterItems()) do now[item] = has end
   local old = starters
   starters = now
   if not old or GetTime() < quietUntil or not ns.db().questAnnounceItems or not inParty()
-      or ns.questie.announces("items") then
+      or ns.questSupport.announces("items") then
     return
   end
   for item, has in pairs(now) do
     if has and old[item] == false then
       local quest = startsQuest(item)
       local name = ns.itemInfo(item)
-      chat("start:" .. item, "Found " .. (type(name) == "string" and name or "a quest item") .. ": it starts "
-        .. questTitle(quest, quest and Q.log(quest)) .. ".")
+      chat("start:" .. item, { itemRef(item, name), " - starts ", questRef(quest, quest and Q.log(quest)) }, nil, "found")
     end
   end
 end
@@ -587,7 +722,13 @@ function ns.partyStepChanged()
   local step = finishedStep
   finishedStep = nil
   if step and ns.db().questAnnounceSteps and GetTime() >= quietUntil and not (step.quest and said[step.quest]) then
-    chat(nil, "Done - " .. Q.plain(Q.label(step)))
+    local kind = step.type == "accept" and "accepted" or step.type == "turnin" and "turnin"
+      or step.type == "complete" and "objective" or STYLES[step.type] and step.type or "step"
+    local delegate = kind == "accepted" and ns.questSupport.announces("accepted")
+      or kind == "turnin" and ns.questSupport.announces("turnedIn")
+    if not delegate then
+      chat(nil, step.quest and { questRef(step.quest, Q.log(step.quest), step.name) } or Q.plain(Q.label(step)), nil, kind)
+    end
   end
   broadcast(false)
   checkTogether()
@@ -648,6 +789,7 @@ function ns.startQuestParty()
   if events then return end
   -- the quest log can fill in over the first seconds: nothing is said for it
   quietUntil = GetTime() + 5
+  registerAnnouncementFilters(1)
   events = CreateFrame("Frame")
   for _, ev in ipairs({ "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "QUEST_ACCEPTED" }) do
     pcall(events.RegisterEvent, events, ev)

@@ -2,7 +2,7 @@
 local B = LevelingCodexQuests.build
 local route = LevelingCodexQuests.HORDE
 
--- Places shared by the three classes (QuestieDB spawns unless noted).
+-- Places shared by the three classes (quest database spawns unless noted).
 local M = B.maps
 local wetlands = M.wetlands
 route.extents[wetlands] = route.extents[wetlands] or { 4135.417, 2756.25 }
@@ -26,7 +26,7 @@ do
   local priest = "PRIEST"
   local miles = B.at("Miles Welsh", 25.31, 15.24, M.thunderBluff)
 
-  -- Troll: Tai'jin offers Hex of Weakness when you train at 10 (quest record 5654; QuestieDB
+  -- Troll: Tai'jin offers Hex of Weakness when you train at 10 (quest record 5654; quest database
   -- lists 5655 for her), Ur'kyo takes it on the first Orgrimmar visit.
   q(5654, "Hex of Weakness", 10, 10, nil, nil, priest)
   quest[5654].race = "TROLL"
@@ -123,7 +123,8 @@ do
     steps = {
       action("goto", og(nil, 38.5, 78.2),
         "Take The Lessons of Ta'zo from the painted rock beside the mage hut in the Valley of Spirits. Keep it until you visit the Undercity."),
-      action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades from the tower outside Orgrimmar, then ride south into the Undercity. Do this on the route's Undercity visit at 24 if you like."),
+      action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades from the tower outside Orgrimmar, then ride south into the Undercity. Do this on the route's Undercity visit at 24 if you like.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       accept(79094, owen, "Give the book to Owen Thadd in the inner ring of the Magic Quarter."),
       finish(79094, owen),
       accept(97286, owen, "Ask Owen Thadd for Research Access now that you have donated a book."),
@@ -141,7 +142,8 @@ do
   B.hordeSide({ id = "mage-spellfire-robes", title = "Mage: Spellfire Robes", zone = M.undercity,
     levels = { 15, 17 }, class = mage, start = MAGES, sources = sources, steps = {
       accept(1959, uthelnay, "Orcs and Trolls: Uthel'nay in Orgrimmar's Valley of Spirits sends you to the Undercity. Skip this if you are already there."),
-      only(action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades and ride south into the Undercity."), { race = { "ORC", "TROLL" } }),
+      only(action("boat", ucZeppelin, "Take the zeppelin to Tirisfal Glades and ride south into the Undercity.",
+        { skipOn = { M.tirisfal, M.undercity } }), { race = { "ORC", "TROLL" } }),
       finish(1959, anastasia, "Anastasia Hartwell stands in the Magic Quarter."),
       accept(1960, anastasia, "Take the quest, then pick up the Cantation of Manifestation and the Chest of Containment Coffers behind Anastasia."),
       withItem(7308, objective(1960, uc(nil, 53.0, 74.7),
@@ -205,7 +207,7 @@ do
       finish(1949, tirth, "Find Magus Tirth at the Mirage Raceway in the Shimmering Flats."),
       accept(1950, tirth),
       objective(1950, B.at('"Plucky" Johnson', 79.61, 75.63, needles),
-        "Find the chicken near the raceway tower. Target it and type /beckon; the man who appears tells you the phrase.",
+        "Find the chicken near the raceway tower. Target it and type /beckon, then talk to the man who appears and choose the dialogue asking for the phrase.",
         "Find the strongbox phrase"),
       finish(1950, tirth),
       accept(1951, tirth),
@@ -231,7 +233,7 @@ do
   local warlock = "WARLOCK"
   local sources = {
     "https://questing.wiki/wow-forever/classes/warlock/",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }
 
   -- Voidwalker on the Durotar route: Ophek in Razor Hill, the Tablet of Verga in Skull Rock.

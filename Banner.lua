@@ -209,7 +209,7 @@ local function makeToast()
   r:SetPoint("TOPLEFT", mid, "TOPRIGHT"); r:SetPoint("BOTTOMRIGHT", 0, 0)
   ns.fade(r, "HORIZONTAL", C.band[1], C.band[2], C.band[3], 0.7, 0)
   -- gold lines along the top and bottom of the band, fading out at the ends (the game's level-up look;
-  -- the accent in the EllesmereUI theme)
+  -- the accent in the external UI theme)
   local line = C.eui and C.accent or { 1, 0.82, 0.25 }
   for _, edge in ipairs({ "TOP", "BOTTOM" }) do
     for side = 1, 2 do
@@ -299,7 +299,7 @@ local function makeToast()
     self.holding = nil; self.leave:Play()
     if mouseButton ~= "RightButton" then (self.onClick or ns.toggleWindow)() end
   end)
-  ns.ellesmere.fonts(toast) -- the EllesmereUI font in its theme (the title is a heading)
+  ns.skinSupport.fonts(toast) -- the external UI font in its theme (the title is a heading)
   ns.placeToast()
 end
 

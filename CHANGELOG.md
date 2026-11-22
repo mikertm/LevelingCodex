@@ -1,12 +1,134 @@
 # Leveling Codex
 
-## Unreleased
+## v0.30.5
+
+### Quest guide fixes
+
+- Buy and collect steps (such as the Southshore cloth and thread errands) no longer come back after you log out once you've handed the items in.
+- Logging in no longer jumps to a later guide in the same zone (the 39-40 Arathi guide at level 34): the guide that fits your level keeps the step.
+
+## v0.30.4
+
+### Quest guide fix
+
+- The Hillsbrad to Arathi step now points at the gap in Thoradin's Wall on the road instead of a spot in the hills north of Durnhold Keep, on both factions' routes.
+
+## v0.30.3
+
+### Quest guide fixes
+
+- Both Horde Brackenwall routes now send you to Darkfang spiders near the Theramore Infiltrators for the 6 Acidic Venom Sacs required by **The Black Shield**.
+- **Jarl Needs Eyes** now shows the Forever requirement of 40 Unpopped Darkmist Eyes on both factions' routes.
+
+## v0.30.2
+
+### Quest guide fix
+
+- The quest arrow keeps pointing until you are within 8 yards of the final waypoint, so it can guide you closer to quest NPCs in cities and buildings.
+
+## v0.30.1
+
+### Quest guide fix
+
+- Returning to Southshore with Brewer's Trade ready to turn in no longer switches you from Soothing Turtle Bisque to the older Coastal Patrols route. The guide keeps following your current route when you have outleveled the alternate.
+
+## v0.30.0
+
+### Profession guides
+
+- Hover over a profession in the game's profession book to see your skill and current leveling step. Mining, Herbalism, Fishing and Skinning also show what to gather or where to go.
+- Open a profession window for a compact guide beside the list. It shows recipe difficulty, estimated crafts, materials and prerequisites, or gathering advice when the route calls for it.
+- The Professions tab has a skill progress bar, separate material and bag counts, and clearer leveling route previews.
+- Audited all 12 guides against the latest Forever client data. Blacksmithing switches to Bronze Warhammer at 129, and the guides include updated Cooking alternatives, gathering routes, Fishing Rack and Seed Hybridizer advice.
+
+## v0.29.1
+
+### Quest guide fixes
+
+- Fixed the guide sending you to objectives or turn-ins for quests you never picked up, including **Foreboding Plans** and **Venom Bottles**.
+- Earlier pickups you still need for a follow-up can appear under **Quests > Quest log > Missed pickups**.
+- Clarified how to accept separate quests from objects such as the Syndicate Documents, Corpse Laden Boat, and Bloodsail Correspondence.
+
+## v0.29.0
+
+### Dungeon encounter guides
+
+- Dungeon guides show boss mechanics and progress in the Quests tab and step window. The guide follows supported encounters when they start and marks bosses defeated when the game reports a kill.
+- Optional bosses and rare spawns can be skipped or marked defeated manually.
+
+### Quest step guide
+
+- The NPC portrait sits in a recessed frame that matches your theme. The step's status color now fades behind the title, and the **Next step** button is beveled with hover and press feedback.
+- Stranglethorn routes keep their own guide suggestions on cross-zone steps. Those suggestions stay available when a dungeon checklist is ready.
+
+## v0.28.3
+
+### Druid macros
+
+- **Fight Cat, Fight Bear, and Prowl Cat** can dismount and shift before their usual attacks or Prowl. Cat shifting accounts for whether you have learned Aquatic Form.
+- **Heal Up** starts with instant Rejuvenation in combat and Healing Touch between fights from level 12. Press again for Regrowth. Both sequences heal you even with an enemy targeted.
+- **Panic Bear** can dismount and shift into Bear or Dire Bear Form before using Frenzied Regeneration and Enrage. **Cancel Form** returns you to caster form and is available from level 10 on every Druid path.
+- Run `/codex macros` to update your existing Codex macros and add Cancel Form.
+
+## v0.28.2
+
+### Travel and guide resumes
+
+- Reloading at Sentinel Hill during the Darkshire chapter now points you across Duskwood to Rebel Camp for **Jungle Secrets**.
+- Added arrival checks to 41 boat, zeppelin, and airship crossings, including the Skyborne skycutter and Horde dungeon, class, and attunement trips. Each leg of a round trip advances at its own destination.
+- Fixed earlier travel steps reappearing when you resume the relevant guides at Ironforge, Refuge Pointe, Everlook, Thunder Bluff, or on the Westfall coast.
+
+## v0.28.1
+
+### Alliance and Horde leveling routes
+
+- Reviewed the level 1–60 guides, including racial starts, alternate routes, and class and dungeon quests. Starter pickups now follow their prerequisites, and the Durotar coast and Silverpine routes need fewer trips.
+- Added nearby quests to existing loops, including Ambermill Investigations, Wanted! Marez Cowl, and Repurposed Totems. Updated directions for the Kurzen Stockpile and Krol'dok Stronghold.
+- Added missing turn-ins in Uldaman and the Plaguelands. Booty Bay now points players carrying Ruzzgot's or Lozgil's delivery to the Farholde guide before the trip to Ratchet.
+- More boat and zeppelin steps advance at the destination. Taking the flight marked by the guide keeps the selected route active on landing. Harlo's Wetlands pickup can reappear when you reach him after joining the route midway.
+
+## v0.28.0
+
+### Find your next gear upgrade
+
+- **New Loot Journal.** Click any slot on your equipment overview to see upgrades you can get at your current level. Each result shows how it compares and where to get it. Set a higher level in Filters to plan ahead.
+- **Pick the sources you want.** Toggle sources individually, or use **Clear sources** to build a shortlist. **Dungeon drop** includes bosses and regular dungeon enemies. You can also filter weapons by type and handedness. Protection Warriors start with weapons that leave room for a shield.
+- **Compare a drop before you swap.** Choose an item from your bags or paste an item link into **Compare** to see estimated score and stat changes. Your talent path sets the default scoring priorities. Change them under **Profiles**, where you can also turn on tooltip ranks for other specs.
+- **Follow a reward to its source.** Quest routes show known chain steps, quest givers, and pickup points. Save a target to the floating tracker and hover over it for item stats. In controller mode, **Map** sets the pin for you to view with your usual world-map button.
+- **Less tooltip clutter.** Enemy mouseovers use the game's normal tooltip. The quest guide's target button shows the creature names it can target.
+
+### Quest routes and travel
+
+- **More Alliance quests in Stranglethorn Vale.** The guides add 36 quest entries across Rebel Camp, the Kurzen Stockpile, Booty Bay, and the southern shore. Grouped objectives cut down on repeat trips, and revised directions help you find keys, strongboxes, ships, and quest handoffs.
+- **New Drowned City checklist.** The optional Alliance dungeon guide shows which quests to pick up before diving in, then walks through the encounters and post-run turn-ins.
+- **Clearer travel steps.** Corrected the Thandol Span return directions and the Wetlands boat handoff. The Duskwood guide keeps **Armed and Ready** active when your flight lands at Sentinel Hill, even if a Westfall turn-in is ready nearby.
+
+## v0.27.0
+
+- Replaced the scrolling Quests tab with a journey board: connected area map previews, route progress, one selected quest panel, and area checklists paged six cards at a time.
+- A side rail opens two-column route and dungeon boards, quest-log categories, party panels and focused option groups. Guide previews keep the followed route, dungeon plans remain separate from entering a run, and quest searches open the matching area and page.
+- Area previews use the client's world-map artwork and explored terrain. Route cards show their zone's map; dungeon cards label their entrance-area map. Missing map APIs or artwork leave a readable fallback without opening or changing the world map.
+- Cleaned up documentation, guide notes and interface wording. Optional integrations retain their existing behavior.
+
+## v0.26.0
+
+### Quest chat announcements
+
+- Quest announcements use a recognizable chat marker, native quest and item links when available, clear progress counts, and distinct accepted, objective-complete, ready-to-turn-in and turned-in messages. Codex clients display a badge and colored status icons. A private preview is available in Settings and Quests > Party.
+- Existing opt-in switches, message throttling, raid exclusion and quest tracker duplicate suppression remain in effect.
 
 ### Quest guide buttons
 
 - Place the quest item and target buttons independently on the left, right, top or bottom of the step window. Each has horizontal and vertical offset sliders, controller-friendly adjustment buttons and a position reset.
 - Settings and Quests > Guide setup offer the same placement controls and separate switches to hide either button. Changes made in combat apply when combat ends.
 - Unlock button dragging in either screen to move separate Item and Target handles with the mouse, then lock them again. Handles preview missing buttons and pause in combat; drops update the saved offsets, whose range now covers the screen.
+
+### Quest steps and dungeon preparation
+
+- **Wetlands eastern loop:** gather Crocs of the Sky scales, Carnage's Rotclaw bait, Razormaw incisors and Perfect Razormaw Eggs on the same Green Belt/Raptor Ridge trip, with shared progress in the step window. Carnage offers the existing elite Take/Skip choice and gives a cave entrance waypoint, Offering Stone instructions and a clickable bait item. Raptor pickups wait until after the coast quests to keep the first Menethil visit's quest log lighter.
+- **Step-guide travel and dungeon preparation:** clickable items show live cooldowns, flights initialize connecting routes, and return steps name the next flight. Completed-history handling accepts keyed sets and keeps confirmed completions for the session. Corrected Snellig's wreck and lower-deck directions. Dungeon pages and the Route tab offer outdoor quest preparation before the run; readiness waits for all outdoor pickups, and a small footer icon replaces the wide Run button.
+- **Sovik's Gnomeregan errand:** both Horde guides now name the gossip option "What else do you have to say?", explain retries and automatic acceptance, and remind you to check the quest log before leaving Orgrimmar. The pickup is no longer hidden when Rig Wars is absent.
+- **Alliance and Horde quest interactions:** corrected missing dialogue, event triggers, escort releases, and quest-item actions in leveling, alternate, dungeon, class, and special guides. The dated audit notes list each change and its sources. These steps still need in-game verification.
 
 ## v0.25.0
 
@@ -74,11 +196,11 @@
 - Every new macro has tips: what each press does and when a new piece joins.
 - Macros made by an older Codex still update in place, even when WoW: Forever doesn't load your saved settings.
 
-### EllesmereUI
+### external UI
 
-- **The Codex takes on EllesmereUI's look.** With EllesmereUI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
-- It's on whenever EllesmereUI is installed. Turn it off for the Codex in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as EllesmereUI is installed.
-- Change your accent colour in EllesmereUI and the Codex follows straight away.
+- **The Codex takes on external UI's look.** With external UI installed, the Codex window, the step window, the macro copy box, the level-up banner and the trainer, vendor, crafting and talent cards use its window frame, dark panels, close button and page arrows, your accent colour and your UI font. The parchment cards become its dark panels.
+- It's on whenever external UI is installed. Turn it off for the Codex in external UI's options (skin settings > Window Skins > Third-Party Addons), or pick Forever (teal) or Codex (gold) in the Codex's Settings > Theme: that pick is kept for as long as external UI is installed.
+- Change your accent colour in external UI and the Codex follows straight away.
 
 ### Party play
 
@@ -87,7 +209,7 @@
 - **Quests one of you is missing.** The Party tab lists the guide quests a party member has that you don't, with Ask to share (their Codex offers it to you), and the ones you have that they don't, with Share.
 - **Quest sharing is on by default.** A guide quest you accept is offered to party members who don't have it yet. It waits a moment, so two of you taking it together don't get each other's offer. Turn it off in Settings > Party.
 - **Catch-up cues.** The step window says when someone is 3 or more steps behind you, and a soft chime plays when the last of you reaches the same step. Settings > Party > Ping sound picks the sound (Soft chime, Party invite or Ready check) and plays it so you can hear it.
-- **Party chat lines, like Questie's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what Questie already says in party chat is left to it. Each one is off until you turn it on.
+- **Party chat lines, like quest tracker's.** Optional lines in party chat for the steps you finish, the quest items you pick up (with your count), finished objectives and quests that are ready to turn in. At most one a second, never in a raid, and what quest tracker already says in party chat is left to it. Each one is off until you turn it on.
 - **Every party option in the guide setup card**, next to the same switches in Settings > Party and Quests > Party.
 - **Steadier sync.** Your step goes out again every minute, so a long kill step no longer drops you from your partner's window, and going Back to look at an earlier step no longer tells the party you're behind.
 
@@ -329,13 +451,13 @@
 
 ## v0.19.0
 
-### Questie compatibility
+### quest tracker compatibility
 
-- **Works side by side with Questie.** While Questie's own auto-accept or auto-complete is on, the Codex leaves those quests to Questie, so the two never pick different quests from one NPC. Settings says so under each tickbox.
-- **One key holds both back.** Questie's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
-- **The step window sits beside Questie's tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
-- **Last-mile arrow with QuestieDB.** With QuestieDB installed (Questie needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (QuestieDB).
-- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks QuestieDB once more if it wasn't ready at login.
+- **Works side by side with quest tracker.** While quest tracker's own auto-accept or auto-complete is on, the Codex leaves those quests to quest tracker, so the two never pick different quests from one NPC. Settings says so under each tickbox.
+- **One key holds both back.** quest tracker's key (Shift by default) now stops the Codex's auto-accept and auto-turn-in too. Alt now also stops the quest window, not just the NPC's list.
+- **The step window sits beside external quest tracker** until you drag it somewhere, on the side facing the middle of the screen, and follows the tracker when you move it.
+- **Last-mile arrow with quest database.** With quest database installed (quest tracker needs it), the arrow leads to the nearest mob or object you still need once you reach a kill or collect step's camp, for example "Kobold Vermin - 42 yd". Items lead to whatever drops them. Turn it off in Settings > Point the arrow at the nearest objective (quest database).
+- **The last-mile arrow skips a spawn you just cleared** for 90 seconds, so it leads on to the next mob instead of back to an empty spot. It also works on clients in other languages, keeps the arrow on screen when the step window sits high, and checks quest database once more if it wasn't ready at login.
 
 ### Alliance quest guide
 

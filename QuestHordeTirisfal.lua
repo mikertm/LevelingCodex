@@ -4,8 +4,8 @@ local B = LevelingCodexQuests.build
 local route = LevelingCodexQuests.HORDE
 local M = B.maps
 
--- Quest facts: QuestieDB (Forever) and the client reference. Chains on Forever quests follow
--- the order the givers offer them (RestedXP Forever); QuestieDB has none for them.
+-- Quest facts: quest database (Forever) and the client reference. Chains on Forever quests follow
+-- the order the givers offer them (reference guide A Forever); quest database has none for them.
 do
   local q, quest = B.q, B.quest
   -- Deathknell
@@ -132,7 +132,7 @@ do
   q(430, "Return to Quinn", 11, 10, 429)
   q(91920, "Wild Eyes", 11, 10, 430, true)
   q(91921, "Return to Quinn (Again)", 11, 10, 91920, true)
-  -- Forever puts Wild Eyes and Return to Quinn (Again) between Return to Quinn and Ivar: QuestieDB's
+  -- Forever puts Wild Eyes and Return to Quinn (Again) between Return to Quinn and Ivar: quest database's
   -- Forever fixes give 91921 as Ivar's prerequisite (its base record still says 430).
   q(425, "Ivar the Foul", 12, 10, 91921)
   q(97891, "Prompt Potion Runner", 16, 10, nil, true)
@@ -238,7 +238,7 @@ local deathknell = (function()
     action("train", nil, "Train spells for level", { level = 4 }),
     accept(3902, saltain), accept(380, arren),
     objective(3902, 32.4, 64.4, "Pick up the scavenged crates and sacks lying beside the village houses.", "6 Scavenged Goods"),
-    B.objectiveAt(91208, ti(nil, 27.68, 63.83), "Find the Frightened Paladin hiding west of the village and offer aid.",
+    B.objectiveAt(91208, ti("Frightened Paladin", 27.68, 63.83), "Find the Frightened Paladin west of the village. Talk through his dialogue to offer help, then defeat him when he attacks.",
       "Offer aid to the Frightened Paladin"),
     along(objectivePart(380, 1, ti(nil, 29.9, 57.3), "Kill Young Night Web Spiders at the mouth of Night Web's Hollow, the cave northwest of the village.",
       "10 Young Night Web Spiders"), 98389),
@@ -314,7 +314,7 @@ local glades = (function()
     accept(427, zygand), accept(99141, zygand), accept(99134, zygand),
     withItem(286176, along(objectiveAt(99134, zygand, "Use the Executor's Motivator on five Deathguards in and around Brill.",
       "5 Deathguards motivated"), 99141)),
-    objectivePart(99141, 1, dillinger, "Ask Deathguard Dillinger on the west side of Brill for his report.", "Dillinger's Report"),
+    objectivePart(99141, 1, dillinger, "Talk to Deathguard Dillinger on the west side of Brill and choose the dialogue about Executor Zygand's report.", "Dillinger's Report"),
     finish(91209, shari, "Paladins: Shari Stilwell trains Paladins next to the town hall."),
     finish(8, town.renee, "Innkeeper Renee is inside the Gallows' End Tavern."),
     action("sethearth", town.renee, "Bind your hearthstone at the Gallows' End Tavern.", { bind = town.brillBind }),
@@ -324,13 +324,13 @@ local glades = (function()
     action("train", nil, "Train spells for level", { level = 6 }),
     objectiveAt(5650, ti("Deathguard Kel", 59.18, 46.49), "Heal Deathguard Kel north of Brill, then cast Power Word: Fortitude on him.",
       "Heal and fortify Deathguard Kel"),
-    objectivePart(99141, 2, ti("Deathguard Kristof", 65.25, 60.22), "Follow the road southeast to Deathguard Kristof's camp and ask for his report.",
+    objectivePart(99141, 2, ti("Deathguard Kristof", 65.25, 60.22), "Follow the road southeast to Deathguard Kristof's camp. Talk to him and choose the dialogue about Executor Zygand's report.",
       "Kristof's Report"),
     accept(97558, shelene),
     finish(97960, ti("Rand Rhobart", 65.58, 60.03), "Rand Rhobart, the skinning trainer, shares the camp."),
     along(objective(404, 52.6, 57.0, "Head back west past Brill. Kill Rotting Dead and Ravaged Corpses in the fields for Putrid Claws.",
       "7 Putrid Claws"), 367, 97558),
-    objectivePart(99141, 3, gordo, "Find Gordo on the road west of Brill and ask for his report.", "Gordo's Report"),
+    objectivePart(99141, 3, gordo, "Find Gordo on the road west of Brill. Talk to him and choose the dialogue about Executor Zygand's report.", "Gordo's Report"),
     objective(5481, 44.4, 57.3, "Pick Gloom Weed beside the river south of the road.", "3 Gloom Weed"),
     objective(365, 36.6, 50.1, "Loot pumpkins in the farm fields north of the Deathknell road.", "10 Tirisfal Pumpkins"),
     accept(99144, ti("Bareth Dawnstone", 31.96, 46.34), "Fight your way into the Scarlet tower to the west and talk to Bareth Dawnstone at the top."),
@@ -514,7 +514,7 @@ local sepulcher = (function()
     finish(435, rane), accept(429, rane), accept(449, rane),
     hunt(objective(429, 56.6, 13.4, "Hunt Mottled Worgs in the woods east of the Yoricks until you have 6 Discolored Worg Hearts. Gorefang, a rare worg, prowls the north end.",
       "6 Discolored Worg Hearts"), "Mottled Worg", "Worg", "Gorefang"),
-    objective(1886, 49.7, 32.2, "Rogues: Astor Hadren patrols the road between Brill and the Sepulcher. Talk to him, then kill him for the letter.",
+    objective(1886, 49.7, 32.2, "Rogues: Astor Hadren patrols the road between Brill and the Sepulcher. Ask his identity, then demand what he carries through his dialogue. Kill him for the letter when he attacks.",
       "Astor's Letter of Introduction"),
     B.taxi("getfp", town.karos, "The Sepulcher, Silverpine Forest", "Follow the road south to the Sepulcher. Learn the flight path from Karos Razok."),
     accept(421, dalar), accept(477, allister), accept(6321, podrig),
@@ -546,9 +546,11 @@ local sepulcher = (function()
     accept(425, rane),
     objective(425, 51.5, 13.9, "Kill Ivar the Foul in the barn north of the Yoricks and take his head. Two Ravenclaw Slaves are with him: clear the yard and pull the one that walks about on its own first.", "Ivar's Head"),
     finish(425, rane),
-    finish(438, boat, "Go southeast to the Corpse Laden Boat on the shore of the Lordamere Lake."), accept(439, boat),
+    finish(438, boat, "Go southeast to the Corpse Laden Boat on the shore of the Lordamere Lake."),
+    accept(439, boat, "Use the Corpse Laden Boat again to accept Rot Hide Clues before leaving for the Dalaran camp."),
     objective(424, 58.6, 44.9, "Follow the lake shore south to the Deep Elem Mine. Grimson the Pale is inside, with Moonrage Darksouls around the entrance; take his head.", "Head of Grimson"),
-    finish(477, crate, "Go south-west to the road and find the Dalaran Crate near the Dalaran camp."), accept(478, crate),
+    finish(477, crate, "Go south-west to the road and find the Dalaran Crate near the Dalaran camp."),
+    accept(478, crate, "Open the Dalaran Crate again and accept Maps and Runes before returning to the Sepulcher."),
     finish(478, allister, "Return to the Sepulcher."), accept(481, allister),
     finish(439, hadrec), accept(440, hadrec),
     finish(424, dalar), finish(481, dalar), accept(482, dalar), finish(482, allister),
@@ -571,8 +573,8 @@ local sepulcher = (function()
     action("goto", town.ucGate, "Ride the elevator up and leave the Undercity. Follow the road north to Brill."),
     finish(440, town.sevren, "Give Deliah's Ring to Magistrate Sevren in Brill."),
     action("train", nil, "Train spells for level", { level = 14 }),
-    action("boat", town.tower, "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin to Durotar. Use Next when you land.",
-      { name = "Tirisfal Glades - Durotar" }),
+    action("boat", town.tower, "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin to Durotar. Check the guide when you land.",
+      { name = "Tirisfal Glades - Durotar", skipOn = { M.durotar, M.orgrimmar } }),
     accept(840, B.at("Takrin Pathseeker", 50.84, 43.59, M.durotar), "Walk south from the zeppelin tower along the road to Razor Hill. Takrin Pathseeker stands by the road."),
     finish(840, B.at("Kargal Battlescar", 62.26, 19.38, M.barrens), "Take the road west from Razor Hill over the bridge into the Barrens. Kargal Battlescar waits at Far Watch Post."),
     accept(842, B.at("Kargal Battlescar", 62.26, 19.38, M.barrens)),
@@ -607,8 +609,8 @@ sections[#sections + 1] = { id = "tirisfal", title = "Tirisfal Glades", zone = t
 sections[#sections + 1] = { id = "silverpine", title = "Silverpine Forest", zone = silverpine, levels = { 12, 15 },
   start = "SCOURGE", verified = false, sources = sources, steps = sepulcher }
 
--- Alternate for Orcs, Trolls, Tauren and Skyborne at 12-15: RestedXP's Forever route for Kalimdor
--- races who want Silverpine before the Barrens. The zeppelin to Tirisfal, the Brill pickups RestedXP
+-- Alternate for Orcs, Trolls, Tauren and Skyborne at 12-15: reference guide A's Forever route for Kalimdor
+-- races who want Silverpine before the Barrens. The zeppelin to Tirisfal, the Brill pickups reference guide A
 -- takes (The Argent Emissary, the Cult of the Damned, Rear Guard Patrol, Delivery to Silverpine),
 -- the Undercity flight path, then the Undead Silverpine loop without its Undead and Rogue quests,
 -- and back to Durotar for the Crossroads. Source notes: tools/audits/2026-11-10-horde-loop-audit.md.
@@ -649,7 +651,8 @@ do
   local ucEntrance = B.at("Undercity entrance", 61.8, 65.1, tirisfal)
   local steps = {
     B.action("boat", durotarTower,
-      "Take the zeppelin to Tirisfal Glades from the tower just outside Orgrimmar's south gate. Use Next when you land."),
+      "Take the zeppelin to Tirisfal Glades from the tower just outside Orgrimmar's south gate. Check the guide on landing.",
+      { skipOn = { tirisfal, undercity } }),
   }
   -- In Brill: Johaan (north), Terrence and Linnea on the way south-east, then Hadric's camp.
   local first = { [445] = 1, [96895] = 2, [356] = 3 }
@@ -683,7 +686,8 @@ do
     end
   end
   steps[#steps + 1] = B.action("boat", town.tower,
-    "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin back to Durotar. Use Next when you land.")
+    "Climb the zeppelin tower between Brill and the Undercity and take the zeppelin back to Durotar. Check the guide when you land.",
+    { skipOn = { M.durotar, M.orgrimmar } })
   steps[#steps + 1] = B.action("goto", B.at("The Crossroads", 51.5, 30.34, M.barrens),
     "From the landing, take the road west past Orgrimmar's gate and on through the Barrens to the Crossroads.")
 

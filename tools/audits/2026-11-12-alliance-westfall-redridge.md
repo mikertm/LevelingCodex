@@ -14,18 +14,18 @@ This pass looks for the same two problems in Westfall and Redridge. The loop che
 ## Sources
 
 - **Loop check:** `tools/questloops.py` from commit 80ebf63, which walks the alternate chapters and flags late pickups. It was run for Human, Dwarf, Gnome, Night Elf and Skyborne with every class.
-- **Gap lists** (session scratchpad): `gaps-alliance.txt`, where list A holds quests guide A routes and we don't, and list B holds QuestieDB-only quests. `gaps-zygor-alliance.txt` was also used.
-- **Guide A** (the local RXP Forever copy; see `2026-11-10-guide-cross-reference.md`). Only quest IDs, grouping, order and positions were used, never its text:
+- **Gap lists** (session scratchpad): `gaps-alliance.txt`, where list A holds quests guide A routes and we don't, and list B holds quest database-only quests. `local guide reference` was also used.
+- **Guide A** (the local reference guide A Forever copy; see `2026-11-10-guide-cross-reference.md`). Only quest IDs, grouping, order and positions were used, never its text:
   - `Alliance-11-20.lua`: "13-15 Westfall" and "19-20 Redridge";
   - `dungeon/Alliance-11-20.lua`: "13-15 Westfall";
   - `Alliance-ADV-AoE-Mage-1-22.lua`: "16-18 ADV Westfall Mage AoE" and "20-22 ADV Redridge 1 Mage AoE";
   - `Alliance-Mage-12-21.lua`: "18-21 Redridge Mage AoE";
-  - `RestedXP-Skyborne.lua`: "24-27 Duskwood/Redridge" and "24-27 Duskwood/Redridge/Stockades".
-- **Zygor Forever guides (quest-ID gap check only).** Its "Westfall (13-15)" and "Redridge & Westfall (19-20)" guides were used for quest IDs and level bands only. No text, step order or code was used.
+  - `local guide reference`: "24-27 Duskwood/Redridge" and "24-27 Duskwood/Redridge/Stockades".
+- **reference guide B Forever guides (quest-ID gap check only).** Its "Westfall (13-15)" and "Redridge & Westfall (19-20)" guides were used for quest IDs and level bands only. No text, step order or code was used.
 - **Bind on Forever:**
   - [Assessing the Threat](https://bindonforever.com/quest/246) and [Show of Force](https://bindonforever.com/quest/98407): both give one objective point, 10.7, 63.2 ("Three Corners"). Show of Force lists no prerequisite and starts at level 11.
   - [Humble Beginnings](https://bindonforever.com/quest/399): level 15, from level 10, Baros Alexston in Cathedral Square, compass at Alexston Farmstead (36.5, 54.5).
-- **`tools/questfacts.py`** (QuestieDB Forever):
+- **`tools/questfacts.py`** (quest database Forever):
   - Redridge Thrashers (14-15): 6 at 11.0, 64.6, 4 at 9.6, 64.6 and 2 at 23.0, 80.9.
   - Redridge Mongrels (15-16): 7 at 26.3, 83.1, 4 at 11.0, 63.9 and 3 at 37.6, 72.1.
   - Redridge Poachers (16-17): 9 at 26.7, 83.0, 4 at 37.6, 71.4 and 3 at 25.5, 79.5. There are none at 10.7, 63.2.
@@ -39,7 +39,7 @@ This pass looks for the same two problems in Westfall and Redridge. The loop che
 
 ## What was wrong
 
-1. **Lakeshire, Assessing the Threat (246), wrong camp.** The objective pointed at the south-west camp (10.7, 63.2), where QuestieDB has only Thrashers and four Mongrels and no Poachers. The Mongrels and Poachers are mostly at the camp south of Feldon (26.5, 83). Guide A's gnoll loop covers both camps. The 10.7, 63.2 point comes from Bind on Forever's single objective marker.
+1. **Lakeshire, Assessing the Threat (246), wrong camp.** The objective pointed at the south-west camp (10.7, 63.2), where quest database has only Thrashers and four Mongrels and no Poachers. The Mongrels and Poachers are mostly at the camp south of Feldon (26.5, 83). Guide A's gnoll loop covers both camps. The 10.7, 63.2 point comes from Bind on Forever's single objective marker.
 2. **Lakeshire, Show of Force (98407), late pickup** (from the loop check). Feldon stands next to the gryphon master where the section starts, but the route took his quest only after the Guard Parker trip. The route then walked back west to the Thrasher camp it had just passed.
 3. **Lakeshire hub** (not flagged by the tool). From the inn, the route went west, then south to the dock and Shawn by the bridge, then north-east to Oslow, Verner and Solomon, then all the way back south over the bridge. It now sweeps once and ends at the bridge. Later, Hilary's turn-in (by the bridge) came before Oslow and Baren in town, and then the route left over the bridge. She now comes last, on the way out.
 4. **Late Redridge, town hub** (from the loop check). The route went from the gryphon master to the inn, back south to Guard Howe beside the gryphon master, and then north again. The Fangore poster sits a few steps from the inn but was read after the walk south. At the end, Howe (south of the bridge) came between Marris and Verner in town.
@@ -66,9 +66,9 @@ This pass looks for the same two problems in Westfall and Redridge. The loop che
 
 ## Gap check
 
-RXP = guide A routes it in a 1-30 chapter. Zygor = in `gaps-zygor-alliance.txt` (Zygor accepts it, we didn't).
+reference guide A = guide A routes it in a 1-30 chapter. reference guide B = in `local guide reference` (reference guide B accepts it, we didn't).
 
-| Quest | Status | Reason | RXP | Zygor |
+| Quest | Status | Reason | reference guide A | reference guide B |
 |---|---|---|---|---|
 | 98407 Show of Force | **Reordered** | Taken at arrival beside the gryphon master; collars on the walk to Guard Parker | yes (route had it) | yes (route had it) |
 | 246 Assessing the Threat | **Moved** | Objective now at the south camp (26.5, 82.5), with the 37.6, 72 group named | yes | yes |
@@ -86,7 +86,7 @@ RXP = guide A routes it in a 1-30 chapter. Zygor = in `gaps-zygor-alliance.txt` 
 | 92911 Harvesting the Harvesters | Left out | The Engineering-parts version of 92909, which we route | no | no |
 | 92109, 92110 Odd Child (Moonbrook barn) | Left out | Level 10, needs Silverleaf, Peacebloom and Empty Vials | no | no |
 | 93928 Of Mice and Milk | Left out | Turned in to Nesingwary in Stranglethorn | no | no |
-| 178 Theocritus' Retrieval | Left out | Item-started, with no known drop source in QuestieDB Forever. The turn-in is back at the Elwynn tower | no | no |
+| 178 Theocritus' Retrieval | Left out | Item-started, with no known drop source in quest database Forever. The turn-in is back at the Elwynn tower | no | no |
 | 249 Morganth | Left out | Needs a second trip to the lion statue after the jar, then Morganth (26) in the Tower of Ilgalar, then Theocritus in Elwynn | no | no |
 | 93963 Exploring the Alliance | Left out | A tour of the other capitals | no | no |
 | 95772 Songblade Search, 386 What Comes Around... | Already routed | Excavation Site and Stockade dungeon guides | yes | no |
@@ -155,7 +155,7 @@ End of the chapter: **Marris (219), Verner (126), then Guard Howe (128)** by the
   - moving the compass step to the 13 objective;
   - moving the turn-in from `lakeshire` to `westfall`.
 - **147 Manhunt** (Elwynn, guide A's Dwarf/Gnome 11-12 chapter): for the `elwynn` auditor.
-- **1793 The Tome of Valor** (Paladin, Zygor 19-20): not in the client reference, so it can't be routed.
+- **1793 The Tome of Valor** (Paladin, reference guide B 19-20): not in the client reference, so it can't be routed.
 
 ## Check in game
 

@@ -8,6 +8,19 @@ Built from **The Leveling Codex** guides — one researched leveling spec per cl
 
 ## Features
 
+### Loot and gear upgrades
+
+Find equipment by slot, level, zone, dungeon, profession and source. Compare an item link, bag
+item or reward against your equipped gear, inspect stat tradeoffs, map its source and track it.
+Loot profiles follow your talent path, with editable weights and import/export codes.
+
+Item tooltip advice, a separate gear-upgrade reward marker, enchant suggestions and an optional
+target tracker use the same comparison rules. Vendor-value coins stay independent. Notifications
+are off by default, and the tab supports keyboard and controller navigation.
+
+Gear scores are advisory estimates. Unknown stats, requirements, effects and locations remain
+clearly labeled. A percentage is an estimated gear-score change, not a promised damage gain.
+
 ### Step-by-step quest guide, levels 1-60
 A small step window tells you exactly what to do next — accept, kill, loot, turn in, fly, hearth, train — with an arrow that points the way. It reads your quest log, so it always picks up where you are.
 
@@ -21,7 +34,7 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
   - Horde 1-30: Tirisfal and Silverpine for Kalimdor races at 12-15, and the Shimmering Flats.
   - 30-60: Forever's **Riverglades** (Alliance from Farholde Keep, Horde from Rog'mar and Powderfuse Port), **Shen'dralas**, early Stranglethorn, the Searing Gorge, the Blasted Lands, Un'Goro and other orders through the 50s.
 
-  The Quests tab lists the route options for your level, and each guide suggests where to go next.
+  The Quests tab opens a journey board with connected area map previews, progress and one selected quest panel. Map previews use the client's own artwork and explored terrain; route cards show their zone, and dungeon cards label their entrance area. Open an area to browse six quest cards at a time. The side rail opens two-column route and dungeon boards, quest-log categories and party panels. Preview another route before starting it; each guide suggests where to go next. Dungeon pages separate pickup plans from entering a run, with preparation, inside and turn-in stages.
 - **Buy it before you go.** Steps that need a bought item say where to get it before the trip (Southshore Stout, Silk Cloth, the Mithril Casing and more). Auction House items are optional steps.
 - **Catch-up built in.**
   - Missed pickups move to Missed quests.
@@ -38,14 +51,14 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 - **Turn-in XP** ("+2,100 XP", or "levels you up"), a 3D portrait of the NPC or creature, and a completion bar for the guide.
 - **Watch out here:** hostile elites and rares near your step, until you outlevel them.
 - **Fits any screen.** Shrink it to 50% (Ctrl+mouse wheel), let it fade while you fight, or switch to compact mode: just the step, its count or distance, a bar and the buttons.
-- **Party play.** The step window lists your party: who is on your step (with their kill or loot count), who is ahead or behind and by how many of your steps, and who is offline or not sharing a step, with a note when someone falls 3 steps behind and a soft chime when everyone is together again. Quests > Party shows each member's guide and step, lets you follow their guide, and lists the quests one of you has and the other doesn't, with Share and Ask to share buttons. Party members need the Codex to share theirs. Optional party chat lines, like Questie's, say the steps you finish, the quest items you pick up and your quest progress. Guide quests you accept are offered to party members who don't have them yet (on by default), and saying your flights in party chat is optional too.
+- **Party play.** The step window lists your party: who is on your step (with their kill or loot count), who is ahead or behind and by how many of your steps, and who is offline or not sharing a step, with a note when someone falls 3 steps behind and a soft chime when everyone is together again. Quests > Party shows each member's guide and step, lets you follow their guide, and lists the quests one of you has and the other doesn't, with Share and Ask to share buttons. Party members need the Codex to share theirs. Optional party chat lines, like quest tracker's, say the steps you finish, the quest items you pick up and your quest progress. Guide quests you accept are offered to party members who don't have them yet (on by default), and saying your flights in party chat is optional too.
 
 ### The arrow and your maps
 - **The arrow** shows the distance and about how long until you get there. It turns green when you're on course, gold when the step is off to your side, and red when it's behind you. Drag it, resize it or lock it.
 - **It knows the way:** across zones by flight path, boat, zeppelin and road, and through tunnels and caves such as the Deadmines and Wailing Caverns. In the air it shows a flight timer. As a ghost it leads back to your corpse.
 - **Flight master trips.** For a long trip the arrow leads to a flight master when flying is quicker ("Fly to Lakeshire from Sentinel Hill"), and the flight map lights up the flight to take. A flight path you don't have close to the way is picked up on the way, and Quests > **Nearest flight master** points at the closest one.
 - **The route on your minimap and world map.** Pins for the current and next steps, a dotted line from you to the step, and the game's own map waypoint on the current step. A waypoint you place yourself is never replaced.
-- **Works with Questie.** Questie's auto-accept and hold-back key take precedence, and the step window sits beside Questie's tracker. With QuestieDB installed, the arrow leads to the nearest mob or object you still need once you reach a camp.
+- **Works with quest tracker.** quest tracker's auto-accept and hold-back key take precedence, and the step window sits beside external quest tracker. With quest database installed, the arrow leads to the nearest mob or object you still need once you reach a camp.
 
 ### Dungeons and attunements
 - **Every dungeon from Ragefire Chasm and the Deadmines to Stratholme**, for both factions: Wailing Caverns, Shadowfang Keep, Blackfathom Deeps, the Stockade, Gnomeregan, Razorfen Kraul and Downs, all four Scarlet Monastery wings, Uldaman, Zul'Farrak, Maraudon, the Sunken Temple, Blackrock Depths, Dire Maul, Lower and Upper Blackrock Spire, Scholomance and Stratholme. Forever's Ruins of Lordaeron, Hall of Thanes, Excavation Site, City of Dalaran and Krol'dok Stronghold are covered too.
@@ -60,12 +73,12 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 - **Special chains** are offered when you pass their start: the Cozy Sleeping Bag (both factions, up to 3% bonus XP), and for the Alliance The Legend of Stalvan, The Missing Diplomat and Seeking Caitlin. Each guide says what it gives you.
 
 ### Helpers
-- **Auto-accept and auto-turn-in** for the guide's quest, off by default. Hold Alt (or Questie's key) to do it yourself. Reward choices always stay yours; a coin marks the one that sells for the most.
+- **Auto-accept and auto-turn-in** for the guide's quest, off by default. Hold Alt (or quest tracker's key) to do it yourself. Reward choices always stay yours; a coin marks the one that sells for the most.
 - **Auto-fly (optional):** the Codex takes the flight the guide marks, and at the step's inn it picks the bind option for you to accept.
 - **Quest item and target buttons** for the current step, both key-bindable: use the quest item (or your Hearthstone on a hearth step), and target the NPC you're looking for or the creatures the quest needs.
 - **Vendors:** the Codex sells your grey items (never quest items or the Hearthstone) and repairs with your own money. When a coming step needs something this vendor sells, a card lists it with one Buy button. Hold Alt as you open the vendor to skip it once.
 - **XP to go** on "Level up" steps: how much is left, about how many kills that is, your rested XP and the XP waiting in finished quests.
-- **Guide setup.** A new character gets a quick setup card: fastest or every quest, recommended dungeons or none, elite quests, the automation and vendor helpers, the map lines, the step window's size and compact mode, and every party option (party steps, quest sharing, the together ping and the party chat lines). Quests > Guide setup opens it any time.
+- **Guide setup.** A new character gets an offer to set up the guide. Quests > Options opens four groups: your route, map and step window, helpers, and party play. Each opens a focused page for pace, dungeon plans, elite decisions, automation, vendors, display controls or party sharing and announcements.
 
 ### Talent paths
 Pick your path in the **Talents** tab: the Codex guide's own build, a recommended leveling path for every spec of your class (Arms, Fire, Holy and so on; Druids get Feral Cat, Bear, Balance and Restoration), or your own.
@@ -140,10 +153,10 @@ Alchemy, Blacksmithing, Cooking, Enchanting, Engineering, First Aid, Fishing, He
 ### Gathering tracking stays on
 WoW: Forever turns **Find Herbs** and **Find Minerals** off when you log in, zone or die. The Codex turns the one you had back on for you (out of combat, never over another tracking such as Track Beasts), and turns it on when you learn Herbalism or Mining. Untick it in Settings if you'd rather do it yourself.
 
-### Themes, and EllesmereUI
+### Themes and optional UI skins
 **Forever** (teal, the default) or **Codex** (gold and parchment).
 
-**Works with EllesmereUI.** With EllesmereUI installed, the Codex takes on its look: its window frame and dark panels, your accent colour and your UI font, on the Codex window, the step window, the banner and the trainer, vendor, crafting and talent cards. Pick Forever or Codex in Settings > Theme to keep the Codex's own look, or turn it off in EllesmereUI's options (Blizzard Skins+ > Window Skins > Third-Party Addons).
+Compatible UI skins can supply the window frame, dark panels, accent colour and font across the Codex's windows and cards. Pick **External skin** in Settings > Theme to use that look, or choose Forever or Codex for the built-in themes.
 
 ---
 

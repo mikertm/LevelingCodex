@@ -21,7 +21,7 @@ local log, turnedIn, liveDone, removed = {}, {}, {}, {}
 local knownFlights, flightHubs, flightLinks = {}, {}, {}
 local visited, selected, review = {}, nil, nil
 local sideSection
-local sideFrom, sideResumeAt
+local sideFrom, sideResumeAt, sidePrepare
 local history, sideHistory, sideSkips = {}, {}, {}
 local route, race, class
 local sections, sectionsById, steps, missed, ready = {}, {}, {}, {}, {}
@@ -30,8 +30,8 @@ local collectItems = {} -- item -> last count, for collect and buy steps
 local routeItems = {} -- every item a route step names (Q.routeItems: the vendor keeps them)
 local runOwn = {} -- run -> quests a route step ties to it (forDungeon): the ones that need the dungeon
 local eliteQuests, elitePrior = {}, {} -- quest -> its elite's name (leveling steps); quest -> the earlier quest with that elite
-local killed = {} -- boss row key -> true: bosses down this dungeon visit
-local inInstance, lastInstance -- the dungeon you're in now (instance ID), and the last one you entered
+local bossResults, bossRows = {}, {} -- results by row key, ordered boss rows by section
+local inInstance, lastInstance, dungeonOptOut
 local questNames = {}
 local greyRows = {} -- outleveled pickups this pass
 local chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}
@@ -151,17 +151,22 @@ local function readCompleted()
   local completed = {}
   local ids = try(C_QuestLog and C_QuestLog.GetAllCompletedQuestIDs)
   if type(ids) == "table" then
-    for _, id in ipairs(ids) do completed[id] = true end
+    for key, value in pairs(ids) do
+      local id = (value == true or (value == 1 and type(key) == "number" and key > 1)) and tonumber(key)
+        or (type(value) == "number" and value)
+      if id then completed[id] = true end
+    end
   end
   local legacy = {}
   local value = try(GetQuestsCompleted, legacy)
   if type(value) == "table" then legacy = value end
   local function check(id)
     if not id or turnedIn[id] ~= nil then return end
-    if liveDone[id] or completed[id] or legacy[id] then turnedIn[id] = true; return end
+    if liveDone[id] or completed[id] or legacy[id] then turnedIn[id], liveDone[id] = true, true; return end
     local done = try(C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted, id)
     if done ~= true and done ~= 1 then done = try(IsQuestFlaggedCompleted, id) end
     turnedIn[id] = done == true or done == 1
+    if turnedIn[id] then liveDone[id] = true end
   end
   for _, row in ipairs(steps) do
     check(row.step.quest)
@@ -277,9 +282,8 @@ end
 
 local LEAD_IN = { ["goto"] = true, fly = true, getfp = true, boat = true }
 
--- A dungeon run's bosses (`bosses`) as steps of type "boss" in the inside phase: after its last
--- inside step, else before its first after step. Its quest objectives inside show beside them
--- as "On the way" lines (row.sticky) instead of being steps of their own.
+-- Keep the dungeon's quest walkthrough in order. Auto-opening the dungeon can start at its
+-- first encounter, where inside quest objectives also appear as "On the way" goals.
 local function addBossRows(section, first)
   local lastInside, firstAfter
   for i = first, #steps do
@@ -290,10 +294,18 @@ local function addBossRows(section, first)
   end
   local at = lastInside and lastInside + 1 or firstAfter or #steps + 1
   local pos = steps[at - 1] and steps[at - 1].section == section and steps[at - 1].pos or 0
+  local rows = {}
+  bossRows[section] = rows
   for n, boss in ipairs(section.bosses) do
-    table.insert(steps, at + n - 1, { section = section, pos = pos, key = section.id .. ":boss:" .. n,
+    -- Older dungeon guides put the rare/optional qualifier in the name.
+    local qualifier = boss.name:match(" %((%a+)[^()]*%)$")
+    local optional = boss.optional or (qualifier == "rare" or qualifier == "optional") and qualifier
+    local row = { section = section, pos = pos, key = section.id .. ":boss:" .. n,
       step = { type = "boss", name = boss.name, text = boss.tip, npc = boss.npc, encounter = boss.encounter,
-        phase = "inside" } })
+        finishName = boss.finishName, targets = boss.targets, skipBossTip = boss.skip,
+        abilities = boss.abilities, optionalBoss = optional, phase = "inside" } }
+    rows[n] = row
+    table.insert(steps, at + n - 1, row)
   end
 end
 
@@ -304,6 +316,7 @@ local function buildRoute()
   race, class = (raceToken or ""):upper(), classToken
   route = LevelingCodexQuests and LevelingCodexQuests[(faction or ""):upper()]
   sections, sectionsById, steps, startItems, flightHubs, collectItems = {}, {}, {}, {}, {}, {}
+  bossRows = {}
   routeItems = {}
   questNames, chainBefore, chainAfter, runQuests, questRun = {}, {}, {}, {}, {}
   eliteQuests, elitePrior = {}, {}
@@ -483,11 +496,16 @@ local function inDungeon(section)
   local name, kind, _, _, _, _, _, instanceID = try(GetInstanceInfo)
   if kind ~= "party" then return false end
   if type(instanceID) == "number" and instanceID > 0 then return instanceID == section.instanceID end
-  return name == (section.instance or section.title)
+  return type(name) == "string" and (name == section.instance or name == section.title)
 end
 
 local function awaitingObjectives(step, entry)
   return entry and entry.readyKnown and not entry.ready and step.phase == "after" and step.type == "turnin"
+end
+
+function Q.awaitingPickup(step)
+  local id = step.quest
+  return id and (step.type == "complete" or step.type == "turnin") and not log[id] and not turnedIn[id]
 end
 
 -- The town your hearthstone is set to (GetBindLocation), nil when the client doesn't say.
@@ -577,9 +595,9 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   if row.section.category ~= "dungeon" and not included(s) then return "filtered" end
   if sideHidden(row.section) then return "filtered" end
   if s.type == "boss" then
-    -- Down (or passed with Next) this visit; only shown while you're in its dungeon.
-    if killed[row.key] or visited[row.key] then return "done" end
-    if skips[row.key] then return "skipped" end
+    -- The result remains available to the dungeon page after leaving the instance.
+    local result = bossResults[row.key]
+    if result then return result == "skipped" and "skipped" or "done" end
     return inDungeon(row.section) and "pending" or "filtered"
   end
   local gate = gated(s)
@@ -635,9 +653,13 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   -- quest (ifDone, ifOnQuest) only shows up when that happens, so a later step doesn't pass it.
   if s.type == "note" and (skips[row.key] or (later and not s.ifDone and not s.ifOnQuest)) then return "done" end
   if skips[row.key] then return "skipped" end
-  -- Already in the section's zone: the way there no longer applies.
-  if row.leadIn and not visited[row.key] and map == row.section.zone then
-    return "skipped"
+  -- Once the active guide is reached, keep its inbound travel skipped on trips out of the zone.
+  if row.leadIn then
+    if visited[row.key] == "alreadyThere" then return "skipped" end
+    if not visited[row.key] and map == row.section.zone then
+      if row.section == (sideSection or selected) and not Q.inFlight() then visited[row.key] = "alreadyThere" end
+      return "skipped"
+    end
   end
   if visited[row.key] then return "done" end
   if s.type == "grind" and s.level and (level > s.level or (level == s.level and grindReached(s))) then
@@ -794,7 +816,7 @@ end
 
 local function leaveSide()
   if review and steps[review].section == sideSection then review = nil end
-  sideSection, sideFrom, sideResumeAt, sideHistory, sideSkips = nil, nil, nil, {}, {}
+  sideSection, sideFrom, sideResumeAt, sidePrepare, sideHistory, sideSkips = nil, nil, nil, nil, {}, {}
 end
 
 -- How far below your level a quest goes grey (the client's own range when it says).
@@ -842,6 +864,23 @@ local function calculate()
   end
   markPassed()
   markGrey(grey)
+  -- An explicitly marked pickup can still be done in place after a route reordering or join.
+  -- Keep the normal catch-up rules once the player leaves its giver.
+  local nearbyPickup
+  if x and y and not sideSection then
+    for i, row in ipairs(steps) do
+      local s = row.step
+      if row.section == fromSection and s.recoverNearby and row.state == "deferred" and not row.cut
+          and not row.grey and level >= (s.min or 1) and prerequisitesMet(s)
+          and (ns.db().questKeepGrey or not s.level or s.level > level - grey) then
+        local _, distance = Q.vector(s, map, x, y)
+        if distance and distance <= RADIUS then
+          row.state, nearbyPickup = "pending", i
+          break
+        end
+      end
+    end
+  end
   -- An elite quest's question waits for its pickup: none while the pickup is done, skipped, missed,
   -- grey or not for you yet.
   for _, row in ipairs(steps) do
@@ -869,9 +908,13 @@ local function calculate()
     if row.section == fromSection then reached = true end
     local s = row.step
     local entry = s.quest and log[s.quest]
+    -- Apply this after catch-up and grey filtering so missed work keeps its progress status.
+    row.waitingForPickup = row.state == "pending" and Q.awaitingPickup(s) or nil
+    if row.waitingForPickup then row.state = "blocked" end
     if row.state == "pending" then
       if row.section.side then
         if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom
+            and (not sidePrepare or (s.phase == "prepare" and s.type ~= "dungeon"))
             and not passOver(row) then
           sideIndex = i
         end
@@ -894,7 +937,7 @@ local function calculate()
     end
     local side = row.section.side
     local elsewhere = side and row.section ~= sideSection or not side and fromSection
-      and (not reached or row.state == "deferred")
+      and (not reached or row.state == "deferred" or (row.requiredFor and not here(row)))
     if elsewhere and s.type == "accept" and not turnedIn[s.quest] and not row.cut
         and not entry and row.state ~= "filtered" and not seen[s.quest] and level >= (s.min or 1)
         and (not side or (not row.section.category and row.state == "pending" and not seen[row.section] and prerequisitesMet(s)))
@@ -907,6 +950,7 @@ local function calculate()
     leaveSide()
     return calculate() -- restore temporarily skipped rows to the browser and pickup queue
   end
+  mainIndex = nearbyPickup or mainIndex
   index = sideIndex or mainIndex
   if mainIndex then selected = steps[mainIndex].section end
 end
@@ -928,10 +972,16 @@ function Q.stickies()
 end
 
 -- Seconds until the Hearthstone is ready: 0 = ready, nil = the client doesn't say.
-function Q.hearthCooldown()
-  local start, duration = try(C_Container and C_Container.GetItemCooldown, 6948)
-  if type(start) ~= "number" then start, duration = try(GetItemCooldown, 6948) end
+function Q.itemCooldown(item)
+  local start, duration = try(C_Item and C_Item.GetItemCooldown, item)
+  if type(start) ~= "number" then start, duration = try(GetItemCooldown, item) end
   if type(start) ~= "number" or type(duration) ~= "number" then return end
+  return start, duration
+end
+
+function Q.hearthCooldown()
+  local start, duration = Q.itemCooldown(6948)
+  if not start then return end
   if start <= 0 or duration <= 0 then return 0 end
   return math.max(0, start + duration - GetTime())
 end
@@ -955,8 +1005,11 @@ local function activeStep(section, localMap)
   for i, row in ipairs(steps) do
     local s = row.step
     local entry = s.quest and log[s.quest]
+    -- Automatic zone catch-up should not start an outleveled alternate. An
+    -- alternate already being followed and manual resume still use its active quests.
+    local outleveledAlternate = row.section.alternate and row.section ~= selected and level > row.section.levels[2]
     if not row.section.side and (not section or row.section == section) and activeGoal(row, entry)
-        and (not localMap or ((row.section.zone == map or row.section == selected)
+        and (not localMap or (not outleveledAlternate and (row.section.zone == map or row.section == selected)
           and (not s.map or s.map == map)
           and (entry.ready or #entry.objectives > 0))) then
       -- A guide that fits your level wins: the 31-34 Hillsbrad guide works Arathi quests too, and
@@ -1006,16 +1059,25 @@ local function followSection(section)
   calculate()
 end
 
-local function resumeLocal(event)
+local guidedFlight
+
+function Q.startGuidedFlight()
+  if index and not review and not sideSection then guidedFlight = { step = steps[index].step } end
+end
+
+local function resumeLocal(event, previous)
   local map, x = Q.position()
   if not (map and x) or Q.inFlight() then return end
   local changed = map ~= lastZone
   lastZone = map
+  local arrivedByFlight = guidedFlight and guidedFlight.started and guidedFlight.step == previous
+  if changed or event == "PLAYER_CONTROL_GAINED" then guidedFlight = nil end
   if not changed and not checkLocalOnLog then return end
   -- The first log update can arrive after the player's position is available.
   checkLocalOnLog = event ~= "QUEST_LOG_UPDATE" or next(log) == nil
   local row = index and steps[index]
-  if sideSection or review or (row and ((row.requiredFor and row.step.map == map) or
+  local arrivedByBoat = previous and previous.type == "boat" and previous.skipOn and matches(previous.skipOn, map)
+  if arrivedByBoat or arrivedByFlight or sideSection or review or (row and ((row.requiredFor and row.step.map == map) or
       (row.step.map == map and row.section.zone ~= map))) then
     checkLocalOnLog = false
     return
@@ -1126,62 +1188,102 @@ function Q.update(event, id, newLevel)
   readCompleted()
   readStartItems()
   chooseSection()
+  local previous = index and steps[index].step
   calculate()
   if not event or event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA"
       or event == "QUEST_LOG_UPDATE" or event == "QUEST_QUERY_COMPLETE" or event == "PLAYER_CONTROL_GAINED" then
-    resumeLocal(event)
+    resumeLocal(event, previous)
   end
   if event == "QUEST_TURNED_IN" and review and steps[review].step.quest == id then review = nil end
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then Q.enteredDungeon() end
 end
 
--- Zoning into a dungeon: a new dungeon clears the bosses counted down, and one with a guide
--- opens it at its inside part (Settings > Open a dungeon's guide when you enter it). Once per
--- entry, so Return to leveling inside sticks; dying and running back in keeps the count.
+local function followDungeon(section)
+  if ns.db().noDungeonOpen or dungeonOptOut then return end
+  if sideSection == section and sideFrom >= PHASE.inside then return end
+  local bosses = bossRows[section]
+  Q.jump(section, nil, "inside", bosses and bosses[1])
+  if sideSection == section then
+    ns.say(Q.plain(section.title .. ": the step window follows its guide, boss by boss. Return to leveling takes you back."))
+    return true
+  end
+end
+
+-- Separate wings can share a Map ID. Prefer an explicit wing name or a guide the player
+-- already chose. If the client only reports the parent dungeon, a boss event identifies the wing.
 function Q.enteredDungeon()
   local name, kind, _, _, _, _, _, instanceID = try(GetInstanceInfo)
   if kind ~= "party" then inInstance = nil; return end
   local here = (type(instanceID) == "number" and instanceID > 0) and instanceID or name
   if here == inInstance then return end
-  inInstance = here
+  inInstance, dungeonOptOut = here, nil
   if here ~= lastInstance then
-    killed = {}
+    bossResults = {}
     if ns.stats then ns.stats.count("dungeons") end
   end
   lastInstance = here
   if ns.db().noDungeonOpen then return end
+  local subzone = try(GetSubZoneText)
+  local candidate, count, followed = nil, 0, nil
   for _, section in ipairs(sections) do
     if section.category == "dungeon" and inDungeon(section) and not sideHidden(section) then
-      if sideSection ~= section then
-        Q.jump(section, nil, "inside")
-        if sideSection == section then
-          ns.say(Q.plain(section.title .. ": the step window follows its guide, boss by boss. Return to leveling takes you back."))
-        end
+      local wing = section.title:match(": (.+)$")
+      if name == section.title or subzone == section.title or (wing and subzone == wing) then
+        return followDungeon(section)
       end
-      return section
+      if section == sideSection then followed = section end
+      candidate, count = section, count + 1
     end
+  end
+  if followed or count == 1 then return followDungeon(followed or candidate) end
+  if count > 1 and name then
+    ns.say(Q.plain(name .. " has multiple guides. Choose your wing in Quests > Dungeons, or begin a boss encounter."))
   end
 end
 
--- A boss died: ENCOUNTER_END / BOSS_KILL (encounter ID, name; an NPC ID matches too). Marks the
--- matching boss of the dungeon you're in.
-function Q.bossDown(encounter, name, npc)
-  local hit = false
+local function dungeonBoss(encounter, name, npc)
   local wanted = type(name) == "string" and Q.plain(name):lower()
-  for _, row in ipairs(steps) do
-    local s = row.step
-    if s.type == "boss" and not killed[row.key] and inDungeon(row.section) then
-      local bossName = s.name:gsub(" %(.*$", ""):lower()
-      if (encounter and s.encounter == encounter) or (npc and s.npc == npc) or (wanted and wanted == bossName) then
-        killed[row.key], hit = true, true
+  local byName
+  for section, rows in pairs(bossRows) do
+    if inDungeon(section) then
+      for _, row in ipairs(rows) do
+        local s = row.step
+        if encounter and s.encounter == encounter then return row end
+        local bossName = s.finishName or s.name:gsub(" %(.*$", "")
+        if wanted == bossName:lower() or (npc and s.npc == npc) then byName = row end
       end
     end
   end
-  if hit then
-    calculate()
-    if ns.stats then ns.stats.count("bosses") end
+  return byName
+end
+
+function Q.bossStarted(encounter, name)
+  local row = dungeonBoss(encounter, name)
+  return row and followDungeon(row.section)
+end
+
+-- Only a completed encounter counts. BOSS_KILL and ENCOUNTER_END can report the same fight.
+function Q.bossDown(encounter, name, npc)
+  local row = dungeonBoss(encounter, name, npc)
+  if not row or bossResults[row.key] == "defeated" then return false end
+  bossResults[row.key] = "defeated"
+  if review and steps[review] == row then review = nil end
+  if not followDungeon(row.section) then calculate() end
+  if ns.stats then ns.stats.count("bosses") end
+  return true
+end
+
+function Q.bossRows(section) return bossRows[section] end
+
+function Q.bossProgress(section)
+  local done, total = 0, 0
+  for _, row in ipairs(bossRows[section] or {}) do
+    if not row.step.optionalBoss then
+      total = total + 1
+      if row.state == "done" then done = done + 1 end
+    end
   end
-  return hit
+  return done, total
 end
 
 function Q.current()
@@ -1292,6 +1394,10 @@ end
 function Q.runReadiness(section)
   local quests = runQuests[section.id]
   if not quests then return 0, 0 end
+  local later = {}
+  for _, s in ipairs(section.steps) do
+    if s.type == "accept" and s.phase and s.phase ~= "prepare" then later[s.quest] = true end
+  end
   local inLog, left = 0, 0
   for id in pairs(quests) do
     if log[id] and not turnedIn[id] then inLog = inLog + 1 end
@@ -1301,7 +1407,7 @@ function Q.runReadiness(section)
     local s = row.step
     if s.type == "accept" and quests[s.quest] and not counted[s.quest] and not log[s.quest] and not turnedIn[s.quest]
         and (s.phase == nil or s.phase == "prepare") and row.state ~= "filtered" and row.state ~= "skipped"
-        and not s.startItem and level >= (s.min or 1) and prerequisitesMet(s) then
+        and not later[s.quest] and (s.phase == "prepare" or (not s.item and not s.startItem)) then
       left, counted[s.quest] = left + 1, true
     end
   end
@@ -1309,14 +1415,14 @@ function Q.runReadiness(section)
 end
 
 -- The "find a group" moment: a planned run in your level range whose pickups are done
--- (or that already has three quests waiting). Nil while you are on a detour.
+-- Nil while preparing, before the suggested level, or while outdoor pickups remain.
 function Q.readyRun()
   if sideSection or not level then return end
   for _, section in ipairs(sections) do
     if section.category == "dungeon" and Q.planned(section.id) and level >= section.levels[1]
         and level <= section.levels[2] + 3 and not sideHidden(section) then
       local inLog, left = Q.runReadiness(section)
-      if inLog > 0 and (left == 0 or inLog >= 3) then return section, inLog end
+      if inLog > 0 and left == 0 then return section, inLog end
     end
   end
 end
@@ -1472,7 +1578,7 @@ function Q.reason(row)
     end
     if s.maxLevel and level > s.maxLevel then return "Skipped: you're past level " .. s.maxLevel .. "." end
     if s.unlessDone and turnedIn[s.unlessDone] then return "Skipped: not needed once " .. named(s.unlessDone) .. " is done." end
-    if row.leadIn then return "Skipped: you're already in this zone." end
+    if row.leadIn then return "Skipped: you've already reached this guide's zone." end
     if s.quest and not row.section.side and eliteSkipped(s) then
       if Q.eliteMode() == "skip" then return "Skipped: Settings > Elite quests is set to Always skip." end
       return "Skipped: you chose Skip for this elite quest (or the one it needs)."
@@ -1550,7 +1656,8 @@ function Q.suggestions(browse)
   end
   for _, id in ipairs(suggestions or {}) do offer(sectionsById[id]) end
   local map = not Q.inFlight() and Q.position()
-  if map and selected and selected.zone ~= map then
+  -- A chapter can send you into another zone for its own steps.
+  if map and selected and selected.zone ~= map and (not row or row.step.map ~= map) then
     for _, section in ipairs(sections) do
       if section.zone == map then offer(section) end
     end
@@ -1706,14 +1813,24 @@ end
 
 function Q.upcoming(i, count)
   local result = {}
-  local section = steps[i].section
+  local current = steps[i]
+  local section = current.section
   local start = resumeAt and steps[resumeAt].section or section
+  -- Preview work from a pickup in this sequence, even before the player accepts it.
+  -- An earlier pickup brought back for catch-up isn't part of that sequence.
+  local pickups = {}
+  if current.step.type == "accept" and current.state == "pending" and not current.requiredFor then
+    pickups[current.step.quest] = true
+  end
   for n = i + 1, #steps do
     local row = steps[n]
+    local s = row.step
     if section.side and row.section ~= section then break end
-    if row.state == "pending" and not row.step.sticky and not row.sticky and (row.section == section or
+    if (row.state == "pending" or (row.waitingForPickup and pickups[s.quest])) and not s.sticky and not row.sticky
+        and (not sidePrepare or (s.phase == "prepare" and s.type ~= "dungeon")) and (row.section == section or
         follows(row.section, start) or row.requiredFor) then
       result[#result + 1] = row
+      if s.type == "accept" and not row.requiredFor and prerequisitesMet(s) then pickups[s.quest] = true end
       if #result == (count or 2) then break end
     end
   end
@@ -1732,7 +1849,7 @@ local function hasMoreObjectives(row, i)
   return false
 end
 
-function Q.next()
+function Q.next(skipBoss)
   local row, i = Q.current()
   if not row then return end
   local manual = not review
@@ -1750,6 +1867,8 @@ function Q.next()
     Q.setElite(row.step.eliteQuest, false) -- Next on an elite quest skips it and the quests that need it
     ns.say(Q.plain((row.step.name or "The quest") .. " is skipped (" .. (row.step.elite or "an elite")
       .. " is elite). Back asks again."))
+  elseif row.step.type == "boss" then
+    bossResults[row.key] = skipBoss and row.step.optionalBoss and "skipped" or "manual"
   elseif row.step.quest or row.step.type == "dungeon" or row.step.type == "getfp" or row.step.type == "sethearth"
       or row.step.type == "note" then
     local skips = row.section.side and sideSkips or skipTable()
@@ -1786,6 +1905,7 @@ function Q.back()
   if row then
     local skips = row.section.side and sideSkips or skipTable()
     skips[row.key], visited[row.key] = nil, nil
+    if row.step.type == "boss" and bossResults[row.key] ~= "defeated" then bossResults[row.key] = nil end
     -- Back to an elite quest's question asks it again.
     if row.step.type == "elite" and Q.eliteMode() == "ask" then Q.clearElite(row.step.eliteQuest) end
     if not sideSection then selected = row.section end
@@ -1805,6 +1925,7 @@ function Q.jump(section, row, phase, resumeRow)
   elseif section.side then
     if Q.guideMinimum(section) then return end
     sideSection, review, sideHistory, sideSkips = section, nil, {}, {}
+    sidePrepare = phase == "prepareOnly"
     sideFrom = PHASE[phase] or (section.category == "dungeon" and inDungeon(section) and PHASE.inside) or PHASE.prepare
     sideResumeAt = 0
     if resumeRow then
@@ -1822,6 +1943,7 @@ function Q.jump(section, row, phase, resumeRow)
 end
 
 function Q.returnToRoute()
+  if inInstance and sideSection and inDungeon(sideSection) then dungeonOptOut = true end
   leaveSide()
   review = nil
   calculate()
@@ -1864,7 +1986,10 @@ function Q.learnFlights(nodes)
 end
 
 function Q.checkPosition()
-  if Q.inFlight() then return end
+  if Q.inFlight() then
+    if guidedFlight then guidedFlight.started = true end
+    return
+  end
   local map, x, y = Q.position()
   -- The map can still show the previous zone when the zone event fires.
   if x and map ~= lastZone then
@@ -1918,6 +2043,21 @@ function Q.eliteText(step)
 end
 
 function Q.text(step)
+  local instructions = step.text
+  if step.type == "fly" and step.flight then
+    return instructions .. " Talk to the flight master and choose " .. step.flight .. "."
+  end
+  if step.type == "hearth" then
+    for i, row in ipairs(steps) do
+      if row.step == step then
+        local nextRow = steps[i + 1]
+        if nextRow and nextRow.step.type == "fly" then
+          instructions = instructions .. " Next, talk to the flight master and fly to " .. nextRow.step.flight .. "."
+        end
+        break
+      end
+    end
+  end
   if step.type == "elite" then return Q.eliteText(step) end
   if step.type == "getfp" then return step.text .. " Use Next to skip this flight path." end
   if step.quest == 95998 and step.type == "complete" then
@@ -1929,22 +2069,22 @@ function Q.text(step)
   end
   if step.type == "sethearth" or step.type == "hearth" then
     local bind = Q.bindLocation()
-    if not step.bind then return step.text end
+    if not step.bind then return instructions end
     local atTarget = bind and bind:lower() == step.bind:lower()
     if step.type == "sethearth" then
       if atTarget then return "Your hearthstone is already set to " .. bind .. "." end
       local current = bind and (" Your hearthstone is set to " .. bind .. ".") or ""
-      return step.text .. current .. " Use Next to keep your current bind."
+      return instructions .. current .. " Use Next to keep your current bind."
     end
     if atTarget then
       local wait = Q.hearthCooldown()
       if wait and wait >= 60 then
-        return step.text .. " Your hearthstone is ready in " .. math.ceil(wait / 60) .. " min: travel there instead."
+        return instructions .. " Your hearthstone is ready in " .. math.ceil(wait / 60) .. " min: travel there instead."
       end
-      return step.text .. (wait and " Use your hearthstone: it's ready." or " Use your hearthstone if it's ready.")
+      return instructions .. (wait and " Use your hearthstone: it's ready." or " Use your hearthstone if it's ready.")
     end
-    if not bind then return step.text .. " Use your hearthstone if you're bound there and it's ready." end
-    return step.text .. " Your hearthstone is set to " .. bind .. "."
+    if not bind then return instructions .. " Use your hearthstone if you're bound there and it's ready." end
+    return instructions .. " Your hearthstone is set to " .. bind .. "."
   end
   if step.type ~= "train" then return step.text end
   local visit = ns.trainAt(step.level or level) or ns.nextTrain((step.level or level) - 1)

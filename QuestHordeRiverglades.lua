@@ -2,8 +2,8 @@
 -- four alternate routes, and the Horde Krol'dok Stronghold guide.
 -- Source notes: tools/audits/2026-11-12-horde-riverglades.md.
 --
--- QuestieDB's cached Forever data has no Riverglades or Shen'dralas quests. Givers, enders and their
--- positions come from bindonforever.com quest and NPC pages (QuestieDB-format data for client build
+-- quest database's cached Forever data has no Riverglades or Shen'dralas quests. Givers, enders and their
+-- positions come from bindonforever.com quest and NPC pages (quest database-format data for client build
 -- 1.60.1.70888); objectives, levels and sides from ForeverDB quest pages; quest-starting items from the
 -- client's ItemSparse table; the instance and its encounters from tools/reference/forever.json.
 -- Objective spots are the centre of the target creatures' published spawn points. Anything the
@@ -642,7 +642,9 @@ do
       { name = "Handler Ashka", encounter = 3453,
         tip = "Two wolves fight with her. Kill or crowd control the wolves first, then her." },
       { name = "Nar'gurk", encounter = 3449,
-        tip = "He mind controls a player. Crowd control the charmed player instead of killing them, and stay near cover." },
+        tip = "Clear or crowd control the gnolls and cultists before engaging Nar'gurk." },
+      { name = "Bossman Toof",
+        tip = "Head across the bridge after Nar'gurk. Look for Toof with his shamans." },
       { name = "Overseer Mugg", encounter = 3451,
         tip = "He leaps around the room, so spread out. Kill his adds first: they weaken the healing on the tank." },
     },
@@ -688,7 +690,7 @@ do
   offer("desolace-41", "shendralas-pylons")
   offer("tanaris-41", "riverglades-eastsea", "shendralas-pylons")
   offer("feralas-43", "shendralas-pylons")
-  offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41")
+  offer("riverglades-rogmar", "stv-40", "swamp-41", "tanaris-41", "feralas-43")
   offer("riverglades-bolderok", "feralas-43", "stv-44", "swamp-45", "tanaris-46")
   offer("riverglades-eastsea", "feralas-43", "stv-44", "swamp-45")
   offer("shendralas-pylons", "feralas-43", "stv-44", "swamp-45", "tanaris-46")

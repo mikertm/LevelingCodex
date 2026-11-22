@@ -1,31 +1,16 @@
 -- QuestPortrait.lua: the step window's portrait, a small 3D model of the step's NPC (a pickup's giver,
--- a turn-in's finisher, a kill's first target) from QuestNPCData.lua, framed in gold like the game's
--- quest portraits. The step's icon shows instead when there is no NPC ID or the client has no
+-- a turn-in's finisher, a kill's first target) from QuestNPCData.lua, set into a dark portrait well.
+-- The step's icon shows instead when there is no NPC ID or the client has no
 -- PlayerModel frame, and while the model is still loading: SetCreature only draws a creature the
 -- client has seen, so an NPC you haven't met yet can take a while (it is asked again after 3 s and
 -- given up on after 10 s). Talking to or targeting that NPC shows its model from that unit at once.
 -- A creature the client can't draw yet leaves the old model on screen (it reported Tavernkeep Smitts
 -- for Zombie Juice's Abercrombie), so the model is cleared before each new creature.
 local _, ns = ...
+local C = ns.C
 
 local SIZE, WAIT, RETRY, GIVE_UP, TICK = 44, 1, 3, 10, 0.2
 local WHO = { accept = "start", turnin = "finish", kill = "mob" }
-
-local function edges(p)
-  for i = 1, 4 do
-    local e = p:CreateTexture(nil, "OVERLAY")
-    e:SetColorTexture(0.85, 0.68, 0.3, 1)
-    if i <= 2 then
-      e:SetPoint(i == 1 and "TOPLEFT" or "BOTTOMLEFT")
-      e:SetPoint(i == 1 and "TOPRIGHT" or "BOTTOMRIGHT")
-      e:SetHeight(2)
-    else
-      e:SetPoint(i == 3 and "TOPLEFT" or "TOPRIGHT")
-      e:SetPoint(i == 3 and "BOTTOMLEFT" or "BOTTOMRIGHT")
-      e:SetWidth(2)
-    end
-  end
-end
 
 -- The model's file once it has loaded (nil = not loaded or nothing to show); without the call,
 -- assume it loaded.
@@ -46,10 +31,15 @@ end
 function ns.makeQuestPortrait(parent)
   local p = CreateFrame("Frame", nil, parent)
   p:SetSize(SIZE, SIZE)
-  p.back = p:CreateTexture(nil, "BACKGROUND")
-  p.back:SetPoint("TOPLEFT", 2, -2)
-  p.back:SetPoint("BOTTOMRIGHT", -2, 2)
-  p.back:SetColorTexture(0.05, 0.09, 0.11, 1)
+  p.rim = p:CreateTexture(nil, "BACKGROUND")
+  p.rim:SetAllPoints()
+  p.back = p:CreateTexture(nil, "BORDER")
+  p.back:SetPoint("TOPLEFT", 1, -1)
+  p.back:SetPoint("BOTTOMRIGHT", -1, 1)
+  function p:Repaint()
+    self.rim:SetColorTexture(ns.rgba(C.edgeSoft))
+    self.back:SetColorTexture(ns.rgba(C.code))
+  end
   local ok, model = pcall(CreateFrame, "PlayerModel", nil, p)
   if ok and model then
     p.model = model
@@ -60,7 +50,6 @@ function ns.makeQuestPortrait(parent)
   p.icon = p:CreateTexture(nil, "ARTWORK")
   p.icon:SetPoint("CENTER")
   p.icon:Hide()
-  edges(p)
   p:Hide()
 
   local function showIcon(step)

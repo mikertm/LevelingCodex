@@ -81,7 +81,7 @@ local bluffTrainers = {
   { "PALADIN", tb("Alodan the Hopeful", 25.18, 14.4) }, { "DRUID", tb("Turak Runetotem", 76.48, 27.25) },
 }
 
--- Quest facts: QuestieDB Forever and the client reference. Prerequisites the client enforces.
+-- Quest facts: quest database Forever and the client reference. Prerequisites the client enforces.
 q(844, "Plainstrider Menace", 12, 10)
 q(845, "The Zhevra", 13, 10, 844)
 q(903, "Prowlers of the Barrens", 15, 10, 845)
@@ -98,7 +98,7 @@ q(1489, "Hamuul Runetotem", 16, 12, 880)
 q(1490, "Nara Wildmane", 16, 12, 1489)
 q(3301, "Mura Runetotem", 15, 10, 880)
 q(871, "Disrupt the Attacks", 12, 9)
--- RestedXP takes this with Disrupt the Attacks; QuestieDB lists 871 as its prerequisite.
+-- reference guide A takes this with Disrupt the Attacks; quest database lists 871 as its prerequisite.
 q(5041, "Supplies for the Crossroads", 14, 9)
 q(872, "The Disruption Ends", 15, 9, 871)
 q(1492, "Wharfmaster Dizzywig", 11, 9)
@@ -399,7 +399,7 @@ local south = (function()
       "South of the oasis, kill Sunscale raptors for feathers and use one at each of the blue, red and yellow nests.",
       "Visit Blue Raptor Nest", "Visit Yellow Raptor Nest", "Visit Red Raptor Nest"), 865),
     objectiveAt(4921, ba("Beaten Corpse", 49.33, 50.32),
-      "Follow the road south-west to a beaten corpse by the roadside and look it over.", "Find Mankrik's Wife"),
+      "Follow the road south-west to the Beaten Corpse by the roadside. Click it, then choose the dialogue to inspect the body further.", "Find Mankrik's Wife"),
     action("goto", p.byula, "Follow the road south to Camp Taurajo."),
     action("sethearth", p.byula, "Bind your hearthstone with Innkeeper Byula.", taurajoBind),
     taxi("getfp", p.omusa, "Camp Taurajo, The Barrens", "Learn the flight path from Omusa Thunderhorn."),
@@ -590,7 +590,7 @@ local ashenvale = (function()
     taxi("fly", p.doras, "Orgrimmar, Durotar", "Fly to Orgrimmar from Tal."),
     dungeon(finish(5761, p.neeru, "If you ran Ragefire Chasm, bring Taragaman's heart to Neeru Fireblade in the Cleft of Shadow."), "ragefire-chasm"),
     action("train", nil, "Train spells for level", { level = 22 }),
-    -- Not taken: Chief Engineer Scooty 2842 (level 35, Sovik in the Valley of Honor); RestedXP takes it here for a
+    -- Not taken: Chief Engineer Scooty 2842 (level 35, Sovik in the Valley of Honor); reference guide A takes it here for a
     -- much later Booty Bay visit. The 22-30 route can add it when it passes through Orgrimmar.
   }
 end)()
@@ -605,12 +605,12 @@ road(M.barrens, M.stonetalon, st(nil, 80.6, 90.0), "Take the pass down into the 
 road(M.ashenvale, M.stonetalon, p.talondeep, "Take the Talondeep Path to Ashenvale")
 
 local sources = {
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
   "https://bindonforever.com/zones/the-barrens",
   "https://www.warcrafttavern.com/forever/guides/leveling",
 }
 local westSources = {
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
   "https://bindonforever.com/zones/the-barrens",
   "https://bindonforever.com/zones/stonetalon-mountains",
   "https://bindonforever.com/zones/ashenvale",
@@ -663,14 +663,16 @@ do
     sources = {
       "https://www.warcrafttavern.com/forever/guides/cozy-sleeping-bag/",
       "https://www.wowhead.com/forever/guide/cozy-sleeping-bag-locations-rewards",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+      "Cached quest records (revision 0f7d8ad)",
     },
     steps = {
       accept(79007, tower, "From level 14, search the Burned-Out Remains at the burned watchtower beside the road south of Camp Taurajo. The chain crosses Alliance land: most players finish its last legs in their 30s."),
       action("boat", at("Snurk Bucksquick", 50.7, 12.9, durotar),
-        "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+        "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city.",
+        { skipOn = { stv, westfall } }),
       uncertain(action("goto", at(nil, 14.6, 23.0, stv),
-        "From Grom'gol, ride north-west to the coast. Swim north along the shore into Westfall and keep clear of the naga and murlocs in the water."),
+        "From Grom'gol, ride north-west to the coast. Swim north along the shore into Westfall and keep clear of the naga and murlocs in the water.",
+        { skipOn = westfall }),
         "Coast point from reference guide A's Horde route; the road north through Duskwood and west past Raven Hill also works."),
       action("goto", at(nil, 37.3, 89.2, westfall),
         "Come ashore on Westfall's south coast and ride north to Alexston Farmstead. Stay away from Sentinel Hill to the east: its guards attack Horde."),

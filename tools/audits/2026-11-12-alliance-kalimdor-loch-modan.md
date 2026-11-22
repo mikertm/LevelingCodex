@@ -7,12 +7,12 @@ Earlier decisions kept unless noted: `2026-11-09-alliance-alternates.md`, `2026-
 ## Sources
 
 - **Loop check**: `tools/questloops.py` extended to walk each alternate chapter on its own and to flag late pickups (an accept the route could take at an earlier visit to the same spot while it walks through that quest's objective area in between). Run for Human, Dwarf, Night Elf and Skyborne with Warrior, Hunter and Priest.
-- **Guide A** (RXP Forever, local copy). Only quest IDs, grouping, order and positions were used, never its text:
+- **Guide A** (reference guide A Forever, local copy). Only quest IDs, grouping, order and positions were used, never its text:
   - "11-13 Loch Modan" (Human), "12-14 Loch Modan (Dwarf/Gnome)", "11-13 Loch Modan (Hunter)", "15-16 Loch Modan". The 15-16 chapter ends with the Ironband report to Jern, takes Report to Ironforge (301), flies to Ironforge and hands it to Stormpike.
   - "14-16 Darkshore", "16-19 Darkshore", "19-21 Darkshore/Ashenvale", "20-21 Darkshore/Ashenvale". The 14-16 chapter takes The Blackwood Corrupted (4763) at the Cliffspring sample hand-in (4762), and Cave Mushrooms (947) on the first Auberdine visit for Night Elves at 12+.
   - The Mage AoE Darkshore and Loch Modan chapters (no extra quest IDs in these zones).
-  - RestedXP-Skyborne.lua "21-23 Ashenvale/Stonetalon", "21-23 Stonetalon/Ashenvale" and "29-30 Ashenvale" (speedrun and dungeon-guide versions). The first Astranaar visit takes Culling the Threat (1054) with Raene's Cleansing (991). The 29-30 chapter takes the Gleaming Crescent Pendant (98027) between Fallen Sky Lake and Felfire Hill.
-- **Zygor Forever guides (quest-ID gap check only)**: `gaps-zygor-alliance.txt` (quests Zygor's 1-30 guides accept that no route step uses). In these zones it lists only quests that are also on guide A's list: 301, 994, 952, 1032, 1039, 1073 (plus 683/686/689 Sara Balloo and 1179 Brassbolts, filed under its Ashenvale 29-30 chapter but outside these zones). Its "Loch Modan (18-19)" chapter was opened only to see where it takes 301: at the end of the chapter, right after 298. No Zygor text, order or code was used.
+  - reference guide A-Skyborne.lua "21-23 Ashenvale/Stonetalon", "21-23 Stonetalon/Ashenvale" and "29-30 Ashenvale" (speedrun and dungeon-guide versions). The first Astranaar visit takes Culling the Threat (1054) with Raene's Cleansing (991). The 29-30 chapter takes the Gleaming Crescent Pendant (98027) between Fallen Sky Lake and Felfire Hill.
+- **reference guide B Forever guides (quest-ID gap check only)**: `local guide reference` (quests reference guide B's 1-30 guides accept that no route step uses). In these zones it lists only quests that are also on guide A's list: 301, 994, 952, 1032, 1039, 1073 (plus 683/686/689 Sara Balloo and 1179 Brassbolts, filed under its Ashenvale 29-30 chapter but outside these zones). Its "Loch Modan (18-19)" chapter was opened only to see where it takes 301: at the end of the chapter, right after 298. No reference guide B text, order or code was used.
 - **Bind on Forever** (Forever quest and zone pages):
   - [Gerenzo's Orders 1090](https://bindonforever.com/quest/1090): both factions, Piznik at 71.9, 60.0 inside Windshear Mine, level 22, from level 17, kobold waves while he mines. Its free route takes it at 21.
   - [One Shot. One Kill. 5713](https://bindonforever.com/quest/5713): Alliance, level 15, from 10. Aynasha at 45.9, 90.3 is poisoned; Blackwood Trackers (14-15) and Marosh the Devious (16) attack. Turned in to Onaeya at Maestra's Post. Its free route takes it at 19.
@@ -21,7 +21,7 @@ Earlier decisions kept unless noted: `2026-11-09-alliance-alternates.md`, `2026-
   - [Slowing the Orc Advance 86757](https://bindonforever.com/quest/86757): Alliance, level 30, from 27; no drop sources listed.
 - [Wowhead Classic, Supplies to Auberdine 976](https://www.wowhead.com/classic/quest=976/supplies-to-auberdine): Feero's escort heads for Auberdine; the turn-in is back at Maestra's Post.
 - [Wowhead Classic, Gerenzo's Orders 1090](https://www.wowhead.com/classic/quest=1090/gerenzos-orders): guard Piznik while he mines; the ore goes to Ziz.
-- `tools/questfacts.py` (QuestieDB Forever): levels, prerequisites, races, NPC and object positions. Notable facts:
+- `tools/questfacts.py` (quest database Forever): levels, prerequisites, races, NPC and object positions. Notable facts:
   - Gaffer Jack (6717) and Electropeller (6718) have no drop source, so Wizbang's 1579/1580 can't be done.
   - Sentinel Selarin (3694, Trek to Ashenvale 990) has no spawn.
   - Ol' Sooty (Vyrin's Revenge 271/531) is a single level 20 bear at 37.9, 63.4.
@@ -48,7 +48,7 @@ Two more the check can't see:
 
 ## Findings
 
-Status: added, reordered, or left out (with the reason). "A" = guide A routes it, "Z" = on Zygor's gap list, "B" = QuestieDB only.
+Status: added, reordered, or left out (with the reason). "A" = guide A routes it, "Z" = on reference guide B's gap list, "B" = quest database only.
 
 | Quest | Src | Status |
 |---|---|---|
@@ -138,7 +138,7 @@ Unchanged: every chapter ID, title, level range and `suggest` list.
 
 - **97914 Expanding Horizons** (Night Elf, Thundris to Baros): fits where the Teldrassil route takes the Auberdine ship to Stormwind.
 - **Camping 101: Blacksmithing, Engineering, Mining** (97939, 97941, 97948): Teldrassil pickups handed in at Auberdine. They belong to the Teldrassil route as optional steps.
-- **683, 686, 689** (Sara Balloo, King Magni, Marblesten): on Zygor's list under its Ashenvale 29-30 chapter. They follow 637 from the Wetlands route's Ironforge stop.
+- **683, 686, 689** (Sara Balloo, King Magni, Marblesten): on reference guide B's list under its Ashenvale 29-30 chapter. They follow 637 from the Wetlands route's Ironforge stop.
 - **The guide A Wailing Caverns detour** (959, 1486, 1487, 6981), which its 21-23 Ashenvale/Stonetalon chapters run from Ratchet: dungeon scope.
 - **Vyrin's Revenge (271, 531)**: would fit a Loch Modan chapter that came back to Farstrider Lodge at 20.
 - **2931 Castpipe's Task**: needs a Gaxim visit at 25+, which no chapter makes.

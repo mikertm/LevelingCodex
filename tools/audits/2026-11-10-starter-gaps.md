@@ -1,6 +1,6 @@
 # Starter gaps: starting zones, Loch Modan and city errands (1-15)
 
-Quests that another Forever leveling guide routes in the Human, Dwarf/Gnome, Night Elf and Skyborne starter chapters (and the 11-16 Loch Modan and Stormwind visits) but that the Codex had nowhere. Facts come from `tools/questfacts.py` (QuestieDB Forever 0f7d8ad) and the Forever client tables (`ItemSparse` for the rare-head items). Both reference guides were read only for order and grouping. Every ID below is in the client reference.
+Quests that another Forever leveling guide routes in the Human, Dwarf/Gnome, Night Elf and Skyborne starter chapters (and the 11-16 Loch Modan and Stormwind visits) but that the Codex had nowhere. Facts come from `tools/questfacts.py` (quest database Forever 0f7d8ad) and the Forever client tables (`ItemSparse` for the rare-head items). Both reference guides were read only for order and grouping. Every ID below is in the client reference.
 
 A new pattern: **optional** steps (`quest[id].optional = true`, or step `optional`) show only with Settings > Show optional quests. They are used for profession intros, the skinning errand and pickups that sit outside Loch Modan's own map (see Loch Modan below).
 
@@ -81,11 +81,11 @@ Why the Loch Modan pickups outside Loch Modan are optional: the viewer skips the
 
 ## Disagreements and uncertainties
 
-- Croaky is a level 11 elite in the reference guide's notes; QuestieDB doesn't say. Vagash's strength is described from its kiting advice.
-- Monty and Nipsy have no coordinates in QuestieDB and the tram has no UiMap in the reference, so those steps have no arrow.
+- Croaky is a level 11 elite in the reference guide's notes; quest database doesn't say. Vagash's strength is described from its kiting advice.
+- Monty and Nipsy have no coordinates in quest database and the tram has no UiMap in the reference, so those steps have no arrow.
 - Whether 2998/2999 lead straight to the Tome (1642/1646) in Forever, with 1641/1645 missing, is unverified.
 - What follows Moonglade 94914 for Skyborne druids (Great Bear Spirit?) is unknown; the side guide says to ask Dendrite.
-- Philmor's dock position (30.4, 28.9) is from QuestieDB; the Auberdine ship's landing point may differ.
+- Philmor's dock position (30.4, 28.9) is from quest database; the Auberdine ship's landing point may differ.
 
 ## Check in game
 

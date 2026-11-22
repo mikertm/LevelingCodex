@@ -35,6 +35,34 @@ end
 
 local function click(root, text, mouse)
   local b = findButton(root, function(l) return l == text end)
+  -- Follow the redesigned board's visible navigation when an older scenario asks for a
+  -- control that moved to an area, a focused options page, or another grid page.
+  if not b and root == win() then
+    local function press(name)
+      local control = findButton(root, function(l) return l == name end)
+      if control then control:Click(mouse); return true end
+    end
+    if text == "Step" then press("Route")
+    elseif text == "Show all steps" then press("Area steps")
+    elseif text:find("^Track ") or text:find("^Untrack ") or text:find("^Show ") then press("In progress") end
+    b = findButton(root, function(l) return l == text end)
+    if not b then
+      local group = ({ ["Fastest"] = "Your route", ["Every quest"] = "Your route", ["Recommended"] = "Your route", ["All"] = "Your route", ["None"] = "Your route",
+        ["Ask"] = "Your route", ["Always take"] = "Your route", ["Always skip"] = "Your route", ["Auto-accept"] = "Helpers", ["Auto turn-in"] = "Helpers",
+        ["Auto-fly and bind"] = "Helpers", ["Sell junk"] = "Helpers", ["Repair"] = "Helpers", ["Minimap"] = "Map and step window", ["World map"] = "Map and step window",
+        ["Compact"] = "Map and step window", ["2 steps"] = "Map and step window", ["5 steps"] = "Map and step window", ["10 steps"] = "Map and step window",
+        ["Step window size -"] = "Map and step window", ["Step window size +"] = "Map and step window", ["Party steps"] = "Party play", ["Share quests"] = "Party play",
+        ["Ping together"] = "Party play", ["Steps done"] = "Party play", ["Quest items"] = "Party play", ["Progress"] = "Party play", ["Flights"] = "Party play" })[text]
+      if group and press("Back to options") then press(group)
+      elseif group then press(group) end
+      b = findButton(root, function(l) return l == text end)
+    end
+    for _ = 1, 40 do
+      if b then break end
+      if not (press("Next dungeons page") or press("Next guides page")) then break end
+      b = findButton(root, function(l) return l == text end)
+    end
+  end
   check(b, "no button '" .. text .. "'", 2)
   b:Click(mouse)
   return b
@@ -81,6 +109,7 @@ end
 -- The Quests tab's Quest log sub-tab, with this queue's heading ("Missed quests (2)").
 local function questQueue(name)
   click(win(), "Quest log")
+  click(win(), name == "Missed quests" and "Missed pickups" or name)
   check(questText(win(), name .. " ("), "quest view is available: " .. name, 2)
 end
 
@@ -89,13 +118,36 @@ end
 local function guideButton(name)
   click(win(), "Guides")
   local function find() return findButton(win(), function(l) return l == name end) end
-  local b = find()
+  local function pages()
+    local b = find()
+    for _ = 1, 40 do
+      if b then return b end
+      local next = findButton(win(), function(l) return l == "Next guides page" or l == "Next dungeons page" end)
+      if not next then break end
+      next:Click(); b = find()
+    end
+    return b
+  end
+  local b = pages()
   for _, view in ipairs({ "Your level", "All levels", "Dungeons", "Special", "Class" }) do
     if b then break end
+    if view ~= "Dungeons" then click(win(), "Guides") end
     local tab = findButton(win(), function(l) return l == view end)
     if tab then
       tab:Click()
-      b = find()
+      b = pages()
+      if not b and view == "All levels" then
+        local bands = {}
+        for _, control in ipairs(MOCK.buttons(win())) do
+          local label = labelOf(control)
+          if label and label:find("^LEVELS ") then bands[#bands + 1] = label end
+        end
+        for _, label in ipairs(bands) do
+          click(win(), label); b = pages()
+          if b then break end
+          click(win(), "All level bands")
+        end
+      end
       while not b do
         local folded = findButton(win(), function(l) return l:find("^%+ LEVELS") ~= nil end)
         if not folded then break end
@@ -127,6 +179,78 @@ local function clickGuide(name)
   b:Click()
   local start = findButton(win(), function(l) return l == "Start this route" or l == "Start this guide" end)
   if start then start:Click() end
+end
+
+-- Browse the visible area nodes and six-card pages; data scenarios still inspect every authored
+-- step, while the board itself is deliberately bounded. This never follows or advances a step.
+local function walkRoute(visit)
+  click(win(), "Route")
+  local function press(name)
+    local button = findButton(win(), function(l) return l == name end)
+    if button then button:Click(); return true end
+  end
+  for _ = 1, 80 do if not press("Previous areas page") then break end end
+  for _ = 1, 80 do
+    local areas = {}
+    for _, button in ipairs(MOCK.buttons(win())) do
+      local label = labelOf(button)
+      if label and label:find("^Area %d+:") then areas[#areas + 1] = label end
+    end
+    if #areas == 0 then break end
+    for _, name in ipairs(areas) do
+      press(name); press("Area steps")
+      press("Show all steps")
+      for _ = 1, 100 do
+        local result = visit()
+        if result then return result end
+        if not press("Next steps page") then break end
+      end
+      press("Back to journey")
+    end
+    if not press("Next areas page") then break end
+  end
+  click(win(), "Route")
+end
+
+local function routeHas(text)
+  local found = false
+  walkRoute(function()
+    if questText(win(), text) then found = true end
+  end)
+  return found
+end
+
+local function routeStep(title)
+  return walkRoute(function()
+    for _, button in ipairs(MOCK.buttons(win())) do
+      if button:IsShown() and button.tipTitle == title then return button end
+    end
+  end)
+end
+
+local function guideHas(text)
+  local function press(name)
+    local b = findButton(win(), function(l) return l == name end)
+    if b then b:Click(); return true end
+  end
+  local phases = {}
+  for _, phase in ipairs({ "Prepare", "Inside", "Turn-ins" }) do
+    local b = findButton(win(), function(l) return l == phase or l == phase .. " (now)" end)
+    if b then phases[#phases + 1] = labelOf(b) end
+  end
+  if #phases == 0 then phases[1] = false end
+  for _, phase in ipairs(phases) do
+    if phase then press(phase) end
+    for _ = 1, 80 do if not press("Previous guide area") then break end end
+    for _ = 1, 80 do
+      for _ = 1, 100 do
+        if questText(win(), text) then return true end
+        if not press("Next steps page") then break end
+      end
+      if not press("Next guide area") then break end
+    end
+  end
+  return false
 end
 
 function S.questStart()
@@ -317,10 +441,9 @@ function S.questDuskwoodFlanks()
   S.login()
   slash("quests")
   local function preview(title)
-    for _, b in ipairs(MOCK.buttons(win())) do
-      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
-    end
-    error("No route objective for " .. title)
+    local button = routeStep("Complete - " .. title)
+    check(button, "route objective is available for " .. title)
+    button:Click()
   end
   local frame = questViewer()
   preview("Ira's Dagger")
@@ -342,10 +465,9 @@ function S.questRedridgeOverlap()
   S.login()
   slash("quests")
   local function preview(title)
-    for _, b in ipairs(MOCK.buttons(win())) do
-      if b:IsVisible() and b.tipTitle == "Complete - " .. title then b:Click(); return end
-    end
-    error("No route objective for " .. title)
+    local button = routeStep("Complete - " .. title)
+    check(button, "route objective is available for " .. title)
+    button:Click()
   end
   preview("Blackrock Blockade")
   local frame = questViewer()
@@ -406,7 +528,7 @@ function S.questLayout()
   check(questText(win(), "CURRENT STEP"), "current action has a dedicated card")
   check(not questText(win(), "Accept - Hilary's Necklace"), "finished steps are hidden by default")
   click(win(), "Show all steps")
-  check(questText(win(), "Accept - Hilary's Necklace"), "finished steps can be shown")
+  check(routeHas("Accept - Hilary's Necklace"), "finished steps can be shown through area pages")
   check(not questText(win(), "The Defias Brotherhood"), "route shows only the selected section")
   checkBounds()
   questQueue("Ready to turn in")
@@ -416,7 +538,7 @@ function S.questLayout()
   check(questText(win(), "Missed quests"), "missed view has its own heading")
   checkBounds()
   clickGuide("Westfall")
-  check(questText(win(), "The Defias Brotherhood"), "switching sections returns to its route")
+  check(routeHas("The Defias Brotherhood"), "switching sections exposes that route's area cards")
   checkBounds()
 end
 
@@ -450,11 +572,8 @@ function S.questBind()
   check(not questText(frame, "Bind hearthstone"), "skip setting hides bind steps")
   check(questText(frame, "Accept - A Free Lunch"), "skip setting moves on to the next step")
   click(win(), "Quests")
-  check(not questText(win(), "Bind hearthstone"), "skipped bind steps leave the route list")
-  local hearth
-  for _, button in ipairs(MOCK.buttons(win())) do
-    if button:IsVisible() and button.tipTitle == "Return to Lakeshire" then hearth = button; break end
-  end
+  check(not routeHas("Bind hearthstone"), "skipped bind steps leave the route list")
+  local hearth = routeStep("Return to Lakeshire")
   check(hearth, "hearth step is in the route list")
   MOCK.bags[6948] = 1
   hearth:Click()
@@ -617,7 +736,7 @@ function S.questCleanup()
     { questID = 7, title = "Kobold Camp Cleanup", level = 2, isComplete = true } }
   S.login()
   slash("quests")
-  click(win(), "Quest log")
+  click(win(), "Quest log"); click(win(), "Clean up")
   check(questText(win(), "Quest log cleanup"), "the library lists quests to clean up")
   check(questText(win(), "Stray Errand") and questText(win(), "Not in your guides") and questText(win(), "Grey"),
     "each quest says why it is listed")
@@ -744,11 +863,18 @@ function S.questMobTarget()
   local target = _G.LevelingCodexQuestTarget
   check(target and target:IsShown() and target:GetAttribute("macrotext") == "/targetexact Kobold Vermin",
     "an objective step targets the creatures it needs")
-  hover(target)
+  MOCK.fire(target, "OnEnter")
+  check(#GameTooltip._lines == 1 and GameTooltip._lines[1] == "Target Kobold Vermin",
+    "the target tooltip shows just the creature name")
+  MOCK.fire(target, "OnLeave")
   MOCK.ns.questMobs[7] = { "Kobold Vermin", "Kobold Worker" }
   MOCK.event("QUEST_LOG_UPDATE")
   check(target:GetAttribute("macrotext") == "/targetexact Kobold Worker\n/targetexact Kobold Vermin",
     "the first creature listed goes last, so it wins when both are near")
+  MOCK.fire(target, "OnEnter")
+  check(#GameTooltip._lines == 2 and GameTooltip._lines[2] == "Kobold Vermin, Kobold Worker",
+    "the compact tooltip still shows every supported target")
+  MOCK.fire(target, "OnLeave")
   local many = {}
   for i = 1, 30 do many[i] = "Kobold Tunnel Rat " .. i end
   MOCK.ns.questMobs[7] = many
@@ -807,7 +933,7 @@ function S.stepSound()
     "debug says when the step sound played")
 end
 
--- The step window colours each step by kind: a chip, the title in that colour, a stripe down the left.
+-- The step window colours each step by kind: a chip and a tinted title row.
 function S.stepKinds()
   local kind = MOCK.ns.questStepKind
   check(kind({ type = "accept" }) == "accept" and kind({ type = "turnin" }) == "turnin"
@@ -824,14 +950,24 @@ function S.stepKinds()
     end
     return walk(frame)
   end
-  local function near(c, r, g, b) return c and math.abs(c[1] - r) < 0.01 and math.abs(c[2] - g) < 0.01 and math.abs(c[3] - b) < 0.01 end
   check(frame.chip and frame.chip.text._text == "Accept" and shown("A Threat Within") and not shown("Accept - A Threat Within"),
     "an accept step: the chip says Accept, the title shows the name alone")
-  check(near(frame.stripe._color, 1, 0.82, 0), "the stripe is gold for a pickup")
+  local band = frame.statusBand
+  check(band and band:IsShown(), "the step kind has a tint behind the title row")
+  local _, _, _, left, top = band:GetPoint(2)
+  local _, _, _, chipLeft, chipTop = frame.chip:GetPoint()
+  check(left < chipLeft and chipLeft - left <= 4 and top > chipTop and band:GetHeight() >= frame.chip:GetHeight(),
+    "the band is inset around the chip, beside the portrait")
+  local accept = frame.chip.plate._color
+  check(accept[1] > accept[2], "the chip is gold for a pickup")
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.event("QUEST_LOG_UPDATE")
-  check(frame.chip.text._text == "Turn in" and near(frame.stripe._color, 0.45, 0.85, 0.4), "a turn-in step: green")
+  local turnin = frame.chip.plate._color
+  check(frame.chip.text._text == "Turn in" and turnin[2] > turnin[1] and turnin[2] > turnin[3], "a turn-in step: green")
+  click(frame, "Compact")
+  local _, _, _, compactLeft = band:GetPoint(2)
+  check(band:IsShown() and compactLeft < left, "the title tint follows the chip in compact mode")
 end
 
 -- Up next rows: the step's icon and how far it is, updating as you move.
@@ -890,6 +1026,7 @@ function S.questPortrait()
   S.login()
   local frame = questViewer()
   local p = frame.portrait
+  check(p.rim and p.rim._color[1] == MOCK.ns.C.edgeSoft[1], "the portrait has a rim in the active theme's edge colour")
   if MOCK.minimal then
     check(p and p:IsShown() and p.icon:IsShown() and not (p.model and p.model:IsShown()), "no models: the icon")
     return
@@ -945,7 +1082,7 @@ function S.questPortrait()
   MOCK.npcGUID, MOCK.modelFails = nil, nil
   MOCK.ns.questNPCs[783] = nil -- a quest started by an object or item: no NPC to show
   MOCK.event("QUEST_LOG_UPDATE")
-  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the ring shows the icon")
+  check(p:IsShown() and p.icon:IsShown() and not p.model:IsShown(), "no NPC ID: the well shows the icon")
   LevelingCodexDB.noQuestPortrait = true
   MOCK.event("QUEST_LOG_UPDATE")
   check(not p:IsShown(), "the setting hides it")
@@ -964,7 +1101,8 @@ function S.stepButtons()
     check(GameTooltip._lines[1] == name, name .. " names itself on hover")
     MOCK.fire(b, "OnLeave")
   end
-  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact", "Next" }) do
+  check(nextB.rim and nextB.shade and nextB.bevel, "Next has an inset face, shading and a raised top edge")
+  for _, name in ipairs({ "Back", "Quests", "Hide", "Compact" }) do
     local b = findButton(frame, function(l) return l == name end)
     check(b and not b.edgeLines, name .. " has no outline")
     if b.icon then check(not (b.bg and b.bg:IsShown()), name .. " is just its art") end
@@ -983,6 +1121,7 @@ function S.stepButtons()
   click(win(), "Settings")
   click(win(), "Codex (gold)") -- Settings' theme switch
   check(math.abs(nextB.fill._color[1] - before) > 0.1, "a theme switch repaints Next")
+  check(frame.portrait.rim._color[1] == MOCK.ns.C.edgeSoft[1], "a theme switch repaints the portrait rim")
   click(frame, "Next")
   check(findButton(frame, function(l) return l == "Back" end), "Next still moves on")
 end
@@ -1035,10 +1174,12 @@ function S.stepSetupWindow()
   S.login()
   slash("quests")
   local frame = questViewer()
+  click(win(), "Setup"); click(win(), "Map and step window")
   click(win(), "Step window size -")
   check(math.abs(frame:GetScale() - 0.9) < 0.001, "the setup card's size stepper")
   click(win(), "Compact")
   check(LevelingCodexDB.questCompact and not questText(frame, "UP NEXT"), "and its Compact check box")
+  click(win(), "Back to options"); click(win(), "Helpers")
   local function box(name) return findButton(win(), function(l) return l == name end) end
   check(box("Sell junk") and box("Sell junk"):GetChecked() and box("Repair") and box("Repair"):GetChecked(),
     "the vendor helpers start on")
@@ -1148,6 +1289,7 @@ end
 function S.questSetupLevelled()
   S.login()
   slash("quests")
+  click(win(), "Setup"); click(win(), "Your route")
   click(win(), "Recommended")
   MOCK.level = 30
   MOCK.event("PLAYER_LEVEL_UP", 30)
@@ -1311,7 +1453,12 @@ function S.arrowArrival()
   S.login()
   local arrow = _G.LevelingCodexQuestArrow
   check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "away from the step the arrow points")
-  MOCK.questX, MOCK.questY = 48.17, 42.94 -- Deputy Willem, the first step
+  local willemX, yardsPerPercent = 48.17, 34.70833 -- Elwynn map width / 100
+  MOCK.questX, MOCK.questY = willemX + 25 / yardsPerPercent, 42.94
+  MOCK.advance(0.5)
+  check(not arrow.here:IsShown() and arrow:GetRegions():IsShown() and questText(arrow, "25 yd"),
+    "the arrow still points to Deputy Willem inside the old 35-yard radius")
+  MOCK.questX = willemX + 7 / yardsPerPercent
   MOCK.advance(0.5)
   check(questText(arrow, "Deputy Willem") and questText(arrow, "Arrived"), "arrival names the step's NPC")
   check(arrow.here:IsShown() and not arrow:GetRegions():IsShown(), "the arrow turns into the step's icon")
@@ -1323,13 +1470,13 @@ function S.arrowArrival()
     "the icon bobs 8 px (went from " .. low .. " to " .. high .. ")")
   low, high, jump = bobRun(arrow, 2.5) -- three more loops
   check(high > 7.5 and jump < 0.6, "the bob goes on smoothly, also at its turns (biggest step " .. jump .. " px)")
-  MOCK.questX, MOCK.questY = 60, 60
+  MOCK.questX = willemX + 9 / yardsPerPercent
   MOCK.advance(0.5)
   check(not arrow.here:IsShown() and arrow:GetRegions():IsShown(), "leaving the spot brings the arrow back")
   local _, _, _, _, y = arrow.here:GetPoint()
   check(y == 0, "and the icon is back on its centre for the next arrival")
   LevelingCodexDB.noArrowBounce = true
-  MOCK.questX, MOCK.questY = 48.17, 42.94
+  MOCK.questX = willemX
   MOCK.advance(0.5)
   low, high = bobRun(arrow, 1)
   check(arrow.here:IsShown() and low == 0 and high == 0, "with the animation off the icon stays still")
@@ -1629,9 +1776,9 @@ function S.guideRowsLong()
     for _, c in ipairs({ f:GetChildren() }) do local hit = c:IsShown() and find(c); if hit then return hit end end
   end
   local fs = find(win())
-  check(fs and fs:GetWidth() <= row:GetWidth() - 190, "the title keeps clear of the range and the tag")
+  check(fs and fs:GetWidth() <= row:GetWidth() - 24, "the title keeps clear of the range and the tag")
   guidesView("All levels")
-  check(findButton(win(), function(l) return l:find("^%- LEVELS 30%-40: %d+ guides") end),
+  check(findButton(win(), function(l) return l:find("^LEVELS 30%-40") end),
     "an open band keeps its label")
 end
 
@@ -1785,8 +1932,8 @@ function S.stepProgress()
   MOCK.fire(bar, "OnLeave")
   local pct = MOCK.textUnder(bar):match("(%d+)%%")
   bar:Click()
-  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Show all steps" end),
-    "clicking opens the route")
+  check(win() and win():IsShown() and findButton(win(), function(l) return l == "Area steps" end),
+    "clicking opens the journey")
   click(win(), "Guides")
   check(pct and (questText(win(), "Current " .. pct .. "%") or (pct == "0" and questText(win(), "Current"))),
     "the guide list shows the bar's percentage: " .. tostring(pct))
@@ -1830,40 +1977,25 @@ end
 
 -- The Quests tab: a fixed step card and button row, then Step, Route, Guides and Quest log sub-tabs.
 function S.questTabViews()
-  S.login()
-  slash("quests")
-  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Quest log" }) do
-    check(findButton(win(), function(l) return l == name end), "the Quests tab has " .. name)
+  S.login(); slash("quests")
+  for _, name in ipairs({ "Setup", "Previous step", "Next step", "Show on map", "Step", "Route", "Guides", "Dungeons", "Quest log", "Party" }) do
+    check(findButton(win(), function(l) return l == name end), "the quest board has " .. name)
   end
-  check(findButton(win(), function(l) return l == "Show all steps" end), "Route, the guide's steps, opens first")
+  check(findButton(win(), function(l) return l == "Area steps" end), "Journey opens first with area drill-down")
   click(win(), "Step")
-  check(findButton(win(), function(l) return l == "Resume active quest" end), "Step has the step's tools")
+  check(findButton(win(), function(l) return l == "Resume active quest" end), "the selected step retains its tools")
   click(win(), "Guides")
-  local yourLevel = findButton(win(), function(l) return l == "Your level" end)
-  check(yourLevel and yourLevel.codexOn and questText(win(), "LEVELING GUIDES FOR LEVEL"),
-    "Guides opens on the guides for your level")
+  check(findButton(win(), function(l) return l == "Your level" end).codexOn, "Routes opens on Your level")
   click(win(), "All levels")
-  check(findButton(win(), function(l) return l == "Search" end)
-    and findButton(win(), function(l) return l:find("^%- LEVELS 1%-12") end),
-    "Guides has the search and the level bands")
-  local folded = findButton(win(), function(l) return l:find("^%+ LEVELS 30%-40") end)
-  check(folded, "a band far from your level is folded")
-  local function band30() -- guide buttons starting in the 30s (class quests can be among them)
-    local n = 0
-    for line in (MOCK.textUnder(win()) .. "\n"):gmatch("(.-)\n") do
-      if line:find("^Levels 3%d%-%d+$") then n = n + 1 end
-    end
-    return n
-  end
-  local before = band30()
-  folded:Click()
-  check(band30() > before, "clicking a folded band opens it (" .. before .. " before)")
+  local band = findButton(win(), function(l) return l:find("^LEVELS 30%-40") end)
+  check(band, "level bands are selectable tiles")
+  band:Click()
+  check(questText(win(), "Levels 3") and findButton(win(), function(l) return l == "All level bands" end), "a band opens its guide grid")
   click(win(), "Dungeons")
-  check(findButton(win(), function(l) return l == "Recommended" end), "dungeons live under Guides")
-  click(win(), "Quest log")
-  check(questText(win(), "Ready to turn in") and questText(win(), "Missed quests"), "Quest log holds the queues")
-  click(win(), "Step")
-  check(findButton(win(), function(l) return l == "Report this step" end), "the step tools sit under Step")
+  check(findButton(win(), function(l) return l == "Recommended" end), "Dungeons has pickup plan choices")
+  questQueue("Ready to turn in")
+  check(questText(win(), "Ready to turn in"), "quest log categories open focused queues")
+  stepTool("Report this step")
 end
 
 -- A buy step that lists several items waits until the bags hold every one of them.
@@ -1984,12 +2116,9 @@ function S.questWindowExtras()
   slash("quests")
   click(win(), "Route")
   if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end
-  local skipped
-  for _, button in ipairs(MOCK.buttons(win())) do
-    if button.tipTitle == "Flight path - Lakeshire, Redridge" then skipped = button end
-  end
+  local skipped = routeStep("Flight path - Lakeshire, Redridge")
   check(skipped and skipped.tipText:find("Skipped: you passed it with Next", 1, true), "the route list says why a step was skipped")
-  click(win(), "Show on map")
+  click(win(), "Route"); click(win(), "Show on map")
   check(MOCK.openedMap == 1433, "Show on map opens the world map at the step")
   stepTool("Report this step")
   local copy = _G.LevelingCodexCopy
@@ -2082,6 +2211,7 @@ function S.questSetup()
   slash("quests")
   check(not seg("Fastest").codexOn and not seg("Every quest").codexOn and questText(win(), "Custom: see Settings"),
     "a mixed pace lights neither and says so")
+  click(win(), "Back to options"); click(win(), "Helpers")
   local accept = seg("Auto-accept")
   check(accept and accept.GetChecked and not accept:GetChecked(), "helpers are check boxes")
   click(win(), "Every quest")
@@ -2092,12 +2222,14 @@ function S.questSetup()
   check(seg("Auto-accept"):GetChecked(), "and ticks the box")
   click(win(), "Fastest")
   check(not LevelingCodexDB.questKeepGrey and not LevelingCodexDB.questOptional, "Fastest drops them again")
+  click(win(), "Back to options"); click(win(), "Map and step window")
   check(seg("Minimap"):GetChecked() and seg("World map"):GetChecked(), "both route lines start on")
   click(win(), "World map")
   check(LevelingCodexDB.noWorldMapLine and not seg("World map"):GetChecked(), "the setup turns the world map line off")
   click(win(), "Minimap")
   check(LevelingCodexDB.noMinimapLine, "and the minimap line")
   -- the party: every party sync option, with quest sharing on by default and the chat lines off
+  click(win(), "Back to options"); click(win(), "Party play")
   check(seg("Party steps"):GetChecked() and seg("Share quests"):GetChecked() and seg("Ping together"):GetChecked(),
     "party sync, quest sharing and the together ping start on")
   check(not seg("Steps done"):GetChecked() and not seg("Quest items"):GetChecked() and not seg("Progress"):GetChecked()
@@ -2115,6 +2247,7 @@ function S.questSetup()
   LevelingCodexDB.questDungeons = false
   LevelingCodexDB.questDungeonPlan = { ["dungeon-deadmines"] = true }
   slash("quests")
+  click(win(), "Back to options"); click(win(), "Your route")
   check(seg("Your picks (1)") and seg("Your picks (1)").codexOn, "a hand-made plan shows as your picks")
   click(win(), "Done")
   check(LevelingCodexDB.questSetupDone and not questText(win(), "SET UP YOUR GUIDE"), "Done closes the setup")
@@ -2157,7 +2290,7 @@ function S.questPreviewAhead()
   check(questText(frame, "Next section: Duskwood"), "the list names the next section where it starts")
 
   local function seg(name) return findButton(win(), function(l) return l == name end) end
-  click(win(), "Setup")
+  click(win(), "Setup"); click(win(), "Map and step window")
   check(not seg("2 steps").codexOn and questText(win(), "8 steps: see Settings"),
     "the setup card says when the count is one Settings set")
   click(win(), "10 steps")
@@ -2256,7 +2389,7 @@ function S.questParty()
   MOCK.taxiNodes = { { "Stormwind, Elwynn", "CURRENT" }, { "Lakeshire, Redridge", "REACHABLE" } }
   TakeTaxiNode(2)
   local said = MOCK.said and MOCK.said[#MOCK.said]
-  check(said and said.text == "Flying to Lakeshire." and said.channel == "PARTY", "the flight is said in party chat")
+  check(said and said.text == "{rt6} Codex: Flying to: Lakeshire." and said.channel == "PARTY", "the flight is said in party chat")
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(not questText(frame, "Ann:"), "leaving the party clears the party's steps")
@@ -2378,11 +2511,13 @@ function S.questPartyTab()
   fromParty("Ann", "L;7,33,783")
   slash("quests")
   click(win(), "Party")
-  check(questText(win(), "Ann (5) Mage"), "the Party tab lists each member")
+  check(findButton(win(), function(l) return l == "Party member: Ann" end) and findButton(win(), function(l) return l == "Party member: Bo" end), "the Party board has one panel per member")
+  click(win(), "Party member: Bo")
+  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"), "a member without the Codex has a detail panel")
+  click(win(), "Back to party"); click(win(), "Party member: Ann")
+  check(questText(win(), "Ann (5) Mage"), "the member detail shows level and class")
   check(questText(win(), "Westfall: Accept - Westfall Stew"), "with their guide and step")
   check(questText(win(), "heard just now"), "and when you last heard from them")
-  check(questText(win(), "Bo (4) Warrior") and questText(win(), "Bo needs the Leveling Codex to share a step"),
-    "a member without the Codex")
   check(questText(win(), "Ann has, you don't (2)"), "the quests Ann has that you don't")
   click(win(), "Ask Ann to share Wolves Across the Border")
   check(addonCount("^R;33;Ann$") == 1, "asking sends Ann's Codex a share request")
@@ -2395,7 +2530,7 @@ function S.questPartyTab()
   check(MOCK.ns.quests.current().section.id == "westfall", "following switches your guide to Ann's")
   click(win(), "Party")
   check(not findButton(win(), function(l) return l == "Follow Ann's guide" end), "no Follow once you're in the same guide")
-  click(win(), "Say quest items I pick up")
+  click(win(), "Party settings"); click(win(), "Quest items")
   check(LevelingCodexDB.questAnnounceItems, "the party switches are in the tab too")
   MOCK.party = false
   MOCK.event("GROUP_ROSTER_UPDATE")
@@ -2444,7 +2579,7 @@ end
 -- items you pick up (each new count; a route item that starts a quest) and quest progress (an
 -- objective finished, a quest ready to turn in). Nothing for what's in your log at login, at most a
 -- line a second (a newer count of the same item replaces a waiting one), nothing in a raid, and
--- what Questie already says in party chat is left to it.
+-- what quest tracker already says in party chat is left to it.
 function S.questPartyChat()
   MOCK.party = true
   local function goal(text, kind, have, need)
@@ -2485,30 +2620,30 @@ function S.questPartyChat()
   check(LevelingCodexDB.questAnnounceItems and LevelingCodexDB.questAnnounceProgress, "Settings turns them on")
   check(not MOCK.said, "nothing for what was already in your log")
   set(meat, 4)
-  check(said("Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)") == 1, "a quest item you pick up is said in party chat")
+  check(said("{rt6} Codex: Loot: Tough Wolf Meat: 4/8 - [Wolves Across the Border]") == 1, "a quest item you pick up is said in party chat")
   set(meat, 5)
   set(meat, 6)
   check(#MOCK.said == 1, "a line a second at most")
   MOCK.advance(1.1)
-  check(#MOCK.said == 2 and said("Codex: Tough Wolf Meat: 6/8 (Wolves Across the Border)") == 1,
+  check(#MOCK.said == 2 and said("{rt6} Codex: Loot: Tough Wolf Meat: 6/8 - [Wolves Across the Border]") == 1,
     "a newer count replaces the waiting one")
   set(worker, 5)
   MOCK.advance(1.1)
   check(#MOCK.said == 2, "kills are said when the objective is finished, not each one")
   set(vermin, 10)
   MOCK.advance(1.1)
-  check(said("Codex: Kobold Vermin slain: 10/10 (Kobold Camp Cleanup)") == 1, "a finished objective")
+  check(said("{rt6} Codex: Objective complete: Kobold Vermin slain: 10/10 - [Kobold Camp Cleanup]") == 1, "a finished objective")
   set(worker, 10)
   MOCK.advance(1.1)
-  check(said("Codex: Kobold Camp Cleanup is ready to turn in.") == 1
-    and said("Codex: Kobold Worker slain: 10/10 (Kobold Camp Cleanup)") == 0, "the last objective says the quest is ready instead")
+  check(said("{rt6} Codex: Ready to turn in: [Kobold Camp Cleanup]") == 1
+    and said("{rt6} Codex: Objective complete: Kobold Worker slain: 10/10 - [Kobold Camp Cleanup]") == 0, "the last objective says the quest is ready instead")
   MOCK.bagItems = { { id = 1307, name = "Gold Pickup Schedule", level = 1, quality = 1 } }
   MOCK.bags[1307] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
   MOCK.advance(1.1)
-  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1, "a route item that starts a quest")
-  -- Questie says finished objectives and quest-starting items itself: the Codex leaves those to it.
-  MOCK.makeQuestie({ announce = { channel = "party", objectives = true, items = true } })
+  check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1, "a route item that starts a quest")
+  -- quest tracker says finished objectives and quest-starting items itself: the Codex leaves those to it.
+  MOCK.makeQuestProvider({ announce = { channel = "party", objectives = true, items = true } })
   MOCK.bags[1307] = 0
   MOCK.event("BAG_UPDATE_DELAYED")
   MOCK.bags[1307] = 1
@@ -2520,15 +2655,15 @@ function S.questPartyChat()
   MOCK.advance(1.1)
   set(bandana, 6)
   MOCK.advance(1.1)
-  check(said("Codex: Found Gold Pickup Schedule: it starts The Collector.") == 1
-    and said("Codex: Defias Thug slain: 10/10 (Brotherhood of Thieves)") == 0, "what Questie says is left to it")
-  check(said("Codex: Red Burlap Bandana: 6/12 (Brotherhood of Thieves)") == 1, "item counts still go out")
+  check(said("{rt6} Codex: Found quest item: [Gold Pickup Schedule] - starts [The Collector]") == 1
+    and said("{rt6} Codex: Objective complete: Defias Thug slain: 10/10 - [Brotherhood of Thieves]") == 0, "what quest tracker says is left to it")
+  check(said("{rt6} Codex: Loot: Red Burlap Bandana: 6/12 - [Brotherhood of Thieves]") == 1, "item counts still go out")
   click(win(), "Settings")
-  check(questText(win(), "leaves those to Questie"), "Settings says so")
+  check(questText(win(), "avoids repeating them"), "Settings explains duplicate announcement suppression")
   MOCK.raid = true
   set(bandana, 7)
   MOCK.advance(1.1)
-  check(said("Codex: Red Burlap Bandana: 7/12 (Brotherhood of Thieves)") == 0, "nothing in a raid")
+  check(said("{rt6} Codex: Loot: Red Burlap Bandana: 7/12 - [Brotherhood of Thieves]") == 0, "nothing in a raid")
 end
 
 -- Settings > Say steps I finish in party chat: a step the game finished (not Next or Back) goes out
@@ -2545,19 +2680,99 @@ function S.questPartyChatSteps()
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.event("QUEST_LOG_UPDATE")
   local last = MOCK.said and MOCK.said[#MOCK.said]
-  check(last and last.text == "Codex: Done - Accept - A Threat Within" and last.channel == "PARTY", "a step the game finished is said")
+  check(last and last.text == "{rt6} Codex: Accepted: [A Threat Within]" and last.channel == "PARTY", "a step the game finished is said")
   MOCK.advance(1.1)
   MOCK.questLog = {}
   MOCK.questDone[783] = true
   MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
   MOCK.event("QUEST_LOG_UPDATE")
   last = MOCK.said[#MOCK.said]
-  check(last.text == "Codex: Done - Turn in - A Threat Within", "and the next one")
+  check(last.text == "{rt6} Codex: Turned in: [A Threat Within]", "and the next one")
   local n = #MOCK.said
   MOCK.advance(1.1)
   click(frame, "Next")
   MOCK.advance(1.1)
   check(#MOCK.said == n, "Next isn't a finished step")
+end
+
+function S.questPartyPolishedChat()
+  MOCK.party = true
+  MOCK.questLinks = { [783] = "|cffffff00|Hquest:783:1|h[A Threat Within]|h|r" }
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  local line = MOCK.said and MOCK.said[#MOCK.said]
+  check(line and line.text:find("{rt6} Codex: Accepted:", 1, true), "accepted quests have a recognizable marker and status")
+  check(line.text:find("|Hquest:783:1|h[A Threat Within]|h", 1, true), "party announcements preserve the native clickable quest link")
+  check(not line.text:find("|T", 1, true), "party transport contains no custom texture escapes")
+  local filter = MOCK.chatFilters and MOCK.chatFilters.CHAT_MSG_PARTY
+  check(filter, "party chat has a local visual filter")
+  local blocked, display, author, language = filter(nil, "CHAT_MSG_PARTY", line.text, "Ann", "enUS")
+  check(blocked == false and author == "Ann" and language == "enUS", "visual formatting preserves the chat sender and metadata")
+  check(display:find("|T", 1, true) and display:find("|cff", 1, true), "Codex clients render a badge and colored status")
+  check(display:find("|TInterface\\GossipFrame\\AvailableQuestIcon:14:14|t", 1, true),
+    "status icons retain their full Blizzard texture path")
+  check(display:find("|Hquest:783:1|h[A Threat Within]|h", 1, true), "visual filter preserves quest links")
+  check(filter(nil, "CHAT_MSG_PARTY", "A normal party message", "Ann") == nil, "other party messages are untouched")
+  MOCK.advance(1.1)
+  MOCK.questLinks[783], MOCK.questLog, MOCK.questDone[783] = nil, {}, true
+  MOCK.event("QUEST_TURNED_IN", 783)
+  local turnedIn = MOCK.said[#MOCK.said].text
+  check(turnedIn:find("Turned in:", 1, true) and turnedIn:find("|Hquest:783:1|h", 1, true),
+    "turn-in announcements retain the known native link after the quest leaves the log")
+  local _, finished = filter(nil, "CHAT_MSG_PARTY", turnedIn, "Ann")
+  check(finished:find("ReadyCheck-Ready", 1, true), "turned-in quests use a completion check rather than a ready question mark")
+end
+
+function S.questPartyAnnouncementPreview()
+  S.login()
+  slash("")
+  click(win(), "Settings")
+  local before = #MOCK.chat
+  click(win(), "Preview quest announcements")
+  check(not MOCK.said, "preview never sends a party message")
+  check(#MOCK.chat >= before + 5, "preview shows several announcement states privately")
+  check(chatHas("|T"), "private previews use the same graphical presentation")
+  slash("quests")
+  click(win(), "Party")
+  click(win(), "Preview quest announcements")
+  check(not MOCK.said, "Party tab preview is also private while solo")
+end
+
+function S.questPartyAnnouncementBudget()
+  MOCK.party = true
+  MOCK.questLinks = { [783] = "|cffffff00|Hquest:783:1" .. string.rep(":0", 150)
+    .. "|h[" .. string.rep("Long quest title ", 30) .. "]|h|r" }
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = string.rep("Long quest title ", 30) } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  local line = MOCK.said and MOCK.said[#MOCK.said]
+  check(line and #line.text <= 255, "long announcements fit the chat byte limit")
+  check(line.text:find("{rt6} Codex: Accepted:", 1, true), "long messages retain their status and marker")
+  if line.text:find("|H", 1, true) then
+    check(line.text:match("|Hquest:[^|]+|h%b[]|h"), "length limiting never cuts a native link in half")
+  end
+end
+
+function S.questPartyProviderAnnounce()
+  MOCK.party = true
+  MOCK.makeQuestProvider({ announce = { channel = "party", objectives = true, items = true } })
+  Questie.db.profile.questAnnounceAccepted = true
+  Questie.db.profile.questAnnounceCompleted = true
+  S.login()
+  MOCK.advance(5)
+  LevelingCodexDB.questAnnounceSteps = true
+  MOCK.questLog = { { questID = 783, title = "A Threat Within" } }
+  MOCK.event("QUEST_ACCEPTED", 1, 783)
+  check(not MOCK.said, "quest tracker handles its enabled accepted-quest announcement")
+  MOCK.advance(1.1)
+  MOCK.questLog, MOCK.questDone[783] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 783)
+  check(not MOCK.said, "quest tracker handles its enabled quest turn-in announcement")
 end
 
 -- Trips through flight masters (QuestTravel.lua): the arrow leads to a flight master when flying
@@ -2608,7 +2823,7 @@ function S.questPartyGoal()
   MOCK.advance(1.1)
   local lines = {}
   for _, m in ipairs(MOCK.said or {}) do lines[#lines + 1] = m.text end
-  check(#lines == 1 and lines[1] == "Codex: A Baying of Gnolls is ready to turn in.",
+  check(#lines == 1 and lines[1] == "{rt6} Codex: Ready to turn in: [A Baying of Gnolls]",
     "one line for the finished kill step: " .. table.concat(lines, " | "))
 end
 
@@ -2907,6 +3122,31 @@ function S.questFlightBack()
   check(arrowSays(" yd"), "it leads on to Sven's Camp with its distance: " .. arrowCaption())
 end
 
+function S.questFlightMorbent()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 31, 1431, 77.4, 44.3
+  MOCK.bind = "Darkshire"
+  for _, id in ipairs({ 538, 181, 173, 58, 221, 134, 225 }) do MOCK.questDone[id] = true end
+  S.login()
+  MOCK.questLog = { { questID = 325, isComplete = true } } -- Morbent's Bane for Sven
+  MOCK.event("QUEST_ACCEPTED", 1, 325)
+  local frame = questViewer()
+  check(questText(frame, "give him Morbent's Bane"), "the Darkshire guide starts with Sven's turn-in")
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 153, isComplete = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  local nodes = { { "Darkshire, Duskwood", "CURRENT" }, { "Sentinel Hill, Westfall", "REACHABLE" } }
+  taxiMap(nodes)
+  check(arrowSays("Fly to Sentinel Hill"), "the arrow routes to Sven via Sentinel Hill: " .. arrowCaption())
+  TakeTaxiNode(2)
+  TaxiFrame:Hide()
+  MOCK.onTaxi = true
+  MOCK.advance(1)
+  MOCK.onTaxi = false
+  walkTo(1436, 56.6, 52.7)
+  check(questText(frame, "give him Morbent's Bane") and not questText(frame, "Auberdine - Stormwind Harbor"),
+    "landing at Sentinel Hill keeps the turn-in current")
+  check(arrowSays(" yd") and not arrowSays("Fly to"), "the arrow leads on foot to Sven: " .. arrowCaption())
+end
+
 local function allText(root)
   local out = {}
   for _, child in ipairs({ root:GetRegions() }) do
@@ -2916,6 +3156,92 @@ local function allText(root)
     if child:IsShown() then out[#out + 1] = allText(child) end
   end
   return table.concat(out, " | ")
+end
+
+function S.questDarkshireStranglethornHandoff()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1436, 56.55, 52.70
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 215 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Darkshire") and questText(frame, "Levels 30-32"), "reload keeps the Darkshire chapter at Sentinel Hill")
+  check(not questText(frame, "Auberdine - Stormwind Harbor"), "Sentinel Hill resumes without the Auberdine ship")
+  check(questText(frame, "Follow the road south into Stranglethorn Vale"), "the next step is the overland approach to Rebel Camp: " .. allText(frame))
+  check(arrowSays("bridge into Duskwood"), "the arrow leads across the Westfall bridge: " .. arrowCaption())
+  walkTo(1431, 8, 64)
+  check(arrowSays("road south into Stranglethorn"), "in Duskwood the arrow leads to the south road: " .. arrowCaption())
+  walkTo(1434, 40.6, 3.5)
+  check(questText(frame, "Accept - Jungle Secrets"), "crossing the border leads to Thorsen's pickup")
+end
+
+function S.questDarkshirePantherSuggestion()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 73.9, 44.4
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 185 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 185, isComplete = true }, { questID = 190, objectives = {
+    { text = "Young Panther slain: 1/10", numFulfilled = 1, numRequired = 10 },
+  } } }
+  S.login()
+  local frame = questViewer()
+  walkTo(1434, 41.5, 12.0)
+  check(questText(frame, "Darkshire") and questText(frame, "Young Panthers prowl east of the camp"),
+    "entering Stranglethorn keeps the Darkshire chapter on Panther Mastery: " .. allText(frame))
+  check(not findButton(frame, function(label) return label == "Try Stranglethorn Early: Rebel Camp and Nesingwary" end),
+    "the step window does not offer a route switch during its own Stranglethorn hunt")
+  slash("quests")
+  check(guideButton("Stranglethorn Early: Rebel Camp and Nesingwary"), "the longer route is still available in Quests")
+end
+
+function S.questDarkshireSouthshorePreview()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1431, 73.9, 44.4
+  LevelingCodexDB = { questPreview = 10, questDungeonPlan = { ["dungeon-gnomeregan"] = true } }
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.flight == "Stormwind, Elwynn" then break end
+        if step.quest and step.quest ~= 185 and step.quest ~= 190 then MOCK.questDone[step.quest] = true end
+      end
+    elseif section.id == "dungeon-gnomeregan" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.phase == "prepare" and step.quest ~= 2929 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 185, isComplete = true }, { questID = 190, isComplete = true }, { questID = 2929 } }
+  S.login()
+  local frame = questViewer()
+  walkTo(1434, 35.55, 10.55)
+  check(questText(frame, "Turn in - Tiger Mastery"), "Darkshire keeps the first hunts active in Stranglethorn")
+  for _, id in ipairs({ 185, 190 }) do
+    table.remove(MOCK.questLog, 1)
+    MOCK.questDone[id] = true
+    MOCK.event("QUEST_TURNED_IN", id)
+  end
+  check(questText(frame, "Fly to Stormwind") and questText(frame, "Next section: Southshore, Alterac and Refuge Pointe"),
+    "Stormwind is current and Southshore is a preview after the hunts: " .. allText(frame))
+  check(questText(frame, "Dungeon quests ready"), "a dungeon is ready alongside the outdoor route")
+  click(frame, "Try Stranglethorn Early: Rebel Camp and Nesingwary")
+  check(questText(frame, "Stranglethorn Early") and questText(frame, "Levels 30-35"),
+    "the Stranglethorn button opens the longer outdoor route while a dungeon is ready: " .. allText(frame))
+  click(frame, "Run Gnomeregan")
+  check(questText(frame, "Gnomeregan"), "the dungeon icon still opens its own guide")
 end
 
 -- Dungeon ahead: before a run's first pickup the route asks whether to plan it. Plan adds its
@@ -2970,9 +3296,20 @@ function S.questDungeonChoice()
     MOCK.questLog[#MOCK.questLog + 1] = { questID = id }
     MOCK.event("QUEST_ACCEPTED", 1, id)
   end
-  check(questText(frame, "Find a group for The Deadmines: ") and questText(frame, " of its quests are in your log"),
-    "a ready run leads the step text: " .. allText(frame))
-  check(findButton(frame, function(l) return l == "Run The Deadmines" end), "and offers Run The Deadmines")
+  check(not findButton(frame, function(l) return l == "Run The Deadmines" end), "finish the remaining outdoor chains before declaring the run ready")
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "dungeon-deadmines" then
+      for _, step in ipairs(section.steps) do
+        if step.phase == "prepare" and step.type == "accept" and step.quest ~= 2040 and step.quest ~= 168 and step.quest ~= 167 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.event("QUEST_QUERY_COMPLETE")
+  check(questText(frame, "Dungeon quests ready - find a group"), "a ready run has a short reminder after the quest instructions")
+  local dungeon = findButton(frame, function(l) return l == "Run The Deadmines" end)
+  check(dungeon and dungeon:GetWidth() <= 32, "the run action is a compact icon")
 end
 
 -- The quests a section's route takes before the step `stop` matches: turned in before it (MOCK.questDone)
@@ -3075,7 +3412,7 @@ function S.questEliteModes()
   check(LevelingCodexCharDB.questElite == nil or LevelingCodexCharDB.questElite[176] == nil,
     "the modes don't save a choice for the quest")
   click(win(), "Quests")
-  click(win(), "Setup")
+  click(win(), "Setup"); click(win(), "Your route")
   check(hasButton(win(), "Ask") and hasButton(win(), "Always take") and hasButton(win(), "Always skip"),
     "the guide setup card has the same three choices")
   click(win(), "Always take")
@@ -3176,8 +3513,8 @@ function S.questBossSteps()
   check(questText(frame, "Boss - Rhahk'Zor"), "a wipe (ENCOUNTER_END without success) changes nothing")
   MOCK.event("ENCOUNTER_END", 2741, "Rhahk'Zor", 1, 5, 1)
   check(questText(frame, "Boss - Miner Johnson"), "ENCOUNTER_END ticks the boss off")
-  click(frame, "Next")
-  check(questText(frame, "Boss - Sneed's Shredder"), "Next passes a rare that isn't there")
+  click(frame, "Skip rare")
+  check(questText(frame, "Boss - Sneed's Shredder"), "Skip rare passes a rare that isn't there")
   MOCK.event("ENCOUNTER_END", 2742, "Sneed's Shredder", 1, 5, 1)
   check(questText(frame, "Boss - Gilnid"), "ENCOUNTER_END ticks the next boss off")
   MOCK.event("BOSS_KILL", 2743, "Gilnid")
@@ -3194,6 +3531,95 @@ function S.questBossSteps()
   MOCK.instanceName, MOCK.instanceID = "Deadmines", 36
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check(questText(frame, "Boss - Edwin VanCleef"), "running back in keeps the bosses already down")
+end
+
+function S.questStockadeBossGuide()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 26, nil
+  MOCK.instanceName, MOCK.instanceID = "Stormwind Stockade", 34
+  MOCK.questLog = {
+    { questID = 377, objectives = { { text = "Hand of Dextren Ward: 0/1" } } },
+    { questID = 388, objectives = { { text = "Red Wool Bandana: 0/10" } } },
+  }
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Boss - Targorr the Dread") and questText(frame, "0/5 bosses") and questText(frame, "Thrash")
+    and not questText(frame, "Chain Lightning"), "the step window shows the current fight's mechanics")
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "The Stockade")
+  check(questText(win(), "0/5 bosses") and questText(win(), "Thrash") and not questText(win(), "Chain Lightning"),
+    "the inside page starts on one encounter")
+  click(win(), "Quest checklist")
+  check(questText(win(), "INSIDE"), "the quest checklist is available during the run")
+  click(win(), "Bosses in order")
+  click(win(), "Next boss")
+  check(questText(win(), "Shield Slam") and questText(frame, "Boss - Targorr the Dread"),
+    "previewing Kam in the board leaves the followed boss alone")
+  click(win(), "Current boss")
+  MOCK.event("BOSS_KILL", 2757, "Kam Deepfury")
+  check(questText(win(), "1/5 bosses") and questText(win(), "Thrash"), "a kill out of order counts without moving the current boss")
+  MOCK.event("ENCOUNTER_END", 2756, "Targorr the Dread", 1, 5, 1)
+  check(questText(win(), "2/5 bosses") and questText(win(), "Chain Lightning") and questText(frame, "Bloodlust"),
+    "both views advance to Hamhock and show his abilities")
+  MOCK.event("BOSS_KILL", 2758, "Hamhock")
+  check(questText(frame, "Smoke Bomb"), "Bazil's card calls out his stun")
+  MOCK.event("BOSS_KILL", 2760, "Bazil Thredd")
+  check(questText(frame, "Skip rare if you don't see the boss") and hasButton(frame, "Skip rare")
+    and hasButton(frame, "Mark defeated") and hasButton(win(), "Skip rare"), "Bruegal is clearly optional in both views")
+  click(frame, "Compact")
+  check(questText(frame, "Rare") and hasButton(frame, "Skip rare"), "compact mode still calls out the rare and the skip")
+  click(frame, "Expand")
+  click(win(), "Skip rare")
+  check(questText(win(), "4/5 bosses") and questText(frame, "Intimidating Shout")
+    and questText(frame, "Hand of Dextren Ward 0/1") and questText(frame, "Red Wool Bandana 0/10"),
+    "skipping Bruegal advances without counting a kill or losing quest goals")
+  click(win(), "Previous boss")
+  check(questText(win(), "Skipped") and questText(win(), "Bruegal Ironknuckle"), "the board records a skip")
+  click(frame, "Back")
+  check(hasButton(frame, "Mark defeated"), "Back lets the player revisit the rare")
+  click(frame, "Mark defeated")
+  check(questText(win(), "Defeated") and questText(frame, "Boss - Dextren Ward"),
+    "a player who found Bruegal can record the kill manually")
+  click(win(), "Current boss")
+  MOCK.event("BOSS_KILL", 2759, "Dextren Ward")
+  click(win(), "Inside")
+  check(questText(win(), "5/5 bosses"), "the board retains the completed clear")
+end
+
+function S.questDungeonEncounterGuides()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 42, nil
+  MOCK.instanceName, MOCK.instanceID = "Scarlet Monastery", 189
+  S.login()
+  local frame = questViewer()
+  check(not questText(frame, "Boss - Interrogator Vishas"), "a shared map does not assume the Graveyard")
+  MOCK.event("ENCOUNTER_START", 450, "High Inquisitor Whitemane", 1, 5)
+  check(questText(frame, "Boss - High Inquisitor Fairbanks") and hasButton(frame, "Skip boss"),
+    "a Cathedral encounter selects the wing and identifies Fairbanks as optional")
+  click(frame, "Skip boss")
+  check(questText(frame, "Boss - Mograine and Whitemane") and questText(frame, "Scarlet Resurrection")
+    and questText(frame, "0/1 bosses"), "both phases are one encounter")
+  MOCK.event("BOSS_KILL", nil, "Scarlet Commander Mograine")
+  check(questText(frame, "Boss - Mograine and Whitemane"), "Mograine's first fall does not finish the encounter")
+  MOCK.event("ENCOUNTER_END", 450, "High Inquisitor Whitemane", 1, 5, 1)
+  check(not questText(frame, "Boss - Mograine and Whitemane"), "the successful encounter advances both phases")
+  MOCK.event("ENCOUNTER_START", 446, "Houndmaster Loksey", 1, 5)
+  check(questText(frame, "Boss - Houndmaster Loksey") and questText(frame, "Bloodlust"), "another wing selects its own boss guide")
+  click(frame, "Return to leveling")
+  MOCK.event("BOSS_KILL", 446, "Houndmaster Loksey")
+  check(not questText(frame, "Boss - Arcanist Doan"), "leaving the guide prevents an encounter from reopening it")
+
+  MOCK.instanceName, MOCK.instanceID = "Uldaman", 70
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Boss - Revelosh") and questText(frame, "Chain Lightning"), "Alliance Uldaman has ability notes")
+  MOCK.event("BOSS_KILL", 547, "Alternate encounter name")
+  check(questText(frame, "Boss - The Lost Dwarves") and questText(frame, "1/8 bosses"), "the numeric encounter ID advances the Alliance guide")
+
+  MOCK.instanceName, MOCK.instanceID = "Dire Maul: North", 429
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Tribute run: leave Mol'dar alive") and questText(frame, "0/1 bosses"), "the named wing opens with Tribute instructions")
+  for _ = 1, 6 do click(frame, "Skip boss") end
+  check(questText(frame, "Boss - King Gordok") and questText(frame, "Mortal Strike")
+    and questText(frame, "0/1 bosses"), "Tribute skips all six optional fights and keeps the required boss")
 end
 
 -- A step's `path`: the arrow leads through the way in, in order, then to the step's own spot;
@@ -3305,8 +3731,8 @@ function S.questGossip()
   PlaySound = original
 end
 
--- Questie side by side: its auto-questing and hold-back key take precedence over the Codex's.
-function S.questQuestieAuto()
+-- quest tracker side by side: its auto-questing and hold-back key take precedence over the Codex's.
+function S.questIntegrationAuto()
   S.login()
   local frame = questViewer()
   check(questText(frame, "Accept - A Threat Within"), "fresh route starts with an accept")
@@ -3314,71 +3740,71 @@ function S.questQuestieAuto()
   MOCK.gossipAvailable = { { questID = 783, title = "A Threat Within" } }
   Questie = {} -- loaded, settings not built yet
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == 783, "Questie without settings leaves auto-accept to the Codex")
+  check(MOCK.gossipPicked == 783, "quest tracker without settings leaves auto-accept to the Codex")
   MOCK.gossipPicked = nil
-  MOCK.makeQuestie({ autoAccept = true })
+  MOCK.makeQuestProvider({ autoAccept = true })
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == nil, "Questie's auto-accept handles gossip lists")
+  check(MOCK.gossipPicked == nil, "quest tracker's auto-accept handles gossip lists")
   MOCK.interactionQuest = 783
   MOCK.event("QUEST_DETAIL")
-  check(not MOCK.questAccepted, "Questie's auto-accept handles the quest window")
-  MOCK.makeQuestie({ legacyAccept = true })
+  check(not MOCK.questAccepted, "quest tracker's auto-accept handles the quest window")
+  MOCK.makeQuestProvider({ legacyAccept = true })
   MOCK.event("GOSSIP_SHOW")
-  check(MOCK.gossipPicked == nil, "an older Questie's autoaccept counts too")
+  check(MOCK.gossipPicked == nil, "an older quest tracker's autoaccept counts too")
   slash("quests")
   click(win(), "Settings")
-  check(questText(win(), "Questie's auto-accept is on, so Questie accepts quests."), "the tickbox says Questie handles it")
+  check(questText(win(), "Your quest tracker's auto-accept is on and handles quest pickups."), "the tickbox says quest tracker handles it")
 
-  MOCK.makeQuestie({}) -- auto-accept off, key Shift
+  MOCK.makeQuestProvider({}) -- auto-accept off, key Shift
   click(win(), "Settings")
   local box = findButton(win(), function(l) return l == "Auto-accept the current guide quest" end)
   MOCK.fire(box, "OnEnter")
   check(table.concat(GameTooltip._lines or {}, " "):find("Hold Alt or Shift to stop it.", 1, true),
-    "the tooltip names Questie's key")
+    "the tooltip names quest tracker's key")
   MOCK.shift = true
   MOCK.event("GOSSIP_SHOW")
   MOCK.event("QUEST_DETAIL")
-  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "Questie's key holds the Codex back")
+  check(MOCK.gossipPicked == nil and not MOCK.questAccepted, "quest tracker's key holds the Codex back")
   MOCK.shift, MOCK.alt = false, true
   MOCK.event("QUEST_DETAIL")
   check(not MOCK.questAccepted, "Alt holds back the quest window too")
   MOCK.alt = false
   MOCK.event("QUEST_DETAIL")
-  check(MOCK.questAccepted == 783, "the Codex accepts when Questie's auto-accept is off and no key is held")
+  check(MOCK.questAccepted == 783, "the Codex accepts when quest tracker's auto-accept is off and no key is held")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
-    "debug reports Questie's settings")
+  check(chatHas("quest tracker: loaded %(version .-%), auto%-accept off, auto%-complete off, key Shift"),
+    "debug reports quest tracker's settings")
 
   local objective = { text = "Speak to McBride 1/1", numFulfilled = 1, numRequired = 1, finished = true }
   MOCK.questLog = { { questID = 783, title = "A Threat Within", objectives = { objective } } }
   MOCK.event("QUEST_ACCEPTED", 783)
   MOCK.event("QUEST_LOG_UPDATE")
   LevelingCodexDB.questAutoTurnin, MOCK.questChoices = true, 0
-  MOCK.makeQuestie({ autocomplete = true })
+  MOCK.makeQuestProvider({ autocomplete = true })
   MOCK.event("QUEST_COMPLETE")
-  check(not MOCK.questRewarded, "Questie's auto-complete handles turn-ins")
+  check(not MOCK.questRewarded, "quest tracker's auto-complete handles turn-ins")
   click(win(), "Settings")
-  check(questText(win(), "Questie's auto-complete is on, so Questie turns quests in."), "the turn-in tickbox says so")
-  MOCK.makeQuestie({})
+  check(questText(win(), "Your quest tracker's auto-complete is on and handles quest turn-ins."), "the turn-in tickbox says so")
+  MOCK.makeQuestProvider({})
   MOCK.event("QUEST_COMPLETE")
-  check(MOCK.questRewarded == 783, "the Codex turns in when Questie's auto-complete is off")
+  check(MOCK.questRewarded == 783, "the Codex turns in when quest tracker's auto-complete is off")
 end
 
--- Questie side by side: the step window sits beside Questie's tracker until you move it.
-function S.questQuestieTracker()
+-- quest tracker side by side: the step window sits beside external quest tracker until you move it.
+function S.questIntegrationTracker()
   S.login()
   local viewer = questViewer()
   local p, rel, rp, x, y = viewer:GetPoint()
-  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without Questie")
-  MOCK.makeQuestie({ cx = 1700 }) -- Questie builds its tracker after login
+  check(p == "RIGHT" and rel == UIParent and x == -48 and y == 80, "default spot without quest tracker")
+  MOCK.makeQuestProvider({ cx = 1700 }) -- quest tracker builds its tracker after login
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
   check(p == "TOPRIGHT" and rel == Questie_BaseFrame and rp == "TOPLEFT" and x == -12 and y == -40,
     "beside a right-hand tracker, on its left")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Step window: beside Questie's tracker"), "debug names the placement")
+  check(chatHas("Step window: beside external quest tracker"), "debug names the placement")
   Questie_BaseFrame._cx = 200
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
@@ -3396,17 +3822,17 @@ function S.questQuestieTracker()
   Questie_BaseFrame:Show()
   MOCK.event("QUEST_LOG_UPDATE")
   p, rel, rp, x, y = viewer:GetPoint()
-  check(rel == UIParent and x == -78, "a dragged position wins over Questie's tracker")
+  check(rel == UIParent and x == -78, "a dragged position wins over external quest tracker")
   MOCK.chat = {}
   slash("debug")
   check(chatHas("Step window: saved position"), "debug names the saved position")
 end
 
--- Questie's tracker changing without a quest event, in combat, and an anchor the client refuses.
-function S.questQuestieTrackerLive()
+-- external quest tracker changing without a quest event, in combat, and an anchor the client refuses.
+function S.questIntegrationTrackerLive()
   S.login()
   local viewer = questViewer()
-  MOCK.makeQuestie({ cx = 1700 })
+  MOCK.makeQuestProvider({ cx = 1700 })
   MOCK.advance(0.25)
   check(select(2, viewer:GetPoint()) == Questie_BaseFrame, "a tracker shown without a quest event is noticed on the next tick")
   MOCK.combat = true
@@ -3430,10 +3856,10 @@ function S.questQuestieTrackerLive()
   check(chatHas("Step window: default spot"), "debug says where the window is")
 end
 
--- QuestieDB fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
+-- quest database fixture: Kobold Camp Cleanup (7) in Elwynn; see the plan's test geometry.
 local function koboldDB(opts)
   opts = opts or {}
-  MOCK.makeQuestieDB({
+  MOCK.makeQuestDataProvider({
     contract = opts.contract, noZones = opts.noZones,
     quests = { [7] = { objectives = opts.objectives or { [1] = { { 6, nil, 0 }, { 257, nil, 0 }, { 999, nil, 0 } } } } },
     npcs = {
@@ -3447,32 +3873,32 @@ local function koboldDB(opts)
   })
 end
 
-function S.questQuestieDB()
+function S.questIntegrationDB()
   S.login()
   slash("quests")
   click(win(), "Settings")
-  check(not questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "no setting without QuestieDB")
+  check(not questText(win(), "Point the arrow at the nearest objective"), "no setting without quest database")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: not loaded") and chatHas("QuestieDB: not installed"), "debug names what is missing")
+  check(chatHas("quest tracker: not loaded") and chatHas("quest database: not installed"), "debug names what is missing")
   koboldDB({ contract = 0 })
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(contract check failed%)"), "an incompatible QuestieDB is refused")
+  check(chatHas("quest database: off %(contract check failed%)"), "an incompatible quest database is refused")
   koboldDB({ noZones = true })
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(no zone table%)"), "QuestieDB without its zone table is refused")
+  check(chatHas("quest database: off %(no zone table%)"), "quest database without its zone table is refused")
   koboldDB()
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable QuestieDB is reported")
+  check(chatHas("quest database: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable quest database is reported")
   click(win(), "Settings")
-  check(questText(win(), "Point the arrow at the nearest objective (QuestieDB)"), "the setting shows with QuestieDB")
+  check(questText(win(), "Point the arrow at the nearest objective"), "the setting shows with quest database")
 end
 
-function S.questQuestieMinimal()
-  MOCK.makeQuestie({ autoAccept = true })
+function S.questIntegrationMinimal()
+  MOCK.makeQuestProvider({ autoAccept = true })
   koboldDB()
   S.login()
   slash("quests")
@@ -3481,7 +3907,7 @@ function S.questQuestieMinimal()
   MOCK.event("QUEST_DETAIL")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("Questie: loaded") and chatHas("QuestieDB: contract 4"), "the Questie block works on a minimal client")
+  check(chatHas("quest tracker: loaded") and chatHas("quest database: contract 4"), "the quest tracker block works on a minimal client")
 end
 
 -- The last-mile arrow: Kobold Camp Cleanup's camp is at (48.8, 36.4) in Elwynn.
@@ -3497,7 +3923,7 @@ local function moveTo(x, y)
   MOCK.advance(0.25)
 end
 
-function S.questQuestieNearest()
+function S.questIntegrationNearest()
   koboldDB()
   local vermin = { text = "Kobold Vermin 4/10", finished = false }
   koboldCamp({ vermin }, 48.8, 50.0)
@@ -3541,13 +3967,13 @@ function S.questQuestieNearest()
   check(not questText(arrow, "Kobold Vermin"), "a new step drops the old nearest target")
 end
 
-function S.questQuestieNearestFallback()
+function S.questIntegrationNearestFallback()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 10/10", finished = true }, { text = "Gnoll Pelt 0/5", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Worker - 242 yd"), "the wide fallback leaves out finished objectives")
 end
 
-function S.questQuestieNearestItem()
+function S.questIntegrationNearestItem()
   koboldDB({
     objectives = { [3] = { { 1001, nil, 0 } } },
     items = { [1001] = { name = "Large Candle", npcDrops = { 6 }, objectDrops = { 50 } } },
@@ -3560,8 +3986,8 @@ function S.questQuestieNearestItem()
   check(questText(arrow, "Candle Box nearby"), "nearby an item source")
 end
 
-function S.questQuestieNearestPart()
-  MOCK.makeQuestieDB({
+function S.questIntegrationNearestPart()
+  MOCK.makeQuestDataProvider({
     quests = { [92745] = { objectives = { [1] = { { 1101, nil, 0 }, { 1102, nil, 0 } } } } },
     npcs = {
       [1101] = { name = "Kobold Digger", spawns = { [40] = { { 46.5, 22.0 } } } },
@@ -3589,7 +4015,7 @@ function S.questQuestieNearestPart()
 end
 
 -- Deferred review minors, one scenario each.
-function S.questQuestieNearestCleared()
+function S.questIntegrationNearestCleared()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
@@ -3602,13 +4028,13 @@ function S.questQuestieNearestCleared()
   check(questText(arrow, "Kobold Vermin - 145 yd"), "it counts again after 90 seconds")
 end
 
-function S.questQuestieArrowClamp()
+function S.questIntegrationArrowClamp()
   S.login()
   local _, _, top = questViewer():GetClampRectInsets()
   check(top and top >= 76, "the screen clamp keeps the arrow above the window on screen")
 end
 
-function S.questQuestieNearestRetext()
+function S.questIntegrationNearestRetext()
   koboldDB()
   local line = { text = "", finished = false } -- objective text not loaded yet
   koboldCamp({ line }, 48.8, 44.0)
@@ -3620,47 +4046,47 @@ function S.questQuestieNearestRetext()
   check(questText(arrow, "Kobold Worker - 242 yd"), "the objective text arriving narrows the search")
 end
 
-function S.questQuestieNearestLateData()
+function S.questIntegrationNearestLateData()
   local quests = {}
-  MOCK.makeQuestieDB({ quests = quests, npcs = { [6] = { name = "Kobold Vermin", spawns = { [12] = { { 50.0, 38.0 } } } } } })
+  MOCK.makeQuestDataProvider({ quests = quests, npcs = { [6] = { name = "Kobold Vermin", spawns = { [12] = { { 50.0, 38.0 } } } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
-  check(questText(arrow, "176 yd"), "no QuestieDB objectives yet: today's arrow")
+  check(questText(arrow, "176 yd"), "no quest database objectives yet: today's arrow")
   quests[7] = { objectives = { [1] = { { 6, nil, 0 } } } }
   MOCK.advance(5)
   check(questText(arrow, "Kobold Vermin - 145 yd"), "an empty spawn list is looked up again after 5 seconds")
 end
 
-function S.questQuestieRecheck()
+function S.questIntegrationRecheck()
   koboldDB({ contract = 0 })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "176 yd"), "a refused contract keeps today's arrow")
-  LibQuestieDB.RequireContract = function() return true end -- QuestieDB finished starting up
+  LibQuestieDB.RequireContract = function() return true end -- quest database finished starting up
   MOCK.advance(10)
-  check(questText(arrow, "Kobold Vermin - 145 yd"), "QuestieDB is checked once more after 10 seconds")
+  check(questText(arrow, "Kobold Vermin - 145 yd"), "quest database is checked once more after 10 seconds")
 end
 
-function S.questQuestieNearestEmptyText()
+function S.questIntegrationNearestEmptyText()
   koboldDB({ objectives = { [1] = { { 6, "", 0 } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty objective text falls back to the NPC's name")
 end
 
-function S.questQuestieNearestEmptyName()
-  MOCK.makeQuestieDB({ quests = { [7] = { objectives = { [1] = { { 6, "Kobold Vermin", 0 } } } } },
+function S.questIntegrationNearestEmptyName()
+  MOCK.makeQuestDataProvider({ quests = { [7] = { objectives = { [1] = { { 6, "Kobold Vermin", 0 } } } } },
     npcs = { [6] = { name = "", spawns = { [12] = { { 50.0, 38.0 } } } } } })
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "an empty NPC name falls back to the objective's")
 end
 
-function S.questQuestieNearestNoRows()
+function S.questIntegrationNearestNoRows()
   koboldDB()
   koboldCamp({}, 48.8, 44.0) -- the log gives no objective lines
   check(questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"), "no objective lines: the wide search")
 end
 
-function S.questQuestieNearestNoScale()
+function S.questIntegrationNearestNoScale()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   LevelingCodexQuests.ALLIANCE.extents[1429] = nil
@@ -3670,7 +4096,7 @@ function S.questQuestieNearestNoScale()
   check(chatHas("arrow: no map scale"), "debug says the map scale is missing")
 end
 
-function S.questQuestieNearestRoundTrip()
+function S.questIntegrationNearestRoundTrip()
   koboldDB()
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local frame, arrow = questViewer(), LevelingCodexQuestArrow
@@ -3683,26 +4109,26 @@ function S.questQuestieNearestRoundTrip()
   check(questText(arrow, "268 yd"), "leaving the step and coming back starts outside the camp")
 end
 
-function S.questQuestieNearestError()
+function S.questIntegrationNearestError()
   koboldDB()
-  MOCK.questieDBError = true
+  MOCK.questDataError = true
   koboldCamp({ { text = "Kobold Vermin 4/10", finished = false } }, 48.8, 44.0)
   local arrow = LevelingCodexQuestArrow
   check(questText(arrow, "176 yd") and not questText(arrow, "Kobold Vermin"), "a read error keeps today's arrow")
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("QuestieDB: off %(read failed"), "debug names the read error")
-  MOCK.questieDBError = false
+  check(chatHas("quest database: off %(read failed"), "debug names the read error")
+  MOCK.questDataError = false
   MOCK.advance(0.25)
   check(questText(arrow, "176 yd"), "no retry straight away")
   MOCK.advance(10)
   check(questText(arrow, "Kobold Vermin - 145 yd"), "one retry after 10 seconds")
-  MOCK.questieDBError = true
+  MOCK.questDataError = true
   MOCK.questLog = { { questID = 7, objectives = { { text = "Kobold Vermin 4/10", finished = false },
     { text = "Kobold Worker 0/5", finished = false } } } }
   MOCK.event("QUEST_LOG_UPDATE")
   MOCK.advance(0.25)
-  MOCK.questieDBError = false
+  MOCK.questDataError = false
   MOCK.advance(15)
   check(questText(arrow, "176 yd"), "a second read error turns it off for the session")
 end
@@ -3773,7 +4199,104 @@ function S.questDuskwoodHandoff()
   check(questText(frame, "Reach level 26 for Wetlands"), "an underleveled handoff shows the catch-up step")
   MOCK.level = 26
   MOCK.event("PLAYER_LEVEL_UP", 26)
-  check(questText(frame, "return to Darkshire"), "at level 26 the route leads back to the flight path")
+  check(questText(frame, "Hearth to Darkshire") and questText(frame, "Felicia Maline") and questText(frame, "flight to Stormwind"),
+    "at level 26 the route names the return, flight master and onward flight")
+end
+
+function S.questSouthshoreForebodingPlans()
+  MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = 33, 1424, 48.14, 59.11
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "hillsbrad-32" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 505 and step.type == "turnin" then break end
+        if step.quest and step.quest ~= 505 and step.quest ~= 510 and step.quest ~= 564 then
+          MOCK.questDone[step.quest] = true
+        end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 505, isComplete = true }, { questID = 564, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Syndicate Assassins"), "resume at Maleb with Syndicate Assassins ready")
+
+  table.remove(MOCK.questLog, 1)
+  MOCK.questDone[505] = true
+  MOCK.event("QUEST_TURNED_IN", 505)
+  check(questText(frame, "Turn in - Costly Menace") and not questText(frame, "Turn in - Foreboding Plans"),
+    "the Southshore route passes Maleb's hand-in if Foreboding Plans was never picked up: " .. allText(frame))
+  click(frame, "Back")
+  check(questText(frame, "Pick up this quest first."), "reviewing the hand-in explains why it is unavailable")
+  click(frame, "Next")
+  questQueue("Missed quests")
+  check(questText(win(), "Foreboding Plans"), "the earlier pickup in Alterac is available under Missed pickups")
+
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 510, isComplete = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - Foreboding Plans"), "Maleb's hand-in returns once Foreboding Plans is in the log")
+  table.remove(MOCK.questLog)
+  MOCK.questDone[510] = true
+  MOCK.event("QUEST_TURNED_IN", 510)
+  check(questText(frame, "Turn in - Costly Menace"), "turning in the plans advances the Southshore route")
+end
+
+function S.questBrackenwallVenom()
+  local checked = 0
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "dustwallow-37" or section.id == "dustwallow-33" then
+      local objectives, positions = {}, {}
+      for index, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest then
+          objectives[step.quest], positions[step.quest] = step, index
+        end
+      end
+      local spies, shield, eyes = objectives[1201], objectives[1322], objectives[1206]
+      check(spies and shield and eyes and positions[1322] == positions[1201] + 1,
+        section.id .. " collects venom while the player is near the Theramore Infiltrators")
+      check(spies.also and spies.also[1] == 1322 and not eyes.also,
+        section.id .. " shows venom progress with the infiltrators and keeps Jarl's hunt separate")
+      check(shield.mobs and shield.mobs[1] == "Darkfang Venomspitter",
+        section.id .. " targets Darkfang spiders at the venom stop")
+      check(shield.objectives[1] == "6 Acidic Venom Sacs" and eyes.objectives[1] == "40 Unpopped Darkmist Eyes",
+        section.id .. " shows the Forever quest counts before live progress loads")
+      checked = checked + 1
+    end
+  end
+  check(checked == 2, "both Horde Brackenwall routes are covered")
+end
+
+function S.questHordeMissedPickup()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 48
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1424, 61.44, 19.06
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "hinterlands-48" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 7816 and step.type == "turnin" then break end
+        if step.quest and step.quest ~= 7816 and step.quest ~= 2933 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 7816, isComplete = true } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turn in - Gammerita, Mon!"), "resume at the preceding hand-in")
+  MOCK.questLog, MOCK.questDone[7816] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 7816)
+  if questTextStarts(frame, "Fly to Tarren Mill.") then click(frame, "Next") end
+  check(questText(frame, "Accept - Venom Bottles") and not questText(frame, "Turn in - Venom Bottles"),
+    "recover the missed pickup before sending the player to Lydon: " .. allText(frame))
+  check(not questText(frame, "Complete - Undamaged Venom Sac"), "do not preview an objective for an unaccepted follow-up")
+
+  MOCK.questLog = { { questID = 2933, isComplete = true } }
+  MOCK.event("QUEST_ACCEPTED", 1, 2933)
+  check(questText(frame, "Turn in - Venom Bottles"), "a real quest in the log can be turned in")
+  MOCK.questLog, MOCK.questDone[2933] = {}, true
+  MOCK.event("QUEST_TURNED_IN", 2933)
+  check(questText(frame, "Accept - Undamaged Venom Sac"), "the actual hand-in unlocks the follow-up")
 end
 
 function S.questLakeshireHandoff()
@@ -3921,7 +4444,8 @@ function S.questButtonOptions()
   click(win(), "Show the target button")
   check(not target:IsShown(), "target can be disabled independently")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   check(not findButton(win(), function(l) return l == "Show the quest item button" end):GetChecked(), "setup shares the item toggle")
   click(win(), "Show the quest item button")
   click(win(), "Show the target button")
@@ -4020,7 +4544,8 @@ function S.questButtonDragging()
     and questOffsetSlider("Quest item vertical offset"):GetValue() == -61, "dragged offsets appear in Settings")
   check(item:GetAttribute("type") == "item" and target:GetAttribute("type") == "macro", "dragging preserves normal button actions")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   check(findButton(win(), function(l) return l == "Lock button dragging" end), "setup shares the unlock state")
   click(win(), "Target position: Bottom")
   local _, _, _, bottomX, bottomY = target:GetPoint()
@@ -4090,7 +4615,8 @@ function S.questButtonMinimalLayout()
   click(win(), "Show the target button")
   check(not target:IsShown(), "minimal client can hide the target")
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   click(win(), "Show the target button")
   check(target:IsShown(), "minimal setup shares the visibility option")
 end
@@ -4121,16 +4647,11 @@ function S.questButtonController()
   end
   adjust()
   slash("quests")
-  if not questText(win(), "SET UP YOUR GUIDE") then click(win(), "Setup") end
+  click(win(), "Setup")
+  click(win(), "Map and step window")
   adjust()
   press("PAD2")
   check(not win():IsShown(), "controller B closes setup")
-end
-
-local function routeHas(text)
-  click(win(), "Route")
-  if findButton(win(), function(l) return l == "Show all steps" end) then click(win(), "Show all steps") end
-  return questText(win(), text)
 end
 
 function S.questRace()
@@ -4202,11 +4723,20 @@ function S.questNoCheckNotes()
 end
 
 function S.questWetlands()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 633 and step.type == "turnin" then
+          check(not step.text:lower():find("swim"), "the Thandol return crosses the bridge instead of swimming beneath it")
+        end
+      end
+    end
+  end
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 28, 1437
   S.login()
   local frame = questViewer()
   check((questText(frame, "Wetlands") and questText(frame, "Levels 26-30")), "a level 28 in the Wetlands follows the Wetlands section")
-  check(questText(frame, "Accept - Razormaw Needling"), "the trip there is skipped once you are in the Wetlands")
+  check(questText(frame, "Accept - Tramping Paws"), "the trip there is skipped once you are in the Wetlands: " .. allText(frame))
 
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
     if section.id == "wetlands" then
@@ -4246,6 +4776,83 @@ function S.questWetlandsTravel()
   check(questText(frame, "Deeprun Tram"), "the tram step follows the Stormwind pickup")
 end
 
+local function wetlandsRidgeQuests()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 28, 1437, 63, 41.8
+  local keep = { [98245] = true, [98246] = true, [98072] = true, [98283] = true }
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and not keep[step.quest] then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = {
+    { questID = 98245, objectives = { { text = "Razormaw Incisor: 3/10" } } },
+    { questID = 98246, objectives = { { text = "Perfect Razormaw Egg: 4/12" } } },
+    { questID = 98072, objectives = { { text = "Pristine Crimson Scale: 5/8" } } },
+    { questID = 98283, objectives = { { text = "Malignant Rotclaw Flesh: 0/1" }, { text = "Carnage's Head: 0/1" } } },
+  }
+end
+
+function S.questWetlandsRidgeLoop()
+  wetlandsRidgeQuests()
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  for _, text in ipairs({ "Razormaw Incisor", "Perfect Razormaw Egg", "Pristine Crimson Scale", "Malignant Rotclaw Flesh" }) do
+    check(questText(frame, text), "the ridge loop tracks all overlapping objectives: " .. text .. " / " .. allText(frame))
+  end
+  check(questText(frame, "whelps") and questText(frame, "Raptor Ridge"), "loop instructions connect the slope and ridge")
+end
+
+function S.questWetlandsCarnageChoice()
+  wetlandsRidgeQuests()
+  MOCK.questDone = {}
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 98283 then break end
+        if step.quest and step.quest ~= 98072 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { MOCK.questLog[3], { questID = 275, isComplete = true } }
+  MOCK.questDone[98245], MOCK.questDone[98246] = true, true
+  MOCK.questDone[275] = nil
+  MOCK.questX, MOCK.questY = 56.37, 40.4
+  S.login()
+  local frame = questViewer()
+  slash("quests")
+  stepTool("Resume active quest")
+  check(questText(frame, "Turn in - Blisters on The Land"), "Rethiel takes the preceding quest first: " .. allText(frame))
+  table.remove(MOCK.questLog, 2)
+  MOCK.questDone[275] = true
+  MOCK.event("QUEST_TURNED_IN", 275)
+  check(questText(frame, "Elite quest - Carnage") and hasButton(frame, "Take it") and hasButton(frame, "Skip"),
+    "Carnage is offered at Rethiel through the elite choice: " .. allText(frame))
+  click(frame, "Skip")
+  check(LevelingCodexCharDB.questElite[98283] == false and questText(frame, "Pristine Crimson Scale"),
+    "skipping Carnage keeps the shared whelp loop available")
+end
+
+function S.questWetlandsCarnageSummon()
+  wetlandsRidgeQuests()
+  for _, id in ipairs({ 98245, 98246, 98072 }) do MOCK.questDone[id] = true end
+  MOCK.questLog = { { questID = 98283, objectives = {
+    { text = "Malignant Rotclaw Flesh: 1/1", finished = true }, { text = "Carnage's Head: 0/1" },
+  } } }
+  MOCK.bags[280331] = 1
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Offering Stone") and questText(frame, "69.5, 34.7"), "Carnage's instructions identify the cave entrance and summon point")
+  local item, target = LevelingCodexQuestItem, LevelingCodexQuestTarget
+  check(item and item:IsShown() and item:GetAttribute("item") == "item:280331", "Carnage has a usable flesh button")
+  check(target and target:GetAttribute("macrotext") == "/targetexact Carnage", "the summon step targets Carnage rather than the bait bears")
+end
+
 function S.questWetlandsEarly()
   -- The 20-25 Wetlands chapter starts in Menethil Harbor, where the Auberdine ship lands, and
   -- takes Fitzsimmons' Greenwarden breadcrumb as a normal step (it is optional in the 26-30 route).
@@ -4277,12 +4884,157 @@ function S.questWetlandsAfterEarly()
   MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 49.4, 42.2
   S.login()
   local frame = questViewer()
-  check(questText(frame, "Accept - Razormaw Needling"), "standing at Howin, his pickup is the step: " .. allText(frame))
+  check(questText(frame, "Accept - Blisters on The Land"), "after the early chapter, the Greenwarden chain continues before the coast: " .. allText(frame))
   slash("quests")
   questQueue("Missed quests")
-  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "Blisters on The Land", "War Banners", "Apprentice's Duties" }) do
+  for _, name in ipairs({ "Razormaw Needling", "Trying Times", "War Banners", "Apprentice's Duties" }) do
     check(not questText(win(), name), name .. " is still on the route, not missed: " .. allText(win()))
   end
+end
+
+function S.questWetlandsHarloPickup()
+  MOCK.race, MOCK.level, MOCK.bind = "Skyborne", 29, "Menethil Harbor"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 10.85, 55.90
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 631 then break end
+        if step.quest and step.quest ~= 472 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  local frame = questViewer()
+  check(questText(frame, "Accept - Fall of Dun Modr"), "Harlo's pickup stays available at the harbor after completing the raptor quests: " .. allText(frame))
+  click(frame, "Next")
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "Accept - Fall of Dun Modr"), "Next still skips Harlo's pickup")
+end
+
+function S.questTheramoreArrival()
+  MOCK.race, MOCK.level = "Human", 33
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1437, 5.1, 63.4
+  S.login()
+  slash("quests")
+  clickGuide("Theramore and the Shimmering Flats")
+  local frame = questViewer()
+  check(questText(frame, "Menethil Harbor - Theramore Isle"), "the crossing starts at Menethil")
+  walkTo(1445, 67.5, 51.3)
+  check(questText(frame, "Theramore and the Shimmering Flats") and not questText(frame, "Menethil Harbor - Theramore Isle"),
+    "landing in Theramore continues the selected Shimmering Flats route: " .. allText(frame))
+  slash("quests")
+  clickGuide("Theramore and the Shimmering Flats")
+  check(not questText(frame, "Menethil Harbor - Theramore Isle"), "starting the route at the dock skips the completed crossing")
+end
+
+function S.questBootyBayArrival()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 50
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1413, 63.7, 38.6
+  MOCK.questDone[2873] = true
+  MOCK.questLog = { { questID = 2874, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Booty Bay, Stonard and the Blasted Lands")
+  local frame = questViewer()
+  check(questText(frame, "Ratchet - Booty Bay"), "the delivery route starts on the boat in Ratchet")
+  walkTo(1434, 25.8, 73.1)
+  check(questText(frame, "Turn in - Deliver to MacKinley"), "MacKinley is the next step after docking: " .. allText(frame))
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turn in - Deliver to MacKinley"), "the turn-in stays current without pressing Next")
+end
+
+function S.questSkycutterDalaranJoin()
+  MOCK.race, MOCK.level = "Skyborne", 12
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1416, 12.3, 56.3
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "valanaar" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 94946 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 94946, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Valanaar")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Turn in to Denaaris Stargale"),
+    "starting Valanaar at the Dalaran dock leads to Denaaris: " .. allText(frame))
+end
+
+function S.questRagefireZeppelinRoundTrip()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 14
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1458, 56.25, 92.2
+  MOCK.questLog = { { questID = 5722 }, { questID = 5723 }, { questID = 5726, isComplete = true } }
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Ragefire Chasm")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Enter the Undercity"), "joining in the Undercity leads to Varimathras: " .. allText(frame))
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 5725 }
+  MOCK.event("QUEST_ACCEPTED", #MOCK.questLog, 5725)
+  check(questTextStarts(frame, "Leave the Undercity and take the zeppelin"),
+    "accepting the books quest keeps the return zeppelin: " .. allText(frame))
+  walkTo(1411, 50.8, 13.8)
+  check(questTextStarts(frame, "Bring the insignia to Thrall"),
+    "landing in Durotar advances the return leg to Thrall: " .. allText(frame))
+end
+
+function S.questHordeCozyWestfallJoin()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 25
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1436, 37.3, 89.2
+  MOCK.questLog = { { questID = 79007, isComplete = true } }
+  S.login()
+  slash("quests")
+  guidesView("Special")
+  click(win(), "Cozy Sleeping Bag")
+  click(win(), "Follow this guide")
+  local frame = questViewer()
+  check(questTextStarts(frame, "Search the Burned-Out Remains in the burned field"),
+    "joining in Westfall leads to the farmstead: " .. allText(frame))
+end
+
+function S.questWinterspringIronforgeJoin()
+  MOCK.race, MOCK.level = "Human", 56
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1455, 55.5, 47.7
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "winterspring-55" then
+      for _, step in ipairs(section.steps) do
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  clickGuide("Winterspring: Everlook and the Southern Valleys")
+  local frame = questViewer()
+  check(not questTextStarts(frame, "Walk back through Timbermaw Hold")
+      and not questTextStarts(frame, "Fly to Auberdine") and not questText(frame, "Auberdine - Menethil Harbor"),
+    "restarting from Ironforge passes the earlier travel legs: " .. allText(frame))
+end
+
+function S.questHillsbradThunderBluffJoin()
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 24
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1456, 47, 49.82
+  LevelingCodexCharDB = { questFlights = { ["Tarren Mill, Hillsbrad"] = true } }
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "hillsbrad" then
+      for _, step in ipairs(section.steps) do
+        if step.quest and step.quest ~= 1067 and step.quest ~= 1086 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 1067, isComplete = true } }
+  S.login()
+  slash("quests")
+  clickGuide("Hillsbrad Foothills")
+  local frame = questViewer()
+  check(not questTextStarts(frame, "Leave the Undercity and take the Durotar zeppelin"),
+    "joining in Thunder Bluff skips the older zeppelin leg: " .. allText(frame))
+  check(questText(frame, "Turn in - Return to Thunder Bluff"), "Zamah's local hand-in is available: " .. allText(frame))
 end
 
 function S.questStranglethornRoad()
@@ -4310,6 +5062,29 @@ function S.questStranglethornRoad()
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   MOCK.advance(0.25)
   check(questText(arrow, "Follow the road south into Stranglethorn"), "from Duskwood the arrow names the road south")
+end
+
+function S.questStranglethornStockpile()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 45.82, 8.18
+  MOCK.questLog = {
+    { questID = 574, objectives = { { text = "Kurzen Commandos 3/10" }, { text = "Kurzen Headshrinkers 0/6" } } },
+    { questID = 97047, objectives = { { text = "Compound Cage Key 0/1" }, { text = "Kurzen Fighter's Uniform 0/1" } } },
+  }
+  S.login()
+  slash("quests")
+  clickGuide("Stranglethorn: Rebels, Kurzen and Nesingwary")
+  local step = routeStep("Complete - Special Forces")
+  check(step, "the Stranglethorn route has a Stockpile objective for Special Forces")
+  step:Click()
+  local frame = questViewer()
+  check(questText(frame, "Kurzen Commandos 3/10"), "the guide shows live Special Forces progress")
+  check(questText(frame, "WHILE YOU'RE HERE") and questText(frame, "Compound Cage Key 0/1"),
+    "the cook's key is visible while clearing Special Forces")
+  MOCK.questLog[2].objectives[1].text = "Compound Cage Key 1/1"
+  MOCK.questLog[2].objectives[1].finished = true
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(not questText(frame, "Compound Cage Key") and questText(frame, "Kurzen Fighter's Uniform 0/1"),
+    "the grouped panel keeps only the uniform after looting the key")
 end
 
 local TICK = "Interface\\RaidFrame\\ReadyCheck-Ready"
@@ -4389,6 +5164,15 @@ function S.questWetlandsDig()
 end
 
 function S.questWetlandsEnd()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "wetlands" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "boat" and step.name == "Stormwind Harbor - Auberdine" then
+          check(step.ifOnQuest == 98209, "the Wetlands boat requires the unfinished Auberdine delivery")
+        end
+      end
+    end
+  end
   -- The Wetlands section ends in Auberdine: Nord'el for Thundris, then the ship to Stormwind for Darkshire.
   MOCK.race, MOCK.level, MOCK.questMap = "Skyborne", 30, 1439
   MOCK.questLog = { { questID = 98209, isComplete = true } }
@@ -4500,20 +5284,341 @@ end
 
 -- Player feedback: clicking a route switched to it without a word, and the Route sub-tab then led
 -- with other routes, so it didn't look like you were on the one you picked.
+-- The overview must describe the route being followed while guide pages are only previews.
+-- Option summaries must update from the same choices that actually change the route.
+function S.questTabOverview()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login()
+  slash("quests")
+  clickGuide("Loch Modan")
+  click(win(), "Route")
+  check(questText(win(), "Area: Loch Modan"), "the overview names the active route's area")
+  check(questText(win(), "Pace: Fastest") and questText(win(), "Elites: Ask"), "the overview shows the active options")
+  local viewer = questViewer()
+  local before = MOCK.textUnder(viewer)
+  guideButton("Darkshore"):Click()
+  check(questText(win(), "PREVIEW") and questText(win(), "Area: Darkshore"), "a guide page labels its preview and area")
+  check(MOCK.textUnder(viewer) == before, "browsing another area never changes the followed step")
+  click(win(), "Start this route")
+  check(questText(win(), "Darkshore") and questText(win(), "Following"), "starting updates the route overview")
+  click(win(), "Setup")
+  click(win(), "Every quest")
+  click(win(), "Always skip")
+  click(win(), "None")
+  click(win(), "Done")
+  check(questText(win(), "Pace: Every quest") and questText(win(), "Elites: Always skip")
+    and questText(win(), "Dungeons: None"), "the closed setup still confirms every routing choice")
+  if not MOCK.minimal then
+    MOCK.mapInfo = nil
+    C_Map.GetMapInfo = function() error("map data unavailable") end
+    click(win(), "Route")
+    check(questText(win(), "Darkshore") and not questText(win(), "Area: nil"), "missing area APIs keep the route readable")
+  end
+end
+
+-- The journey must stay a single screen even when a route has hundreds of steps.
+-- In-game report: the board's circles and tile headers were empty. Artwork paths
+-- must reach SetTexture intact, including GossipFrame art outside Interface/Icons.
+function S.questBoardIcons()
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests")
+  local function textures()
+    local found = {}
+    local function walk(frame)
+      for _, region in ipairs(frame._regions) do
+        if region._shown and region._type == "Texture" then
+          check(not (region._path or ""):find("Interface\\Icons\\Interface\\", 1, true),
+            "quest artwork paths must not receive a second icon-directory prefix")
+          found[#found + 1] = region
+        end
+      end
+      for _, child in ipairs(frame._children) do if child._shown then walk(child) end end
+    end
+    walk(win())
+    return found
+  end
+  local function artwork(file)
+    for _, texture in ipairs(textures()) do
+      if texture._path == file then return texture end
+    end
+  end
+  local map = "Interface\\Icons\\INV_Misc_Map_01"
+  check(artwork(map), "journey area nodes and sidebar display game map artwork")
+  click(win(), "Guides")
+  check(artwork(map), "route tiles display game map artwork")
+  click(win(), "Dungeons")
+  check(artwork("Interface\\Icons\\INV_Misc_Head_Dragon_01"), "dungeon tiles display game artwork")
+  click(win(), "Quest log")
+  check(artwork("Interface\\GossipFrame\\AvailableQuestIcon"), "quest-log cards display quest artwork outside the icon directory")
+  MOCK.missingTextures[map:lower()] = true
+  click(win(), "Guides")
+  local fallback = false
+  for _, texture in ipairs(textures()) do
+    if texture:GetTexture() == 134400 then fallback = true end
+  end
+  check(fallback, "unavailable board artwork displays the question-mark fallback")
+end
+
+function S.questBoardAreaMaps()
+  local maps = { 1432, 1437, 1417 }
+  local names = { "Loch Modan", "Wetlands", "Arathi Highlands" }
+  local steps = {}
+  MOCK.mapArt, MOCK.mapInfo, MOCK.mapOverlays = {}, {}, {}
+  for i, map in ipairs(maps) do
+    MOCK.mapInfo[map] = { name = names[i] }
+    MOCK.mapArt[map] = {
+      layers = { { layerWidth = 768, layerHeight = 512, tileWidth = 256, tileHeight = 256 } },
+      textures = { { 900000 + i * 10 + 1, 900000 + i * 10 + 2, 900000 + i * 10 + 3,
+        900000 + i * 10 + 4, 900000 + i * 10 + 5, 900000 + i * 10 + 6 } },
+    }
+    MOCK.mapOverlays[map] = { { textureWidth = 300, textureHeight = 270, offsetX = 150, offsetY = 110,
+      fileDataIDs = { 901000 + i * 10 + 1, 901000 + i * 10 + 2, 901000 + i * 10 + 3, 901000 + i * 10 + 4 } } }
+    steps[#steps + 1] = { type = "note", name = names[i] .. " stop", text = "Visit " .. names[i] .. ".", map = map }
+  end
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-area-art", title = "Test area artwork", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests"); clickGuide("Test area artwork")
+  if MOCK.minimal then
+    check(questText(win(), "Map unavailable") and questText(win(), "Loch Modan"),
+      "without map APIs the area preview keeps its name and explains unavailable art")
+    return
+  end
+  local function artUnder(root)
+    local found = {}
+    local function walk(frame)
+      for _, region in ipairs(frame._regions) do
+        if region._shown and region._type == "Texture" and type(region._tex) == "number"
+          and region._tex > 900000 and region._tex < 902000 then
+          found[region._tex] = region
+          for _, v in ipairs(region._coords or {}) do check(v >= 0 and v <= 1, "map tiles crop within their texture") end
+        end
+      end
+      for _, child in ipairs(frame._children) do if child._shown then walk(child) end end
+    end
+    walk(root)
+    return found
+  end
+  local art = artUnder(win())
+  for i = 1, 3 do
+    check(art[900000 + i * 10 + 2] and art[900000 + i * 10 + 5], "each journey area uses its own map tiles")
+    check(art[901000 + i * 10 + 4], "each map includes explored terrain over its base parchment")
+  end
+  local edge = art[901014]._coords
+  check(edge[2] <= 44 / 64 and edge[4] <= 14 / 16, "partial exploration tiles exclude power-of-two texture padding")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 2: Wetlands")
+  check(MOCK.textUnder(questViewer()) == before and not MOCK.openedMap, "map previews leave the followed step and world map alone")
+  click(win(), "Guides")
+  check(artUnder(win())[900012], "route cards use their zone's real map tiles")
+  C_MapExplorationInfo.GetExploredMapTextures = function() error("exploration unavailable") end
+  click(win(), "Route")
+  check(artUnder(win())[900012], "unavailable exploration APIs keep the base map usable")
+  C_Map.GetMapArtLayers = function() error("map art unavailable") end
+  click(win(), "Route")
+  check(questText(win(), "Map unavailable") and not next(artUnder(win())), "failed map APIs show a named placeholder and hide pooled map tiles")
+  C_Map.GetMapArtLayers, C_Map.GetMapArtLayerTextures = nil, nil
+  click(win(), "Guides"); click(win(), "Route")
+  check(questText(win(), "Map unavailable"), "clients without map-art APIs keep the board usable")
+end
+
+function S.questBoardJourney()
+  local steps = {}
+  for i = 1, 36 do steps[#steps + 1] = { type = "note", name = "Loch stop " .. i, text = "Read the Loch instruction " .. i .. ".", map = 1432 } end
+  steps[#steps + 1] = { type = "note", name = "Coastal stop", text = "Read the coastal instruction.", map = 1439 }
+  steps[#steps + 1] = { type = "note", name = "Return stop", text = "Return to the Loch.", map = 1432 }
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-journey-board", title = "Test journey board", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login()
+  slash("quests")
+  clickGuide("Test journey board")
+  local opener = findButton(win(), function(l) return l == "Hide step window" or l == "Show step window" end)
+  local _, content = opener:GetPoint()
+  check(content:GetHeight() <= 480, "the default journey fits one screen instead of drawing the full itinerary")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 2: Darkshore")
+  check(questText(win(), "Coastal stop") and questText(win(), "AREA PREVIEW"), "an area node opens its own quest panel")
+  check(MOCK.textUnder(questViewer()) == before, "area browsing leaves the followed quest and arrow alone")
+  click(win(), "Area steps")
+  check(questText(win(), "Coastal stop") and not questText(win(), "Loch stop 36"), "area steps contain only the selected leg")
+  click(win(), "Back to journey")
+  click(win(), "Area 1: Loch Modan")
+  click(win(), "Area steps")
+  check(not questText(win(), "Loch stop 36"), "long areas are paged")
+  click(win(), "Next steps page")
+  local oldPage = false
+  for _, b in ipairs(MOCK.buttons(win())) do if b.tipTitle == "Note - Loch stop 1" then oldPage = true end end
+  check(questText(win(), "Loch stop 7") and not oldPage, "the next page replaces the first six quest cards")
+end
+
+function S.questBoardDungeons()
+  MOCK.level, MOCK.questMap = 20, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  local a = findButton(win(), function(l) return l == "The Deadmines" end)
+  local b = findButton(win(), function(l) return l == "Wailing Caverns" end)
+  check(a and b, "the dungeon board includes the early runs")
+  local _, _, _, ax, ay = a:GetPoint()
+  local _, _, _, bx, by = b:GetPoint()
+  check(ax ~= bx and ay == by, "dungeons are peer tiles in two columns, not a vertical button list")
+  click(win(), "Plan The Deadmines")
+  check(LevelingCodexDB.questDungeonPlan["dungeon-deadmines"], "a tile plans its run without following it")
+  check(not questText(questViewer(), "Enter the Deadmines"), "planning leaves the leveling guide active")
+end
+
+function S.questBoardSearch()
+  local steps = { { type = "note", text = "Stay at the Loch.", map = 1432 } }
+  for i = 1, 12 do steps[#steps + 1] = { type = "note", text = "Coastal errand " .. i, map = 1439 } end
+  steps[#steps + 1] = { type = "accept", quest = 999181, name = "Needle Paperwork", text = "Pick up the paperwork.", map = 1439, min = 11 }
+  steps[#steps + 1] = { type = "accept", quest = 999182, name = "Optional Paperwork", text = "An optional errand.", map = 1439, min = 11, optional = true }
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-board-search", title = "Test board search", zone = 1432, levels = { 11, 18 }, steps = steps,
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  S.login(); slash("quests")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Needle Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  local match = findButton(win(), function(l) return l == "Accept - Needle Paperwork" end)
+  check(match, "quest-name searches retain a card for the matching quest")
+  match:Click()
+  check(questText(win(), "Needle Paperwork"), "search opens the area and card page containing the matching quest")
+  check(MOCK.textUnder(questViewer()) == before, "search previews leave the followed step alone")
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Optional Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  check(not findButton(win(), function(l) return l == "Accept - Optional Paperwork" end)
+    and questText(win(), "outside your current route options"), "filtered matches explain their exclusion instead of opening an unrelated area")
+  click(win(), "Setup"); click(win(), "Your route"); click(win(), "Every quest")
+  click(win(), "Guides")
+  LevelingCodexQuestSearch:SetText("Optional Paperwork")
+  MOCK.fire(LevelingCodexQuestSearch, "OnEnterPressed")
+  local optional = findButton(win(), function(l) return l == "Accept - Optional Paperwork" end)
+  check(optional, "enabling optional quests makes the search result navigable")
+  optional:Click()
+  check(questText(win(), "Optional Paperwork"), "the enabled match opens its own area page")
+end
+
+function S.questBoardExternalGuide()
+  local sections = LevelingCodexQuests.ALLIANCE.sections
+  for _, name in ipairs({ "A", "B" }) do
+    sections[#sections + 1] = { id = "board-run-" .. name, title = "Board run " .. name, zone = 1436, levels = { 13, 18 }, side = true, category = "dungeon", steps = {
+      { type = "note", phase = "prepare", text = "Prepare for " .. name },
+      { type = "note", phase = "inside", text = "Inside " .. name },
+      { type = "note", phase = "after", text = "After " .. name },
+    } }
+  end
+  sections[#sections + 1] = { id = "board-linked-route", title = "Board linked route", zone = 1436, levels = { 13, 18 }, steps = {
+    { type = "note", text = "A related guide is available.", guide = "board-run-B" },
+  } }
+  MOCK.level, MOCK.questMap = 14, 1436
+  S.login(); slash("quests"); clickGuide("Board linked route")
+  guidesView("Dungeons"); click(win(), "Board run A"); click(win(), "Turn-ins")
+  stepTool("Plan Board run B")
+  local prepare = findButton(win(), function(l) return l == "Prepare" end)
+  local after = findButton(win(), function(l) return l == "Turn-ins" end)
+  check(prepare and prepare.codexOn and after and not after.codexOn, "opening a related guide clears the previous dungeon's phase selection")
+end
+
+-- Area headings follow travel order, including returning to an earlier area.
+function S.questTabItinerary()
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-itinerary", title = "Test travel itinerary", zone = 1432, levels = { 11, 18 }, steps = {
+      { type = "note", name = "First stop", text = "First stop.", map = 1432 },
+      { type = "note", name = "Second stop", text = "Second stop.", map = 1439 },
+      { type = "note", name = "Return stop", text = "Return stop.", map = 1432 },
+    },
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
+  MOCK.mapInfo = { [1432] = { name = "Loch Modan" }, [1439] = { name = "Darkshore" } }
+  S.login(); slash("quests"); clickGuide("Test travel itinerary")
+  local positions = {}
+  for i, name in ipairs({ "Area 1: Loch Modan", "Area 2: Darkshore", "Area 3: Loch Modan" }) do
+    local b = findButton(win(), function(l) return l == name end)
+    check(b, "consecutive area node is available: " .. name)
+    positions[i] = select(4, b:GetPoint())
+  end
+  check(positions[1] < positions[2] and positions[2] < positions[3], "area nodes preserve route order, including a return visit")
+  local before = MOCK.textUnder(questViewer())
+  click(win(), "Area 3: Loch Modan")
+  check(questText(win(), "Return stop") and MOCK.textUnder(questViewer()) == before, "a return-area preview is independent of the followed step")
+end
+
+-- Planning pickups and actively following a dungeon are independent states.
+function S.questTabDungeonStates()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 20, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "The Deadmines")
+  check(questText(win(), "Not planned") and questText(win(), "PREVIEW"), "an unplanned dungeon opens as a preview")
+  check(findButton(win(), function(l) return l == "Prepare" end) and findButton(win(), function(l) return l == "Inside" end) and findButton(win(), function(l) return l == "Turn-ins" end),
+    "the dungeon page explains its three stages")
+  local pickup
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if b:IsShown() and type(b.tipTitle) == "string" and b.tipTitle:find("^Accept %- ") then pickup = b; break end
+  end
+  check(pickup, "the dungeon preview has a pickup to inspect")
+  pickup:Click()
+  check(questText(win(), "FOLLOWING") and questText(win(), "PREVIEW"),
+    "inspecting a dungeon step keeps the followed leveling route in the overview")
+  click(win(), "Plan this run")
+  check(questText(win(), "Planned") and questText(win(), "PREVIEW"), "planning leaves the leveling route active")
+  click(win(), "Start inside")
+  click(win(), "Guides")
+  click(win(), "Dungeons")
+  click(win(), "The Deadmines")
+  check(questText(win(), "Following") and questText(win(), "Planned"), "a followed dungeon still confirms its pickup plan")
+end
+
+function S.questTabStagePreview()
+  LevelingCodexQuests.ALLIANCE.sections[#LevelingCodexQuests.ALLIANCE.sections + 1] = {
+    id = "test-stage-run", title = "Test stage run", zone = 1436, levels = { 20, 30 }, side = true, category = "dungeon",
+    steps = {
+      { type = "note", phase = "prepare", text = "Prepare for the test run." },
+      { type = "note", phase = "inside", text = "Inside the test run." },
+      { type = "note", phase = "after", text = "Finish the test run." },
+    },
+  }
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 26, 1436
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Test stage run")
+  click(win(), "Start inside")
+  check(questText(questViewer(), "Inside the test run."), "the run is following its inside phase")
+  guidesView("Dungeons")
+  click(win(), "The Deadmines")
+  for _, b in ipairs(MOCK.buttons(win())) do
+    if type(b.tipTitle) == "string" and b.tipTitle:find("^Accept %- ") then b:Click(); break end
+  end
+  guidesView("Dungeons")
+  click(win(), "Test stage run")
+  check(findButton(win(), function(l) return l == "Inside (now)" end) and not findButton(win(), function(l) return l == "Prepare (now)" end),
+    "another dungeon's step preview cannot move the followed dungeon's stage highlight")
+end
+
 function S.questRoutePick()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 12, 1432
   S.login()
   local frame = questViewer()
   check(questText(frame, "Levels 11-18"), "the Dwarf starts on Loch Modan")
   slash("quests")
-  check(questText(win(), "YOU ARE ON THIS ROUTE"), "the Route sub-tab names the route you're on first")
+  check(questText(win(), "Following") and questText(win(), "Loch Modan"), "Journey names the followed route")
   local row = guideButton("Darkshore")
   check(row, "Darkshore is listed under Guides", 2)
   row:Click()
   check(not questText(frame, "Levels 12-20"), "clicking a guide row doesn't switch routes")
   check(findButton(win(), function(l) return l == "Start this route" end), "its page offers Start this route")
   check(questText(win(), "until you start this one"), "the page says which route you stay on")
-  check(questText(win(), "STEPS ("), "the page lists the route's steps under a heading")
+  check(questText(win(), "Area:"), "the preview identifies the selected area")
   -- a step row of a route you're only previewing doesn't move the step window
   local stepRow
   for _, b in ipairs(MOCK.buttons(win())) do
@@ -4526,21 +5631,21 @@ function S.questRoutePick()
   click(win(), "Start this route")
   check(questText(frame, "Levels 12-20"), "Start this route switches the step window")
   check(chatHas("Now following Darkshore"), "starting a route says so in chat")
-  check(questText(win(), "YOU ARE ON THIS ROUTE") and findButton(win(), function(l) return l == "Show all steps" end),
-    "Start shows the Route sub-tab of the new route")
-  check(questText(win(), "Started. The step window and arrow follow it now."), "the route card confirms the start")
+  check(questText(win(), "Following") and findButton(win(), function(l) return l == "Area steps" end),
+    "Start opens the new route's journey board")
+  check(questText(win(), "Darkshore"), "the journey confirms which route started")
   MOCK.advance(31)
   click(win(), "Route")
   check(not questText(win(), "Started. The step window"), "the confirmation goes after half a minute")
   clickGuide("Darkshore")
   check(questText(win(), "You are on this route."), "the page of the route you're on says so")
   click(win(), "Route")
-  local preview = findButton(win(), function(l) return l:find("^Preview ") ~= nil end)
-  check(preview, "the Route sub-tab lists other routes for your level", 2)
+  local preview = guideButton("Loch Modan")
+  check(preview, "Routes offers another route")
   preview:Click()
   check(questText(frame, "Levels 12-20"), "previewing another route keeps you on yours")
-  click(win(), "Back to the route")
-  check(questText(win(), "YOU ARE ON THIS ROUTE"), "Back returns to the Route sub-tab")
+  click(win(), "Back to guides"); click(win(), "Route")
+  check(questText(win(), "Following") and questText(win(), "Darkshore"), "Journey keeps the followed route after previewing")
   click(win(), "Change route")
   check(guideButton("Darkshore"), "Change route opens the guide list")
   -- a route above your level says so on its page
@@ -4628,6 +5733,176 @@ function S.questHordeDungeon()
   MOCK.faction, MOCK.instanceName, MOCK.instanceID = nil, nil, nil
 end
 
+-- Reported in game: Sovik's quest is behind gossip, so leaving Orgrimmar after
+-- only visiting the vendor sends the player back from Booty Bay.
+local function sovikPickup(dungeon, withoutRigWars)
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 30
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1454, 75.49, 25.36
+  LevelingCodexDB = { questDungeonPlan = { ["dungeon-gnomeregan"] = true } }
+  MOCK.questLog = withoutRigWars and {} or { { questID = 2841 } }
+  if not dungeon then
+    for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+      if not section.side and not section.alternate then
+        for _, step in ipairs(section.steps) do
+          if step.quest == 2842 then break end
+          if step.quest and step.quest ~= 2841 then MOCK.questDone[step.quest] = true end
+        end
+        if section.id == "hillsbrad-30" then break end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  if dungeon then
+    guidesView("Dungeons")
+    click(win(), "Gnomeregan")
+    click(win(), "Follow this guide")
+    if withoutRigWars then
+      check(questText(questViewer(), "Accept - Rig Wars"), "Nogg is offered first")
+      click(questViewer(), "Next")
+    end
+  else
+    clickGuide("Tarren Mill, Alterac and Hammerfall")
+    -- Travel and clean-up notes before the city pickups still need acknowledging.
+    for _ = 1, 20 do
+      if questTextStarts(questViewer(), "Sovik") then break end
+      click(questViewer(), "Next")
+    end
+  end
+  local frame = questViewer()
+  check(questText(frame, "Accept - Chief Engineer Scooty"), "Sovik's pickup is current")
+  check(questText(frame, "What else do you have to say?"), "Sovik's pickup explains the required gossip choice")
+  check(questText(frame, "quest log") and questText(frame, "Orgrimmar"), "confirm the quest before leaving Orgrimmar")
+  MOCK.event("GOSSIP_CLOSED")
+  check(questText(frame, "Accept - Chief Engineer Scooty"), "closing gossip cannot acknowledge the pickup")
+  MOCK.questLog[#MOCK.questLog + 1] = { questID = 2842 }
+  MOCK.event("QUEST_ACCEPTED", 2, 2842)
+  check(not questTextStarts(frame, "Sovik"), "accepting the quest advances past Sovik")
+end
+
+function S.questSovikDungeon() sovikPickup(true) end
+function S.questSovikRoute() sovikPickup(false) end
+function S.questSovikWithoutRigWars() sovikPickup(true, true) end
+
+local function incendiariesAfterUse(ready)
+  MOCK.faction, MOCK.race, MOCK.level = "Horde", "Orc", 56
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1420, 83.2, 69.1
+  if ready then MOCK.questLog = { { questID = 5096, isComplete = true } }
+  else MOCK.questDone[5096] = true end
+  for _, section in ipairs(LevelingCodexQuests.HORDE.sections) do
+    if section.id == "plaguelands-56" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.quest == 5096 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  slash("quests")
+  clickGuide("Plaguelands: the Bulwark and Tirion Fordring")
+  local frame = questViewer()
+  for _ = 1, 12 do
+    if questTextStarts(frame, "Take a Flame in a Bottle") or questTextStarts(frame, "Garush hands out") then break end
+    click(frame, "Next")
+  end
+  check(not questTextStarts(frame, "Take a Flame in a Bottle"), "a finished Scarlet Diversions never sends you back for an incendiary")
+  check(questTextStarts(frame, "Garush hands out"), "the route continues to the Argent Dawn pickup")
+end
+
+function S.questIncendiariesDone() incendiariesAfterUse(false) end
+function S.questIncendiariesReady() incendiariesAfterUse(true) end
+
+local function upperSpireDialoguePickup(quest, name)
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 60, nil
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Upper Blackrock Spire")
+  click(win(), "Start inside")
+  local frame = questViewer()
+  local found = false
+  for _ = 1, 60 do
+    -- The pickup instructions are on the current card, not in UP NEXT.
+    if questText(frame, "Accept - " .. name) and questText(frame, "dialogue") then found = true; break end
+    local nextButton = findButton(frame, function(l) return l == "Next" end)
+    if not nextButton then break end
+    nextButton:Click()
+  end
+  check(found, name .. " is offered before receiving its supplied quest item")
+  MOCK.questLog = { { questID = quest } }
+  MOCK.event("QUEST_ACCEPTED", 1, quest)
+  check(not questTextStarts(frame, quest == 5160 and "Awbee" or "After The Beast"), "accepting the NPC quest advances the guide")
+end
+
+function S.questAwbeePickup() upperSpireDialoguePickup(5160, "The Matron Protectorate") end
+function S.questFinklePickup() upperSpireDialoguePickup(5047, "Finkle Einhorn, At Your Service!") end
+
+function S.questHearthModernCooldown()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "hearth", bind = "Goldshire", map = 1429, x = 47, y = 41,
+        text = "Return to Goldshire, then talk to the flight master." })
+    end
+  end
+  MOCK.bind, MOCK.bags[6948], MOCK.time = "Goldshire", 1, 20
+  GetItemCooldown = nil
+  C_Item.GetItemCooldown = function(id) if id == 6948 then return 10, 3600, true end end
+  C_Container.GetItemCooldown = function(bag, slot) return 0, 0, true end
+  S.login()
+  check(questText(questViewer(), "ready in 60 min"), "modern item cooldown does not mistake an item ID for a bag")
+  local b = LevelingCodexQuestItem
+  check(b and b:IsShown() and questText(b, "60m"), "clickable hearthstone shows its live cooldown")
+  MOCK.advance(61)
+  check(questText(b, "59m"), "clickable item cooldown updates while the step stays current")
+end
+
+function S.questFlightRouteInitialization()
+  local initialized
+  TaxiNodeOnButtonEnter = function(button) initialized = button end
+  local original = TakeTaxiNode
+  TakeTaxiNode = function(slot)
+    check(initialized == _G["TaxiButton" .. slot], "initialize the destination route before taking a connecting flight")
+    original(slot)
+  end
+  _G.TaxiButton2 = CreateFrame("Button", "TaxiButton2", UIParent)
+  S.questTravelFlight()
+end
+
+function S.questCompletedSet()
+  C_QuestLog.IsQuestFlaggedCompleted = function() return false end
+  C_QuestLog.GetAllCompletedQuestIDs = function() return { [783] = true, [92710] = true } end
+  S.login()
+  check(not questText(questViewer(), "Accept - A Threat Within"), "completed quest ID sets skip earlier pickups on a fresh DB")
+end
+
+function S.questDungeonPreparation()
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 24, 1437
+  S.login()
+  slash("quests")
+  guidesView("Dungeons")
+  click(win(), "Excavation Site: Wetlands")
+  click(win(), "Prepare quests")
+  check(LevelingCodexDB.questDungeonPlan["dungeon-excavation-site"], "preparation plans the dungeon pickups while leveling")
+  check(questText(questViewer(), "Songblade Search"), "prepare offers the Lakeshire prerequisite before the run level")
+  -- Finish every outdoor quest and travel step through player acknowledgements.
+  for _ = 1, 60 do
+    local frame = questViewer()
+    check(not questTextStarts(frame, "Meet the group at the upper dig"), "preparing never sends you to enter the dungeon")
+    if findButton(frame, function(l) return l == "Return to leveling" end) == nil then break end
+    click(frame, "Next")
+  end
+  check(not findButton(questViewer(), function(l) return l == "Return to leveling" end), "finishing preparation returns to leveling")
+end
+
+function S.questDungeonIncompletePreparation()
+  MOCK.level, MOCK.questMap = 28, 1437
+  LevelingCodexDB = { questDungeonPlan = { ["dungeon-excavation-site"] = true } }
+  MOCK.questLog = { { questID = 98815 }, { questID = 95772 }, { questID = 95647 } }
+  S.login()
+  check(not findButton(questViewer(), function(l) return l == "Run Excavation Site: Wetlands" end),
+    "three quests do not declare the dungeon ready while outdoor prerequisites remain")
+end
+
 local function classSideFixture()
   local function step(kind, id, name)
     return { type = kind, quest = id, name = name, text = "Test class chain.", min = 10, level = 10,
@@ -4694,8 +5969,10 @@ function S.questDetourLibrary()
   click(win(), "Quests")
   guidesView("Dungeons")
   click(win(), "Test Dungeon")
-  check(questText(win(), "BEFORE YOU GO") and questText(win(), "INSIDE") and questText(win(), "AFTER THE RUN"), "dungeon stages are shown")
-  check(questText(win(), "Requires level 15"), "shows the actual level gate")
+  check(findButton(win(), function(l) return l == "Prepare" end) and findButton(win(), function(l) return l == "Inside" end)
+    and findButton(win(), function(l) return l == "Turn-ins" end), "dungeon stages are selectable")
+  click(win(), "Inside")
+  check(questText(win(), "Requires level 15"), "the inside checklist shows the actual level gate")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Dungeon Test Pickup"), "dungeon guide starts independently of class quests")
   MOCK.questLog = { { questID = 999011, title = "Dungeon Test Pickup", objectives = { { text = "Dungeon widgets: 0/2" } } } }
@@ -4729,8 +6006,9 @@ function S.questDungeonContent()
   slash("quests")
   guidesView("Dungeons")
   click(win(), "Hall of Thanes")
-  check(questText(win(), "Old Ironforge Incursion") and questText(win(), "The Treaty of Understanding"),
-    "Hall of Thanes has both outdoor unlock and inside starter")
+  check(guideHas("Old Ironforge Incursion"), "Hall of Thanes shows its outdoor unlock")
+  click(win(), "Inside")
+  check(guideHas("The Treaty of Understanding"), "its inside checklist includes the starter")
   click(win(), "Follow this guide")
   check(questText(questViewer(), "Accept - Old Ironforge Incursion"), "completed map prep leads directly to the dungeon pickup")
   click(questViewer(), "Return to leveling")
@@ -4765,6 +6043,26 @@ function S.questAlternateSharedPickup()
   MOCK.questDone[999020] = true
   MOCK.event("QUEST_TURNED_IN", 999020)
   check(not questText(questViewer(), "Accept - Shared Alternate Pickup"), "game completion is shared across alternates")
+end
+
+function S.questSouthshoreTurnin()
+  local turtle = { questID = 555, objectives = { { text = "Turtle Meat: 1/10" } } }
+  MOCK.race, MOCK.level, MOCK.questMap = "Human", 33, 1416
+  MOCK.questLog = { turtle, { questID = 98071, isComplete = true } }
+  for _, id in ipairs({ 98059, 647, 98219, 536, 559, 560, 561, 562, 659 }) do MOCK.questDone[id] = true end
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  local frame = questViewer()
+  check(questText(frame, "Turtle Meat 1/10"), "the level 33 route is following the turtle objective")
+
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1424, 52.13, 58.74
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(questText(frame, "Turtle Meat 1/10"), "the ready turn-in does not switch to the older Southshore alternate")
+  MOCK.questDone[98071], MOCK.questLog = true, { turtle }
+  MOCK.event("QUEST_TURNED_IN", 98071)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(questText(frame, "Turtle Meat 1/10"), "turning in Brewer's Trade keeps the turtle objective in view")
 end
 
 function S.questPinCapacity()
@@ -4877,14 +6175,14 @@ function S.questQuarryKeg()
   MOCK.race, MOCK.level, MOCK.questMap = "Dwarf", 10, 1426
   S.login()
   slash("quests")
-  check(not questText(win(), "Stolen Blasting Powder"), "the entire powder chain is hidden without the keg")
+  check(not routeHas("Stolen Blasting Powder"), "the entire powder chain is hidden without the keg")
   MOCK.bags[268548] = 1
   MOCK.event("BAG_UPDATE_DELAYED")
-  check(questText(win(), "Stolen Blasting Powder"), "looting the keg reveals the chain")
+  check(routeHas("Stolen Blasting Powder"), "looting the keg reveals the chain")
   MOCK.bags[268548] = 0
   MOCK.questDone[95213] = true
   MOCK.event("QUEST_TURNED_IN", 95213)
-  check(questText(win(), "Complete - Stolen Blasting Powder"), "the follow-up stays visible after turning in the keg")
+  check(routeHas("Complete - Stolen Blasting Powder"), "the follow-up stays visible after turning in the keg")
 end
 
 function S.questWestfall()
@@ -4892,12 +6190,12 @@ function S.questWestfall()
   S.login()
   check(questText(questViewer(), "Westfall"), "Skyborne can enter the shared Westfall route")
   slash("quests")
-  check(questText(win(), "The Defias Brotherhood"), "solo Defias lead-in is visible with dungeons off")
-  check(not questText(win(), "Dungeon - The Deadmines"), "dungeon run is hidden by default")
+  check(routeHas("The Defias Brotherhood"), "solo Defias lead-in is visible with dungeons off")
+  check(not routeHas("Dungeon - The Deadmines"), "dungeon run is hidden by default")
   click(win(), "Settings")
   click(win(), "Plan every dungeon run")
   click(win(), "Quests")
-  check(questText(win(), "Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
+  check(routeHas("Dungeon - The Deadmines"), "dungeon setting reveals the Deadmines run")
 end
 
 -- Reported in game: logging in at Menethil with Wetlands turn-ins ready kept the Duskwood guide,
@@ -4947,7 +6245,7 @@ function S.questWarriorFangs()
     { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" }, { text = "Charred Horn: 0/12" },
       { text = "Galvanized Horn: 0/1" }, { text = "Vial of Phlogiston: 0/1" } } },
   })
-  check(questText(win(), "Complete - Alchemical Hazards") and questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and routeHas("Complete - Fire Hardened Mail"),
     "a Warrior with Fire Hardened Mail collects the fangs at Thelgen Rock")
 end
 
@@ -4956,14 +6254,14 @@ function S.questWarriorFangsOtherClass() -- run as a Mage
     { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
     { questID = 1701, objectives = { { text = "Scorched Spider Fang: 12/50" } } },
   })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Complete - Fire Hardened Mail"),
     "other classes never get the Warrior's fang step")
 end
 
 function S.questWarriorFangsNotTaken()
   LevelingCodexDB = { questOptional = true } -- even with optional quests shown
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Complete - Fire Hardened Mail"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Complete - Fire Hardened Mail"),
     "without Fire Hardened Mail in the log there is no fang step")
 end
 
@@ -4979,24 +6277,24 @@ end
 
 function S.questClassAlongDruid() -- run as a Druid
   routeAt("NightElf", 16, 1439, 47.0, 14.0, { { questID = 272, objectives = { { text = "Pendant of the Sea Lion: 0/1" } } } })
-  check(questText(win(), "Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
+  check(routeHas("Travel - Trial of the Sea Lion"), "a Druid with Trial of the Sea Lion gets the Darkshore lockbox stop")
 end
 
 function S.questClassAlongDruidNotTaken() -- run as a Druid
   routeAt("NightElf", 16, 1439, 47.0, 14.0, {})
-  check(questText(win(), "Darkshore") and not questText(win(), "Trial of the Sea Lion"), "no lockbox stop without the quest")
+  check(routeHas("Darkshore") and not routeHas("Trial of the Sea Lion"), "no lockbox stop without the quest")
 end
 
 function S.questClassAlongShaman() -- run as a Shaman
   MOCK.faction = "Horde"
   routeAt("Orc", 13, 1413, 52.0, 30.0, { { questID = 1525, objectives = { { text = "Fire Tar: 0/1" }, { text = "Reagent Pouch: 0/1" } } } })
-  check(questText(win(), "Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
+  check(routeHas("Complete - Call of Fire"), "a Shaman with Call of Fire gets the Fire Tar step at the Crossroads")
 end
 
 function S.questClassAlongShamanNotTaken() -- run as a Shaman
   MOCK.faction = "Horde"
   routeAt("Orc", 13, 1413, 52.0, 30.0, {})
-  check(questText(win(), "Crossroads") and not questText(win(), "Complete - Call of Fire"), "no Fire Tar step without the quest")
+  check(routeHas("Crossroads") and not routeHas("Complete - Call of Fire"), "no Fire Tar step without the quest")
 end
 
 -- Reported in game: with Show optional quests on, the step window said "Turn in - Unrequited Love"
@@ -5004,7 +6302,7 @@ end
 function S.questCarriedTurninNotTaken()
   LevelingCodexDB = { questOptional = true }
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } } })
-  check(questText(win(), "Complete - Alchemical Hazards") and not questText(win(), "Turn in - Unrequited Love"),
+  check(routeHas("Complete - Alchemical Hazards") and not routeHas("Turn in - Unrequited Love"),
     "no turn-in for an optional quest you don't have, even with optional quests shown")
 end
 
@@ -5012,7 +6310,7 @@ function S.questCarriedTurninCarried()
   LevelingCodexDB = { questOptional = true }
   thelgenRoute({ { questID = 98282, objectives = { { text = "Unruptured Stalker Gland: 0/1" } } },
     { questID = 98461, isComplete = true } })
-  check(questText(win(), "Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
+  check(routeHas("Turn in - Unrequited Love"), "carrying Hollee's note keeps its turn-in")
 end
 
 -- Outleveled pickups leave the route and guides show progress by level band.
@@ -5086,7 +6384,9 @@ function S.questDungeonPlan()
   check(findButton(win(), function(l) return l == "Recommended" end) and questText(win(), "Not planned"),
     "the dungeon list offers plans")
   click(win(), "Test Plan Dungeon")
-  check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page lists boss tips")
+  click(win(), "Bosses in order")
+  check(questText(win(), "BOSSES IN ORDER") and questText(win(), "Interrupt the test bolt."), "the dungeon page retains boss tips")
+  click(win(), "Quest checklist")
   click(win(), "Plan this run")
   check(findButton(win(), function(l) return l == "Planned: its pickups are in your route" end), "the dungeon page shows the plan")
   check(questText(frame, "Accept - Plan Dungeon Pickup"), "a planned run adds its pickup to the route")
@@ -5266,7 +6566,7 @@ function S.questAlternateRoutes()
   check(questText(frame, "Accept - Thelsamar Blood Sausages"), "Loch Modan starts with a Thelsamar pickup")
   check(not LevelingCodexCharDB.questFlights["Thelsamar, Loch Modan"], "skipping does not record a flight path as learned")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Preview Darkshore" end), "other suitable routes are offered away from checkpoints")
+  check(guideButton("Darkshore"), "other suitable routes are offered through Routes")
   clickGuide("Darkshore")
   check(questText(frame, "Boat - Stormwind Harbor - Auberdine"), "Darkshore provides the way to Auberdine")
   MOCK.questMap = 1439
@@ -5298,6 +6598,8 @@ function S.questLochHistory()
   local frame = questViewer()
   check(questText(frame, "End of the alternate route"), "completed Loch Modan history advances past setup and reminders")
   check(not findButton(frame, function(label) return label == "Next" end), "a completed route needs no manual Next")
+  slash("quests")
+  check(questText(win(), "Complete"), "the completed selected route has an explicit Complete badge")
 end
 
 function S.questLochReady()
@@ -5363,8 +6665,8 @@ function S.questWestfallDetour()
   local frame = questViewer()
   check(findButton(frame, function(label) return label == "Try Loch Modan" end), "the step window offers a detour")
   slash("quests")
-  check(findButton(win(), function(label) return label == "Preview Loch Modan" end), "Westfall offers Loch Modan")
-  click(win(), "Preview Darkshore")
+  check(guideButton("Loch Modan"), "Westfall offers Loch Modan through Routes")
+  guideButton("Darkshore"):Click()
   check(not questText(frame, "Levels 12-20"), "previewing a route doesn't switch to it")
   click(win(), "Start this route")
   check((questText(frame, "Darkshore") and questText(frame, "Levels 12-20")), "Westfall also offers quest XP through Darkshore")
@@ -6286,6 +7588,33 @@ end
 local function installedMacroBody(name)
   local macro = MOCK.macros[GetMacroIndexByName(name)]
   return macro and macro.body
+end
+
+function S.druidMacros()
+  local function has(name, text)
+    local body = installedMacroBody(name)
+    return body and body:find(text, 1, true)
+  end
+
+  MOCK.level = 60
+  if not MOCK.minimal then
+    -- A character can log in with an old macro and no record of who made it.
+    MOCK.macros = { { name = "Heal up", icon = 134400, perChar = true,
+      body = "#showtooltip\n/cancelform\n/cast [@player,combat] Regrowth; [@player] Healing Touch" } }
+    LevelingCodexCharDB.made = nil
+  end
+  slash("macros")
+  check(has("Heal up", "[@player,combat] reset=combat Rejuvenation, Regrowth"), "combat Heal up starts with self Rejuvenation")
+  check(has("Heal up", "[@player,nocombat] reset=combat Healing Touch, Regrowth"), "out of combat Heal up starts with self Healing Touch")
+  check(has("Fight Cat", "/dismount") and has("Fight Cat", "Rake,Claw,Claw,Claw,Ferocious Bite"),
+    "Fight Cat shifts and retains the full rotation")
+  check(has("Prowl Cat", "[noform:3,known:1066][noform:2,noknown:1066] Cat Form")
+      and has("Prowl Cat", "[combat] Shifting Power; [nostealth] Prowl; Ravage"),
+    "Prowl Cat accounts for both Cat slots and keeps its existing abilities")
+  check(has("Panic Bear", "/dismount") and has("Panic Bear", "[noform:1] Dire Bear Form")
+      and has("Panic Bear", "/cast Frenzied Regeneration\n/cast Enrage"),
+    "Panic Bear shifts before its emergency abilities")
+  check(has("Cancel Form", "Moonkin Form\n/cancelform"), "Cancel Form is created with a form-sensitive tooltip")
 end
 
 function S.warriorPackMacros()
@@ -7817,12 +9146,12 @@ function S.profLearnedSwitch()
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
   end
-  check(profText():find("STEP 100%-112"), "clicked route preview")
+  check(profText():find("STEP PREVIEW"), "clicked route preview")
   MOCK.setSkill("Blacksmithing", 98, 150)
   MOCK.advance(1.2)
   MOCK.setSkill("Blacksmithing", 97, 150)
   MOCK.advance(1.2)
-  check(profText():find("DO THIS NOW") and not profText():find("STEP 100%-112"), "rank change clears the preview permanently")
+  check(profText():find("CURRENT STEP") and not profText():find("STEP PREVIEW"), "rank change clears the preview permanently")
   MOCK.removeSkill("Mining")
   MOCK.removeSkill("Blacksmithing")
   MOCK.advance(1.2)
@@ -7927,20 +9256,20 @@ function S.profTab()
   click(win(), "To 300")
   local t = profText()
   check(t:find("Blacksmithing 97 / 150"), "skill header")
-  check(t:find("Rough Bronze Leggings") and t:find("about 3 more to 100"), "now card")
-  check(t:find("Learn at 95"), "learn level")
+  check(t:find("Rough Bronze Leggings") and t:find("About 3 crafts to skill 100"), "now card")
+  check(t:find("(skill 95)"), "learn level")
   check(t:find("SHOPPING LIST TO 300"), "shopping list")
   check(t:find("1620 Thorium Bar"), "shopping list counts the 100 Thorium Bars the two Imperial Plate quests take")
   check(t:find("24 Heavy Grinding Stone"), "shopping list counts only the stones the route doesn't make itself")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^100%-112") then b:Click(); break end
   end
-  check(profText():find("STEP 100%-112") and profText():find("make 24 more"), "clicked step shows; the note says how many more stones")
+  check(profText():find("STEP PREVIEW") and profText():find("make 24 more"), "clicked step shows; the note says how many more stones")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^95%-100") then b:Click(); break end
   end
-  check(profText():find("DO THIS NOW") and profText():find("about 3 more to 100"), "clicking your own step goes back to it")
-  check(t:find("THE WHOLE ROUTE"), "route list")
+  check(profText():find("CURRENT STEP") and profText():find("About 3 crafts to skill 100"), "clicking your own step goes back to it")
+  check(t:find("LEVELING ROUTE"), "route list")
   check(t:find("TRAIN EXPERT") == nil, "Expert not due at 97")
   click(win(), "Mining")
   t = profText()
@@ -8002,13 +9331,15 @@ function S.profBrowse()
   t = profText()
   check(t:find("Alchemy  -  not learned", 1, true) and t:find("Any Alchemy trainer", 1, true), "where to learn it")
   check(t:find("FIRST STEP", 1, true) and t:find("Minor Arcane Elixir", 1, true), "its first step")
-  check(t:find("THE WHOLE ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
+  check(t:find("LEVELING ROUTE", 1, true) and t:find("SHOPPING LIST TO 300", 1, true) and t:find("from 1", 1, true),
     "its route and shopping list from 1")
-  check(not t:find("DO THIS NOW", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
+  check(not t:find("CURRENT STEP", 1, true) and not t:find("TRAIN JOURNEYMAN", 1, true), "no now card or training for a guide you lack")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.tipTitle and b.tipTitle:find("^90%-120") then b:Click(); break end
   end
-  check(profText():find("STEP 90-120", 1, true) and profText():find("Elixir of Wisdom", 1, true), "a step can be opened")
+  t = profText()
+  check(t:find("STEP PREVIEW", 1, true) and t:find("Skill 90-120", 1, true) and
+    t:find("Elixir of Wisdom", 1, true), "a step can be opened")
   click(win(), "Other guides")
   click(win(), "Herbalism")
   t = profText()
@@ -8016,7 +9347,7 @@ function S.profBrowse()
     t:find("Elwynn Forest", 1, true), "a gathering guide lists its first nodes without colours")
   MOCK.setSkill("Herbalism", 1, 75); MOCK.advance(1.2)
   t = profText()
-  check(t:find("Herbalism 1 / 75", 1, true) and t:find("DO THIS NOW", 1, true), "learning it turns the page into your guide")
+  check(t:find("Herbalism 1 / 75", 1, true) and t:find("CURRENT STEP", 1, true), "learning it turns the page into your guide")
   click(win(), "Mining")
   check(profText():find("Mining 140 / 225", 1, true), "your own guides are a click away")
   MOCK.removeSkill("Herbalism"); MOCK.advance(1.2)
@@ -8037,7 +9368,7 @@ function S.profTabCases()
   MOCK.level = 30
   MOCK.setSkill("Blacksmithing", 300, 300)
   click(win(), "Blacksmithing")
-  check(profText():find("ROUTE DONE"), "route done at 300")
+  check(profText():find("ROUTE COMPLETE"), "route done at 300")
   MOCK.removeSkill("Blacksmithing")
   MOCK.removeSkill("Mining")
   MOCK.advance(1.2)
@@ -8187,7 +9518,7 @@ function S.herbalismTab()
   MOCK.race = "Skyborne"
   click(win(), "Herbalism")
   check(profText():find("Zephras Isle"), "Skyborne starter zone")
-  check(text:find("THE WHOLE ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
+  check(text:find("LEVELING ROUTE") and text:find("270%-300") and text:find("CAMP OBJECTS"), "route and camp sections")
   check(text:find("20  Incense Candle") and text:find("140  Greenhouse") and
     text:find("300  Seed Hybridizer"), "camp unlocks")
   check(not text:find("Smelt") and not text:find("SHOPPING LIST"), "gathering route has no crafting advice")
@@ -8198,7 +9529,7 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 65, 75); MOCK.advance(1.2)
   check(profText():find("Peacebloom  1  green"), "Forever's herbs turn green at skill + 65")
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
+  check(profText():find("ROUTE COMPLETE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
   local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
@@ -8276,7 +9607,7 @@ function S.firstAidTab()
   check(text:find("Heavy Runecloth Bandage", 1, true) and text:find("22 Runecloth", 1, true),
     "the last bandage step and cloth estimate")
   MOCK.setSkill("First Aid", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "First Aid route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "First Aid route ends at 300")
 end
 
 function S.alchemyTab()
@@ -8307,7 +9638,7 @@ function S.alchemyTab()
     check(content:find("you can make 2", 1, true), "bag estimate is limited by the vial")
   end
   MOCK.setSkill("Alchemy", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Alchemy route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Alchemy route ends at 300")
 end
 
 function S.skinningLeatherworkingTab()
@@ -8329,7 +9660,7 @@ function S.skinningLeatherworkingTab()
   card = toast()
   check(card and card:IsShown() and MOCK.textUnder(card):find("NEW STEP"), "Skinning step card")
   MOCK.setSkill("Skinning", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE"), "Skinning cap")
+  check(profText():find("ROUTE COMPLETE"), "Skinning cap")
   click(win(), "Leatherworking")
   content = profText()
   check(content:find("Leatherworking 1 / 75") and content:find("57 Ruined Leather Scraps") and
@@ -8404,7 +9735,7 @@ function S.cookingTab()
   check(text:find("Nightfin Soup", 1, true) and text:find("Gikkix", 1, true) and
     shoppingText():find("17 Raw Nightfin Snapper", 1, true), "Nightfin Soup finishes the route at a Cooking Fire")
   MOCK.setSkill("Cooking", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Cooking route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Cooking route ends at 300")
 end
 
 function S.fishingTab()
@@ -8438,7 +9769,7 @@ function S.fishingTab()
   check(text:find("Tidefury Cove", 1, true) and not text:find("UNLOCK ARTISAN", 1, true) and
     not text:find("Feralas Ahi", 1, true), "raising the cap clears the quest objectives and leaves the final water")
   MOCK.setSkill("Fishing", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Fishing route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Fishing route ends at 300")
 end
 
 function S.engineeringTab()
@@ -8463,7 +9794,7 @@ function S.engineeringTab()
   check(content:find("Thorium Tube", 1, true) and content:find("Xizzer Fizzbolt", 1, true) and
     content:find("binds on pickup", 1, true), "the last stretch names the bind-on-pickup schematic vendor")
   MOCK.setSkill("Engineering", 300, 300); MOCK.advance(1.2)
-  check(profText():find("ROUTE DONE", 1, true), "Engineering route ends at 300")
+  check(profText():find("ROUTE COMPLETE", 1, true), "Engineering route ends at 300")
 end
 
 local function tailoring() click(win(), "Tailoring"); return profText() end
@@ -8500,7 +9831,7 @@ function S.tailorTab()
   check(not shop:find("%d+ Bolt of"), "no bolt rows in the shopping list: they're counted as cloth")
   local cloth, bolts = shop:match("(%d+) Runecloth %(for (%d+) bolts")
   check(cloth and tonumber(cloth) == 5 * tonumber(bolts), "Runecloth row: 5 per bolt (" .. tostring(cloth) .. ", " .. tostring(bolts) .. ")")
-  check(t:find("make them from Silk Cloth %(4 each%)"), "step card: bolts are made from Silk Cloth")
+  check(t:find("Make them from Silk Cloth %(4 each%)"), "step card: bolts are made from Silk Cloth")
   local now, linen = textY(win(), "^Silk Cloth  %-  you need this now"), textY(win(), "^Linen Cloth$")
   check(now and linen and now < linen, "this step's cloth (Silk) first, marked")
   check(t:find("Humanoids level 27%-39"), "silk mob levels")
@@ -8514,7 +9845,7 @@ function S.tailorTab()
     check(not over, "shopping rows don't overlap: " .. tostring(over))
     MOCK.bags["Bolt of Silk Cloth"] = 12
     local held = tailoring()
-    check(held:find("make them from Silk Cloth %(4 each%): your 0 make 0") and not held:find("your 48"),
+    check(held:find("Make them from Silk Cloth %(4 each%): your 0 make 0") and not held:find("your 48"),
       "step card: held bolts aren't cloth that makes more bolts")
     MOCK.bags["Bolt of Silk Cloth"] = nil
   else
@@ -8569,7 +9900,7 @@ function S.tailorTabCases()
     "Runecloth finish: the vendor patterns need a Loom")
   MOCK.setSkill("Tailoring", 300, 300)
   t = tailoring()
-  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  check(t:find("ROUTE COMPLETE") and not t:find("you need this now"), "route done at 300")
   MOCK.setSkill("Tailoring", 150, 225)
   win():Hide()
 end
@@ -8627,7 +9958,7 @@ function S.enchantTab()
   openAt(30, "Professions")
   local t = enchanting()
   check(t:find("Enchanting 150 / 225"), "Enchanting header")
-  check(t:find("Enchant Bracer %- Lesser Stamina") and t:find("about 5 more to 155"), "step at 150")
+  check(t:find("Enchant Bracer %- Lesser Stamina") and t:find("About 5 crafts to skill 155"), "step at 150")
   check(t:find("Enchant your own bracers"), "what to enchant")
   check(t:find("\nDISENCHANTING\n"), "disenchanting section")
   if GetItemCount then
@@ -8667,10 +9998,10 @@ function S.enchantTabCases()
   check(shoppingText():find("Strange Dust %(for %d+ motes"), "Motes counted as Strange Dust")
   check(shoppingText():find("\n1 Mote of Magic"), "the rod's first Mote stays on the list: it must be bought")
   if GetItemCount then
-    check(not t:find("make them from Strange Dust"), "skill 1, no rod: no 'make them from' (Dust to Motes needs the rod)")
+    check(not t:find("Make them from Strange Dust"), "skill 1, no rod: no 'make them from' (Dust to Motes needs the rod)")
     MOCK.setSkill("Enchanting", 12, 75)
     MOCK.bags = { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 4 }
-    check(enchanting():find("make them from Strange Dust %(1 makes 3%): your 4 make 12"), "Motes: 1 dust makes 3")
+    check(enchanting():find("Make them from Strange Dust %(1 makes 3%): your 4 make 12"), "Motes: 1 dust makes 3")
     MOCK.bags = { ["Runed Arcanite Rod"] = 1 }
     MOCK.setSkill("Enchanting", 265, 300)
     check(enchanting():find("Rod: Runed Truesilver Rod %(you have it%)"), "an Arcanite rod counts for the Truesilver one")
@@ -8682,7 +10013,7 @@ function S.enchantTabCases()
   check(t:find("Enchant Shield %- Greater Stamina") and t:find("Mythrin'dir") and t:find("any shield"), "skill 265: shield, formula vendor")
   MOCK.setSkill("Enchanting", 300, 300)
   t = enchanting()
-  check(t:find("ROUTE DONE") and not t:find("you need this now"), "route done at 300")
+  check(t:find("ROUTE COMPLETE") and not t:find("you need this now"), "route done at 300")
   MOCK.setSkill("Enchanting", 150, 225)
   win():Hide()
 end
@@ -8886,7 +10217,7 @@ function S.craftAlchemy()
   check(row == TradeSkillSkill1, "oil is skipped while a leaded vial is missing")
   MOCK.bags["Leaded Vial"] = 1; MOCK.advance(1)
   _, row = trace:GetPoint(1)
-  check(row == TradeSkillSkill2 and MOCK.textUnder(hint):find("you can make 2", 1, true),
+  check(row == TradeSkillSkill2 and MOCK.textUnder(hint):find("You can make 2", 1, true),
     "make two Stonescale Oil from one eel and the only vial, even when grey")
   MOCK.bags["Stonescale Oil"] = 2; MOCK.advance(1)
   _, row = trace:GetPoint(1)
@@ -8903,7 +10234,7 @@ function S.craftLeatherworking()
   local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
   check(hint and hint:IsShown() and MOCK.textUnder(hint):find("Wicked Leather Gauntlets"), "Leatherworking hint")
   local status = MOCK.textUnder(hint)
-  check(status:find("Not learned yet") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
+  check(status:find("Recipe not learned") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
     "missing Leatherworking recipe names the pattern vendors")
   MOCK.trade.recipes[2] = { "Wicked Leather Gauntlets", "optimal", 3 }
   MOCK.trade.layout(); MOCK.advance(1)
@@ -8913,7 +10244,8 @@ function S.craftLeatherworking()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Skinning", 20, 75
   MOCK.trade.recipes = { { "Camp Chair", "optimal", 3 } }
   MOCK.trade.layout(); MOCK.advance(1)
-  check(not hint:IsShown() and not trace:IsShown(), "Skinning gathering route has no crafting overlay")
+  check(hint:IsShown() and not trace:IsShown() and MOCK.textUnder(hint):find("Skin starter beasts", 1, true),
+    "switching to Skinning replaces the recipe trace with gathering advice")
   closeCraft()
 end
 
@@ -8924,8 +10256,8 @@ function S.craftTrace()
   local tr, h = _G.LevelingCodexCraftTrace, _G.LevelingCodexCraftHint
   check(h and h:IsShown(), "card beside the crafting window")
   local text = MOCK.textUnder(h)
-  check(text:find("Rough Bronze Leggings") and text:find("About 3 more to 100") and text:find("materials for 4"), "card text")
-  check(text:find("orange"), "live colour on the card")
+  check(text:find("Rough Bronze Leggings") and text:find("About 3 crafts to skill 100") and text:find("Materials for 4 crafts"), "card text")
+  check(text:find("Orange"), "live colour on the card")
   check(tr and tr:IsShown(), "row traced")
   local _, rel = tr:GetPoint(1)
   check(rel == TradeSkillSkill4, "trace on the Rough Bronze Leggings row (its text has a colour code and a count)")
@@ -8933,24 +10265,61 @@ function S.craftTrace()
   check(not tr:IsShown() and not h:IsShown(), "trace and card hide with the window")
 end
 
-function S.craftHerbalism()
+function S.craftGathering()
   openCraft()
   local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
   check(hint and hint:IsShown() and trace and trace:IsShown(), "crafting guide before switching professions")
-  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Herbalism", 20, 75
-  MOCK.trade.recipes = { { "Incense Candle", "optimal", 2 } }
-  MOCK.trade.layout()
-  MOCK.event("TRADE_SKILL_UPDATE")
-  MOCK.advance(0.6)
-  check(not hint:IsShown() and not trace:IsShown(), "Herbalism camp recipes do not show a crafting guide")
+  for _, profession in ipairs({
+    { "Mining", 80, 150, "Silver Vein", "Rock Garden" },
+    { "Mining", 185, 225, "Mithril Deposit" },
+    { "Herbalism", 20, 75, "Peacebloom", "Incense Candle" },
+    { "Fishing", 150, 225, "Fish at Booty Bay or Tidefury Cove", "Fishing Rack" },
+    { "Skinning", 170, 225, "Skin yetis and worgen", "Field Guide" },
+  }) do
+    MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = unpack(profession, 1, 3)
+    MOCK.trade.recipes = profession[5] and { { profession[5], "optimal", 2 } } or {}
+    MOCK.trade.layout()
+    MOCK.advance(0.6)
+    check(hint:IsShown() and not trace:IsShown() and MOCK.textUnder(hint):find(profession[4], 1, true),
+      profession[1] .. " provides gathering advice without outlining a camp recipe")
+  end
   closeCraft()
+  TradeSkillFrame:Show(); MOCK.advance(0.6)
+  check(hint:IsShown(), "a gathering-only window may open without a crafting event")
+  TradeSkillFrame:Hide()
+  check(not hint:IsShown(), "gathering hint closes with the window")
+end
+
+function S.craftProfessionBook()
+  MOCK.setSkill("Mining", 185, 225)
+  MOCK.setSkill("Fishing", 150, 225)
+  MOCK.professionSpells = { "Fishing", "Mining", "Heroic Strike" }
+  local tip = GameTooltip
+  tip:SetOwner(UIParent, "ANCHOR_RIGHT")
+  tip:SetSpellBookItem(1, "spell")
+  local function lines() return table.concat(tip._lines, "\n") end
+  check(lines():find("Fishing 150 / 225", 1, true) and lines():find("Tidefury Cove", 1, true), "Fishing's native profession tooltip")
+  tip:SetSpellBookItem(2, "spell")
+  check(lines():find("Mithril Deposit", 1, true) and not lines():find("Tidefury Cove", 1, true), "switching tooltips replaces the advice")
+  local spellBook = C_SpellBook
+  C_SpellBook = { GetSpellBookItemName = function() return "Find Minerals" end }
+  tip:SetSpellBookItem(2, 0)
+  check(lines():find("Mining 185 / 225", 1, true), "the modern spellbook's tracking spell identifies Mining")
+  C_SpellBook = spellBook
+  tip:SetSpellBookItem(3, "spell")
+  check(lines() == "Heroic Strike", "ordinary spell tooltips are untouched")
+  LevelingCodexDB.noCraftGuide = true
+  tip:SetSpellBookItem(1, "spell")
+  check(lines() == "Fishing", "profession hints follow the setting")
+  LevelingCodexDB.noCraftGuide = nil
+  tip:Hide()
 end
 
 function S.craftNotLearned()
   if not craftReady() then return end
   table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("Not learned yet"), "not learned")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Recipe not learned"), "not learned")
   check(not LevelingCodexCraftTrace:IsShown(), "nothing to trace")
   closeCraft()
   table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
@@ -8961,7 +10330,7 @@ function S.craftGrey()
   if not craftReady() then return end
   MOCK.trade.recipes[4][2] = "trivial"; MOCK.trade.layout()
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("Grey now: next is Heavy Grinding Stone"), "grey: move on")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Next in the guide: Heavy Grinding Stone"), "grey: move on")
   closeCraft()
   MOCK.trade.recipes[4][2] = "optimal"; MOCK.trade.layout()
 end
@@ -8974,7 +10343,7 @@ function S.craftScrolled()
   openCraft()
   local h = LevelingCodexCraftHint
   check(h:IsShown() and not LevelingCodexCraftTrace:IsShown(), "card without a trace when the row is off screen")
-  check(MOCK.textUnder(h):find("It's in the list: scroll to it.", 1, true), "the card says to scroll to it")
+  check(MOCK.textUnder(h):lower():find("scroll to the recipe.", 1, true), "the card says to scroll to it")
   MOCK.trade.offset = 11; MOCK.trade.layout() -- the player scrolls to it
   MOCK.advance(2.3)
   check(LevelingCodexCraftTrace:IsShown(), "traced once the player scrolls to it")
@@ -9020,7 +10389,8 @@ function S.craftHandsOff()
     check(MOCK.trade.offset == 0 and MOCK.trade.selected == 0, who .. ": the list stays where the player left it")
     local h = LevelingCodexCraftHint
     local text = h and h:IsShown() and MOCK.textUnder(h) or ""
-    check(text:find("It's in the list: scroll to it.", 1, true), who .. ": the card says to scroll to it")
+    local instruction = C_TradeSkillUI and "Check filters or scroll to the recipe." or "Scroll to the recipe."
+    check(text:find(instruction, 1, true), who .. ": the card says where to find the recipe")
     check(not text:find("Show it"), who .. ": no Show it button")
     closeCraft()
   end
@@ -9053,7 +10423,8 @@ function S.craftSmelting()
   MOCK.trade.layout()
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("MINING 80") and text:find("Smelt Silver") and text:find("About 20 more to 100"), "smelting card")
+  check(text:find("MINING  80 / 150", 1, true) and text:find("Smelt Silver") and
+    text:find("About 20 crafts to skill 100"), "smelting card")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill3, "Smelt Silver row traced")
   closeCraft()
@@ -9140,7 +10511,7 @@ function S.profTrainer()
   MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)
   MOCK.trainer[2].category, MOCK.trainer[4].category = "available", "available"
   MOCK.event("TRAINER_UPDATE")
-  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (130-140)"),
+  check(questText(card, "Learn 2 recipes  -  14s") and questText(card, "Heavy Grinding Stone (100-112), Bronze Warhammer (129-140)"),
     "what to learn now for the route, and the cost")
   check(questText(card, "You have 10s: 4s short"), "and when money is short")
   MOCK.trainer[2].category, MOCK.trainer[4].category = "used", "used"
@@ -9148,7 +10519,7 @@ function S.profTrainer()
   MOCK.trainer[3].category, MOCK.trainer[6].category = "available", "available"
   MOCK.money = 100000
   MOCK.event("TRAINER_UPDATE")
-  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-130)"),
+  check(questText(card, "Train Expert + 1 recipe  -  1g 8s") and questText(card, "Expert Blacksmithing (to 225), Iron Buckle (125-129)"),
     "the next rank comes first")
   MOCK.chat = {}
   slash("debug")
@@ -9535,7 +10906,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 9, "nine tabs (" .. #tabs .. ")")
+  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -9671,14 +11042,26 @@ function S.craftFiltered()
   table.remove(MOCK.trade.recipes, 4); MOCK.trade.layout()
   MOCK.knownSpells[2668] = true
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("not in the list: clear the search"), "known but filtered")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Recipe hidden"), "known but filtered")
   closeCraft()
   MOCK.knownSpells[2668] = nil
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Not learned yet") and text:find("Instead: Runed Copper Belt"), "not learned shows the alternative")
+  check(text:find("Recipe not learned") and text:find("Alternative: Runed Copper Belt"), "not learned shows the alternative")
+  local hint, knownSpell = LevelingCodexCraftHint, IsPlayerSpell
+  local expanded = hint:GetHeight()
+  IsPlayerSpell = nil
+  MOCK.advance(0.6)
+  text = MOCK.textUnder(hint)
+  check(text:find("Recipe unavailable") and not text:find("Recipe not learned"), "unknown recipe knowledge is shown as unavailable")
+  IsPlayerSpell = knownSpell
+  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 0 })
+  MOCK.trade.layout(); MOCK.advance(0.6)
+  text = MOCK.textUnder(hint)
+  check(text:find("Missing materials") and not text:find("Alternative:") and hint:GetHeight() < expanded,
+    "a visible recipe without materials has a shorter hint and no stale alternative")
   closeCraft()
-  table.insert(MOCK.trade.recipes, { "Rough Bronze Leggings", "optimal", 4 })
+  MOCK.trade.recipes[#MOCK.trade.recipes][3] = 4
   MOCK.trade.layout()
 end
 
@@ -9689,7 +11072,7 @@ function S.craftClassicStubs()
   S.retailAPI()
   GetNumTradeSkills = function() return 0 end
   openCraft()
-  check(MOCK.textUnder(LevelingCodexCraftHint):find("materials for 4"), "recipe read through C_TradeSkillUI")
+  check(MOCK.textUnder(LevelingCodexCraftHint):find("Materials for 4 crafts"), "recipe read through C_TradeSkillUI")
   closeCraft()
   GetNumTradeSkills = count
   C_TradeSkillUI = nil
@@ -9761,7 +11144,7 @@ function S.craftTailoring()
   local restore = tailorWindow()
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make Bolts of Silk Cloth first: your 46 Silk Cloth make 11.", 1, true), "bolts first with only the cloth")
+  check(text:find("46 Silk Cloth in your bags can make 11 Bolts of Silk Cloth.", 1, true), "bolts first with only the cloth")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the bolt row is outlined (grey, but still the one to make)")
   MOCK.bags["Bolt of Silk Cloth"] = 11; MOCK.advance(1)
@@ -9775,7 +11158,7 @@ function S.craftTailoring()
   MOCK.bags = { ["Silk Cloth"] = 46 }
   local vest = table.remove(MOCK.trade.recipes, 3); MOCK.trade.layout(); MOCK.advance(1)
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Earthen Vest") and text:find("Not learned yet") and not text:find("first"),
+  check(text:find("Earthen Vest") and text:find("Recipe not learned") and not text:find("first"),
     "the step's recipe not learned: say so, not bolts first")
   table.insert(MOCK.trade.recipes, vest)
   table.remove(MOCK.trade.recipes, 1); MOCK.trade.layout(); MOCK.advance(1)
@@ -9803,7 +11186,7 @@ function S.craftEnchanting()
     { "Dust to Motes", "trivial", 3 } }, {})
   openCraft()
   local text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make your Runed Silver Rod first: every enchant from here needs it.", 1, true), "rod first")
+  check(text:find("Make this rod first for Enchant Bracer - Lesser Stamina.", 1, true), "rod first")
   local _, rel = LevelingCodexCraftTrace:GetPoint(1)
   check(LevelingCodexCraftTrace:IsShown() and rel == TradeSkillSkill1, "the rod row is outlined")
   MOCK.bags["Runed Truesilver Rod"] = 1; MOCK.advance(1)
@@ -9814,18 +11197,19 @@ function S.craftEnchanting()
   MOCK.bags = {}
   table.remove(MOCK.trade.recipes, 2); MOCK.trade.layout(); MOCK.advance(1)
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Not learned yet") and not text:find("first"), "the step's recipe missing: not learned, not the rod")
+  check(text:find("Recipe not learned") and not text:find("first"), "the step's recipe missing: not learned, not the rod")
   enchantWindow(270, 300, { { "Runed Truesilver Rod", "trivial", 0 }, { "Enchant Shield - Greater Stamina", "optimal", 0 } }, {})
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make your Runed Truesilver Rod first") and not text:find("Grey now"), "a grey rod still needed")
+  check(text:find("Make this rod first for Enchant Shield - Greater Stamina.", 1, true) and
+    not text:find("No skill points"), "a grey rod still needed")
   check(LevelingCodexCraftTrace:IsShown(), "the grey rod is outlined")
   enchantWindow(1, 75, { { "Runed Copper Rod", "optimal", 0 }, { "Dust to Motes", "optimal", 5 } }, { ["Strange Dust"] = 5 })
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Runed Copper Rod") and not text:find("Make Motes of Magic first"), "skill 1: the rod, not Motes (Dust to Motes needs the rod)")
+  check(text:find("Runed Copper Rod") and not text:find("Make this first"), "skill 1: the rod, not Motes (Dust to Motes needs the rod)")
   enchantWindow(12, 75, { { "Dust to Motes", "trivial", 5 }, { "Enchant Bracer - Inferior Stamina", "optimal", 0 } },
     { ["Runed Copper Rod"] = 1, ["Strange Dust"] = 5 })
   text = MOCK.textUnder(LevelingCodexCraftHint)
-  check(text:find("Make Motes of Magic first: your 5 Strange Dust make 15.", 1, true), "Motes first: 3 per dust")
+  check(text:find("5 Strange Dust in your bags can make 15 Motes of Magic.", 1, true), "Motes first: 3 per dust")
   closeCraft()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset, MOCK.trade.selected = unpack(saved)
   MOCK.bags = {}
@@ -9860,14 +11244,14 @@ function S.craftSmeltingCases()
   check(t:find("Smelt Bronze") and not t:find("Smelt Tin"), "66: Smelt Bronze, the better chance")
   t = at(100, { { "Smelt Copper", "trivial", 9 }, { "Smelt Tin", "trivial", 2 }, { "Smelt Bronze", "easy", 1 },
                 { "Smelt Silver", "medium", 3 } })
-  check(t:find("Smelt Silver") and t:find("chance of a point") and not t:find("About %d+ more"), "100: a chance, not a count")
+  check(t:find("Smelt Silver") and t:find("chance of a point") and not t:find("crafts to skill", 1, true), "100: a chance, not a count")
   t = at(145, { { "Smelt Copper", "trivial", 9 }, { "Smelt Bronze", "trivial", 1 }, { "Smelt Silver", "trivial", 3 },
                 { "Smelt Iron", "trivial", 5 } })
-  check(t:find("no points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
+  check(t:find("no skill points at 145") and t:find("Smelt Gold") and t:find("155"), "145: mine instead, Gold from 155")
   t = at(184, { { "Smelt Gold", "easy", 3 } })
   check(t:find("Smelt Gold") and t:find("chance of a point"), "184: Gold still gives points")
   t = at(185, { { "Smelt Gold", "trivial", 3 } })
-  check(t:find("no points at 185"), "185: Gold is grey, mine instead")
+  check(t:find("no skill points at 185"), "185: Gold is grey, mine instead")
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max, MOCK.trade.recipes, MOCK.trade.offset = unpack(saved)
   MOCK.trade.layout()
 end
@@ -9921,8 +11305,8 @@ function S.questFreshProgress()
 end
 
 ----------------------------------------------------------------------------
--- EllesmereUI (MOCK.makeEllesmere): its skin API themes the Codex. Its pieces must only go on the
--- backing frames the Codex makes for them: EllesmereUI fades every texture of a frame it skinned again
+-- external UI (MOCK.makeexternal UI): its skin API themes the Codex. Its pieces must only go on the
+-- backing frames the Codex makes for them: external UI fades every texture of a frame it skinned again
 -- whenever some Blizzard windows open (the talent window among them, under the talent card).
 ----------------------------------------------------------------------------
 
@@ -9938,19 +11322,19 @@ local function euiCalled(kind, frame)
   return false
 end
 
--- Every frame EllesmereUI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
+-- Every frame external UI keeps for its re-fade is a backing frame (codexSkin) holding only its textures.
 local function euiOnlyOnBacking()
   for frame, kind in pairs(MOCK.eui.skinned) do
     if MOCK.eui.restrip[frame] then
-      check(frame.codexSkin, "EllesmereUI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
+      check(frame.codexSkin, "external UI's " .. kind .. " went on a Codex frame (" .. tostring(frame:GetName()) .. ")", 2)
       for _, r in ipairs({ frame:GetRegions() }) do
-        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an EllesmereUI backing frame", 2)
+        check(MOCK.eui.own[r] or not r:IsObjectType("Texture"), "a Codex texture on an external UI backing frame", 2)
       end
     end
   end
 end
 
--- EllesmereUI's re-fade leaves every Codex texture under these frames as it was.
+-- external UI's re-fade leaves every Codex texture under these frames as it was.
 local function survivesRestrip(roots, what)
   local before, n = {}, 0
   for _, root in ipairs(roots) do
@@ -9962,7 +11346,7 @@ local function survivesRestrip(roots, what)
   end
   check(n > 0, what .. " has textures to check", 2)
   MOCK.euiRestrip()
-  for r, a in pairs(before) do check(r:GetAlpha() == a, "EllesmereUI's re-fade hid a texture of " .. what, 2) end
+  for r, a in pairs(before) do check(r:GetAlpha() == a, "external UI's re-fade hid a texture of " .. what, 2) end
 end
 
 local function usesFont(root, path)
@@ -9977,20 +11361,20 @@ end
 
 local MORPHEUS = "Fonts\\MORPHEUS.TTF"
 
--- Installed and on: the theme at login, EllesmereUI's shell, close button and font, nothing on content.
+-- Installed and on: the theme at login, external UI's shell, close button and font, nothing on content.
 function S.euiSkin()
   local E = MOCK.eui
-  check(E and E.fired.LevelingCodex, "the Codex registered its skin with EllesmereUI and it ran")
+  check(E and E.fired.LevelingCodex, "the Codex registered its skin with external UI and it ran")
   check(#E.registry == 1, "registered once (" .. #E.registry .. ")")
   if not D() then return end
   openAt(30, "This Level")
   local f = win()
-  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has EllesmereUI's window shell")
-  check(f._backdrop == nil, "no Blizzard dialog border under the EllesmereUI shell")
-  check(euiCalled("CloseButton"), "the close button is EllesmereUI's")
-  check(euiCalled("PageButton"), "the level arrows are EllesmereUI's")
-  check(usesFont(f, E.font), "the window's text is in the EllesmereUI font")
-  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the EllesmereUI theme")
+  check(f.euiSkin and E.skinned[f.euiSkin] == "Shell", "the window's backing frame has external UI's window shell")
+  check(f._backdrop == nil, "no Blizzard dialog border under the external UI shell")
+  check(euiCalled("CloseButton"), "the close button is external UI's")
+  check(euiCalled("PageButton"), "the level arrows are external UI's")
+  check(usesFont(f, E.font), "the window's text is in the external UI font")
+  check(not usesFont(f, MORPHEUS), "no Morpheus headings in the external UI theme")
   for _, tab in ipairs({ "Talents", "Trainer", "Macros", "Tips", "Professions", "Quests", "Stats", "Settings" }) do
     click(win(), tab)
     check(not usesFont(win(), MORPHEUS), "no Morpheus on " .. tab)
@@ -9999,7 +11383,7 @@ function S.euiSkin()
   euiOnlyOnBacking()
   survivesRestrip({ win() }, "the Codex window")
   local v = questViewer()
-  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has EllesmereUI's panel")
+  check(v.euiSkin and E.skinned[v.euiSkin] == "Panel", "the step window's backing frame has external UI's panel")
   check(v._backdrop == nil, "no Blizzard dialog border on the step window")
   check(not usesFont(v, MORPHEUS), "no Morpheus on the step window")
   survivesRestrip({ v }, "the step window")
@@ -10007,14 +11391,14 @@ function S.euiSkin()
   win():Hide()
 end
 
--- The trainer, talent, crafting and vendor cards: an EllesmereUI panel behind them, their icons kept.
+-- The trainer, talent, crafting and vendor cards: an external UI panel behind them, their icons kept.
 function S.euiCards()
   local seen = 0
   for _, name in ipairs({ "LevelingCodexTrainerHint", "LevelingCodexTalentHint", "LevelingCodexCraftHint", "LevelingCodexShopCard" }) do
     local card = _G[name]
     if card then
       seen = seen + 1
-      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an EllesmereUI panel behind it")
+      check(card.euiSkin and MOCK.eui.skinned[card.euiSkin] == "Panel", name .. " has an external UI panel behind it")
       check(card._backdrop == nil, name .. " has no Blizzard tooltip border")
       check(not usesFont(card, MORPHEUS), name .. " has no Morpheus heading")
       survivesRestrip({ card }, name)
@@ -10024,29 +11408,29 @@ function S.euiCards()
   euiOnlyOnBacking()
 end
 
--- Settings: the EllesmereUI theme sits beside the other two and a choice made with it on is kept apart.
+-- Settings: the external UI theme sits beside the other two and a choice made with it on is kept apart.
 function S.euiThemePick()
   if not D() then return end
   openAt(30, "Settings")
-  check(findButton(win(), function(l) return l == "EllesmereUI" end), "Settings offers the EllesmereUI theme")
+  check(findButton(win(), function(l) return l == "External skin" end), "Settings offers the external UI theme")
   local before = LevelingCodexDB.theme
   click(win(), "Forever (teal)")
-  check(LevelingCodexDB.euiTheme == "forever", "the choice made with EllesmereUI on is saved apart")
-  check(LevelingCodexDB.theme == before, "the theme without EllesmereUI is untouched")
-  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the EllesmereUI shell")
+  check(LevelingCodexDB.euiTheme == "forever", "the choice made with external UI on is saved apart")
+  check(LevelingCodexDB.theme == before, "the theme without external UI is untouched")
+  check(win():IsShown() and not (win().euiSkin and win().euiSkin:IsShown()), "the window rebuilt without the external UI shell")
   check(not MOCK.minimal == (win()._backdrop ~= nil), "Forever teal draws its own border again")
   local v = _G.LevelingCodexQuestViewer
-  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the EllesmereUI panel") end
+  if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the external UI panel") end
   click(win(), "Settings")
-  click(win(), "EllesmereUI")
-  check(LevelingCodexDB.euiTheme == "ellesmere", "EllesmereUI chosen again")
-  check(win().euiSkin and win().euiSkin:IsShown(), "the EllesmereUI shell is back")
+  click(win(), "External skin")
+  check(LevelingCodexDB.euiTheme == "ellesmere", "external UI chosen again")
+  check(win().euiSkin and win().euiSkin:IsShown(), "the external UI shell is back")
   if v and v:IsShown() then check(v.euiSkin and v.euiSkin:IsShown(), "the step window's panel is back") end
   euiOnlyOnBacking()
   win():Hide()
 end
 
--- A new accent colour in EllesmereUI repaints the Codex and never opens a closed window. A colour
+-- A new accent colour in external UI repaints the Codex and never opens a closed window. A colour
 -- picker sends a change for every step of a drag: the Codex repaints once, after the last.
 function S.euiAccent()
   if not D() then return end
@@ -10056,7 +11440,7 @@ function S.euiAccent()
   check(not (win() and win():IsShown()), "an accent change leaves the window closed")
   openAt(30, "Settings")
   local accent = MOCK.ns.C.accent
-  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows EllesmereUI's new accent")
+  check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows external UI's new accent")
   local function shells()
     local n = 0
     for _, c in ipairs(MOCK.eui.calls) do if c[1] == "Shell" then n = n + 1 end end
@@ -10077,21 +11461,21 @@ function S.euiDebug()
   MOCK.chat = {}
   slash("debug")
   if MOCK.eui and MOCK.eui.off then
-    check(chatHas("EllesmereUI: installed, skin off"), "debug says EllesmereUI's skin is off for the Codex")
+    check(chatHas("external UI: installed, skin off"), "debug says external UI's skin is off for the Codex")
   elseif MOCK.eui then
-    check(chatHas("EllesmereUI: skin on %(api 4, style eui%)"), "debug says the EllesmereUI skin is on")
+    check(chatHas("external UI: skin on %(api 4, style eui%)"), "debug says the external UI skin is on")
   else
-    check(chatHas("EllesmereUI: not installed"), "debug says EllesmereUI isn't installed")
+    check(chatHas("external UI: not installed"), "debug says external UI isn't installed")
   end
 end
 
--- EllesmereUI installed with its skin for the Codex turned off: nothing changes.
+-- external UI installed with its skin for the Codex turned off: nothing changes.
 function S.euiOff()
   check(MOCK.eui and not MOCK.eui.fired.LevelingCodex, "the skin callback never ran")
   if not D() then return end
   openAt(30, "Settings")
-  check(not findButton(win(), function(l) return l == "EllesmereUI" end), "no EllesmereUI theme while its skin is off")
-  check(not win().euiSkin, "no EllesmereUI shell")
+  check(not findButton(win(), function(l) return l == "External skin" end), "no external UI theme while its skin is off")
+  check(not win().euiSkin, "no external UI shell")
   check(not MOCK.minimal == (win()._backdrop ~= nil), "the Codex draws its own border")
   win():Hide()
   S.euiDebug()
@@ -10099,34 +11483,574 @@ end
 
 function S.euiDispatch() MOCK.euiDispatch() end
 
--- EllesmereUI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
+-- external UI's callback after the Codex started (its PLAYER_LOGIN came second): the theme switches live.
 function S.euiLate()
   local v = questViewer()
-  check(not v.euiSkin, "Forever teal until EllesmereUI's callback runs")
+  check(not v.euiSkin, "Forever teal until external UI's callback runs")
   if D() then openAt(30, "This Level"); win():Hide() end
   MOCK.euiDispatch()
   check(MOCK.eui.fired.LevelingCodex, "the callback ran")
-  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the EllesmereUI panel at once")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window takes the external UI panel at once")
   check(not usesFont(v, MORPHEUS), "and its fonts")
   if D() then
     check(not win():IsShown(), "the window stays closed")
     openAt(30, "This Level")
-    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the EllesmereUI theme")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window opens in the external UI theme")
     win():Hide()
   end
   euiOnlyOnBacking()
 end
 
--- Saved settings from before EllesmereUI (Codex gold): installing EllesmereUI still brings its theme.
+-- Saved settings from before external UI (Codex gold): installing external UI still brings its theme.
 function S.euiSkinOn()
   check(MOCK.eui.fired.LevelingCodex, "the callback ran")
-  check(MOCK.ns.C.eui == true, "the EllesmereUI theme is on")
+  check(MOCK.ns.C.eui == true, "the external UI theme is on")
   local v = questViewer()
-  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the EllesmereUI panel")
+  check(v.euiSkin and v.euiSkin:IsShown(), "the step window has the external UI panel")
   if D() then
     openAt(30, "This Level")
-    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the EllesmereUI shell")
+    check(win().euiSkin and win().euiSkin:IsShown(), "the window has the external UI shell")
     win():Hide()
   end
   euiOnlyOnBacking()
+end
+
+local function lootSetup()
+  MOCK.level=30
+  MOCK.lootItems[900001]={name="Old Vest",stats={ITEM_MOD_STRENGTH_SHORT=10}}
+  MOCK.lootItems[900002]={name="Better Vest",stats={ITEM_MOD_STRENGTH_SHORT=100}}
+  MOCK.equipped[5]="item:900001"
+  MOCK.skills={{name="Cloth",rank=1,max=1}}
+  MOCK.event("PLAYER_LOGIN")
+  slash("loot")
+  check(win() and win():IsShown() and questText(win(),"Loot"),"Loot tab opens")
+end
+function S.lootTab()
+  lootSetup()
+  for _,name in ipairs({"Compare","Tracked","Profiles","Upgrades"}) do click(win(),name) end
+  check(questText(win(),"Level 30") and questText(win(),"Scoring profile") and questText(win(),"0 active"),
+    "the Loot header shows level context, scoring profile, and active targets")
+  MOCK.equipped[5]="item:900002"
+  if MOCK.event("PLAYER_EQUIPMENT_CHANGED",5)==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"paper doll refreshes after equipment changes")
+  click(win(),"Browse Ranged / relic")
+  local relic=MOCK.class=="PALADIN" or MOCK.class=="SHAMAN" or MOCK.class=="DRUID"
+  check(questText(win(),relic and "Relic upgrades" or "Ranged upgrades"),"paper doll chooses the class's ranged or relic category")
+end
+function S.lootGraphics()
+  lootSetup()
+  check(questText(win(),"Armor") and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "equipment slots have visible group headings")
+  check(questText(win(),"1 / 17") or questText(win(),"Equipment data unavailable"),
+    "the portrait panel summarizes how many equipment slots are filled")
+  local chestSlot=findButton(win(),function(label) return label=="Browse Chest" end)
+  MOCK.fire(chestSlot,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(chestSlot) and link=="item:900001",
+    "the equipment slot opens the native item tooltip")
+  MOCK.fire(chestSlot,"OnLeave")
+  local chestIcon,headIcon,model
+  local function walk(f)
+    for _,b in ipairs({f:GetChildren()}) do
+      if b:IsShown() then
+        if b:GetObjectType()=="PlayerModel" then model=b end
+        if b.tex and b.tipTitle=="Chest" then chestIcon=b.tex end
+        if b.tex and b.tipTitle=="Head" then headIcon=b.tex end
+        walk(b)
+      end
+    end
+  end
+  walk(win())
+  check(not model,"Loot uses a static portrait instead of inheriting player animations")
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chestTexture=canRead and 134400 or MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Chest")
+  check(chestIcon and chestIcon:GetTexture()==chestTexture,"native item IDs and unloaded-item slot art reach the renderer intact")
+  check(headIcon and headIcon:GetTexture()==MOCK.fileID("Interface\\PaperDoll\\UI-PaperDoll-Slot-Head"),"complete empty-slot texture paths stay intact")
+  local darkBackground
+  local function checkSurfaces(frame)
+    for _,r in ipairs({frame:GetRegions()}) do
+      if r:IsShown() then
+        check(not (r._path and r._path:find("loot-paper.tga",1,true)),"Loot backgrounds do not depend on the client's paper texture tint")
+        local color=r._color
+        if r:GetObjectType()=="Texture" and color then
+          local _,anchor=r:GetPoint(1)
+          local _,opposite=r:GetPoint(2)
+          if anchor==frame and opposite==frame and frame:GetWidth()>=500 and frame:GetHeight()>=420 then
+            darkBackground=darkBackground or (color[1]<0.22 and color[2]<0.22 and color[3]<0.22 and color[4]==1)
+          end
+        end
+      end
+    end
+    for _,child in ipairs({frame:GetChildren()}) do if child:IsShown() then checkSurfaces(child) end end
+  end
+  checkSurfaces(win())
+  check(darkBackground,"Loot uses an opaque dark background even in a bright game scene")
+end
+function S.lootCardViews()
+  lootSetup();click(win(),"Compare")
+  click(win(),"Equipped")
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  local chest=findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+  check(chest and chest:GetWidth()<400 and chest:GetHeight()>=44,"equipment is browsed in readable item cards")
+  click(win(),"Bags")
+  check(questText(win(),"No bag equipment") or questText(win(),"Bag items unavailable"),"an empty or unavailable bag view is explained")
+  if C_Container and canRead then
+    for i=1,7 do
+      local id=900010+i;local name="Bag Vest "..i
+      MOCK.lootItems[id]={name=name,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+      MOCK.bagItems[#MOCK.bagItems+1]={id=id,name=name,class="Armor",quality=2,level=1}
+    end
+    MOCK.lootItems[900018]={name="Bag Blade",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=1}}
+    MOCK.bagItems[#MOCK.bagItems+1]={id=900018,name="Bag Blade",class="Weapon",quality=2,level=1}
+    MOCK.event("BAG_UPDATE_DELAYED");MOCK.advance(0.2)
+    click(win(),"Next items")
+    check(findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag cards remain reachable beyond the first page")
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"different kinds of gear can be compared from the same bag view")
+    local filter=LevelingCodexLootInventorySearch
+    filter:SetText("Blade");filter:GetScript("OnEnterPressed")(filter)
+    check(findButton(win(),function(label) return label=="Bag: Bag Blade" end)
+      and not findButton(win(),function(label) return label=="Bag: Bag Vest 7" end),"bag filtering finds items and resets paging")
+  end
+  click(win(),"Scoring settings")
+  local protection=findButton(win(),function(label) return label=="Protection" end)
+  check(protection and protection:GetWidth()>240 and protection:GetWidth()<300 and protection:GetHeight()>=80,
+    "specialization cards use the wider workspace")
+  click(win(),"Arms")
+  check(LevelingCodexCharDB.lootProfileKey=="arms","specialization cards apply their selected scoring profile")
+  click(win(),"Export profile")
+  check(LevelingCodexLootProfileCode and LevelingCodexLootProfileCode:IsShown() and #LevelingCodexLootProfileCode:GetText()>0,"profile sharing remains available")
+  click(win(),"Tracked");click(win(),"Browse upgrades")
+  check(questText(win(),"Your equipment"),"the empty target page leads directly to equipment browsing")
+end
+function S.lootDetailCards()
+  lootSetup();click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  click(win(),"Full comparison")
+  click(win(),"Upgrades");click(win(),"Browse Chest");click(win(),"Compare")
+  check(findButton(win(),function(label) return label=="Back to items" end)
+    and questText(win(),canRead and "Better Vest" or "Item 900002"),
+    "browsing upgrades preserves the selected comparison and its detail view")
+  if canRead then
+    check(questText(win(),"Equipped: 10") and questText(win(),"New: 100"),"stat cards show independently known before and after values")
+    local strength=findButton(win(),function(label) return label=="Strength comparison" end)
+    check(strength and strength:GetWidth()<400,"individual stat comparisons are grouped cards")
+    MOCK.fire(strength,"OnEnter")
+    check(GameTooltip:IsOwned(strength),"stat comparison details are available on focus or hover")
+    MOCK.fire(strength,"OnLeave")
+    MOCK.lootItems[900005]={name="Old Sword",slot="INVTYPE_WEAPONMAINHAND",classID=2,subclassID=0,stats={ITEM_MOD_STRENGTH_SHORT=10}}
+    MOCK.lootItems[900006]={name="Old Shield",slot="INVTYPE_SHIELD",classID=4,subclassID=6,stats={ITEM_MOD_STRENGTH_SHORT=5}}
+    MOCK.lootItems[900007]={name="New Two-hander",slot="INVTYPE_2HWEAPON",classID=2,subclassID=1,stats={ITEM_MOD_STRENGTH_SHORT=20}}
+    MOCK.equipped[16],MOCK.equipped[17]="item:900005","item:900006"
+    MOCK.event("PLAYER_EQUIPMENT_CHANGED",16);MOCK.advance(0.2)
+    edit:SetText("900007");edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"Equipped: 15") and questText(win(),"New: 20"),"two-hand comparisons include both replaced items")
+    edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+    MOCK.lootItems[900004]={name="Unknown Vest",loaded=false}
+    MOCK.equipped[5]="item:900004";MOCK.event("PLAYER_EQUIPMENT_CHANGED",5);MOCK.advance(0.2)
+  end
+  check(questText(win(),"Stat comparison unavailable"),"missing equipment facts never become a zero baseline in a graph")
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Sources")
+  check(findButton(win(),function(label) return label=="Source details 1" end),"acquisition details are organized into expandable source cards")
+  check(not questText(win(),"Materials:"),"source summaries start compact")
+  click(win(),"Source details 1")
+  check(questText(win(),"Database reference") or questText(win(),"Client reference"),"source evidence stays visible while browsing")
+  check(questText(win(),"Materials:") and questText(win(),"Bolt of Linen Cloth"),"expanding a crafting source reveals its actual materials")
+  click(win(),"Source details 1")
+  check(not questText(win(),"Materials:"),"source cards can be folded back to their summary")
+  click(win(),"Track source 1")
+  local target
+  for _,t in pairs(LevelingCodexCharDB.lootTargets or {}) do if t.id==2572 and t.sourceID=="craft:2389:2572" then target=t end end
+  check(target and questText(win(),"Source tracked"),"source card actions track the selected acquisition route")
+end
+-- A wrong slot handler, lost filter/page, or an item detail appended below the list
+-- would break this player-visible browse/back flow.
+function S.lootBrowse()
+  lootSetup()
+  check(questText(win(),"Your equipment"),"loot starts with the equipment paper doll")
+  check(win():GetWidth()>810,"Loot has room for a result list beside the item preview")
+  for _,name in ipairs({"Head","Neck","Shoulders","Back","Chest","Wrists","Hands","Waist","Legs","Feet",
+    "Ring 1","Ring 2","Trinket 1","Trinket 2","Main hand","Off hand","Ranged / relic"}) do
+    check(findButton(win(),function(label) return label=="Browse "..name end),"paper doll slot is clickable: "..name)
+  end
+  local function clickThroughArtwork(control)
+    local _,anchor,_,x,y=control:GetPoint(1)
+    for _,child in ipairs({control:GetParent():GetChildren()}) do
+      local _,relative,_,cx,cy=child:GetPoint(1)
+      if child.tex and child:IsShown() and child:IsMouseEnabled() and relative==anchor
+          and cx<x+control:GetWidth() and cx+child:GetWidth()>x
+          and cy>y-control:GetHeight() and cy-child:GetHeight()<y then
+        check(control:GetFrameLevel()>child:GetFrameLevel(),"the first click on an item icon reaches its row action")
+      end
+    end
+    control:Click()
+  end
+  local chest=findButton(win(),function(label) return label=="Browse Chest" end)
+  local redraws=0
+  chest:HookScript("OnHide",function() redraws=redraws+1 end)
+  MOCK.leftMouseDown=true
+  MOCK.event("PLAYER_REGEN_ENABLED");MOCK.advance(0.3)
+  check(redraws==0,"a background refresh does not replace a slot button during a click")
+  MOCK.leftMouseDown=false
+  clickThroughArtwork(chest)
+  check(questText(win(),"Chest upgrades") and questText(win(),"Currently equipped"),"slot opens its results and equipped baseline")
+  check(MOCK.scrollOf(win())==0,"the results page opens with its navigation visible")
+  local results=0
+  for _,control in ipairs(MOCK.buttons(win())) do
+    if control.codexLabel and control.codexLabel:find("^Inspect item ") then
+      results=results+1
+      check(control:GetWidth()>=320,"the results give item names and their acquisition text more room")
+    end
+  end
+  check(results==5,"five items fit on the first results page")
+  check(findButton(win(),function(label) return label=="Availability filters" end),"the visible level opens the filters directly")
+  check(not findButton(win(),function(label) return label=="Slot Shoulder" or label=="All sources" end),"slot and source lists stay off the results page")
+  click(win(),"Change slot")
+  local shoulder=findButton(win(),function(label) return label=="Slot Shoulder" end)
+  check(shoulder and shoulder:GetWidth()>240 and questText(win(),"Accessories") and questText(win(),"Weapons"),
+    "the slot picker groups the slots in full-width columns")
+  MOCK.fire(shoulder,"OnEnter")
+  check(GameTooltip._lines[1]=="Shoulder","reused slot rows have their own tooltip, not an old equipped item")
+  MOCK.fire(shoulder,"OnLeave")
+  click(win(),"Back to results")
+  click(win(),"Availability filters")
+  for _,source in ipairs({"Quest reward","Dungeon drop","Raid drop","Vendor","Crafted","PvP"}) do
+    check(findButton(win(),function(label) return label==source end),source.." is visible when filters open")
+  end
+  local function enabled(source)
+    return findButton(win(),function(label) return label==source end).codexOn
+  end
+  local source=findButton(win(),function(label) return label=="World drop" end)
+  check(source.codexOn and enabled("Dungeon drop") and enabled("Reputation"),"sources start enabled")
+  clickThroughArtwork(source)
+  check(not enabled("World drop") and enabled("Dungeon drop") and enabled("Reputation") and LevelingCodexLootZone:IsShown(),
+    "one click excludes a source without altering the others")
+  click(win(),"Show results")
+  check(questText(win(),"World drop excluded"),"results identify the excluded source")
+  click(win(),"Filters")
+  click(win(),"Clear sources")
+  check(not enabled("Dungeon drop") and not enabled("Reputation"),"clear sources turns off every tile")
+  click(win(),"Show results")
+  check(questText(win(),"No acquisition sources selected"),"no sources selected has a clear empty state")
+  click(win(),"Choose sources")
+  click(win(),"Dungeon drop");click(win(),"Reputation")
+  check(enabled("Dungeon drop") and enabled("Reputation") and not enabled("Raid drop"),
+    "dungeons and reputation can be enabled together")
+  click(win(),"All sources")
+  click(win(),"Local / active")
+  check(findButton(win(),function(label) return label=="Local / active" end).codexOn,"local ordering is explicitly selectable")
+  click(win(),"Best upgrade")
+  check(findButton(win(),function(label) return label=="Best upgrade" end).codexOn,"upgrade ordering is explicitly selectable")
+  local level=LevelingCodexLootPlanLevel
+  level:SetText("60")
+  click(win(),"Show results")
+  check(questText(win(),"Available by level 60"),"Show results accepts a typed plan level without Enter")
+  click(win(),"Filters")
+  click(win(),"Use my level")
+  check(level:GetText()=="30","the player level can be restored directly")
+  click(win(),"Raise loot plan level")
+  check(level:GetText()=="31","the level stepper adjusts by one")
+  click(win(),"Lower loot plan level")
+  check(level:GetText()=="30","the level stepper can return to the original level")
+  level:SetText("0")
+  click(win(),"Show results")
+  check(level:IsShown() and questText(win(),"Enter a level from 1 to 60"),"invalid levels leave the filter controls available")
+  click(win(),"Use my level")
+  click(win(),"Show results")
+  check(not (LevelingCodexLootZone and LevelingCodexLootZone:IsShown()),"filter fields are hidden from results")
+  click(win(),"Next loot page")
+  check(questText(win(),"Page 2 of"),"results can be paged")
+  local row
+  for _,candidate in ipairs(MOCK.buttons(win())) do
+    if candidate.codexLabel and candidate.codexLabel:find("^Inspect item ") and not candidate.codexOn then
+      row=candidate;break
+    end
+  end
+  check(row,"a different result can be selected")
+  local label=row.codexLabel
+  clickThroughArtwork(row)
+  local active=findButton(win(),function(candidate) return candidate==label end)
+  check(active and active.codexOn and LevelingCodexLootSearch:IsShown() and questText(win(),"Selected item"),
+    "a single click changes the selection while keeping the results visible")
+  click(win(),"Full comparison")
+  click(win(),"Back to results")
+  check(questText(win(),"Page 2 of"),"returning from details retains the result page")
+  local search=LevelingCodexLootSearch
+  search:SetFocus()
+  if MOCK.event("BAG_UPDATE_DELAYED")==0 then MOCK.event("PLAYER_REGEN_ENABLED") end
+  MOCK.advance(0.2)
+  check(search:HasFocus(),"background equipment updates do not interrupt search typing")
+  search:SetText("Red Linen Robe");search:GetScript("OnEnterPressed")(search)
+  check(findButton(win(),function(label) return label=="Inspect item 2572" end),"chest browsing includes robes")
+  check(questText(win(),"Tailoring: Red Linen Robe"),
+    "the preview shows the actual recipe source before opening details")
+  local itemRow=findButton(win(),function(label) return label=="Inspect item 2572" end)
+  local routeRow=findButton(win(),function(label) return label=="Sources for item 2572" end)
+  local _,_,_,itemX=itemRow:GetPoint(1)
+  local _,_,_,routeX=routeRow:GetPoint(1)
+  check(itemX+itemRow:GetWidth()<=routeX,"the source shortcut has its own hit area beside the item")
+  check(questText(win(),"Crafted / Tailoring: Red Linen Robe"),"the source stays readable on the item row")
+  click(win(),"Sources for item 2572")
+  check(questText(win(),"Tailoring: Red Linen Robe") and questText(win(),"Bolt of Linen Cloth")
+    and findButton(win(),function(label) return label=="Track source 1" end),"the result's source link opens the route it advertises")
+  click(win(),"Back to results")
+  check(LevelingCodexLootSearch:GetText()=="Red Linen Robe","returning from a source preserves the item search")
+  click(win(),"Inspect item 2572")
+  local _,_,_,_,beforeTrack=search:GetPoint(1)
+  click(win(),"Track this item")
+  local _,_,_,_,afterTrack=search:GetPoint(1)
+  check(beforeTrack==afterTrack and questText(win(),"Target tracked"),"tracking feedback keeps the result controls in place")
+  click(win(),"Full comparison");click(win(),"Sources")
+  check(questText(win(),"Crafted") and questText(win(),"Track route"),"item details retain the recipe and its track action")
+  click(win(),"Back to results")
+  search:SetText("no-such-item-123");search:GetScript("OnEnterPressed")(search)
+  check(questText(win(),"No matching items"),"empty results explain the filters")
+  click(win(),"Filters")
+  check(LevelingCodexLootZone and LevelingCodexLootZone:IsShown(),"advanced filters can be opened")
+  local zone=LevelingCodexLootZone
+  zone:SetText("no-such-zone-123")
+  click(win(),"Show results")
+  check(questText(win(),"No matching items") and questText(win(),"Zone: no-such-zone-123"),"results show the applied filter")
+  click(win(),"Filters")
+  click(win(),"Reset filters")
+  click(win(),"Show results")
+  check(LevelingCodexLootSearch:GetText()=="" and not questText(win(),"No matching items"),"reset restores the slot list")
+  click(win(),"Back to character")
+  click(win(),"Browse Ring 2")
+  check(questText(win(),"Ring upgrades") and questText(win(),"Ring 1") and questText(win(),"Ring 2"),"paired slots show both equipped baselines")
+  click(win(),"Back to character")
+  click(win(),"Browse Off hand")
+  check(questText(win(),"Off hand upgrades"),"off hand opens its own equipment category")
+end
+function S.lootWeaponRoutes()
+  MOCK.lootItems[15225]={name="Sequoia Hammer of the Whale",slot="INVTYPE_WEAPONMAINHAND",
+    classID=2,subclassID=4,stats={ITEM_MOD_STAMINA_SHORT=6}}
+  MOCK.equipped[16]="item:15225:0:0:0:0:0:-15"
+  lootSetup()
+  click(win(),"Browse Main hand")
+  check(questText(win(),"One-hand + shield"),"Protection starts with a shield-compatible main-hand list")
+  local edit=LevelingCodexLootSearch
+  edit:SetText("Whirlwind Warhammer");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"No matching items"),"Protection does not include two-handers by default")
+  click(win(),"Weapon filters")
+  click(win(),"Two-hand")
+  click(win(),"Maces")
+  click(win(),"Show results")
+  check(questText(win(),"Whirlwind Warhammer") and questText(win(),"The Islander"),
+    "explicit weapon types show the reward and the beginning of its chain")
+  check(findButton(win(),function(label) return label=="Inspect item 6976" end),
+    "the two-handed mace result is selectable")
+  if type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo) then
+    check(questText(win(),"+18.7 DPS"),"the preview shows verified weapon DPS even with uncertain item effects")
+  end
+  check(questText(win(),"prevents a shield"),"the preview explains the shield trade-off")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map preview pickup")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453 and LevelingCodexLootSearch:IsShown(),
+      "the preview pins the next pickup without leaving the weapon list")
+    click(win(),"Clear loot map target")
+  end
+  click(win(),"Sources for item 6976")
+  check(questText(win(),"Whirlwind Weapon") and questText(win(),"The Summoning")
+    and questText(win(),"The Islander") and questText(win(),"Bath'rah the Windwatcher"),
+    "the source view shows the named chain and its reward contact")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map quest 1718")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==1453,"the chain-start pin leads to the Alliance starter")
+    click(win(),"Clear loot map target")
+  end
+  MOCK.questDone[1718]=true
+  click(win(),"Back to results")
+  if IsQuestFlaggedCompleted or C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
+    check(questText(win(),"Next quest") and questText(win(),"The Affray"),"a completed chain starter advances the preview")
+  else
+    check(questText(win(),"The Islander"),"the route keeps its known starter when completion cannot be read")
+  end
+  click(win(),"Weapon filters")
+  click(win(),"Use profile default")
+  click(win(),"Axes")
+  click(win(),"Show results")
+  edit:SetText("Gutterblade");edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"Raene Wolfrunner"),"the one-hand axe shows the start of the Raene chain")
+  click(win(),"Sources for item 17046")
+  check(questText(win(),"Reward quest pickup at Krolg") and questText(win(),"Turn in to Raene Wolfrunner"),
+    "the reward step distinguishes pickup from turn-in")
+end
+function S.lootLevelAvailability()
+  lootSetup()
+  MOCK.level=31
+  MOCK.event("PLAYER_LEVEL_UP",31);MOCK.advance(0.2)
+  click(win(),"Browse Main hand")
+  check(questText(win(),"Available by level 31"),"the list identifies the level used for source availability")
+  local edit=LevelingCodexLootSearch
+  for _,id in ipairs({"289294","274383","20003","276338"}) do
+    edit:SetText(id);edit:GetScript("OnEnterPressed")(edit)
+    check(questText(win(),"No matching items"),"unverified weapon "..id.." is hidden even when searched directly")
+  end
+  edit:SetText("6220");edit:GetScript("OnEnterPressed")(edit)
+  check(findButton(win(),function(label) return label=="Inspect item 6220" end),
+    "level-appropriate dungeon weapons remain discoverable")
+  edit:SetText("289294");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Filters");click(win(),"Show unverified sources");click(win(),"Show results")
+  check(findButton(win(),function(label) return label=="Inspect item 289294" end)
+    and questText(win(),"Source unverified"),"the explicit discovery filter labels unverified weapons")
+end
+function S.lootCompareVerdicts()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText("900002"); edit:GetScript("OnEnterPressed")(edit)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Estimated gear score" or "Needs review"),"actual uncataloged item compares or explains missing APIs: "..MOCK.textUnder(win()))
+  click(win(),"Equipped")
+  check(LevelingCodexLootItem:IsShown(),"item input stays visible after comparing")
+  click(win(),"Chest: "..(canRead and "Old Vest" or "Item 900001"))
+  check(findButton(win(),function(label) return label=="Chest: "..(canRead and "Old Vest" or "Item 900001") end)
+    and questText(win(),"Equipped baseline") and questText(win(),"Selected item"),
+    "one click compares another item beside the equipment picker")
+  click(win(),"Planning")
+  check(LevelingCodexLootPreviewLevel:IsShown(),"planning controls are still reachable")
+  click(win(),"Use live character")
+  check(not LevelingCodexLootPreviewLevel:IsShown(),"live mode closes the planning controls")
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item"); click(win(),"Tracked")
+  check(findButton(win(),function(label) return label:find(" - tracked",1,true) and (label:find("Better Vest",1,true) or label:find("900002",1,true)) end),"tracked item is listed")
+end
+function S.lootInputBounds()
+  lootSetup(); click(win(),"Compare")
+  local edit=_G.LevelingCodexLootItem
+  check(edit,"item link input exists")
+  edit:SetText(string.rep("x",2049)); edit:GetScript("OnEnterPressed")(edit)
+  check(questText(win(),"valid item"),"invalid item input has a clear message")
+end
+function S.lootTracker()
+  S.lootCompareVerdicts();MOCK.advance(0.5)
+  check(_G.LevelingCodexLootTracker and LevelingCodexLootTracker:IsShown(),"tracked loot opens the optional tracker")
+  check(LevelingCodexLootTracker:GetHeight()<160,"a single target keeps the floating tracker compact")
+  check(questText(LevelingCodexLootTracker,"Source unverified"),"a target without verified sources explains what's missing")
+  check(not findButton(LevelingCodexLootTracker,function(label) return label=="Clear loot map" end),"a map clear action only appears for an active loot waypoint")
+  local target=findButton(LevelingCodexLootTracker,function(label) return label:find("^Loot target ") end)
+  check(target,"the tracked item has a hover target")
+  MOCK.fire(target,"OnEnter")
+  local _,link=GameTooltip:GetItem()
+  check(GameTooltip:IsOwned(target) and link=="item:900002","hovering a tracked item opens its native stat tooltip")
+  MOCK.fire(target,"OnLeave")
+  check(not GameTooltip:IsShown(),"the tracker closes its own tooltip on leave")
+  slash("loot");click(win(),"Compare")
+  local edit=LevelingCodexLootItem
+  edit:SetText("2572");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Tailoring: Red Linen Robe"),"an item-only target shows a known recipe source")
+  click(LevelingCodexLootTracker,"Loot target Red Linen Robe")
+  check(questText(win(),"Bolt of Linen Cloth"),"the tracker opens the route it displays")
+  edit:SetText("276339");edit:GetScript("OnEnterPressed")(edit)
+  click(win(),"Track this item");MOCK.advance(0.5)
+  check(questText(LevelingCodexLootTracker,"Prey and Predator") and questText(LevelingCodexLootTracker,"Mount Hyjal"),
+    "the tracker shows the quest and zone even when the source is above the player's level")
+  click(win(),"Tracked")
+  check(questText(win(),"Prey and Predator") and questText(win(),"Mount Hyjal") and questText(win(),"Level 54"),
+    "the journal card shows the target's destination and required level")
+  check(findButton(win(),function(label) return label=="Map Cured Staghide Leggings" end),
+    "item-only tracking can expose the known source waypoint")
+  check(not findButton(win(),function(label) return label=="Map Red Linen Robe" end),
+    "a craft route without coordinates has no map action")
+  if C_Map and C_Map.SetUserWaypoint then
+    click(win(),"Map Cured Staghide Leggings")
+    check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482,"the journal pins the source shown on the card")
+    check(not OpenWorldMap or MOCK.openedMap==2482,"mouse users still get the destination map")
+    click(win(),"Clear loot map target")
+    check(not MOCK.userWaypoint,"clearing the pin leaves the tracked item available")
+    if OpenWorldMap and InputUtil then
+      MOCK.blockControllerMap,MOCK.gamepadUI,MOCK.openedMap=true,true,nil
+      click(LevelingCodexLootTracker,"Map loot target Cured Staghide Leggings")
+      check(not chatHas("SetPreferredGamepadInteractTarget") and not MOCK.openedMap,
+        "the tracked reward does not open Blizzard's protected controller map")
+      check(MOCK.userWaypoint and MOCK.userWaypoint.uiMapID==2482 and MOCK.superTracked,
+        "the controller action still sets and tracks the reward waypoint")
+      check(chatHas("Open your world map"),"the tracker tells controller users how to see the pin")
+      click(LevelingCodexLootTracker,"Clear loot map")
+      MOCK.blockControllerMap,MOCK.gamepadUI=nil,nil
+    end
+  end
+  click(LevelingCodexLootTracker,"Loot target Cured Staghide Leggings")
+  check(questText(win(),"Starts with Kala'th") and questText(win(),"Source requires level 54"),
+    "the shown quest route opens with its giver and availability")
+  check(not MOCK.questRewarded,"loot guidance never selects a reward")
+end
+function S.lootTooltips()
+  lootSetup()
+  GameTooltip:SetHyperlink("item:900002")
+  check(#(GameTooltip._lines or {})==1,"Codex adds one compact score line with no extra advice")
+  local count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"one annotation even with setter and item callbacks ("..count..")")
+  GameTooltip:SetHyperlink("item:900001")
+  count=0
+  for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
+  check(count==1,"reused tooltip has one current annotation")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#(GameTooltip._lines or {})==1 and GameTooltip._lines[1]:find("Rank #",1,true),
+    "a verified catalog comparison has rank and score on one line")
+  click(win(),"Scoring settings")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines>1 and GameTooltip._lines[2]:find("Arms:",1,true),"other profile ranks are opt-in")
+  click(win(),"Show other profile ranks")
+  GameTooltip:SetHyperlink("item:2572")
+  check(#GameTooltip._lines==1,"the tooltip returns to one line when other profiles are disabled")
+  check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
+end
+function S.lootTooltipStaysOpen()
+  lootSetup()
+  for _,tip in ipairs({GameTooltip,ItemRefTooltip}) do
+    tip:SetOwner(UIParent,"ANCHOR_RIGHT")
+    tip:SetHyperlink("item:900002")
+    tip:AddLine("Shared tooltip detail")
+    MOCK.advance(0.3)
+    check(tip:IsShown(),tip:GetName().." remains open after delayed loot-data refresh")
+    for _,event in ipairs({"GET_ITEM_INFO_RECEIVED","BAG_UPDATE_DELAYED","PLAYER_EQUIPMENT_CHANGED","PLAYER_REGEN_ENABLED"}) do
+      MOCK.event(event,900002,true)
+      MOCK.advance(0.2)
+      check(tip:IsShown() and tip:IsOwned(UIParent),tip:GetName().." keeps its visibility and owner after "..event)
+      local callback=tip:GetScript("OnTooltipSetItem")
+      if callback then callback(tip) end
+      local ours,shared=0,0
+      for _,line in ipairs(tip._lines or {}) do
+        if line:find("Codex:",1,true) then ours=ours+1 end
+        if line=="Shared tooltip detail" then shared=shared+1 end
+      end
+      check(ours==1 and shared==1,"refresh callbacks preserve shared tooltip content without duplicate advice")
+    end
+    tip:Hide();MOCK.advance(0.3)
+    check(not tip:IsShown(),"a player-closed tooltip stays closed")
+    tip:SetHyperlink("item:900001")
+    check(tip:IsShown(),"the next item tooltip can open normally")
+    tip:Hide()
+  end
+end
+function S.lootPad()
+  if not GamepadMode then return end
+  MOCK.gamepadUI=true
+  lootSetup();click(win(),"Compare");MOCK.advance(0.6)
+  check(LevelingCodexLootItem and not LevelingCodexLootItem.padSkip,"controller can focus the item input")
+  MOCK.padRefuse=true;win():Hide();slash("loot");MOCK.advance(0.6)
+  check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(),"fallback controller can navigate Loot")
+  MOCK.combat=true;MOCK.event("PLAYER_REGEN_DISABLED");MOCK.combat=false;MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.advance(0.6)
+  check(not MOCK.forbidden,"loot controller recovery is safe")
+end
+function S.lootCacheLate()
+  lootSetup();click(win(),"Compare")
+  MOCK.lootItems[900003]={name="Late Vest",loaded=false,stats={ITEM_MOD_STRENGTH_SHORT=50}}
+  local edit=LevelingCodexLootItem
+  edit:SetText("900003");edit:GetScript("OnEnterPressed")(edit)
+  edit:SetText("900002");edit:GetScript("OnEnterPressed")(edit)
+  MOCK.lootItems[900003].loaded=true;MOCK.event("GET_ITEM_INFO_RECEIVED",900003,true);MOCK.advance(1)
+  local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
+  check(questText(win(),canRead and "Better Vest" or "Item 900002"),"late response does not replace the selected candidate")
 end

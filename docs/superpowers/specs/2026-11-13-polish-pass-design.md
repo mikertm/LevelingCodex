@@ -7,7 +7,7 @@ of v0.21.1-24-ge32a049 (Duskwood, level 25 Protection Warrior).
 
 | Feedback | Decision |
 |---|---|
-| The minimap line is straight; can it route? | Add-ons can't read the game's terrain or pathing. Zygor routes through a hand-made graph (zone border crossings, boats, inns, flight paths) and draws straight dots between those points; RXP draws lines its writers traced by hand. We draw the line through every waypoint the route already knows (way-in points, a trip's flight master, road legs). A road-waypoint network is out of scope here. |
+| The minimap line is straight; can it route? | Add-ons can't read the game's terrain or pathing. reference guide B routes through a hand-made graph (zone border crossings, boats, inns, flight paths) and draws straight dots between those points; reference guide A draws lines its writers traced by hand. We draw the line through every waypoint the route already knows (way-in points, a trip's flight master, road legs). A road-waypoint network is out of scope here. |
 | The fainter second line is confusing | Removed. The numbered next-step pins stay. |
 | Our edge arrow sits on the game's own waypoint arrow | Ours hides while the game's waypoint marks the same spot. |
 | "11 of 89 steps, 0 of 33 quests turned in": right? | Both are right; they measure different things. Every progress figure now counts steps; turn-ins stay as a second line in the bar's tooltip. |
@@ -191,6 +191,6 @@ Player-level scenarios in `tests/scenarios.lua` (TDD, each failing first):
 
 ## Out of scope
 
-- A road and mountain-pass waypoint network (Zygor-style border crossings for every zone pair),
+- A road and mountain-pass waypoint network (reference guide B-style border crossings for every zone pair),
   which would be our own data recorded in game; true terrain pathfinding (not possible for add-ons).
 - Changing or replacing the game's own waypoint or minimap icons.

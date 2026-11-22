@@ -1,6 +1,6 @@
 # Alliance starter route completion pass
 
-The four racial starts lead into Westfall. The route keeps a grind fallback where XP needs an in-game check. New quest IDs, map positions and the quest log cap are audited against the Forever 1.60.1.70862 reference and pinned QuestieDB cache.
+The four racial starts lead into Westfall. The route keeps a grind fallback where XP needs an in-game check. New quest IDs, map positions and the quest log cap are audited against the Forever 1.60.1.70862 reference and pinned quest database cache.
 
 ## Elwynn and Westfall
 
@@ -21,7 +21,7 @@ The four racial starts lead into Westfall. The route keeps a grind fallback wher
 
 ## High Order Skyborne
 
-- The pinned Forever base and fixes give 95 corrected minimum levels plus prerequisites for the three Zephras hubs. The route adds the Mage's Glowing Recall Crystal and Fillion's bedroll interaction and locates Avenged Tenfold at the watchtower camp. [QuestieDB Forever reference](https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever) · [Zephras route objectives](https://polestar.guide/guides/alliance/skyborne/01-zephras-isle)
+- The pinned Forever base and fixes give 95 corrected minimum levels plus prerequisites for the three Zephras hubs. The route adds the Mage's Glowing Recall Crystal and Fillion's bedroll interaction and locates Avenged Tenfold at the watchtower camp. external reference · [Zephras route objectives](https://polestar.guide/guides/alliance/skyborne/01-zephras-isle)
 - Board at the eastern pier. Denaaris and the portal to Stormwind use Alterac Mountains UiMap 1416 in the cached data and a reference guide. Welcome to Azeroth (94947) ends at Bolvar, who offers Journey to Sentinel Hill (98021). Druids can take Child of Nature (94912) from Alfina to Sheldras on the way. [Eastern pier](https://www.wowhead.com/forever/guide/zephras-isle-zone-overview) · [Denaaris and Bolvar](https://azeroth.wiki/forever/quests/welcome-to-azeroth) · [Druid referral](https://bindonforever.com/quest/94912) · [Journey to Sentinel Hill](https://pd.zroot.it/forever/quests/98021)
 
 ## Priest

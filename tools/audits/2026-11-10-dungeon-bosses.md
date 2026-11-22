@@ -2,7 +2,7 @@
 
 Every Alliance dungeon detour in `QuestDungeonData.lua` now carries `bosses`, shown on the Quests tab as BOSSES IN ORDER with one short tip per boss. Only the `bosses` fields changed. The tips are original wording built from the mechanics described in the sources below. Optional and rare encounters are marked in the name.
 
-Creature IDs (`npc`) were checked with `tools/questfacts.py npc ID` against the pinned QuestieDB Forever records. Every Classic boss ID used is present in the Forever records under the same name. Of the new Forever bosses, only Highland Horror (260808) is in those records, so the other new bosses carry no `npc` for now. A local reference guide was read only to cross-check names and order. None of its text was used. Boss order is the usual clear order and still needs a live check.
+Creature IDs (`npc`) were checked with `tools/questfacts.py npc ID` against the pinned quest database Forever records. Every Classic boss ID used is present in the Forever records under the same name. Of the new Forever bosses, only Highland Horror (260808) is in those records, so the other new bosses carry no `npc` for now. A local reference guide was read only to cross-check names and order. None of its text was used. Boss order is the usual clear order and still needs a live check.
 
 ## Sources per dungeon
 

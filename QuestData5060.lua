@@ -146,7 +146,8 @@ end
 do
   local stv = on.stv
   local smotts = stv("Captain Hecklebury Smotts", 26.69, 73.61)
-  local fin = stv("Fin Fizracket", 27.61, 76.74)
+  local sprogger = stv("Sprogger", 26.66, 73.64)
+  local mokrash = stv("Mok'rash", 23.2, 72.1)
   local seahorn = stv("Fleet Master Seahorn", 27.17, 77.01)
   local oglethorpe = stv("Oglethorpe Obnoticus", 28.36, 76.35)
   local poobah = stv("Princess Poobah", 38.53, 80.58)
@@ -154,6 +155,8 @@ do
 
   q(8551, "The Captain's Chest", 47, 40)
   q(608, "The Bloodsail Buccaneers", 45, 37, 604)
+  B.elite(8551, "Gorlash")
+  B.elite(608, "the Bloodsail captains")
   q(3721, "An OOX of Your Own", 50, 45, { 648, 836, 2767 })
   q(8552, "The Monogrammed Sash", 50, 40)
   quest[8552].startItem = 3985
@@ -162,6 +165,9 @@ do
   q(630, "Message in a Bottle", 51, 45, 594)
   B.elite(630, "King Mukla")
   q(8553, "The Captain's Cutlass", 50, 40, 8552)
+  q(8554, "Facing Negolash", 50, 40, 8553)
+  local negolash = accept(8554, sprogger, "Sprogger sends you to the ruined lifeboat. Bring a group to fight Negolash once you have the bait.")
+  negolash.elite = "Negolash"
   q(4449, "Caught!", 45, 43)
   -- Picked up by the 40-50 route; only their turn-ins are here.
   q(2874, "Deliver to MacKinley", 45, 40, 2873)
@@ -173,11 +179,11 @@ do
 
   chapter("stv-50", "Booty Bay: Pirates and Princess Poobah", M.stv, 50, 50, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), RATCHET, "If you are still in Tanaris, fly from Gadgetzan to Ratchet."),
-    action("boat", at(nil, 63.7, 38.6, M.barrens), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Use Next when you arrive.",
-      { name = "Ratchet - Booty Bay" }),
+    action("boat", at(nil, 63.7, 38.6, M.barrens), "If you are still in Ratchet, take the boat at the end of the dock to Booty Bay. Check the guide after docking.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     accept(8551, smotts, "Captain Hecklebury Smotts waits on the wooden walkway just inside the tunnel into town."),
     carried(finish(2874, stv("\"Sea Wolf\" MacKinley", 27.78, 77.07), "If you carried Stoley's bottle from Tanaris, give it to MacKinley.")),
     carried(finish(580, stv("Whiskey Slim", 27.14, 77.45), "Whiskey Slim sits upstairs in the inn. Hand in his port if you collected it.")),
@@ -185,18 +191,32 @@ do
     carried(finish(2767, oglethorpe, "Oglethorpe Obnoticus is in the hut on the pier past the bank. Report any robot rescues you finished.")),
     carried(finish(648, oglethorpe)), carried(finish(836, oglethorpe)),
     accept(3721, oglethorpe, "With all three robots home, Oglethorpe gives you a chicken for your own."), finish(3721, oglethorpe),
-    withItem(3985, accept(8552, stv(nil, 23.2, 71.9), "Bloodsail pirates around the bay can drop a Monogrammed Sash. Use it from your bags if you find one.")),
-    withItem(4098, accept(594, stv(nil, 32.4, 82.2), "Keep an eye on the beaches for a bottle with a message. Use it from your bags if you find one.")),
-    along(objective(608, stv(nil, 32.9, 88.2), "Swim out to the three Bloodsail ships south of Booty Bay. Stillwater is on the nearest, Keelhaul and Firallon on the others. Clear the deck before each captain.",
-      "Captain Stillwater", "Captain Keelhaul", "Fleet Master Firallon"), 8552),
+    action("collect", mokrash, "With a group, kill the elite sea giant Mok'rash northwest of Booty Bay for the Monogrammed Sash.",
+      { item = 3985, name = "Monogrammed Sash", unlessDone = 8552, optional = true }),
+    withItem(3985, accept(8552, mokrash, "Read the sash you looted from Mok'rash.")),
+    finish(8552, smotts), accept(8553, smotts), finish(8553, sprogger),
+    negolash,
+    action("collect", sprogger, "Bring ten Barbecued Buzzard Wings and five Junglevine Wine. Check the Auction House for the cooked wings and wine.",
+      { items = { { 4457, 10 }, { 4595, 5 } }, name = "Bait for Negolash", ifOnQuest = 8554 }),
+    objective(8554, stv("Ruined Lifeboat", 32.48, 81.98), "Put the food and wine into the ruined lifeboat to lure Negolash out. Kill him and loot Smotts' Cutlass.",
+      "Smotts' Cutlass"),
+    B.objectivePart(608, 2, stv("Captain Keelhaul", 29.32, 88.29), "Swim to the western Bloodsail ship for Captain Keelhaul. Clear the deck before pulling.",
+      "Captain Keelhaul"),
+    B.objectivePart(608, 3, stv("Fleet Master Firallon", 30.58, 90.63), "Board the southern ship and kill Fleet Master Firallon.",
+      "Fleet Master Firallon"),
+    B.objectivePart(608, 1, stv("Captain Stillwater", 32.87, 88.2), "Board the eastern ship and kill Captain Stillwater.",
+      "Captain Stillwater"),
+    action("collect", stv("Half-Buried Bottle", 36.56, 77.09),
+      "Look for a Half-Buried Bottle on the eastern mainland shore opposite Jaguero Isle. Open it for the Carefully Folded Note.",
+      { item = 4098, name = "Carefully Folded Note", unlessDone = 594 }),
+    withItem(4098, accept(594, nil, "Read the Carefully Folded Note from your bags.")),
     finish(594, poobah, "Princess Poobah is in a cage on Jaguero Isle, east across the water."),
     accept(630, poobah),
     objective(630, stv("King Mukla", 41.0, 83.9), "Kill the gorillas on Jaguero Isle until King Mukla stands alone, then kill him for the key.", "Shackle Key"),
     finish(630, poobah),
-    objective(8551, stv("Gorlash", 37.0, 69.7), "Swim back to the mainland and go north to the Crystalvein Mine. The ogre Gorlash guards Smotts' chest. He is elite, but a few levels below you now.",
+    objective(8551, stv("Gorlash", 37.0, 69.7), "Swim back to the mainland beach north of the island. Gorlash is an elite sea giant on the coast. Kill him for the chest.",
       "Smotts' Chest"),
-    finish(8551, smotts, "Swim or ride back to Booty Bay."), finish(8552, smotts), accept(8553, smotts),
-    finish(8553, stv("Sprogger", 26.66, 73.64), "Sprogger stands next to Smotts."),
+    finish(8551, smotts, "Swim or ride back to Booty Bay."), finish(8554, smotts),
     finish(608, seahorn),
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), SW_FLIGHT, "Fly to Stormwind."),
     action("collect", at("Auctioneer Jaxon", 61.16, 70.68, M.stormwind),
@@ -248,7 +268,7 @@ do
 
   chapter("searing-50", "Searing Gorge: Thorium Point", M.searing, 50, 51, {
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", at(nil, 69.0, 31.0, M.stormwind), "Take the Deeprun Tram from the Dwarven District to Ironforge."),
     taxi("fly", B.at("Lanie Reed", 37.9, 30.9, 1427), THORIUM,
@@ -260,7 +280,7 @@ do
     accept(7728, sg("Thorium Brotherhood notice", 37.6, 26.5), "Read the board beside the Thorium Point tents for three more jobs."),
     accept(7729, sg("Thorium Brotherhood notice", 37.6, 26.5)), accept(7701, sg("Thorium Brotherhood notice", 37.6, 26.5)),
     accept(3441, windblade, "Walk south down the hill. The Windblade stands alone on the ridge above the Cauldron."),
-    objective(3441, windblade, "Listen to his story.", "Divine Retribution"),
+    objective(3441, windblade, "Talk to Windblade, ask about his vengeance and continue through every dialogue page.", "Divine Retribution"),
     finish(3441, windblade), accept(3442, windblade),
     along(objective(7724, sg(nil, 27.6, 45.5), "Kill Greater Lava Spiders on the western plateau and Heavy War Golems as you cross to the south.",
       "20 Greater Lava Spiders"), 7723, 7728),
@@ -282,7 +302,7 @@ do
     finish(3454, sg("Torch of Retribution", 39.06, 39.07), "Take the Torch of Retribution from beside him."),
     accept(3462, maltrake), finish(3462, maltrake), accept(3463, maltrake),
     along(objective(7723, sg(nil, 33.2, 43.6), "Finish the Heavy War Golems on the roads around the Cauldron.", "20 Heavy War Golems"), 7728),
-    along(objective(3463, sg(nil, 50.1, 54.7), "Use the Torch of Retribution inside each of the four sentry towers around the Cauldron. Kill Steamsmiths and Lookouts on the way for Scrange's tools.",
+    along(objective(3463, sg(nil, 50.1, 54.7), "Equip the Torch of Retribution, then click the Sentry Brazier on each of the four tower platforms around the Cauldron. Kill Steamsmiths and Lookouts on the way for Scrange's tools.",
       "North Sentry Tower", "South Sentry Tower", "East Sentry Tower", "West Sentry Tower"), 7728),
     objective(7728, sg(nil, 50.1, 54.7), "Finish the stolen tools: Dark Iron Steamsmiths carry the tuyere and Lookouts the spyglass.",
       "Smithing Tuyere", "Lookout's Spyglass"),
@@ -295,7 +315,7 @@ do
     objective(3367, sg(nil, 74.4, 19.3), "Walk Dorius north-east toward the Loch Modan path. Stay close and kill the Dark Irons who ambush him.",
       "Escort Dorius"),
     finish(3367, sg("Singed Letter", 74.45, 19.29), "Read the letter left where Dorius fell."),
-    accept(3368, sg("Singed Letter", 74.45, 19.29)),
+    accept(3368, sg("Singed Letter", 74.45, 19.29), "Read the Singed Letter again to accept the follow-up for Curator Thorius in Ironforge."),
     withItem(10000, accept(3181, nil, "If you killed Margol the Rager for his horn, use it from your bags.")),
     taxi("fly", B.at("Thorgrum Borrelson", 33.9, 51, 1432), THELSAMAR, "Fly to Thelsamar for Pebblebitty, or use Next if you have no horn."),
     finish(3181, at("Mountaineer Pebblebitty", 18.18, 84.01, M.lochModan), "Pebblebitty guards the Badlands gate at the south end of Loch Modan."),
@@ -331,7 +351,7 @@ do
 
   chapter("blasted-51", "Blasted Lands: The Bloodmages", M.blasted, 51, 51, {
     "https://www.wowhead.com/forever/zone=4/blasted-lands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("collect", at("Auctioneer Jaxon", 61.16, 70.68, M.stormwind),
       "The auction house is a few steps from the inn. If they sell cheaply, buy the Blasted Lands bloodmages' parts now: 5 Snickerfang Jowls, 6 Blasted Boar Lungs, 6 Scorpok Pincers, 11 Basilisk Brains and 14 Vulture Gizzards cover all five quests. Use Next to hunt for them instead.",
@@ -339,7 +359,7 @@ do
     taxi("fly", B.at("Alexandra Constantine", 65.5, 24.3, 1419), NETHERGARDE, "Fly to Nethergarde Keep."),
     accept(2783, bl("Ambassador Ardalan", 67.57, 19.29), "Ambassador Ardalan stands in the Nethergarde courtyard."),
     finish(2783, hero, "Ride north out of the keep to the border with the Swamp of Sorrows. The Fallen Hero kneels by the road."),
-    accept(2801, hero), objective(2801, hero, "Listen to the whole story.", "A Tale of Sorrow"), finish(2801, hero),
+    accept(2801, hero), objective(2801, hero, "Talk to the Fallen Hero and continue through every dialogue page until his story is complete.", "A Tale of Sorrow"), finish(2801, hero),
     accept(2601, lynnore, "The two bloodmages camp on the ridge west of Nethergarde. Take all their requests: each one needs a mix of parts."),
     accept(2603, lynnore), accept(2585, drazial), accept(2583, drazial), accept(2581, drazial),
     action("note", bl(nil, 62.5, 28.0), "Hunt basilisks, vultures, scorpoks, boars and Snickerfang hyenas through the valleys south of the keep. Hand in to the bloodmages whenever a recipe is ready.",
@@ -397,7 +417,7 @@ do
 
   chapter("wpl-51", "Western Plaguelands: Chillwind Camp", M.wpl, 51, 52, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(5090, ironforge("Courier Hammerfall", 55.9, 81.4), "Courier Hammerfall rides a circuit through Ironforge. Stop him when he passes to take his call to arms."),
     finish(3182, thorius, "Curator Thorius stands in the Hall of Explorers."), accept(3201, thorius),
@@ -448,7 +468,7 @@ do
   local erelas = tel("Erelas Ambersky", 55.5, 92.05)
   local lohatu = on.azshara("Loh'atu", 11.37, 78.17)
   local truesong, berdun = on.azshara("Commander Truesong", 11.78, 78.3), on.azshara("Berdun Cliffbrew", 12.58, 77.33)
-  local TALRENDIS_NOTE = "Forever quest with no QuestieDB record: places converted from reference guide A, level 48 from Wowhead Forever. Check in game."
+  local TALRENDIS_NOTE = "Forever quest with no quest database record: places converted from reference guide A, level 48 from Wowhead Forever. Check in game."
   local arathandris = fw("Arathandris Silversky", 54.15, 86.83)
   local grazle = fw("Grazle", 50.93, 85.01)
   local greta = fw("Greta Mosshoof", 51.21, 82.11)
@@ -468,7 +488,7 @@ do
   q(2972, "Doling Justice", 47, 38, 2970)
   q(5535, "Spiritual Unrest", 47, 45)
   q(5536, "A Land Filled with Hatred", 47, 45)
-  -- Forever's Talrendis Point quests: no QuestieDB record; level 48 from Wowhead Forever, places from guide A.
+  -- Forever's Talrendis Point quests: no quest database record; level 48 from Wowhead Forever, places from guide A.
   q(88807, "Slay the Spitelash", 48, nil, nil, true)
   q(89001, "Home on the Range", 48, nil, nil, true)
   q(89013, "Gettin' Buzzed", 48, nil, 89001, true)
@@ -495,12 +515,12 @@ do
 
   chapter("felwood-52", "Felwood: Emerald Sanctuary and Jaedenar", M.felwood, 52, 52, {
     "https://www.wowhead.com/forever/zone=361/felwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("hearth", at("Innkeeper Firebrew", 18.1, 51.5, M.ironforge), "Hearth to Ironforge.", { bind = "Ironforge" }),
     taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
-    action("boat", at(nil, 4.6, 57.3, M.wetlands), "Take the Auberdine ship from Menethil's north pier. Use Next in Auberdine.",
-      { name = "Menethil Harbor - Auberdine" }),
+    action("boat", at(nil, 4.6, 57.3, M.wetlands), "Take the Auberdine ship from Menethil's north pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Auberdine", skipOn = M.darkshore }),
     action("sethearth", shaussiy, "Bind at the Auberdine inn. You come back here after Felwood.", auberdine),
     taxi("fly", B.at("Vesprystus", 58.4, 94.02, 1438), RUTTHERAN, "Fly to Rut'theran Village."),
     carried(finish(3661, erelas, "Erelas Ambersky waits by the moonwell. Hand in the Hinterlands wildkin feathers if you have them.")),
@@ -561,7 +581,7 @@ do
     finish(8462, fw("Nafien", 64.77, 8.13), "Follow the road north to Nafien at the Timbermaw Hold tunnel."),
     accept(8461, fw("Nafien", 64.77, 8.13), "Nafien also wants the Deadwood camp beside the tunnel cleared."),
     note(objective(8461, fw(nil, 62.6, 10.1), "Clear the Deadwood furbolg camp next to the tunnel. They are a level or two above you: pull them one at a time.",
-      "6 Deadwood Den Watchers", "6 Deadwood Avengers", "6 Deadwood Shamans"), "Deadwood here are 53-55 (QuestieDB); the Horde route does this camp at 53."),
+      "6 Deadwood Den Watchers", "6 Deadwood Avengers", "6 Deadwood Shamans"), "Deadwood here are 53-55 (quest database); the Horde route does this camp at 53."),
     finish(8461, fw("Nafien", 64.77, 8.13)), accept(8465, fw("Nafien", 64.77, 8.13), "Nafien sends word to Salfa at the Winterspring end of the tunnel."),
     action("goto", on.winterspring(nil, 27.8, 34.6), "Walk through Timbermaw Hold. The furbolgs let you pass now. Exit into Winterspring."),
     finish(8465, on.winterspring("Salfa", 27.73, 34.5), "Salfa stands just outside the tunnel."),
@@ -610,7 +630,7 @@ do
 
   chapter("feralas-52", "Feralas: Feathermoon and the Forgotten Coast", M.feralas, 52, 53, {
     "https://www.wowhead.com/forever/zone=357/feralas",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(7733, pratt, "Pratt McGrubben, by the Feathermoon inn, has a better job now that you brought his first hides."),
     finish(2943, troyas, "Troyas Moonbreeze is in the building on the north side of the stronghold."), accept(2879, troyas),
@@ -627,13 +647,13 @@ do
     action("buy", gregan, "Gregan needs an Evoroot for Donova's Videre Elixir. Buy one Bait from him first.",
       { item = 11141, count = 1, ifOnQuest = 3909 }),
     accept(2844, rockbiter, "Rockbiter, a gentle giant, sits at the edge of the Ruins of Ravenwind."),
-    finish(2844, shay, "Shay Leafrunner wanders far to the north-west, near the Equinex Monolith."), accept(2845, shay),
-    objective(2879, monolith, "Energize Troyas' stave at the nearby monolith.", "Stave of Equinex"),
+    finish(2844, shay, "Shay Leafrunner wanders far to the north-west, near the Equinex Monolith."), accept(2845, shay, "Before leaving, take Shay's Bell from the chest beside her."),
+    withItem(9263, objective(2879, monolith, "In the Ruins of Ravenwind, collect an essence from each of the four flames: Samha, Imbel, Lahassa and Byltan. With all four in your bags, use Troyas' Stave beside the Equinex Monolith.", "Stave of Equinex")),
     finish(2879, monolith), accept(2942, monolith),
     note(action("collect", fe("Evoroot", 44.6, 10.2),
       "Ride east to the Ruins of Isildien. Set the Bait down beside Miblon Snarltooth and take the Evoroot while he eats.",
-      { item = 11242, count = 1, ifOnQuest = 3909 }), "Reference guide A uses the Bait this way; the Evoroot is an object in the ruins (QuestieDB)."),
-    objective(2845, rockbiter, "Ring Shay's Bell whenever she wanders off, and walk her back to Rockbiter.", "Shay's Bell"),
+      { item = 11242, count = 1, ifOnQuest = 3909 }), "Reference guide A uses the Bait this way; the Evoroot is an object in the ruins (quest database)."),
+    objective(2845, rockbiter, "Stay close to Shay on the walk back to Rockbiter. Ring Shay's Bell whenever she wanders off.", "Shay's Bell"),
     finish(2845, rockbiter),
     note(objective(3909, gregan, "Bring the Evoroot back to Gregan for the Videre Elixir.", "Videre Elixir"),
       "Gregan's own Evoroot quest (4041) is not in the Forever client list; check how he hands the elixir out."),
@@ -668,7 +688,7 @@ do
 
   chapter("azshara-53", "Azshara: Kim'jael and the Runes", M.azshara, 53, 53, {
     "https://www.wowhead.com/forever/zone=16/azshara",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bragok", 63.1, 37.2, 1413), RATCHET, "Fly to Ratchet."),
     action("sethearth", wiley, "Bind at the Ratchet inn.", ratchet),
@@ -744,7 +764,7 @@ do
 
   chapter("ungoro-53", "Un'Goro Crater: Marshal's Refuge", M.ungoro, 53, 54, {
     "https://www.wowhead.com/forever/zone=490/ungoro-crater",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bera Stonehammer", 51, 29.3, 1446), GADGETZAN, "Fly to Gadgetzan."),
     carried(finish(2641, tan("Sprinkle", 51.06, 26.87), "Give Sprinkle the Violet Tragan from the Hinterlands.")),
@@ -757,21 +777,22 @@ do
       "Fly to Marshal's Refuge. Without that flight path, ride west from Gadgetzan and down the ramp into Un'Goro."),
     taxi("getfp", ug("Gryfe", 45.2, 5.8), MARSHAL, "Learn the Marshal's Refuge flight path."),
     accept(3881, williden), accept(3883, holanyee, "Hol'anyee Marshal, beside Williden, gives you a scraping vial for the Gorishi hive."),
-    accept(3882, spark), accept(4501, spraggle),
+    accept(3882, spark),
+    accept(4501, ug("Beware of Pterrordax", 43.53, 8.44), "Read the warning sign beside Spraggle."),
     accept(4492, spraggle, "Spraggle Frock's friend Ringo is lost near Fire Plume Ridge."), accept(4503, shizzle),
     accept(4243, karna, "Karna Remtravel, just south of the refuge, lost her robot A-Me 01 in the north-east."),
     action("note", ug(nil, 50, 30), "Diemetradons drop bones and scales, pterrordaxes drop scales. Kill them whenever they are on your way, and loot 25 Un'Goro Soil from the dirt piles: 5 for Pestlezugg, 20 for Darnassus.",
       { name = "Un'Goro dinosaurs" }),
     finish(4243, ame, "Ride east along the crater's north wall. A-Me 01 waits beside the gorilla caves."), accept(4244, ame),
     note(finish(4244, ame, "Give A-Me the Mithril Casing from the auction house. Without one, use Next and skip the escort."),
-      "Mithril Casing source: QuestieDB lists Clunk and shredders; engineers craft it, so the auction house sells it too."),
+      "Mithril Casing source: quest database lists Clunk and shredders; engineers craft it, so the auction house sells it too."),
     accept(4245, ame, "Walk A-Me back to Karna. Gorillas and dinosaurs attack on the way."),
     finish(4245, karna),
     objective(4504, ug(nil, 46.6, 17.0), "The Lakkari Tar Pits are just south of Karna. Tar beasts, lurkers and lords drop Super Sticky Tar.",
       "12 Super Sticky Tar"),
     along(objective(3881, ug("Crate of Foodstuffs", 68.54, 36.54), "Ride east to the small camp of crates and search it for the Crate of Foodstuffs.", "Crate of Foodstuffs"), 3882),
     accept(4292, torwa, "Ride south to Torwa Pathfinder at the crater's south-east entrance. He gives you a pouch that calls Lar'korwi."),
-    withItem(11568, objective(4292, ug("Lar'korwi", 79.9, 49.9), "Ride back north to Lar'korwi's nest on the east side, open Torwa's pouch there and kill him for his head.", "Lar'korwi's Head")),
+    withItem(11568, objective(4292, ug("Lar'korwi", 79.9, 49.9), "At the flat rock among the bones behind the Eastern Crystal Pylon, open Torwa's Pouch. Use the Preserved Threshadon Meat first, then the Preserved Pheromone Mixture to summon Lar'korwi. Kill him and loot his head.", "Lar'korwi's Head")),
     finish(4292, torwa, "Take the head back to Torwa."),
     along(objective(4501, ug(nil, 44.3, 90.4), "Kill Pterrordaxes on the southern plains.", "10 Pterrordax", "15 Frenzied Pterrordax"), 4503, 3882),
     along(withItem(11132, objective(3883, ug("Gorishi Hive Hatchery", 48.69, 85.32),
@@ -858,7 +879,7 @@ do
   chapter("winterspring-54", "Felwood and Winterspring: Shadow Hold and the Winterfall", M.felwood, 54, 55, {
     "https://www.wowhead.com/forever/zone=618/winterspring",
     "https://www.wowhead.com/forever/zone=361/felwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Daelyshia", 34.41, 47.99, 1440), ASTRANAAR, "Fly to Astranaar."),
     action("goto", fw(nil, 51.2, 82.0), "Ride north out of Astranaar into Felwood. The Emerald Sanctuary is beside the road."),
@@ -929,6 +950,7 @@ do
   local ws = on.winterspring
   local vizzie = ws("Innkeeper Vizzie", 61.4, 38.8)
   local mauari = ws("Witch Doctor Mau'ari", 61.92, 38.3)
+  local evie = ws("Evie Whirlbrew", 60.75, 37.78)
   local umi = ws("Umi Rumplesnicker", 60.88, 37.62)
   local gregor = ws("Gregor Greystone", 61.35, 38.97)
   local jaron = ws("Jaron Stoneshaper", 52.14, 30.43)
@@ -941,6 +963,9 @@ do
   q(977, "Are We There, Yeti?", 58, 52, 3783)
   q(5163, "Are We There, Yeti?", 58, 52, 977)
   q(969, "Luck Be With You", 60, 55)
+  q(975, "Cache of Mau'ari", 60, 55, 969)
+  q(92859, "Shroud of the Winter Wilds", 60, 55, nil, true)
+  quest[92859].optional = true
   q(4863, "Enraged Wildkin", 59, 53, 4861)
   q(4864, "Enraged Wildkin", 59, 53, 4863)
   q(5121, "High Chief Winterfall", 59, 52, 5087)
@@ -950,13 +975,14 @@ do
 
   chapter("winterspring-55", "Winterspring: Everlook and the Southern Valleys", M.winterspring, 55, 56, {
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("sethearth", vizzie, "Ride east to Everlook and bind at the inn.", everlook),
     accept(6028, gregor, "Gregor Greystone, by the inn, has a report for the Argent Dawn at Chillwind Camp."),
     accept(6030, gregor, "He also sends a book to Duke Nicholas Zverenhoff at Light's Hope Chapel. Keep both for the Plaguelands."),
     accept(3783, umi, "Umi Rumplesnicker, across the street, wants yeti fur."),
     accept(969, mauari, "Witch Doctor Mau'ari wants Frostmaul Shards from the gorge in the south."),
+    accept(92859, evie, "If heading to Mount Hyjal, ask Evie for a potion to help you get past the demons in Darkwhisper Gorge."),
     objective(3783, ws(nil, 67.0, 43.0), "Ice Thistle yetis live in the hills just east of Everlook.", "10 Thick Yeti Fur"),
     finish(3783, umi), accept(977, umi),
     objective(977, ws(nil, 69.9, 41.7), "The Ice Thistle Matriarch and Patriarch live in the yeti caves east of the village. They are a level or two above you.",
@@ -968,21 +994,28 @@ do
     objective(4864, ws(nil, 61.4, 60.7), "Pick up Jaron's supplies from the snow around the wagon.", "Jaron's Supplies"),
     finish(979, ws("Ranshalla", 63.07, 59.48), "Ranshalla camps in the hills east of the wagon."),
     objective(4864, ws(nil, 65.5, 60.3), "Kill the owlbeasts in the valley until one drops the Blue-feathered Amulet.", "Blue-feathered Amulet"),
-    objective(969, ws(nil, 62.8, 67.8), "Frostmaul Shards lie on the ground all through Frostwhisper Gorge. The giants guarding them are elite: pick the shards up between their patrols.",
-      "4 Frostmaul Shards"),
+    objective(969, ws(nil, 62.8, 67.8), "Collect the Frostmaul Shards your log asks for from the ground in Frostwhisper Gorge. Pick them up between the elite giants' patrols.",
+      "Frostmaul Shards"),
     objective(4842, ws(nil, 59.9, 74.0), "Test the hot spring at the south end of the gorge for Donova.", "Strange Sources"),
     action("hearth", vizzie, "Hearth to Everlook.", everlook),
-    finish(969, mauari), finish(977, umi),
+    objective(92859, ws(nil, 57.0, 39.0), "Hunt Chillwind chimaeras and Winterspring owls in the snow west of Everlook. Return to Evie for the potions.",
+      "5 Chillwind Chimaera Fur", "5 Winterspring Owl Feathers"),
+    finish(92859, evie, "Evie's potion reduces detection only in Winterspring. Give the demons room if you take the road through Darkwhisper Gorge to Mount Hyjal."),
+    finish(969, mauari), accept(975, mauari), finish(975, mauari, "Give Mau'ari a moment to prepare the lucky charm, then speak to her again."),
+    finish(977, umi),
     accept(5163, umi, "Umi has one last job: scare three of her friends with her mechanical yeti. Sprinkle in Gadgetzan and Quixxil in Un'Goro wait for your trip south at 59."),
     note(withItem(12928, B.objectivePart(5163, 1, ws("Legacki", 61.5, 38.6), "Use the mechanical yeti on Legacki, right here in Everlook.", "Legacki")),
-      "Objective order (Legacki, Sprinkle, Quixxil) taken from QuestieDB; check the quest log order in game."),
+      "Objective order (Legacki, Sprinkle, Quixxil) taken from quest database; check the quest log order in game."),
     finish(4864, jaron, "Take Jaron his supplies and amulet at Starfall Village."),
     finish(4842, donova), finish(5087, donova),
-    action("goto", on.felwood("Mishellena", 62.5, 24.2), "Walk back through Timbermaw Hold and ride south to the Talonbranch Glade flight master."),
-    taxi("fly", B.at("Caylais Moonfeather", 36.34, 45.58, 1439), AUBERDINE, "Fly to Auberdine."),
-    action("boat", at(nil, 32.4, 43.8, M.darkshore), "Take the Menethil ship from Auberdine's west pier. Use Next in Menethil Harbor.",
-      { name = "Auberdine - Menethil Harbor" }),
-    taxi("fly", B.at("Gryth Thurden", 55.5, 47.7, 1455), IF_FLIGHT, "Fly to Ironforge."),
+    action("goto", on.felwood("Mishellena", 62.5, 24.2), "Walk back through Timbermaw Hold and ride south to the Talonbranch Glade flight master.",
+      { skipOn = { M.darkshore, M.wetlands, M.ironforge } }),
+    action("fly", on.darkshore("Caylais Moonfeather", 36.34, 45.58), "Fly to Auberdine.",
+      { flight = AUBERDINE, skipOn = { M.darkshore, M.wetlands, M.ironforge } }),
+    action("boat", at(nil, 32.4, 43.8, M.darkshore), "Take the Menethil ship from Auberdine's west pier. Check the guide when it docks.",
+      { name = "Auberdine - Menethil Harbor", skipOn = { M.wetlands, M.ironforge } }),
+    action("fly", on.ironforge("Gryth Thurden", 55.5, 47.7), "Fly to Ironforge.",
+      { flight = IF_FLIGHT, skipOn = M.ironforge }),
   })
 end
 
@@ -1040,10 +1073,10 @@ do
   chapter("steppes-56", "Burning Steppes: Morgan's Vigil and the True Masters", M.steppes, 56, 57, {
     "https://www.wowhead.com/forever/zone=46/burning-steppes",
     "https://www.wowhead.com/forever/zone=51/searing-gorge",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     accept(3702, archesonus, "Royal Historian Archesonus stands beside King Magni in the High Seat."),
-    objective(3702, archesonus, "Listen to the history of Thaurissan.", "The Smoldering Ruins of Thaurissan"),
+    objective(3702, archesonus, "Tell Archesonus you are ready to listen, then continue through all her dialogue about Thaurissan.", "The Smoldering Ruins of Thaurissan"),
     finish(3702, archesonus), accept(3701, archesonus),
     action("sethearth", ironforge("Innkeeper Firebrew", 18.1, 51.5), "Bind at the Stonefire Tavern.", ironforgeBind),
     finish(3461, ironforge("Tymor", 30.96, 4.83), "Return Tymor's drawing kit to him in the Mystic Ward."),
@@ -1066,13 +1099,13 @@ do
     accept(4726, tinkee, "Ride north-west to Flame Crest. Tinkee Steamboil gives you a device for the broodlings."),
     accept(4296, maxwort),
     accept(4022, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
-    objective(4022, cyrus, "Show Cyrus the Black Dragonflight Molt from the Searing Gorge hoard.", "Black Dragonflight Molt"),
+    objective(4022, cyrus, "With the Black Dragonflight Molt from the Searing Gorge hoard in your bags, talk to Cyrus and choose to present your proof.", "Black Dragonflight Molt"),
     finish(4022, cyrus),
     along(withItem(12284, objective(4726, bs(nil, 90.6, 43.6), "Use the Draco-Incarcinatrix 900 on Black Broodlings in the east, then kill them for their essence.",
       "8 Broodling Essence")), 4182),
     along(objective(4182, bs(nil, 90.6, 43.6), "Kill the black dragonkin around the eastern spires.",
       "15 Black Broodlings", "10 Black Dragonspawn", "4 Black Wyrmkin", "Black Drake"), 4726),
-    along(objective(4296, bs("Tablet of the Seven", 54.1, 40.8), "Ride west to the tablet at the edge of the Ruins of Thaurissan and copy it.", "Tablet Transcript"), 3701, 4283),
+    along(objective(4296, bs("Tablet of the Seven", 54.1, 40.8), "Ride west to the Tablet of the Seven at the edge of the Ruins of Thaurissan. Interact with it and choose to transcribe it for the Tablet Transcript.", "Tablet Transcript"), 3701, 4283),
     along(objective(3701, bs(nil, 57.4, 36.4), "Search the Thaurissan Relics scattered through the ruins.", "Thaurissan Relic"), 4283),
     along(objective(3824, bs("Gor'tesh", 39.3, 55.3), "Gor'tesh holds the Blackrock camp south-west of the mountain.", "Gor'tesh's Lopped Off Head"), 4283),
     objective(4283, bs(nil, 48.8, 59.6), "Finish the medallions in the Blackrock camps of the southern Steppes.", "50 Blackrock Medallion"),
@@ -1084,10 +1117,10 @@ do
     finish(5022, at("Royal Factor Bathrilor", 57.17, 48.07, M.stormwind), "Bring Janice's parcel to Royal Factor Bathrilor, the census officer in the city hall."),
     accept(5048, at("Royal Factor Bathrilor", 57.17, 48.07, M.stormwind)),
     note(finish(5048, at("Ol' Emma", 60.2, 57.03, M.stormwind), "Find Ol' Emma in the streets a little south and give her the parcel."),
-      "QuestieDB has one spot for Ol' Emma; she may walk a path through the city."),
+      "quest database has one spot for Ol' Emma; she may walk a path through the city."),
     accept(5050, at("Ol' Emma", 60.2, 57.03, M.stormwind), "Emma sends half of a good luck charm back to Janice. You pass Felstone Farm early at 57."),
     finish(4184, bolvar, "Highlord Bolvar is in the throne room of Stormwind Keep."), accept(4185, bolvar),
-    objective(4185, bolvar, "Speak with Lady Katrana Prestor beside him, then with Bolvar again.", "Lady Prestor's counsel"),
+    objective(4185, bolvar, "Talk to Lady Katrana Prestor beside Bolvar and continue through all her dialogue about his request. Return to Bolvar once the objective completes.", "Lady Prestor's counsel"),
     finish(4185, bolvar), accept(4186, bolvar),
     accept(6182, bolvar, "Bolvar also sends you to Mathias Shaw."),
     finish(6182, shaw, "Mathias Shaw is in SI:7, in Old Town."), accept(6183, shaw),
@@ -1096,7 +1129,7 @@ do
     finish(4186, solomon), accept(4223, solomon),
     taxi("fly", B.at("Borgus Stoutarm", 84.3, 68.3, 1428), MORGANS, "Fly to Morgan's Vigil."),
     finish(4223, maxwell), accept(4224, maxwell),
-    objective(4224, bs("Ragged John", 65.0, 23.8), "Ragged John wanders near Flame Crest. Hear his whole story.", "Ragged John's tale"),
+    objective(4224, bs("Ragged John", 65.0, 23.8), "Ragged John wanders near Flame Crest. Ask about Marshal Windsor and continue through his entire dialogue until the quest updates.", "Ragged John's tale"),
     finish(4726, tinkee), accept(4808, tinkee, "Tinkee has a letter for Felnok Steelspring in Everlook. Keep it for your next Winterspring visit."),
     finish(4296, maxwort),
     objective(3825, bs("Soft Dirt Mound", 81.0, 46.8), "Climb Dreadmaul Rock and plant Gor'tesh's head in the soft dirt mound on top.", "Soft Dirt Mound"),
@@ -1169,7 +1202,7 @@ do
   chapter("plaguelands-57", "Plaguelands: Andorhal and Tirion Fordring", M.wpl, 57, 58, {
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly to Southshore."),
     action("sethearth", anderson, "Bind at the Southshore inn, the closest inn to the Plaguelands.", southshore),
@@ -1225,11 +1258,11 @@ do
     withItem(15042, objective(5903, epl(nil, 26.6, 22.9), "Use the termite jar on the termite mounds in the north-west.", "100 Plagueland Termites")),
     objective(5542, epl(nil, 44.2, 30.7), "Finish the plaguehounds in the northern hills.", "20 Plaguehound Runt", "5 Plaguehound", "5 Frenzied Plaguehound"),
     note(accept(6164, epl("Augustus the Touched", 11.36, 26.37), "Ride west to the ruins of Terrordale on your way back to Tirion. Augustus the Touched lost his receipt book."),
-      "Augustus' quest is only in the Zygor Forever list (quest-ID check); check he offers it to the Alliance."),
+      "Augustus' quest is only in the reference guide B Forever list (quest-ID check); check he offers it to the Alliance."),
     objective(6164, epl("Augustus' Receipt Book", 14.0, 24.2), "The book lies in the ruins a little north-east of him.", "Augustus' Receipt Book"),
     finish(6164, epl("Augustus the Touched", 11.36, 26.37)),
     finish(5542, tirion), finish(5543, tirion), finish(5544, tirion),
-    accept(5742, tirion), objective(5742, tirion, "Listen to Tirion's story.", "Redemption"), finish(5742, tirion),
+    accept(5742, tirion), objective(5742, tirion, "Type /sit beside Tirion, talk to him and choose to hear his tale. Continue through every dialogue page until the quest updates.", "Redemption"), finish(5742, tirion),
     accept(5781, tirion),
     objective(6021, epl("Zaeldarr the Outcast", 23.1, 72.6), "Zaeldarr the Outcast waits at the Undercroft.", "Zaeldarr's Head"),
     accept(6024, epl(nil, 22.9, 72.9), "Read Hameya's plea near the Undercroft."),
@@ -1263,6 +1296,7 @@ do
   local mulgris = wpl("Mulgris Deepriver", 53.73, 64.66)
   local macdonnell = wpl("High Priestess MacDonnell", 42.97, 84.5)
   local dumah = wpl("Nathaniel Dumah", 43.42, 84.83)
+  local ashlam = wpl("Commander Ashlam Valorfist", 42.70, 84.03)
   local chambers = epl("Jessica Chambers", 71.8, 48.5)
   local lightsHope = { bind = "Light's Hope Chapel" }
 
@@ -1273,6 +1307,7 @@ do
   q(5281, "The Restless Souls", 60, 55)
   q(5382, "Doctor Theolen Krastinov, the Butcher", 60, 55)
   q(5226, "Return to Chillwind Point", 58, 50, 5225)
+  q(5238, "Mission Accomplished!", 58, 50, 5226)
   q(6389, "A Plague Upon Thee", 55, 48, 5904)
   q(6004, "Unfinished Business", 56, 50)
   q(6023, "Unfinished Business", 57, 50, 6004)
@@ -1282,7 +1317,7 @@ do
   chapter("plaguelands-58", "Plaguelands: Darrowshire's Heroes and Hearthglen", M.epl, 58, 59, {
     "https://www.wowhead.com/forever/zone=139/eastern-plaguelands",
     "https://www.wowhead.com/forever/zone=28/western-plaguelands",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Khaelyn Steelwing", 71.8, 49.6, 1423), LIGHTSHOPE, "Fly to Light's Hope Chapel."),
     action("sethearth", chambers, "Bind at Light's Hope Chapel.", lightsHope),
@@ -1290,7 +1325,7 @@ do
     withGuide("dungeon-stratholme", finish(6021, alen, "Give Caretaker Alen Zaeldarr's head. His Stratholme task, The Restless Souls, is in the Stratholme guide.")),
     objective(5845, epl(nil, 62.5, 26.8), "Ride north to Northdale and search the ruined house for the Symbol of Lost Honor.", "Symbol of Lost Honor"),
     objective(6024, epl("Infiltrator Hameya", 62.0, 11.1), "Infiltrator Hameya roams the far north. Kill him for his key.", "Hameya's Key"),
-    B.objectivePart(5211, 1, epl(nil, 57.7, 31.5), "Kill ghouls and flayers across the zone and free the Darrowshire spirits that rise from them.", "15 Darrowshire Spirits"),
+    B.objectivePart(5211, 1, epl(nil, 57.7, 31.5), "Kill ghouls and flayers across the zone, then talk to each Darrowshire Spirit that rises from them to free it and receive credit.", "15 Darrowshire Spirits"),
     B.objectivePart(5181, 1, epl(nil, 44.3, 41.2), "Horgus's skull lies at the Infectis Scar.", "Skull of Horgus"),
     B.objectivePart(5181, 2, epl(nil, 46.9, 55.4), "Marduk's broken sword lies in the Pestilent Scar to the south.", "Shattered Sword of Marduk"),
     finish(6024, epl("Mound of Dirt", 23.58, 73.79), "Use Hameya's key on the mound of dirt behind the Undercroft."),
@@ -1302,7 +1337,7 @@ do
     objective(4985, wpl(nil, 56.1, 54.0), "Ride west through the hills and kill Diseased Grizzlies.", "8 Diseased Grizzly"),
     finish(4985, mulgris, "Mulgris Deepriver waits on the hill above the Writhing Haunt."),
     accept(4986, mulgris, "Mulgris gives you a glyphed branch for the Cenarion Circle in Darnassus. Keep it for your last visit there."),
-    finish(5904, wpl("Termite Barrel", 48.34, 31.99), "Place the termite barrel in the middle of Northridge Lumber Camp."),
+    finish(5904, wpl("Termite Barrel", 48.34, 31.99), "Inside Northridge Lumber Mill, click the Northridge Lumber Mill Crate and choose to place your barrel. Click the Termite Barrel that appears to turn in the quest and take its follow-up."),
     accept(6389, wpl("Termite Barrel", 48.34, 31.99)),
     accept(6004, kirsta, "Kirsta Deepshadow waits in the hills north of the lumber camp."),
     objective(6004, wpl(nil, 50.8, 40.7), "Kill Scarlet medics, hunters, mages and knights at the Scarlet camps.",
@@ -1317,11 +1352,13 @@ do
     action("hearth", chambers, "Hearth to Light's Hope Chapel.", lightsHope),
     finish(5211, carlin), finish(5181, carlin), finish(5168, carlin),
     taxi("fly", B.at("Bibilfaz Featherwhistle", 42.9, 85.1, 1422), CHILLWIND, "Fly to Chillwind Camp."),
-    finish(5226, macdonnell), finish(6389, dumah),
+    finish(5226, macdonnell),
+    accept(5238, ashlam, "Ask Commander Ashlam, beside MacDonnell, about closing out the cauldron campaign. Use Next if he has no follow-up."),
+    finish(5238, ashlam), finish(6389, dumah),
     finish(5846, wpl("Artist Renfray", 65.77, 75.37), "Ride east to Caer Darrow's lake shore. Artist Renfray's ghost stands on the island."),
     forDungeon(accept(5848, wpl("Artist Renfray", 65.77, 75.37), "Renfray says the painting hangs in Stratholme."), "dungeon-stratholme"),
     withGuide("dungeon-scholomance", forDungeon(accept(5382, wpl("Eva Sarkhoff", 70.22, 73.71),
-      "Eva Sarkhoff, nearby on the island, wants Doctor Krastinov of the Scholomance dead."), "dungeon-scholomance")),
+      "Eva Sarkhoff waits nearby on the island. Ask why she is here and finish every page of her story to reveal her quest against Doctor Krastinov."), "dungeon-scholomance")),
   })
 end
 
@@ -1383,27 +1420,30 @@ do
   chapter("silithus-59", "Winterspring to Silithus: Cenarion Hold", M.silithus, 59, 59, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
     "https://www.wowhead.com/forever/zone=618/winterspring",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Gryth Thurden", 55.5, 47.7, 1455), IF_FLIGHT, "Fly to Ironforge from Chillwind Camp."),
     accept(8275, at("Cenarion Emissary Jademoon", 58.54, 47.32, M.ironforge),
       "Cenarion Emissary Jademoon, a few steps from the gryphon master, asks you to help Windcaller Proudhorn in Silithus."),
-    taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
-    action("boat", at(nil, 4.6, 57.3, M.wetlands), "Take the Auberdine ship from Menethil's north pier. Use Next in Auberdine.",
-      { name = "Menethil Harbor - Auberdine" }),
-    taxi("fly", B.at("Maethrya", 62.3, 36.6, 1452), EVERLOOK, "Fly to Everlook."),
+    action("fly", on.wetlands("Shellei Brondir", 9.5, 59.7), "Fly to Menethil Harbor.",
+      { flight = "Menethil Harbor, Wetlands", skipOn = { M.wetlands, M.darkshore, M.winterspring } }),
+    action("boat", at(nil, 4.6, 57.3, M.wetlands), "Take the Auberdine ship from Menethil's north pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Auberdine", skipOn = { M.darkshore, M.winterspring } }),
+    action("fly", on.winterspring("Maethrya", 62.3, 36.6), "Fly to Everlook.",
+      { flight = EVERLOOK, skipOn = M.winterspring }),
     action("sethearth", vizzie, "Bind at the Everlook inn.", everlook),
     finish(4808, felnok, "Felnok Steelspring stands by the inn. Give him Tinkee's letter."), accept(4809, felnok),
     along(objective(4809, ws(nil, 57.5, 44.4), "Ride south. Chillwind Chimaeras roam the valleys between Everlook and the Altar of Elune; they drop the horns.",
       "8 Uncracked Chillwind Horn"), 4901),
     accept(4901, ranshalla, "Ranshalla's escort is hard at this level. Bring a friend."),
-    objective(4901, ws(nil, 64.8, 63.8), "Follow Ranshalla through the Altar of Elune caves and protect her while she lights the torches.", "Altar of Elune"),
+    objective(4901, ws(nil, 64.8, 63.8), "Follow and protect Ranshalla through the caves. When she stops to channel, click each Fire of Elune torch; at the final stop click the Altar of Elune when prompted. Stay for the ritual.", "Altar of Elune"),
     action("hearth", vizzie, "Hearth to Everlook.", everlook),
     withGuide("dungeon-upper-blackrock-spire", finish(4809, felnok, "Give Felnok the horns. His next errand for Tinkee leads into Upper Blackrock Spire.")),
     action("goto", mg(nil, 35.8, 71.9), "Go into Timbermaw Hold and take the Moonglade tunnel."),
     forDungeon(finish(7066, mg("Keeper Remulos", 36.18, 41.79), "If you killed Theradras, give Remulos the Seed of Life."), "dungeon-maraudon"),
     finish(6762, rabine, "Rabine Saturna lives in Nighthaven on the lake's east shore."),
-    accept(1124, rabine), accept(5527, rabine),
+    accept(1124, rabine), accept(5527, rabine,
+      "Ask Rabine about Dire Maul and finish every dialogue page to reveal this quest. If that topic is missing, visit Dire Maul first and return; you can skip this detour for now."),
     taxi("getfp", mg("Sindrayl", 48.1, 67.3), MOONGLADE, "Learn the Moonglade flight path from Sindrayl."),
     taxi("fly", B.at("Daelyshia", 34.41, 47.99, 1440), ASTRANAAR, "Fly to Astranaar."),
     taxi("fly", B.at("Bera Stonehammer", 51, 29.3, 1446), GADGETZAN, "Fly to Gadgetzan."),
@@ -1411,7 +1451,7 @@ do
     withItem(12928, B.objectivePart(5163, 2, on.tanaris("Sprinkle", 51.06, 26.87), "Scare Sprinkle with the mechanical yeti next door.", "Sprinkle")),
     taxi("fly", B.at("Gryfe", 45.2, 5.8, 1449), MARSHAL, "Fly to Marshal's Refuge."),
     withItem(12928, B.objectivePart(5163, 3, on.ungoro("Quixxil", 43.7, 9.4), "Quixxil is at the refuge: scare him too.", "Quixxil")),
-    objective(4507, on.ungoro(nil, 43.5, 81.1), "Go deep into the Gorishi hive in the south, summon the Hive Queen and kill her for her brain.", "Gorishi Queen Brain"),
+    withItem(11833, objective(4507, on.ungoro(nil, 43.5, 81.1), "Deep inside the southern hive, use the Gorishi Queen Lure at the Gorishi Silithid Crystal. Defeat the attacking waves, then kill the Hive Queen and loot her brain.", "Gorishi Queen Brain")),
     action("goto", sil(nil, 81.9, 18.9), "Ride back north and leave Un'Goro by the north-west ramp into Silithus. Valor's Rest is just west of the top of the ramp."),
     finish(1124, layo, "Layo Starstrike stands by the Valor's Rest graveyard."), accept(1125, layo),
     objective(1125, sil(nil, 62.3, 53.6), "Ride south-west to ruined Southwind Village and free the tortured druids and sentinels.", "8 Tortured Druid", "8 Tortured Sentinel"),
@@ -1449,10 +1489,10 @@ do
     accept(8282, noggle, "Noggle lost his satchel in the southern mountains, next to Bronzebeard's Encampment."),
     finish(8318, bor),
     note(accept(8304, maralith, "Commander Mar'alith asks you to question the dwarves at Bronzebeard's Encampment, far to the south."),
-      "QuestieDB gives Dearest Natalia a minimum level of 60; check whether Mar'alith offers it at 59."),
+      "quest database gives Dearest Natalia a minimum level of 60; check whether Mar'alith offers it at 59."),
     action("goto", frankal, "Ride south to Bronzebeard's Encampment."),
-    B.objectivePart(8304, 1, frankal, "Question Frankal Stonebridge.", "Frankal Invisible Trigger"),
-    B.objectivePart(8304, 2, rutgar, "Question Rutgar Glyphshaper beside him.", "Rutgar Invisible Trigger"),
+    B.objectivePart(8304, 1, frankal, "Talk to Frankal Stonebridge about Natalia and continue through his whole dialogue until his objective completes.", "Frankal Invisible Trigger"),
+    B.objectivePart(8304, 2, rutgar, "Talk to Rutgar Glyphshaper beside Frankal about Natalia and continue through his whole dialogue until his objective completes.", "Rutgar Invisible Trigger"),
     finish(8308, rutgar, "Give Rutgar Brann's letter if you found it."),
     objective(8282, sil("Noggle's Satchel", 44.56, 91.38), "Ride a little east into the mountains. Noggle's satchel lies among the scorpids.", "Noggle's Satchel"),
     objective(8283, sil("Deathclasp", 45.07, 92.31), "Deathclasp lurks right beside it.", "Deathclasp's Pincer"),
@@ -1483,7 +1523,7 @@ do
   chapter("silithus-60", "The Road to 60: Moonglade and Darnassus", M.darnassus, 59, 60, {
     "https://www.wowhead.com/forever/zone=1377/silithus",
     "https://www.wowhead.com/forever/zone=493/moonglade",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Bera Stonehammer", 51, 29.3, 1446), GADGETZAN, "Fly to Gadgetzan."),
     finish(4507, on.tanaris("Alchemist Pestlezugg", 50.89, 26.96), "Alchemist Pestlezugg takes the queen's brain."),
@@ -1545,7 +1585,7 @@ do
       "Fly to Everlook. Without that flight path, ride through Timbermaw Hold from northern Felwood."),
   }, from("felwood-52", { 6603 }), from("winterspring-55", { 3783 }, "accept"),
     from("winterspring-54", { 6603, 5082, 5083, 5084, 5085, 5086, 5087, 4861 }),
-    from("winterspring-55", { 5087, 4861, 4863, 4864, 969 }), {
+    from("winterspring-55", { 5087, 4861, 4863, 4864, 969, 975 }), {
       accept(5121, on.winterspring("Donova Snowden", 31.27, 45.16), "Donova wants High Chief Winterfall dead. Bring a friend for his cave."),
       objective(5121, on.winterspring("High Chief Winterfall", 69.6, 38.3), "Fight into Winterfall Village, north-east of Everlook. High Chief Winterfall waits in the back cave.",
         "High Chief Winterfall"),

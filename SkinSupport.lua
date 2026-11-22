@@ -1,29 +1,29 @@
 -- The Leveling Codex: in-game companion for the WoW: Forever leveling guides.
--- Ellesmere.lua: the EllesmereUI theme (ns.ellesmere).
+-- skin adapter: the external UI theme (the skin adapter).
 --
--- EllesmereUI (a UI suite for Retail and Forever) lends other addons its look through
--- EllesmereUI.RegisterSkin(name, fn), its public skinning API (SKINNING_API.md in its folder). The
+-- external UI (a UI suite for Retail and Forever) lends other addons its look through
+-- RegisterSkin(name, fn), its public skinning API (SKINNING_API.md in its folder). The
 -- callback runs once, at PLAYER_LOGIN (at once for a later registration), and only while the player
--- has its third-party skins on for the Codex (EllesmereUI options: Blizzard Skins+ > Window Skins >
+-- has its third-party skins on for the Codex (external UI options: skin settings > Window Skins >
 -- Third-Party Addons). It hands over a facade S: Shell, Panel, CloseButton, PageButton, Checkbox,
 -- EditBox, ScrollBar, Font, and the player's panel colour, accent colour and UI font.
 --
--- With S the Codex adds the "ellesmere" theme (ns.THEMES.ellesmere, made from those colours and made
--- again whenever EllesmereUI's looks change) and draws in it, unless the player picked another theme
--- while EllesmereUI was on (db.euiTheme; db.theme keeps the choice for when it isn't installed).
+-- With S the Codex adds the "external UI" theme (the active skin palette, made from those colours and made
+-- again whenever external UI's looks change) and draws in it, unless the player picked another theme
+-- while external UI was on (db.euiTheme; db.theme keeps the choice for when it isn't installed).
 --
--- EllesmereUI fades every texture of a frame its Shell or Panel skinned, and fades them all again
+-- external UI fades every texture of a frame its Shell or Panel skinned, and fades them all again
 -- whenever some Blizzard windows open (the talent window, professions, collections, the calendar).
 -- So those never go on a Codex frame: E.backing(f, kind) gives f a child frame at f's own frame level
 -- (regions of frames at the same level draw by layer, so f's own art and text stay on top) that holds
--- nothing but EllesmereUI's backdrop. Pooled widgets inside the windows are drawn by the Codex itself in
+-- nothing but external UI's backdrop. Pooled widgets inside the windows are drawn by the Codex itself in
 -- the theme's colours (Art.lua's flat look).
 
 local _, ns = ...
 local E = {}
-ns.ellesmere = E
+ns.skinSupport = E
 
-local S          -- EllesmereUI's facade, once its callback ran
+local S          -- external UI's facade, once its callback ran
 local registered -- RegisterSkin was called
 local MORPHEUS = "Fonts\\MORPHEUS.TTF"
 
@@ -37,15 +37,15 @@ local function call(name, ...)
 end
 E.call = call
 
--- EllesmereUI's skin is on for the Codex: its callback ran and the player hasn't turned it off since
--- (turning it off takes a /reload in EllesmereUI; the Codex drops the theme at once).
+-- external UI's skin is on for the Codex: its callback ran and the player hasn't turned it off since
+-- (turning it off takes a /reload in external UI; the Codex drops the theme at once).
 function E.available()
   if not S then return false end
   local ok, on = call("IsEnabled")
   return not (ok and on == false)
 end
 
--- The Codex is drawn in the EllesmereUI theme right now.
+-- The Codex is drawn in the external UI theme right now.
 function E.on() return ns.C.eui == true and S ~= nil end
 
 local function unit(v, default)
@@ -54,7 +54,7 @@ local function unit(v, default)
   return math.max(0, math.min(1, v))
 end
 
--- The palette: EllesmereUI's neutral greys and panel fill, the player's accent for headings and
+-- The palette: external UI's neutral greys and panel fill, the player's accent for headings and
 -- highlights, light text on every card (the parchment cards become its dark panels).
 function E.palette()
   local _, ar, ag, ab = call("GetAccentColor")
@@ -81,7 +81,7 @@ function E.palette()
   }
 end
 
--- The theme to draw in: with EllesmereUI's skin on, the player's pick made then (its own theme unless
+-- The theme to draw in: with external UI's skin on, the player's pick made then (its own theme unless
 -- they chose another); without it, db.theme (Forever teal by default).
 function ns.themeName()
   local db = ns.db()
@@ -95,15 +95,15 @@ function ns.themeName()
   return t
 end
 
--- Settings > Theme. A choice made while EllesmereUI's skin is on is kept apart (db.euiTheme), so
--- installing EllesmereUI brings its theme even to someone who once picked Codex gold.
+-- Settings > Theme. A choice made while external UI's skin is on is kept apart (db.euiTheme), so
+-- installing external UI brings its theme even to someone who once picked Codex gold.
 function ns.setTheme(name)
   local db = ns.db()
   if E.available() then db.euiTheme = name else db.theme = name end
   ns.rebuildForTheme()
 end
 
--- The player's EllesmereUI font (path, flags) while its theme is on; nil otherwise.
+-- The player's external UI font (path, flags) while its theme is on; nil otherwise.
 function E.font()
   if not E.on() then return nil end
   local ok, path, flags = call("GetFont")
@@ -112,10 +112,10 @@ function E.font()
   end
 end
 
--- The face for the Codex's headings: Morpheus, or the EllesmereUI font in its theme.
+-- The face for the Codex's headings: Morpheus, or the external UI font in its theme.
 function ns.headFont() return (E.font()) or MORPHEUS end
 
--- Every font string under frame in the EllesmereUI font while its theme is on (S.Font keeps each one's
+-- Every font string under frame in the external UI font while its theme is on (S.Font keeps each one's
 -- size), or back to the font it had. A heading (fs.codexHead = its size) takes ns.headFont() instead.
 -- Each string is done once per theme switch, so it's cheap to call on every refresh: pooled rows made
 -- later get theirs then.
@@ -147,9 +147,9 @@ function E.fonts(frame)
   walk(frame, 0)
 end
 
--- f's backing frame with EllesmereUI's `kind` ("Shell" for a window, "Panel" for a card or the step
--- window; opts as EllesmereUI takes them, e.g. { inset = true }): made once, shown while the
--- EllesmereUI theme is on and hidden otherwise. Returns true when it shows.
+-- f's backing frame with external UI's `kind` ("Shell" for a window, "Panel" for a card or the step
+-- window; opts as external UI takes them, e.g. { inset = true }): made once, shown while the
+-- external UI theme is on and hidden otherwise. Returns true when it shows.
 function E.backing(f, kind, opts)
   if not E.on() then
     if f.euiSkin then f.euiSkin:Hide() end
@@ -163,7 +163,7 @@ function E.backing(f, kind, opts)
     b:SetFrameLevel(f:GetFrameLevel())
     f.euiSkin = b
     if not call(kind == "Shell" and "Shell" or "Panel", b, opts) then
-      -- EllesmereUI refused: a plain fill in its colours, so the window isn't see-through
+      -- external UI refused: a plain fill in its colours, so the window isn't see-through
       local fill = b:CreateTexture(nil, "BACKGROUND", nil, -8)
       fill:SetAllPoints(b)
       fill:SetColorTexture(ns.rgba(ns.C.parch))
@@ -173,7 +173,7 @@ function E.backing(f, kind, opts)
   return true
 end
 
--- An old-style scroll bar (UIPanelScrollFrameTemplate's slider) the way EllesmereUI flattens its own:
+-- An old-style scroll bar (UIPanelScrollFrameTemplate's slider) the way external UI flattens its own:
 -- the arrows' art faded, the thumb a 4 px white strip; a modern one through S.ScrollBar.
 function E.scrollBar(scroll)
   if not E.on() then return end
@@ -196,7 +196,7 @@ function E.scrollBar(scroll)
   end
 end
 
--- EllesmereUI's looks change (its accent colour, live from its options): one repaint 0.4 s after the
+-- external UI's looks change (its accent colour, live from its options): one repaint 0.4 s after the
 -- last change. A colour picker sends a change for every step of a drag, and each rebuild makes new
 -- frames (the client never frees one).
 local looksRun = 0
@@ -211,7 +211,7 @@ local function looksChanged()
   end)
 end
 
--- EllesmereUI's callback: keep its facade, make the theme, switch to it (now when the Codex has
+-- external UI's callback: keep its facade, make the theme, switch to it (now when the Codex has
 -- started; otherwise start() picks it).
 local function apply(facade)
   if type(facade) ~= "table" then return end
@@ -225,7 +225,7 @@ local function apply(facade)
   end
 end
 
--- Register with EllesmereUI. At load (the .toc lists it as an optional dependency, so it loaded first)
+-- Register with external UI. At load (the .toc lists it as an optional dependency, so it loaded first)
 -- and again from start(), for a client that loaded it after us.
 function E.register()
   if registered then return end
@@ -238,9 +238,9 @@ E.register()
 
 -- /codex debug
 function E.debugLine()
-  if type(EllesmereUI) ~= "table" then return "EllesmereUI: not installed" end
-  if not E.available() then return "EllesmereUI: installed, skin off" .. (registered and "" or " (no skin API)") end
+  if type(EllesmereUI) ~= "table" then return "external UI: not installed" end
+  if not E.available() then return "external UI: installed, skin off" .. (registered and "" or " (no skin API)") end
   local _, style = call("GetStyle")
-  return "EllesmereUI: skin on (api " .. tostring(S.apiVersion) .. ", style " .. tostring(style or "?") ..
-    "), Codex theme: " .. tostring(ns.themeKey)
+  return "external UI: skin on (api " .. tostring(S.apiVersion) .. ", style " .. tostring(style or "?") ..
+    "), Codex theme: " .. tostring(ns.themeKey == "ellesmere" and "external skin" or ns.themeKey)
 end

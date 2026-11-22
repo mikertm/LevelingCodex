@@ -44,7 +44,7 @@ do
 end
 
 -- Rogue: the Orc and Troll level 10 chain (Therzok's Shattered Hand), placed on the route's own
--- Orgrimmar and Southsea stops. RestedXP takes The Shattered Hand straight from Therzok for Orcs
+-- Orgrimmar and Southsea stops. reference guide A takes The Shattered Hand straight from Therzok for Orcs
 -- and Trolls, so Kaplak's referral (Orcs only) is a breadcrumb.
 do
   local at, q, accept, finish, objective = B.at, B.q, B.accept, B.finish, B.objectiveAt
@@ -111,7 +111,7 @@ do
       accept(2382, zandozan),
       finish(2382, wrenix, "Fly or ride to Ratchet. Wrenix stands beside his machine near the flight master."),
       accept(2381, wrenix,
-        "Take the job, then use Wrenix's Gizmotronic Apparatus next to him for an E.C.A.C. and Thieves' Tools. Check that both are in your bags."),
+        "Take the job, then talk to Wrenix's Gizmotronic Apparatus next to him. Choose its yellow button for Thieves' Tools and its red button for an E.C.A.C. Check that both are in your bags."),
       objective(2381, ba("Buccaneer's Strongbox", 65.06, 45.45),
         "Board the Tide Razor, the pirate ship moored off the Southsea camps south of Ratchet. Below deck, cast Pick Lock on the Buccaneer's Strongboxes until your Lockpicking is about 70. Use Next when you get there."),
       withItem(7970, objective(2381, ba("The Jewel of the Southsea", 64.95, 45.44),

@@ -9,11 +9,11 @@ replaces the placeholder built from the Alliance guide.
 - **Neither reference guide has Horde Riverglades or Shen'dralas chapters** (reference guide A has only
   an Alliance Riverglades group; reference guide B's Horde quest cache has no Riverglades entry). Nothing
   here comes from them.
-- **QuestieDB** (the cached Forever data used by `tools/questfacts.py`, and the newest Forever data
+- **quest database** (the cached Forever data used by `tools/questfacts.py`, and the newest Forever data
   commit on GitHub, 2026-10-26) has none of these quests.
 - **Givers, enders and their positions**: bindonforever.com quest pages,
   `https://bindonforever.com/quest/<id>` for every quest ID below. The site states its givers,
-  positions and chains are QuestieDB-format data for client build 1.60.1.70888 (Nov 10), not yet
+  positions and chains are quest database-format data for client build 1.60.1.70888 (Nov 10), not yet
   checked in game.
 - **Creature positions**: bindonforever.com NPC pages, `https://bindonforever.com/npc/<id>`, reached
   from [the Riverglades NPC list](https://bindonforever.com/npcs/riverglades). Each page shows a

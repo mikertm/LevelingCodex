@@ -43,7 +43,7 @@ ICON = ["makeTalentWindow:icon:ClassTalentFrame", "login", "talentByIcon", "tale
 NOART = ["skills:BS;97;150,MI;140;225:professions", "makeTalentWindow:name", "login", "profTab", "levelups", "browse", "everyButton", "settings", "talentByName",
          "talentPoints", "talentShape", "copyMacro", "debugReport", "artUsed", "talentTree", "macroMockups"]
 PERSISTED = ["persist", "login", "browse", "settings", "bannerTest", "minimap", "talentPathSaved", "euiDebug"]
-# EllesmereUI installed ("eui" makes it before the addon loads; "eui:off" = its skin turned off for the
+# external UI installed ("eui" makes it before the addon loads; "eui:off" = its skin turned off for the
 # Codex, "eui:manual" = its callback runs only at the euiDispatch step).
 EUI = ["eui", "makeTalentWindow:name", "login", "questStart", "euiSkin", "talentByName", "classTrainer", "euiCards",
        "browse", "everyButton", "euiThemePick", "euiAccent", "copyMacro", "debugReport", "euiDebug"]
@@ -202,7 +202,7 @@ def run_sequence(name, cls, minimal, files, steps):
     for step in steps:
         if step == "eui" or step.startswith("eui:"):
             opts = ", ".join("%s = true" % o for o in step.split(":")[1:])
-            pre += "\nMOCK.makeEllesmere({ %s })\n" % opts
+            pre += "\nMOCK.makeSkinProvider({ %s })\n" % opts
     lua, err = new_state(cls, minimal, files, pre or None, noart=steps is NOART)
     if not err and "lost" in steps:
         lua.execute(LOST_DB.encode())
@@ -722,7 +722,7 @@ def talent_tree_checks():
             if t.talents[i].name == name:
                 return t.talents[i]
     ms = find("WARRIOR", "Mortal Strike")
-    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"] \
+    if not ms or (ms.tab, ms.row, ms.col, ms.req) != (1, 7, 2, 30) or list(ms.prereq.values()) != ["Sweeping Strikes"]\
             or [2, 48] not in [list(r.values()) for r in ms.spell.values()]:
         errors.append("talent tree WARRIOR: Mortal Strike should be Arms row 7 col 2, 30 points, after Sweeping Strikes, rank 2 at 48")
     if find("HUNTER", "Lightning Reflexes") or find("PRIEST", "Holy Specialization"):
@@ -948,7 +948,7 @@ def update_audit_checks(gamedata, ref, tag):
     import tempfile
     built = copy.deepcopy(ref)
     built["quests"]["maps"] = {int(key): value for key, value in built["quests"]["maps"].items()}
-    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata")
+    names = ("latest_build", "fetch", "build_reference", "write_reference", "load_reference", "full_audit", "write_talentdata", "refresh_loot")
     saved = {name: getattr(gamedata, name) for name in names}
     audited, calls, trees_written = [], [], []
     fd, path = tempfile.mkstemp(suffix=".json")
@@ -965,6 +965,7 @@ def update_audit_checks(gamedata, ref, tag):
         gamedata.load_reference = lambda p=path: saved["load_reference"](p)
         gamedata.full_audit = lambda r, only=None: calls.append(r) or audited.extend(saved["full_audit"](r, "QUESTS")) or audited
         gamedata.write_talentdata = lambda r: trees_written.append(r)
+        gamedata.refresh_loot = lambda r: None
         sys.argv = ["gamedata.py", "update"]
         with contextlib.redirect_stdout(io.StringIO()):
             gamedata.main()
@@ -1015,6 +1016,11 @@ def herbalism_tool_checks(gamedata, ref, guide, tag):
 
 
 def main():
+    # Run offline generator/engine units once in the parent, not once per Lua scenario.
+    import unittest
+    loot_units = unittest.defaultTestLoader.discover(HERE, pattern="test_loot*.py")
+    if not unittest.TextTestRunner(verbosity=1).run(loot_units).wasSuccessful():
+        return 1
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = sys.argv[1:]
@@ -1035,23 +1041,35 @@ def main():
 
     runs = []
     for minimal in (False, True):
+        for scenario in ("lootTab", "lootGraphics", "lootCardViews", "lootDetailCards", "lootBrowse", "lootWeaponRoutes", "lootLevelAvailability", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootTooltipStaysOpen", "lootPad", "lootCacheLate"):
+            runs.append(("WARRIOR/%s/%s" % ("minimal" if minimal else "full", scenario), "WARRIOR", minimal, [scenario]))
+        for loot_class in CLASSES:
+            if loot_class != "WARRIOR":
+                runs.append(("%s/%s/lootTab" % (loot_class, "minimal" if minimal else "full"), loot_class, minimal, ["lootTab"]))
+    for minimal in (False, True):
         variant = "minimal" if minimal else "full"
         runs.append(("WARRIOR/%s/quests" % variant, "WARRIOR", minimal, ["login", "questStart"]))
+        for scenario in ("questTabOverview", "questTabItinerary", "questTabDungeonStates", "questTabStagePreview", "questBoardIcons", "questBoardAreaMaps", "questBoardJourney", "questBoardDungeons", "questBoardSearch", "questBoardExternalGuide"):
+            runs.append(("WARRIOR/%s/quests-" % variant + scenario, "WARRIOR", minimal, [scenario]))
         for scenario in (("questButtonMinimalLayout", "questButtonDragPreview") if minimal else
                          ("questButtonOptions", "questButtonSavedLayout", "questButtonInvalidLayout", "questButtonController",
                           "questButtonDragging", "questButtonDragPreview")):
             runs.append(("WARRIOR/%s/quests-" % variant + scenario, "WARRIOR", minimal, [scenario]))
         if minimal:
-            runs.append(("WARRIOR/minimal/questie", "WARRIOR", True, ["questQuestieMinimal"]))
+            runs.append(("WARRIOR/minimal/integration", "WARRIOR", True, ["questIntegrationMinimal"]))
         if not minimal:
             for scenario in ("questProgress", "questClassic", "questPastRoute", "questNavigation", "questTravelArrow",
                              "questRedridgeOverlap", "questObjectiveWaypoints", "questDuskwoodHandoff", "questDuskwoodZoneEntry",
-                             "questDuskwoodDagger",
+                             "questDuskwoodDagger", "questSouthshoreForebodingPlans", "questHordeMissedPickup", "questBrackenwallVenom",
                              "questRecorder",
                              "questController", "questControllerBackup", "questSkyborne", "questWestfall", "questCatchup", "questLayout",
                              "questBind", "questGossip", "questFlights", "questDuskwood", "questLakeshireHandoff", "questItem",
                              "questRace", "questRaceHuman", "questPassed", "questBreadcrumb",
-                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questWetlandsEarly", "questRouteEnd", "questStranglethornRoad", "questWetlandsDig", "questStepChecklist", "questWetlandsAfterEarly", "questNoCheckNotes",
+                             "questWetlands", "questWetlandsTravel", "questWetlandsEnd", "questWetlandsEarly", "questRouteEnd",
+                             "questStranglethornRoad", "questStranglethornStockpile", "questWetlandsDig", "questStepChecklist", "questWetlandsAfterEarly",
+                             "questWetlandsHarloPickup", "questTheramoreArrival", "questBootyBayArrival", "questNoCheckNotes",
+                             "questSkycutterDalaranJoin", "questRagefireZeppelinRoundTrip", "questHordeCozyWestfallJoin",
+                             "questWinterspringIronforgeJoin", "questHillsbradThunderBluffJoin",
                              "questStartDwarf", "questStartGnome", "questStartNightElf", "questStartSkyborne",
                              "questStartHordeOrc", "questStartHordeTroll", "questStartHordeTauren", "questStartHordeScourge", "questStartHordeSkyborne", "questHordeSkyborne", "questHordeBarrens", "questHordeSilverpine", "questHordeStranglethorn", "questHordeRouteEnd", "questHordeDungeon",
                              "questRoutePick", "questNoteOnce", "questNoteSaved", "questNoteLater",
@@ -1059,21 +1077,27 @@ def main():
                              "questDetour", "questCrossZoneResume", "questZoneResume", "questLoginResume",
                              "questHistoryResume", "questAlternateRoutes", "questLochHistory", "questLochReady",
                              "questLochFlight", "questLochBingles", "questWestfallDetour", "questDetourLibrary",
-                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questPinCapacity", "questLibraryResume",
-                             "questQuestieAuto", "questQuestieTracker", "questQuestieDB", "questQuestieNearest",
-                             "questQuestieNearestItem", "questQuestieNearestPart", "questQuestieNearestError",
-                             "questQuestieTrackerLive", "questQuestieNearestFallback", "questQuestieNearestCleared",
-                             "questQuestieArrowClamp", "questQuestieNearestRetext", "questQuestieNearestLateData",
-                             "questQuestieRecheck", "questQuestieNearestEmptyText", "questQuestieNearestEmptyName",
-                             "questQuestieNearestNoRows", "questQuestieNearestNoScale", "questQuestieNearestRoundTrip",
+                             "questDungeonContent", "questDungeonPlan", "questGrey", "questLoginWetlandsLocal", "questAlternateSharedPickup", "questSouthshoreTurnin", "questPinCapacity", "questLibraryResume",
+                             "questIntegrationAuto", "questIntegrationTracker", "questIntegrationDB", "questIntegrationNearest",
+                             "questIntegrationNearestItem", "questIntegrationNearestPart", "questIntegrationNearestError",
+                             "questIntegrationTrackerLive", "questIntegrationNearestFallback", "questIntegrationNearestCleared",
+                             "questIntegrationArrowClamp", "questIntegrationNearestRetext", "questIntegrationNearestLateData",
+                             "questIntegrationRecheck", "questIntegrationNearestEmptyText", "questIntegrationNearestEmptyName",
+                             "questIntegrationNearestNoRows", "questIntegrationNearestNoScale", "questIntegrationNearestRoundTrip",
                              "questCorpse", "questTravelFlight", "questTravelBind", "questGrind", "questCleanup", "questReward", "questRewardStale", "questRewardSlowPrice", "questRewardButtons", "questMobTarget",
                              "questMapPin", "questMapPinReload", "dungeonDoneBefore", "questSetupLevelled", "stepSound", "stepKinds", "stepUpNext", "stepXP", "questPortrait", "stepButtons", "stepComfort", "stepSetupWindow", "stepCompactNote", "stepScaleButtons", "stepScaleSaved", "stepCompactDistance", "stepTitles", "questWarriorFangs", "questWarriorFangsNotTaken",
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "questBuyUsedUp", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questPreviewAhead", "questDanger", "questParty", "questPartySync", "questPartyGoal", "questPartyChat", "questPartyChatSteps", "questPartyHeartbeat", "questPartyTab", "questPartyShare", "questPartyCatchUp",
-                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questDungeonChoice",
-                             "questBossSteps", "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",
-                             "questEliteChain", "questEliteFresh"):
+                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent",
+                             "questDarkshireStranglethornHandoff", "questDarkshirePantherSuggestion", "questDarkshireSouthshorePreview", "questDungeonChoice",
+                             "questBossSteps", "questStockadeBossGuide", "questDungeonEncounterGuides",
+                             "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",
+                             "questEliteChain", "questEliteFresh", "questSovikDungeon", "questSovikRoute", "questSovikWithoutRigWars",
+                             "questIncendiariesDone", "questIncendiariesReady", "questAwbeePickup", "questFinklePickup",
+                             "questHearthModernCooldown", "questFlightRouteInitialization", "questCompletedSet",
+                             "questDungeonPreparation", "questDungeonIncompletePreparation", "questWetlandsRidgeLoop", "questWetlandsCarnageChoice", "questWetlandsCarnageSummon", "questPartyPolishedChat",
+                             "questPartyAnnouncementPreview", "questPartyAnnouncementBudget", "questPartyProviderAnnounce"):
                 runs.append(("WARRIOR/full/quests-" + scenario, "WARRIOR", False, [scenario]))
             runs.append(("WARRIOR/full/blocked-report", "WARRIOR", False, ["blockedReport"]))
             for cls, scenario in (("HUNTER", "questHunterGuides"), ("SHAMAN", "questShamanGuides"),
@@ -1084,7 +1108,10 @@ def main():
         for cls in CLASSES:
             runs.append(("%s/%s/icon" % (cls, variant), cls, minimal, ICON))
         runs.append(("WARRIOR/%s/warrior-macros" % variant, "WARRIOR", minimal, ["login", "warriorPackMacros"]))
+        runs.append(("DRUID/%s/druid-macros" % variant, "DRUID", minimal, ["login", "druidMacros"]))
         runs.append(("WARRIOR/%s/talent-path-api" % variant, "WARRIOR", minimal, ["login", "talentPathApi"]))
+        if minimal:
+            runs.append(("WARRIOR/minimal/quest-announcement-preview", "WARRIOR", True, ["questPartyAnnouncementPreview"]))
         if not minimal:
             for cls in ("DRUID", UNSUPPORTED):
                 runs.append(("%s/full/talent-path-api" % cls, cls, False, ["login", "talentPathApi"]))
@@ -1215,8 +1242,10 @@ def main():
             runs.append(("WARRIOR/full/craft-retail", "WARRIOR", False, CRAFT_RETAIL))
             runs.append(("WARRIOR/full/craft-scrollbox", "WARRIOR", False, CRAFT_SCROLLBOX))
             for mode in ("classic", "retail"):
-                runs.append(("WARRIOR/full/craft-herbalism-" + mode, "WARRIOR", False,
-                             ["makeCraftWindow:" + mode, "login", "craftHerbalism"]))
+                runs.append(("WARRIOR/full/craft-gathering-" + mode, "WARRIOR", False,
+                             ["makeCraftWindow:" + mode, "login", "craftGathering"]))
+            runs.append(("WARRIOR/full/craft-profession-book", "WARRIOR", False,
+                         ["login", "craftProfessionBook"]))
 
     runs = [r for r in runs if not only or only in r[0]]
     jobs = [(name, cls, minimal, files, steps) for name, cls, minimal, steps in runs]

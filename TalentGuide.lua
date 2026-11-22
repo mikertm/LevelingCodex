@@ -440,7 +440,7 @@ local function makeTrace()
   t.tag = ns.art.frame("Frame", nil, t)
   t.tag:SetSize(10, 22)
   t.tag:SetPoint("BOTTOM", t, "TOP", 0, 8)
-  -- the flat look's fill and underline (shown without the tooltip border and EllesmereUI's panel)
+  -- the flat look's fill and underline (shown without the tooltip border and external UI's panel)
   t.tag.bg = t.tag:CreateTexture(nil, "BACKGROUND"); t.tag.bg:SetAllPoints()
   t.tag.line = t.tag:CreateTexture(nil, "BORDER")
   t.tag.line:SetPoint("BOTTOMLEFT"); t.tag.line:SetPoint("BOTTOMRIGHT"); t.tag.line:SetHeight(2)
@@ -493,14 +493,14 @@ local function paintTrace(t)
   t.shapeGlow:SetVertexColor(a[1], a[2], a[3]); t.shapeLine:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
   t.disc:SetVertexColor(a[1], a[2], a[3])
   t.spark:SetVertexColor(C.gem[1], C.gem[2], C.gem[3]); t.spark2:SetVertexColor(C.gem[1], C.gem[2], C.gem[3])
-  -- the tag's frame, again after a theme switch: the tooltip border, the flat look or EllesmereUI's panel
+  -- the tag's frame, again after a theme switch: the tooltip border, the flat look or external UI's panel
   local tag = t.tag
   if tag.chromeFor ~= ns.themeVersion then
     tag.chromeFor = ns.themeVersion
-    local skinned = ns.ellesmere.backing(tag, "Panel")
+    local skinned = ns.skinSupport.backing(tag, "Panel")
     tag.blizz = ns.art.backdrop(tag, "tooltip")
     tag.bg:SetShown(not skinned and not tag.blizz); tag.line:SetShown(not skinned and not tag.blizz)
-    ns.ellesmere.fonts(tag)
+    ns.skinSupport.fonts(tag)
   end
   if tag.blizz then
     tag:SetBackdropColor(0.03, 0.03, 0.05, 0.92)
@@ -551,7 +551,7 @@ local function makeHint()
   h:SetClampedToScreen(true)
   h:EnableMouse(false)
   h:Hide()
-  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
+  A.cardChrome(h) -- the tooltip border, flat edges, or external UI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")

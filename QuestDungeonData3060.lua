@@ -6,7 +6,7 @@ local route = LevelingCodexQuests.ALLIANCE
 local M, on = B.maps, B.on
 local at, q, accept, finish, action = B.at, B.q, B.accept, B.finish, B.action
 local objective, part, withItem, uncertain = B.objectiveAt, B.objectivePart, B.withItem, B.note
-local qdb = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local qdb = "Cached quest records (revision 0f7d8ad)"
 
 local function add(section, prepare, inside, after)
   section.side, section.category, section.verified = true, "dungeon", false
@@ -81,6 +81,65 @@ end
 
 B.dungeon = { add = add, tip = tip, enter = enter, copy = copy }
 
+do
+  local name = "The Drowned City"
+  local krazek = on.stv("Krazek", 26.94, 77.21)
+  local dibbs = on.hillsbrad("Loremaster Dibbs", 50.57, 57.09)
+  local timear = on.alterac("Archmage Timear", 15.37, 74.09)
+  local abra = on.alterac("Abra Cadabra", 12.01, 70.45)
+  local karnik = on.ironforge("Historian Karnik", 77.54, 11.82)
+  q(95787, "Take Two With Water", 40, 30, 95786, true)
+  q(95788, "Magics of the Drowned City", 40, 30, 95786, true)
+  q(95798, "The Web of Magic", 40, 30, 95788, true)
+  q(95799, "Findings for the Explorer's League", 40, 30, 95787, true)
+
+  add({ id = "dungeon-drowned-city", title = name, zone = M.stv, levels = { 35, 40 }, instanceID = 2970,
+    bosses = {
+      { name = "Zul'Alai", encounter = 3474,
+        tip = "Clear nearby patrols before pulling. Look for the first tablet down the left path after the fight." },
+      { name = "Var'Taka", encounter = 3475,
+        tip = "Check for the tablet near the room, then click the Glowing Pearl to open the way onward." },
+      { name = "Captain Dreadrise", encounter = 3476,
+        tip = "Interrupt Waterbolt Volley and break Abyssal Bubble to free its target. Click the Glowing Pearl after the fight." },
+      { name = "Gill", optional = "rare",
+        tip = "Check the right side of the approach to the Deep Archives as you pass." },
+      { name = "Umbra", optional = "rare",
+        tip = "Look for the rare and its pack in the Deep Archives." },
+      { name = "Deathless Marrow", encounter = 3478,
+        tip = "Click both Glowing Pearls to open the room. Loot the Ancient Gurubashi Idol if you have Timear's quest." },
+      { name = "Primeval Elemental (optional)", encounter = 3511,
+        tip = "Take the right-hand water tunnels in the Deep Archives. Kill the Undying Offerings to activate the elemental." },
+      { name = "Min'loth the Serpent", encounter = 3479,
+        tip = "Keep a dispel ready for the serpent phase. Check for the nearby tablet before you leave." },
+    },
+    sources = {
+      "https://news.blizzard.com/en-gb/article/24301455/explore-the-new-dungeons-of-world-of-warcraft-forever",
+      "https://www.wowhead.com/forever/guide/the-drowned-city-dungeon-overview-location-rewards",
+      "https://www.icy-veins.com/wow-forever/drowned-city-quests/",
+    } },
+    join(copy("stv-36", { 203, 204, 207, 205 }), copy("stv-41", { 205, 95786 }), {
+      finish(95786, dibbs, "Deliver Nimetz's report to Dibbs in Southshore's town hall."),
+      accept(95787, dibbs), accept(95788, dibbs),
+      accept(97130, timear, "Find Timear outside the Violet Hold in Dalaran while you are north of Stranglethorn."),
+      accept(95789, krazek), accept(95791, krazek),
+      enter(name, on.stv("Sunken Hollow", 21.4, 27.9),
+        "Swim out south of the Haunted Isle and dive by the large crab remains. Follow the cavern to the portal."),
+    }), {
+      objective(95787, nil, "Make rubbings of the four tablets. Look down the left path after Zul'Alai, in the pirate area by the skull, and near Var'Taka's and Min'loth's rooms.",
+        "First Tablet of I'lalai", "Second Tablet of I'lalai", "Third Tablet of I'lalai", "Fourth Tablet of I'lalai"),
+      objective(95788, nil, "Loot five fetishes from trolls as you clear the city.", "5 I'lalai Fetishes"),
+      objective(95789, nil, "Loot ten artifacts from the Saltseer pirates. Check the count before leaving with the group.", "10 Voodoo-Infused Artifacts"),
+      objective(95791, nil, "Kill three Saltseer Coroners along the pirate route and defeat Captain Dreadrise.", "3 Saltseer Coroners", "Captain Dreadrise"),
+      objective(97130, nil, "Loot the idol from the Deathless Guardians encounter.", "Ancient Gurubashi Idol"),
+    }, {
+      finish(95789, krazek), finish(95791, krazek),
+      finish(95787, dibbs), accept(95799, dibbs),
+      finish(95788, dibbs), accept(95798, dibbs),
+      finish(95798, abra), finish(97130, timear),
+      finish(95799, karnik, "Deliver the translations to Historian Karnik in the Hall of Explorers."),
+    })
+end
+
 -- A pickup whose prerequisite another guide or the route gives: shown once that quest is turned in
 -- (`ifDone`), so the guide still plays on its own.
 local function afterDone(id, step)
@@ -106,9 +165,9 @@ do
     instanceID = 189, instance = sm,
     links = { "dungeon-scarlet-monastery-graveyard", "dungeon-scarlet-monastery-armory", "dungeon-scarlet-monastery-cathedral" },
     bosses = {
-      { name = "Houndmaster Loksey", npc = 3974,
+      { name = "Houndmaster Loksey", encounter = 446, npc = 3974,
         tip = "He waits with three hounds and sends them in at the start. Kill the dogs first, then tank him away from the next pack; he Bloodlusts, so save a stun for it." },
-      { name = "Arcanist Doan", npc = 6487,
+      { name = "Arcanist Doan", encounter = 447, npc = 6487,
         tip = "Clear the last hall first. When he shields himself and starts Detonation, everyone runs out of range; he also Polymorphs and Silences, so spread out." },
     },
     sources = { "https://www.wowhead.com/forever/zone=796", "https://www.wowhead.com/forever/quest=96800", qdb } }, {
@@ -135,7 +194,7 @@ do
     instanceID = 189, instance = sm,
     links = { "dungeon-scarlet-monastery-cathedral", "dungeon-scarlet-monastery-library" },
     bosses = {
-      { name = "Herod", npc = 3975,
+      { name = "Herod", encounter = 448, npc = 3975,
         tip = "Clear the training hall and his room first. During Whirlwind the melee step back and the tank kites him; at low health he enrages, and a wave of trainees runs in after he dies, so stay ready." },
     },
     sources = { "https://www.wowhead.com/forever/zone=796", qdb } }, {
@@ -162,12 +221,11 @@ do
     instanceID = 189, instance = sm,
     links = { "dungeon-scarlet-monastery-library", "dungeon-scarlet-monastery-armory", "dungeon-scarlet-monastery-graveyard" },
     bosses = {
-      { name = "High Inquisitor Fairbanks", npc = 4542,
+      { name = "High Inquisitor Fairbanks", encounter = 449, npc = 4542,
         tip = "Optional, behind the side door in the courtyard. He is weak but heals himself; interrupt and burn him." },
-      { name = "Scarlet Commander Mograine", npc = 3976,
-        tip = "Clear every pack in the cathedral first. Ranged and healers stay back; his hammer stun and shield are aimed at the tank." },
-      { name = "High Inquisitor Whitemane", npc = 3977,
-        tip = "She joins when Mograine falls, sleeps the group and raises him. Have someone free to wake the healer, then kill Mograine again and burn her." },
+      { name = "Mograine and Whitemane", encounter = 450, npc = 3976, finishName = "High Inquisitor Whitemane",
+        targets = { "Scarlet Commander Mograine", "High Inquisitor Whitemane" },
+        tip = "Clear the entire cathedral before pulling Mograine at the altar. Whitemane joins when he falls." },
     },
     sources = { "https://www.wowhead.com/forever/zone=796", qdb } }, prep, {
     part(1053, 4, nil, "Library wing: kill Houndmaster Loksey at the start of the halls.", "Houndmaster Loksey"),
@@ -191,17 +249,17 @@ do
   add({ id = "dungeon-razorfen-downs", title = name, zone = M.barrens, levels = { 35, 42 }, instanceID = 129, instance = name,
     links = { "dungeon-razorfen-kraul" },
     bosses = {
-      { name = "Tuten'kash", npc = 7355,
+      { name = "Tuten'kash", encounter = 2780, npc = 7355,
         tip = "Ringing the gong calls spider waves and then Tuten'kash. His poison and web stack on the tank, so cleanse it and save a cooldown for the end." },
-      { name = "Plaguemaw the Rotting", npc = 7356,
+      { name = "Plaguemaw the Rotting", encounter = 2781, npc = 7356,
         tip = "A plain fight. Cure his disease on the tank and keep him away from the next pack." },
-      { name = "Mordresh Fire Eye", npc = 7357,
+      { name = "Mordresh Fire Eye", encounter = 2782, npc = 7357,
         tip = "He casts Fireball and Fire Nova; interrupt the fireballs and melee watch their health." },
-      { name = "Glutton", npc = 8567,
+      { name = "Glutton", encounter = 2784, npc = 8567,
         tip = "He enrages and grows stronger the longer you take, so use cooldowns from the start. His Disease Cloud hurts melee." },
-      { name = "Ragglesnout (rare, may be absent)", npc = 7354,
-        tip = "Interrupt his Shadow Word: Pain and heals. Otherwise easy." },
-      { name = "Amnennar the Coldbringer", npc = 7358,
+      { name = "Ragglesnout (rare, may be absent)", encounter = 2783, npc = 7354,
+        tip = "Check Amnennar's room as you clear toward the last platform." },
+      { name = "Amnennar the Coldbringer", encounter = 2785, npc = 7358,
         tip = "Frost Nova roots the group and he calls frost adds twice. Kill the adds fast and keep the healer out of melee." },
     },
     sources = { "https://www.wowhead.com/forever/zone=722", qdb } }, prep, {
@@ -267,21 +325,21 @@ do
   })
   add({ id = "dungeon-uldaman", title = name, zone = M.badlands, levels = { 38, 47 }, instanceID = 70, instance = name,
     bosses = {
-      { name = "Revelosh", npc = 6910,
+      { name = "Revelosh", encounter = 547, npc = 6910,
         tip = "Kill his trogg guards first and interrupt his Chain Lightning. He drops the Shaft of Tsol for the Hidden Chamber." },
-      { name = "The Lost Dwarves (Baelog, Eric and Olaf)", npc = 6906,
+      { name = "The Lost Dwarves (Baelog, Eric and Olaf)", encounter = 548, npc = 6906,
         tip = "Three dwarves at once: crowd control or kill Eric first, keep Olaf faced away and stop Baelog's arrows with line of sight." },
-      { name = "Ironaya", npc = 7228,
+      { name = "Ironaya", encounter = 549, npc = 7228,
         tip = "Her Arcing Smash hits everyone in front, so face her away. She knocks the tank up and stomps; stay spread." },
-      { name = "Obsidian Sentinel", npc = 7023,
+      { name = "Obsidian Sentinel", encounter = 1887, npc = 7023,
         tip = "It splits off shards as its health drops. Kill the shards quickly or the sentinel heals." },
-      { name = "Ancient Stone Keeper", npc = 7206,
+      { name = "Ancient Stone Keeper", encounter = 551, npc = 7206,
         tip = "Tank it away from the group; it pulses damage around itself. Burn it before the sand pools add up." },
-      { name = "Galgann Firehammer", npc = 7291,
+      { name = "Galgann Firehammer", encounter = 552, npc = 7291,
         tip = "Interrupt his Fire Nova and Flame Lash. Melee step out when he starts casting." },
-      { name = "Grimlok", npc = 4854,
+      { name = "Grimlok", encounter = 553, npc = 4854,
         tip = "Kill his basilisks first. He shrinks and Lightning Bolts the group; interrupt where you can." },
-      { name = "Archaedas", npc = 2748,
+      { name = "Archaedas", encounter = 554, npc = 2748,
         tip = "Clear the room edges, then wake him at the altar. He wakes dwarf guardians and later stone watchers; the tank holds him while others kill the adds." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1337", qdb } }, prep, {
@@ -301,8 +359,9 @@ do
       "Hidden Chamber explored"),
     objective(1360, nil, "Krom's chest is in the North Common Hall, past Ironaya.", "Krom Stoutarm's Treasure"),
     withItem(7666, accept(2198, nil, "If a Shattered Necklace drops, use it.")),
-    accept(2278, nil, "After Archaedas, speak to the stone watcher and use the Discs of Norgannon."),
-    finish(2278, nil, "Activate the Discs of Norgannon."),
+    accept(2278, nil, "After Archaedas, click the Discs of Norgannon in the treasure chamber to accept the quest."),
+    objective(2278, nil, "Talk to the Lore Keeper of Norgannon and continue through every dialogue page until the objective completes.", "Stone watcher's lore"),
+    finish(2278, nil, "Click the Discs of Norgannon again, then take their next quest before leaving the chamber."),
     accept(2279, nil, "Take the miniature discs for the Explorers' League."),
   }, {
     finish(723, ryedol, "Ride to Ryedol's camp in the Badlands."), accept(724, ryedol),
@@ -314,7 +373,9 @@ do
     finish(2240, stormpike), finish(1360, krom),
     finish(2279, magellas), accept(2439, magellas), finish(2439, dinita, "Dinita Stonemantle works in the Vault of Ironforge."),
     finish(2198, talvash, "Talvash del Kissel is in the Mystic Ward."),
-    accept(2199, talvash, "His next step wants five Silver Bars and a later visit back to Uldaman."),
+    accept(2199, talvash, "Talvash wants five Silver Bars for his information about the necklace."),
+    objective(2199, talvash, "Bring five Silver Bars from Mining or the Auction House.", "5 Silver Bars"),
+    finish(2199, talvash, "Finish at Talvash. His next quest is for a separate return to Uldaman."),
   })
 end
 
@@ -322,16 +383,16 @@ end
 do
   local name = "Krol'dok Stronghold"
   local rg = on.riverglades
-  local brant = rg("Demar Brant", 66.6, 81.0)
-  local ashe = rg("Ashe Amberhall", 66.6, 81.0)
-  local riftan = rg("Sergeant Riftan", 30.6, 49.0)
-  local dumas = rg("Alphonse Dumas", 64.4, 82.0)
-  local sable = rg("Melanie Sable", 66.2, 83.2)
-  fromItem(94980, 267138, "Krol'dok Moulding", 44, 40, nil, true)
-  need(94981, "Key Ingredients", 44, 40, 94980, true)
-  need(94997, "Lingering Essence", 44, 38, 94983, true)
-  need(94998, "Curios of Curiosity", 44, 38, 94997, true)
-  fromItem(94926, 266889, "Drop the Hammer", 44, 40, nil, true)
+  local brant = rg("Demar Brant", 66.67, 81.01)
+  local ashe = rg("Ashe Amberhall", 66.75, 81.1)
+  local riftan = rg("Sergeant Riftan", 30.71, 49.06)
+  local dumas = rg("Alphonse Dumas", 64.46, 82.03)
+  local sable = rg("Melanie Sable", 66.21, 83.36)
+  fromItem(94980, 267138, "Krol'dok Moulding", 41, 40, nil, true)
+  need(94981, "Key Ingredients", 41, 40, 94980, true)
+  need(94997, "Lingering Essence", 42, 38, 94983, true)
+  need(94998, "Curios of Curiosity", 42, 38, 94997, true)
+  fromItem(94926, 266889, "Drop the Hammer", 45, 40, nil, true)
   local prep = copy("riverglades-shroud", { 94886, 94907 })
   insertAfter(prep, 94886, "accept", { accept(94982, brant, "Brant wants the Eye of Mugg from the stronghold's overlord.") })
   insertAfter(prep, 94886, "turnin", { accept(94983, riftan, "Riftan wants bangles from the Twilight's Hammer inside Krol'dok.") })
@@ -350,9 +411,9 @@ do
       { name = "Handler Ashka", encounter = 3453,
         tip = "She fights with two wolves. Kill or crowd control the wolves first; she may stand off the main road." },
       { name = "Nar'gurk", encounter = 3449,
-        tip = "He takes control of a player. Fight near cover, keep a crowd control ready for the charmed player and do not kill them." },
+        tip = "Clear or crowd control the gnolls and cultists before engaging Nar'gurk." },
       { name = "Bossman Toof",
-        tip = "Waits past the bridge. Not part of the game's boss list, but he hits hard; pull him without the nearby ogres." },
+        tip = "Head across the bridge after Nar'gurk. Look for Toof with his shamans." },
       { name = "Overseer Mugg", encounter = 3451,
         tip = "The last boss at the top of the hill. Spread out because he leaps around the room, and kill his adds first: they cut the healing on the tank." },
     },
@@ -364,18 +425,18 @@ do
     uncertain(withItem(267138, accept(94980, nil, "If a Krol'dok Moulding drops for you, use it.")),
       "The moulding is party loot; which mob drops it is not published."),
     uncertain(withItem(266889, accept(94926, nil, "If Komuk's Warmaul drops, use it to start Drop the Hammer.")),
-      "Quest giver item found in the client data; drop source and hand-in not published."),
+      "Quest starter from the client data. Confirm where Komuk's Warmaul drops."),
   }, {
     finish(94983, riftan, "Riftan waits at the edge of the Twilight's Shroud."),
-    uncertain(accept(94997, riftan, "Take the satchel of mementos back to Ashe."), "Giver of the follow-up not confirmed."),
-    finish(94984, ashe), uncertain(finish(94997, ashe), "Follow-up chain from published notes; check in game."),
-    uncertain(accept(94998, ashe), "Follow-up chain from published notes; check in game."),
-    uncertain(finish(94998, sable, "Melanie Sable, the enchanter at Farholde Keep, studies the curios."), "Hand-in from published notes."),
+    accept(94997, riftan, "Take the satchel of mementos back to Ashe."),
+    finish(94984, ashe), finish(94997, ashe),
+    accept(94998, ashe),
+    finish(94998, sable, "Melanie Sable, the enchanter at Farholde Keep, studies the curios."),
     finish(94982, brant),
-    uncertain(finish(94980, dumas, "Alphonse Dumas at Farholde Keep can cast the moulding into a key."), "Hand-in from published notes."),
-    uncertain(accept(94981, dumas, "He needs 4 Thick Leather and 12 Iron Bars for the Krol'dok Compound Key."), "Quest name and giver from published notes."),
-    uncertain(finish(94981, dumas), "Quest name and giver from published notes."),
-    uncertain(finish(94926, nil, "Hand in Drop the Hammer where the quest log points."), "Hand-in not published."),
+    finish(94980, dumas, "Alphonse Dumas at Farholde Keep can cast the moulding into a key."),
+    accept(94981, dumas, "He needs 4 Thick Leather and 12 Iron Bars for the Krol'dok Compound Key. Bring them from your professions or buy them at the Auction House."),
+    finish(94981, dumas),
+    finish(94926, brant, "Show Komuk's maul to Demar Brant at Farholde Keep."),
   })
 end
 
@@ -419,19 +480,22 @@ do
   add({ id = "dungeon-zul-farrak", title = name, zone = M.tanaris, levels = { 42, 48 }, instanceID = 209, instance = name,
     links = { "dungeon-sunken-temple" },
     bosses = {
-      { name = "Antu'sul", npc = 8127,
+      { name = "Antu'sul", encounter = 595, npc = 8127,
         tip = "Clear the basilisk pit first. He calls basilisks and heals at low health; kill the adds and interrupt the heal." },
-      { name = "Theka the Martyr", npc = 7272,
+      { name = "Theka the Martyr", encounter = 596, npc = 7272,
         tip = "He turns into a scarab and becomes immune to physical damage; casters finish him. Loot the first Mosh'aru tablet." },
-      { name = "Witch Doctor Zum'rah", npc = 7271,
+      { name = "Witch Doctor Zum'rah", encounter = 597, npc = 7271,
         tip = "Entering the graveyard wakes zombies. Kill his ward totem and interrupt his Shadow Bolt Volley." },
-      { name = "Nekrum and Sezz'ziz (pyramid event)", npc = 7796,
-        tip = "Free Sergeant Bly's group, then hold the stairs against the waves. Nekrum and Sezz'ziz come last; kill Sezz'ziz's heals first. Bly turns on you afterwards." },
-      { name = "Hydromancer Velratha", npc = 7795,
+      { name = "Shadowpriest Sezz'ziz", encounter = 599,
+        tip = "Free Sergeant Bly's group and hold the stairs. Sezz'ziz arrives in the final wave with Nekrum." },
+      { name = "Nekrum Gutchewer", encounter = 598, npc = 7796,
+        tip = "Finish Nekrum after the Shadowpriest. Speak to Bly afterward if your quest needs his rod." },
+      { name = "Hydromancer Velratha", encounter = 593, npc = 7795,
         tip = "In the pool area west of the pyramid. Interrupt her heals and frost bolts; loot the Tiara and the second tablet." },
-      { name = "Gahz'rilla (summoned)", npc = 7273,
-        tip = "Rung up at the pool with the Mallet of Zul'Farrak. Her Freeze and Icicle hit hard; spread out and keep the healer back." },
-      { name = "Chief Ukorz Sandscalp and Ruuzlu", npc = 7267,
+      { name = "Gahz'rilla (summoned)", encounter = 594, npc = 7273,
+        tip = "Clear the pool area, then ring its gong with the Mallet of Zul'Farrak." },
+      { name = "Chief Ukorz Sandscalp and Ruuzlu", encounter = 600, npc = 7267, finishName = "Chief Ukorz Sandscalp",
+        targets = { "Chief Ukorz Sandscalp", "Ruuzlu" },
         tip = "Last at the top of the steps. Kill Ruuzlu or crowd control him; Ukorz enrages and cleaves, so face him away." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1176", qdb } }, prep, {
@@ -439,7 +503,7 @@ do
     objective(2865, nil, "Open the scarab-filled sand mounds and kill the scarabs for shells.", "5 Uncracked Scarab Shells"),
     objective(3527, nil, "Loot one tablet from Theka the Martyr and the other from Hydromancer Velratha.", "First Mosh'aru Tablet", "Second Mosh'aru Tablet"),
     objective(2846, nil, "Velratha carries the Tiara of the Deep.", "Tiara of the Deep"),
-    objective(2768, nil, "After the pyramid event, kill Sergeant Bly and loot the Divino-matic Rod.", "Divino-matic Rod"),
+    objective(2768, nil, "After the pyramid event, recover with the group, then talk to Sergeant Bly and demand the Divino-matic Rod to make him hostile. Kill him and loot the rod.", "Divino-matic Rod"),
     objective(2991, nil, "Nekrum Gutchewer drops his medallion at the end of the pyramid event.", "Nekrum's Medallion"),
     uncertain(objective(2770, nil, "Ring the gong at Velratha's pool with the Mallet of Zul'Farrak and kill Gahz'rilla.", "Gahz'rilla's Electrified Scale"),
       "The Mallet comes from a separate Hinterlands quest; skip this one without it."),
@@ -473,21 +537,21 @@ do
   need(7066, "Seed of Life", 51, 45)
   add({ id = "dungeon-maraudon", title = name, zone = M.desolace, levels = { 44, 52 }, instanceID = 349, instance = name,
     bosses = {
-      { name = "Noxxion", npc = 13282,
+      { name = "Noxxion", encounter = 422, npc = 13282,
         tip = "Orange side. He splits into small spawns and becomes immune; kill the spawns with area damage. Drops the Celebrian Rod." },
-      { name = "Razorlash", npc = 12258,
+      { name = "Razorlash", encounter = 423, npc = 12258,
         tip = "Orange side, patrols. Face his cleave away from the group." },
-      { name = "Lord Vyletongue", npc = 12236,
+      { name = "Lord Vyletongue", encounter = 424, npc = 12236,
         tip = "Purple side. Kill his satyr guards, then chase him when he blinks. Drops the Celebrian Diamond." },
-      { name = "Celebras the Cursed", npc = 12225,
+      { name = "Celebras the Cursed", encounter = 425, npc = 12225,
         tip = "Clear the grove around him. He roots and calls a corrupted forest spirit; kill the add and avoid his Wrath. Speak to his redeemed spirit after." },
-      { name = "Landslide", npc = 12203,
+      { name = "Landslide", encounter = 426, npc = 12203,
         tip = "Tank him in place: his knockback throws the tank, and he calls rock adds at low health." },
-      { name = "Tinkerer Gizlock", npc = 13601,
+      { name = "Tinkerer Gizlock", encounter = 427, npc = 13601,
         tip = "Clear the goblins first. He shoots bombs and his Goblin Dragon Gun burns melee; stay at his side." },
-      { name = "Rotgrip", npc = 13596,
-        tip = "A crocolisk in the water. Her bite poisons the tank; cleanse it and kill her quickly." },
-      { name = "Princess Theradras", npc = 12201,
+      { name = "Rotgrip", encounter = 428, npc = 13596,
+        tip = "Look for the crocolisk in the water below the inner falls." },
+      { name = "Princess Theradras", encounter = 429, npc = 12201,
         tip = "Her dust field and knockback break the group apart. Tank her with your back to a wall and spread ranged. Her death frees Zaetar's spirit." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2100", qdb } }, {
@@ -501,12 +565,12 @@ do
       "Enter the cave in the Valley of Spears. Purple (left) leads to Vyletongue, orange (right) to Noxxion; both join the inner falls."),
   }, {
     objective(7070, nil, "Shadowshard smashers and rumblers on both outer sides drop the fragments.", "10 Shadowshard Fragments"),
-    objective(7067, nil, "Kill the Kolkar khan spirits along the outer paths and loot their amulet pieces, then combine them.", "Amulet of Union"),
+    withItem(17757, objective(7067, nil, "Kill the Nameless Prophet in the outer caves for the Amulet of Spirits. Use it on each khan spirit to make it attackable: three are in the outer caves and two inside the instance, one on each wing. Kill all five, loot their gems and use a gem to combine them into the Amulet of Union.", "Amulet of Union")),
     withItem(17693, objective(7041, nil, "Fill the vial at the orange crystal pool, then use it on the Vylestem vines and kill the scions that emerge.",
       "8 plants healed")),
     objective(7044, nil, "Take the Celebrian Rod from Noxxion and the Celebrian Diamond from Lord Vyletongue.", "Celebrian Rod", "Celebrian Diamond"),
     finish(7044, nil, "Kill Celebras the Cursed, then speak to Celebras the Redeemed."),
-    accept(7046, nil, "Watch Celebras make the scepter."), objective(7046, nil, "Stay until the ritual ends.", "Scepter of Celebras"),
+    accept(7046, nil, "Watch Celebras make the scepter."), objective(7046, nil, "Follow Celebras to the stone, click the Incantations of Celebras and stay until the ritual ends.", "Scepter of Celebras"),
     finish(7046, nil, "Speak to Celebras again for the scepter."),
     objective(7028, nil, "Constructs throughout the inner halls drop the carvings.", "15 Theradric Crystal Carvings"),
     objective(7065, nil, "Use the scepter's portal to Theradras's chamber or walk the falls, then kill Princess Theradras.", "Princess Theradras"),
@@ -562,19 +626,20 @@ do
   add({ id = "dungeon-sunken-temple", title = name, zone = M.swamp, levels = { 47, 54 }, instanceID = 109,
     instance = "Sunken Temple", links = { "dungeon-zul-farrak" },
     bosses = {
-      { name = "Atal'alarion (statue event)", npc = 8580,
+      { name = "Atal'alarion (statue event)", encounter = 3582, npc = 8580,
         tip = "Activate the six statues in the circle in the right order to call him. He knocks people back and hits hard; tank him away from the walls." },
       { name = "Troll minibosses (six balconies)", npc = 5716,
         tip = "Kill all six troll guardians on the balconies to open the way to Jammal'an. Each fights alone with a few adds." },
-      { name = "Jammal'an the Prophet and Ogom the Wretched", npc = 5710,
+      { name = "Jammal'an the Prophet and Ogom the Wretched", encounter = 3589, npc = 5710,
+        finishName = "Jammal'an the Prophet", targets = { "Jammal'an the Prophet", "Ogom the Wretched" },
         tip = "Kill Jammal'an first and interrupt his heals. His Hex of Jammal'an turns a player against the group; crowd control them." },
-      { name = "Dreamscythe and Weaver", npc = 5721,
-        tip = "Two green dragons. Tank them facing away from the group and avoid the breath; kill one at a time." },
-      { name = "Morphaz and Hazzas", npc = 5719,
-        tip = "Two more dragons in the next room. Same rules: face them away and spread the ranged." },
-      { name = "Avatar of Hakkar (optional, needs Hakkari Blood)", npc = 8443,
+      { name = "Dreamscythe", encounter = 3588, tip = "Clear the hall and pull the first pair of green dragons." },
+      { name = "Weaver", encounter = 3587, tip = "Finish the other green dragon in the first pair." },
+      { name = "Morphaz", encounter = 3586, tip = "Clear the approach before pulling the second pair of dragons." },
+      { name = "Hazzas", encounter = 3585, tip = "Finish the other green dragon in the second pair." },
+      { name = "Avatar of Hakkar (optional, needs Hakkari Blood)", encounter = 3583, npc = 8443,
         tip = "Summoned with the blood for The God Hakkar. Put out the four flames when Hakkar's servants appear." },
-      { name = "Shade of Eranikus", npc = 5709,
+      { name = "Shade of Eranikus", encounter = 3584, npc = 5709,
         tip = "Clear his room carefully. His War Stomp and Deep Slumber hit the group; dispel the sleep on the healer. Loot the Essence of Eranikus." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1477", qdb } }, prep, {
@@ -583,7 +648,7 @@ do
     objective(4143, nil, "Deep Lurkers, Murk Worms and Oozes in the flooded halls drop the haze.", "5 Atal'ai Haze"),
     finish(3446, nil, "Find the Altar of Hakkar in the central chamber after the trolls."),
     objective(1446, nil, "Kill Jammal'an the Prophet and loot his head.", "Head of Jammal'an"),
-    uncertain(objective(3528, nil, "At the central altar use the Egg of Hakkar, put out the four flames with Hakkari Blood from the Bloodkeepers, and kill the Avatar of Hakkar.",
+    uncertain(objective(3528, nil, "At the altar use the Egg of Hakkar, put out all four flames with Hakkari Blood from the Bloodkeepers, then kill the Avatar of Hakkar. Loot its Essence of Hakkar and use it to fill your egg.",
       "Filled Egg of Hakkar"), "Event order from the Horde guide: check in game."),
     withItem(10454, accept(3373, nil, "Use the Essence of Eranikus from the Shade.")),
     finish(3373, nil, "Place the essence in the Essence Font in Eranikus's lair."),
@@ -639,40 +704,40 @@ do
   add({ id = "dungeon-blackrock-depths", title = name, zone = M.searing, levels = { 50, 58 }, instanceID = 230, instance = name,
     links = { "dungeon-lower-blackrock-spire" },
     bosses = {
-      { name = "Lord Roccor", npc = 9025,
+      { name = "Lord Roccor", encounter = 228, npc = 9025,
         tip = "A rock elemental near the start. Cure his poison and step out of his Ground Tremor." },
-      { name = "High Interrogator Gerstahn", npc = 9018,
+      { name = "High Interrogator Gerstahn", encounter = 227, npc = 9018,
         tip = "In the Detention Block. Dispel her Shadow Word: Pain and interrupt her Mind Blast." },
-      { name = "Ring of Law", npc = 9027,
+      { name = "Ring of Law", encounter = 230, npc = 9027,
         tip = "Jumping into the arena starts waves and a random boss. Fight in the middle and save cooldowns for the boss." },
-      { name = "Pyromancer Loregrain", npc = 9024,
+      { name = "Pyromancer Loregrain", encounter = 231, npc = 9024,
         tip = "Kill his searing totems and interrupt his Flame Shock." },
-      { name = "Lord Incendius", npc = 9017,
+      { name = "Lord Incendius", encounter = 232, npc = 9017,
         tip = "At the Black Anvil. His knockback and Fire Storm spread the group; tank him against a wall." },
-      { name = "Fineous Darkvire", npc = 9056,
+      { name = "Fineous Darkvire", encounter = 234, npc = 9056,
         tip = "Cleanse his poison and stun his heal. He carries Ironfel." },
-      { name = "Bael'Gar", npc = 9016,
+      { name = "Bael'Gar", encounter = 235, npc = 9016,
         tip = "A fire giant who calls fire elementals. Kill the adds and keep the tank healed." },
-      { name = "General Angerforge", npc = 9033,
+      { name = "General Angerforge", encounter = 236, npc = 9033,
         tip = "At low health he calls a large add wave. Push him low together and burn the last part fast." },
-      { name = "Golem Lord Argelmach", npc = 8983,
+      { name = "Golem Lord Argelmach", encounter = 237, npc = 8983,
         tip = "Clear his golems first: he wakes the ones nearby. Interrupt his Chain Lightning." },
-      { name = "Hurley Blackbreath", npc = 9537,
+      { name = "Hurley Blackbreath", encounter = 238, npc = 9537,
         tip = "In the Grim Guzzler, after the ale kegs are broken. Fight him away from the bar crowd." },
-      { name = "Ribbly Screwspigot", npc = 9543,
+      { name = "Ribbly Screwspigot", encounter = 240, npc = 9543,
         tip = "In the Grim Guzzler. Pulling him angers his bodyguards; take them one at a time." },
-      { name = "Ambassador Flamelash", npc = 9156,
+      { name = "Ambassador Flamelash", encounter = 242, npc = 9156,
         tip = "Fire elementals walk to him from the runes. Stop them reaching him or he grows stronger." },
-      { name = "The Seven", npc = 9039,
+      { name = "The Seven", encounter = 243, npc = 9039,
         tip = "Doom'rel starts seven fights in a row. Kill each dwarf before the next joins." },
-      { name = "Magmus", npc = 9938,
+      { name = "Magmus", encounter = 244, npc = 9938,
         tip = "A giant in the throne room approach; the fire jets on the floor hurt, so stay off them." },
-      { name = "Emperor Dagran Thaurissan", npc = 9019,
+      { name = "Emperor Dagran Thaurissan", encounter = 2790, npc = 9019,
         tip = "Princess Moira heals him. Do not kill her if you want Moira's quest; burn the Emperor through her heals." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1584", qdb } }, prep, {
     finish(4341, nil, "Kharan Mighthammer sits in a cell of the Detention Block."),
-    accept(4342, nil, "Listen to Kharan's story."), objective(4342, nil, "Hear him out.", "Kharan's Tale"), finish(4342, nil, "Speak to Kharan again."),
+    accept(4342, nil, "Listen to Kharan's story."), objective(4342, nil, "Talk to Kharan and continue through every dialogue page until his tale is complete.", "Kharan's Tale"), finish(4342, nil, "Speak to Kharan again."),
     accept(4361, nil, "Take Kharan's news back to Magni."),
     objective(4286, nil, "Loot Dark Iron fanny packs from the dwarves throughout the Depths.", "20 Dark Iron Fanny Packs"),
     objective(4263, nil, "Kill Lord Incendius at the Black Anvil.", "Lord Incendius"),
@@ -680,7 +745,7 @@ do
     uncertain(objective(4123, nil, "Open the safe in the Vault after the four watchers fall for the Heart of the Mountain.", "Heart of the Mountain"),
       "Check the Vault's lock in game."),
     objective(4126, nil, "In the Grim Guzzler, break the ale kegs and kill Hurley Blackbreath for the recipe.", "Lost Thunderbrew Recipe"),
-    objective(4136, nil, "Kill Ribbly Screwspigot in the Grim Guzzler and loot his head.", "Ribbly's Head"),
+    objective(4136, nil, "Talk to Ribbly Screwspigot in the Grim Guzzler and demand his head to start the fight. Kill him and his cronies, then loot his head.", "Ribbly's Head"),
   }, {
     finish(4286, oralius), finish(4263, jalinda), finish(4123, maxwort), finish(4136, yuka),
     finish(4024, cyrus, "Ride east along the northern cliffs to Cyrus Therepentous."),
@@ -712,21 +777,22 @@ do
   add({ id = "dungeon-lower-blackrock-spire", title = name, zone = M.searing, levels = { 55, 60 }, instanceID = 229,
     instance = "Blackrock Spire", links = { "dungeon-upper-blackrock-spire", "dungeon-blackrock-depths" },
     bosses = {
-      { name = "Highlord Omokk", npc = 9196,
+      { name = "Highlord Omokk", encounter = 267, npc = 9196,
         tip = "Clear the ogres on the platform first. He knocks people off the edge, so tank him with your back to the wall." },
-      { name = "Shadow Hunter Vosh'gajin", npc = 9236,
+      { name = "Shadow Hunter Vosh'gajin", encounter = 268, npc = 9236,
         tip = "Dispel her curse and hex, and kill her totems." },
-      { name = "War Master Voone", npc = 9237,
+      { name = "War Master Voone", encounter = 269, npc = 9237,
         tip = "He throws axes and cleaves. Ranged stay spread; melee stay behind him." },
-      { name = "Mother Smolderweb", npc = 10596,
+      { name = "Mother Smolderweb", encounter = 270, npc = 10596,
         tip = "Spiders and webs. Her poison stacks on the tank; the Mother's Milk player lets her poison them on purpose." },
-      { name = "Urok Doomhowl (event)", npc = 10584,
+      { name = "Urok Doomhowl (event)", encounter = 271, npc = 10584,
         tip = "Summoned with Warosh's challenge. Ogre waves come before him; kill them and keep the healer safe." },
-      { name = "Quartermaster Zigris", npc = 9736,
+      { name = "Quartermaster Zigris", encounter = 272, npc = 9736,
         tip = "He drinks potions and shoots. Interrupt or stun his heal." },
-      { name = "Halycon and Gizrul the Slavener", npc = 10220,
+      { name = "Halycon and Gizrul the Slavener", encounter = 273, npc = 10220, finishName = "Gizrul the Slavener",
+        targets = { "Gizrul the Slavener", "Halycon" },
         tip = "Halycon the worg first; Gizrul comes after and frenzies, so keep a tranquilize or cooldown ready." },
-      { name = "Overlord Wyrmthalak", npc = 9568,
+      { name = "Overlord Wyrmthalak", encounter = 275, npc = 9568,
         tip = "At low health he calls two dragonkin. Save cooldowns for the end. Loot General Drakkisath's Command." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1583", qdb } }, {
@@ -737,7 +803,7 @@ do
     enter(name, brm, "In Blackrock Mountain take the upper path and climb to the Spire's portal."),
   }, {
     accept(4867, nil, "Warosh, a troll near the start, gives you his scroll."),
-    objective(4867, nil, "Find the spear and the challenge at Urok's platform and summon Urok Doomhowl for Warosh's mojo.", "Warosh's Mojo"),
+    objective(4867, nil, "Loot Omokk's Head from Highlord Omokk and take the Roughshod Pike from its rack on the bridge route. At Urok's Tribute Pile beyond Mother Smolderweb, use the head with the pike in your bags. Defeat the ogre waves, then Urok, and loot Warosh's Mojo.", "Warosh's Mojo"),
     finish(4867, nil, "Return to Warosh."),
     accept(5001, nil, "Bijou, a gnome near the spider halls, lost her belongings."),
     objective(5001, nil, "Her belongings are on a crate near Mother Smolderweb.", "Bijou's Belongings"),
@@ -770,22 +836,23 @@ do
   need(4765, "Delivery to Ridgewell", 60, 57, 4764)
   fromItem(5089, 12780, "General Drakkisath's Command", 60, 55)
   need(5102, "General Drakkisath's Demise", 60, 55, 5089)
-  fromItem(5160, 12923, "The Matron Protectorate", 60, 57)
-  fromItem(5047, 12710, "Finkle Einhorn, At Your Service!", 60, 55)
+  need(5160, "The Matron Protectorate", 60, 57)
+  need(5047, "Finkle Einhorn, At Your Service!", 60, 55)
   add({ id = "dungeon-upper-blackrock-spire", title = name, zone = M.searing, levels = { 58, 60 }, instanceID = 229,
     instance = "Blackrock Spire", links = { "dungeon-lower-blackrock-spire" },
     bosses = {
-      { name = "Pyroguard Emberseer", npc = 9816,
+      { name = "Pyroguard Emberseer", encounter = 3062, npc = 9816,
         tip = "Clear the room's orcs, then use the seven altars together to wake him. He grows hotter over time; burn him." },
       { name = "Solakar Flamewreath", npc = 10264,
         tip = "Touching the egg wakes waves of whelps and handlers before him. Hold them on the tank and use area damage." },
       { name = "Goraluk Anvilcrack", npc = 10899,
         tip = "A plain hard-hitting ogre. Keep the tank healed." },
-      { name = "Warchief Rend Blackhand and Gyth", npc = 10429,
+      { name = "Warchief Rend Blackhand and Gyth", encounter = 3063, npc = 10429, finishName = "Warchief Rend Blackhand",
+        targets = { "Gyth", "Warchief Rend Blackhand" },
         tip = "The event sends many waves before Gyth lands with Rend. Fight near the door so the waves come in a line; kill Gyth, then Rend." },
-      { name = "The Beast", npc = 10430,
-        tip = "Fireballs, fear and a knockback. Tank him in the corridor so nobody is feared into packs. Finkle Einhorn comes out after." },
-      { name = "General Drakkisath", npc = 10363,
+      { name = "The Beast", encounter = 3068, npc = 10430,
+        tip = "Fireballs, fear and a knockback. Tank him in the corridor so nobody is feared into packs. Skin his body afterward to reveal Finkle Einhorn." },
+      { name = "General Drakkisath", encounter = 3069, npc = 10363,
         tip = "Pull his two guards away first. Tank him facing away; his Flamestrike and Conflagration need spread ranged." },
     },
     sources = { "https://www.wowhead.com/forever/zone=1583", qdb } }, {
@@ -797,8 +864,8 @@ do
     enter(name, brm, "Climb to the Spire's portal in Blackrock Mountain. The Upper Spire door is at the start, past the first ramps."),
   }, {
     objective(4764, nil, "Doomrigger's Clasp sits in a chest along the way to Rend.", "Doomrigger's Clasp"),
-    withItem(12923, accept(5160, nil, "Use Awbee's scale if it drops for you.")),
-    withItem(12710, accept(5047, nil, "Speak to Finkle Einhorn after The Beast dies.")),
+    accept(5160, nil, "After Rend and Gyth, talk to Awbee on the ledge beyond the stadium and finish the dialogue. Accept the quest to receive Awbee's Scale."),
+    accept(5047, nil, "After The Beast dies, have the group's skinner skin it to reveal Finkle Einhorn. Talk to him and finish his dialogue to receive the quest and the flesh sample."),
     objective(5102, nil, "Kill General Drakkisath in his hall.", "General Drakkisath"),
   }, {
     finish(4764, mayara), accept(4765, mayara), finish(4765, ridgewell),
@@ -824,15 +891,15 @@ do
   add({ id = "dungeon-dire-maul-east", title = name, zone = M.feralas, levels = { 55, 60 }, instanceID = 429, instance = "Dire Maul",
     links = { "dungeon-dire-maul-west", "dungeon-dire-maul-north" },
     bosses = {
-      { name = "Pusillin", npc = 14354,
+      { name = "Pusillin", encounter = 2792, npc = 14354,
         tip = "An imp who runs off when you speak to him. Chase him through the halls; he fights at the end with his imps." },
-      { name = "Zevrim Thornhoof", npc = 11490,
-        tip = "His Sacrifice stuns and drains one player. Burn him and heal through it." },
-      { name = "Hydrospawn", npc = 13280,
+      { name = "Zevrim Thornhoof", encounter = 343, npc = 11490,
+        tip = "His Sacrifice stuns and drains one player. After he dies, talk to Ironbark in the Conservatory and ask him to open the door to Alzzin." },
+      { name = "Hydrospawn", encounter = 344, npc = 13280,
         tip = "A water elemental. His Riptide and knockback scatter the group; tank him against a wall." },
-      { name = "Lethtendris", npc = 14327,
+      { name = "Lethtendris", encounter = 345, npc = 14327,
         tip = "Kill her pimgib imp first. She casts Shadow Bolt Volley; spread and interrupt." },
-      { name = "Alzzin the Wildshaper", npc = 11492,
+      { name = "Alzzin the Wildshaper", encounter = 346, npc = 11492,
         tip = "He changes form often. Kill his adds and keep moving with him. Use the Reliquary on the Felvine after he dies." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, join(copy("silithus-59", { 5527 }), copy("silithus-60", { 5527 }), {
@@ -844,9 +911,9 @@ do
     uncertain(enter(name, dmDoor, "Ride to the ruined city in central Feralas. The East wing's portal is in the courtyard reached from the Broken Commons."),
       "Wing entrance positions from the classic map; check in game."),
   }), {
-    objective(7441, nil, "Speak to Pusillin and chase him; loot his book when he gives up.", "Azj'Tordin's Book of Incantations"),
+    objective(7441, nil, "Talk to Pusillin at every stop as you chase him through the halls. At his last stop, speak again to start the fight; kill him and loot his book and Crescent Key.", "Azj'Tordin's Book of Incantations"),
     objective(7488, nil, "Kill Lethtendris and loot her web.", "Lethtendris's Web"),
-    withItem(18539, objective(5526, nil, "Kill Alzzin, then use the Reliquary of Purity on the Felvine.", "Felvine Shard")),
+    withItem(18539, objective(5526, nil, "Kill Alzzin, loot a Felvine Shard from the vine behind him, then use the Reliquary of Purity in your bags to seal it.", "Sealed Reliquary of Purity")),
   }, {
     finish(7441, azj), finish(7488, latronicus), finish(5526, rabine),
   })
@@ -862,15 +929,15 @@ do
   add({ id = "dungeon-dire-maul-west", title = name, zone = M.feralas, levels = { 57, 60 }, instanceID = 429, instance = "Dire Maul",
     links = { "dungeon-dire-maul-east", "dungeon-dire-maul-north" },
     bosses = {
-      { name = "Tendris Warpwood", npc = 11489,
+      { name = "Tendris Warpwood", encounter = 350, npc = 11489,
         tip = "A treant with heavy roots and stuns. Tank him near the courtyard door and heal through the roots." },
-      { name = "Illyanna Ravenoak", npc = 11488,
+      { name = "Illyanna Ravenoak", encounter = 347, npc = 11488,
         tip = "A hunter with a pet bear. Kill or crowd control the bear; she volleys the group." },
-      { name = "Magister Kalendris", npc = 11487,
+      { name = "Magister Kalendris", encounter = 348, npc = 11487,
         tip = "Interrupt his Mind Blast and dispel his Shadow Word: Pain." },
-      { name = "Immol'thar", npc = 11496,
+      { name = "Immol'thar", encounter = 349, npc = 11496,
         tip = "Shut down the five pylons first. He summons eyes of Immol'thar; kill them and avoid his Trample." },
-      { name = "Prince Tortheldrin", npc = 11486,
+      { name = "Prince Tortheldrin", encounter = 361, npc = 11486,
         tip = "In the Athenaeum. He whirlwinds and teleports to random players; keep healers ready." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, {
@@ -898,19 +965,19 @@ do
   add({ id = "dungeon-dire-maul-north", title = name, zone = M.feralas, levels = { 57, 60 }, instanceID = 429, instance = "Dire Maul",
     links = { "dungeon-dire-maul-west", "dungeon-dire-maul-east" },
     bosses = {
-      { name = "Guard Mol'dar", npc = 14326,
+      { name = "Guard Mol'dar", encounter = 362, npc = 14326,
         tip = "For the tribute run, leave the guards alive. If you fight him, face his cleave away." },
-      { name = "Stomper Kreeg", npc = 14322,
+      { name = "Stomper Kreeg", encounter = 363, npc = 14322,
         tip = "A drunk ogre. If fought, his whirlwind hits melee." },
-      { name = "Guard Fengus", npc = 14321,
+      { name = "Guard Fengus", encounter = 364, npc = 14321,
         tip = "Tribute run: leave him alive. Otherwise tank him away from patrols." },
-      { name = "Guard Slip'kik", npc = 14323,
+      { name = "Guard Slip'kik", encounter = 365, npc = 14323,
         tip = "Use the Ogre Suit or freeze trap to slip past him for the tribute; otherwise a plain fight." },
-      { name = "Captain Kromcrush", npc = 14325,
+      { name = "Captain Kromcrush", encounter = 366, npc = 14325,
         tip = "He calls two ogre guards at low health. Save cooldowns for that." },
-      { name = "Cho'Rush the Observer", npc = 14324,
+      { name = "Cho'Rush the Observer", encounter = 367, npc = 14324,
         tip = "A caster beside King Gordok. Interrupt him; he becomes friendly if you kill the King last." },
-      { name = "King Gordok", npc = 11501,
+      { name = "King Gordok", encounter = 368, npc = 11501,
         tip = "Kill him after Cho'Rush engages; his Mortal Strike and knockback need a steady tank. The ogres then crown your group." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2557", qdb } }, {
@@ -949,32 +1016,34 @@ do
   add({ id = "dungeon-scholomance", title = name, zone = M.wpl, levels = { 57, 60 }, instanceID = 289, instance = name,
     links = { "dungeon-stratholme" },
     bosses = {
-      { name = "Kirtonos the Herald (summoned)", npc = 10506,
+      { name = "Kirtonos the Herald (summoned)", encounter = 2805, npc = 10506,
         tip = "Placing the Blood of Innocents on the porch brazier calls him. Pull the lever on the wall to drop the gates and stop the adds." },
-      { name = "Jandice Barov", npc = 10503,
+      { name = "Jandice Barov", encounter = 2804, npc = 10503,
         tip = "She splits into many images. Area damage clears them; find the real one and burn her." },
-      { name = "Rattlegore", npc = 11622,
+      { name = "Rattlegore", encounter = 2811, npc = 11622,
         tip = "A bone giant who hits very hard. Tank him in the corner and keep the healer on the tank." },
-      { name = "Ras Frostwhisper", npc = 10508,
+      { name = "Ras Frostwhisper", encounter = 2810, npc = 10508,
         tip = "Frost Nova and Frostbolt Volley. Use the Soulbound Keepsake on him for Ras's quest, then fight him as a mortal." },
-      { name = "Doctor Theolen Krastinov", npc = 11261,
+      { name = "Doctor Theolen Krastinov", encounter = 2802, npc = 11261,
         tip = "In the room past the viewing hall. He frenzies at low health; burn him and save a stun." },
-      { name = "Lorekeeper Polkelt", npc = 10901,
+      { name = "Lorekeeper Polkelt", encounter = 2808, npc = 10901,
         tip = "His disease stacks on the tank; cure it." },
-      { name = "Lady Illucia Barov and Lord Alexei Barov", npc = 10502,
-        tip = "Two separate rooms. Illucia mind controls and fears; Alexei casts Unholy Aura. Clear their rooms first." },
-      { name = "The Ravenian", npc = 10507,
+      { name = "Lady Illucia Barov", encounter = 2806, npc = 10502,
+        tip = "Clear her room and fight away from the doorway." },
+      { name = "Lord Alexei Barov", encounter = 2807,
+        tip = "Clear his room before pulling. Keep the healer in range of the whole group." },
+      { name = "The Ravenian", encounter = 2812, npc = 10507,
         tip = "A plain melee boss with a wide cleave. Face him away from the group." },
-      { name = "Instructor Malicia", npc = 10505,
+      { name = "Instructor Malicia", encounter = 2803, npc = 10505,
         tip = "Interrupt her heals and cleanse her poison." },
-      { name = "Darkmaster Gandling", npc = 1853,
+      { name = "Darkmaster Gandling", encounter = 2801, npc = 1853,
         tip = "Appears once the six side bosses are dead. He teleports players into rooms with adds; those players fight their way out while the tank holds him." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2057", qdb } }, {
     tip("Skeleton Key", "Scholomance needs the Skeleton Key from the Chillwind Camp key chain. One key holder opens the door for everyone."),
     accept(5529, betina, "Betina Bigglezink at Light's Hope Chapel wants the plagued hatchlings cleared."),
     accept(5343, weldon, "Weldon Barov at Chillwind Camp wants his family's deeds."),
-    accept(5382, eva, "Eva Sarkhoff waits by the Caer Darrow ruins with her husband."),
+    accept(5382, eva, "Eva Sarkhoff waits by the Caer Darrow ruins with her husband. Ask why she is here and finish every page of her story to reveal the quest."),
     enter(name, at("Caer Darrow", 69.4, 72.8, M.wpl), "Cross to Caer Darrow and enter the Scholomance through the castle's crypt with your key."),
   }, {
     objective(5529, nil, "Kill the plagued hatchlings in the dragon nests past the first halls.",
@@ -1041,25 +1110,25 @@ do
   add({ id = "dungeon-stratholme", title = name, zone = M.epl, levels = { 57, 60 }, instanceID = 329, instance = name,
     links = { "dungeon-scholomance" },
     bosses = {
-      { name = "The Unforgiven", npc = 10516,
+      { name = "The Unforgiven", encounter = 472, npc = 10516,
         tip = "Ghosts come first. Kill them, then dispel or heal through his frost spells." },
-      { name = "Timmy the Cruel", npc = 10808,
+      { name = "Timmy the Cruel", encounter = 474, npc = 10808,
         tip = "Appears after the market's undead are cleared. A heavy hitter; keep the tank healed." },
-      { name = "Cannon Master Willey", npc = 10997,
+      { name = "Cannon Master Willey", encounter = 475, npc = 10997,
         tip = "His riflemen shoot from the platform. Kill them, then pull him; his cannon knocks people back." },
-      { name = "Archivist Galford", npc = 10811,
+      { name = "Archivist Galford", encounter = 477, npc = 10811,
         tip = "In the archive. Burn the archive after he dies for Zverenhoff's quest." },
-      { name = "Balnazzar", npc = 10813,
+      { name = "Balnazzar", encounter = 478, npc = 10813,
         tip = "Grand Crusader Dathrohan turns into Balnazzar at half health. He mind controls and casts Psychic Scream; spread out." },
-      { name = "Baroness Anastari", npc = 10436,
+      { name = "Baroness Anastari", encounter = 479, npc = 10436,
         tip = "Dead side. She possesses a player; keep crowd control ready and dispel her silence." },
-      { name = "Nerub'enkan", npc = 10437,
+      { name = "Nerub'enkan", encounter = 480, npc = 10437,
         tip = "Dead side. Kill the scarabs he calls and cure the poison." },
-      { name = "Maleki the Pallid", npc = 10438,
+      { name = "Maleki the Pallid", encounter = 481, npc = 10438,
         tip = "Dead side. Interrupt his Frostbolt and dispel Drain Life." },
-      { name = "Ramstein the Gorger", npc = 10439,
+      { name = "Ramstein the Gorger", encounter = 483, npc = 10439,
         tip = "After the abominations. He knocks the tank back; tank him against a wall." },
-      { name = "Baron Rivendare", npc = 10440,
+      { name = "Baron Rivendare", encounter = 484, npc = 10440,
         tip = "He calls skeletons and uses Death Pact. Kill the skeletons fast; there is no timer unless you started the run's event." },
     },
     sources = { "https://www.wowhead.com/forever/zone=2017", qdb } }, prep, {

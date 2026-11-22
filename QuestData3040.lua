@@ -80,6 +80,7 @@ do
   road(M.darkshore, M.stormwind, auberdineSouth, "Take the Stormwind ship from Auberdine's south pier")
   road(M.stormwind, M.dustwallow, stormwindPier, "Take the Auberdine ship, then fly south to Theramore")
   -- Overland legs out of the Alliance towns.
+  road(M.westfall, M.stv, on.westfall(nil, 68, 63), "Take the east bridge into Duskwood, then follow the south road to Stranglethorn")
   road(M.duskwood, M.stv, on.duskwood(nil, 44.7, 87.5), "Follow the road south into Stranglethorn")
   road(M.stv, M.duskwood, on.stv(nil, 40.6, 3.5), "Follow the road north into Duskwood")
   road(M.duskwood, M.deadwind, on.duskwood(nil, 87.7, 41.1), "Take the east road out of Darkshire into Deadwind Pass")
@@ -140,7 +141,7 @@ do
   q(228, "Mor'Ladim", 35, 28, 227)
   q(229, "The Daughter Who Lived", 35, 28, 228)
   q(253, "Bride of the Embalmer", 30, 20, 252)
-  q(55, "Morbent Fel", 32, 18, 325)
+  q(55, "Morbent Fel", 32, 20, 325)
   q(215, "Jungle Secrets", 33, 30)
   q(583, "Welcome to the Jungle", 30, 28)
   q(185, "Tiger Mastery", 31, 28, 583)
@@ -155,11 +156,13 @@ do
   section("darkshire-30", "Darkshire: Mor'Ladim and the Worgen", M.duskwood, 30, 32, {
     "https://www.wowhead.com/forever/zone=10/duskwood",
     "https://bindonforever.com/zones/duskwood",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
+    -- The ship is for players finishing the Wetlands delivery in Auberdine.
     action("boat", on.darkshore("Thamarian", 32.67, 42.11),
-      "Take the Stormwind ship from Auberdine's south pier. Use Next when you reach Stormwind Harbor.",
-      { name = "Auberdine - Stormwind Harbor" }),
+      "Take the Stormwind ship from Auberdine's south pier. Check the guide when it docks.",
+      { name = "Auberdine - Stormwind Harbor", skipOn = { M.stormwind, M.westfall, M.duskwood, M.stv,
+        M.elwynn, M.redridge, M.ironforge, M.dunMorogh, M.lochModan, M.wetlands } }),
     action("note", nil, "Clean out your quest log. If you never ran the Deadmines, abandon its quests now: they are grey and the 30s need the room.",
       { name = "Quest log", drop = { 166, 167, 168, 214, 2040, 92753 } }),
     accept(538, at("Milton Sheaf", 77.07, 30.21, M.stormwind),
@@ -214,15 +217,17 @@ do
       "Mor'Ladim, a level 35 elite, walks the cemetery paths. He hits hard but moves slowly: bring help.", "Mor'Ladim's Skull"),
       "Patrol path and difficulty need an in-game check."),
     finish(55, sven, "Ride back west to Sven for the Morbent Fel turn-in."),
-    action("goto", on.stv(nil, 40.6, 3.5), "Follow the main road south out of Duskwood into Stranglethorn Vale."),
-    accept(215, on.stv("Private Thorsen", 40.3, 8.4), "Private Thorsen sometimes patrols the road near the Rebel Camp. Take his note if you see him."),
+    action("goto", on.stv(nil, 40.6, 3.5),
+      "From Sentinel Hill, take the east bridge into Duskwood. Follow the road south into Stranglethorn Vale and on to Rebel Camp."),
+    accept(215, on.stv("Private Thorsen", 37.98, 3.41),
+      "From Sentinel Hill, cross the east bridge into Duskwood. Follow the road south into Stranglethorn Vale to Rebel Camp. Check for Private Thorsen in camp or on patrol around 40.3, 8.4."),
+    finish(215, on.stv("Lieutenant Doren", 38.04, 3.01)),
     accept(583, barnil, "Follow the road south to Nesingwary's Expedition, west of the road."),
     finish(583, at("Hemet Nesingwary", 35.66, 10.81, M.stv)),
     accept(185, ajeck), accept(190, erlgadin),
     along(objective(185, on.stv(nil, 35.4, 12.5), "Hunt Young Stranglethorn Tigers around the camp.", "10 Young Stranglethorn Tigers"), 190),
     along(objective(190, on.stv(nil, 41.5, 12.0), "Young Panthers prowl east of the camp, across the road.", "10 Young Panthers"), 185),
     finish(185, ajeck), finish(190, erlgadin),
-    finish(215, on.stv("Lieutenant Doren", 38.0, 3.0), "Climb north to the Rebel Camp and find Lieutenant Doren."),
     action("hearth", trelayne, "Hearth back to Darkshire.", darkshire),
     finish(228, althea), accept(229, althea), finish(229, ladimore, "Watcher Ladimore stands just outside the town hall."),
     finish(253, ello),
@@ -277,7 +282,7 @@ do
     "https://www.wowhead.com/forever/zone=267/hillsbrad-foothills",
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
     "https://bindonforever.com/zones/hillsbrad-foothills",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     withGuide("dungeon-gnomeregan", action("goto", nil,
       "Take the Deeprun Tram from Stormwind's Dwarven District to Ironforge. Use Next when you arrive. The tram stops in Tinker Town, where the Gnomeregan quests are.")),
@@ -325,8 +330,8 @@ do
     along(objective(565, al(nil, 31.2, 52.8), "Hunt yetis around Growless Cave for Yeti Fur.", "10 Yeti Fur"), 564),
     along(objective(505, al(nil, 48.0, 82.0), "Clear Syndicate Footpads and Thieves on the road and in Strahnbrad.",
       "12 Syndicate Footpads", "8 Syndicate Thieves"), 564),
-    accept(510, documents, "Search the documents on the table in Strahnbrad's inn. They also give the encrypted letter."),
-    accept(511, documents),
+    accept(510, documents, "Open the Syndicate Documents in Strahnbrad and accept Foreboding Plans. Check that it appears in your quest log before leaving."),
+    accept(511, documents, "Accept Encrypted Letter at the Syndicate Documents as a separate quest. Bring the letter to Loremaster Dibbs."),
     objective(564, al(nil, 61.8, 35.7), "Finish the Mountain Lions on the hills north of Strahnbrad and along the climb.",
       "8 Mountain Lions", "10 Hulking Mountain Lions"),
     taxi("getfp", on.wpl("Bibilfaz Featherwhistle", 42.9, 85.1), "Chillwind Camp, Western Plaguelands",
@@ -394,10 +399,10 @@ do
   section("needles-33", "Theramore and the Shimmering Flats", M.needles, 33, 35, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
     "https://www.wowhead.com/forever/zone=400/thousand-needles",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks in Theramore.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     action("note", nil, "Clean out your quest log: abandon the Blackfathom Deeps, Excavation Site and City of Dalaran quests unless you still plan to run them. All three dungeons are grey or nearly so at 33.",
       { name = "Quest log", drop = { 971, 1275, 95646, 95647, 98815, 92432 } }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
@@ -499,6 +504,9 @@ do
   rq(95315, "The Riverglades Report", 38, 36)
   rq(94929, "Deliver the Second Shipment", 38, 36)
   rq(93443, "Lost Shipping Crate", 36, 36)
+  rq(97332, "Twice Misplaced Trust", 41, nil)
+  rq(95327, "All's Well That Ends Well", 40, 36, 95326)
+  quest[97332].optional, quest[95327].optional = true, true
   rq(95147, "The Lost Scout", 37, 36)
   -- Chains below follow a published Forever guide's Alliance Riverglades order (2026-11-14 audit):
   -- Dalton's report waits for the gnolls, Benjy's horses for Foal Play, Halligan's saplings for the plant
@@ -645,6 +653,8 @@ do
     action("goto", friz, "Follow the road east to Powderfuse Port on the coast."),
     taxi("getfp", rg(nil, 77.5, 53.5), portFlight, "Learn the Powderfuse Port flight path."),
     finish(94928, friz, "Friz Frazzlespark buys the lion hides."), B.optional(finish(93443, friz, "Hand over the lost crate from Stranglethorn.")),
+    finish(95327, friz, "If you recovered Ruzzgot's shipment in Stranglethorn, bring Friz the news."),
+    finish(97332, whizzbuzz, "Give Wharfmaster Whizzbuzz the replacement package from Booty Bay."),
     accept(95059, friz, "Friz has a crate for Demar Brant."),
     accept(95118, whizzbuzz), accept(95121, fimbo),
     accept(95988, zizplink, "Innkeeper Zizplink wants the makings of a drink: crawler parts and three goods from the port's merchants."),
@@ -704,7 +714,7 @@ do
   rq(95288, "Smuggler's Paradise", 43, 38)
   rq(95293, "Smuggler's Special", 42, 38, 95288)
   rq(95294, "Smuggler's Bargain", 42, 38, 95293)
-  rq(94879, "Scraps of Knowledge", 38, 36)
+  rq(94879, "Scraps of Knowledge", 40, 36)
   rq(95934, "Proof of Profit", 42, 36)
   rq(95935, "Hail the Dragonslayer", 43, 36)
   quest[95935].startItem = 271612
@@ -739,8 +749,7 @@ do
       "8 Twilight Shadowmancers", "8 Twilight Neophytes", "8 Twilight Raiders"), 94881, 94961, 94885),
     along(objective(94881, twilight, "Loot trinkets from the Twilight cultists.", "25 Twilight Trinkets"), 94877, 94961),
     along(objective(94961, twilight, "Fuzzle wants food from the Twilight cultists. Pick it up while you fight.", "20 Morsels"), 94877, 94881),
-    along(note(objective(94879, twilight, "Pick up the Twilight pages lying around the cultists' camps for Ashe.", "Twilight Pages"),
-      "Page spots from a published guide's route (clicked during the Sunnyglade fights); check the count in game."), 94877, 94881),
+    along(objective(94879, twilight, "Pick up five Twilight Pages around the cultists' camps for Ashe.", "5 Twilight Pages"), 94877, 94881),
     withItem(266427, accept(94885, nil, "A cultist carries the Field Marshal's log. Read it when it drops.")),
     objective(95991, rg("Ghostmaw", 47.2, 56.7), "Ghostmaw, an elite, prowls the south edge of Sunnyglade. Bring a partner.", "Ghostmaw's Head"),
     along(objective(95643, rg(nil, 48.4, 48.4), "Kill the Empowered Brutes and Twilight Ritualists at the ritual site.", "5 Empowered Brutes", "5 Twilight Ritualists"),
@@ -884,10 +893,14 @@ do
   q(1382, "Strange Alliance", 35, 30)
   q(5501, "Bone Collector", 39, 33)
   q(5561, "Kodo Roundup", 34, 30)
+  q(79229, "Highway Robbery", 40, nil, nil, true)
+  q(79235, "On the Lam", 40, nil, 79229, true)
+  q(79236, "Cherry for Your Thoughts?", 40, nil, 79235, true)
+  for _, id in ipairs({ 79229, 79235, 79236 }) do quest[id].optional = true end
 
   section("desolace-35", "Desolace: Nijel's Point", M.desolace, 35, 37, {
     "https://www.wowhead.com/forever/zone=405/desolace",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Thyssiana", 89.5, 45.9, 1444), "Thalanaar, Feralas", "Fly from Theramore to Thalanaar."),
     action("goto", on.feralas(nil, 44.9, 4.0), "Follow the road west across Feralas, then take the north fork into Desolace. Stay on the road past the ogre ruins."),
@@ -923,16 +936,17 @@ do
     along(objective(1387, ds(nil, 69.4, 73.4), "Kill Magram centaurs for their ears. Every kill also raises your standing with the Gelkis.", "15 Centaur Ears"), 1382),
     objective(261, ds(nil, 64.0, 91.7), "Go south to the Scarlet camp at the edge of the Valley of Bones and kill Undead Ravagers.", "30 Undead Ravagers"),
     accept(5561, smeed, "Smeed Scrabblescrew camps beside the Kodo Graveyard."),
-    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard, then walk each tamed kodo back to Smeed.",
+    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on one Ancient or Dying Kodo, lead it to Smeed and wait for his acknowledgement. Talk to that Tamed Kodo to get credit before fetching the next; repeat five times.",
       "5 Tamed Kodos")), 5501, 1459),
     along(objective(5501, graveyard, "Pick up kodo bones from the ground in the graveyard.", "10 Kodo Bones"), 5561, 1459),
     along(objective(1459, ds(nil, 52.2, 57.5), "Kill Scorpashi scorpids around the graveyard for venom, and Aged Kodos for their hides.",
       "7 Scorpashi Venom", "3 Aged Kodo Hides"), 5561, 5501),
     finish(5561, smeed),
+    accept(79229, ds("Extinguished Campfire", 47.52, 54.61), "Check the extinguished campfire just west of the Kodo Graveyard."),
     action("goto", ds(nil, 40.0, 75.0), "Ride west across the south of Desolace toward the Gelkis village."),
     finish(1382, ds("Uthek the Wise", 36.22, 79.25), "Once the Gelkis are Friendly, find Uthek the Wise in their village."),
     action("goto", bibbly, "Ride back northeast to Kormek's Hut."),
-    finish(5501, bibbly),
+    finish(5501, bibbly), finish(79229, bibbly), accept(79235, bibbly, "Follow Bibbly's lead to Tokal in Booty Bay."),
     finish(5741, azore, "Bring the Sceptre to Azore at Ethel Rethor."), accept(6027, azore),
     objective(6027, ds("Lord Kragaru", 28.2, 6.7), "Go north along the coast to the Ranazjar Isle ogres. Lord Kragaru carries the Book of the Ancients.",
       "Book of the Ancients"),
@@ -956,10 +970,12 @@ do
   local revilgaz = st("Baron Revilgaz", 27.23, 76.87)
   local crank = st("Crank Fizzlebub", 27.12, 77.21)
   local lozgil = st("Wharfmaster Lozgil", 26.35, 73.56)
+  local ruzzgot = st("Caravaneer Ruzzgot", 27.37, 74.08)
   local skindle = st("Innkeeper Skindle", 27.0, 77.3)
   local gyll = st("Gyll", 27.5, 77.8)
   local yohwa = st("Sergeant Yohwa", 38.02, 3.33)
   local doren = st("Lieutenant Doren", 38.04, 3.01)
+  local thorsen = st("Private Thorsen", 37.98, 3.41)
   local nimetz = st("Brother Nimetz", 37.83, 3.56)
   local hemet = st("Hemet Nesingwary", 35.66, 10.81)
   local ajeck = st("Ajeck Rouack", 35.62, 10.62)
@@ -967,9 +983,25 @@ do
   local wendel = st("Wendel Mathers", 44.3, 7.9)
   local zimmix = st("Zimmix Sputterspark", 23.5, 12.8)
   local kurzen = st(nil, 44.9, 10.2)
+  local stockpile = st(nil, 45.82, 8.18)
+  local records = st("Bookie Herod's Records", 43.67, 9.37)
+  local strongbox = st("Bookie Herod's Strongbox", 49.62, 7.56)
   local bloodscalp = st(nil, 25.5, 9.4)
   local bootyBay = { bind = "Booty Bay" }
+  local diz = on.barrens("Wharfmaster Dizzywig", 63.35, 38.45)
+  local daltry = on.duskwood("Clerk Daltry", 72.54, 46.87)
+  local carevin = on.duskwood("Jonathan Carevin", 75.32, 49.02)
+  local tokal = st("Tokal", 26.98, 77.29)
+  local nixxrax = st("Nixxrax Fillamug", 27.04, 77.17)
 
+  q(1040, "Passage to Booty Bay", 30, 25, 1039)
+  q(1041, "The Caravan Road", 30, 25, 1040)
+  q(1042, "The Carevin Family", 30, 25, 1041)
+  q(1043, "The Scythe of Elune", 30, 25, 1042)
+  q(1044, "Answered Questions", 30, 25, 1043)
+  for id = 1040, 1044 do
+    quest[id].optional, quest[id].ifDone = true, id - 1
+  end
   q(1180, "Goblin Sponsorship", 37, 29, 1178)
   q(1181, "Goblin Sponsorship", 37, 29, 1180)
   q(1182, "Goblin Sponsorship", 37, 29, 1181)
@@ -991,6 +1023,9 @@ do
   q(330, "Patrol Schedules", 37, 30, 329)
   q(331, "Report to Doren", 37, 30, 330)
   q(210, "Krazek's Cookery", 37, 32)
+  q(627, "Favor for Krazek", 37, 32, 210)
+  q(622, "Return to Corporal Kaleb", 37, 32, 627)
+  quest[627].optional, quest[622].optional = true, true
   q(189, "Bloodscalp Ears", 35, 30)
   q(186, "Tiger Mastery", 33, 28, 185)
   q(187, "Tiger Mastery", 35, 28, 186)
@@ -999,13 +1034,19 @@ do
   q(192, "Panther Mastery", 38, 28, 191)
   q(194, "Raptor Mastery", 34, 28, 583)
   q(195, "Raptor Mastery", 36, 28, 194)
-  q(97047, "The Cook in the Cage", 37, 30, nil, true)
-  q(97048, "Returning to Port", 37, 30, 97047, true)
+  q(97047, "The Cook in the Cage", 38, 30, nil, true)
+  q(97048, "Returning to Port", 38, 30, 97047, true)
   q(97328, "Anything of Value", 35, 30, nil, true)
-  q(97329, "Where's the Key?", 37, 30, nil, true)
-  q(97331, "Zimmix's Great Escape", 37, 30, 97329, true)
+  q(97329, "Where's the Key?", 35, 30, nil, true)
+  q(97331, "Zimmix's Great Escape", 35, 30, 97329, true)
+  quest[97332].ifDone = 97331
   q(575, "Supply and Demand", 31, 26)
   q(577, "Some Assembly Required", 36, 31, 575)
+  q(628, "Excelsior", 38, 31, 577)
+  B.elite(628, "Elder Saltwater Crocolisk")
+  q(95789, "Shady Saltseers", 40, 34, nil, true)
+  q(95791, "The Saltseer Captain", 40, 34, nil, true)
+  q(97130, "Ancient Gurubashi Secrets", 40, 34, nil, true)
   q(635, "Crystal in the Mountains", 35, 30)
   quest[635].startItem = 4614
   -- Picked up here for the 41-43 Stranglethorn chapter (QuestData4050.lua does them): the route is at
@@ -1021,76 +1062,100 @@ do
 
   section("stv-36", "Stranglethorn: Rebels, Kurzen and Nesingwary", M.stv, 36, 38, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "https://polestar.guide/guides/alliance/30-40/04-stranglethorn-vale",
+    "https://github.com/Questie/QuestieDB/tree/0f37b70d070470d50560b1f7d035136ed8a9666f",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", on.barrens(nil, 62.6, 37.0), "Leave Theramore west and follow the Barrens road north to Ratchet on the coast."),
     taxi("getfp", on.barrens("Bragok", 63.1, 37.2), "Ratchet, The Barrens", "Learn the Ratchet flight path."),
     finish(1178, on.barrens("Gazlowe", 62.68, 36.23), "Gazlowe has his office above the docks."),
     accept(1180, on.barrens("Gazlowe", 62.68, 36.23), "Gazlowe sends you on to Booty Bay."),
-    finish(1111, on.barrens("Wharfmaster Dizzywig", 63.35, 38.45)),
-    action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from Ratchet's dock to Booty Bay. Use Next when you arrive.",
-      { name = "Ratchet - Booty Bay" }),
+    finish(1111, diz), finish(1039, diz), accept(1040, diz),
+    action("boat", on.barrens(nil, 63.7, 38.6), "Take the boat from Ratchet's dock to Booty Bay. Check the guide when it docks.",
+      { name = "Ratchet - Booty Bay", skipOn = M.stv }),
     taxi("getfp", gyll, "Booty Bay, Stranglethorn", "Learn the Booty Bay flight path from Gyll, up the ramps above the inn."),
     finish(1180, lozgil, "Wharfmaster Lozgil stands on the docks."), accept(1181, lozgil),
+    finish(1040, ruzzgot), accept(1041, ruzzgot),
     accept(605, crank, "Crank Fizzlebub waits on the inn's lower floor."),
     action("sethearth", skindle, "Bind at the Salty Sailor Tavern.", bootyBay),
-    finish(98463, st("Nixxrax Fillamug", 27.04, 77.17), "Pass Barkeep Kelly's gossip to Nixxrax Fillamug at the tavern's bar."),
+    finish(98463, nixxrax, "Pass Barkeep Kelly's gossip to Nixxrax Fillamug at the tavern's bar."),
+    finish(79235, tokal), accept(79236, tokal, "If you followed Bibbly's lead, Tokal wants a Cherry Grog before answering."),
+    action("buy", nixxrax, "Buy one Cherry Grog from Nixxrax at the bar.", { item = 4600, count = 1, ifOnQuest = 79236 }),
+    finish(79236, tokal),
     accept(198, krazek, "Krazek, on the inn's upper balcony, has supplies for the Rebel Camp."), accept(201, krazek), accept(616, krazek),
+    withGuide("dungeon-drowned-city", action("note", krazek,
+      "Krazek has two quests for The Drowned City. Open the dungeon checklist to plan the pickups and follow the Alliance lead-in.",
+      { name = "The Drowned City" })),
     accept(213, kebok, "Kebok stands beside Krazek."), accept(189, kebok),
     accept(575, drizzlik, "Drizzlik, a few doors east of the inn, wants two crocolisk skins from the river by Nesingwary's camp."),
     finish(616, revilgaz, "Baron Revilgaz looks over the bay from the top floor of the inn."), accept(578, revilgaz),
     finish(1181, revilgaz), accept(1182, revilgaz),
     taxi("fly", B.at("Felicia Maline", 77.49, 44.29, 1431), "Darkshire, Duskwood", "Fly to Darkshire."),
+    finish(1041, daltry), accept(1042, daltry), finish(1042, carevin), accept(1043, carevin),
+    objective(1043, on.duskwood(nil, 73.54, 79.13), "Look for evidence of the Scythe in Roland's Doom, south of Darkshire.",
+      "Find evidence of the Scythe of Elune"),
+    finish(1043, carevin, "Return to Carevin after finding the evidence. Take Answered Questions if you plan to visit Thyn'tel in Darnassus."),
     action("goto", st(nil, 38.0, 3.5), "Take the road south out of Duskwood into Stranglethorn and climb to the Rebel Camp."),
-    finish(198, st("Private Thorsen", 37.98, 3.41)), accept(203, yohwa), accept(204, yohwa), accept(200, doren),
+    finish(198, thorsen), accept(200, doren), accept(203, yohwa), accept(204, yohwa),
     objective(201, hemet, "Walk down to Nesingwary's Expedition: you have found the hunters' camp for Krazek.", "Hunters' Camp Found"),
     finish(5762, hemet, "Give Hemet the crate from Kravel."),
     accept(186, ajeck), accept(191, erlgadin), accept(194, hemet),
     objective(575, st(nil, 38.0, 11.6), "River Crocolisks swim in the stream east of the camp, on your way to the compound. Kill them until you have two skins.",
       "2 Large River Crocolisk Skins"),
-    accept(97047, wendel, "Wendel Mathers hides on the slope above the Kurzen compound. His cook is locked up inside."),
-    along(objective(203, kurzen, "Clear the Kurzen Jungle Fighters around the compound.", "15 Kurzen Jungle Fighters"), 204, 200, 97047),
-    along(objective(204, kurzen, "Medicine Men carry Jungle Remedies (the Auction House sells them too). The Venom Fern Extract is in a chest in the compound's back cave.",
-      "7 Jungle Remedy", "Venom Fern Extract"), 203, 200, 97047),
-    along(objective(97047, st(nil, 48.8, 5.4), "Loot a Kurzen Fighter's Uniform and the compound's cage key from the Kurzen guards, then free the cook.",
-      "Kurzen Fighter's Uniform", "Compound Cage Key"), 203, 204),
-    finish(200, st("Bookie Herod's Records", 43.67, 9.37), "Read Bookie Herod's records in the compound."),
-    accept(328, st("Bookie Herod's Records", 43.67, 9.37)),
-    finish(328, st("Bookie Herod's Strongbox", 49.62, 7.56), "Open Bookie Herod's strongbox east of the compound with the small brass key."),
-    accept(329, st("Bookie Herod's Strongbox", 49.62, 7.56)),
-    finish(97047, wendel), accept(97048, wendel, "Keep his note for Captain Aransas in Booty Bay."),
-    along(objective(605, st(nil, 48.5, 8.8), "Kill Stone Maw basilisks east of the compound for Singing Crystal Shards.", "10 Singing Crystal Shards"), 186),
-    along(objective(186, st(nil, 46.7, 15.8), "Hunt Stranglethorn Tigers in the jungle south of the compound.", "10 Stranglethorn Tigers"), 213, 1182),
+    finish(200, records, "Read the records inside the building on the west side of the compound."),
+    accept(328, records, "Take the Small Brass Key. Open the strongbox on the next pass through the Stockpile."),
+    along(objective(203, kurzen, "Clear the Kurzen Jungle Fighters around the compound. Kill Medicine Men along the way.", "15 Kurzen Jungle Fighters"), 204),
+    along(B.objectivePart(204, 1, kurzen, "Kurzen Medicine Men drop the remedies. The Auction House may have them too.", "7 Jungle Remedies"), 203),
+    along(B.objectivePart(204, 2, st("Kurzen Supplies", 44.1, 9.6), "Open the Kurzen Supplies in the compound's buildings for the extract.",
+      "Venom Fern Extract"), 203),
+    finish(203, yohwa, "Return to Sergeant Yohwa before entering the Stockpile."), finish(204, yohwa),
+    accept(574, yohwa), accept(207, nimetz, "Take Brother Nimetz's tablet quest for the west coast."),
+    accept(210, st("Corporal Kaleb", 37.74, 3.3), "Take Kaleb's crock pot for Krazek in Booty Bay."),
+    accept(97047, wendel, "Find Wendel in the building on the north side of the compound before entering the Stockpile."),
+    along(objective(574, stockpile, "Enter the Stockpile cave. Kill the stealthed Commandos and Headshrinkers on the upper level.",
+      "10 Kurzen Commandos", "6 Kurzen Headshrinkers"), 97047, 328),
+    along(B.objectivePart(97047, 1, stockpile, "On the lower level, loot the Compound Cage Key from Kurzen Elites or Subchiefs.",
+      "Compound Cage Key"), 574, 328),
+    along(B.objectivePart(97047, 2, st("Kurzen Supply Crate", 49.62, 7.74), "Take the uniform from the Kurzen Supply Crate on the lower level.",
+      "Kurzen Fighter's Uniform"), 574, 328),
+    finish(328, strongbox, "Use the Small Brass Key on the strongbox beside the supply crate."), accept(329, strongbox),
+    finish(97047, wendel, "Leave the cave and give Wendel the key and uniform."), accept(97048, wendel),
+    objective(605, st(nil, 48.5, 8.8), "Kill Stone Maw basilisks east of the compound for Singing Crystal Shards.", "10 Singing Crystal Shards"),
+    objective(186, st(nil, 46.7, 15.8), "Hunt Stranglethorn Tigers in the jungle south of the compound.", "10 Stranglethorn Tigers"),
     along(objective(213, st(nil, 45.6, 18.8), "Kill Venture Co. Geologists at the dig south of the tigers for Tumbled Crystals.", "8 Tumbled Crystals"), 1182),
-    along(objective(1182, st(nil, 43.3, 20.3), "Search the Venture Co. camp for the fuel regulator blueprints.", "Fuel Regulator Blueprints"), 213),
-    finish(203, yohwa), finish(204, yohwa), accept(574, yohwa), accept(207, nimetz, "Brother Nimetz wants the troll tablets read."),
+    along(B.objectivePart(1182, 1, st("Foreman Cozzle's Footlocker", 43.34, 20.34),
+      "Kill Foreman Cozzle up the platform around 42.7, 18.4 for his key. Open his footlocker in the hut to the south for the blueprints.",
+      "Fuel Regulator Blueprints"), 213),
+    finish(574, doren, "Report to Doren at Rebel Camp before heading west."),
     finish(329, doren), accept(330, doren), finish(330, st("Corporal Sethman", 37.66, 3.39)), accept(331, st("Corporal Sethman", 37.66, 3.39)),
     finish(331, doren),
-    objective(574, st(nil, 47.9, 7.8), "Back in the compound, kill Kurzen Commandos and Headshrinkers.", "10 Kurzen Commandos", "6 Kurzen Headshrinkers"),
     finish(186, ajeck), accept(187, ajeck),
     accept(97328, st("Thoroughly Scavenged Supplies", 31.55, 12.95), "Search the scavenged supplies west of Nesingwary's camp."),
-    along(objective(191, st(nil, 29.8, 11.2), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 187, 194, 97328),
+    along(objective(191, st(nil, 29.8, 11.2), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 187, 194),
     along(objective(187, st(nil, 31.9, 19.9), "Elder Stranglethorn Tigers live farther south and west.", "10 Elder Stranglethorn Tigers"), 191, 194),
     along(objective(194, st(nil, 27.2, 16.1), "Stranglethorn Raptors hunt near the western coast.", "10 Stranglethorn Raptors"), 191, 187, 207),
+    B.objectivePart(207, 1, st("Moon Over the Vale", 29.48, 19.15), "Read the tablet above the elder tigers.", "The First Troll Legend"),
+    B.objectivePart(207, 2, st("Gri'lek the Wanderer", 24.75, 22.84), "Read the submerged tablet at the Ruins of Aboraz. Watch for elite murlocs.",
+      "The Second Troll Legend"),
+    objective(578, st(nil, 21.33, 21.93), "Swim to the Haunted Isle and go ashore until the discovery registers.", "Haunted Island located"),
     accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp on the coast."),
-    B.objectivePart(207, 3, st("Tablet", 22.9, 12.0), "Read the troll tablet in the ruins beside Zimmix's cage.", "The Third Troll Legend"),
+    B.objectivePart(207, 3, st("Fall of Gurubashi", 22.95, 12.02), "Read the troll tablet in the ruins beside Zimmix's cage.", "The Third Troll Legend"),
     along(objective(189, bloodscalp, "Kill Bloodscalp trolls along the coast for their ears.", "15 Bloodscalp Ears"), 97329, 97328),
     along(objective(97329, bloodscalp, "A Bloodscalp troll carries Zimmix's Primitive Key.", "Primitive Key"), 189),
-    B.objectivePart(207, 4, st("Tablet", 24.7, 8.9), "Read the next tablet in the ruins just north of the Bloodscalp camp.", "The Fourth Troll Legend"),
+    B.objectivePart(207, 4, st("The Emperor's Tomb", 24.70, 8.93), "Read the tablet on the upper path north of the Bloodscalp camp.", "The Fourth Troll Legend"),
     note(withItem(4614, accept(635, nil, "If a Bloodscalp dropped a Pendant of Myzrael, use it to start the quest. The crystal it shows waits in Arathi.")),
       "The pendant's drop rate is unknown; it also drops from the Skullsplitters later."),
     along(objective(97328, st(nil, 26.0, 13.0), "Pick up the stolen shipments scattered around the Bloodscalp camps.", "8 Stolen Shipments"), 189),
     finish(97329, zimmix), accept(97331, zimmix),
     objective(97331, zimmix, "Help Zimmix out of the troll camp.", "Zimmix Escaped"),
-    B.objectivePart(207, 1, st("Tablet", 29.5, 19.1), "Head southeast to the tablet on the ridge above the elder tigers.", "The First Troll Legend"),
-    B.objectivePart(207, 2, st("Tablet", 24.8, 22.9), "Go back west to the coast for the last tablet at the Ruins of Aboraz.", "The Second Troll Legend"),
-    objective(578, st("Stone of the Tides", 21.6, 21.8), "Swim to the Haunted Isle just off the coast and take the Stone of the Tides from its pool.",
-      "Stone of the Tides"),
     finish(191, erlgadin), finish(187, ajeck), finish(194, hemet), accept(195, hemet), accept(188, ajeck), accept(192, erlgadin),
-    finish(207, nimetz), finish(574, doren),
-    accept(210, st("Corporal Kaleb", 37.74, 3.3), "Corporal Kaleb has a recipe errand for Krazek in Booty Bay."),
+    finish(207, nimetz),
+    B.optional(accept(93443, st("Lost Shipping Crate", 38.0, 3.01),
+      "Take the lost crate at Rebel Camp if you plan to quest in the Riverglades.")),
     action("hearth", skindle, "Hearth to Booty Bay.", bootyBay),
     finish(605, crank), finish(213, kebok), finish(189, kebok), finish(201, krazek), finish(210, krazek),
+    accept(627, krazek, "Take Krazek's favor if you can spare four Lesser Bloodstone Ore. Miners can gather it at Drywhisker Gorge in Arathi, or buy it at the Auction House."),
+    finish(627, krazek, "Give Krazek four Lesser Bloodstone Ore if you brought them."), accept(622, krazek),
     finish(575, drizzlik), accept(577, drizzlik, "Drizzlik now wants Snapjaw Crocolisk skins from Lake Nazferiti."),
     finish(1182, revilgaz), accept(1183, revilgaz, "Revilgaz sends the blueprints on to Pozzik in the Shimmering Flats. Keep them: the route is back there at 40."),
     finish(578, revilgaz), accept(601, revilgaz),
@@ -1106,12 +1171,11 @@ do
     finish(192, erlgadin), accept(193, erlgadin, "Erlgadin's last panther, Bhag'thera, is a level 40 elite. Keep the quest for your next Stranglethorn visit."),
     accept(205, nimetz, "Walk north to the Rebel Camp once more. Brother Nimetz wants fetishes from the Skullsplitter trolls in the south: keep it for later."),
     accept(202, doren, "Lieutenant Doren wants Colonel Kurzen dead. He hides in the compound's cave with his elite guard: keep it for later."),
-    B.optional(accept(93443, st("Lost Shipping Crate", 38.0, 3.1),
-      "A lost shipping crate sits by the Rebel Camp. Take it if you plan to visit the Riverglades next.")),
+    finish(622, st("Corporal Kaleb", 37.74, 3.3), "Give Kaleb his repaired pot if you brought it from Krazek."),
     action("hearth", skindle, "Hearth to Booty Bay. If it isn't ready yet, ride south or fly from Darkshire.", bootyBay),
     finish(601, revilgaz), accept(602, revilgaz, "Keep the bracers for Archmage Ansirem in Dalaran, in the Alterac Mountains."),
     finish(577, drizzlik),
-  }, { suggest = { "riverglades-farholde" } })
+  }, { suggest = { "stv-30", "riverglades-farholde" } })
 end
 
 -- Stormwind errands, the Swamp of Sorrows and Nethergarde Keep.
@@ -1138,7 +1202,7 @@ do
 
   section("swamp-38", "Swamp of Sorrows and Nethergarde", M.swamp, 38, 39, {
     "https://www.wowhead.com/forever/zone=8/swamp-of-sorrows",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     taxi("fly", B.at("Dungar Longdrink", 71, 72.5, 1453), "Stormwind, Elwynn", "Fly to Stormwind."),
     accept(1363, sw("Mazen Mac'Nadir", 51.8, 74.24), "Mazen Mac'Nadir works in the Mage Quarter's tower."),
@@ -1153,7 +1217,7 @@ do
     withItem(6196, accept(1392, nil, "If Noboru's Cudgel dropped from the mossy giant Noboru, read it to start the quest.")),
     accept(93585, sm("Father Tuttle", 22.22, 50.23), "Father Tuttle, north-west of Biggs, wants to reach the draenei refuge at the Harborage. His quest is an escort."),
     note(objective(93585, magtoor, "Escort Father Tuttle north to the Harborage on the swamp's northwest shore. Stay close and fight off what attacks him.",
-      "Father Tuttle escorted"), "Forever quest: QuestieDB has the giver only; the escort's end and the hand-in at Magtoor come from a published guide."),
+      "Father Tuttle escorted"), "Forever quest: quest database has the giver only; the escort's end and the hand-in at Magtoor come from a published guide."),
     finish(93585, magtoor, "Magtoor waits at the Harborage."),
     accept(1389, magtoor, "Magtoor also wants Draenethyst crystals from the Lost One villages."),
     finish(1392, magtoor),
@@ -1207,6 +1271,7 @@ do
   q(693, "Wand over Fist", 39, 30, 691)
   q(694, "Trelane's Defenses", 39, 30, 693)
   q(695, "An Apprentice's Enchantment", 39, 30, 694)
+  q(684, "Wanted!  Marez Cowl", 39, 30)
   q(685, "Wanted!  Otto and Falconcrest", 40, 30)
   q(657, "Hints of a New Plague?", 36, 30, 658)
   q(660, "Hints of a New Plague?", 37, 30, 657)
@@ -1241,13 +1306,14 @@ do
   q(1452, "Rhapsody's Kalimdor Kocktail", 43, 38, 1451)
   -- Elite targets: the route asks at the pickup whether to take them (Take it / Skip).
   B.elite(652, "Fozruk")
+  B.elite(684, "Marez Cowl")
   B.elite(685, "Otto and Lord Falconcrest")
   B.elite(694, "Boulderfist Shamans")
 
   section("arathi-39", "Arathi Highlands, Alterac and Aerie Peak", M.arathi, 39, 40, {
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
     "https://www.wowhead.com/forever/zone=36/alterac-mountains",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("goto", nil, "Take the Deeprun Tram from Stormwind to Ironforge. Use Next when you arrive."),
     finish(1457, ifg("Roetten Stonehammer", 69.95, 21.26), "Give Karnitol's satchel to Roetten Stonehammer in the Hall of Explorers."),
@@ -1261,6 +1327,7 @@ do
     taxi("fly", B.at("Cedrik Prose", 45.7, 46.1, 1417), "Refuge Pointe, Arathi", "Fly to Refuge Pointe."),
     accept(691, kryten, "Apprentice Kryten wants troll goods for Skuerto's research."),
     accept(685, ar("Wanted Board", 46.04, 47.76), "Read the wanted board: Otto and Lord Falconcrest hide in Stromgarde."),
+    accept(684, ar("Wanted Board", 46.04, 47.76), "Read the second notice on the same board. Marez Cowl is also in Stromgarde."),
     accept(657, quae, "Quae, at the farm east of Refuge Pointe, sends you to Kinelory."),
     finish(657, kinelory), accept(660, kinelory),
     objective(660, kinelory, "Protect Kinelory while she raids the Hammerfall supply. Let her pull ahead and stay close.", "Kinelory protected"),
@@ -1280,7 +1347,7 @@ do
       "Trelane's Wand of Invocation"),
     withItem(213422, accept(79624, ar(nil, 53.8, 74.6), "If an Illegible Recipe dropped from the Boulderfist ogres by the cave, use it from your bags: an ogre who can read waits nearby.")),
     note(finish(79624, ar("Skonk", 57.7, 74.7), "Follow the path east of the ogre camp to Skonk and give him the recipe."),
-      "Skonk and the recipe's drop have no QuestieDB record; the spots come from a published guide."),
+      "Skonk and the recipe's drop have no quest database record; the spots come from a published guide."),
     finish(693, skuerto), accept(694, skuerto),
     action("goto", ar(nil, 25.5, 30.1), "Ride northwest past Northfold Manor."),
     B.objectivePart(651, 1, ar("Stone of West Binding", 25.5, 30.1), "Take the Burning Key from the Stone of West Binding.", "Burning Key"),
@@ -1288,9 +1355,11 @@ do
       "Azure Agate"),
     objective(685, ar(nil, 26.0, 65.7), "Otto and Lord Falconcrest, both elites, hide in the Stromgarde ruins with the Syndicate. Bring a group.",
       "Otto's Head", "Falconcrest's Head"),
+    objective(684, ar("Marez Cowl", 29.6, 63.0), "Look for the elite mage Marez Cowl in the Syndicate-held ruins east of the keep. Loot her head.",
+      "Marez's Head"),
     finish(651, inner, "Bring the three keys to the Stone of Inner Binding on the hill east of Stromgarde."), accept(652, inner),
     note(objective(652, ar(nil, 44.5, 58.8), "Fozruk, a level 42 elite giant with a kobold escort, walks a long loop around Arathi. Wait for him on his path east of the stone and pull him away from the kobolds.",
-      "Rod of Order"), "Patrol line from a published guide; QuestieDB spawns him at 67.7, 37.6 near the Stone of East Binding."),
+      "Rod of Order"), "Patrol line from a published guide; quest database spawns him at 67.7, 37.6 near the Stone of East Binding."),
     finish(652, keystone, "Place the rod at the Keystone beside the stone."), accept(653, keystone, "Keep the message for Gerrig Bonegrip in Ironforge."),
     accept(663, ar("Lolo the Lookout", 31.78, 82.68), "Follow the coast south to Faldir's Cove. Lolo watches from the cliff."),
     finish(663, obreen), accept(662, nilzlix), accept(664, steelgut), accept(665, ar("Professor Phizzlethorpe", 33.87, 80.55)),
@@ -1304,7 +1373,7 @@ do
     along(objective(666, ar(nil, 22.7, 88.6), "Wear the Goggles of Gem Hunting and gather Elven Gems from the clams on the reef.", "10 Elven Gems"), 662, 664),
     finish(662, nilzlix), finish(664, steelgut), finish(666, draxlegauge), accept(668, draxlegauge), finish(668, obreen),
     accept(669, obreen, "Shakes O'Breen sends a sample gem to Fleet Master Seahorn in Booty Bay. Keep it: you are back there at 41."),
-    finish(694, kryten), accept(695, kryten), finish(695, skuerto), finish(685, nials),
+    finish(694, kryten), accept(695, kryten), finish(695, skuerto), finish(685, nials), finish(684, nials),
     taxi("fly", B.at("Darla Harris", 49.34, 52.27, 1424), "Southshore, Hillsbrad", "Fly from Refuge Pointe to Southshore."),
     finish(661, hb("Phin Odelic", 50.35, 59.05)),
     finish(1052, hb("Raleigh the Devout", 51.47, 58.35), "Raleigh the Devout stands near the inn."),
@@ -1313,8 +1382,8 @@ do
     finish(525, maleb), accept(537, maleb), accept(512, maleb),
     accept(500, redpath), accept(540, dibbs),
     action("sethearth", anderson, "Bind at the Southshore inn.", southshore),
-    finish(602, al("Archmage Ansirem Runeweaver", 14.2, 59.7), "Ride north and west into Alterac to Archmage Ansirem at Dalaran's walls."),
-    accept(603, al("Archmage Ansirem Runeweaver", 14.2, 59.7), "Ansirem's key goes to Catelyn the Blade in Booty Bay. Keep it for your next Stranglethorn visit."),
+    finish(602, al("Archmage Ansirem Runeweaver", 18.84, 78.49), "Follow the road west from Southshore to Archmage Ansirem outside Dalaran."),
+    accept(603, al("Archmage Ansirem Runeweaver", 18.84, 78.49), "Ansirem's key goes to Catelyn the Blade in Booty Bay. Keep it for your next Stranglethorn visit."),
     along(objective(543, al("Grel'borg the Miser", 35.6, 54.4), "Ride east to the Ruins of Alterac. Grel'borg the Miser, a level 39 elite ogre, walks the road between here and the ruined keep with the Perenolde Tiara. Pull him alone.",
       "Perenolde Tiara"), 540),
     along(objective(540, al(nil, 38.4, 46.4), "Pick up Recovered Tomes from the Syndicate and ogres in the ruins. The Worn Leather Book is in the keep.",
@@ -1370,19 +1439,19 @@ do
 
   section("dustwallow-40", "Dustwallow Marsh and Razorfen Downs", M.dustwallow, 40, 41, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     forDungeon(accept(3636, at("Archbishop Benedictus", 50.31, 45.47, M.stormwind),
       "Archbishop Benedictus, in the Cathedral of Light, wants Amnennar the Coldbringer of Razorfen Downs destroyed. Take it now if you might run the dungeon: it is only offered here."), rfd),
     accept(1260, at("Angus Stern", 51.79, 93.64, M.stormwind), "Angus Stern, by the Mage Quarter's south gate, has a letter for his brother in Theramore."),
     taxi("fly", B.at("Shellei Brondir", 9.5, 59.7, 1437), "Menethil Harbor, Wetlands", "Fly to Menethil Harbor."),
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     action("sethearth", janene, "Bind at the Theramore inn.", { bind = "Theramore Isle" }),
     finish(1260, stern, "Morgan Stern runs the inn's kitchen."), accept(1204, stern),
     accept(1206, jarl, "Ride north to Swamp Eye Jarl's shack again."),
     accept(1177, mudcrush, "Follow the road west to Mudcrush Durtfeet, a friendly ogre by the road."),
-    objective(1206, dm(nil, 34.5, 22.1), "Kill Darkmist spiders in the northwest for unpopped eyes.", "20 Unpopped Darkmist Eyes"),
+    objective(1206, dm(nil, 34.5, 22.1), "Kill Darkmist spiders in the northwest for unpopped eyes.", "40 Unpopped Darkmist Eyes"),
     accept(1222, dm("\"Stinky\" Ignatz", 46.88, 17.52), "\"Stinky\" Ignatz is gathering in the northern bog."),
     objective(1222, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers. Fight off the attackers.", "Stinky escorted"),
     along(objective(1204, dm(nil, 60.2, 17.0), "Kill Mudrock turtles along the north shore for forked tongues.", "8 Forked Mudrock Tongues"), 1177),
@@ -1419,11 +1488,11 @@ do
 
   section("stv-30", "Stranglethorn Early: Rebel Camp and Nesingwary", M.stv, 30, 35, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
     action("sethearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Bind in Darkshire. This run starts and ends there.", darkshire),
-    accept(215, st("Private Thorsen", 40.3, 8.4), "Take the road south out of Duskwood into Stranglethorn. Private Thorsen sometimes patrols the road below the Rebel Camp: take his note if you see him."),
     action("goto", st(nil, 38.0, 3.5), "Climb to the Rebel Camp."),
+    accept(215, st("Private Thorsen", 37.98, 3.41), "Check the Rebel Camp. If Thorsen is out on patrol, look along the road around 40.3, 8.4."),
     finish(215, doren), accept(203, yohwa), accept(204, yohwa), accept(200, doren),
     accept(583, st("Barnil Stonepot", 35.7, 10.8), "Walk down to Nesingwary's Expedition."),
     finish(583, hemet), B.optional(finish(5762, hemet, "If you carry Kravel's crate from the Shimmering Flats, give it to Hemet.")),
@@ -1432,15 +1501,12 @@ do
     along(objective(190, st(nil, 41.5, 12.0), "Young Panthers prowl east of the camp, across the road.", "10 Young Panthers"), 185),
     finish(185, ajeck), finish(190, erlgadin), accept(186, ajeck), accept(191, erlgadin),
     along(objective(203, kurzen, "Go east to the Kurzen compound and clear the Jungle Fighters.", "15 Kurzen Jungle Fighters"), 204, 200),
-    along(objective(204, kurzen, "Medicine Men carry Jungle Remedies. The Venom Fern Extract is in a chest in the back cave.",
+    along(objective(204, kurzen, "Medicine Men carry Jungle Remedies. For the Venom Fern Extract, open the Kurzen Supplies in the compound's buildings around 44.1, 9.6.",
       "7 Jungle Remedy", "Venom Fern Extract"), 203, 200),
     finish(200, st("Bookie Herod's Records", 43.67, 9.37), "Read Bookie Herod's records in the compound."),
-    accept(328, st("Bookie Herod's Records", 43.67, 9.37)),
-    finish(328, st("Bookie Herod's Strongbox", 49.62, 7.56), "Open the strongbox east of the compound."),
-    accept(329, st("Bookie Herod's Strongbox", 49.62, 7.56)),
+    accept(328, st("Bookie Herod's Records", 43.67, 9.37), "Keep the Small Brass Key for the Stockpile cave on the 36-38 return."),
     objective(186, st(nil, 46.7, 15.8), "Hunt Stranglethorn Tigers in the jungle south of the compound.", "10 Stranglethorn Tigers"),
-    finish(203, yohwa), finish(204, yohwa), finish(329, doren), accept(330, doren),
-    finish(330, st("Corporal Sethman", 37.66, 3.39)), accept(331, st("Corporal Sethman", 37.66, 3.39)), finish(331, doren),
+    finish(203, yohwa), finish(204, yohwa),
     accept(207, nimetz, "Brother Nimetz has the troll tablets for later. Keep the quest for your next Stranglethorn visit."),
     finish(186, ajeck), accept(187, ajeck),
     along(objective(191, st(nil, 29.8, 11.2), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 187, 194),
@@ -1448,7 +1514,7 @@ do
     along(objective(194, st(nil, 27.2, 16.1), "Stranglethorn Raptors hunt near the western coast.", "10 Stranglethorn Raptors"), 191, 187),
     finish(191, erlgadin), finish(187, ajeck), finish(194, hemet),
     action("hearth", on.duskwood("Innkeeper Trelayne", 73.9, 44.4), "Hearth to Darkshire.", darkshire),
-  }, { alternate = true, suggest = { "needles-33", "theramore-33" } })
+  }, { alternate = true, suggest = { "needles-33", "theramore-33", "stv-36" } })
 
   local vimes = dm("Captain Garran Vimes", 68.21, 48.62)
   local tesoran = dm("Adjutant Tesoran", 68.05, 48.11)
@@ -1463,10 +1529,10 @@ do
 
   section("theramore-33", "Dustwallow: Theramore and the Marsh", M.dustwallow, 33, 37, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
   }, {
-    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Use Next when it docks.",
-      { name = "Menethil Harbor - Theramore Isle" }),
+    action("boat", on.wetlands(nil, 5.1, 63.4), "Take the Theramore ship from Menethil's south pier. Check the guide when it docks.",
+      { name = "Menethil Harbor - Theramore Isle", skipOn = M.dustwallow }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
     action("sethearth", janene, "Bind at the Theramore inn.", theramore),
     B.skipOnceDone(accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."), 1302),
@@ -1477,11 +1543,12 @@ do
     accept(1206, jarl), accept(1219, dm("Loose Dirt", 55.44, 25.92), "Search the loose dirt beside the shack."),
     accept(1222, dm("\"Stinky\" Ignatz", 46.88, 17.52), "\"Stinky\" Ignatz gathers in the northern bog."),
     objective(1222, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers.", "Stinky escorted"),
-    objective(1206, dm(nil, 34.5, 22.1), "Kill Darkmist spiders in the northwest for unpopped eyes.", "20 Unpopped Darkmist Eyes"),
+    objective(1206, dm(nil, 34.5, 22.1), "Kill Darkmist spiders in the northwest for unpopped eyes.", "40 Unpopped Darkmist Eyes"),
     accept(1177, dm("Mudcrush Durtfeet", 35.15, 38.26), "Ride south to Mudcrush Durtfeet by the road."),
     action("goto", dm("Shady Rest Inn", 29.7, 47.8), "Follow the road southwest to the burned Shady Rest Inn."),
-    accept(1284, dm("Suspicious Hoofprint", 29.7, 47.64)), accept(1252, dm("Theramore Guard Badge", 29.83, 48.24)),
-    accept(1253, dm("Black Shield", 29.63, 48.62)),
+    accept(1284, dm("Suspicious Hoofprint", 29.7, 47.64), "Inspect the Suspicious Hoofprint at the burned inn and accept its quest."),
+    accept(1252, dm("Theramore Guard Badge", 29.83, 48.24), "Inspect the Theramore Guard Badge at the burned inn and accept Lieutenant Paval Reethe."),
+    accept(1253, dm("Black Shield", 29.63, 48.62), "Inspect the Black Shield at the burned inn and accept its quest."),
     action("goto", dm(nil, 57.0, 13.0), "Ride back north-east across the marsh to the north shore."),
     objective(1177, dm(nil, 57.0, 13.0), "Kill Mirefin murlocs along the shore for their heads.", "8 Mirefin Heads"),
     finish(1206, jarl),

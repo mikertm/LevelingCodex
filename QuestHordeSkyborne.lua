@@ -211,7 +211,7 @@ insert(valanaar, "complete", 93317, {
 })
 local essences = along(objective(93736, z(nil, 58.2, 32.8), "Loot Wind Hollow Essences from the same Wind Hollows. Use Next if they drop too slowly.",
   "10 Wind Hollow Essences"), 93172)
-essences.mobs = { "Wind Hollow" } -- QuestieDB has no drop data for the essence
+essences.mobs = { "Wind Hollow" } -- quest database has no drop data for the essence
 insert(valanaar, "complete", 93172, { essences })
 -- Shamans finish the orchard trip at the brazier in Valanaar (Call of Fire), so the hearth back
 -- from the orchard is for the other classes: a Shaman would spend the hearthstone needed after Shadowgale.
@@ -233,7 +233,8 @@ for _, step in ipairs({
   finish(93737, riaani), accept(93738, riaani),
   finish(93736, endaria, "Bring the essences to Endaria Mistgaze on your way to Ayessa."),
   finish(93738, ayessa),
-  action("boat", airship, "Board the Windshaper airship at the dock below Ayessa. It lands in northern Mulgore."),
+  action("boat", airship, "Board the Windshaper airship below Ayessa. Check the guide when it lands in northern Mulgore.",
+    { skipOn = M.mulgore }),
   accept(95350, alaana, "Alaana Stormwalker meets you where the airship lands."),
   accept(94911, muln),
   action("goto", bluffLift, "Follow the road south to Thunder Bluff and ride a lift up the mesa."),
@@ -257,7 +258,7 @@ local sources = {
   "https://www.warcrafttavern.com/forever/guides/zephras-isle-walkthrough/",
   "https://warcraft.wiki.gg/wiki/Skyborne_starting_experience",
   "https://www.warcrafttavern.com/forever/guides/skyborne/",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 route.starts.SKYBORNE = "zephras"
 -- Zephras Isle's size in yards (as in the Alliance route): the arrow's yards and the loop check need it.

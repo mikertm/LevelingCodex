@@ -7,7 +7,7 @@ local route = LevelingCodexQuests.HORDE
 local M, on = B.maps, B.on
 local accept, finish, action, taxi, withItem = B.accept, B.finish, B.action, B.taxi, B.withItem
 local objective, part, uncertain = B.objectiveAt, B.objectivePart, B.note
-local qdb = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local qdb = "Cached quest records (revision 0f7d8ad)"
 
 -- Steps that stay optional inside a guide: work on a quest picked up somewhere else, shown only
 -- while that quest is in your log.
@@ -77,7 +77,7 @@ local function og(name, x, y) return B.at(name, x, y, M.orgrimmar) end
 local function uc(name, x, y) return B.at(name, x, y, M.undercity) end
 local function tb(name, x, y) return B.at(name, x, y, M.thunderBluff) end
 
--- Shared places (QuestieDB Forever spawns).
+-- Shared places (quest database Forever spawns).
 local ogFlights = og("Doras", 45.12, 63.89)
 local ucFlights = uc("Michael Garrett", 63.26, 48.55)
 local tbFlights = tb("Tal", 47.0, 49.82)
@@ -118,8 +118,7 @@ do
   fromItem(2945, 9326, "Grime-Encrusted Ring", 34, 28)
   H.need(2949, "Return of the Ring", 34, 28, 2945)
   H.need(2950, "Nogg's Ring Redo", 35, 28, 2949)
-  local sovikStep = accept(2842, sovik, "Sovik works beside Nogg. He only offers his errand to Booty Bay while Rig Wars is in your log.")
-  sovikStep.ifOnQuest = 2841
+  local sovikStep = accept(2842, sovik, "Sovik stands beside Nogg. Choose his gossip option 'What else do you have to say?' to receive Chief Engineer Scooty; it may accept automatically. If it does not appear, talk again and retry; take Nogg's Rig Wars if needed. Confirm Chief Engineer Scooty is in your quest log before leaving Orgrimmar.")
   add({ id = "dungeon-gnomeregan", title = name, zone = M.dunMorogh, levels = { 30, 38 }, instanceID = 90,
     instance = name, bosses = H.bosses("dungeon-gnomeregan"),
     sources = { "https://questing.wiki/wow-forever/dungeons/gnomeregan/quests/",
@@ -127,7 +126,8 @@ do
       "https://www.warcrafttavern.com/forever/guides/gnomeregan/", qdb } }, {
       accept(2841, nogg, "Find Nogg in his workshop in the Valley of Honor, Orgrimmar. Take Rig Wars first."),
       sovikStep,
-      action("boat", toGromgol, "Leave Orgrimmar by the main gate and climb the zeppelin tower east of the city. Take the zeppelin to Grom'gol."),
+      action("boat", toGromgol, "Leave Orgrimmar by the main gate and climb the zeppelin tower east of the city. Take the zeppelin to Grom'gol.",
+        { skipOn = M.stv }),
       taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay if you know the route. Otherwise ride south down the road to the port."),
       finish(2842, scooty, "Scooty works next to Gringer, the Booty Bay flight master."),
       accept(2843, scooty),
@@ -135,7 +135,7 @@ do
         "Goblin Transponder calibrated"),
       finish(2843, scooty),
       uncertain(action("goto", pad, "Step onto the transporter beside Scooty with the transponder in your bags. It sets you down in the tunnels outside Gnomeregan."),
-        "Landing spot from QuestieDB's transporter pad (21.4, 37.1). If you lose the transponder, Scooty hands out another."),
+        "Landing spot from quest database's transporter pad (21.4, 37.1). If you lose the transponder, Scooty hands out another."),
       uncertain(enter(name, pad, "The portal is a short walk from the pad. Meet your group there and go in together."),
         "Check how far the portal is from the pad and which way to walk."),
     }, {
@@ -154,7 +154,8 @@ do
       action("goto", scooty, "Leave through the portal and step on the transporter pad outside to return to Booty Bay."),
       finish(2904, scooty, "Tell Scooty that Kernobee is safe."),
       taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol, or ride north up the road."),
-      action("boat", gromgolToOrgrimmar, "Take the zeppelin to Orgrimmar."),
+      action("boat", gromgolToOrgrimmar, "Take the zeppelin to Orgrimmar.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       finish(2841, nogg, "Bring the blueprints and the combination to Nogg."),
       finish(2949, nogg, "Show Nogg the ring."),
       accept(2950, nogg, "For a better ring Nogg wants a Silver Bar, a Moss Agate and 30 silver. The auction house sells the bar and the agate."),
@@ -179,7 +180,7 @@ do
   fromItem(95664, 270866, "Elder Knowledge", 31, 24, nil, true)
   H.need(98823, "Earthen Echo", 31, 24, 95664, true)
   local meetAgent = uncertain(finish(95663, agent, "Climb the ridge to the upper dig. The Deathstalker Agent waits in the hills near the dungeon portal."),
-    "QuestieDB has no spawn for the agent; the step points at the portal. Check where he stands.")
+    "quest database has no spawn for the agent; the step points at the portal. Check where he stands.")
   meetAgent.path = { { 53.27, 65.81 } }
   add({ id = "dungeon-excavation-site", title = name, zone = M.wetlands, levels = { 28, 33 }, instanceID = 2998,
     instance = name,
@@ -190,7 +191,8 @@ do
     sources = { "https://questing.wiki/wow-forever/dungeons/excavation-site-wetlands/",
       "https://www.wowhead.com/forever/npc=13155", qdb } }, {
       accept(95697, borstan, "Borstan, by his firepit in Orgrimmar, wants raptor meat from the Excavation Site."),
-      action("boat", durotarTower, "Leave Orgrimmar and take the zeppelin to Tirisfal Glades from the tower east of the city."),
+      action("boat", durotarTower, "Leave Orgrimmar and take the zeppelin to Tirisfal Glades from the tower east of the city.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       taxi("fly", B.at("Urda", 73, 32.7, 1417), "Hammerfall, Arathi",
         "Fly to Hammerfall from the bat handler. Without that flight path, fly to Tarren Mill and ride east through Hillsbrad into Arathi."),
       accept(95663, zaruk, "Zaruk in Hammerfall has heard rumors about the Dragonmaw in the Wetlands."),
@@ -211,13 +213,14 @@ do
       finish(95682, agent, "Leave the dungeon and report to the Deathstalker Agent outside."),
       action("goto", urda, "Ride north over the Thandol Span and back east across Arathi to Hammerfall."),
       taxi("fly", B.at("Michael Garrett", 63.25, 48.56, 1458), "Undercity, Tirisfal", "Fly to the Undercity."),
-      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate."),
+      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       finish(95697, borstan, "Bring the raptor meat to Borstan."),
       taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff from Doras on the flight tower."),
       finish(95664, bashana, "Bashana Runetotem on the Elder Rise knows about titan relics."),
       accept(98823, bashana),
       uncertain(action("goto", muln, "Take the lift down from Thunder Bluff and climb to the Skywatcher Plateau, north-west of the bluffs."),
-        "Muln's spot from QuestieDB (33.4, 22.6); the way up was not checked."),
+        "Muln's spot from quest database (33.4, 22.6); the way up was not checked."),
       finish(98823, muln, "Give the relic to Muln Earthfury."),
     })
 end
@@ -255,7 +258,7 @@ do
       part(544, 4, al("Kegan Darkmar", 17.8, 83.2), "Kegan Darkmar is upstairs in the warden's building to the west. Kill Warden Belamoore first, using doorways to block her spells, then Kegan.",
         "Bloodstone Oval"),
       uncertain(objective(93680, al("Warden Belamoore", 17.8, 83.0), "Open the warden's footlocker inside the same building, on the way upstairs, for the Grimy Key.",
-        "Grimy Key"), "Footlocker position not in QuestieDB; published notes place it on the stairs near Warden Belamoore."),
+        "Grimy Key"), "Footlocker position not in quest database; published notes place it on the stairs near Warden Belamoore."),
       action("goto", wordeen, "Ride back to Tarren Mill."),
       finish(544, wordeen),
       finish(93680, wordeen),
@@ -266,7 +269,7 @@ do
       action("goto", wordeen, "Ride back to Tarren Mill."),
       finish(545, wordeen),
       uncertain(accept(92434, wordeen, "Wordeen wants a way into Dalaran found along Lordamere Lake."),
-        "Offered after Dalaran Patrols and Key to the City in published order; QuestieDB lists no prerequisite."),
+        "Offered after Dalaran Patrols and Key to the City in published order; quest database lists no prerequisite."),
       action("goto", modera, "Ride back into the mountains. Go around Dalaran's dome on its north side and follow the Lordamere Lake shore to the sewer outlet."),
       finish(92434, modera, "The Image of Archmage Modera stands by the sewer outlet on the shore."),
       accept(96984, modera),
@@ -287,7 +290,7 @@ do
       accept(97287, wordeen, "He sends you to Archmage Celindra."),
       action("goto", celindra, "Ride back to the lake shore by the sewer outlet."),
       uncertain(finish(97287, celindra, "Archmage Celindra stands near Modera's image."),
-        "Celindra's spot from QuestieDB (14.2, 60.0); one published route hands this in right after the run."),
+        "Celindra's spot from quest database (14.2, 60.0); one published route hands this in right after the run."),
       action("goto", felben, "Travel to the Undercity: ride to Tarren Mill and fly, or ride north through Silverpine Forest."),
       finish(96988, felben, "Bring the sentry cores to Doctor Martin Felben."),
     })
@@ -342,7 +345,8 @@ do
     sources = { "https://questing.wiki/wow-forever/dungeons/scarlet-monastery/quests/", qdb } }, {
       accept(1049, sage, "Orc, tauren and troll: Sage Truthseeker, inside a building on Thunder Bluff's central mesa, wants a book from the monastery library."),
       taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly to Orgrimmar."),
-      action("boat", durotarTower, "Take the zeppelin to Tirisfal Glades from the tower east of Orgrimmar."),
+      action("boat", durotarTower, "Take the zeppelin to Tirisfal Glades from the tower east of Orgrimmar.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       accept(1048, varimathras, "Varimathras, in the Royal Quarter, wants four Scarlet leaders dead. Houndmaster Loksey is in the Library; the others are in the Armory and the Cathedral."),
       action("goto", smDoor, smWay),
       uncertain(enter(name, smDoor, "In the monastery's entry hall the Library is the second door. Regroup at its portal."),
@@ -357,7 +361,8 @@ do
       action("goto", parqual, "Ride back to the Undercity."),
       carried(finish(1160, parqual, "Bring the book to Parqual Fintallas on his bridge. He then asks you a question and later sends you to Dorn Plainstalker in Thousand Needles.")),
       finish(1048, varimathras, "Once Loksey, Herod, Mograine and Whitemane are dead, report to Varimathras. Until then, open the Armory or Cathedral guide."),
-      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar."),
+      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly to Thunder Bluff."),
       finish(1049, sage, "Bring the Compendium to Sage Truthseeker."),
     })
@@ -388,12 +393,10 @@ end
 -- Scarlet Monastery: Cathedral. Mograine and Whitemane end Into The Scarlet Monastery.
 do
   local name = "Scarlet Monastery: Cathedral"
-  local smEncounters = { ["High Inquisitor Fairbanks"] = 449, ["Scarlet Commander Mograine"] = 450,
-    ["High Inquisitor Whitemane"] = 450 }
   add({ id = "dungeon-scarlet-monastery-cathedral", title = name, zone = M.tirisfal, levels = { 37, 44 },
     instanceID = 189, instance = "Scarlet Monastery",
     links = { "dungeon-scarlet-monastery-library", "dungeon-scarlet-monastery-armory", "dungeon-scarlet-monastery-graveyard" },
-    bosses = bosses("dungeon-scarlet-monastery-cathedral", smEncounters),
+    bosses = H.bosses("dungeon-scarlet-monastery-cathedral"),
     sources = { "https://questing.wiki/wow-forever/dungeons/scarlet-monastery/quests/", qdb } }, {
       accept(1048, varimathras, "If you don't carry it yet, take Into The Scarlet Monastery from Varimathras in the Royal Quarter."),
       note("The Scarlet Key", "The Cathedral door needs The Scarlet Key from Arcanist Doan's strongbox at the end of the Library. A rogue's lockpicking or an engineer's charge also opens it."),
@@ -425,7 +428,8 @@ do
     sources = { "https://questing.wiki/wow-forever/dungeons/razorfen-downs/quests/", qdb } }, {
       accept(3341, andrew, "From level 37, Andrew Brownell in the north-east of the Undercity wants Amnennar the Coldbringer's skull."),
       once(6522, accept(6521, varimathras, "If you gave Varimathras Charlga's scroll from Razorfen Kraul, he now wants Ambassador Malcin's head.")),
-      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate."),
+      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       taxi("fly", B.at("Omusa Thunderhorn", 44.45, 59.15, 1413), "Camp Taurajo, The Barrens", "Fly to Camp Taurajo."),
       action("goto", on.barrens(nil, 47.4, 89.0), "Ride south along the road toward the Great Lift. The Downs are the thorny mounds east of the road at the south end of the Barrens."),
       accept(6626, myriam, "Myriam Moonsinger waits at the foot of the path up to the Downs."),
@@ -445,7 +449,8 @@ do
     }, {
       action("goto", omusa, "Ride north to Camp Taurajo."),
       taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly to Orgrimmar."),
-      action("boat", durotarTower, "Take the zeppelin to Tirisfal Glades from the tower east of Orgrimmar."),
+      action("boat", durotarTower, "Take the zeppelin to Tirisfal Glades from the tower east of Orgrimmar.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       finish(3341, andrew, "Bring the skull to Andrew Brownell."),
       once(6522, finish(6521, varimathras, "Give Varimathras the ambassador's head.")),
     })
@@ -540,7 +545,7 @@ do
       part(2339, 2, nil, "Sapphire: Grimlok at the end of the Stone Vault carries it.", "Shattered Necklace Sapphire"),
       part(2339, 4, nil, "Power source: wake and defeat Archaedas in the Hall of the Crafters.", "Shattered Necklace Power Source"),
       accept(2278, nil, "In the room behind Archaedas, use the Discs of Norgannon."),
-      objective(2278, nil, "Speak to the Lore Keeper of Norgannon and hear what it knows.", "Lore of the stone watcher"),
+      objective(2278, nil, "Talk to the Lore Keeper of Norgannon beside the discs. Ask about the Earthen and follow every dialogue page until the lore objective completes.", "Lore of the stone watcher"),
       finish(2278, nil, "Use the Discs of Norgannon again."),
       accept(2280, nil, "Take the miniature discs for the sages of Thunder Bluff."),
       action("goto", rigglefuzz, "Leave Uldaman and ride south to Rigglefuzz's camp."),
@@ -623,14 +628,17 @@ do
       finish(2934, lydon),
       accept(2935, lydon, "Lydon sends you to Master Gadrin in Sen'jin Village."),
       taxi("fly", B.at("Michael Garrett", 63.25, 48.56, 1458), "Undercity, Tirisfal", "Fly to the Undercity."),
-      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate."),
+      action("boat", tirisfalTower, "Take the zeppelin to Orgrimmar from the tower north-west of the Undercity gate.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       action("goto", gadrin, "Ride south through Durotar to Sen'jin Village."),
       finish(2935, gadrin),
       accept(2936, gadrin, "Gadrin wants the name of the Witherbark spider god from the Tablet of Theka in Zul'Farrak."),
-      action("boat", toGromgol, "Ride north to the zeppelin tower east of Orgrimmar and take the zeppelin to Grom'gol."),
+      action("boat", toGromgol, "Ride north to the zeppelin tower east of Orgrimmar and take the zeppelin to Grom'gol.",
+        { skipOn = M.stv }),
       taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay, or ride south down the road."),
       accept(2864, krazek, "Krazek, on the top floor of the Booty Bay inn, sends you to Tran'rek in Gadgetzan."),
-      action("boat", on.stv(nil, 25.8, 73.1), "Take the boat to Ratchet from the Booty Bay docks."),
+      action("boat", on.stv(nil, 25.8, 73.1), "Take the boat to Ratchet from the Booty Bay docks.",
+        { skipOn = M.barrens }),
       taxi("fly", B.at("Shardi", 35.6, 31.9, 1445), "Brackenwall Village, Dustwallow Marsh", "Fly to Brackenwall Village."),
       action("goto", tabetha, "Ride south through the marsh to Tabetha's hut, south-west of Theramore."),
       accept(2846, tabetha, "Tabetha wants the Tiara of the Deep from Zul'Farrak."),
@@ -658,7 +666,7 @@ do
       objective(3527, nil, "Theka the Martyr carries the first Mosh'aru tablet; Hydromancer Velratha, by the pool south-east of the pyramid, the second.",
         "First Mosh'aru Tablet", "Second Mosh'aru Tablet"),
       objective(2865, nil, "Kill scarabs for their shells. Most are in Theka's room.", "5 Uncracked Scarab Shells"),
-      objective(2768, nil, "On the pyramid, kill the Sandfury Executioner for his key and free Sergeant Bly's band. Hold the stairs through the waves; once Nekrum is dead, Bly turns on you. Kill him for the rod.",
+      objective(2768, nil, "On the pyramid, kill the Sandfury Executioner for his key and open a Troll Cage to free Sergeant Bly's band. Hold the stairs through the waves. After Nekrum dies, talk to Bly and demand the rod through his dialogue to start the fight. Kill him and loot it.",
         "Divino-matic Rod"),
       objective(2846, nil, "Hydromancer Velratha also carries the Tiara of the Deep.", "Tiara of the Deep"),
       uncertain(objective(2770, nil, "Clear the pool, then use the Mallet of Zul'Farrak at the gong to summon Gahz'rilla. Loot her scale.",

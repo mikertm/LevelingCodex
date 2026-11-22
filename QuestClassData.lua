@@ -228,7 +228,7 @@ do
       accept(1782, furen),
       finish(1782, furen, "Collect the Fire Hardened Hauberk from Furen."),
     } })
-  -- Thelgen Rock's Leech and Cave Stalkers drop the hauberk's Scorched Spider Fangs (QuestieDB:
+  -- Thelgen Rock's Leech and Cave Stalkers drop the hauberk's Scorched Spider Fangs (quest database:
   -- item 6838 from Leech Stalkers around 54, 64 and 47, 62) as well as Alchemical Hazards' gland,
   -- so a Warrior carrying Fire Hardened Mail fills the fangs right after the gland. `logOnly`:
   -- the step shows only while the quest is in the log, so Warriors without it never see it.
@@ -815,7 +815,9 @@ do
   q(5676, "Arcane Feedback", 20, 20, nil, nil, priest)
   side({ id = "priest-feedback", title = "Priest: Feedback", zone = m.stormwind,
     levels = { 20, 20 }, class = priest, start = "HUMAN", sources = priestSources, steps = {
-      accept(5676, laurena, "Find Laurena in the Cathedral of Light. If you have an Arcane Feedback referral, hand it in here."),
+      B.note(accept(5676, at("Brother Joshua", 49.53, 45.2, m.stormwind),
+        "Ask Brother Joshua in the Cathedral of Light for the Feedback referral. If he has no offer, check with Laurena nearby."),
+        "Quest records list Joshua as the giver. A Forever guide takes the quest directly from Laurena."),
       finish(5676, laurena, "Speak with Laurena in the cathedral to learn Feedback."),
     },
   })
@@ -1168,7 +1170,7 @@ do
   q(6001, "Body and Heart", 10, 10, 5931, nil, druid)
   side({ id = "druid-bear-form", title = "Druid: Bear Form", zone = maps.darnassus,
     levels = { 10, 12 }, class = druid, start = nightElf,
-    sources = { "QuestieDB Forever 0f7d8ad", "https://bindonforever.com/quest/6001" },
+    sources = { "quest database Forever 0f7d8ad", "https://bindonforever.com/quest/6001" },
     steps = {
       accept(5921, mathrengyl, "See Mathrengyl upstairs in the Cenarion Enclave. If you have Heeding the Call, hand it in first."),
       finish(5921, dendrite, "Cast Teleport: Moonglade. Find Dendrite upstairs in Nighthaven."),
@@ -1197,21 +1199,21 @@ do
   })
   side({ id = "druid-moonglade-skyborne", title = "Druid: Moonglade (Skyborne)", zone = moonglade,
     levels = { 10, 12 }, class = druid, start = "SKYBORNE",
-    sources = { "QuestieDB Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=94914/moonglade" },
+    sources = { "quest database Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=94914/moonglade" },
     steps = {
       finish(94914, dendrite,
         "Cast Teleport: Moonglade and find Dendrite upstairs in Nighthaven. Ask him about the next lesson before you leave."),
     },
   })
 
-  -- Forever captures identify 26 as Alliance. The pinned QuestieDB swaps 26 and 27.
+  -- Forever captures identify 26 as Alliance. The pinned quest database swaps 26 and 27.
   q(26, "A Lesson to Learn", 16, 16, nil, nil, druid)
   q(29, "Trial of the Lake", 16, 16, 26, nil, druid)
   q(272, "Trial of the Sea Lion", 16, 16, 29, nil, druid)
   q(5061, "Aquatic Form", 16, 16, 272, nil, druid)
   side({ id = "druid-aquatic-form", title = "Druid: Aquatic Form", zone = maps.darnassus,
     levels = { 16, 18 }, class = druid, start = allianceDruids,
-    sources = { "QuestieDB Forever 0f7d8ad", "https://efficient.games/wowf/quests/id5061",
+    sources = { "quest database Forever 0f7d8ad", "https://efficient.games/wowf/quests/id5061",
       "https://bindonforever.com/quest/26" },
     steps = {
       accept(26, mathrengyl,
@@ -1266,7 +1268,7 @@ do
   call(94375, "Earth", 4, 4, 94374)
   side({ id = "shaman-earth-totem", title = "Shaman: Earth Totem", zone = maps.dunMorogh,
     levels = { 4, 6 }, class = shaman, start = dwarf,
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide, "https://bindonforever.com/quest/94374" },
+    sources = { "quest database Forever 0f7d8ad", totemGuide, "https://bindonforever.com/quest/94374" },
     steps = {
       accept(94373, teo, "Find Teo inside Anvilmar. If Ingrid or Eldrun sent you back to Teo, hand in that introduction first."),
       objectiveAt(94373, at(nil, 27.4, 80.8, maps.dunMorogh),
@@ -1288,7 +1290,7 @@ do
   call(94468, "Fire", 14, 10, 94467)
   side({ id = "shaman-fire-totem", title = "Shaman: Fire Totem", zone = maps.dunMorogh,
     levels = { 10, 14 }, class = shaman, start = dwarf,
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide, "https://bindonforever.com/quest/94467" },
+    sources = { "quest database Forever 0f7d8ad", totemGuide, "https://bindonforever.com/quest/94467" },
     steps = {
       accept(94449, ingrid, "Accept from Ingrid in Kharanos, Teo in Anvilmar or Eldrun in Ironforge. The reagent mobs are level 12-14, so bring help or come back around 14."),
       action("goto", at(nil, 86.7, 47.0, maps.dunMorogh),
@@ -1322,7 +1324,7 @@ do
   call(94505, "Water", 23, 20, 94503)
   side({ id = "shaman-water-totem", title = "Shaman: Water Totem", zone = maps.ironforge,
     levels = { 20, 23 }, class = shaman, start = dwarf,
-    sources = { "QuestieDB Forever 0f7d8ad", totemGuide, "https://forg.gg/en/forever/tips/shaman-totems" },
+    sources = { "quest database Forever 0f7d8ad", totemGuide, "https://forg.gg/en/forever/tips/shaman-totems" },
     steps = {
       accept(94494, eldrun, "Find Eldrun in Ironforge's Mystic Ward."),
       finish(94494, norric, "Find Norric at his hut on the northwest shore of Loch Modan, just south of Stonewrought Dam."),
@@ -1459,7 +1461,7 @@ do
   local m, at, q = B.maps, B.at, B.q
   local accept, finish, goal, part, note = B.accept, B.finish, B.objectiveAt, B.objectivePart, B.note
   local warrior = "WARRIOR"
-  local qdb = "QuestieDB Forever 0f7d8ad"
+  local qdb = "quest database Forever 0f7d8ad"
 
   local klannoc = at("Klannoc Macleod", 68.62, 49.16, m.barrens)
   local bathrah = at("Bath'rah the Windwatcher", 80.5, 66.92, m.alterac)
@@ -1534,7 +1536,7 @@ do
   local m, at, q = B.maps, B.at, B.q
   local accept, finish, goal, note, optional = B.accept, B.finish, B.objectiveAt, B.note, B.optional
   local paladin, races = "PALADIN", { "HUMAN", "DWARF" }
-  local qdb = "QuestieDB Forever 0f7d8ad"
+  local qdb = "quest database Forever 0f7d8ad"
   local function p(id, name, level, min, prev)
     q(id, name, level, min, prev, nil, paladin)
     B.quest[id].race = races
@@ -1587,7 +1589,7 @@ end
 do
   local m, at, q = B.maps, B.at, B.q
   local accept, finish, goal = B.accept, B.finish, B.objectiveAt
-  local qdb = "QuestieDB Forever 0f7d8ad"
+  local qdb = "quest database Forever 0f7d8ad"
   local ogtinc = at("Ogtinc", 42.4, 42.62, m.azshara)
   local coursers = at(nil, 40.0, 70.0, m.azshara)
   local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
@@ -1648,7 +1650,7 @@ end
 do
   local m, at, q = B.maps, B.at, B.q
   local accept, finish, goal, note = B.accept, B.finish, B.objectiveAt, B.note
-  local qdb = "QuestieDB Forever 0f7d8ad"
+  local qdb = "quest database Forever 0f7d8ad"
   local xylem = at("Archmage Xylem", 29.25, 40.21, m.azshara)
   local sanath = at("Sanath Lim-yo", 28.11, 50.09, m.azshara)
   local temple = at("Temple of Atal'Hakkar", 69.7, 53.5, m.swamp)
@@ -1745,7 +1747,7 @@ do
   local m, at, q = B.maps, B.at, B.q
   local accept, finish, goal, note, optional, withItem = B.accept, B.finish, B.objectiveAt, B.note, B.optional, B.withItem
   local warlock = "WARLOCK"
-  local qdb = "QuestieDB Forever 0f7d8ad"
+  local qdb = "quest database Forever 0f7d8ad"
   local strahad = at("Strahad Farsan", 62.63, 35.5, m.barrens)
   local menara = at("Menara Voidrender", 62.51, 35.45, m.barrens)
   local demisette = at("Demisette Cloyce", 39.24, 84.96, m.stormwind)
@@ -1868,7 +1870,7 @@ do
   q(9053, "A Better Ingredient", 52, 50, 9051, nil, druid)
   side({ id = "druid-better-ingredient", title = "Druid: A Better Ingredient", zone = m.ungoro,
     levels = { 52, 54 }, class = druid, links = { "dungeon-sunken-temple" },
-    sources = { "QuestieDB Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=9053" },
+    sources = { "quest database Forever 0f7d8ad", "https://www.wowhead.com/forever/quest=9053" },
     steps = {
       accept(9063, at("Mathrengyl Bearwalker", 35.37, 8.4, m.darnassus),
         "From level 50, Mathrengyl upstairs in the Cenarion Enclave sends you to Torwa. Sheldras Moontree in Stormwind and Loganaar in Moonglade give it too."),
@@ -1896,8 +1898,8 @@ linkRun("dungeon-sunken-temple", { "warrior-voodoo-feathers", "paladin-mightston
 linkRun("dungeon-uldaman", { "mage-celestial-power" })
 
 -- Class objectives the route passes anyway (both factions), from the class quest audit
--- (tools/audits/2026-11-11-class-quest-audit.md: RestedXP and Zygor pairings checked against
--- QuestieDB and our route). Every step is `logOnly`: only that class, only while the quest is in
+-- (tools/audits/2026-11-11-class-quest-audit.md: reference guide A and reference guide B pairings checked against
+-- quest database and our route). Every step is `logOnly`: only that class, only while the quest is in
 -- the log. Sources per pairing: tools/audits/2026-11-11-class-pairings.md.
 do
   local m, at, part, stop, withItem = B.maps, B.at, B.logOnlyPart, B.logOnlyGoto, B.withItem

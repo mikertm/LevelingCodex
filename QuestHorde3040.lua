@@ -76,7 +76,7 @@ function H.need(id, name, level, min, prerequisite, forever)
   return B.quest[id]
 end
 
--- Limit a quest to some races or classes (QuestieDB requiredRaces / requiredClasses).
+-- Limit a quest to some races or classes (quest database requiredRaces / requiredClasses).
 function H.limit(id, rules)
   for key, value in pairs(rules) do B.quest[id][key] = value end
 end
@@ -129,7 +129,7 @@ for _, name in ipairs({ "durotar", "orgrimmar", "thunderBluff", "undercity", "mu
   B.on[name] = B.on[name] or function(npc, x, y) return B.at(npc, x, y, id) end
 end
 
--- Zeppelins and boats (zeppelin masters' spots from QuestieDB Forever).
+-- Zeppelins and boats (zeppelin masters' spots from quest database Forever).
 do
   local road, at = H.road, B.at
   local durotarToGromgol = at("Snurk Bucksquick", 50.7, 12.9, M.durotar)
@@ -170,7 +170,7 @@ do
   road(M.swamp, M.blasted, B.on.swamp(nil, 34.2, 66.4), "Take the road south from the Swamp into the Blasted Lands")
 end
 
--- 30-40 chapters follow. Quest facts: QuestieDB Forever (tools/questfacts.py), quest IDs and flight
+-- 30-40 chapters follow. Quest facts: quest database Forever (tools/questfacts.py), quest IDs and flight
 -- names checked in tools/reference/forever.json; order and grouping from two published Forever guides.
 local quest = B.quest
 local accept, finish, action, taxi = B.accept, B.finish, B.action, B.taxi
@@ -226,7 +226,7 @@ local P = {
   kargath = { bind = "Kargath" },
 }
 
--- Class trainers in the three cities (QuestieDB spawns).
+-- Class trainers in the three cities (quest database spawns).
 P.ucTrainers = {
   { "WARRIOR", on.undercity("Angela Curthas", 48.3, 16.0) }, { "ROGUE", on.undercity("Carolyn Ward", 83.9, 72.1) },
   { "PRIEST", on.undercity("Aelthalyste", 49.3, 17.1) }, { "MAGE", on.undercity("Lexington Mortaim", 84.2, 15.6) },
@@ -245,7 +245,7 @@ P.orgTrainers = {
   { "WARLOCK", on.orgrimmar("Mirket", 48.62, 46.95) },
 }
 
-local questie = "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever"
+local questRecords = "Cached quest records (revision 0f7d8ad)"
 
 -- Tarren Mill at 30: the silithid and Alliance Relations errands, the Battle of Hillsbrad, the
 -- Lordamere camp and Strahnbrad, Dun Garok, then Hammerfall and back to the Undercity.
@@ -303,8 +303,7 @@ do
   need(2843, "Gnomer-gooooone!", 35, 20, 2842)
   need(95697, "Changing Tastes", 31, 24, nil, true)
   local sovik = dungeon("gnomeregan", accept(2842, on.orgrimmar("Sovik", 75.49, 25.36),
-    "Sovik, beside Nogg, has an errand for Chief Engineer Scooty in Booty Bay. Take it only if you plan to run Gnomeregan: you reach Booty Bay at 36."))
-  sovik.ifOnQuest = 2841
+    "Sovik stands beside Nogg. Choose his gossip option 'What else do you have to say?' to receive Chief Engineer Scooty; it may accept automatically. If it does not appear, talk again and retry; take Nogg's Rig Wars if needed. Confirm Chief Engineer Scooty is in your quest log before leaving Orgrimmar. This is for Gnomeregan; the route reaches Booty Bay at 36."))
 
   local cleanup = action("note", nil, "Clean out your quest log. If you are not going to run Wailing Caverns, Shadowfang Keep or Blackfathom Deeps, abandon their quests now: the thirties need the room.",
     { name = "Quest log", drop = { 914, 962, 1014, 1098, 6563, 6921 } })
@@ -316,7 +315,7 @@ do
     "https://www.warcrafttavern.com/forever/guides/city-of-dalaran-quests/",
     "https://www.wowhead.com/forever/quest=93680",
     "https://www.wowhead.com/forever/quest=97539",
-    questie,
+    questRecords,
   }, { "flats-33", "dustwallow-33" }, withTrainers({
     cleanup,
     taxi("fly", B.at("Devrak", 51.5, 30.34, 1413), "Crossroads, The Barrens", "Fly from Freewind Post to the Crossroads."),
@@ -332,7 +331,8 @@ do
     accept(1431, on.orgrimmar("Craven Drok", 51.3, 45.9), "Craven Drok has a message for Keldran."),
     finish(1431, P.keldran, "Keldran stands in the Valley of Spirits, on the west side of the city."),
     accept(1432, P.keldran, "Keep his message for Takata Steelblade at Ghost Walker Post in Desolace."),
-    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades from the tower north-east of the city. Then walk into the Undercity."),
+    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades from the tower north-east of the city. Then walk into the Undercity.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     accept(1164, P.genavie, "Genavie Callow, beside the bat handler east of the Trade Quarter, wants three Syndicate heads from Arathi."),
     dungeon("razorfen-kraul", accept(1109, P.faranell,
       "Master Apothecary Faranell in the Apothecarium has a guano errand inside Razorfen Kraul. Take it only if you plan to run the dungeon.")),
@@ -368,7 +368,7 @@ do
     along(objective(544, camp, "Kill the four traitors: Ricter in the yard, Dermot and Alina in the roofless house, and Kegan Darkmar upstairs in the house outside the palisade.",
       "Bloodstone Marble", "Bloodstone Wedge", "Bloodstone Shard", "Bloodstone Oval"), 93680, 556),
     note(objective(93680, al("Warden Belamoore", 17.8, 83.0), "Kill Warden Belamoore on the ground floor of Kegan's house and open the warden's footlocker for the key."),
-      "The footlocker comes from a published guide; QuestieDB has no record of it."),
+      "The footlocker comes from a published guide; quest database has no record of it."),
     objective(556, al(nil, 18.3, 84.8), "Kill Dalaran mages, guards and workers around the camp until you have ten Worn Stone Tokens.", "10 Worn Stone Tokens"),
     part(553, 3, al("Flame of Uzel", 37.5, 66.2), "Ride east into the Alterac hills to the Flame of Uzel and touch it to charge the rod.", "Flame of Uzel charged"),
     action("goto", hb(nil, 44.0, 27.5), "Ride south-east back down to the Hillsbrad yeti cave."),
@@ -376,7 +376,7 @@ do
     part(553, 2, hb("Flame of Veraz", 44.0, 26.6), "The Flame of Veraz burns deeper in the same cave.", "Flame of Veraz charged"),
     action("goto", al(nil, 58.2, 67.2), "Climb north-east into Alterac to the Syndicate town of Strahnbrad."),
     note(objective(533, al("Henchman Valik", 57.2, 69.5), "Give Henchman Valik the Southshore Stout for the Syndicate Missive. If he attacks or you have no stout, kill Syndicate Footpads and Thieves in town until one carries it.",
-      "Syndicate Missive"), "The stout trade comes from a published guide; QuestieDB has Valik's spawn and Innkeeper Shay selling the stout, not the gossip."),
+      "Syndicate Missive"), "The stout trade comes from a published guide; quest database has Valik's spawn and Innkeeper Shay selling the stout, not the gossip."),
     action("goto", P.krusk, "Ride south back to Tarren Mill."),
     finish(539, P.darthalia), accept(541, P.darthalia, "Darthalia now sends you against Dun Garok, the dwarven fort in the south-east."),
     finish(567, P.darthalia),
@@ -416,7 +416,7 @@ do
     objective(677, ar(nil, 66.4, 75.0), "Ride south-east to Witherbark Village. Kill Axe Throwers, Headhunters and Witch Doctors.",
       "10 Witherbark Axe Throwers", "10 Witherbark Headhunters", "8 Witherbark Witch Doctors"),
     note(withItem(253711, accept(92707, ar(nil, 66.4, 75.0), "If you killed the Witherbark Goliath, an elite in the village's cave, use the Goliath's Wristguards he dropped. Drum Fel wants to see them.")),
-      "The goliath and his cave have no QuestieDB records; a published guide and Wowhead Forever name the wristguards. The step shows only while they are in your bags."),
+      "The goliath and his cave have no quest database records; a published guide and Wowhead Forever name the wristguards. The step shows only while they are in your bags."),
     action("goto", P.drumFel, "Ride north back to Hammerfall."),
     finish(677, P.drumFel),
     finish(92707, P.drumFel, "Show Drum Fel the goliath's wristguards."),
@@ -455,12 +455,12 @@ do
 
   chapter("flats-33", "Shimmering Flats and Ratchet", M.needles, 33, 34, {
     "https://www.wowhead.com/forever/zone=400/thousand-needles",
-    questie,
+    questRecords,
   }, { "desolace-34", "dustwallow-33" }, {
     action("hearth", P.abeqwa, "Hearth to Freewind Post.", P.freewind),
     accept(5361, P.longhorn, "Cliffwatcher Longhorn has a report for Nataka Longhorn at Ghost Walker Post in Desolace. Keep it for later."),
     note(objective(97985, tn("Stormheart", 55.7, 54.2), "Ride east out of Freewind into the canyon. Stormheart, a level 30 beast, roams the canyon floor between the mesas. Kill it and take its heart."),
-      "Stormheart's route comes from QuestieDB spawn points only; check in game."),
+      "Stormheart's route comes from quest database spawn points only; check in game."),
     action("goto", moktar, "Follow the canyon road east toward the Shimmering Flats. Moktar Krin camps on the high ground west of the flats."),
     finish(1146, moktar), accept(1147, moktar),
     action("goto", kravel, "Ride down onto the salt flats to the racing camps in the middle."),
@@ -515,6 +515,7 @@ do
   local bibbly = ds("Bibbly F'utzbuckle", 62.33, 38.99)
   local smeed = ds("Smeed Scrabblescrew", 60.86, 61.86)
   local uthek = ds("Uthek the Wise", 36.22, 79.25)
+  local molkar = ds("Molkar", 35.68, 92.23)
   local sikewa = ds("Innkeeper Sikewa", 24.1, 68.2)
   local mailahii = ds("Mai'Lahii", 22.64, 71.97)
   local drulzegar = ds("Drulzegar Skraghook", 23.32, 72.87)
@@ -549,7 +550,7 @@ do
   need(1365, "Khan Dez'hepah", 35, 30)
   need(1368, "Gelkis Alliance", 33, 30)
   need(93225, "Carved Centaur Totems", 40, nil, nil, true)
-  need(94873, "Buying Friendship: Gelkis", 40, nil, 93225, true)
+  need(94873, "Buying Friendship: Gelkis", 45, nil, 93225, true)
   need(6142, "Clam Bait", 35, 31)
   need(6143, "Other Fish to Fry", 36, 32)
   need(5763, "Hunting in Stranglethorn", 31, 28)
@@ -560,7 +561,7 @@ do
     "https://www.wowhead.com/forever/quest=93225",
     "https://www.wowhead.com/forever/quest=94873",
     "https://www.wowhead.com/classic/quest=1435/the-burning-of-spirits",
-    questie,
+    questRecords,
   }, { "stv-35", "dustwallow-33" }, withTrainers({
     action("note", nil, "Clean out your quest log. If you are not going to run the Excavation Site, abandon Dragonmaw Rumors and Changing Tastes now: the run is for levels 28 to 33.",
       { name = "Quest log", drop = { 95663, 95697 } }),
@@ -592,7 +593,7 @@ do
     finish(1362, felgur), accept(1365, felgur),
     accept(1368, gurda, "Gurda Wildmane wants you on friendly terms with the Gelkis centaur."),
     note(accept(93225, gurda, "She also wants carved totems from centaur of any clan."),
-      "QuestieDB has no giver for this Forever quest; Gurda takes it in."),
+      "quest database has no giver for this Forever quest; Gurda takes it in."),
     withItem(6436, objective(1435, thunderAxe, "Ride north back to Thunder Axe Fortress. Bring a Burning Blade cultist low, use the Burning Gem on it, then finish it.",
       "15 Infused Burning Gems")),
     accept(5501, bibbly, "Ride south-east to Kormek's Hut. Bibbly F'utzbuckle wants kodo bones from the Kodo Graveyard."),
@@ -609,18 +610,16 @@ do
     finish(1481, maurin), accept(1482, maurin, "Maurin now wants an Oracle Crystal from the Slitherblade naga on the north-west coast."),
     finish(1435, maurin), accept(1436, takata, "Keep Takata's answer for Keldran in Orgrimmar."),
     finish(1365, felgur),
-    finish(93225, gurda), note(accept(94873, gurda, "Take the Totem Tote to the Gelkis quartermaster."),
-      "QuestieDB has no giver for this Forever quest; Gurda takes in the totems before it."),
+    finish(93225, gurda), accept(94873, gurda, "Take the Totem Tote to Molkar in Gelkis Village."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
     action("goto", graveyard, "Ride west from Smeed's camp down into the Kodo Graveyard."),
-    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each tamed kodo back to Smeed.",
+    along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")), 5501),
     along(objective(5501, graveyard, "Pick up Kodo Bones from the ground in the graveyard.", "10 Kodo Bones"), 5561),
     finish(5561, smeed),
-    action("goto", uthek, "Ride south-west to the Gelkis village."),
-    note(finish(94873, uthek, "Hand the Totem Tote to the Gelkis quartermaster in the village."),
-      "The quartermaster has no QuestieDB record; the arrow points at Uthek the Wise in the same village."),
-    finish(1368, uthek, "Uthek the Wise welcomes you now that the Gelkis are friendly."),
+    action("goto", molkar, "Ride south-west through Gelkis Village to Molkar at its southern end."),
+    finish(94873, molkar, "Give Molkar the Totem Tote. You need at least Neutral standing with the Gelkis."),
+    finish(1368, uthek, "Ride north through the village to Uthek the Wise once the Gelkis are Friendly."),
     taxi("getfp", P.thalon, "Shadowprey Village, Desolace", "Ride west to Shadowprey Village on the coast and learn the flight path from Thalon."),
     action("sethearth", sikewa, "Bind at the Shadowprey inn.", shadowprey),
     accept(6142, mailahii), accept(6143, drulzegar),
@@ -632,7 +631,7 @@ do
     action("goto", naga, "Walk north along the coast to the Slitherblade naga."),
     along(objective(6143, ds(nil, 34.2, 23.5), "Kill Slitherblade Naga, Sorceresses and Myrmidons up the coast.", "7 Slitherblade Myrmidons",
       "7 Slitherblade Naga", "5 Slitherblade Sorceresses"), 6142, 1482, 6161),
-    along(objective(6142, naga, "The naga carry Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143, 6161),
+    along(objective(6142, naga, "Loot the naga and gather Giant Softshell Clams from the sea floor. Open the clams in your bags for Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143, 6161),
     objective(1482, ds("Slitherblade Oracle", 32.7, 12.9), "Slitherblade Oracles stand farther north. Kill one for its crystal.", "Oracle Crystal"),
     part(6161, 2, ds(nil, 32.4, 7.3), "One of the naga at the northern shore carries Rackmore's Golden Key.", "Rackmore's Golden Key"),
     finish(6161, ds("Rackmore's Chest", 30.0, 8.71), "Swim to the small isle off the coast and open Rackmore's Chest."),
@@ -665,15 +664,15 @@ do
   local crank = st("Crank Fizzlebub", 27.12, 77.21)
   local lozgil = st("Wharfmaster Lozgil", 26.35, 73.56)
   local drizzlik = st("Drizzlik", 28.3, 77.6)
-  local wendel = st("Wendel Mathers", 44.3, 7.9)
-  local zimmix = st("Zimmix Sputterspark", 23.5, 12.8)
+  local wendel = st("Wendel Mathers", 44.27, 7.9)
+  local zimmix = st("Zimmix Sputterspark", 23.46, 12.79)
   local bloodscalp = st(nil, 24.7, 12.1)
   local headhunters = st(nil, 22.7, 10.9)
   local shadowmaw = st(nil, 37.6, 36.4)
   local scooty = st("Scooty", 27.6, 77.48)
-  local gemmil = st("Gemmil", 32.8, 28.5)
+  local gemmil = st("Gemmil", 32.78, 28.43)
   local nerrist = st("Nerrist", 32.7, 29.23)
-  local weeds = st(nil, 34.8, 31.6)
+  local weeds = st(nil, 33.7, 30.4)
 
   need(568, "The Defense of Grom'gol", 36, 33)
   need(569, "The Defense of Grom'gol", 37, 33, 568)
@@ -694,7 +693,7 @@ do
 
   chapter("stv-35", "Stranglethorn: Grom'gol and Nesingwary", M.stv, 35, 37, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    questie,
+    questRecords,
   }, { "dustwallow-37", "badlands-37" }, withTrainers({
     action("note", nil, "Clean out your quest log. If you are not going to run the City of Dalaran, abandon Source of Power and The Grave Knight now: the run is for levels 30 to 36, and Stranglethorn needs the room.",
       { name = "Quest log", drop = { 96988, 96986 } }),
@@ -703,7 +702,8 @@ do
     finish(1184, P.belgrom, "Belgrom Rockmaul waits in the Valley of Honor."),
     action("train", nil, "Visit your class trainer in Orgrimmar. Train spells for level", { level = 36 }),
     action("sethearth", P.gryshka, "Bind at the Orgrimmar inn in the Valley of Strength. You come back here after Stranglethorn.", P.org),
-    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the Grom'gol zeppelin from the tower north-east of the city.",
+      { skipOn = M.stv }),
     taxi("getfp", P.thysta, "Grom'gol, Stranglethorn", "Learn the Grom'gol flight path from Thysta."),
     accept(568, aggrogosh),
     accept(95773, aggrogosh, "He also wants the naga off Grom'gol's coast taught a lesson: you dive at the Vile Reef anyway."),
@@ -719,8 +719,7 @@ do
     accept(97328, st("Thoroughly Scavenged Supplies", 31.55, 12.95), "Ride back west past the camp and search the scavenged supplies."),
     along(objective(191, st(nil, 28.8, 14.1), "Panthers prowl the jungle west of the camp.", "10 Panthers"), 194, 97328),
     along(objective(194, st(nil, 25.8, 16.1), "Stranglethorn Raptors hunt nearer the coast.", "10 Stranglethorn Raptors"), 191),
-    note(accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp at the Ruins of Zul'Kunda."),
-      "Zimmix has no QuestieDB record; the spot comes from the Alliance route's map point."),
+    accept(97329, zimmix, "Zimmix Sputterspark is caged near the Bloodscalp camp at the Ruins of Zul'Kunda."),
     along(objective(581, bloodscalp, "Kill Bloodscalp trolls along the coast for their tusks.", "9 Bloodscalp Tusks"), 596, 97329, 97328),
     along(objective(596, bloodscalp, "Every kind of Bloodscalp also carries Bloody Bone Necklaces.", "25 Bloody Bone Necklaces"), 581, 97329, 97328),
     along(objective(97329, bloodscalp, "One of the trolls carries Zimmix's Primitive Key.", "Primitive Key"), 581, 596),
@@ -740,10 +739,8 @@ do
     finish(568, aggrogosh), finish(95773, aggrogosh), accept(569, aggrogosh),
     finish(581, nimboya), accept(582, nimboya),
     finish(596, kinweelay), finish(629, kinweelay),
-    note(accept(97453, gemmil, "Gemmil, a troll child in the camp, wants the carnivorous weeds south of Grom'gol cut back."),
-      "Gemmil and the weeds have no QuestieDB records; both spots come from a published guide."),
-    note(objective(97453, weeds, "On the way east, kill Carnivorous Weeds in the jungle south-east of the camp.", "6 Carnivorous Weeds"),
-      "Weed spot from a published guide (Wowhead Forever: south of Grom'gol); check in game."),
+    accept(97453, gemmil, "Gemmil, a troll child in the camp, wants the carnivorous weeds south of Grom'gol cut back."),
+    objective(97453, weeds, "On the way east, kill Carnivorous Weeds just south-east of the camp. More grow north-east near 33.6, 28.0.", "6 Carnivorous Weeds"),
     along(objective(569, st(nil, 37.0, 31.0), "Ride east to the Mosh'Ogg camp. Kill Brutes and Witch Doctors.", "10 Mosh'Ogg Brutes", "5 Mosh'Ogg Witch Doctors"), 570, 192),
     along(objective(192, shadowmaw, "Shadowmaw Panthers stalk unseen in the jungle south of the ogres. A Catseye Elixir from the Auction House makes them easier to find.", "10 Shadowmaw Panthers"), 570, 569),
     along(objective(570, shadowmaw, "Collect Shadowmaw Claws from the panthers and a Pristine Tigress Fang from the tigresses there.", "8 Shadowmaw Claws",
@@ -774,13 +771,14 @@ do
     accept(196, hemet, "Hemet's next raptors are the Jungle Stalkers farther south. Keep it for your return at 40."),
     objective(188, st("Sin'Dall", 32.2, 17.4), "Sin'Dall, a white tigress, prowls the hilltop south-west of the camp. Kill her for her paw.", "Paw of Sin'Dall"),
     finish(188, ajeck),
-    note(accept(97047, wendel, "Ride east to Wendel Mathers on the slope above the Kurzen compound. His cook is locked inside."),
-      "Wendel has no QuestieDB record; the spot comes from the Alliance route's map point."),
-    objective(97047, st(nil, 48.8, 5.4), "Loot a Kurzen Fighter's Uniform and the compound's cage key from the Kurzen guards, then free the cook.",
-      "Kurzen Fighter's Uniform", "Compound Cage Key"),
+    accept(97047, wendel, "Ride east to Wendel Mathers on the north side of the Kurzen compound before entering the Stockpile."),
+    B.objectivePart(97047, 1, st(nil, 48.8, 5.4), "Inside the Stockpile, descend to the lower level and loot the Compound Cage Key from Kurzen Elites or Subchiefs.",
+      "Compound Cage Key"),
+    B.objectivePart(97047, 2, st("Kurzen Supply Crate", 49.62, 7.74), "Take the uniform from the Kurzen Supply Crate before going back to Wendel.",
+      "Kurzen Fighter's Uniform"),
     finish(97047, wendel), accept(97048, wendel, "Keep his note for Captain Aransas in Booty Bay."),
     along(objective(213, st(nil, 44.6, 22.1), "Ride south to the Venture Co. dig. Kill Geologists for Tumbled Crystals.", "8 Tumbled Crystals"), 1182),
-    objective(1182, st("Cozzle's Footlocker", 43.3, 20.3), "Open Cozzle's Footlocker in the Venture Co. camp for the blueprints.", "Fuel Regulator Blueprints"),
+    objective(1182, st("Foreman Cozzle's Footlocker", 43.34, 20.34), "Kill Foreman Cozzle on the platform at 42.7, 18.4 for his key. Use it to open the footlocker in the hut to the south.", "Fuel Regulator Blueprints"),
     action("goto", nimboya, "Ride west back to Grom'gol."),
     finish(582, nimboya), accept(638, nimboya, "Nimboya sends you to Zengu in Hammerfall. Keep it for Arathi."),
     taxi("fly", B.at("Gringer", 26.9, 77.1, 1434), "Booty Bay, Stranglethorn", "Fly to Booty Bay."),
@@ -791,13 +789,20 @@ do
     accept(600, crank, "Crank Fizzlebub now wants Singing Blue Crystals from the Venture Co. mine in the middle of the jungle. Keep it for your return at 40."),
     finish(1182, revilgaz),
     finish(575, drizzlik, "Bring Drizzlik his skins."),
-    finish(97048, st("Captain Aransas", 27.4, 76.3), "Captain Aransas waits by the docks."),
+    finish(97048, st("Captain Aransas", 27.69, 76.66), "Captain Aransas waits by the docks."),
     action("hearth", P.gryshka, "Hearth to Orgrimmar.", P.org),
   }, P.orgTrainers))
 end
 
 -- Dustwallow from Brackenwall Village at 37: the Shady Rest, the Black Shield, Swamp Eye Jarl and the
 -- Theramore docks; then Ratchet, Thunder Bluff and the camp outside Razorfen Downs.
+local function dustwallowVenom()
+  local step = objective(1322, on.dustwallow(nil, 38.7, 26.0),
+    "Hunt Darkfang spiders in the reeds near the Theramore Infiltrators for Acidic Venom Sacs.", "6 Acidic Venom Sacs")
+  step.mobs = { "Darkfang Venomspitter", "Darkfang Creeper", "Giant Darkfang Spider" }
+  return step
+end
+
 do
   local dm = on.dustwallow
   local krog = dm("Krog", 36.42, 31.88)
@@ -832,7 +837,7 @@ do
 
   chapter("dustwallow-37", "Dustwallow: Brackenwall Village", M.dustwallow, 37, 38, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    questie,
+    questRecords,
   }, { "arathi-38", "badlands-37" }, {
     action("buy", on.orgrimmar("Xen'to", 57.6, 52.9), "Buy 3 Soothing Spices from Xen'to in Orgrimmar. Swamp Eye Jarl in Dustwallow wants them.",
       { item = 3713, count = 3 }),
@@ -851,9 +856,10 @@ do
     accept(1201, nazeer),
     accept(1273, ogron, "Ogron waits south-east of the village. He takes you to question Reethe."),
     note(objective(1273, ogron, "Follow Ogron to Reethe and stay with him through the questioning. Fight off the ambush that follows."),
-      "The escort's path is not in QuestieDB; check in game."),
+      "The escort's path is not in quest database; check in game."),
     accept(1177, mudcrush, "Mudcrush Durtfeet, a friendly ogre south of the village, is hungry for murloc heads."),
-    objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"),
+    along(objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"), 1322),
+    dustwallowVenom(),
     accept(1270, stinky, "Ride north-east to \"Stinky\" Ignatz in the bog. His escape is an escort."),
     note(objective(1270, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers bog samples and fight off the attackers."),
       "Escort route from the classic quest; check in game."),
@@ -862,8 +868,7 @@ do
     accept(1238, dirt, "Search the loose dirt beside Jarl's shack."),
     objective(1177, dm(nil, 56.8, 15.6), "Ride north to the coast and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
     action("goto", spiders, "Ride west along the north of the marsh to the Darkmist spider caves north of Brackenwall."),
-    along(objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "20 Unpopped Darkmist Eyes"), 1322),
-    along(objective(1322, dm(nil, 33.0, 22.1), "The same spiders carry Acidic Venom Sacs.", "5 Acidic Venom Sacs"), 1206),
+    objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "40 Unpopped Darkmist Eyes"),
     finish(1201, nazeer), accept(1202, nazeer), finish(1238, nazeer),
     finish(1322, dogol), accept(1323, dogol), finish(1323, krog),
     finish(1273, krog), accept(1276, krog, "Keep the shield for Mosarn in Thunder Bluff."),
@@ -943,9 +948,10 @@ do
     "https://www.wowhead.com/forever/zone=36/alterac-mountains",
     "https://www.wowhead.com/forever/zone=45/arathi-highlands",
     "https://www.wowhead.com/forever/quest=92519",
-    questie,
+    questRecords,
   }, { "badlands-39" }, withTrainers({
-    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades, then walk into the Undercity."),
+    action("boat", P.ucZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Tirisfal Glades, then walk into the Undercity.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     finish(97985, P.calder, "Bring Stormheart's heart to Calder Gray in the Apothecarium."),
     accept(232, zinge, "From level 38, Apothecary Zinge, a few steps from Calder, has a purchase order for Alessandro Luca."),
     finish(232, luca, "Alessandro Luca keeps a shop south-west of the bat handler, off the Trade Quarter's ring."),
@@ -997,13 +1003,13 @@ do
     part(651, 2, ar("Stone of East Binding", 66.7, 29.7), "Ride back west past Hammerfall to the Stone of East Binding. Touch it and defeat the guardian that appears for the Cresting Key.",
       "Cresting Key"),
     note(objective(92519, ar("Apothecary Jorell", 60.1, 59.3), "Ride south to Go'shek Farm and pick up the case of Packaged Tonics in Jorell's lab.", "Packaged Tonics"),
-      "The case has no QuestieDB record; the arrow points at Apothecary Jorell's lab."),
+      "The case has no quest database record; the arrow points at Apothecary Jorell's lab."),
     part(651, 3, ar("Stone of Outer Binding", 52.0, 50.7), "Ride west to the Stone of Outer Binding for the Thundering Key.", "Thundering Key"),
     along(objective(701, ar(nil, 52.3, 66.6), "Ride south and kill Highland Fleshstalkers for Raptor Hearts.", "12 Raptor Hearts"), 678),
     along(objective(678, ar(nil, 53.1, 75.2), "Kill Boulderfist Brutes and Magi at the ogre camp farther south.", "10 Boulderfist Brutes", "4 Boulderfist Magi"), 701),
     withItem(213422, accept(79624, ar(nil, 53.1, 75.2), "If an Illegible Recipe dropped from the ogres, use it from your bags: an ogre who can read waits nearby.")),
     note(finish(79624, ar("Skonk", 57.7, 74.7), "Follow the path east of the camp to Skonk and give him the recipe."),
-      "Skonk has no QuestieDB record; the spot comes from a published guide."),
+      "Skonk has no quest database record; the spot comes from a published guide."),
     optional(action("collect", ar(nil, 55.5, 67.0), "Kill Mesa Buzzards when you see them for Buzzard Wings. Rigglefuzz in the Badlands wants four; the Auction House sells them too.",
       { item = 3404, count = 4 })),
     action("hearth", P.adegwa, "Hearth to Hammerfall.", P.hammerfall),
@@ -1096,7 +1102,7 @@ do
       accept(710, B2.lotwil, "Ride west along the road toward Kargath. Lotwil Veriatus, beside it, wants stone shards from the rock elementals."),
       taxi("getfp", P.gorrik, "Kargath, Badlands", "Ride on west to Kargath and learn the flight path from Gorrik."),
       note(accept(97663, B2.mushale, "Mus'hale wants his stolen supplies back from the ogres of the Dustbowl."),
-        "QuestieDB has no record of this Forever quest's giver; Wowhead names Mus'hale at Kargath."),
+        "quest database has no record of this Forever quest's giver; Wowhead names Mus'hale at Kargath."),
       action("sethearth", B2.shulkar, "Bind at the Kargath inn.", P.kargath),
       accept(2258, B2.jarkal), accept(1419, B2.neeka),
       action("goto", B2.elementals, "Ride back east to Lotwil's camp."),
@@ -1105,7 +1111,7 @@ do
       along(part(2258, 3, bl(nil, 17.7, 42.6), "Lesser Rock Elementals north-west of the camp also drop Rock Elemental Shards.", "5 Rock Elemental Shards"), 711),
       objective(711, bl(nil, 14.5, 34.5), "Ride into the hills north-west of the camp. Kill Rock Elementals for Large Stone Slabs.", "3 Large Stone Slabs"),
       note(objective(97663, B2.dustbowl, "Ride south to the Dustbowl. Kill Dustbelcher ogres until you recover Mus'hale's Stolen Supplies, then use them on the stone etchings nearby for a small and a large rubbing."),
-        "The ogre camp and the etchings are not in QuestieDB; the arrow points at the nearest Dustbelcher ogres."),
+        "The ogre camp and the etchings are not in quest database; the arrow points at the nearest Dustbelcher ogres."),
       along(part(2258, 2, B2.coyotes, "Ride south-west. Kill Elder Crag Coyotes for their fangs.", "10 Crag Coyote Fangs"), 1419),
       along(objective(1419, B2.coyotes, "Every coyote can carry a Coyote Jawbone. Feral and Elder Crag Coyotes roam much of the south.", "30 Coyote Jawbones"), 2258),
       along(part(2258, 1, bl(nil, 15.5, 62.1), "Giant Buzzards circle the same hills. Kill them for their gizzards.", "5 Buzzard Gizzards"), 1419),
@@ -1115,7 +1121,7 @@ do
     local B2 = badlands
     return {
       note(withItem(211269, accept(78823, B2.jarkal, "If a Primitive Drawing dropped for you in the Badlands, use it from your bags. Hemet Nesingwary in Stranglethorn wants to see it.")),
-        "The drawing's drop source is not in QuestieDB; a published guide offers it after the Stonevault troggs. The step shows only while the drawing is in your bags."),
+        "The drawing's drop source is not in quest database; a published guide offers it after the Stonevault troggs. The step shows only while the drawing is in your bags."),
       finish(2258, B2.jarkal),
       dungeon("uldaman", accept(2202, B2.jarkal, "Jarkal now wants fungus caps from the Uldaman dig. Take it only if you plan to run Uldaman.")),
       finish(1419, B2.neeka), accept(1420, B2.neeka, "Keep Neeka's report for Helgrum the Swift in Stonard, in the Swamp of Sorrows."),
@@ -1148,7 +1154,7 @@ do
   chapter("badlands-39", "Badlands: Kargath", M.badlands, 39, 40, {
     "https://www.wowhead.com/forever/zone=3/badlands",
     "https://www.wowhead.com/forever/quest=97663",
-    questie,
+    questRecords,
   }, nil, steps)
 end
 
@@ -1167,10 +1173,11 @@ do
 
   alternate("stv-30", "Stranglethorn Early: Grom'gol and Nesingwary", M.stv, 30, 34, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
-    questie,
+    questRecords,
   }, { "flats-33", "desolace-34", "dustwallow-33" }, {
     taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly from Freewind Post to Orgrimmar."),
-    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the zeppelin to Grom'gol from the tower north-east of the city."),
+    action("boat", P.gromgolZeppelin, "Leave Orgrimmar by the main gate and take the Grom'gol zeppelin from the tower north-east of the city.",
+      { skipOn = M.stv }),
     taxi("getfp", P.thysta, "Grom'gol, Stranglethorn", "Learn the Grom'gol flight path from Thysta."),
     action("sethearth", thulbek, "Bind at the Grom'gol inn. This run starts and ends here.", gromgol),
     action("goto", hemet, "Follow the road north from Grom'gol to Nesingwary's Expedition, just west of the road."),
@@ -1198,7 +1205,8 @@ do
     finish(187, ajeck), finish(195, hemet),
     action("goto", aggrogosh, "Ride south back to Grom'gol."),
     finish(568, aggrogosh), finish(581, nimboya),
-    action("boat", st("Nez'raz", 31.4, 29.9), "Take the zeppelin from Grom'gol back to Orgrimmar."),
+    action("boat", st("Nez'raz", 31.4, 29.9), "Take the zeppelin from Grom'gol back to Durotar.",
+      { skipOn = { M.durotar, M.orgrimmar } }),
   })
 end
 
@@ -1211,6 +1219,7 @@ do
   local gurda = ds("Gurda Wildmane", 56.29, 59.68)
   local smeed = ds("Smeed Scrabblescrew", 60.86, 61.86)
   local uthek = ds("Uthek the Wise", 36.22, 79.25)
+  local molkar = ds("Molkar", 35.68, 92.23)
   local sikewa = ds("Innkeeper Sikewa", 24.1, 68.2)
   local mailahii = ds("Mai'Lahii", 22.64, 71.97)
   local drulzegar = ds("Drulzegar Skraghook", 23.32, 72.87)
@@ -1228,7 +1237,7 @@ do
     "https://www.wowhead.com/forever/zone=215/mulgore",
     "https://www.wowhead.com/forever/quest=93225",
     "https://www.wowhead.com/forever/quest=94873",
-    questie,
+    questRecords,
   }, { "flats-33", "stv-35", "dustwallow-33" }, {
     taxi("fly", B.at("Tal", 47, 49.82, 1456), "Thunder Bluff, Mulgore", "Fly from Freewind Post to Thunder Bluff."),
     action("goto", muln, "Take the lift down and ride north-west across Mulgore to Muln Earthfury at the Skywatcher Plateau."),
@@ -1252,7 +1261,7 @@ do
     accept(1365, felgur),
     accept(1368, gurda, "Gurda Wildmane wants you on friendly terms with the Gelkis centaur."),
     note(accept(93225, gurda, "She also wants carved totems from centaur of any clan."),
-      "QuestieDB has no giver for this Forever quest; Gurda takes it in."),
+      "quest database has no giver for this Forever quest; Gurda takes it in."),
     action("goto", ds(nil, 75.1, 16.0), "Ride north-east past Kormek's Hut to Sargeron, the satyr camp in the corner of the zone."),
     along(objective(1434, ds(nil, 75.1, 16.0), "Kill Hatefury Rogues, Felsworn, Betrayers and Hellcallers.", "7 Hatefury Rogues", "7 Hatefury Felsworn",
       "7 Hatefury Betrayers", "7 Hatefury Hellcallers"), 1481),
@@ -1265,23 +1274,21 @@ do
     finish(1434, takata),
     finish(1481, maurin), accept(1482, maurin, "Maurin now wants an Oracle Crystal from the Slitherblade naga on the north-west coast."),
     finish(1365, felgur),
-    finish(93225, gurda), note(accept(94873, gurda, "Take the Totem Tote to the Gelkis quartermaster."),
-      "QuestieDB has no giver for this Forever quest; Gurda takes in the totems before it."),
+    finish(93225, gurda), accept(94873, gurda, "Take the Totem Tote to Molkar in Gelkis Village."),
     accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
-    withItem(13892, objective(5561, ds(nil, 52.5, 58.3), "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each tamed kodo back to Smeed.",
+    withItem(13892, objective(5561, ds(nil, 52.5, 58.3), "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")),
     finish(5561, smeed),
-    action("goto", uthek, "Ride south-west to the Gelkis village."),
-    note(finish(94873, uthek, "Hand the Totem Tote to the Gelkis quartermaster in the village."),
-      "The quartermaster has no QuestieDB record; the arrow points at Uthek the Wise in the same village."),
-    finish(1368, uthek, "Uthek the Wise welcomes you now that the Gelkis are friendly."),
+    action("goto", molkar, "Ride south-west through Gelkis Village to Molkar at its southern end."),
+    finish(94873, molkar, "Give Molkar the Totem Tote. You need at least Neutral standing with the Gelkis."),
+    finish(1368, uthek, "Ride north through the village to Uthek the Wise once the Gelkis are Friendly."),
     taxi("getfp", P.thalon, "Shadowprey Village, Desolace", "Ride west to Shadowprey Village on the coast and learn the flight path from Thalon."),
     action("sethearth", sikewa, "Bind at the Shadowprey inn.", shadowprey),
     accept(6142, mailahii), accept(6143, drulzegar),
     action("goto", naga, "Ride north along the coast road to the Slitherblade naga below Ethel Rethor."),
     along(objective(6143, ds(nil, 34.2, 23.5), "Kill Slitherblade Naga, Sorceresses and Myrmidons up the coast.", "7 Slitherblade Myrmidons",
       "7 Slitherblade Naga", "5 Slitherblade Sorceresses"), 6142, 1482),
-    along(objective(6142, naga, "The naga carry Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143),
+    along(objective(6142, naga, "Loot the naga and gather Giant Softshell Clams from the sea floor. Open the clams in your bags for Soft-shelled Clam Meat.", "10 Soft-shelled Clam Meat"), 6143),
     objective(1482, ds("Slitherblade Oracle", 32.7, 12.9), "Slitherblade Oracles stand farther north. Kill one for its crystal.", "Oracle Crystal"),
     action("goto", takata, "Ride south-east across Desolace to Ghost Walker Post."),
     finish(1482, maurin), accept(1484, maurin), finish(1484, takata),
@@ -1304,7 +1311,7 @@ do
 
   alternate("dustwallow-33", "Dustwallow First: Brackenwall Village", M.dustwallow, 33, 37, {
     "https://www.wowhead.com/forever/zone=15/dustwallow-marsh",
-    questie,
+    questRecords,
   }, { "desolace-34", "stv-35", "arathi-38" }, {
     action("goto", P.devrak, "Travel to the Crossroads: fly there from any Horde flight master in Kalimdor."),
     action("buy", on.barrens("Tarban Hearthgrain", 55.2, 32.1), "Buy 3 Soothing Spices from Tarban Hearthgrain, the Crossroads baker. Swamp Eye Jarl in Dustwallow wants them.",
@@ -1321,9 +1328,10 @@ do
     accept(1201, nazeer),
     accept(1273, ogron, "Ogron waits south-east of the village. He takes you to question Reethe."),
     note(objective(1273, ogron, "Follow Ogron to Reethe and stay with him through the questioning. Fight off the ambush that follows."),
-      "The escort's path is not in QuestieDB; check in game."),
+      "The escort's path is not in quest database; check in game."),
     accept(1177, mudcrush, "Mudcrush Durtfeet, a friendly ogre south of the village, is hungry for murloc heads."),
-    objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"),
+    along(objective(1201, dm(nil, 38.6, 24.4), "Theramore Infiltrators sneak through the reeds north-east of the village. Kill them.", "9 Theramore Infiltrators"), 1322),
+    dustwallowVenom(),
     accept(1270, dm("\"Stinky\" Ignatz", 46.88, 17.52), "Ride north-east to \"Stinky\" Ignatz in the bog. His escape is an escort."),
     note(objective(1270, dm(nil, 48.8, 24.5), "Escort Stinky while he gathers bog samples and fight off the attackers."),
       "Escort route from the classic quest; check in game."),
@@ -1332,8 +1340,7 @@ do
     accept(1238, dm("Loose Dirt", 55.44, 25.92), "Search the loose dirt beside Jarl's shack."),
     objective(1177, dm(nil, 56.8, 15.6), "Ride north to the coast and kill Mirefin murlocs for their heads.", "8 Mirefin Heads"),
     action("goto", spiders, "Ride west along the north of the marsh to the Darkmist spider caves north of Brackenwall."),
-    along(objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "20 Unpopped Darkmist Eyes"), 1322),
-    along(objective(1322, dm(nil, 33.0, 22.1), "The same spiders carry Acidic Venom Sacs.", "5 Acidic Venom Sacs"), 1206),
+    objective(1206, spiders, "Kill Darkmist spiders for Unpopped Darkmist Eyes.", "40 Unpopped Darkmist Eyes"),
     finish(1201, nazeer), accept(1202, nazeer), finish(1238, nazeer),
     finish(1322, dogol), accept(1323, dogol), finish(1323, krog),
     finish(1273, krog), accept(1276, krog, "Keep the shield for Mosarn in Thunder Bluff."),
@@ -1381,7 +1388,7 @@ do
   alternate("badlands-37", "Badlands First: Kargath", M.badlands, 37, 40, {
     "https://www.wowhead.com/forever/zone=3/badlands",
     "https://www.wowhead.com/forever/quest=97663",
-    questie,
+    questRecords,
   }, { "arathi-38" }, steps)
 end
 

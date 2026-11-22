@@ -4,7 +4,7 @@
 
 ## Evidence
 
-- Quest IDs, givers, turn-ins, positions, prerequisites, race and class masks: `tools/questfacts.py quest|item|npc` on the cached Forever QuestieDB data. Every scripted ID is in `tools/reference/forever.json` `quests.ids`. RestedXP (`forever/Horde-01-14_Undead.lua`, `forever/Horde-01-12_Durotar.lua`, classic `RestedXP Horde 13-23 Barrens.lua` and `RestedXP Horde 20-30.lua`) was used only for order and waypoints. All step text is ours.
+- Quest IDs, givers, turn-ins, positions, prerequisites, race and class masks: `tools/questfacts.py quest|item|npc` on the cached Forever quest database data. Every scripted ID is in `tools/reference/forever.json` `quests.ids`. reference guide A (`forever/Horde-01-14_Undead.lua`, `forever/Horde-01-12_Durotar.lua`, classic `local guide reference` and `local guide reference`) was used only for order and waypoints. All step text is ours.
 - Web: [questing.wiki Warrior](https://questing.wiki/wow-forever/classes/warrior/) (Path of Defense and Ulag the Cleaver teach Defensive Stance; the Horde level 20 list), [questing.wiki Paladin](https://questing.wiki/wow-forever/classes/paladin/) (the Forsaken Paladin quest list), [Bind on Forever 91858](https://bindonforever.com/quest/91858) (Paladin only, Horde, from level 18), [Bind on Forever 94441](https://bindonforever.com/quest/94441) (part 7 of A Lesson in Divinity), [Conquest Capped weapon guide](https://conquestcapped.com/guides/wow-forever/wow-forever-paladin-weapon-quest/) (the Wolfsbane chain, materials, the level 20 gate from A Moon-Kissed Blade on). Icy Veins' Warrior page returned 403.
 
 ## Warrior
@@ -21,7 +21,7 @@
 | `warrior-brutal-legguards` Warrior: Brutal Legguards | 28-30 | all | 1841, 1846 (Sturdy Dragonmaw Shinbones, Wetlands), 1847 |
 | `warrior-berserker-stance` Warrior: Berserker Stance | 30 | all five | 1718 (race-filtered accepts: Sorek for Orc/Troll/Skyborne, Torm Ragetotem for Tauren, Baltus Fowler for Undead), 1719 (Berserker Stance and Intercept) |
 
-- 1505 is exclusive with 1818 (`exclusiveTo`), so the Barrens stance chain is limited to Orc, Troll and Tauren. The file sets `quest[1505].race` (the quest record is defined in `QuestHordeMulgore.lua` with no steps). RestedXP's Orc/Troll Tirisfal path abandons 1505 and does 1818 instead; our Durotar route stays in Kalimdor.
+- 1505 is exclusive with 1818 (`exclusiveTo`), so the Barrens stance chain is limited to Orc, Troll and Tauren. The file sets `quest[1505].race` (the quest record is defined in `QuestHordeMulgore.lua` with no steps). reference guide A's Orc/Troll Tirisfal path abandons 1505 and does 1818 instead; our Durotar route stays in Kalimdor.
 - Skyborne Warriors: 94003 covers the stance. Their race bit is in the 1505-1503 mask, so they may also be able to take the Forged Steel weapon chain through Uzzek. Not routed until that is checked in game.
 - The Brutal quests have quest level 30 and a minimum of 20, with no race split for the three armour pieces (all have the full Horde race mask). The Dragonmaw shinbone drop has no Forever or classic drop record in the cache. The Dragonmaw Raider, Bonewarder, Swamprunner and Centurion spawns cluster at Angerfang Encampment (Wetlands 45-53, 45-54), so the waypoint is there. The guide adds Wetlands extents to the Horde route for that one step.
 - Left out: The Windwatcher 1791 and the Whirlwind Weapon chain (level 30 entry but the quests run to 40, as on the Alliance side). Weapons of Choice 893 is a general Barrens quest, not a class quest.

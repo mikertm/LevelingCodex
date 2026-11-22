@@ -2,9 +2,9 @@
 
 `QuestHordeClassCasters.lua`. Inline insertions into the Horde route plus seven side guides. Model: the Alliance
 casters in `QuestClassData.lua` (`2026-11-08-class-priest-mage-warlock.md`). Facts come from `tools/questfacts.py`
-(QuestieDB Forever 0f7d8ad), and every quest ID is in `tools/reference/forever.json`. RestedXP gave the order
+(quest database Forever 0f7d8ad), and every quest ID is in `tools/reference/forever.json`. reference guide A gave the order
 only, from its Forever `Horde-01-12_Durotar.lua`, `Horde-01-14_Undead.lua` and `Horde-12-22_Barrens.lua` and
-the classic `RestedXP Horde 1-13 Troll-Orc.lua` and `RestedXP Horde 20-30.lua`. All step text is ours. Every
+the classic `local guide reference` and `local guide reference`. All step text is ours. Every
 section is `verified = false`.
 
 Races (Forever): Priest is Troll and Undead. Mage and Warlock are Orc, Troll and Undead (Orc Mage and Troll
@@ -19,16 +19,16 @@ Warlock are new in Forever).
 | Shadowguard 5642 | Troll | Accept from Miles Welsh on the level-20 Thunder Bluff visit (`sun-rock`, after Clarice Foster). Turn in to Ur'kyo when you fly into Orgrimmar at 22 (`zoramgar`). |
 | Dark Sacrifice 5644 | Undead | Same Miles Welsh pickup. Turn in to Aelthalyste on the level-24 Undercity visit (`hillsbrad`, after Raleigh). |
 
-- **Two sources disagree on IDs.** QuestieDB has Tai'jin giving 5655 and Var'jun giving 5654. The Forever quest
-  record on questing.wiki and every RestedXP guide have Tai'jin giving 5654, so we use 5654. For the Undead the
-  quest record makes 5658 a direct quest from Aelthalyste. QuestieDB says Father Lankester, who stands next to
+- **Two sources disagree on IDs.** quest database has Tai'jin giving 5655 and Var'jun giving 5654. The Forever quest
+  record on questing.wiki and every reference guide A guide have Tai'jin giving 5654, so we use 5654. For the Undead the
+  quest record makes 5658 a direct quest from Aelthalyste. quest database says Father Lankester, who stands next to
   her. The step text covers both.
 - **Forever renamed 5644** from Devouring Plague to Dark Sacrifice. It now teaches the new Undead spell, and
   Devouring Plague and Fear Ward are baseline at 20 (Blizzard's Priest deep dive). Shadowguard, Hex of Weakness and
   Touch of Weakness are unchanged.
 - The racial quests are exclusive groups, five IDs at 10 and three at 20. A player who takes a different
   trainer's copy can hand it in at the same NPC, and our step for the other ID ends up under Missed quests.
-- No other Horde Priest quests exist below 30 in the QuestieDB data or on questing.wiki's Forever Priest list.
+- No other Horde Priest quests exist below 30 in the quest database data or on questing.wiki's Forever Priest list.
   Garments of Spirituality and Garments of Darkness were already in the route.
 
 ## Mage
@@ -44,17 +44,17 @@ Warlock are new in Forever).
 
 - The Undead 10 chain (Speak with Anastasia 1881, The Balnir Farmstead 1882) was already inline in Tirisfal.
   1883 and 1881 are exclusive.
-- **Orc Mage race masks.** QuestieDB masks 1883/1884, 1959-1962 and 1943-1946 as Troll and Undead (144). That
+- **Orc Mage race masks.** quest database masks 1883/1884, 1959-1962 and 1943-1946 as Troll and Undead (144). That
   is the classic mask. Forever added Orc Mages, so the guides include Orcs. **Check in game** that an Orc Mage
   is offered Speak with Un'thuwa and Report to Anastasia.
-- Report to Anastasia (1959) is a breadcrumb for 1960, as Report to Jennea is on the Alliance side. QuestieDB
+- Report to Anastasia (1959) is a breadcrumb for 1960, as Report to Jennea is on the Alliance side. quest database
   lists it as 1960's prerequisite. Undead go straight to Anastasia.
 - Study: Owen Thadd in the Undercity's Magic Quarter takes the library books for the Horde. The book locations
-  come from Warcraft Tavern's library list, and Owen's position from QuestieDB (npc 211022). The book is looted
-  from a shelf or rock, and QuestieDB has no giver for the book quests. So a goto step marks the book, and the
-  quest is accepted and turned in at Owen. That matches RestedXP, which turns the Primer in without an accept.
+  come from Warcraft Tavern's library list, and Owen's position from quest database (npc 211022). The book is looted
+  from a shelf or rock, and quest database has no giver for the book quests. So a goto step marks the book, and the
+  quest is accepted and turned in at Owen. That matches reference guide A, which turns the Primer in without an accept.
 - Waters of Xavian: the waterfall at Ashenvale 76, 41 comes from warcraft.wiki.gg (one source). Laughing Sisters
-  spawn around Ashenvale 59, 56 (QuestieDB). Rift Spawns for 1960 are at Undercity 53.0, 74.7 (QuestieDB spawns).
+  spawn around Ashenvale 59, 56 (quest database). Rift Spawns for 1960 are at Undercity 53.0, 74.7 (quest database spawns).
   Dalaran Apprentices for the gems are at Silverpine 52.6, 65.1.
 - The Mage's Wand text follows the Alliance chain. The Horde start is Deino. Tabetha, Tirth, Arathi and the
   Scarlet Monastery Library are shared.
@@ -68,19 +68,19 @@ Warlock are new in Forever).
 | `warlock-orb-horde` "Warlock: The Orb of Soran'ruk" (side, `links` to `dungeon-blackfathom-deeps` and `dungeon-shadowfang-keep`) | 1740 | 20-28 | all three |
 | `warlock-felhunter-horde` "Warlock: Felhunter" (side) | 2996 Seeking Strahad (Gan'rul) -> 1801 -> 1803 (Moldy Tome in Hillsbrad, Tattered Manuscript in Splithoof Hold) -> 1805 (Rods of Channeling, Wetlands) -> 1795 | 30 | all three |
 
-- Undead Voidwalker (1478, 1473, 1471) was already inline in Tirisfal. QuestieDB limits 1473 and 1471 to the
-  Undead, so Orcs and Trolls take the Orgrimmar chain. The order comes from the classic RestedXP Troll-Orc guide,
+- Undead Voidwalker (1478, 1473, 1471) was already inline in Tirisfal. quest database limits 1473 and 1471 to the
+  Undead, so Orcs and Trolls take the Orgrimmar chain. The order comes from the classic reference guide A Troll-Orc guide,
   which fits our Kalimdor route: Ophek at the level-10 Razor Hill stop, Gan'rul on the first Orgrimmar visit,
-  the tablet during Skull Rock, the binding on the second Orgrimmar visit. The Forever RestedXP guide sends Orc
+  the tablet during Skull Rock, the binding on the second Orgrimmar visit. The Forever reference guide A guide sends Orc
   and Troll warlocks to Tirisfal for 1478 instead. We keep the Kalimdor route.
 - **Dropped:** the Undercity Succubus and Incubus (Devourer of Souls 1472 -> Hearts of the Pure 1476 -> The
   Binding 1474, and Hearts of the Lovers 65593 -> The Binding 65597). They are exclusive with Gan'rul's 1507.
   Their hearts come from Silverpine and the Wetlands, while the Gan'rul chain runs through the Barrens, where
   every Horde race is at 20. Also dropped: Seeking Strahad 3001 (Carendin Halgar's exclusive copy; the step text
   mentions it), the Bloodrobe chain (31+) and the Orb of Orahil (35+).
-- Wish You Were Here 65610 is quest level 27 (QuestieDB), so the Incubus part is done later. The audit warns about
+- Wish You Were Here 65610 is quest level 27 (quest database), so the Incubus part is done later. The audit warns about
   this; it is expected.
-- The Withered Scarf drop area and the binding spot in the Cleft of Shadow (49.43, 50.0) come from RestedXP's
+- The Withered Scarf drop area and the binding spot in the Cleft of Shadow (49.43, 50.0) come from reference guide A's
   classic 20-30 waypoints.
 - Felhunter: the Moldy Tome is in Alliance territory (Hillsbrad murloc huts, 27.8, 72.8). The rods come from
   Dragonmaw in the Wetlands, reached from Hammerfall over Thandol Span. The Wetlands extents were added to the
@@ -88,14 +88,14 @@ Warlock are new in Forever).
 
 ## Sources
 
-- QuestieDB Forever data (via `tools/questfacts.py`); the Forever client reference for IDs.
+- quest database Forever data (via `tools/questfacts.py`); the Forever client reference for IDs.
 - https://questing.wiki/wow-forever/classes/priest/, /mage/, /warlock/ and the quest pages for 5642, 5644,
   5652, 5654, 5658, 5679, 5680 (quest record vs Everything Quests pickups).
 - https://news.blizzard.com/en-us/article/24301514/world-of-warcraft-forever-class-deep-dives-priest-and-warrior
 - https://www.warcrafttavern.com/forever/guides/library-books
 - https://warcraft.wiki.gg/wiki/Waters_of_Xavian
 - https://bindonforever.com/quest/1883, https://www.wowhead.com/forever/quest=1884/ju-ju-heaps
-- RestedXP guides supplied by the owner (order and IDs only).
+- reference guide A guides supplied by the owner (order and IDs only).
 
 ## Check in game
 

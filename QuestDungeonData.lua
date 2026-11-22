@@ -315,7 +315,7 @@ do
     }, {
       finish(1486, nalpak), finish(1487, ebru),
       finish(1491, mebok), finish(959, bigglefuzz),
-      objective(6981, sputtervalve, "Show the shard to Sputtervalve on the Ratchet docks.", "Speak with someone in Ratchet"),
+      objective(6981, sputtervalve, "Talk to Sputtervalve by Ratchet's flight master and choose his dialogue about the Glowing Shard until the objective completes.", "Speak with someone in Ratchet"),
       finish(6981, falla, "Find Falla Sagewind on the ridge above the caverns."),
       accept(3370, falla, "Take the Nightmare Shard delivery to Darnassus."),
       finish(3370, mathrengyl, "Find Mathrengyl in the Cenarion Enclave."),
@@ -398,20 +398,40 @@ do
     instanceID = 34, instance = "Stormwind Stockade",
     bosses = {
       { name = "Targorr the Dread", encounter = 2756, npc = 1696,
-        tip = "He can be in several cells along the first hall, with one to three prisoners. He enrages at low health, so save a stun for the end." },
+        tip = "Check the cells off the entry hall. Control or kill the prisoners with him first. Loot his head for What Comes Around...",
+        abilities = {
+          { "Thrash", "Extra swings can spike tank damage." },
+          { "Enrage", "He hits harder at low health. Save a stun for the end." },
+        } },
       { name = "Kam Deepfury", encounter = 2757, npc = 1666,
-        tip = "His Shield Slam stuns the tank briefly and his block chance spikes for a few seconds; let casters carry the damage then." },
+        tip = "Check the cells in the east wing. Control the nearby prisoners and loot his head for The Fury Runs Deep.",
+        abilities = {
+          { "Shield Slam", "Briefly stuns the tank. Keep them healthy through it." },
+          { "Improved Blocking", "His block chance spikes. Melee can attack from behind." },
+        } },
       { name = "Hamhock", encounter = 2758, npc = 1717,
-        tip = "Stun or interrupt his Chain Lightning, and purge his Bloodlust if you can. Slow his attacks with Thunder Clap or similar." },
+        tip = "Look for the ogre farther down the east wing. Control his adds before focusing him.",
+        abilities = {
+          { "Chain Lightning", "Interrupt the cast and spread out to limit jumps." },
+          { "Bloodlust", "He attacks and casts faster. Purge it if you can." },
+        } },
       { name = "Bazil Thredd", encounter = 2760, npc = 1716,
-        tip = "Keep ranged players back from his Smoke Bomb, which stuns everyone nearby. While the tank is stunned he turns on the next player on threat." },
-      { name = "Bruegal Ironknuckle (rare, may be absent)", npc = 1720,
-        tip = "A rare in the west wing with no special tricks. Pull him on his own." },
+        tip = "Find him at the end of the east wing. Loot his head for The Stockade Riots.",
+        abilities = {
+          { "Smoke Bomb", "Stuns nearby players. Ranged and healers stay back. Be ready if he turns on you while the tank is stunned." },
+        } },
+      { name = "Bruegal Ironknuckle", optional = "rare", npc = 1720,
+        tip = "Look in the west wing on the way to Dextren Ward. If Bruegal is there, clear the nearby prisoners before pulling him." },
       { name = "Dextren Ward", encounter = 2759, npc = 1663,
-        tip = "His shout fears everyone nearby, so pull him where feared players will not run into more cells. Tremor Totem helps." },
+        tip = "Find him at the end of the west wing. Loot his hand for Crime and Punishment.",
+        abilities = {
+          { "Intimidating Shout", "Fears nearby players. Clear the hall and nearby cells before pulling him. Tremor Totem helps." },
+        } },
     },
     sources = { "https://questing.wiki/wow-forever/dungeons/stockades/quests/",
-      "https://www.icy-veins.com/wow-forever/the-stockade-quests" } }, {
+      "https://www.icy-veins.com/wow-forever/the-stockade-quests",
+      "https://www.wowhead.com/forever/guide/the-stockade-dungeon-overview-location-rewards",
+      "https://www.method.gg/wow-forever/dungeons/the-stockade" } }, {
       accept(386, berton, "Pick this up by the Lakeshire bridge when you are in Redridge."),
       accept(377, millstipe, "Find Millstipe in the Darkshire town hall."),
       accept(303, motley, "At level 25 or higher, check in with Motley at Dun Modr before heading into the Stockade."),
@@ -660,7 +680,7 @@ do
   q(2962, "The Only Cure is More Green Glow", 30, 20, 2926)
   q(2930, "Data Rescue", 30, 25)
   q(2929, "The Grand Betrayal", 35, 25)
-  q(2904, "A Fine Mess", 30)
+  q(2904, "A Fine Mess", 30, 24)
   fromItem(2945, 9326, 34, 28, "Grime-Encrusted Ring")
   q(2947, "Return of the Ring", 34, 28, 2945)
   q(2948, "Gnome Improvement", 35, 28, 2947)
@@ -729,7 +749,7 @@ do
   fromItem(1100, 5791, 34, 29, "Lonebrow's Journal")
   q(1101, "The Crone of the Kraul", 34, 29, 1100)
   q(1142, "Mortality Wanes", 30, 25)
-  q(1144, "Willix the Importer", 30)
+  q(1144, "Willix the Importer", 30, 23)
   add({ id = "dungeon-razorfen-kraul", title = name, zone = barrens, levels = { 29, 38 }, instanceID = 47,
     links = { "warrior-fire-hardened-mail", "shaman-air-totem" },
     bosses = {

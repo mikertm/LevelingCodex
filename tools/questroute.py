@@ -18,7 +18,7 @@ STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
                "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "items", "skipOn", "maxLevel",
                "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop",
-               "elite"}
+               "elite", "recoverNearby"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -51,6 +51,24 @@ def audit(data, ref, cap=20):
 
     def ascii_text(value):
         return isinstance(value, str) and value.isascii() and all(32 <= ord(c) < 127 for c in value)
+
+    def boss_shape(boss):
+        if (not isinstance(boss, dict) or not ascii_text(boss.get("name")) or not ascii_text(boss.get("tip"))
+                or set(boss) - {"name", "tip", "npc", "encounter", "optional", "abilities", "skip", "finishName", "targets"}
+                or boss.get("optional") not in (None, "rare", "optional")):
+            return False
+        if "skip" in boss and (not boss.get("optional") or not ascii_text(boss["skip"])):
+            return False
+        if "finishName" in boss and not ascii_text(boss["finishName"]):
+            return False
+        if "targets" in boss and (not isinstance(boss["targets"], list) or not boss["targets"]
+                                  or not all(ascii_text(name) for name in boss["targets"])):
+            return False
+        abilities = boss.get("abilities", [])
+        return isinstance(abilities, list) and bool(abilities) and all(
+            isinstance(ability, list) and len(ability) == 2 and all(ascii_text(text) and text.strip() for text in ability)
+            for ability in abilities
+        )
 
     def coord(value):
         return type(value) in (float, int) and 0 <= value <= 100
@@ -122,9 +140,10 @@ def audit(data, ref, cap=20):
             if not section.get("sources"):
                 warn(label, "no sources listed")
             if "bosses" in section and (category != "dungeon" or not isinstance(section["bosses"], list) or any(
-                    not isinstance(boss, dict) or not ascii_text(boss.get("name")) or not ascii_text(boss.get("tip"))
-                    or set(boss) - {"name", "tip", "npc", "encounter"} for boss in section["bosses"])):
-                fail(label, "bosses must be a dungeon guide's list of { name, tip } in printable ASCII")
+                    not boss_shape(boss) for boss in section["bosses"])):
+                bosses = section["bosses"] if isinstance(section["bosses"], list) else []
+                missing = [boss.get("name", "?") for boss in bosses if isinstance(boss, dict) and not boss_shape(boss)]
+                fail(label, "invalid boss entries or missing ability notes: " + ", ".join(missing))
             # The instance and its boss encounters, from the client (GetInstanceInfo, ENCOUNTER_END).
             instances = game.get("instances") or {}
             dungeon = instances.get(str(section.get("instanceID")))
@@ -141,6 +160,8 @@ def audit(data, ref, cap=20):
                         continue
                     if enc not in encounters:
                         fail(label, f"boss {boss.get('name')}: encounter {enc} is not one of {dungeon['name']}'s")
+                    if enc in used:
+                        fail(label, f"encounter {enc} is listed as more than one boss")
                     used.add(enc)
                 missing = [name for id_, name in dungeon["encounters"] if id_ not in used]
                 if missing:
@@ -246,6 +267,9 @@ def audit(data, ref, cap=20):
                 for key in ("sticky", "nearest"):
                     if key in step and type(step[key]) is not bool:
                         fail(where, f"{key} must be a boolean")
+                if "recoverNearby" in step and (type(step["recoverNearby"]) is not bool or kind != "accept"
+                                               or step.get("x") is None or section.get("side")):
+                    fail(where, "recoverNearby needs a leveling quest pickup with coordinates")
                 path = step.get("path")
                 if path is not None and not (step.get("map") and isinstance(path, list) and path and all(
                         isinstance(p, list) and len(p) in (2, 3) and coord(p[0]) and coord(p[1])
@@ -363,6 +387,10 @@ def audit(data, ref, cap=20):
                                 and not dungeons and section.get("category") != "dungeon") or (
                                 step.get("optional") and step["type"] in {"complete", "turnin"}
                                 and step.get("quest") not in picked) or step.get("logOnly"):
+                            continue
+                        # A leveling handoff can depend on a quest from a separate route. The
+                        # dungeon checklist checks its external prerequisites separately.
+                        if not section.get("category") and step.get("ifDone") and step["ifDone"] not in finished:
                             continue
                         kind, quest = step["type"], step.get("quest")
                         # A clean-up note: quests the player abandons here if they still hold them.

@@ -54,7 +54,7 @@ local menethilFlight = "Menethil Harbor, Wetlands"
 local ashSources = {
   "https://wowforeverinfo.com/guides/ashenvale-alliance-18-30/",
   "https://bindonforever.com/zones/ashenvale",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 q(967, "The Tower of Althalaxx", 18, 13, 966)
@@ -238,8 +238,8 @@ chapter("stonetalon", "Stonetalon Mountains", stonetalon, 22, 28, {
   taxi("fly", at("Caylais Moonfeather", 36.34, 45.58, M.darkshore), "Auberdine, Darkshore",
     "When you head back east, fly from Astranaar to Auberdine or follow the road north through Maestra's Post."),
   action("boat", at("Thamarian", 32.67, 42.11, M.darkshore),
-    "Take the Stormwind ship from Auberdine's south pier. Use Next in Stormwind Harbor.",
-    { name = "Auberdine - Stormwind Harbor" }),
+    "Take the Stormwind ship from Auberdine's south pier. Check the guide when it docks.",
+    { name = "Auberdine - Stormwind Harbor", skipOn = M.stormwind }),
   finish(1075, at("Collin Mauren", 53.01, 86.63, M.stormwind), "Give Gaxim's scroll to Collin Mauren in Stormwind. His follow-ups send you to Westfall and back to Stonetalon."),
   finish(1072, at("Lomac Gearstrip", 72.09, 51.88, M.ironforge),
     "Take the Deeprun Tram to Ironforge and give the letter to Lomac Gearstrip in Tinker Town. His follow-up needs potions from an alchemist."),
@@ -272,6 +272,8 @@ q(98417, "Vengeful Trail", 30, nil, nil, true)
 q(98418, "Shared Fury", 30, nil, 98417, true)
 q(1037, "Velinde Starsong", 30, 25, 1022)
 q(1038, "Velinde's Effects", 30, 25, 1037)
+q(1039, "The Barrens Port", 30, 25, 1038)
+B.quest[1039].optional = true
 
 local velene = ash("Sentinel Velene Starstrike", 49.8, 67.21)
 local shael = ash("Shael'dryn", 53.54, 46.29)
@@ -380,7 +382,8 @@ chapter("ashenvale-late", "Ashenvale: Raynewood and Forest Song", ashenvale, 24,
     finish(1037, thyntel, "Find Thyn'tel Bladeweaver on the Warrior's Terrace."), accept(1038, thyntel),
     objective(1038, at("Velinde's Locker", 62.3, 83.3, M.darnassus), "Search Velinde's Locker in her old home in the south-east of the city for her journal.",
       "Velinde's Journal"),
-    finish(1038, thyntel, "Bring the journal back to Thyn'tel. His next quest goes to Ratchet in the Barrens; leave it."),
+    finish(1038, thyntel, "Bring the journal back to Thyn'tel."),
+    accept(1039, thyntel, "If you plan to follow the Booty Bay route later, take the lead to Wharfmaster Dizzywig in Ratchet."),
     action("grind", astranaar, "If you still need level 30, finish a suggested chapter or run Blackfathom Deeps with a group.",
       { level = 30, suggest = { "wetlands", "southshore", "duskwood-late", "redridge-late" }, guide = "dungeon-blackfathom-deeps" }),
   })

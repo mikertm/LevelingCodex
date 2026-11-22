@@ -2,16 +2,17 @@
 -- a round class portrait, character-sheet tabs, red panel buttons, check boxes, and cards with
 -- the tooltip border (parchment or dark). Morpheus headings and the theme's accent colour stay.
 -- Every piece of art falls back to the flat Codex look when the client lacks it (Art.lua). In the
--- EllesmereUI theme (Ellesmere.lua) the window is EllesmereUI's shell on a backing frame, the inside
+-- external UI theme (skin adapter) the window is external UI's shell on a backing frame, the inside
 -- the flat look in its colours and font.
 
 local _, ns = ...
 local C, rgba, plain, padText = ns.C, ns.rgba, ns.plain, ns.padText
 local A = ns.art
 
-local FONT_HEAD = "head" -- Morpheus, or the EllesmereUI font in its theme (ns.headFont)
+local FONT_HEAD = "head" -- Morpheus, or the external UI font in its theme (ns.headFont)
 local FONT_MONO = "Fonts\\ARIALN.TTF"
 local W = 568 -- content width
+local tabWidths = {}
 
 local frame, scroll, content, tabs, levelText, nowBtn
 local viewLevel -- the level the window is showing (defaults to yours)
@@ -88,7 +89,7 @@ local function styleFS(fs, kind)
   local path, size, flags = fontOf(st[1], 12)
   local face, fl = st[2] or path, (st[2] and "") or flags or ""
   if face == FONT_HEAD then face = ns.headFont() end
-  local eui, euiFlags = ns.ellesmere.font()
+  local eui, euiFlags = ns.skinSupport.font()
   if eui and kind ~= "mono" then face, fl = eui, euiFlags end -- code keeps Arial Narrow
   fs:SetFont(face, st[3] or size, fl)
   local sh = (kind == "head" or kind == "title" or kind == "label") and 1 or 0
@@ -101,6 +102,7 @@ end
 -- Place text at (x, y) in content; returns its height and the font string.
 local function T(str, x, y, width, kind, color, justify, onTop)
   local fs = onTop and take("fsTop", newFSTop) or take("fs", newFS)
+  fs.codexLabel = nil
   styleFS(fs, kind)
   fs:SetTextColor(rgba(color or C.light))
   fs:SetWidth(width)
@@ -145,7 +147,7 @@ local function newCard()
 end
 
 -- The guide's flat card (when the client has no backdrops): fill, aged shade, double border. In the
--- EllesmereUI theme its panel: the fill and a 1 px border, nothing else.
+-- external UI theme its panel: the fill and a 1 px border, nothing else.
 local function flatBox(x, y, w, h, fill, edge)
   rect(x, y, w, h, fill)
   if C.eui then
@@ -210,6 +212,36 @@ local function plate(x, y, w, h, bg, edge)
   f.paper:Hide(); f.shade:Hide(); f.glow:Hide()
 end
 
+-- Loot uses standalone illustrations over solid UI surfaces.
+-- Every file can fall back to a plain surface without a missing-texture square.
+local function picture(path, x, y, w, h)
+  if not A.hasFile(path) then return false end
+  local t = take("picture", newTex)
+  t:SetDrawLayer("BACKGROUND", 2)
+  t:SetTexture(path)
+  t:SetTexCoord(0, 1, 0, 1)
+  t:SetVertexColor(1, 1, 1, 1)
+  t:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); t:SetSize(w, h)
+  return true
+end
+local function surface(x, y, w, h, bg, edge)
+  rect(x,y,w,h,bg)
+  edge = edge or C.edgeSoft
+  rect(x,y,w,1,edge,"border"); rect(x,y+h-1,w,1,edge,"border")
+  rect(x,y,1,h,edge,"border"); rect(x+w-1,y,1,h,edge,"border")
+end
+local function newFolio()
+  local f=CreateFrame("Frame",nil,content)
+  f:SetFrameLevel(content:GetFrameLevel()+1)
+  f.paper=f:CreateTexture(nil,"BACKGROUND");f.paper:SetAllPoints(f)
+  return f
+end
+local function folio(h,bg,w)
+  local f=take("folio",newFolio)
+  f:SetPoint("TOPLEFT",content,"TOPLEFT",0,0);f:SetSize(w or W,h)
+  f.paper:SetColorTexture(rgba(bg))
+end
+
 local showTip, hideTip = A.showTip, A.hideTip
 
 -- Spell icons the way the game draws them: a black edge with a thin gold rim.
@@ -232,8 +264,10 @@ local function icon(name, x, y, size, title, text)
   local f = take("icon", newIcon)
   f:SetSize(size, size)
   f:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y)
+  f:EnableMouse(true) -- a decorative use may have made this pooled icon passive
   ns.setIcon(f.tex, name)
   f.tex:SetDesaturated(false)
+  f.tex:SetAlpha(1)
   f.tex:SetVertexColor(1, 1, 1)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
@@ -1113,9 +1147,9 @@ renderers.settings = function()
     "WoW: Forever's logo teal for the accents and highlights.")
   row("Codex (gold)", 156, 150, th == "codex", function() ns.setTheme("codex") end,
     "The guide site's gold for the accents and highlights.")
-  if ns.ellesmere.available() then
-    row("EllesmereUI", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
-      "Your EllesmereUI look: its panels, your accent colour and your UI font. EllesmereUI's options can turn it off for the Codex (Blizzard Skins+ > Window Skins > Third-Party Addons).")
+  if ns.skinSupport.available() then
+    row("External skin", 312, 150, th == "ellesmere", function() ns.setTheme("ellesmere") end,
+      "Use your installed UI skin's panels, accent colour and font. Its skin settings can turn this off for the Codex.")
   end
   y = y + 40
 
@@ -1165,8 +1199,8 @@ renderers.settings = function()
   y = y + 12
 
   head("PROFESSIONS")
-  tick("Trace my recipe in the crafting window", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
-    "When you open a crafting profession or Smelting, the Codex outlines the recipe to make for your skill and shows how many more to make.")
+  tick("Show profession hints", not db.noCraftGuide, function() db.noCraftGuide = not db.noCraftGuide end,
+    "Show your current step in the profession book and profession windows. Crafting hints outline the recommended recipe.")
   tick("Profession skill-up cards", not db.noProfCards, function() db.noProfCards = not db.noProfCards end,
     "Shows a card for new steps, training or skill caps in every profession the Codex guides. Mining and Herbalism also announce new nodes.")
   y = y + 12
@@ -1245,11 +1279,11 @@ renderers.settings = function()
     ns.placeQuestArrow()
   end, "Puts the arrow back above the step window at its normal size.")
   y = y + 36
-  if ns.questie.usable() then
-    tick("Point the arrow at the nearest objective (QuestieDB)", not db.noNearestSpawn, function()
+  if ns.questSupport.usable() then
+    tick("Point the arrow at the nearest objective", not db.noNearestSpawn, function()
       db.noNearestSpawn = not db.noNearestSpawn
       ns.questRefresh()
-    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need. The spawns come from your QuestieDB addon.")
+    end, "Near a kill or collect step's camp, the arrow leads to the closest mob or object you still need using your installed quest-data provider.")
   end
   tick("Track the step's quest in the quest tracker", not db.noQuestWatch, function() db.noQuestWatch = not db.noQuestWatch; ns.questRefresh() end,
     "Adds the current step's quest to the game's objective tracker. Quests you track yourself are left alone.")
@@ -1264,13 +1298,15 @@ renderers.settings = function()
   tick("Say my flights in party chat", db.questAnnounceFlights, function() db.questAnnounceFlights = not db.questAnnounceFlights end,
     "Off by default. Taking a flight says where you're flying in party chat, with the time once that flight has been timed.")
   tick("Say steps I finish in party chat", db.questAnnounceSteps, function() db.questAnnounceSteps = not db.questAnnounceSteps end,
-    "Off by default. When the game finishes a step of your guide (not Next or Back), party chat gets \"Codex: Done - Accept - A Threat Within\".")
+    "Off by default. Icons and clickable quest links mark accepted quests, finished objectives and turn-ins. Next and Back stay quiet.")
   tick("Say quest items I pick up", db.questAnnounceItems, function() db.questAnnounceItems = not db.questAnnounceItems end,
-    "Off by default. Each quest item you loot goes to party chat with your count, \"Codex: Tough Wolf Meat: 4/8 (Wolves Across the Border)\", and so does an item that starts a quest of your guide.")
+    "Off by default. Quest loot goes to party chat with your progress count and quest link. An item that starts a quest includes its item link when available.")
   tick("Say quest progress in party chat", db.questAnnounceProgress, function() db.questAnnounceProgress = not db.questAnnounceProgress end,
-    "Off by default. A finished objective (\"Codex: Kobold Vermin slain: 10/10\") and a quest that's ready to turn in go to party chat. At most a line a second, never in a raid.")
+    "Off by default. Finished objectives and quests ready to turn in use distinct status messages and quest links. At most a line a second, never in a raid.")
   tick("Ping when the party is together on my step", not db.noPartyPing, function() db.noPartyPing = not db.noPartyPing end,
     "A sound when the last party member reaches your step (or you reach theirs). Quests > Party shows everyone's step, counts and quests.")
+  btn("Preview quest announcements", 0, y, 260, ns.previewQuestAnnouncements, false, "Show sample icons, links and progress privately. Nothing is sent to the party.")
+  y = y + 28
   -- the ping's sound: picking one plays it, so you can hear it (Sound Effects volume)
   T("Ping sound", 0, y + 5, 110, "body", C.ink)
   local pingLabels, pingTips = {}, {
@@ -1284,8 +1320,8 @@ renderers.settings = function()
     ns.playPartyPing(i)
     refresh()
   end, pingTips) + 8
-  if ns.questie.announces("objectives") or ns.questie.announces("items") then
-    y = y - 4 + T("Questie already says finished objectives and quest-starting items in party chat, so the Codex leaves those to Questie.",
+  if ns.questSupport.announces("objectives") or ns.questSupport.announces("items") then
+    y = y - 4 + T("Your quest tracker already announces finished objectives and quest-starting items, so the Codex avoids repeating them.",
       28, y - 4, W - 28, "small", C.dim) + 6
   end
   T("Steps shown ahead", 0, y + 4, 150, "body", C.light)
@@ -1326,19 +1362,27 @@ renderers.settings = function()
     "In combat the step window drops to 30% so it's out of your way; the mouse over it brings it back.")
   tick("Compact step window", db.questCompact, function() db.questCompact = not db.questCompact; ns.questRefresh() end,
     "Only the step's title, a thin progress bar and the buttons: for small screens. The corner button switches it too.")
-  local questieKey = ns.questie.keyName()
-  local holdBack = "Hold Alt" .. (questieKey and (" or " .. questieKey) or "") .. " to stop it."
-  local function questieNote(on, text)
+  local providerKey = ns.questSupport.keyName()
+  local holdBack = "Hold Alt" .. (providerKey and (" or " .. providerKey) or "") .. " to stop it."
+  local function providerNote(on, text)
     if on then y = y - 4 + T(text, 28, y - 4, W - 28, "small", C.dim) + 6 end
   end
   tick("Auto-accept the current guide quest", db.questAutoAccept, function() db.questAutoAccept = not db.questAutoAccept end,
     "Off by default, so you can read each quest. On: accepts only the guide's current quest, also from an NPC's gossip list. " .. holdBack)
-  questieNote(ns.questie.autoAccept(), "Questie's auto-accept is on, so Questie accepts quests.")
+  providerNote(ns.questSupport.autoAccept(), "Your quest tracker's auto-accept is on and handles quest pickups.")
   tick("Auto-turn in the current guide quest", db.questAutoTurnin, function() db.questAutoTurnin = not db.questAutoTurnin end,
     "Off by default. On: turns in only the guide's current quest, out of combat, when there is no reward to choose. " .. holdBack)
-  questieNote(ns.questie.autoComplete(), "Questie's auto-complete is on, so Questie turns quests in.")
+  providerNote(ns.questSupport.autoComplete(), "Your quest tracker's auto-complete is on and handles quest turn-ins.")
   tick("Mark the best-selling quest reward", not db.noRewardHint, function() db.noRewardHint = not db.noRewardHint end,
     "When a quest offers a choice of rewards, a coin marks the one that sells for the most and chat names it. The Codex never picks a reward for you.")
+  tick("Loot tooltip advice",not db.noLootHints,function() db.noLootHints=not db.noLootHints end,
+    "Compare equipment against your current gear with your selected loot profile.")
+  tick("Mark gear upgrade rewards",not db.noLootRewards,function() db.noLootRewards=not db.noLootRewards end,
+    "A plus marks the strongest conclusive gear upgrade. Vendor value keeps its separate coin mark.")
+  tick("Show loot target tracker",not db.noLootTracker,function() db.noLootTracker=not db.noLootTracker;if ns.loot then ns.loot.refreshTracker() end end,
+    "A small panel lists your tracked items. Drag it to move it.")
+  tick("Loot notifications",db.lootNotifications,function() db.lootNotifications=not db.lootNotifications end,
+    "Off by default. Announce obtained targets and conclusively new bag upgrades once.")
   tick("Open a dungeon's guide when you enter it", not db.noDungeonOpen, function() db.noDungeonOpen = not db.noDungeonOpen end,
     "Zoning into a dungeon the Codex has a guide for switches the step window to it, boss by boss, even if you didn't press Run. Return to leveling takes you back.")
   tick("Plan trips through flight masters", not db.noFlightPlans, function() db.noFlightPlans = not db.noFlightPlans; ns.questRefresh() end,
@@ -1377,8 +1421,9 @@ local TABS = {
 
 -- Another file adds its own tab (before Settings): renderer(viewLevel) draws with ns.ui and
 -- returns the content height. TABS outlives the frame, so a theme rebuild keeps the tab.
-function ns.addTab(key, label, renderer)
+function ns.addTab(key, label, renderer, width)
   renderers[key] = renderer
+  tabWidths[key] = width
   for _, t in ipairs(TABS) do if t[1] == key then return end end
   table.insert(TABS, #TABS, { key, label })
 end
@@ -1389,6 +1434,8 @@ local function hit(x, y, w, h, tipTitle, tipText, onClick, label)
   local hb = take("hit", newHit)
   hb:SetPoint("TOPLEFT", content, "TOPLEFT", x, -y); hb:SetSize(w, h)
   hb.tipTitle, hb.tipText = tipTitle, tipText
+  -- A previous use may have installed a native item tooltip (the Loot browser).
+  hb:SetScript("OnEnter", showTip); hb:SetScript("OnLeave", hideTip)
   hb.codexLabel = label
   hb:SetScript("OnClick", onClick)
   hb:SetFrameLevel(overlay:GetFrameLevel() + 1)
@@ -1412,7 +1459,7 @@ end
 local function questSearch(x, y, w, value, onChange, onSubmit)
   local edit = take("edit", function()
     local box = CreateFrame("EditBox", "LevelingCodexQuestSearch", overlay, "InputBoxTemplate")
-    if C.eui then ns.ellesmere.call("EditBox", box) end -- its near-black box, the template art gone
+    if C.eui then ns.skinSupport.call("EditBox", box) end -- its near-black box, the template art gone
     box:SetAutoFocus(false)
     box:SetMaxLetters(80)
     box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
@@ -1426,8 +1473,44 @@ local function questSearch(x, y, w, value, onChange, onSubmit)
   edit:SetScript("OnEnterPressed", function(self) self:ClearFocus(); onSubmit() end)
 end
 
+local function entry(key,x,y,w,value,onChange,onSubmit,maxBytes)
+  local edit=take("input:"..key,function()
+    local e=CreateFrame("EditBox","LevelingCodex"..key,overlay,"InputBoxTemplate")
+    e:SetAutoFocus(false)
+    e:SetScript("OnEscapePressed",function(self) self:ClearFocus() end)
+    e:SetScript("OnHide",function(self) self:ClearFocus() end)
+    return e
+  end)
+  edit:SetScript("OnTextChanged",nil)
+  edit:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y); edit:SetSize(w,22)
+  edit:SetMaxLetters(maxBytes or 2048); edit.codexLabel=key
+  if edit:GetText()~=value then edit:SetText(value or "") end
+  edit:SetScript("OnTextChanged",function(self) if onChange then onChange(self:GetText()) end end)
+  edit:SetScript("OnEnterPressed",function(self) self:ClearFocus(); if onSubmit then onSubmit(self:GetText()) end end)
+  return edit
+end
+
+-- A static portrait avoids inheriting the player's animations, mounts, and camera.
+local function playerPortrait(x,y,size,class,live)
+  local tex=take("playerPortrait",function() return overlay:CreateTexture(nil,"ARTWORK") end)
+  tex:SetPoint("TOPLEFT",content,"TOPLEFT",x,-y)
+  tex:SetSize(size,size)
+  tex:SetTexCoord(0,1,0,1)
+  if live then
+    local ok,result=ns.try(SetPortraitTexture,tex,"player")
+    if ok and result~=false then return end
+  end
+  ns.setIcon(tex,"classicon_"..class:lower())
+end
+local function interactivePoolKinds()
+  local kinds={"icon","btn","check","hit","edit"}
+  for kind in pairs(pools) do if kind:sub(1,6)=="input:" then kinds[#kinds+1]=kind end end
+  return kinds
+end
+
 -- The drawing helpers for tabs that live in other files.
-ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, icon = icon, btn = btn, check = check, hit = hit,
+ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
+  entry = entry, playerPortrait = playerPortrait,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
@@ -1437,7 +1520,12 @@ function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
   local p = db.windowPos
-  frame:SetScale(db.windowScale or 1)
+  local scale = db.windowScale or 1
+  if tabWidths[activeTab] then
+    local screenWidth = UIParent:GetWidth()
+    if screenWidth and screenWidth > 32 then scale = math.min(scale, (screenWidth - 32) / frame:GetWidth()) end
+  end
+  frame:SetScale(scale)
   frame:ClearAllPoints()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
@@ -1445,6 +1533,12 @@ end
 refresh = function(professionSnapshot)
   if not (frame and frame:IsShown() and ns.D) then return end
   local me = UnitLevel("player")
+  local width = tabWidths[activeTab] or W
+  if content:GetWidth() ~= width then
+    content:SetWidth(width)
+    frame:SetWidth(width + 72)
+    ns.placeWindow()
+  end
   viewLevel = viewLevel or me
   if viewLevel < 1 then viewLevel = 1 elseif viewLevel > 60 then viewLevel = 60 end
   levelText:SetText("Level " .. viewLevel)
@@ -1455,6 +1549,15 @@ refresh = function(professionSnapshot)
   if shownTab then scrollPos[shownTab] = scroll:GetVerticalScroll() or 0 end
   local edit = pools.edit and pools.edit.list[1]
   local keepSearchFocus = edit and edit:IsShown() and edit:HasFocus()
+  local keepEntryFocus
+  for kind, pool in pairs(pools) do
+    if kind:sub(1,6) == "input:" then
+      for i = 1, pool.used do
+        local entry = pool.list[i]
+        if entry:IsShown() and entry:HasFocus() then keepEntryFocus = entry; break end
+      end
+    end
+  end
   releaseAll()
   local h = renderers[activeTab](viewLevel, professionSnapshot) or 0
   content:SetHeight(math.max(h, 10))
@@ -1466,11 +1569,11 @@ refresh = function(professionSnapshot)
   -- the controller's tags, from what each widget is now (pooled widgets change role between tabs,
   -- and some get their click after the helper drew them): padSkip = nothing to press, padX/padY =
   -- its centre in content coordinates
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
-      w.padSkip = (kind ~= "edit" and w:GetScript("OnClick") == nil) or nil
+      w.padSkip = (kind ~= "edit" and kind:sub(1,6) ~= "input:" and w:GetScript("OnClick") == nil) or nil
       local _, rel, _, x, y = w:GetPoint(1)
       if rel == content and x and y then
         w.padX, w.padY = x + (w:GetWidth() or 0) / 2, -y + (w:GetHeight() or 0) / 2
@@ -1479,8 +1582,38 @@ refresh = function(professionSnapshot)
   end
   if ns.gamepad then ns.gamepad.refresh(frame) end
   if keepSearchFocus and edit:IsShown() then edit:SetFocus() end
+  if keepEntryFocus and keepEntryFocus:IsShown() then keepEntryFocus:SetFocus() end
 end
 ns.refresh = refresh
+local lootRefreshQueued
+function ns.refreshLootTab(background)
+  if not (frame and frame:IsShown() and activeTab=="loot") then return end
+  if background then
+    local ok,down=ns.try(IsMouseButtonDown,"LeftButton")
+    down=ok and down==true
+    local hits=pools.hit
+    if not down and hits then
+      for i=1,hits.used do
+        local button=hits.list[i]
+        local supported,state=ns.try(button.GetButtonState,button)
+        if supported and state=="PUSHED" then down=true;break end
+      end
+    end
+    -- The renderer hides and reuses pooled buttons. Keep a pressed button intact
+    -- until its mouse-up can finish before applying delayed item/bag updates.
+    if down then
+      if not lootRefreshQueued then
+        lootRefreshQueued=true
+        ns.after(0.08,function()
+          lootRefreshQueued=nil
+          ns.refreshLootTab(true)
+        end)
+      end
+      return
+    end
+  end
+  refresh()
+end
 function ns.refreshQuestTab()
   if frame and frame:IsShown() and activeTab == "quests" then refresh() end
 end
@@ -1502,7 +1635,7 @@ end
 -- buttons, ticks and clickable strips, the header above it and the tabs below it.
 local function listFocusables()
   local out = {}
-  for _, kind in ipairs({ "icon", "btn", "check", "hit", "edit" }) do
+  for _, kind in ipairs(interactivePoolKinds()) do
     local p = pools[kind]
     for i = 1, p and p.used or 0 do
       local w = p.list[i]
@@ -1510,7 +1643,8 @@ local function listFocusables()
     end
   end
   local chrome = frame.padChrome or {}
-  for _, c in ipairs({ { chrome.prev, W * 0.6 }, { chrome.now, W * 0.75 }, { chrome.next, W * 0.9 }, { chrome.close, W + 20 } }) do
+  local width = content:GetWidth()
+  for _, c in ipairs({ { chrome.prev, width * 0.6 }, { chrome.now, width * 0.75 }, { chrome.next, width * 0.9 }, { chrome.close, width + 20 } }) do
     if c[1] and c[1]:IsShown() then out[#out + 1] = { frame = c[1], x = c[2], y = -40, fixed = true } end
   end
   local h = content:GetHeight() or 0
@@ -1552,9 +1686,9 @@ local function flatChrome(f)
 end
 
 -- The game's dialog border and background, with a faint theme-coloured glow under the header;
--- EllesmereUI's window shell in its theme.
+-- external UI's window shell in its theme.
 local function chrome(f, glowHeight)
-  if ns.ellesmere.backing(f, "Shell") then return true end
+  if ns.skinSupport.backing(f, "Shell") then return true end
   if A.backdrop(f, "dialog") then
     -- the dialog background is see-through: darken it so names and effects in the world
     -- don't show through the text
@@ -1570,11 +1704,11 @@ local function chrome(f, glowHeight)
   return false
 end
 
--- A dark inset (the tooltip border) to hold scrolling content or a text box; EllesmereUI's darker
+-- A dark inset (the tooltip border) to hold scrolling content or a text box; external UI's darker
 -- inset panel in its theme.
 local function inset(parent)
   local f = A.frame("Frame", nil, parent)
-  if ns.ellesmere.backing(f, "Panel", { inset = true }) then return f end
+  if ns.skinSupport.backing(f, "Panel", { inset = true }) then return f end
   if not A.backdrop(f, "tooltip", { 0, 0, 0, 0.5 }, { C.edgeSoft[1], C.edgeSoft[2], C.edgeSoft[3], 1 }) then
     local bg = f:CreateTexture(nil, "BACKGROUND"); bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.35)
   end
@@ -1632,7 +1766,7 @@ local function makeFrame()
 
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
-  if C.eui then ns.ellesmere.call("CloseButton", close) end
+  if C.eui then ns.skinSupport.call("CloseButton", close) end
 
   -- level picker: view any level, with the spellbook's page arrows
   local nextB = A.arrow(header, "next"); nextB:SetPoint("TOPRIGHT", -36, -22)
@@ -1660,7 +1794,7 @@ local function makeFrame()
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 8, -10)
   scroll:SetPoint("BOTTOMRIGHT", -28, 10)
-  ns.ellesmere.scrollBar(scroll)
+  ns.skinSupport.scrollBar(scroll)
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(W, 10)
   scroll:SetScrollChild(content)
@@ -1691,7 +1825,7 @@ local function makeFrame()
     for _, b in ipairs(tabs) do b:SetWidth(math.floor((tonumber(b:GetWidth()) or 0) * share)) end
   end
 
-  ns.ellesmere.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
+  ns.skinSupport.fonts(frame) -- the title, kicker and tabs (the pooled text sets its own: styleFS)
   frame:SetScript("OnShow", function() viewLevel = viewLevel or UnitLevel("player"); refresh() end)
   -- after OnShow is set: the controller (Gamepad.lua) hooks it
   ns.gamepad.attach(frame, { main = true, scroll = scroll, focusables = listFocusables, onTab = cycleTab })
@@ -1783,8 +1917,8 @@ local function makeCopy()
   copy.useB:SetPoint("RIGHT", copy.done, "LEFT", -6, 0)
   local close = CreateFrame("Button", nil, copy, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
-  if C.eui then ns.ellesmere.call("CloseButton", close) end
-  ns.ellesmere.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
+  if C.eui then ns.skinSupport.call("CloseButton", close) end
+  ns.skinSupport.fonts(copy) -- the title, help and count (the macro text keeps Arial Narrow)
   copy:HookScript("OnHide", function(self) self.edit:ClearFocus() end) -- give the keyboard back
   -- the controller: the text first, then the box's buttons along one row
   ns.gamepad.attach(copy, { popup = true, focusables = function()
@@ -1846,10 +1980,11 @@ function ns.toggleWindow()
 end
 
 -- Theme change: rebuild the window (and drop the banner) in the new colours. A closed window stays
--- closed (EllesmereUI's accent changes rebuild too).
+-- closed (external UI's accent changes rebuild too).
 function ns.rebuildForTheme()
   ns.useTheme(ns.themeName())
   ns.questRefresh()
+  if ns.loot then ns.loot.refreshTracker() end
   ns.dropToast()
   if copy then copy:Hide(); copy = nil end
   if frame then
@@ -1862,10 +1997,14 @@ function ns.rebuildForTheme()
   end
 end
 
-function ns.openTab(tab)
+function ns.openTab(tab, atTop)
   if not ns.D then return end
   ns.lastBanner = nil -- a banner click (or any direct opening) has used it
   if not frame then makeFrame() end
+  if atTop then
+    scrollPos[tab] = 0
+    if shownTab == tab then scroll:SetVerticalScroll(0) end
+  end
   activeTab = tab
   if frame:IsShown() then refresh() else frame:Show() end
 end

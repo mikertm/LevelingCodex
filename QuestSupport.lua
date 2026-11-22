@@ -1,9 +1,9 @@
--- Working side by side with Questie: its settings decide who auto-accepts and turns in,
+-- Working side by side with quest tracker: its settings decide who auto-accepts and turns in,
 -- and its hold-back key stops the Codex too. Everything is read at call time and never errors:
--- Questie may be missing, still loading, or a version with other settings.
+-- quest tracker may be missing, still loading, or a version with other settings.
 local _, ns = ...
 local M = {}
-ns.questie = M
+ns.questSupport = M
 
 local function profile()
   local q = _G.Questie
@@ -26,9 +26,10 @@ function M.autoComplete()
   return p ~= nil and p.autocomplete == true
 end
 
--- Questie's own party chat lines: "objectives" (an objective finished) or "items" (an item that
+-- quest tracker's own party chat lines: "objectives" (an objective finished) or "items" (an item that
 -- starts a quest), said in a party when its announce channel is "party" or "both" and it isn't shut up.
-local ANNOUNCE = { objectives = "questAnnounceObjectives", items = "questAnnounceItems" }
+local ANNOUNCE = { objectives = "questAnnounceObjectives", items = "questAnnounceItems",
+  accepted = "questAnnounceAccepted", turnedIn = "questAnnounceCompleted" }
 
 function M.announces(kind)
   local p = profile()
@@ -44,7 +45,7 @@ local function key()
   return p and type(p.autoModifier) == "string" and KEYS[p.autoModifier]
 end
 
--- Questie's key when it isn't Alt (Alt already holds the Codex back).
+-- quest tracker's key when it isn't Alt (Alt already holds the Codex back).
 function M.keyName()
   local k = key()
   if k and k[1] ~= "Alt" then return k[1] end
@@ -62,7 +63,7 @@ local function scaleOf(frame)
   return ok and type(s) == "number" and s > 0 and s or 1
 end
 
--- Questie's tracker, when shown and laid out, and which side of it the step window goes:
+-- external quest tracker, when shown and laid out, and which side of it the step window goes:
 -- "left" for a tracker on the right half of the screen, else "right".
 function M.trackerSide()
   local tracker = _G.Questie_BaseFrame
@@ -76,7 +77,7 @@ function M.trackerSide()
   return tracker, onRight and "left" or "right"
 end
 
--- QuestieDB, through its public LibQuestieDB API. The check runs once per LibQuestieDB table
+-- quest database, through its public quest data API API. The check runs once per quest data API table
 -- (a /reload makes a new one); a failure, or a later read error, turns it off for good.
 local db -- { lib, ok, reason, zones, zoneCount }
 M.arrowState = "waiting"
@@ -128,7 +129,7 @@ local function now()
   return ok and type(t) == "number" and t or 0
 end
 
--- A failed check or read error gets one more try 10 s later (QuestieDB may still be starting).
+-- A failed check or read error gets one more try 10 s later (quest database may still be starting).
 local RETRY = 10
 
 function M.usable()
@@ -174,7 +175,7 @@ local function finished(obj) return obj.finished == true or obj.finished == 1 en
 
 local function text(s) if type(s) == "string" and s ~= "" then return s end end
 
--- QuestieDB's objectives for a quest as { name, sources = { { kind, id } } }.
+-- quest database's objectives for a quest as { name, sources = { { kind, id } } }.
 local function entries(lib, quest)
   local out = {}
   local groups = lib.Quest.objectives(quest)
@@ -341,27 +342,27 @@ end
 
 local function onOff(on) return on and "on" or "off" end
 
-function ns.questieDebugLines()
+function ns.questSupportDebugLines()
   local lines = {}
   if M.loaded() then
     local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
     local ok, version = ns.try(meta, "Questie", "Version")
     local k = key()
-    lines[#lines + 1] = "Questie: loaded (version " .. (ok and version and tostring(version) or "?") .. "), auto-accept "
+    lines[#lines + 1] = "quest tracker: loaded (version " .. (ok and version and tostring(version) or "?") .. "), auto-accept "
       .. onOff(M.autoAccept()) .. ", auto-complete " .. onOff(M.autoComplete()) .. ", key " .. (k and k[1] or "none")
   else
-    lines[#lines + 1] = "Questie: not loaded"
+    lines[#lines + 1] = "quest tracker: not loaded"
   end
   if ns.questViewerPlacement then lines[#lines + 1] = "Step window: " .. ns.questViewerPlacement() end
   local usable, reason = M.usable()
   if usable then
     local lib = _G.LibQuestieDB
-    lines[#lines + 1] = "QuestieDB: contract " .. tostring(lib.contractVersion) .. " (" .. tostring(lib.readMode) .. "), "
+    lines[#lines + 1] = "quest database: contract " .. tostring(lib.contractVersion) .. " (" .. tostring(lib.readMode) .. "), "
       .. db.zoneCount .. " zone maps, arrow: " .. M.arrowState
   elseif reason == "not installed" then
-    lines[#lines + 1] = "QuestieDB: not installed"
+    lines[#lines + 1] = "quest database: not installed"
   else
-    lines[#lines + 1] = "QuestieDB: off (" .. tostring(reason) .. ")"
+    lines[#lines + 1] = "quest database: off (" .. tostring(reason) .. ")"
   end
   return lines
 end

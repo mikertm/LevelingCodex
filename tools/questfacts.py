@@ -1,4 +1,4 @@
-"""Look up quest facts from the cached QuestieDB sources.
+"""Look up quest facts from the cached quest database sources.
 
     python -I tools/questfacts.py quest 7
     python -I tools/questfacts.py zone Elwynn --flavor classic
@@ -19,7 +19,7 @@ from lupa.lua51 import LuaRuntime, lua_type
 
 REV = "0f7d8adc92b28ac6594f4ad8745257f4d9784edf"
 ROOT = Path(__file__).resolve().parent
-CACHE = ROOT / ".cache" / f"questiedb-{REV[:7]}"
+CACHE = ROOT / ".cache" / f"quest-records-{REV[:7]}"
 BASE = f"https://raw.githubusercontent.com/Questie/QuestieDB/{REV}/"
 ZONES = {
     "Northshire": (9, 1429), "Elwynn": (12, 1429), "Westfall": (40, 1436),

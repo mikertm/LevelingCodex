@@ -14,7 +14,7 @@ turn-in has its accept earlier in the same guide). The leveling band files tag t
   chapters around them) and reference guide B (its Horde "Dungeon Quests" guides for the same dungeons), read for
   quest IDs, order and grouping only. All step text is our own; no coordinates come from either.
 - Quest facts (givers, enders, levels, minimums, races, prerequisites, objectives, item drops, NPC and object
-  spawns): QuestieDB Forever at 0f7d8ad via `tools/questfacts.py`; every quest ID is in the client reference's
+  spawns): quest database Forever at 0f7d8ad via `tools/questfacts.py`; every quest ID is in the client reference's
   `quests.ids`, every `taxi()` name is a client taxi node, and the encounter IDs come from `quests.instances`.
 - Forever changes and Horde access: questing.wiki/wow-forever dungeon pages
   ([Gnomeregan quests](https://questing.wiki/wow-forever/dungeons/gnomeregan/quests/),
@@ -89,9 +89,9 @@ Dalaran needs level 30 (Prison Break In, Dalaran Patrols); Bring the End needs 3
 ## Gnomeregan
 
 Horde access, checked: Forever keeps the classic Horde way in. Nogg's Rig Wars must be in the log before Sovik offers
-Chief Engineer Scooty (warcrafttavern; QuestieDB lists no prerequisite, so the step uses `ifOnQuest = 2841`).
+Chief Engineer Scooty (warcrafttavern; quest database lists no prerequisite, so the step uses `ifOnQuest = 2841`).
 Scooty's Gnomer-gooooone! calibrates the Goblin Transponder; with it, the transporter beside Scooty in Booty Bay
-sets you down outside Gnomeregan and works both ways. QuestieDB places the Dun Morogh pad ("Transpolyporter", object
+sets you down outside Gnomeregan and works both ways. quest database places the Dun Morogh pad ("Transpolyporter", object
 142175) at 21.4, 37.1, among the Caverndeep trogg spawns of the outer tunnels, west of the front lift (24.3, 39.8):
 neither source walks through the airfield, the lift or the back door. The back door is the Workshop door, opened
 with the key from Electrocutioner 6000 inside; it is an exit, not the Horde way in. So the guide has no `path`; the
@@ -107,11 +107,11 @@ Gyrodrillmatic) stay in the Alliance guide.
 
 ## Excavation Site: Wetlands
 
-Borstan's Changing Tastes is 95697 (QuestieDB: Borstan, raptor meat; reference guide B's 97249 is Borstan's level-15
+Borstan's Changing Tastes is 95697 (quest database: Borstan, raptor meat; reference guide B's 97249 is Borstan's level-15
 Favorite Food). Zaruk's Dragonmaw Rumors (95663) ends at the Deathstalker Agent, who gives Open the Maw (95682). The
-agent has no QuestieDB spawn (wowhead lists only "Wetlands"); both references put him by the portal, so the steps use
+agent has no quest database spawn (wowhead lists only "Wetlands"); both references put him by the portal, so the steps use
 the portal spot with an `uncertain` note and a one-point `path` up from the uphill road (53.3, 65.8). Elder Knowledge
-(95664) starts from the Horde Titan Relic, item 270866 (QuestieDB's required item for 95664), ends with Bashana
+(95664) starts from the Horde Titan Relic, item 270866 (quest database's required item for 95664), ends with Bashana
 Runetotem; Earthen Echo (98823, given prerequisite 95664) ends with Muln Earthfury on the Skywatcher Plateau
 (Mulgore 33.4, 22.6). Highland Hides (Menethil Harbor), Songblade Search (Lakeshire), Lost in the Thicket Things,
 Horrors in the Highland and the Lost Relic Carry chain are Alliance or sit in Alliance towns: left out. Two roads
@@ -126,12 +126,12 @@ Wordeen) and the sewer entrance. Shrewd Negotiations (97287) goes from Wordeen t
 Felben's Source of Power (96988), Melisara's The Grave Knight (96986) and Rexxie Copperclutch's Opportunistic
 Education (96987, given inside) complete the set.
 
-- QuestieDB has no prerequisites for the Forever quests. 92434 is given {545, 93680} (reference guide A offers it
+- quest database has no prerequisites for the Forever quests. 92434 is given {545, 93680} (reference guide A offers it
   only after both), 96984 after 92434 and 97287 after 96984; marked `uncertain` where it matters.
-- 96984's hand-in: QuestieDB says Wordeen in Tarren Mill (reference guide A agrees); reference guide B turns it in at
-  Modera's image. The guide follows QuestieDB.
+- 96984's hand-in: quest database says Wordeen in Tarren Mill (reference guide A agrees); reference guide B turns it in at
+  Modera's image. The guide follows quest database.
 - Stone Tokens and Bracers of Binding (556, 557) are Tarren Mill side quests, not lead-ins: left to the band files.
-- Places use the Alterac map (Modera 14.3, 59.6 and Celindra 14.2, 60.0 from QuestieDB); `zone` is Alterac.
+- Places use the Alterac map (Modera 14.3, 59.6 and Celindra 14.2, 60.0 from quest database); `zone` is Alterac.
 
 ## Scarlet Monastery
 
@@ -139,7 +139,7 @@ Education (96987, given inside) complete the set.
   (32.3, 32.8), handed to Monika Sengutz in Tarren Mill. Hearts of Zeal (1113) needs Going, Going, Guano! (1109),
   which the Razorfen Kraul guide turns in: its steps drop the `chain` and use `ifDone = 1109`, so they show only once
   1109 is done (the same pattern as the Alliance route's `carried`).
-- Library: Compendium of the Fallen (1049) is limited to Orc, Tauren and Troll (QuestieDB requiredRaces 162;
+- Library: Compendium of the Fallen (1049) is limited to Orc, Tauren and Troll (quest database requiredRaces 162;
   `H.limit`). Parqual Fintallas's Test of Lore (1160) ends a long Thousand Needles chain (1149-1159), so its book and
   hand-in are carried steps (optional, shown only while 1160 is in the log); the text names the follow-ups (6628,
   1394). The Scarlet Key from Doan's strongbox is a note.
@@ -162,7 +162,7 @@ Two runs, as the necklace chain demands. Prepare: Patrick Garrett (2342), Jarkal
 rock elementals 21.7, 45.7; buzzards 15.5, 62.1; coyotes 12.8, 65.6 as `objectiveIndex` parts) to Uldaman Reagent
 Run (2202), Rigglefuzz (2418), Theldurin (709); at the dig, a `collect` step for the Shattered Necklace (item 7666,
 Shadowforge drops at the dig and in the outer caves; `unlessDone = 2283` so it stays done after the hand-in), the
-Tablet of Ryun'eh and the Garrett Family Chest in the outer caves (QuestieDB places both chests on the Loch Modan
+Tablet of Ryun'eh and the Garrett Family Chest in the outer caves (quest database places both chests on the Loch Modan
 map: 38.6, 93.2 and 33.9, 93.0, so the steps carry no place), then Dran Droffers in Orgrimmar (2283 accepted and
 handed in together, 2284). Run 1: the Remains of a Paladin (2284 to 2318), caps and power stones. After: Jarkal
 (2318, 2338, 2339), run 2 for the three gems (parts 3, 1, 2) and Archaedas's power source (part 4), the Platinum
@@ -188,7 +188,7 @@ while you are inside).
 Prepare follows the Horde Spider God chain: the Venom Bottles (2933, Hinterlands object) to Apothecary Lydon,
 Undamaged Venom Sac (2934, Witherbark Broodguards at Shadra'Alor 32.7, 72.9), Consult Master Gadrin (2935) and The
 Spider God (2936, read the Tablet of Theka inside). Then Krazek's Tran'rek referral (2864, required for Scarab Shells
-2865 per QuestieDB), Tabetha (2846), Gadgetzan (2865, 2768, 3042), Wizzle Brassbolts (2770) and Yeh'kinya's Screecher
+2865 per quest database), Tabetha (2846), Gadgetzan (2865, 2768, 3042), Wizzle Brassbolts (2770) and Yeh'kinya's Screecher
 Spirits (3520: screecher clusters as `points` with `nearest`) to The Prophecy of Mosh'aru (3527). The Mallet of
 Zul'Farrak (Qiaga the Keeper at 48.6, 68.2, then the Jintha'Alor altar) is an optional note: one per group, level 50
 elites. After: Gadgetzan, Steamwheedle Port, the Shimmering Flats, Tabetha, Gadrin. Summoning Shadra (2937, level 55)

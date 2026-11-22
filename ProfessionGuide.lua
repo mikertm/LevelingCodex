@@ -1,6 +1,6 @@
--- ProfessionGuide.lua: in the crafting window (Blacksmithing, Smelting, Tailoring, Enchanting), outlines the recipe the
--- guide says to make now and shows a card beside the window: how many more, how many you have
--- materials for, the recipe's live colour, or where to learn it / what's next when it's grey.
+-- ProfessionGuide.lua: adds the current leveling step to the profession book's spell tooltips.
+-- Beside a profession window it shows gathering advice or outlines the recommended recipe and
+-- reports its live difficulty, craft count, and material availability.
 --
 -- Forever's crafting window is unconfirmed, so like the talent trace this tries known window names,
 -- then discovered frames named *TradeSkill* / *Profession*, and finds the row by its text. Recipe
@@ -43,7 +43,7 @@ local function discoverRoots()
     local n = nameOf(f)
     if type(n) == "string" and (n:find("TradeSkill") or n:find("Profession")) and not isOurs(f) and visible(f) then
       local wok, w, h = pcall(function() return f:GetWidth(), f:GetHeight() end)
-      if wok and (w or 0) >= 300 and (h or 0) >= 300 then guide.roots[f] = true end
+      if wok and (w or 0) >= 300 and (h or 0) >= 300 and n ~= "ProfessionsBookFrame" then guide.roots[f] = true end
     end
     ok, f = pcall(EnumerateFrames, f)
   end
@@ -74,15 +74,74 @@ local function openProfession()
 end
 
 local function keyFor(name)
+  if name == "Smelting" or name == "Find Minerals" then return "MINING" end
+  if name == "Find Herbs" then return "HERBALISM" end
   for _, key in ipairs(ns.PROF_ORDER) do
     local P = ns.P and ns.P[key]
-    if P and (P.smelt or (P.steps[1] and P.steps[1].name))
-        and (P.name == name or (key == "MINING" and name == "Smelting")) then return key end
+    if P and P.name == name then return key end
+  end
+end
+
+local function skillText(skill, cap)
+  return skill .. (cap and (" / " .. cap) or "")
+end
+
+local function gatheringAdvice(key, step, skill)
+  local names, zones = {}, ns.profZones(step)
+  for _, name in ipairs(step.herbs or step.veins or {}) do
+    local node = ns.profNode(key, name)
+    if node and node.skill <= skill and ns.profNodeColor(node, skill) ~= "grey" then
+      names[#names + 1] = node.name
+      if #zones == 0 then zones = ns.profZones(node) end
+    end
+  end
+  local targets = #names > 0 and ("Gather " .. table.concat(names, ", ")) or nil
+  local places = #zones > 0 and ("Try " .. table.concat(zones, ", ", 1, math.min(3, #zones))) or nil
+  return targets, places
+end
+
+-- The profession book uses the game's spellbook tooltip. Append the current
+-- route to profession abilities without changing the tooltip's owner or contents.
+local function addBookHint(tip, slot, bank)
+  if ns.db().noCraftGuide then return end
+  local name
+  if C_SpellBook and C_SpellBook.GetSpellBookItemName then
+    local ok, value = pcall(C_SpellBook.GetSpellBookItemName, slot, bank)
+    if ok then name = value end
+  end
+  if not name and tip.GetSpell then
+    local ok, value = pcall(tip.GetSpell, tip)
+    if ok then name = value end
+  end
+  local key = type(name) == "string" and keyFor(name)
+  local P = key and ns.P and ns.P[key]
+  if not P then return end
+  local skill, cap = ns.profSkill(key)
+  if not skill then return end
+  local goldR, goldG, goldB = rgba(C.gold)
+  local r, g, b = rgba(C.light)
+  tip:AddLine(" ")
+  tip:AddLine("Leveling Codex  |  " .. P.name .. " " .. skillText(skill, cap), goldR, goldG, goldB)
+  local step = ns.profStep(key, skill)
+  if not step then
+    tip:AddLine("Route complete", r, g, b)
+    return
+  end
+  tip:AddLine(plain((step.name or step.title) .. " (skill " .. step.from .. "-" .. step.to .. ")"), r, g, b, true)
+  if not step.name then
+    local targets, places = gatheringAdvice(key, step, skill)
+    if targets then tip:AddLine(plain(targets), r, g, b, true) end
+    if places then tip:AddLine(plain(places), r, g, b, true) end
   end
 end
 
 local KIND = { optimal = "orange", medium = "yellow", easy = "green", trivial = "grey" }
 local RELATIVE = { [0] = "orange", [1] = "yellow", [2] = "green", [3] = "grey" }
+local DIFFICULTY = {
+  orange = { "Orange", { 1, 0.64, 0.3 } },
+  yellow = { "Yellow", { 1, 0.86, 0.46 } },
+  green = { "Green", { 0.59, 0.88, 0.53 } },
+}
 
 -- A recipe in the window's list: { index or id, color, available }, or nil. The classic list only
 -- holds what the window shows (a search, a filter or a closed heading hide recipes), and some
@@ -204,20 +263,22 @@ local function pickFor(key, skill)
   local step = ns.profStep(key, skill)
   if not step then return nil end
   if step.name then return rodFirst(key, step) or partFirst(key, step) or step end
-  local best, bestScore, later
+  if not P.smelt then return { gathering = true, step = step } end
+  local best, bestScore, bestListed, later
   for _, sname in ipairs(step.smelt or {}) do
     for _, s in ipairs(P.smelt or {}) do
       if s.name == sname then
         if s.learn > skill then
           later = later or s
         elseif skill < s.grey then
-          local score = chanceAt(s, skill) + (findRecipe(s.name) and 10 or 0)
-          if not best or score > bestScore then best, bestScore = s, score end
+          local listed = findRecipe(s.name) ~= nil
+          local score = chanceAt(s, skill) + (listed and 10 or 0)
+          if not best or score > bestScore then best, bestScore, bestListed = s, score, listed end
         end
       end
     end
   end
-  if not best then return { none = true, step = step, later = later } end
+  if not bestListed then return { none = true, step = step, later = later, smelt = best } end
   local s = best
   local orange = skill < s.yellow
   return { name = s.name, spell = s.spell, icon = s.icon, yellow = s.yellow, grey = s.grey, learn = s.learn, mats = s.mats,
@@ -253,38 +314,63 @@ local function makeTrace()
   return t
 end
 
+local HINT_WIDTH, HINT_INSET = 378, 14
+
 local function makeHint()
   local A = ns.art
   local h = A.frame("Frame", "LevelingCodexCraftHint", UIParent)
-  h:SetSize(440, 104)
+  h:SetSize(HINT_WIDTH, 100)
   h:SetFrameStrata("FULLSCREEN_DIALOG")
   h:SetClampedToScreen(true)
   h:EnableMouse(false) -- text only: nothing on it to click or for the controller to land on
   h:Hide()
-  A.cardChrome(h) -- the tooltip border, flat edges, or EllesmereUI's panel behind it
+  A.cardChrome(h) -- the tooltip border, flat edges, or external UI's panel behind it
   h.glow = h:CreateTexture(nil, "BORDER")
   h.glow:SetPoint("TOPLEFT", 4, -4); h.glow:SetPoint("TOPRIGHT", -4, -4); h.glow:SetHeight(30)
   h.ring = h:CreateTexture(nil, "ARTWORK")
-  h.ring:SetSize(42, 42); h.ring:SetPoint("TOPLEFT", 10, -12); h.ring:SetColorTexture(0.72, 0.58, 0.3, 0.95)
+  h.ring:SetSize(36, 36); h.ring:SetPoint("TOPLEFT", HINT_INSET, -12)
   h.edge = h:CreateTexture(nil, "ARTWORK", nil, 1)
-  h.edge:SetSize(40, 40); h.edge:SetPoint("CENTER", h.ring, "CENTER"); h.edge:SetColorTexture(0, 0, 0, 1)
+  h.edge:SetSize(34, 34); h.edge:SetPoint("CENTER", h.ring, "CENTER"); h.edge:SetColorTexture(0, 0, 0, 1)
   h.icon = h:CreateTexture(nil, "ARTWORK", nil, 2)
-  h.icon:SetSize(38, 38); h.icon:SetPoint("CENTER", h.ring, "CENTER"); h.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  h.icon:SetSize(32, 32); h.icon:SetPoint("CENTER", h.ring, "CENTER"); h.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
   h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, 1)
+  h.label:SetPoint("TOPLEFT", h.ring, "TOPRIGHT", 10, -1)
   h.name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
   h.name:SetPoint("TOPLEFT", h.label, "BOTTOMLEFT", 0, -2)
+  h.name:SetWidth(HINT_WIDTH - 2 * HINT_INSET - 46)
+  h.name:SetJustifyH("LEFT")
+  h.name:SetWordWrap(true)
   h.name:SetFont(ns.headFont(), 18, "")
   h.name.codexHead = 18
   h.name:SetShadowOffset(1, -1)
-  for _, k in ipairs({ "line", "status" }) do
+  h.rule = h:CreateTexture(nil, "ARTWORK")
+  h.rule:SetHeight(1)
+  for _, k in ipairs({ "line", "status", "detail" }) do
     local fs = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetWidth(360); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
+    fs:SetWidth(HINT_WIDTH - 2 * HINT_INSET); fs:SetJustifyH("LEFT"); fs:SetWordWrap(true)
     h[k] = fs
   end
-  h.line:SetPoint("TOPLEFT", h.name, "BOTTOMLEFT", 0, -2)
-  h.status:SetPoint("TOPLEFT", h.line, "BOTTOMLEFT", 0, -2)
   return h
+end
+
+local function layoutHint(h, line, status, detail)
+  local y = math.max(54, 22 + h.label:GetStringHeight() + h.name:GetStringHeight())
+  h.rule:ClearAllPoints()
+  h.rule:SetPoint("TOPLEFT", HINT_INSET, -y)
+  h.rule:SetPoint("TOPRIGHT", -HINT_INSET, -y)
+  y = y + 8
+  local lines = { line or "", status or "", detail or "" }
+  for i, fs in ipairs({ h.line, h.status, h.detail }) do
+    local text = lines[i]
+    fs:SetText(text)
+    fs:SetShown(text ~= "")
+    if text ~= "" then
+      fs:ClearAllPoints()
+      fs:SetPoint("TOPLEFT", HINT_INSET, -y)
+      y = y + fs:GetStringHeight() + 4
+    end
+  end
+  h:SetHeight(y + 8)
 end
 
 local function paint()
@@ -292,8 +378,10 @@ local function paint()
   for _, x in ipairs(t.edges) do x:SetColorTexture(a[1], a[2], a[3], 1) end
   t.fill:SetColorTexture(a[1], a[2], a[3], 1)
   ns.art.paintCard(h)
+  h.rule:SetColorTexture(a[1], a[2], a[3], 0.35)
   h.name:SetTextColor(rgba(C.titleInk))
-  h.line:SetTextColor(rgba(C.light)); h.status:SetTextColor(rgba(C.dim))
+  h.status:SetTextColor(rgba(C.light))
+  h.detail:SetTextColor(rgba(C.dim))
   guide.theme = ns.themeVersion
 end
 
@@ -314,8 +402,8 @@ local function watchRoot(f)
 end
 
 -- Every 0.25 s while a crafting window is open.
-local function tick()
-  local root, rootName = craftWindow()
+local function tick(root, rootName)
+  if not root then root, rootName = craftWindow() end
   if not root and guide.lookUntil and (GetTime and GetTime() or 0) < guide.lookUntil
       and (GetTime and GetTime() or 0) >= (guide.nextLook or 0) then
     -- the event can come before the window is on screen, and its name may be one we don't know
@@ -331,7 +419,8 @@ local function tick()
   watchRoot(root)
   local pname, skill, cap = openProfession()
   local key = pname and keyFor(pname)
-  if not key then
+  local P = key and ns.P and ns.P[key]
+  if not P then
     if guide.open then hideGuide() end
     return
   end
@@ -340,62 +429,89 @@ local function tick()
     if guide.open then hideGuide() end
     return
   end
-  local P = ns.P[key]
   local pick = pickFor(key, skill)
   guide.trace = guide.trace or makeTrace()
   guide.hint = guide.hint or makeHint()
   if guide.theme ~= ns.themeVersion then paint() end
   guide.open, guide.rootName = true, rootName
   local h, t = guide.hint, guide.trace
-  h.label:SetText("LEVELING CODEX  -  " .. string.upper(P.name) .. " " .. skill)
+  h.label:SetText(string.upper(P.name) .. "  " .. skillText(skill, cap))
+  local line, status, detail, difficulty
 
-  if not pick or pick.none then
+  if not pick or pick.none or pick.gathering then
     ns.setIcon(h.icon, P.icon)
-    h.name:SetText(pick and plain(pick.step.title) or "Route done")
-    h.line:SetText(pick and ("Smelting gives no points at " .. skill .. ": mine instead." ..
-      (pick.later and ("  " .. pick.later.name .. " gives points from " .. pick.later.learn .. ".") or ""))
-      or ("You've reached " .. skill .. "."))
-    h.status:SetText(pick and plain(pick.step.note or "") or "")
-    t:Hide(); guide.how = "none"
+    if pick then
+      local targets, places = gatheringAdvice(key, pick.step, skill)
+      h.name:SetText(pick.none and "Mine for skill points" or plain(pick.step.title))
+      if pick.none then
+        if pick.smelt then
+          line = pick.smelt.name .. " can also give skill points."
+        else
+          line = "Smelting gives no skill points at " .. skill .. "."
+          if pick.later then line = line .. " " .. pick.later.name .. " can give points from " .. pick.later.learn .. "." end
+        end
+        status = targets and places and (targets .. ". " .. places .. ".") or targets or places
+      else
+        line = targets or ("Skill " .. pick.step.from .. "-" .. pick.step.to)
+        status = places
+      end
+      status = status and plain(status)
+      detail = plain(pick.step.note or "")
+    else
+      h.name:SetText("Route complete")
+      line = "You reached " .. skill .. " " .. P.name .. "."
+    end
+    t:Hide(); guide.row, guide.how = nil, pick and "gathering" or "complete"
   else
     ns.setIcon(h.icon, pick.icon)
     h.name:SetText(pick.name)
     local found = findRecipe(pick.name)
     local n = (not pick.chanceOnly) and ns.craftsLeft(pick, skill)
-    local line = n and ("About " .. n .. " more to " .. pick.to) or ""
+    local prerequisite = pick.partOf or pick.rodOf
+    if n then line = "About " .. n .. (n == 1 and " craft" or " crafts") .. " to skill " .. pick.to end
     if pick.chanceOnly then
-      line = "About a " .. math.floor(pick.chance * 100 + 0.5) .. "% chance of a point per smelt now"
+      line = "About " .. math.floor(pick.chance * 100 + 0.5) .. "% chance of a point per smelt"
     end
     if pick.rodOf then
-      line = "Make your " .. pick.name .. " first: every enchant from here needs it."
+      line = "Make this rod first for " .. pick.rodOf.name .. "."
     elseif pick.partOf then
-      line = "Make " .. pick.plural .. " first"
+      line = "Make this first for " .. pick.partOf.name .. "."
       if pick.reagent then
-        line = line .. ": your " .. pick.have .. " " .. pick.reagent .. " make " .. pick.canMake .. "."
+        detail = pick.have .. " " .. pick.reagent .. " in your bags can make " .. pick.canMake .. " " .. pick.plural .. "."
       else
-        line = line .. " (you can make " .. pick.canMake .. ")."
+        detail = "You can make " .. pick.canMake .. " with your materials."
       end
-    elseif found and found.available then
-      line = line .. "  -  you have materials for " .. found.available
     end
-    h.line:SetText(line)
     if not found then
-      local known = pick.spell and IsPlayerSpell and select(2, pcall(IsPlayerSpell, pick.spell)) == true
+      local known
+      if pick.spell and IsPlayerSpell then
+        local ok, learned = pcall(IsPlayerSpell, pick.spell)
+        if ok and type(learned) == "boolean" then known = learned end
+      end
       if known then
-        h.status:SetText("You know it, but it's not in the list: clear the search or filter, or open its heading.")
+        line = "Recipe hidden"
+        status = "Clear the search or filters, or expand the recipe category."
         guide.how = "filtered"
       else
         local source = pick.source or (P.name .. " trainer")
-        h.status:SetText("Not learned yet or filtered. Learn at " .. (pick.learn or "?") .. "  -  " .. plain(source) ..
-          "." .. ((pick.alt and pick.alt ~= "") and ("  Instead: " .. plain(pick.alt)) or ""))
+        line = known == false and "Recipe not learned" or "Recipe unavailable"
+        status = plain(source) .. (pick.learn and (" (skill " .. pick.learn .. ")") or "")
+        if known == nil then status = status .. ". If you know it, check your search and filters." end
+        if pick.alt and pick.alt ~= "" then detail = "Alternative: " .. plain(pick.alt) end
         guide.how = "not learned"
       end
       t:Hide(); guide.row = nil
-    elseif found.color == "grey" and not (pick.partOf or pick.rodOf) then  -- a bolt or rod is worth making even when grey
+    elseif found.color == "grey" and not prerequisite then  -- a bolt or rod is worth making even when grey
       local nxt = ns.profNext(key, skill)
-      h.status:SetText("Grey now: " .. (nxt and ("next is " .. (nxt.name or nxt.title) .. ".") or "the route is done."))
+      line = "Grey  |  No skill points"
+      status = nxt and ("Next in the guide: " .. (nxt.name or nxt.title) .. " (skill " .. nxt.from .. ").")
       t:Hide(); guide.row, guide.how = nil, "grey"
     else
+      difficulty = not prerequisite and DIFFICULTY[found.color]
+      if found.available and not pick.partOf then
+        status = found.available > 0 and ("Materials for " .. found.available .. (found.available == 1 and " craft" or " crafts"))
+          or "Missing materials"
+      end
       if guide.row and not stillRow(guide.row, pick.name) then guide.row = nil end
       if guide.rowFor ~= pick.name then guide.rowFor, guide.nextRow, guide.rowEvery = pick.name, 0, nil end
       local now = GetTime and GetTime() or 0
@@ -412,17 +528,20 @@ local function tick()
         t:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 3, -3)
       end) then
         t:Show()
-        h.status:SetText(((pick.partOf or pick.rodOf) and "" or ((found.color or "?") .. " now. ")) .. "Make it here: the outlined recipe.")
         guide.how = "row"
       else
         t:Hide()
-        h.status:SetText(((pick.partOf or pick.rodOf) and "" or ((found.color or "?") .. " now. ")) .. "It's in the list: scroll to it.")
+        local instruction = found.index and "Scroll to the recipe." or "Check filters or scroll to the recipe."
+        detail = detail and (detail .. " " .. instruction) or instruction
         guide.how = "not shown"
       end
     end
   end
   guide.pick = pick and pick.name
-  h:SetHeight(math.max(104, 55 + h.line:GetStringHeight() + h.status:GetStringHeight()))
+  local color = difficulty and difficulty[2] or C.light
+  h.line:SetTextColor(rgba(color))
+  if difficulty then line = line and (difficulty[1] .. "  |  " .. line) or difficulty[1] end
+  layoutHint(h, line, status, detail)
   ns.placeByWindow(h, root, guide)
   h:Show()
 end
@@ -436,6 +555,9 @@ end
 
 function ns.startCraftGuide()
   if guide.ticker then return end
+  if hooksecurefunc and GameTooltip and GameTooltip.SetSpellBookItem and GameTooltip.AddLine then
+    pcall(hooksecurefunc, GameTooltip, "SetSpellBookItem", addBookHint)
+  end
   local events = CreateFrame("Frame")
   local any = false
   for _, ev in ipairs({ "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "TRADE_SKILL_CLOSE" }) do
@@ -456,8 +578,12 @@ function ns.startCraftGuide()
   guide.polling = not any -- no crafting events in this client: keep looking for a window
   guide.active = guide.polling
   guide.ticker = ns.every(0.25, function()
-    if not guide.active then return end
-    local ok, err = pcall(tick)
+    local root, rootName
+    if not guide.active then
+      root, rootName = craftWindow()
+      if not root then return end
+    end
+    local ok, err = pcall(tick, root, rootName)
     if not ok and not guide.errored then
       guide.errored = true
       ns.say("crafting guide error: " .. plain(err))

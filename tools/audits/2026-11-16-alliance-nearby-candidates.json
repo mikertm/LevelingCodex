@@ -1,0 +1,2999 @@
+{
+  "method": "QuestieDB0f7d8ad; client-present omitted Alliance-capable IDs levels1-59, giver name+spawn within100yd of leveling/alternate step; questlevel section low-6/high+2 and min<=high. Candidates NOT confirmed omissions; missing eligibility/prerequisites/objective geography need review. priorAuditMentions are search hits, not verdicts.",
+  "candidates": [
+    {
+      "id": 143,
+      "name": "Messenger to Westfall",
+      "level": 14,
+      "min": 14,
+      "sections": [
+        "lakeshire"
+      ],
+      "prerequisites": [
+        121
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-guide-cross-reference.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-12-alliance-westfall-redridge.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 144,
+      "name": "Messenger to Westfall",
+      "level": 14,
+      "min": 14,
+      "sections": [
+        "westfall"
+      ],
+      "prerequisites": [
+        143
+      ],
+      "missingPrerequisites": [
+        143
+      ],
+      "priorAuditMentions": [
+        "2026-11-08-duskwood.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-westfall-redridge.md",
+        "2026-11-13-guide-rewards.md",
+        "2026-11-15-alliance-interactions.md"
+      ]
+    },
+    {
+      "id": 145,
+      "name": "Messenger to Darkshire",
+      "level": 18,
+      "min": 18,
+      "sections": [
+        "lakeshire",
+        "redridge-late"
+      ],
+      "prerequisites": [
+        144
+      ],
+      "missingPrerequisites": [
+        144
+      ],
+      "priorAuditMentions": [
+        "2026-11-07-tailoring.md",
+        "2026-11-08-class-druid-shaman.md",
+        "2026-11-08-duskwood.md",
+        "2026-11-08-herbalism.md",
+        "2026-11-09-alchemy.md",
+        "2026-11-09-engineering.md",
+        "2026-11-09-skinning-leatherworking.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-1-30-loops-gaps.md",
+        "2026-11-12-alliance-1-12.md",
+        "2026-11-12-alliance-westfall-redridge.md",
+        "2026-11-14-path-macros.md"
+      ]
+    },
+    {
+      "id": 147,
+      "name": "Manhunt",
+      "level": 10,
+      "min": 7,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [
+        123
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-07-professions.md",
+        "2026-11-09-engineering.md",
+        "2026-11-09-first-aid.md",
+        "2026-11-10-starter-gaps.md",
+        "2026-11-11-class-pairings.md",
+        "2026-11-12-1-30-loops-gaps.md",
+        "2026-11-12-alliance-1-12.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 152,
+      "name": "The Coast Isn't Clear",
+      "level": 19,
+      "min": 10,
+      "sections": [
+        "westfall"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-30-40.md",
+        "2026-11-12-alliance-westfall-redridge.md",
+        "2026-11-13-guide-rewards.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 161,
+      "name": "A Dark Threat Looms",
+      "level": 18,
+      "min": 16,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        199
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 212,
+      "name": "A Meal Served Cold",
+      "level": 40,
+      "min": 35,
+      "sections": [
+        "dustwallow-40"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-07-tailoring.md",
+        "2026-11-14-professions.md"
+      ]
+    },
+    {
+      "id": 249,
+      "name": "Morganth",
+      "level": 27,
+      "min": 20,
+      "sections": [
+        "redridge-late"
+      ],
+      "prerequisites": [
+        248
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-westfall-redridge.md",
+        "2026-11-13-guide-rewards.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 273,
+      "name": "Resupplying the Excavation",
+      "level": 15,
+      "min": 10,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        302
+      ],
+      "missingPrerequisites": [
+        302
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 278,
+      "name": "A Dark Threat Looms",
+      "level": 18,
+      "min": 16,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        274
+      ],
+      "missingPrerequisites": [
+        274
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-13-guide-rewards.md"
+      ]
+    },
+    {
+      "id": 280,
+      "name": "A Dark Threat Looms",
+      "level": 18,
+      "min": 16,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        278
+      ],
+      "missingPrerequisites": [
+        278
+      ],
+      "priorAuditMentions": [
+        "2026-11-07-professions.md",
+        "2026-11-07-tailoring.md",
+        "2026-11-08-herbalism.md",
+        "2026-11-09-alchemy.md",
+        "2026-11-09-engineering.md",
+        "2026-11-09-skinning-leatherworking.md",
+        "2026-11-11-class-pairings.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-14-professions.md"
+      ]
+    },
+    {
+      "id": 302,
+      "name": "Powder to Ironband",
+      "level": 15,
+      "min": 10,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        301
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-13-guide-rewards.md"
+      ]
+    },
+    {
+      "id": 344,
+      "name": "Brother Paxton",
+      "level": 24,
+      "min": 20,
+      "sections": [
+        "darkshire-30",
+        "wetlands"
+      ],
+      "prerequisites": [
+        343
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 347,
+      "name": "Rethban Ore",
+      "level": 24,
+      "min": 20,
+      "sections": [
+        "lakeshire"
+      ],
+      "prerequisites": [
+        345
+      ],
+      "missingPrerequisites": [
+        345
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-guide-cross-reference.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 415,
+      "name": "Rejold's New Brew",
+      "level": 10,
+      "min": 8,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [
+        315
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-dun-morogh.md",
+        "2026-11-11-class-pairings.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 465,
+      "name": "Nek'rosh's Gambit",
+      "level": 31,
+      "min": 23,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [
+        464
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 504,
+      "name": "Crushridge Warmongers",
+      "level": 40,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [
+        500
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 523,
+      "name": "Baron's Demise",
+      "level": 40,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [
+        522
+      ],
+      "missingPrerequisites": [
+        522
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 526,
+      "name": "Lightforge Ingots",
+      "level": 29,
+      "min": 20,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [
+        324
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-herbalism.md"
+      ]
+    },
+    {
+      "id": 531,
+      "name": "Vyrin's Revenge",
+      "level": 20,
+      "min": 15,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [
+        271
+      ],
+      "missingPrerequisites": [
+        271
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 613,
+      "name": "Cracking Maury's Foot",
+      "level": 44,
+      "min": 30,
+      "sections": [
+        "stv-41",
+        "ungoro-49"
+      ],
+      "prerequisites": [
+        609
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 622,
+      "name": "Return to Corporal Kaleb",
+      "level": 37,
+      "min": 32,
+      "sections": [
+        "stv-36",
+        "stv-41"
+      ],
+      "prerequisites": [
+        627
+      ],
+      "missingPrerequisites": [
+        627
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 627,
+      "name": "Favor for Krazek",
+      "level": 37,
+      "min": 32,
+      "sections": [
+        "stv-36",
+        "stv-41"
+      ],
+      "prerequisites": [
+        210
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 634,
+      "name": "Plea To The Alliance",
+      "level": 31,
+      "min": 28,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [
+        633
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-route-audit-pass-2.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 670,
+      "name": "Sunken Treasure",
+      "level": 40,
+      "min": 35,
+      "sections": [
+        "stv-41"
+      ],
+      "prerequisites": [
+        669
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 682,
+      "name": "Stromgarde Badges",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [
+        681
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 684,
+      "name": "Wanted!  Marez Cowl",
+      "level": 39,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-class-30-60.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 696,
+      "name": "Attack on the Tower",
+      "level": 39,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [
+        695
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 697,
+      "name": "Malin's Request",
+      "level": 39,
+      "min": 30,
+      "sections": [
+        "arathi-39"
+      ],
+      "prerequisites": [
+        696
+      ],
+      "missingPrerequisites": [
+        696
+      ],
+      "priorAuditMentions": [
+        "2026-11-13-guide-rewards.md"
+      ]
+    },
+    {
+      "id": 705,
+      "name": "Pearl Diving",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-13-guide-rewards.md",
+        "2026-11-14-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 713,
+      "name": "Coolant Heads Prevail",
+      "level": 37,
+      "min": 35,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-14-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 714,
+      "name": "Gyro... What?",
+      "level": 37,
+      "min": 35,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [
+        713
+      ],
+      "missingPrerequisites": [
+        713
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 727,
+      "name": "To Ironforge for Yagyin's Digest",
+      "level": 40,
+      "min": 30,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [
+        709
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 730,
+      "name": "Trouble In Darkshore?",
+      "level": 14,
+      "min": 14,
+      "sections": [
+        "darkshore"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-1-12.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 734,
+      "name": "This Is Going to Be Hard",
+      "level": 42,
+      "min": 35,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 735,
+      "name": "The Star, the Hand and the Heart",
+      "level": 44,
+      "min": 30,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [
+        727
+      ],
+      "missingPrerequisites": [
+        727
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 737,
+      "name": "Forbidden Knowledge",
+      "level": 40,
+      "min": 30,
+      "sections": [
+        "arathi-39",
+        "badlands-41"
+      ],
+      "prerequisites": [
+        735,
+        736
+      ],
+      "missingPrerequisites": [
+        735,
+        736
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 952,
+      "name": "Grove of the Ancients",
+      "level": 11,
+      "min": 6,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [
+        940
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-teldrassil.md",
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 994,
+      "name": "Escape Through Force",
+      "level": 22,
+      "min": 10,
+      "sections": [
+        "darkshore"
+      ],
+      "prerequisites": [
+        993
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1012,
+      "name": "Insane Druids",
+      "level": 32,
+      "min": 24,
+      "sections": [
+        "ashenvale-late"
+      ],
+      "prerequisites": [
+        1011
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 1017,
+      "name": "Mage Summoner",
+      "level": 25,
+      "min": 20,
+      "sections": [
+        "ashenvale-late"
+      ],
+      "prerequisites": [
+        1016
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-09-alliance-route-expansion.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1032,
+      "name": "Satyr Slaying!",
+      "level": 32,
+      "min": 26,
+      "sections": [
+        "ashenvale-late"
+      ],
+      "prerequisites": [
+        1031
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1039,
+      "name": "The Barrens Port",
+      "level": 30,
+      "min": 25,
+      "sections": [
+        "ashenvale-late"
+      ],
+      "prerequisites": [
+        1038
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1040,
+      "name": "Passage to Booty Bay",
+      "level": 30,
+      "min": 25,
+      "sections": [
+        "stv-36"
+      ],
+      "prerequisites": [
+        1039
+      ],
+      "missingPrerequisites": [
+        1039
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1043,
+      "name": "The Scythe of Elune",
+      "level": 30,
+      "min": 25,
+      "sections": [
+        "darkshire-30",
+        "duskwood-late"
+      ],
+      "prerequisites": [
+        1042
+      ],
+      "missingPrerequisites": [
+        1042
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1044,
+      "name": "Answered Questions",
+      "level": 30,
+      "min": 25,
+      "sections": [
+        "darkshire-30",
+        "duskwood-late"
+      ],
+      "prerequisites": [
+        1043
+      ],
+      "missingPrerequisites": [
+        1043
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1073,
+      "name": "Ineptitude + Chemicals = Fun",
+      "level": 21,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1072
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-guide-cross-reference.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1074,
+      "name": "Ineptitude + Chemicals = Fun",
+      "level": 21,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1073
+      ],
+      "missingPrerequisites": [
+        1073
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-guide-cross-reference.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1076,
+      "name": "Devils in Westfall",
+      "level": 21,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1075
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 1077,
+      "name": "Special Delivery for Gaxim",
+      "level": 21,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1076
+      ],
+      "missingPrerequisites": [
+        1076
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1078,
+      "name": "Retrieval for Mauren",
+      "level": 26,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-westfall-redridge-duskwood-gaps.md",
+        "2026-11-12-alliance-duskwood-wetlands.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 1079,
+      "name": "Covert Ops - Alpha",
+      "level": 22,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1077,
+        1074
+      ],
+      "missingPrerequisites": [
+        1077,
+        1074
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1080,
+      "name": "Covert Ops - Beta",
+      "level": 22,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1074,
+        1077
+      ],
+      "missingPrerequisites": [
+        1074,
+        1077
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md",
+        "2026-11-13-guide-rewards.md"
+      ]
+    },
+    {
+      "id": 1081,
+      "name": "Reception from Tyrande",
+      "level": 28,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1082
+      ],
+      "missingPrerequisites": [
+        1082
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1082,
+      "name": "Update for Sentinel Thenysil",
+      "level": 22,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1083,
+      "name": "Enraged Spirits",
+      "level": 26,
+      "min": 20,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1091
+      ],
+      "missingPrerequisites": [
+        1091
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1084,
+      "name": "Wounded Ancients",
+      "level": 28,
+      "min": 22,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1091
+      ],
+      "missingPrerequisites": [
+        1091
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1091,
+      "name": "Kaela's Update",
+      "level": 22,
+      "min": 17,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1094,
+      "name": "Further Instructions",
+      "level": 21,
+      "min": 16,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1093
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1096,
+      "name": "Gerenzo Wrenchwhistle",
+      "level": 27,
+      "min": 16,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [
+        1095
+      ],
+      "missingPrerequisites": [
+        1095
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1107,
+      "name": "Encrusted Tail Fins",
+      "level": 35,
+      "min": 28,
+      "sections": [
+        "needles-33"
+      ],
+      "prerequisites": [
+        1105
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-30-40.md",
+        "2026-11-10-class-30-60.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1115,
+      "name": "The Rumormonger",
+      "level": 36,
+      "min": 30,
+      "sections": [
+        "needles-33"
+      ],
+      "prerequisites": [
+        1114
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-13-guide-rewards.md",
+        "2026-11-14-alliance-40-50.md",
+        "2026-11-15-alliance-interactions.md"
+      ]
+    },
+    {
+      "id": 1116,
+      "name": "Dream Dust in the Swamp",
+      "level": 36,
+      "min": 30,
+      "sections": [
+        "stv-36",
+        "stv-41"
+      ],
+      "prerequisites": [
+        1115
+      ],
+      "missingPrerequisites": [
+        1115
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1117,
+      "name": "Rumors for Kravel",
+      "level": 36,
+      "min": 30,
+      "sections": [
+        "stv-36",
+        "stv-41"
+      ],
+      "prerequisites": [
+        1116
+      ],
+      "missingPrerequisites": [
+        1116
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1118,
+      "name": "Back to Booty Bay",
+      "level": 43,
+      "min": 35,
+      "sections": [
+        "tanaris-43"
+      ],
+      "prerequisites": [
+        1117
+      ],
+      "missingPrerequisites": [
+        1117
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1119,
+      "name": "Zanzil's Mixture and a Fool's Stout",
+      "level": 44,
+      "min": 35,
+      "sections": [
+        "stv-41"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1120,
+      "name": "Get the Gnomes Drunk",
+      "level": 44,
+      "min": 35,
+      "sections": [
+        "tanaris-43"
+      ],
+      "prerequisites": [
+        1119
+      ],
+      "missingPrerequisites": [
+        1119
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1121,
+      "name": "Get the Goblins Drunk",
+      "level": 44,
+      "min": 35,
+      "sections": [
+        "tanaris-43"
+      ],
+      "prerequisites": [
+        1119
+      ],
+      "missingPrerequisites": [
+        1119
+      ],
+      "priorAuditMentions": [
+        "2026-11-13-guide-rewards.md"
+      ]
+    },
+    {
+      "id": 1122,
+      "name": "Report Back to Fizzlebub",
+      "level": 44,
+      "min": 35,
+      "sections": [
+        "tanaris-43"
+      ],
+      "prerequisites": [
+        1120,
+        1121
+      ],
+      "missingPrerequisites": [
+        1120,
+        1121
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-40-50.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 1167,
+      "name": "The Tower of Althalaxx",
+      "level": 28,
+      "min": 13,
+      "sections": [
+        "ashenvale-late"
+      ],
+      "prerequisites": [
+        1140
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1189,
+      "name": "Safety First",
+      "level": 41,
+      "min": 29,
+      "sections": [
+        "tanaris-43"
+      ],
+      "prerequisites": [
+        1188
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1271,
+      "name": "Feast at the Blue Recluse",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "dustwallow-40"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 1370,
+      "name": "Stealing Supplies",
+      "level": 35,
+      "min": 30,
+      "sections": [
+        "desolace-35"
+      ],
+      "prerequisites": [
+        1368,
+        1384
+      ],
+      "missingPrerequisites": [
+        1368,
+        1384
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-30-40.md",
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1373,
+      "name": "Ongeku",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "desolace-35"
+      ],
+      "prerequisites": [
+        1370
+      ],
+      "missingPrerequisites": [
+        1370
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-30-40.md",
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-30-40.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1374,
+      "name": "Khan Jehn",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "desolace-35"
+      ],
+      "prerequisites": [
+        1373
+      ],
+      "missingPrerequisites": [
+        1373
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-13-guide-rewards.md",
+        "2026-11-14-alliance-1-60-audit.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 1384,
+      "name": "Raid on the Kolkar",
+      "level": 32,
+      "min": 30,
+      "sections": [
+        "desolace-35"
+      ],
+      "prerequisites": [
+        1382
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 1385,
+      "name": "Brutal Politics",
+      "level": 35,
+      "min": 30,
+      "sections": [
+        "desolace-35"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 1559,
+      "name": "Flash Bomb Recipe",
+      "level": 37,
+      "min": 30,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 1579,
+      "name": "Gaffer Jacks",
+      "level": 12,
+      "min": 10,
+      "sections": [
+        "darkshore"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1580,
+      "name": "Electropellers",
+      "level": 12,
+      "min": 10,
+      "sections": [
+        "darkshore"
+      ],
+      "prerequisites": [
+        1579
+      ],
+      "missingPrerequisites": [
+        1579
+      ],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 1581,
+      "name": "Elixirs for the Bladeleafs",
+      "level": 8,
+      "min": 4,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-teldrassil.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 2041,
+      "name": "Speak with Shoni",
+      "level": 15,
+      "min": 15,
+      "sections": [
+        "loch-modan"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-herbalism.md",
+        "2026-11-09-dungeon-routes.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 2501,
+      "name": "Badlands Reagent Run II",
+      "level": 44,
+      "min": 40,
+      "sections": [
+        "badlands-41"
+      ],
+      "prerequisites": [
+        2500
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2847,
+      "name": "Wild Leather Armor",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2848,
+      "name": "Wild Leather Shoulders",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2847
+      ],
+      "missingPrerequisites": [
+        2847
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2849,
+      "name": "Wild Leather Vest",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2847
+      ],
+      "missingPrerequisites": [
+        2847
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2850,
+      "name": "Wild Leather Helmet",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2847
+      ],
+      "missingPrerequisites": [
+        2847
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2851,
+      "name": "Wild Leather Boots",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2847
+      ],
+      "missingPrerequisites": [
+        2847
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2852,
+      "name": "Wild Leather Leggings",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2847
+      ],
+      "missingPrerequisites": [
+        2847
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2853,
+      "name": "Master of the Wild Leather",
+      "level": 45,
+      "min": 30,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2931,
+      "name": "Castpipe's Task",
+      "level": 28,
+      "min": 25,
+      "sections": [
+        "stonetalon"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 2946,
+      "name": "Seeing What Happens",
+      "level": 50,
+      "min": 45,
+      "sections": [
+        "wpl-51"
+      ],
+      "prerequisites": [
+        2963
+      ],
+      "missingPrerequisites": [
+        2963
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2964,
+      "name": "A Future Task",
+      "level": 50,
+      "min": 45,
+      "sections": [
+        "wpl-51"
+      ],
+      "prerequisites": [
+        2977
+      ],
+      "missingPrerequisites": [
+        2977
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 2997,
+      "name": "Tome of Divinity",
+      "level": 12,
+      "min": 12,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-class-warrior-paladin.md",
+        "2026-11-12-alliance-1-12.md",
+        "2026-11-14-alliance-30-40.md"
+      ]
+    },
+    {
+      "id": 3378,
+      "name": "Prayer to Elune",
+      "level": 50,
+      "min": 40,
+      "sections": [
+        "steppes-56"
+      ],
+      "prerequisites": [
+        3377
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 3785,
+      "name": "Morrowgrain Research",
+      "level": 50,
+      "min": 47,
+      "sections": [
+        "ungoro-53"
+      ],
+      "prerequisites": [
+        3781
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 3788,
+      "name": "Jonespyre's Request",
+      "level": 50,
+      "min": 47,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        3785
+      ],
+      "missingPrerequisites": [
+        3785
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 3789,
+      "name": "Assisting Arch Druid Staghelm",
+      "level": 50,
+      "min": 47,
+      "sections": [
+        "searing-50",
+        "stv-50"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 3790,
+      "name": "Assisting Arch Druid Staghelm",
+      "level": 50,
+      "min": 47,
+      "sections": [
+        "felwood-52",
+        "steppes-56",
+        "wpl-51"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 3791,
+      "name": "The Mystery of Morrowgrain",
+      "level": 50,
+      "min": 47,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 3841,
+      "name": "An Orphan Looking For a Home",
+      "level": 47,
+      "min": 38,
+      "sections": [
+        "feralas-44"
+      ],
+      "prerequisites": [
+        2972
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 3961,
+      "name": "Linken's Adventure",
+      "level": 54,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        4005
+      ],
+      "missingPrerequisites": [
+        4005
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 3962,
+      "name": "It's Dangerous to Go Alone",
+      "level": 56,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        3961
+      ],
+      "missingPrerequisites": [
+        3961
+      ],
+      "priorAuditMentions": [
+        "2026-11-09-engineering.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4005,
+      "name": "Aquementas",
+      "level": 54,
+      "min": 47,
+      "sections": [
+        "felwood-52",
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        4084
+      ],
+      "missingPrerequisites": [
+        4084
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4023,
+      "name": "A Taste of Flame",
+      "level": 54,
+      "min": 52,
+      "sections": [
+        "searing-alt",
+        "steppes-56"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 4084,
+      "name": "Silver Heart",
+      "level": 55,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        3942
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4284,
+      "name": "Crystals of Power",
+      "level": 53,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-40-50.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4285,
+      "name": "The Northern Pylon",
+      "level": 53,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        4284
+      ],
+      "missingPrerequisites": [
+        4284
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4287,
+      "name": "The Eastern Pylon",
+      "level": 53,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        4284
+      ],
+      "missingPrerequisites": [
+        4284
+      ],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4288,
+      "name": "The Western Pylon",
+      "level": 53,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [
+        4284
+      ],
+      "missingPrerequisites": [
+        4284
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4289,
+      "name": "The Apes of Un'Goro",
+      "level": 55,
+      "min": 47,
+      "sections": [
+        "ungoro-53"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md",
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4301,
+      "name": "The Mighty U'cha",
+      "level": 55,
+      "min": 50,
+      "sections": [
+        "ungoro-53"
+      ],
+      "prerequisites": [
+        4289
+      ],
+      "missingPrerequisites": [
+        4289
+      ],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4321,
+      "name": "Making Sense of It",
+      "level": 53,
+      "min": 47,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4450,
+      "name": "Ledger from Tanaris",
+      "level": 46,
+      "min": 43,
+      "sections": [
+        "searing-50",
+        "searing-alt",
+        "searing-gorge"
+      ],
+      "prerequisites": [
+        4449
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-40-50.md"
+      ]
+    },
+    {
+      "id": 4513,
+      "name": "A Little Slime Goes a Long Way",
+      "level": 54,
+      "min": 48,
+      "sections": [
+        "steppes-56",
+        "wpl-51"
+      ],
+      "prerequisites": [
+        4512
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-10-class-30-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 4810,
+      "name": "Return to Tinkee",
+      "level": 54,
+      "min": 50,
+      "sections": [
+        "silithus-59"
+      ],
+      "prerequisites": [
+        4809
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 5128,
+      "name": "Words of the High Chief",
+      "level": 59,
+      "min": 52,
+      "sections": [
+        "winterspring-alt"
+      ],
+      "prerequisites": [
+        5123
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md",
+        "2026-11-15-quest-interactions.md"
+      ]
+    },
+    {
+      "id": 5234,
+      "name": "Return to the Bulwark",
+      "level": 55,
+      "min": 50,
+      "sections": [
+        "plaguelands-57"
+      ],
+      "prerequisites": [
+        5233
+      ],
+      "missingPrerequisites": [
+        5233
+      ],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 5238,
+      "name": "Mission Accomplished!",
+      "level": 58,
+      "min": 50,
+      "sections": [
+        "plaguelands-57"
+      ],
+      "prerequisites": [
+        5226
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 5245,
+      "name": "Troubled Spirits of Kel'Theril",
+      "level": 56,
+      "min": 53,
+      "sections": [
+        "winterspring-54",
+        "winterspring-55",
+        "winterspring-alt"
+      ],
+      "prerequisites": [
+        5244
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-alliance-50-60.md",
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 5503,
+      "name": "Argent Dawn Commission",
+      "level": 55,
+      "min": 50,
+      "sections": [
+        "plaguelands-57"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 5628,
+      "name": "Returning Home",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 5630,
+      "name": "Returning Home",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 5634,
+      "name": "Desperate Prayer",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 5635,
+      "name": "Desperate Prayer",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-route-audit-pass-2.md",
+        "2026-11-11-class-quest-audit.md"
+      ]
+    },
+    {
+      "id": 5636,
+      "name": "Desperate Prayer",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-15-alliance-interactions.md"
+      ]
+    },
+    {
+      "id": 5637,
+      "name": "Desperate Prayer",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-route-audit-pass-2.md",
+        "2026-11-11-class-quest-audit.md"
+      ]
+    },
+    {
+      "id": 6032,
+      "name": "Sacred Cloth",
+      "level": 55,
+      "min": 50,
+      "sections": [
+        "winterspring-54"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 6071,
+      "name": "The Hunter's Path",
+      "level": 10,
+      "min": 10,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-route-audit-pass-2.md",
+        "2026-11-11-class-quest-audit.md",
+        "2026-11-12-1-30-loops-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 8317,
+      "name": "Kitchen Assistance",
+      "level": 57,
+      "min": 54,
+      "sections": [
+        "silithus-59",
+        "silithus-alt"
+      ],
+      "prerequisites": [
+        8313
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-alliance-50-60.md"
+      ]
+    },
+    {
+      "id": 8554,
+      "name": "Facing Negolash",
+      "level": 50,
+      "min": 40,
+      "sections": [
+        "stv-50"
+      ],
+      "prerequisites": [
+        8553
+      ],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-vendor-steps.md"
+      ]
+    },
+    {
+      "id": 92467,
+      "name": "Call of Earth",
+      "level": 4,
+      "min": null,
+      "sections": [
+        "zephras"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-14-portrait-audit.md"
+      ]
+    },
+    {
+      "id": 92484,
+      "name": "Embracing the Elements",
+      "level": 2,
+      "min": null,
+      "sections": [
+        "zephras"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 92514,
+      "name": "Welcome to Shen'dar Village",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar",
+        "zephras"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 92579,
+      "name": "To Valanaar",
+      "level": 8,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 92646,
+      "name": "Confront Lorthuna",
+      "level": 12,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 92700,
+      "name": "The Grand Skyseer",
+      "level": 9,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 92911,
+      "name": "Harvesting the Harvesters",
+      "level": 15,
+      "min": null,
+      "sections": [
+        "westfall"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 93090,
+      "name": "What Comes Next",
+      "level": 13,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 93963,
+      "name": "Exploring the Alliance",
+      "level": 13,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-westfall-redridge.md"
+      ]
+    },
+    {
+      "id": 94007,
+      "name": "Taming the Beast",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-class-hunter-rogue.md",
+        "2026-11-08-zephras-isle.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 94493,
+      "name": "A Sacrifice in Vain",
+      "level": 11,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 94775,
+      "name": "Divine Grace",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-teldrassil.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 94776,
+      "name": "Divine Grace",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 94821,
+      "name": "Confounding Flash",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 94822,
+      "name": "Confounding Flash",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 94824,
+      "name": "Confounding Flash",
+      "level": 10,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96031,
+      "name": "Camping 101: Leatherworking",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96044,
+      "name": "Camping 101: Blacksmithing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96047,
+      "name": "Camping 101: First Aid",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96050,
+      "name": "Camping 101: Fishing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96057,
+      "name": "Camping 101: Tailoring",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 96058,
+      "name": "Camping 101: Engineering",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 96243,
+      "name": "Call of Earth",
+      "level": 4,
+      "min": null,
+      "sections": [
+        "dunmorogh"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-class-druid-shaman.md",
+        "2026-11-12-1-30-loops-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97914,
+      "name": "Expanding Horizons",
+      "level": 17,
+      "min": null,
+      "sections": [
+        "darkshore"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-darkshore-ashenvale-wetlands-gaps.md",
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 97915,
+      "name": "Camping 101: Alchemy",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97916,
+      "name": "Camping 101: Blacksmithing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97917,
+      "name": "Camping 101: Enchanting",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97918,
+      "name": "Camping 101: Engineering",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97919,
+      "name": "Camping 101: First Aid",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97920,
+      "name": "Camping 101: Fishing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97922,
+      "name": "Camping 101: Leatherworking",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97925,
+      "name": "Camping 101: Tailoring",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "elwynn"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97938,
+      "name": "Camping 101: Alchemy",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97939,
+      "name": "Camping 101: Blacksmithing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 97940,
+      "name": "Camping 101: Enchanting",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97941,
+      "name": "Camping 101: Engineering",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-kalimdor-loch-modan.md"
+      ]
+    },
+    {
+      "id": 97942,
+      "name": "Camping 101: First Aid",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 97943,
+      "name": "Camping 101: Fishing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97946,
+      "name": "Camping 101: Leatherworking",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97950,
+      "name": "Camping 101: Tailoring",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "teldrassil"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97963,
+      "name": "Camping 101: Alchemy",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97964,
+      "name": "Camping 101: Blacksmithing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md"
+      ]
+    },
+    {
+      "id": 97965,
+      "name": "Camping 101: First Aid",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97967,
+      "name": "Camping 101: Fishing",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97969,
+      "name": "Camping 101: Leatherworking",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97972,
+      "name": "Camping 101: Tailoring",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 97973,
+      "name": "Camping 101: Tailoring",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 98230,
+      "name": "This Land Was Their Land",
+      "level": 29,
+      "min": null,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-11-wetlands-early.md",
+        "2026-11-12-alliance-duskwood-wetlands.md"
+      ]
+    },
+    {
+      "id": 98240,
+      "name": "Crimson Crate Delivery",
+      "level": 29,
+      "min": null,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-11-wetlands-early.md",
+        "2026-11-12-alliance-duskwood-wetlands.md"
+      ]
+    },
+    {
+      "id": 98284,
+      "name": "Camping 101: Enchanting",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 98285,
+      "name": "Camping 101: Engineering",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "valanaar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-08-zephras-isle.md",
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 98286,
+      "name": "Camping 101: Enchanting",
+      "level": 6,
+      "min": null,
+      "sections": [
+        "shendar"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": [
+        "2026-11-10-starter-gaps.md",
+        "2026-11-12-alliance-1-12.md"
+      ]
+    },
+    {
+      "id": 98310,
+      "name": "Gleaning Our Future",
+      "level": 32,
+      "min": null,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    },
+    {
+      "id": 98313,
+      "name": "For Further Study",
+      "level": 32,
+      "min": null,
+      "sections": [
+        "wetlands"
+      ],
+      "prerequisites": [],
+      "missingPrerequisites": [],
+      "priorAuditMentions": []
+    }
+  ]
+}

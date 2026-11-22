@@ -6,7 +6,7 @@
 
 **Architecture:** Four new modules (`Vendor.lua`, `Stats.lua`, `QuestMap.lua`, generated `QuestShopData.lua` from `tools/questshop.py`) plus changes to `QuestGuide.lua` (arrow, bar, flashes), `QuestTab.lua` (sub-tabs), `Quests.lua` (`items` on buy steps, progress), `Window.lua` (settings, tab fit). Every module reads the client through guarded calls and talks to others through `ns.*` at call time.
 
-**Tech Stack:** WoW addon Lua 5.1 (Forever, Interface 16001); test harness `tests/run.py` (Python + lupa) with the strict client mock `tests/wowmock.lua` and player-level scenarios in `tests/scenarios.lua`; QuestieDB cache tools in `tools/`.
+**Tech Stack:** WoW addon Lua 5.1 (Forever, Interface 16001); test harness `tests/run.py` (Python + lupa) with the strict client mock `tests/wowmock.lua` and player-level scenarios in `tests/scenarios.lua`; quest database cache tools in `tools/`.
 
 **Spec:** `docs/superpowers/specs/2026-11-12-guide-parity-design.md`
 
@@ -320,7 +320,7 @@ Run: `python tests/run.py -k nothing`. The data checks still run. Expected: `FAI
 - [ ] **Step 3: Write `tools/questshop.py`**
 
 Model it on `tools/questmobs.py`: same imports, `HEADER`, `render`, `--check`, `OUT = ROOT / "QuestShopData.lua"`. For each route quest:
-- take its QuestieDB item objectives (`objectives[3]`);
+- take its quest database item objectives (`objectives[3]`);
 - keep items with `vendors` and none of `npcDrops`, `objectDrops`, `itemDrops`;
 - count = the first match of `(\d+)\s+<item name>` (case-insensitive) in the quest's `objectivesText` lines, else 1.
 
@@ -746,7 +746,7 @@ Run: `python tests/run.py -k arrowMove`. Expected: FAIL, "the arrow lives on its
 
 - [ ] **Step 4: Run it and see it pass**
 
-Run: `python tests/run.py -k quests`. Expected: PASS, including `questNavigation`, `questCorpse` and `questQuestieArrowClamp` (unmoved arrow).
+Run: `python tests/run.py -k quests`. Expected: PASS, including `questNavigation`, `questCorpse` and `questquest trackerArrowClamp` (unmoved arrow).
 
 - [ ] **Step 5: Commit**
 
@@ -1032,7 +1032,7 @@ git commit -m "World map: numbered pins for the current and next steps"
 - [ ] **Step 2:** `python tests/run.py`, the install check, `python tools/install.py`, commit.
 - [ ] **Step 3:** In-game list:
   - drag and Ctrl+wheel the arrow;
-  - the arrival bob at an NPC, a kill camp (QuestieDB) and a flight master;
+  - the arrival bob at an NPC, a kill camp (quest database) and a flight master;
   - whether the icons all show (a gold dot means a missing file);
   - minimap pins line up with the game's own waypoint while you walk and turn, with rotate-minimap on and off;
   - whether the game already draws its waypoint on the minimap (two pins);

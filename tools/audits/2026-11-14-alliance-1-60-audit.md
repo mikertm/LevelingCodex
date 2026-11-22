@@ -6,12 +6,12 @@ The owner asked for the Alliance route to get the pass the Horde route had the s
 
 - **Loop check.** `tools/questloops.py ALLIANCE` for all five races and all nine classes, main route and every alternate chapter.
 - **Gap list.** Every quest the Alliance chapters of the two references accept, against every quest any Alliance section names (route, alternates, dungeon, class and special guides):
-  - Reference guide A (RXP's Forever guides, the Nov 10 copy): the Alliance-*.lua chapters and the "(A)" groups of RestedXP-Skyborne.lua (the 21-60 speedrun and dungeon chapters, the Riverglades standalone chapters, the dungeon quest guides). Parsed from the `RegisterGuide` blocks, their `<< Alliance` headers and `.accept` lines; steps or lines filtered `<< Horde` dropped. Used for quest IDs, grouping, order and positions, never its text.
-  - Zygor Forever guides (quest-ID gap check only): `accept Name##ID` lines of the Alliance leveling file. No text, order or code taken.
-  - Horde-only quests dropped with QuestieDB `requiredRaces`.
+  - Reference guide A (reference guide A's Forever guides, the Nov 10 copy): the Alliance-*.lua chapters and the "(A)" groups of reference guide A-Skyborne.lua (the 21-60 speedrun and dungeon chapters, the Riverglades standalone chapters, the dungeon quest guides). Parsed from the `RegisterGuide` blocks, their `<< Alliance` headers and `.accept` lines; steps or lines filtered `<< Horde` dropped. Used for quest IDs, grouping, order and positions, never its text.
+  - reference guide B Forever guides (quest-ID gap check only): `accept Name##ID` lines of the Alliance leveling file. No text, order or code taken.
+  - Horde-only quests dropped with quest database `requiredRaces`.
   - Result: 420 quests no Alliance section names. 219 are level 60 raid, Ahn'Qiraj, Naxxramas, cloth-donation, level 60 class chains or Season of Discovery copies (out of scope). The rest went to the band that owns their zone, each with the earlier audits that already gave it a verdict.
-- **Vendor and Auction House.** Every guide A buy or Auction House step and every Zygor `buy` line in the Alliance chapters, against our `buy`/`collect` steps and `QuestShopData.lua`; plus every Alliance route quest's QuestieDB item objectives, sorted into vendor-only, vendor or drop, and no source (crafted, Auction House or quest-given).
-- **Elite list.** Every Alliance route quest whose kill target or item dropper QuestieDB ranks elite, rare elite or boss, for the new elite question.
+- **Vendor and Auction House.** Every guide A buy or Auction House step and every reference guide B `buy` line in the Alliance chapters, against our `buy`/`collect` steps and `QuestShopData.lua`; plus every Alliance route quest's quest database item objectives, sorted into vendor-only, vendor or drop, and no source (crafted, Auction House or quest-given).
+- **Elite list.** Every Alliance route quest whose kill target or item dropper quest database ranks elite, rare elite or boss, for the new elite question.
 - **Three band audits ran in parallel**, each limited to its own file:
 
 | Band | Sections | Audit file |
@@ -29,7 +29,7 @@ The loop findings are the thirteen explained on 11-12 (`2026-11-12-1-30-loops-ga
 Every gap-list quest at 1-30 already had a verdict from 11-10 or 11-12, and those verdicts stand (none was "the log" or "missing data" with an optional step that now fits). The two that had none:
 
 - **The Barrens Port chain (1039 > 1040 > 1041 > 1042 > 1043)** starts at Thyn'tel in Darnassus, where `ashenvale-late` ends, and runs through Ratchet, Booty Bay and Darkshire in the thirties. Passed to the 30-40 band (its verdict is in `2026-11-14-alliance-30-40.md`).
-- **Pristine Pesterhide Pelts (98155)**, a Forever quest Zygor files under Thousand Needles at 33: passed to the 30-40 band.
+- **Pristine Pesterhide Pelts (98155)**, a Forever quest reference guide B files under Thousand Needles at 33: passed to the 30-40 band.
 
 Carnage (98283, Rethiel, a summoned level 30 elite) stays out: the 11-10 reason was the group, and the Wetlands log is at 20 of 20 on its coast trip. The elite question could carry it now if the owner wants it (open decisions).
 
@@ -37,13 +37,13 @@ Carnage (98283, Rethiel, a summoned level 30 elite) stays out: the 11-10 reason 
 
 | Section | Step | Before | After | Reason |
 |---|---|---|---|---|
-| `elwynn` | WANTED: "Hogger" (176) | plain pickup | elite quest (Hogger): the route asks at the poster | Hogger is a level 11 elite (QuestieDB) |
+| `elwynn` | WANTED: "Hogger" (176) | plain pickup | elite quest (Hogger): the route asks at the poster | Hogger is a level 11 elite (quest database) |
 | `dunmorogh` | Protecting the Herd (314) | plain | elite quest (Vagash) | Vagash, level 11 elite |
 | `teldrassil` | Oakenscowl (2499) | "Bring help or use Next" | elite quest (Oakenscowl); text "Kill elite Oakenscowl southwest of the lake, then head to Gnarlpine Hold." | level 9 elite |
 | `darkshore` | Gyromast's Revenge (2078) | plain | elite quest (The Threshwackonator 4100) | level 20 elite at the end of the escort |
 | `wetlands` | Death to the Dragonmaw (98291) | plain | elite quest (the Dragonmaw at Dragonmaw Retreat) | Forever quest: 16 kills of level 29-30 elites |
-| `redridge-late` | Tharil'zun (19), Shadow Magic (115), Wanted: Gath'Ilzogg (169) | plain | elite quests (Tharil'zun; the Blackrock Shadowcasters of Stonewatch Keep; Gath'Ilzogg) | Stonewatch Keep's orcs are elite (QuestieDB) |
-| `lakeshire` | Stormwind visit, before the flight path | - | optional buy step: Stormwind Seasoning Herbs (item 2665) from Felicia Gump (Stormwind 69.3, 71.3) | Seasoned Wolf Kabobs (90) in Darkshire needs them; only Felicia sells them (QuestieDB vendors) |
+| `redridge-late` | Tharil'zun (19), Shadow Magic (115), Wanted: Gath'Ilzogg (169) | plain | elite quests (Tharil'zun; the Blackrock Shadowcasters of Stonewatch Keep; Gath'Ilzogg) | Stonewatch Keep's orcs are elite (quest database) |
+| `lakeshire` | Stormwind visit, before the flight path | - | optional buy step: Stormwind Seasoning Herbs (item 2665) from Felicia Gump (Stormwind 69.3, 71.3) | Seasoned Wolf Kabobs (90) in Darkshire needs them; only Felicia sells them (quest database vendors) |
 | `duskwood` | Seasoned Wolf Kabobs (90) pickup | "Buy Stormwind Seasoning Herbs from a cooking supplies vendor." | "He also wants Stormwind Seasoning Herbs: Felicia Gump in Stormwind sells them, and so does the Auction House." | Darkshire has no such vendor |
 | `duskwood-late`, `ashenvale-late`, `southshore` | section `suggest` | 1-30 chapters only | `darkshire-30` first | each ends at 30; darkshire-30 is the main route's next chapter (its first step is the Auberdine ship, where ashenvale-late ends) |
 
@@ -72,10 +72,10 @@ Each guide's quests were compared with guide A's "Dungeon Quests (A)" chapter fo
 
 | Guide | Added | Steps | Source |
 |---|---|---|---|
-| Uldaman | Power Stones (2418) | prepare: Rigglefuzz (Badlands 42.39, 52.93) after Ryedol's pickups; inside: 8 Dentrium and 8 An'Alleum Power Stones from the Shadowforge dwarves; after: Rigglefuzz between Ryedol and Theldurin | guide A's Uldaman chapter, the Horde guide, QuestieDB |
-| Sunken Temple | The Ancient Egg (4787) and The God Hakkar (3528) | prepare: Yeh'kinya (Tanaris 66.99, 22.36) at the Tanaris stop, shown once Zul'Farrak's Prophecy of Mosh'aru (3527) is turned in; the egg in Jintha'alor (Hinterlands 57.6, 86.8, QuestieDB object); hand-in and the Egg of Hakkar after the Un'Goro stop; inside: the altar event and the Avatar of Hakkar (`uncertain`); after: Yeh'kinya | guide A, the Horde guide, QuestieDB |
+| Uldaman | Power Stones (2418) | prepare: Rigglefuzz (Badlands 42.39, 52.93) after Ryedol's pickups; inside: 8 Dentrium and 8 An'Alleum Power Stones from the Shadowforge dwarves; after: Rigglefuzz between Ryedol and Theldurin | guide A's Uldaman chapter, the Horde guide, quest database |
+| Sunken Temple | The Ancient Egg (4787) and The God Hakkar (3528) | prepare: Yeh'kinya (Tanaris 66.99, 22.36) at the Tanaris stop, shown once Zul'Farrak's Prophecy of Mosh'aru (3527) is turned in; the egg in Jintha'alor (Hinterlands 57.6, 86.8, quest database object); hand-in and the Egg of Hakkar after the Un'Goro stop; inside: the altar event and the Avatar of Hakkar (`uncertain`); after: Yeh'kinya | guide A, the Horde guide, quest database |
 | Blackrock Depths | A Taste of Flame (4024) | prepare: Cyrus Therepentous (Burning Steppes 95.09, 31.56), shown once the route's 4022 is turned in; inside: Bael'Gar and the Altered Black Dragonflight Molt (11231); after: Cyrus | guide A, the Horde guide |
-| Stratholme | The Argent Hold (5265) | after: Lord Maxwell Tyrosus opens the hold at Light's Hope (71.96, 48.41) | guide A, the Horde guide, QuestieDB |
+| Stratholme | The Argent Hold (5265) | after: Lord Maxwell Tyrosus opens the hold at Light's Hope (71.96, 48.41) | guide A, the Horde guide, quest database |
 | Gnomeregan | Gnome Improvement (2948) | after: Talvash improves the Return of the Ring ring for a Silver Bar, a Moss Agate (Auction House) and 30 silver | guide A |
 
 `afterDone(id, step)` (QuestDungeonData3060.lua) shows a pickup once a quest from another guide or the route is turned in (`ifDone`, no `chain`), so each guide still runs on its own and the route audit can simulate it alone.
@@ -88,7 +88,7 @@ Left out:
 - **Upper Blackrock Spire:** Egg Freezing and Egg Collection (4734, 4735, level 60), the Hydraxis chain (6804, 6805, 6821: the Molten Core attunement) and Blackhand's Command (7761: Blackwing Lair). Raid chains and level 60.
 - **Arcane Refreshment (7463)**, Dire Maul: a level 60 Mage quest.
 
-No game-enforced dungeon prerequisite missing from QuestieDB turned up on the Alliance side (the Horde's was The New Plague).
+No game-enforced dungeon prerequisite missing from quest database turned up on the Alliance side (the Horde's was The New Plague).
 
 ## Moves between band files (made during the merge)
 
@@ -147,7 +147,7 @@ Quests that need a bought item say where to get it at a step before the trip (de
 - **Auction House `collect` steps or notes:** Hillman's Cloak and Bolts of Woolen Cloth (Ironforge, for Bartolo's Yeti Fur Cloak), an Elixir of Water Breathing, a Moonsteel Broadsword (Jarl Needs a Blade), Silk Cloth, the five bloodmage parts, the Mithril Casing, the Evoroot, Gnome Improvement's Silver Bar and Moss Agate; text for Jungle Remedies and a Catseye Elixir.
 - **Already right:** Rhapsody Malt, the Empty Vial for The Great Tree Provides, the Flagon of Dwarven Honeymead (each objective stands at its vendor).
 - **Left as text:** Look To The Stars' Bronze Tube (an engineer's item), The Touch of Zanzil's three Stormwind vendors (rogue class guide).
-- `QuestShopData.lua` is regenerated (still 10 quests). Two Riverglades quests with vendor items, 95988 and 95613, have no QuestieDB record, so their buy steps carry the item IDs.
+- `QuestShopData.lua` is regenerated (still 10 quests). Two Riverglades quests with vendor items, 95988 and 95613, have no quest database record, so their buy steps carry the item IDs.
 
 ## Generated files
 

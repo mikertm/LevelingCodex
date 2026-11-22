@@ -104,7 +104,7 @@ local function setIcon(tex, step, size)
 end
 M.setIcon = setIcon
 
--- What a step asks of you, for the step window's chip, stripe and title colour: "accept",
+-- What a step asks of you, for the step window's chip and title row colours: "accept",
 -- "turnin", "kill", "collect", "travel", "dungeon" or "other".
 local KIND_OF = { accept = "accept", turnin = "turnin", collect = "collect", buy = "collect",
   ["goto"] = "travel", fly = "travel", getfp = "travel", boat = "travel", hearth = "travel", sethearth = "travel",
@@ -130,7 +130,10 @@ function ns.questKindStyle(kind, step)
   local style = KIND_STYLE[kind]
   if style then
     local label = style[1]
-    if kind == "dungeon" and step and step.type == "boss" then label = "Boss" end
+    if kind == "dungeon" and step and step.type == "boss" then
+      if step.optionalBoss == "rare" then return { label = "Rare", color = KIND_STYLE.collect[2] } end
+      label = "Boss"
+    end
     if kind == "kill" and step and step.type == "elite" then label = "Elite" end
     if kind == "travel" and step and TRAVEL_WORD[step.type] then label = TRAVEL_WORD[step.type] end
     return { label = label, color = style[2] }
@@ -153,7 +156,7 @@ end
 M.paintIcon = paintIcon
 
 ----------------------------------------------------------------------------
--- Minimap: where the arrow leads (the step, QuestieDB's nearest spawn, a flight master on a trip,
+-- Minimap: where the arrow leads (the step, quest database's nearest spawn, a flight master on a trip,
 -- your corpse) gets a pin, or an edge arrow on the rim while it's off the minimap; the next two
 -- steps get small numbered pins (faded on the rim while they're off it). Gold dots run from you to
 -- the pin and, for a step's way in, on through its tunnel points (a bend dot at each) to the step;
@@ -563,7 +566,7 @@ local function lineKey()
     .. ":" .. tostring(goal and goal.key) .. ":" .. tostring(goal and goal.spot and goal.spot.x)
 end
 
--- The map's own pin level (the level Questie's pins get from the map), so our layer draws above
+-- The map's own pin level (the level quest tracker's pins get from the map), so our layer draws above
 -- the map's art, which sits above the canvas's own level; without that manager, a little above it.
 local function layerLevel(child)
   local frame = WorldMapFrame

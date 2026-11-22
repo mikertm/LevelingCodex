@@ -9,10 +9,10 @@ local route = LevelingCodexQuests.HORDE
 -- fine). Referral quests get one accept per race, at that race's capital.
 local ORC, TROLL, TAUREN, UNDEAD, SKYBORNE = "ORC", "TROLL", "TAUREN", "SCOURGE", "SKYBORNE"
 local ALL = { ORC, TROLL, TAUREN, UNDEAD, SKYBORNE }
-local qdb = "QuestieDB Forever 0f7d8ad"
+local qdb = "quest database Forever 0f7d8ad"
 local refB = "Reference guide B: class quest chapters (order and IDs only)"
 
--- A class quest: QuestieDB facts, limited to the class (QuestClassData.lua re-registers the
+-- A class quest: quest database facts, limited to the class (QuestClassData.lua re-registers the
 -- shared ones for the Alliance afterwards; steps keep the copy made here).
 local function need(class, id, name, level, min, prev, forever)
   H.need(id, name, level, min, prev, forever)
@@ -32,7 +32,7 @@ local function linkRun(dungeonId, sectionIds)
   error("Horde class quests 30-60: no dungeon guide " .. dungeonId)
 end
 
--- Places several chains share (QuestieDB spawns; zeppelin towers as in QuestHorde3040.lua).
+-- Places several chains share (quest database spawns; zeppelin towers as in QuestHorde3040.lua).
 local P = {}
 do
   local M, at = B.maps, B.at
@@ -86,7 +86,8 @@ do
       accept(1791, klannoc,
         "After The Affray, Klannoc Macleod on Fray Island has The Windwatcher. Keep it in your log until you head for Alterac."),
       taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Wade back across the shallows, ride north to Ratchet and fly to Orgrimmar."),
-      action("boat", P.toUndercity, "Take the zeppelin to Tirisfal Glades from the tower north of Orgrimmar."),
+      action("boat", P.toUndercity, "Take the zeppelin to Tirisfal Glades from the tower north of Orgrimmar.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       taxi("fly", B.at("Zarise", 60.14, 18.62, 1424), "Tarren Mill, Hillsbrad", "Walk into the Undercity and fly to Tarren Mill."),
       finish(1791, P.bathrah,
         "Bath'rah camps by his cauldron in the hills just over the Alterac border, a short ride north-east of Tarren Mill."),
@@ -103,7 +104,7 @@ do
       note(goal(1712, at(nil, 78.5, 35.8, M.arathi),
         "Ride east from Hammerfall into Drywhisker Gorge. The kobolds there drop the Burning, Thundering and Cresting Charms. The Exile elementals drop them too: Cresting Exiles west of Hammerfall, Thundering Exiles in the middle of Arathi (52, 50), Burning Exiles in the north-west hills (26, 30). Use Next once you have all three.",
         "Burning Charm", "Thundering Charm", "Cresting Charm"),
-        "Charm drop sources are QuestieDB data; check them in game."),
+        "Charm drop sources are quest database data; check them in game."),
       action("goto", P.bathrah, "Take the road west out of Arathi into Hillsbrad and climb back up to Bath'rah's camp."),
       note(part(1712, 3, cauldron,
         "Combine the three charms at the cauldron beside Bath'rah for the Essence of the Exile.", "Essence of the Exile"),
@@ -390,7 +391,7 @@ do
       finish(4490, P.strahad, "Speak with Strahad again to learn Summon Felsteed."),
     } })
 
-  -- The Orb of Orahil. QuestieDB gives the Orgrimmar referral (4967) Alliance races and the
+  -- The Orb of Orahil. quest database gives the Orgrimmar referral (4967) Alliance races and the
   -- Stormwind one (4968) Horde races; this guide uses Zevrost's and Kaal Soulreaper's.
   need(warlock, 4967, "Knowledge of the Orb of Orahil", 35, 35)
   need(warlock, 4969, "Knowledge of the Orb of Orahil", 35, 35)
@@ -407,7 +408,7 @@ do
     steps = {
       note(only(accept(4967, zevrost, "From level 35, Zevrost in Orgrimmar's Cleft of Shadow has Knowledge of the Orb of Orahil."),
         { race = orcTroll }),
-        "QuestieDB lists this Orgrimmar referral for Alliance races (the Stormwind one for Horde). Check that Zevrost offers it."),
+        "quest database lists this Orgrimmar referral for Alliance races (the Stormwind one for Horde). Check that Zevrost offers it."),
       only(accept(4969, kaal,
         "From level 35, Kaal Soulreaper in the Undercity's Magic Quarter has Knowledge of the Orb of Orahil."), { race = UNDEAD }),
       action("goto", P.bragok, toRatchet),
@@ -565,7 +566,7 @@ do
     steps = {
       note(accept(79360, prate,
         "After Call of Air, Prate Cloudseer has Elemental Aid. It sends you to the end of Razorfen Kraul, so plan a group."),
-        "QuestieDB has no level or prerequisite for this Forever chain. Check that Prate offers it right after Call of Air."),
+        "quest database has no level or prerequisite for this Forever chain. Check that Prate offers it right after Call of Air."),
       taxi("fly", B.at("Omusa Thunderhorn", 44.45, 59.15, 1413), "Camp Taurajo, The Barrens", "Ride back to Freewind Post and fly to Camp Taurajo."),
       B.withGuide("dungeon-razorfen-kraul", note(goal(79360, at("Razorfen Kraul approach", 42.9, 90.2, M.barrens),
         "Ride south to the far end of the Barrens and down the thorny path to Razorfen Kraul. Inside, defeat Charlga Razorflank in her hut and loot the note with the quilboar's plans.",
@@ -579,23 +580,25 @@ do
       taxi("fly", B.at("Shardi", 35.6, 31.9, 1445), "Brackenwall Village, Dustwallow Marsh", "Fly from Freewind Post to Brackenwall Village in Dustwallow Marsh."),
       note(part(79361, 1, at(nil, 57.5, 15.0, M.dustwallow),
         "Ride east along the northern shore to the Mirefin murloc camps on the north-east coast. Kill murlocs for 5 Twisted Water Totems.",
-        "5 Twisted Water Totem"), "Objective order is QuestieDB's. Use Next if this step waits on another totem."),
+        "5 Twisted Water Totem"), "Objective order is quest database's. Use Next if this step waits on another totem."),
       taxi("fly", B.at("Thalon", 21.6, 74.1, 1443), "Shadowprey Village, Desolace", "Ride back to Brackenwall Village and fly to Shadowprey Village in Desolace."),
       note(part(79361, 4, at(nil, 33.5, 57.0, M.desolace),
         "Ride north-east to the Maraudine centaur camps in western Desolace. Kill centaurs for 5 Twisted Air Totems.",
-        "5 Twisted Air Totem"), "Objective order is QuestieDB's. Use Next if this step waits on another totem."),
+        "5 Twisted Air Totem"), "Objective order is quest database's. Use Next if this step waits on another totem."),
       taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Ride back to Shadowprey Village and fly to Orgrimmar."),
-      action("boat", P.toGromgol, "Take the zeppelin to Grom'gol from the tower north of Orgrimmar."),
+      action("boat", P.toGromgol, "Take the zeppelin to Grom'gol from the tower north of Orgrimmar.",
+        { skipOn = M.stv }),
       taxi("fly", B.at("Breyk", 46.1, 54.8, 1435), "Stonard, Swamp of Sorrows", "Fly from Grom'gol to Stonard."),
       note(part(79361, 2, at(nil, 58.0, 27.0, M.swamp),
         "Ride north-east from Stonard to the Lost Ones' huts in the north-east of the swamp. Kill them for 5 Twisted Earth Totems.",
-        "5 Twisted Earth Totem"), "Objective order is QuestieDB's. Use Next if this step waits on another totem."),
+        "5 Twisted Earth Totem"), "Objective order is quest database's. Use Next if this step waits on another totem."),
       taxi("fly", B.at("Gorrik", 4, 44.8, 1418), "Kargath, Badlands", "Ride back to Stonard and fly to Kargath in the Badlands."),
       note(part(79361, 3, at(nil, 65.5, 23.5, M.badlands),
         "Ride east across the Badlands to the Dustbelcher ogre camp in the north-east. Kill ogres for 5 Twisted Fire Totems. The Stonevault troggs in the south (49, 68) drop them too.",
-        "5 Twisted Fire Totem"), "Objective order is QuestieDB's. Use Next if this step waits on another totem."),
+        "5 Twisted Fire Totem"), "Objective order is quest database's. Use Next if this step waits on another totem."),
       taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Ride back to Kargath and fly to Grom'gol."),
-      action("boat", P.gromgolToOrgrimmar, "Take the zeppelin to Orgrimmar."),
+      action("boat", P.gromgolToOrgrimmar, "Take the zeppelin to Orgrimmar.",
+        { skipOn = { M.durotar, M.orgrimmar } }),
       taxi("fly", B.at("Nyse", 45.14, 49.11, 1441), "Freewind Post, Thousand Needles", "Fly from Orgrimmar to Freewind Post."),
       finish(79361, prate, prateText),
       accept(79366, prate,
@@ -604,11 +607,12 @@ do
         "Go to the steam pools west of Freewind Post. Use the Corrupted Totems there, kill each wave of elementals, then the quilboar and the Ravaging Tempest. Loot the Eye of the Tempest.",
         "Eye of the Tempest")), "Check where the ritual starts and whether a quest flight takes you there."),
       note(finish(79366, rau, "Return to Rau Cliffrunner in Freewind Post."),
-        "QuestieDB has no turn-in NPC for the Horde Heed My Call; one database page names Rau Cliffrunner."),
+        "quest database has no turn-in NPC for the Horde Heed My Call; one database page names Rau Cliffrunner."),
       note(accept(79442, rau, "Take The Tempest's Weapons: Bath'rah the Windwatcher in Alterac makes the weapon."),
-        "The Horde giver of The Tempest's Weapons is not in QuestieDB. Check whether Rau or Prate offers it."),
+        "The Horde giver of The Tempest's Weapons is not in quest database. Check whether Rau or Prate offers it."),
       taxi("fly", B.at("Doras", 45.12, 63.89, 1454), "Orgrimmar, Durotar", "Fly from Freewind Post to Orgrimmar."),
-      action("boat", P.toUndercity, "Take the zeppelin to Tirisfal Glades from the tower north of Orgrimmar."),
+      action("boat", P.toUndercity, "Take the zeppelin to Tirisfal Glades from the tower north of Orgrimmar.",
+        { skipOn = { M.tirisfal, M.undercity } }),
       taxi("fly", B.at("Zarise", 60.14, 18.62, 1424), "Tarren Mill, Hillsbrad", "Walk into the Undercity and fly to Tarren Mill."),
       finish(79442, P.bathrah,
         "Bath'rah camps by his cauldron in the hills just over the Alterac border, north-east of Tarren Mill. Choose Rage of the Storm, Lightning's Grasp or Tidebringer's Claw."),

@@ -4,7 +4,7 @@ Section: `wetlands-early` in `QuestAlternateData.lua` ("Wetlands: The Green Belt
 
 ## Why
 
-The owner sent a screenshot from the Whelgar Excavation Site. Their level 24 Warrior had just turned in In Search of The Excavation Team (305) and taken Ormer's Revenge (294), and Prospector Whelgar offered **Uncovering the Past (299)**. The chapter didn't route it. The 11-11 audit had left it out because QuestieDB gives it required level 25 (quest level 28). The game offered it at 24, so that minimum is wrong for Forever.
+The owner sent a screenshot from the Whelgar Excavation Site. Their level 24 Warrior had just turned in In Search of The Excavation Team (305) and taken Ormer's Revenge (294), and Prospector Whelgar offered **Uncovering the Past (299)**. The chapter didn't route it. The 11-11 audit had left it out because quest database gives it required level 25 (quest level 28). The game offered it at 24, so that minimum is wrong for Forever.
 
 ## Sources
 
@@ -16,7 +16,7 @@ The owner sent a screenshot from the Whelgar Excavation Site. Their level 24 War
 - [games.gg Wetlands guide](https://games.gg/world-of-warcraft/guides/wow-forever-wetlands-leveling-guide/): Uncovering the Past and Ormer's Revenge at "about 24-27", the Scytheclaws and Razormaws together with the relics.
 - [Bind on Forever: Wetlands](https://bindonforever.com/zones/wetlands): lists 299 (level 27), 295 (27) and 296 (29), but routes none of them. It gives no minimum levels.
 - [Wowhead Forever, quest 299](https://www.wowhead.com/forever/quest=299/uncovering-the-past): the follow-up is Understanding Our Present. It gives no minimum level.
-- `tools/questfacts.py` (QuestieDB Forever):
+- `tools/questfacts.py` (quest database Forever):
   - Fragments, all inside the dig: Ados (Ancient Relic, 34.7, 48.3 and 34.2, 50.4), Modr (Ancient Relic, 34.3, 45.1 and 35.2, 51.5), Golm (Ancient Relic, 35.0, 46.1) and Neru (Loose Soil, 34.0, 45.7 and 33.3, 51.4).
   - Raptors in the dig: Mottled Scytheclaws (25-26, 14 spawns from 32.0 to 35.7, 44 to 51) and Mottled Razormaws (26-27, 9 spawns around 33.6, 48.1).
   - Sarltooth (29), a normal mob, at 33.3, 51.5.
@@ -43,7 +43,7 @@ Every Alliance Wetlands quest from `questfacts.py zone Wetlands` with quest leve
 
 `QuestData.lua`:
 
-- `q(299, "Uncovering the Past", 28, 25)` becomes `q(299, "Uncovering the Past", 28, 24)`, with a comment: QuestieDB says 25, but the game offered it at 24. The 26-30 route is unaffected: it takes 299 at 26 or later.
+- `q(299, "Uncovering the Past", 28, 25)` becomes `q(299, "Uncovering the Past", 28, 24)`, with a comment: quest database says 25, but the game offered it at 24. The 26-30 route is unaffected: it takes 299 at 26 or later.
 
 `QuestAlternateData.lua`, `wetlands-early`, at the dig. Steps in route order (new ones in bold):
 

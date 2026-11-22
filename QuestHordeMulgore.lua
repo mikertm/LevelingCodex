@@ -220,7 +220,7 @@ do
     finish(96661, mu("Pyall Silentstride", 44.92, 61.67), "Talk to Pyall Silentstride on the west side of the village about Cooking."),
     finish(97936, mu("Yonn Deepcut", 44.97, 61.4), "Yonn Deepcut stands next to Pyall."),
     accept(761, harken), accept(99108, krang),
-    objective(99108, 48.76, 63.68, "Beat three Novice Warriors in the sparring ring beside Krang, or win three duels.", "3 duels won"),
+    objective(99108, 48.76, 63.68, "Talk to a Novice Warrior in the sparring ring beside Krang and choose the challenge dialogue to begin a duel. Win three duels.", "3 duels won"),
     finish(99108, krang),
     accept(748, mull), accept(99079, wildrunner), accept(743, ruul),
     along(objective(748, 49.43, 68.81, "Go south of the village and kill Prairie Wolves and Adult Plainstriders for paws and talons. Pick up Ambercorns from the ground under the trees as you go.",
@@ -367,7 +367,7 @@ do
     "https://bindonforever.com/zones/mulgore",
     "https://www.warcrafttavern.com/forever/guides/tauren/",
     "https://mobalytics.gg/wow-forever/guides/wow-forever-race-class-combinations",
-    "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+    "Cached quest records (revision 0f7d8ad)",
     "https://wago.tools/db2/QuestV2?build=1.60.1.70862",
   }
   route.sections[#route.sections + 1] = { id = "camp-narache", title = "Camp Narache", zone = mulgore, levels = { 1, 6 },

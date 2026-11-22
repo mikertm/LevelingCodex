@@ -12,11 +12,11 @@ stays `verified = false`.
   "Dungeon Quests" guides, read for quest IDs and order only. All step text and new boss tips are written here; no
   coordinates come from either guide.
 - **Quest facts** (names, levels, minimum levels, Horde/Alliance race masks, prerequisites, givers, enders, provided
-  items, objective order): the QuestieDB Forever cache through `tools/questfacts.py`. Every quest ID is in the client
+  items, objective order): the quest database Forever cache through `tools/questfacts.py`. Every quest ID is in the client
   quest list (`tools/reference/forever.json`, checked by `tools/questroute.py audit`).
-- **Places**: QuestieDB Forever NPC and object spawns, mob spawn clusters for kill and loot objectives (bloodpetals,
+- **Places**: quest database Forever NPC and object spawns, mob spawn clusters for kill and loot objectives (bloodpetals,
   War Reavers, broodlings, Chillwind chimaeras, Shadowshard golems, Andorhal skeletons and the four tower markers,
-  the skull drakes), flight masters at the client's taxi nodes. Dungeon doors that QuestieDB can't place are the
+  the skull drakes), flight masters at the client's taxi nodes. Dungeon doors that quest database can't place are the
   Alliance guides' points (Maraudon cave, Sunken Temple, Dire Maul, Caer Darrow), flagged where uncertain.
 - **Encounters**: `quests.instances` in the client reference (DungeonEncounter IDs per instance).
 - **Forever changes**: [wowhead Forever quest 5214](https://www.wowhead.com/forever/quest=5214) (the quest is
@@ -70,17 +70,17 @@ The dungeon guides link these (`links`, and `guide` on the Seal, Skeleton Key an
   `ifOnQuest = 6163`.
 - **Quest records**: `B.q(3444)` sets The Stone Circle's prerequisite to the Horde's 3380 (the Alliance record has
   3445; steps built earlier keep theirs). `B.q(5214)` renames it to the Forever name, The Great Ezra Grimm. Everything
-  else uses `H.need` (fills gaps only). Prerequisites with a choice in QuestieDB (3444, 5096) use the Horde one.
+  else uses `H.need` (fills gaps only). Prerequisites with a choice in quest database (3444, 5096) use the Horde one.
 - **Upper Spire needs Warlord's Command**: For The Horde! (4974) needs 4941, which needs 4903 from a Lower Spire run,
   so the Upper Spire guide and the Onyxia guide repeat 4903 -> 4941 (done quests show as done).
 - **Elven Legends** (7481) is in the North guide (Kariel Winthalus in the Gordok library, as reference guide B has
   it; reference guide A completes it in the West wing): flagged uncertain.
-- **Blackrock Mountain**: QuestieDB has no positions inside the mountain. The Alliance guides' gate on the Searing
+- **Blackrock Mountain**: quest database has no positions inside the mountain. The Alliance guides' gate on the Searing
   Gorge map (34.8, 85.3) is converted to the Burning Steppes map through the client's world coordinates (28.4, 17.3),
   since the Horde arrives from Flame Crest. In-mountain steps (Franclorn, Lothos, Pyron, Vaelan, the Quartermaster)
   have no waypoint.
 - **Eastern Plaguelands map frame**: Forever's map of the Eastern Plaguelands is framed differently from classic's
-  (QuestieDB Forever vs classic for the same NPCs: Egan 11.4, 26.6 vs 14.4, 33.7; Betina 71.7, 49.9 vs 81.5, 59.7;
+  (quest database Forever vs classic for the same NPCs: Egan 11.4, 26.6 vs 14.4, 33.7; Betina 71.7, 49.9 vs 81.5, 59.7;
   Tirion 5.2, 35.6 vs 7.6, 43.7). A fit over four NPCs gives x' = 0.899 x - 1.58, y' = 0.898 y - 3.65. The other maps
   used here match classic. The Stratholme gate (Alliance guide: 31.2, 15.6, a classic-map point) becomes 26.5, 10.4.
 - **Left out**: 4201 The Love Potion (outdoor gathering in Azshara and Un'Goro), 5065/4788 the Mosh'aru tablets
@@ -125,6 +125,6 @@ Tag these with `H.dungeon(...)` where the route passes the giver (quest, giver, 
 - Upper Spire: where the Darkstone Tablet lies, where Awbee waits, whether Finkle needs a skinner.
 - Dire Maul: the three wing doors (classic-map points); where Kariel Winthalus lies; where the Gauntlet of Gordok
   Might is.
-- Stratholme: the converted gate spot and Egan's spot (QuestieDB puts him well south-west of the gate).
+- Stratholme: the converted gate spot and Egan's spot (quest database puts him well south-west of the gate).
 - Onyxia chain: Rexxar's patrol, Grim Batol's guards around Axtroz.
 - Seal of Ascension: Emberstrife's guards and the seal and orb order.

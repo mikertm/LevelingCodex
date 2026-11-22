@@ -58,9 +58,10 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "ZONE_CHANGED_NEW_AREA", "TAXIMAP_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "HEARTHSTONE_BOUND",
   "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "CONFIRM_BINDER", "PLAYER_XP_UPDATE",
   "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "CHAT_MSG_ADDON", "GROUP_ROSTER_UPDATE", "PLAYER_DEAD",
-  "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
+  "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
-  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED" }) do
+  "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED",
+  "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -110,14 +111,33 @@ C_ChatInfo = {
   end,
 }
 function SendChatMessage(text, channel)
+  if #text > 255 then error("SendChatMessage: over 255 bytes", 2) end
   MOCK.said = MOCK.said or {}
   table.insert(MOCK.said, { text = text, channel = channel })
 end
+function GetQuestLink(id) return MOCK.questLinks and MOCK.questLinks[id] end
+function ChatFrameAddMessageEventFilter(event, filter)
+  MOCK.chatFilters = MOCK.chatFilters or {}
+  MOCK.chatFilters[event] = filter
+end
 function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
--- The world map: OpenWorldMap records the map it opened.
-function OpenWorldMap(map) MOCK.openedMap = map end
+-- Forever can block the map's controller focus change when an addon opens it.
+function OpenWorldMap(map)
+  MOCK.openedMap = map
+  if MOCK.blockControllerMap and (MOCK.gamepadUI or MOCK.gamepad) then
+    MOCK.event("ADDON_ACTION_BLOCKED", "LevelingCodex", "SetPreferredGamepadInteractTarget()")
+  end
+end
 C_Map = {
   GetBestMapForUnit = function() return MOCK.questMap end,
+  GetMapArtLayers = function(id)
+    local art = MOCK.mapArt and MOCK.mapArt[id]
+    return art and art.layers
+  end,
+  GetMapArtLayerTextures = function(id, layer)
+    local art = MOCK.mapArt and MOCK.mapArt[id]
+    return art and art.textures[layer]
+  end,
   -- MOCK.mapInfo[id] = { name, mapType, parentMapID } (opt-in: other names change "Travel to" captions)
   GetMapInfo = function(id)
     local m = MOCK.mapInfo and MOCK.mapInfo[id]
@@ -136,6 +156,11 @@ C_Map = {
   GetUserWaypoint = function() return MOCK.userWaypoint end,
   ClearUserWaypoint = function() MOCK.userWaypoint = nil end,
   CanSetUserWaypointOnMap = function(map) return not (MOCK.noWaypointMaps and MOCK.noWaypointMaps[map]) end,
+}
+C_MapExplorationInfo = {
+  GetExploredMapTextures = function(id)
+    return MOCK.mapOverlays and MOCK.mapOverlays[id]
+  end,
 }
 C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = on end,
   IsSuperTrackingUserWaypoint = function() return MOCK.superTracked and true or false end }
@@ -162,6 +187,7 @@ function NumTaxiNodes() return #(MOCK.taxiNodes or {}) end
 function TaxiNodeName(i) return MOCK.taxiNodes[i][1] end
 function TaxiNodeGetType(i) return MOCK.taxiNodes[i][2] end
 function TakeTaxiNode(i) MOCK.tookTaxi = i end
+function TaxiNodeOnButtonEnter(button) MOCK.taxiHovered = button end
 -- Blizzard's popups belong to the Blizzard UI. Confirming an NPC interaction from addon code is
 -- blocked (Forever's ADDON_ACTION_FORBIDDEN dialog), and StaticPopup_Hide from addon code taints the
 -- popup system, so the next protected popup button (the Spirit Healer's Accept) is blocked and
@@ -483,6 +509,7 @@ function Frame:CreateFontString(name, layer, template)
   return fs
 end
 local SCRIPTS = {
+  OnTooltipSetItem=1, OnTooltipSetUnit=1, OnTooltipCleared=1,
   OnShow = 1, OnHide = 1, OnUpdate = 1, OnEvent = 1, OnEnter = 1, OnLeave = 1, OnClick = 1, OnMouseUp = 1,
   OnMouseDown = 1, OnDragStart = 1, OnDragStop = 1, OnMouseWheel = 1, OnKeyDown = 1, OnKeyUp = 1,
   OnGamePadButtonDown = 1, OnGamePadButtonUp = 1, OnGamePadStick = 1, OnEscapePressed = 1, OnEnterPressed = 1, OnTextChanged = 1,
@@ -572,6 +599,7 @@ end
 function Frame:GetNumChildren() return #self._children end
 function Frame:GetRegions() return unpack(self._regions) end
 function Frame:IsMouseOver() return MOCK.mouseOver[self] and true or false end
+function IsMouseButtonDown(button) return MOCK.leftMouseDown and button=="LeftButton" or false end
 function Frame:SetHitRectInsets() end
 function Frame:SetID(id) self._id = id end
 function Frame:GetID() return self._id or 0 end
@@ -832,14 +860,33 @@ MerchantFrame = CreateFrame("Frame", "MerchantFrame", UIParent)
 MerchantFrame:SetSize(336, 447)
 MerchantFrame:Hide()
 
-GameTooltip = CreateFrame("Frame", "GameTooltip", UIParent)
-GameTooltip:Hide()
-function GameTooltip:SetOwner(owner, anchor) self._owner = owner; self._lines = {} end
-function GameTooltip:SetText(s) ascii(s, "GameTooltip:SetText"); self._lines = { s } end
-function GameTooltip:AddLine(s) ascii(s, "GameTooltip:AddLine"); self._lines[#self._lines + 1] = s end
-function GameTooltip:AddDoubleLine(a, b) ascii(a, "GameTooltip"); ascii(b, "GameTooltip") end
-function GameTooltip:ClearLines() self._lines = {} end
-function GameTooltip:IsOwned(f) return self._owner == f end
+local function itemTooltip(name)
+  local tip=CreateFrame("Frame",name,UIParent)
+  tip:Hide()
+  function tip:SetOwner(owner,anchor) self._owner=owner;self._lines={} end
+  function tip:SetText(s) ascii(s,name..":SetText");self._lines={s} end
+  function tip:AddLine(s) ascii(s,name..":AddLine");self._lines[#self._lines+1]=s end
+  function tip:AddDoubleLine(a,b) ascii(a,name);ascii(b,name) end
+  function tip:ClearLines() self._lines={} end
+  function tip:IsOwned(f) return self._owner==f end
+  function tip:GetItem() return self._lootName,self._lootLink end
+  function tip:SetHyperlink(link)
+    self:ClearLines();self._lootLink=link;self._lootName="Item"
+    local clear=self:GetScript("OnTooltipCleared");if clear then clear(self) end
+    local set=self:GetScript("OnTooltipSetItem");if set then set(self) end
+    self:Show()
+  end
+  return tip
+end
+GameTooltip=itemTooltip("GameTooltip")
+ItemRefTooltip=itemTooltip("ItemRefTooltip")
+
+function GameTooltip:SetSpellBookItem(slot)
+  self._spellName = (MOCK.professionSpells or {})[slot]
+  self:SetText(self._spellName or "")
+  return self._spellName ~= nil
+end
+function GameTooltip:GetSpell() return self._spellName end
 
 DEFAULT_CHAT_FRAME = CreateFrame("Frame", "ChatFrame1", UIParent)
 function DEFAULT_CHAT_FRAME:AddMessage(s)
@@ -903,10 +950,10 @@ function GetMinimapShape() return MOCK.minimapShape or "ROUND" end
 function IsShiftKeyDown() return MOCK.shift or false end
 function IsControlKeyDown() return MOCK.ctrl or false end
 
--- Questie (opt-in, made by scenarios): its settings and its tracker frame.
--- MOCK.makeQuestie{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
+-- quest tracker (opt-in, made by scenarios): its settings and its tracker frame.
+-- MOCK.makequest tracker{ autoAccept, autocomplete, modifier = "shift", legacyAccept, tracker = false, cx,
 --   announce = { channel = "party", objectives, items, shutUp } }
-function MOCK.makeQuestie(opts)
+function MOCK.makeQuestProvider(opts)
   opts = opts or {}
   local profile = { autocomplete = opts.autocomplete == true, autoModifier = opts.modifier or "shift" }
   if opts.announce then
@@ -930,16 +977,16 @@ function MOCK.makeQuestie(opts)
   tracker:Show()
 end
 
--- QuestieDB's LibQuestieDB (opt-in, made by scenarios), a new table on every call.
--- MOCK.makeQuestieDB{ contract = 4, quests = { [id] = { objectives } }, npcs/objects = { [id] = { name, spawns } },
+-- quest database's quest data API (opt-in, made by scenarios), a new table on every call.
+-- MOCK.makequest database{ contract = 4, quests = { [id] = { objectives } }, npcs/objects = { [id] = { name, spawns } },
 --   items = { [id] = { name, npcDrops, objectDrops } }, zones = "return {...}", noZones }
--- Entity getters raise while MOCK.questieDBError is set.
-function MOCK.makeQuestieDB(opts)
+-- Entity getters raise while MOCK.quest databaseError is set.
+function MOCK.makeQuestDataProvider(opts)
   opts = opts or {}
   local contract = opts.contract or 4
   local function getter(source, field)
     return function(id)
-      if MOCK.questieDBError then error("mock read error", 2) end
+      if MOCK.questDataError then error("mock read error", 2) end
       local row = source and source[id]
       return row and row[field]
     end
@@ -953,7 +1000,7 @@ function MOCK.makeQuestieDB(opts)
     contractVersion = contract, minSupportedContract = 1, readMode = "baked",
     RequireContract = function(n)
       if type(n) == "number" and n >= 1 and n <= contract then return true end
-      return false, "QuestieDB contract " .. contract .. " does not support " .. tostring(n)
+      return false, "quest data contract " .. contract .. " does not support " .. tostring(n)
     end,
     Quest = { objectives = getter(opts.quests or {}, "objectives") },
     Npc = { name = getter(npcs, "name"), spawns = getter(npcs, "spawns") },
@@ -963,21 +1010,21 @@ function MOCK.makeQuestieDB(opts)
   }
 end
 
--- EllesmereUI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
+-- external UI (opt-in: run.py's "eui" step makes it before the addon loads, like the real one, which
 -- the .toc lists as an optional dependency). Its public skin API (SKINNING_API.md, apiVersion 4):
--- EllesmereUI.RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
--- else hears it (EllesmereUI loads first), or at MOCK.euiDispatch() with opts.manual; never with
+-- RegisterSkin(name, fn) queues; the callbacks run once, at PLAYER_LOGIN before anything
+-- else hears it (external UI loads first), or at MOCK.euiDispatch() with opts.manual; never with
 -- opts.off (the player turned third-party skins off). The facade records each call in MOCK.eui.calls
 -- and, like the real engine, fades every texture of a frame it skins. Shell, Panel, Inset and Button
--- keep the frame for MOCK.euiRestrip(), which fades them all again (EllesmereUI does that when some
+-- keep the frame for MOCK.euiRestrip(), which fades them all again (external UI does that when some
 -- Blizzard windows open), sparing only the textures the facade made itself. MOCK.euiLooks(accent)
 -- changes the accent colour and calls every OnLooksChanged callback.
--- MOCK.makeEllesmere{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
-function MOCK.makeEllesmere(opts)
+-- MOCK.makeexternal UI{ manual, off, accent = { r, g, b }, style = "eui" / "modern" }
+function MOCK.makeSkinProvider(opts)
   opts = opts or {}
   local E = { calls = {}, skinned = {}, restrip = {}, own = {}, looks = {}, registry = {}, fired = {},
     accent = opts.accent or { 0.047, 0.824, 0.616 }, style = opts.style or "eui", off = opts.off,
-    font = "Interface\\AddOns\\EllesmereUI\\media\\fonts\\Expressway.ttf" }
+    font = "Interface\\AddOns\\TestSkinProvider\\media\\fonts\\UI.ttf" }
   MOCK.eui = E
   local function fade(frame)
     for _, r in ipairs({ frame:GetRegions() }) do
@@ -1016,7 +1063,7 @@ function MOCK.makeEllesmere(opts)
     if E.fired[entry.name] or E.off then return end
     E.fired[entry.name] = true
     local ok, err = pcall(entry.apply, S)
-    if not ok then problem("lua", "EllesmereUI skin callback: " .. tostring(err)) end
+    if not ok then problem("lua", "external UI skin callback: " .. tostring(err)) end
   end
   EllesmereUI = {
     RegisterSkin = function(name, fn)
@@ -1306,6 +1353,32 @@ end
 -- Modern clients (retail, and WoW: Forever by every add-on written for it) read item info through
 -- C_Item.GetItemInfo; scenario noGlobalItemInfo drops the old global, the minimal client drops C_Item.
 C_Item = { GetItemInfo = GetItemInfo }
+-- Equipment fixtures used only by loot scenarios; all existing item readers keep their behavior.
+MOCK.lootItems, MOCK.equipped = {}, {}
+local beforeLootItemInfo = GetItemInfo
+local function lootItem(ref)
+  local id=tonumber(tostring(ref):match("item:(%d+)")) or tonumber(ref)
+  return MOCK.lootItems[ref] or MOCK.lootItems[id]
+end
+function GetItemInfo(ref)
+  local it=lootItem(ref)
+  if not it then return beforeLootItemInfo(ref) end
+  if it.loaded==false then return end
+  return it.name,tostring(ref),2,20,it.level or 1,"Armor","Cloth",1,it.slot or "INVTYPE_CHEST",134400,0,it.classID or 4,it.subclassID or 1
+end
+C_Item.GetItemInfo=GetItemInfo
+function GetInventoryItemLink(unit,slot) return MOCK.equipped[slot] end
+function GetItemStats(ref,output)
+  local it=lootItem(ref)
+  if not it or it.loaded==false then return end
+  if output then for k,v in pairs(it.stats or {}) do output[k]=v end end
+  return it.stats or {}
+end
+C_Item.GetItemStats=GetItemStats
+C_TooltipInfo={GetHyperlink=function(ref)
+  local it=lootItem(ref)
+  if it and it.loaded~=false then return {lines={{leftText=it.effect or "Plain equipment"}}} end
+end}
 
 local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
 function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end
@@ -1345,7 +1418,7 @@ function RepairAllItems()
   fromServer(function() MOCK.setMoney((MOCK.money or 0) - cost) end)
 end
 -- MOCK.merchantLate = s: Forever's order, MERCHANT_SHOW first and the vendor window s seconds
--- later (Zygor's Forever build waits for it too); closing before then keeps it hidden.
+-- later (reference guide B's Forever build waits for it too); closing before then keeps it hidden.
 local merchantVisit = 0
 function MOCK.openMerchant(m)
   MOCK.merchant = m
@@ -1647,7 +1720,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
-  "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
+  "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
 
 function MOCK.setup(opts)
@@ -1655,6 +1728,7 @@ function MOCK.setup(opts)
   MOCK.minimal = opts.minimal
   if opts.minimal then
     C_QuestLog, C_Map, GetPlayerFacing, GetQuestID, GetNumQuestChoices, AcceptQuest, GetQuestReward = nil, nil, nil, nil, nil, nil, nil
+    C_MapExplorationInfo = nil
     UnitOnTaxi, NumTaxiNodes, TaxiNodeName, TaxiNodeGetType = nil, nil, nil, nil
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
     for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end

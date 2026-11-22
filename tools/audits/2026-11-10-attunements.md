@@ -12,7 +12,7 @@ Five `special` guides at the end of `QuestSpecialData.lua`. Each is checked on i
 
 ## Sources
 
-Quest facts from the QuestieDB Forever cache (`tools/questfacts.py`, revision 0f7d8ad) and the Forever client reference; quest IDs and the chain order also match the 50-60 route builders' notes (`tools/audits/2026-11-10-alliance-50-60.md`). NPC positions inside instances are not in the data: those steps have no waypoint and say where to look.
+Quest facts from the quest database Forever cache (`tools/questfacts.py`, revision 0f7d8ad) and the Forever client reference; quest IDs and the chain order also match the 50-60 route builders' notes (`tools/audits/2026-11-10-alliance-50-60.md`). NPC positions inside instances are not in the data: those steps have no waypoint and say where to look.
 
 ## Check in game
 

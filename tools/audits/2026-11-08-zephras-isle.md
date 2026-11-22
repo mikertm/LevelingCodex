@@ -8,7 +8,7 @@ The client's ChrRaces has two Skyborne rows sharing `ClientFileString = "Skyborn
 
 ## Sources
 
-- Quest facts (givers, turn-ins, coordinates, objectives, levels): the QuestieDB Forever cache through `tools/questfacts.py`. The data has no minimum levels and no prerequisite fields for these quests, so `min = 1` everywhere and the chains follow the NPC hand-offs in the published route.
+- Quest facts (givers, turn-ins, coordinates, objectives, levels): the quest database Forever cache through `tools/questfacts.py`. The data has no minimum levels and no prerequisite fields for these quests, so `min = 1` everywhere and the chains follow the NPC hand-offs in the published route.
 - Order and faction split: [Bind on Forever, Zephras Isle](https://bindonforever.com/zones/zephras-isle) (its High Order route, trainer list, innkeeper Donaal Downbreeze at 62.2, 72.6, and the leyline, cave, Vulgara and Shrine notes). Step text was written fresh.
 - Leaving the island: [Warcraft Tavern](https://www.warcrafttavern.com/forever/guides/how-to-get-to-ironforge-from-the-zephras-isle/), [Gamer Guides](https://gamer-guides.com/warcraft-forever/zephras-isle-to-stormwind-orgrimmar/), [All Things How](https://allthings.how/how-to-complete-the-magical-city-of-dalaran-in-wow-forever/).
 - Mob places: `questfacts.py npc` spawn clusters (Vuldren, Cirrusflies, Converts, Ursera, Al'Aketh camps, hippogryphs, bandits, Stormcallers, Assassins, Wind Hollows, Shrine guards).
@@ -21,7 +21,7 @@ Class quests: Rorian's letters for Mage 92481, Hunter 92482, Rogue 92483, Druid 
 
 ## How Skyborne leave the island
 
-There is no flight path on Zephras Isle in the client (`TaxiNodes` only has a quest path). The Alliance leaves on The Magical City of Dalaran (94946): the skycutter from the south-east dock in Valanaar to Dalaran, turn in to Denaaris Stargale (QuestieDB; one guide names "Denara's Vanguard"), then the Stormwind portal in Dalaran's portal room, which lands in the Mage Quarter. No Ironforge or tram trip is needed. The route then learns the Stormwind flight path (Dungar) and walks to the Furlbrow farm in Westfall, where the shared `westfall` section starts. The player arrives around 13, a level over Westfall's start.
+There is no flight path on Zephras Isle in the client (`TaxiNodes` only has a quest path). The Alliance leaves on The Magical City of Dalaran (94946): the skycutter from the south-east dock in Valanaar to Dalaran, turn in to Denaaris Stargale (quest database; one guide names "Denara's Vanguard"), then the Stormwind portal in Dalaran's portal room, which lands in the Mage Quarter. No Ironforge or tram trip is needed. The route then learns the Stormwind flight path (Dungar) and walks to the Furlbrow farm in Westfall, where the shared `westfall` section starts. The player arrives around 13, a level over Westfall's start.
 
 ## Left out and why
 

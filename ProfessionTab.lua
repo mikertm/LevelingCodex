@@ -48,7 +48,7 @@ end
 
 local function colorsLine(step)
   local green = math.floor((step.yellow + step.grey) / 2)
-  return "Orange until " .. step.yellow .. ", yellow until " .. green .. ", green until " .. step.grey .. ", then grey."
+  return "Turns yellow at " .. step.yellow .. ", green at " .. green .. " and grey at " .. step.grey .. "."
 end
 
 local function have(item)
@@ -80,7 +80,7 @@ local function smeltNamed(P, name)
   for _, s in ipairs(P.smelt or {}) do if s.name == name then return s end end
 end
 
-local function smeltLine(P, step, skill)
+local function smeltLine(P, step)
   local parts = {}
   for _, name in ipairs(step.smelt or {}) do
     local s = smeltNamed(P, name)
@@ -89,14 +89,14 @@ local function smeltLine(P, step, skill)
       parts[#parts + 1] = s.makes .. " (" .. until_ .. ")"
     end
   end
-  if #parts == 0 then return "Smelting gives no points here: from Mithril on a smelt is grey as soon as you learn it." end
-  return "Smelt for points: " .. table.concat(parts, ", ") .. "."
+  if #parts == 0 then return "Mine veins to gain skill in this range." end
+  return "Smelting can also give skill points. " .. table.concat(parts, ", ") .. "."
 end
 
 local function renderer(_, snapshot)
   local ui = ns.ui
   local W, T, box, icon, btn, rect, hit = ui.W, ui.T, ui.box, ui.icon, ui.btn, ui.rect, ui.hit
-  local y = ui.sectionTitle("Professions", 0, "Leveling guides for WoW: Forever")
+  local y = ui.sectionTitle("Professions", 0)
   local names = profNames()
   if names == "" then return y + T("No profession guides in this build.", 0, y, W, "body", C.dim) + 10 end
 
@@ -124,7 +124,7 @@ local function renderer(_, snapshot)
   end
 
   if hidden then
-    y = y + T("Open the character window's Skills tab and expand Professions to show your learned guides.",
+    y = y + T("In the character window, open Skills and expand Professions.",
       0, y, W, "body", C.dim) + 10
   end
   if unavailable then y = y + T("Profession skills are unavailable right now.", 0, y, W, "body", C.dim) + 10 end
@@ -152,7 +152,7 @@ local function renderer(_, snapshot)
     if #others > 0 then
       local bx, by = place(n)
       btn(#learned > 0 and "Other guides" or "All guides", bx, by, bw, function() grid = not grid; ui.refresh() end, picker or browse ~= nil,
-        "The guides for professions you haven't learned: see the trainers, the route and what it costs before you pick one.")
+        "Browse trainers, leveling routes and shopping lists for other professions.")
     end
     y = y + math.ceil(n / per) * 28 + 6
   end
@@ -162,7 +162,6 @@ local function renderer(_, snapshot)
     if #learned == 0 and not (hidden or unavailable) then
       y = y + T("No supported professions learned yet.", 0, y, W, "body", C.dim) + 4
     end
-    y = y + T("Pick a guide to see where to learn it, its whole route and what it needs to 300.", 0, y, W, "small", C.dim) + 8
     local per = 4
     local gw = math.floor((W - 6 * (per - 1)) / per)
     for i, k in ipairs(others) do
@@ -170,7 +169,7 @@ local function renderer(_, snapshot)
       btn(name, ((i - 1) % per) * (gw + 6), y + math.floor((i - 1) / per) * 28, gw, function()
         browse, grid = k, false
         ui.refresh()
-      end, k == browse, "Show the " .. name .. " guide as if you were starting it.")
+      end, k == browse, "Open the " .. name .. " guide from skill 1.")
     end
     return y + math.ceil(#others / per) * 28 + 10
   end
@@ -188,11 +187,17 @@ local function renderer(_, snapshot)
   if skill then
     T(P.name .. " " .. skill .. (cap and (" / " .. cap) or ""), 66, y + 2, W - 90, "head", C.ink)
     local tier = ns.profTier(key, skill, cap)
-    T((tier and (tier.name .. " " .. P.name) or P.name) .. (cap and (", up to " .. cap) or ""), 66, y + 26, W - 90, "small", C.inkSoft)
-    y = y + 50
+    local barY = y + 26
+    if tier then barY = barY + T(tier.name, 66, barY, W - 90, "small", C.inkSoft) + 5 end
+    if cap and cap > 0 then
+      local width = W - 88
+      rect(66, barY, width, 4, { 0, 0, 0, 0.24 }, "border")
+      rect(66, barY, width * math.min(1, skill / cap), 4, C.accent, "border", 1)
+    end
+    y = math.max(y + 52, barY + 15)
   else
     T(P.name .. "  -  not learned", 66, y + 2, W - 90, "head", C.ink)
-    local h = T("Learn it at: " .. plain(P.tiers[1].where) .. ".", 66, y + 26, W - 90, "small", C.inkSoft)
+    local h = T(plain(P.tiers[1].where) .. ".", 66, y + 26, W - 90, "small", C.inkSoft)
     y = y + math.max(50, 30 + h)
   end
   box(0, top, W, y - top, C.parch, C.edge)
@@ -209,14 +214,14 @@ local function renderer(_, snapshot)
         local title = due == "cap" and "AT YOUR CAP" or "CHECK " .. string.upper(nextTier.name)
         T(title, 16, y, W - 32, "label", C.gold)
         y = y + 18
-        y = y + T("Ask about " .. nextTier.name .. " at skill " .. nextTier.skill .. " to raise your cap to " .. nextTier.cap ..
-          ". Character-level requirements are unconfirmed. " .. plain(nextTier.where) .. ".",
+        y = y + T("Ask a trainer about " .. nextTier.name .. " at skill " .. nextTier.skill .. " for a cap of " .. nextTier.cap ..
+          ". The character level requirement is unconfirmed. " .. plain(nextTier.where) .. ".",
           16, y, W - 32, "body", C.light) + 10
       elseif due == "train" then
         T(string.upper(action .. " " .. nextTier.name), 16, y, W - 32, "label", C.gold)
         y = y + 18
-        y = y + T(plain(nextTier.where) .. ". Needs skill " .. nextTier.skill .. " and level " .. nextTier.level ..
-          ". This raises your cap to " .. nextTier.cap .. ".", 16, y, W - 32, "body", C.light) + 10
+        y = y + T("Raises your cap to " .. nextTier.cap .. ". Requires skill " .. nextTier.skill .. " and character level " .. nextTier.level ..
+          ". " .. plain(nextTier.where) .. ".", 16, y, W - 32, "body", C.light) + 10
       else
         local trained = ns.profTier(key, skill, cap)
         T("AT YOUR CAP", 16, y, W - 32, "label", C.gold)
@@ -242,23 +247,28 @@ local function renderer(_, snapshot)
   top = y
   y = y + 14
   if not step then
-    T("ROUTE DONE", 16, y, W - 32, "label", C.inkSoft)
+    T("ROUTE COMPLETE", 16, y, W - 32, "label", C.inkSoft)
     y = y + 18
-    y = y + T("You've reached " .. (skill or 300) .. " " .. P.name .. ". The route is done.", 16, y, W - 32, "body", C.ink) + 14
-  elseif step.name then
-    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or (skill and "DO THIS NOW" or "FIRST STEP"), 16, y, 300, "label", C.inkSoft)
-    T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
-    y = y + 18
+    y = y + T("You reached " .. (skill or 300) .. " " .. P.name .. ".", 16, y, W - 32, "body", C.ink) + 14
+  else
+    local label = browsing and "STEP PREVIEW" or (skill and "CURRENT STEP" or "FIRST STEP")
+    T(label, 16, y, W / 2 - 16, "label", C.inkSoft)
+    T("Skill " .. step.from .. "-" .. step.to, W / 2, y, W / 2 - 16, "label", C.inkSoft, "RIGHT")
+    y = y + 22
+  end
+  if step and step.name then
     icon(step.icon, 16, y, 46, step.name, plain(step.note))
     local from = (skill and not browsing) and skill or step.from
     local n = ns.craftsLeft(step, from) or 0
     local h = T(step.name, 74, y, W - 100, "head", C.ink)
-    local sub = (browsing or not skill) and ("about " .. n .. " crafts, " .. step.from .. " to " .. step.to)
-      or ("about " .. n .. " more to " .. step.to .. "  -  " .. recipeColor(step, skill) .. " now")
-    T(sub, 74, y + h + 2, W - 100, "small", C.inkSoft)
-    y = y + math.max(50, h + 22)
+    local sub = "About " .. n .. (n == 1 and " craft" or " crafts") .. " to skill " .. step.to
+    if skill and not browsing then sub = sub .. "  |  " .. recipeColor(step, skill):gsub("^%l", string.upper) end
+    local subH = T(sub, 74, y + h + 3, W - 100, "small", C.inkSoft)
+    y = y + math.max(54, h + subH + 12)
     y = y + T(colorsLine(step), 16, y, W - 32, "small", C.inkSoft) + 6
-    y = y + T("Learn at " .. step.learn .. "  -  " .. plain(step.source), 16, y, W - 32, "small", C.inkSoft) + 8
+    local source = plain(step.source)
+    if not source:find("^Known when") then source = source .. " (skill " .. step.learn .. ")" end
+    y = y + T(source, 16, y, W - 32, "small", C.inkSoft) + 8
     if step.tools then
       y = y + T("Tools: " .. table.concat(step.tools, ", "), 16, y, W - 32, "small", C.inkSoft) + 6
     end
@@ -278,9 +288,19 @@ local function renderer(_, snapshot)
       end
       y = y + T(line, 16, y, W - 32, "small", got == false and C.gold or C.inkSoft) + 8
     end
-    for _, m in ipairs(step.mats or {}) do
+    local mats = step.mats or {}
+    if #mats > 0 then
+      rect(16, y + 2, W - 32, 1, { 0, 0, 0, 0.18 }, "border")
+      y = y + 10
+      T("MATERIALS FOR THIS STEP", 16, y, W - 128, "label", C.inkSoft)
+      if GetItemCount then T("IN BAGS", W - 110, y, 94, "label", C.inkSoft, "RIGHT") end
+      y = y + 18
+    end
+    for _, m in ipairs(mats) do
       local got = have(m[1])
-      y = y + T((n * m[2]) .. " " .. m[1] .. (got and (" (you have " .. got .. ")") or ""), 28, y, W - 44, "body", C.ink) + 2
+      local needed = n * m[2]
+      if got then T(tostring(got), W - 110, y, 94, "body", got >= needed and C.ink or C.inkSoft, "RIGHT") end
+      y = y + math.max(18, (T(needed .. " " .. m[1], 16, y, W - 128, "body", C.ink))) + 3
       local part = ns.profPart(key, m[1])
       local src = part and part.mats and part.mats[1]
       if src and ns.profHasRod(key, ns.profRod(key, part)) ~= false then  -- a part that needs a rod you lack can't be made
@@ -288,26 +308,23 @@ local function renderer(_, snapshot)
         local line
         if #part.mats == 1 then
           local h = have(src[1])
-          line = "make them from " .. src[1] .. " (" .. src[2] .. (per > 1 and (" makes " .. per) or " each") .. ")" ..
+          line = "Make them from " .. src[1] .. " (" .. src[2] .. (per > 1 and (" makes " .. per) or " each") .. ")" ..
             (h and (": your " .. h .. " make " .. math.floor(h / src[2]) * per) or "")
         else
           local reagents = {}
           for _, mat in ipairs(part.mats) do reagents[#reagents + 1] = mat[2] .. " " .. mat[1] end
           local nPart = ns.profPartAvailable(part)
-          line = "make " .. per .. " from " .. table.concat(reagents, " + ") ..
+          line = "Make " .. per .. " from " .. table.concat(reagents, " + ") ..
             (nPart and (" (you can make " .. nPart .. ")") or "")
         end
-        y = y + T(line, 40, y, W - 56, "small", C.inkSoft) + 2
+        y = y + T(line, 26, y, W - 42, "small", C.inkSoft) + 4
       end
     end
     y = y + 6
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
-    if step.alt and step.alt ~= "" then y = y + T("Instead: " .. plain(step.alt), 16, y, W - 32, "small", C.inkSoft) + 6 end
+    if step.alt and step.alt ~= "" then y = y + T("Alternative: " .. plain(step.alt), 16, y, W - 32, "small", C.inkSoft) + 6 end
     y = y + 8
-  else -- Gathering
-    T(browsing and ("STEP " .. step.from .. "-" .. step.to) or (skill and "DO THIS NOW" or "FIRST STEP"), 16, y, 300, "label", C.inkSoft)
-    T("Skill " .. step.from .. "-" .. step.to, 16, y, W - 32, "label", C.inkSoft, "RIGHT")
-    y = y + 18
+  elseif step then -- Gathering
     y = y + T(plain(step.title), 16, y, W - 32, "head", C.ink) + 8
     if step.zones then
       y = y + T("Where: " .. plain(table.concat(ns.profZones(step), ", ")), 16, y, W - 32, "small", C.inkSoft) + 6
@@ -322,7 +339,7 @@ local function renderer(_, snapshot)
         y = y + math.max(36, 21 + h)
       end
     end
-    if P.smelt then y = y + T(smeltLine(P, step, skill), 16, y, W - 32, "small", C.inkSoft) + 6 end
+    if P.smelt then y = y + T(smeltLine(P, step), 16, y, W - 32, "small", C.inkSoft) + 6 end
     if step.note and step.note ~= "" then y = y + T(plain(step.note), 16, y, W - 32, "body", C.ink) + 6 end
     y = y + 8
   end
@@ -332,31 +349,36 @@ local function renderer(_, snapshot)
   -- next
   local nxt = step and P.steps[(index or 0) + 1]
   if nxt then
-    T("NEXT", 0, y + 4, 60, "label", C.goldDim)
+    T("NEXT", 0, y + 4, 45, "label", C.goldDim)
     if nxt.icon then icon(nxt.icon, 52, y, 22, nxt.name or nxt.title, plain(nxt.note)) end
     T(nxt.from .. ": " .. (nxt.name or nxt.title), nxt.icon and 82 or 52, y + 4, W - 90, "body", C.light)
     y = y + 32
   end
 
   -- the whole route
-  T("THE WHOLE ROUTE", 0, y, W, "label", C.gold)
-  T("click a step to see it", 0, y, W - 6, "small", C.dim, "RIGHT")
+  T("LEVELING ROUTE", 0, y, W / 2, "label", C.gold)
+  T("Select a step to preview", W / 2, y, W / 2 - 10, "small", C.dim, "RIGHT")
   y = y + 20
+  T("SKILL", 8, y, 60, "label", C.dim, "RIGHT")
+  T("STEP", 78, y, W - 184, "label", C.dim)
+  if P.steps[1].name then T("EST. CRAFTS", W - 104, y, 94, "label", C.dim, "RIGHT") end
+  y = y + 17
   for i, s in ipairs(P.steps) do
     local mine = skill and skill >= s.from and skill < s.to
-    if mine then rect(0, y, 3, 22, C.edge, "border") end
-    if index == i then rect(0, y, W, 22, { C.accent[1], C.accent[2], C.accent[3], 0.18 }, nil, 2) end
     local done = skill and skill >= s.to
     T(s.from .. "-" .. s.to, 8, y + 4, 60, "label", done and C.goldDim or C.gold, "RIGHT")
-    T(s.name or s.title, 78, y + 4, W - 200, "body", done and C.dim or C.light)
+    local height = math.max(22, 8 + T(s.name or s.title, 78, y + 4, W - 184, "body", done and C.dim or C.light))
+    if mine then rect(0, y, 3, height, C.edge, "border") end
+    if index == i then rect(0, y, W, height, { C.accent[1], C.accent[2], C.accent[3], 0.18 }, nil, 2)
+    elseif i % 2 == 0 then rect(0, y, W, height, { 1, 1, 1, 0.035 }) end
     local n = s.name and ns.craftsLeft(s, s.from)
-    if n then T("~" .. n, 0, y + 5, W - 10, "small", C.dim, "RIGHT") end
-    hit(0, y, W, 22, s.from .. "-" .. s.to .. ": " .. (s.name or s.title), plain(s.note), function()
+    if n then T(tostring(n), W - 104, y + 5, 94, "small", C.dim, "RIGHT") end
+    hit(0, y, W, height, s.from .. "-" .. s.to .. ": " .. (s.name or s.title), plain(s.note), function()
       -- your own step takes you back to "do this now"
       picked[key] = (not mine) and { index = i, at = skill } or nil
       ui.refresh()
     end)
-    y = y + 24
+    y = y + height + 2
     for at, note in pairs(P.notes or {}) do
       if tonumber(at) == s.to then
         y = y + T("At " .. at .. ": " .. plain(note), 78, y, W - 90, "small", C.dim) + 4
@@ -404,7 +426,7 @@ local function renderer(_, snapshot)
       rowH = math.max(rowH, (T(text, cx, y, col - 8, "body", C.light)))
       if i % 2 == 0 or i == #list then y = y + math.max(18, rowH + 4); rowH = 0 end
     end
-    y = y + T("About, from the recipe colours: yellow and green crafts sometimes give no point.", 16, y + 4, W - 32,
+    y = y + T("Estimates account for yellow and green recipes, which can take extra crafts.", 16, y + 4, W - 32,
       "small", C.dim) + 14
     box(0, top, W, y - top, C.panel, C.edge)
     y = y + 12

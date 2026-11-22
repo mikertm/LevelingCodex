@@ -118,7 +118,7 @@ do
     sources = {
       "https://www.wowhead.com/forever/quest=66/the-legend-of-stalvan",
       "https://www.wowhead.com/forever/quest=98/the-legend-of-stalvan",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+      "Cached quest records (revision 0f7d8ad)",
     },
     steps = {
       accept(66, eva, "From level 22, speak to Madame Eva in Darkshire. Start the investigation while questing here and plan to finish the fight at a higher level or with help."),
@@ -176,6 +176,8 @@ do
   local samaul = at("Commander Samaul", 68.02, 48.71, dustwallow)
   local sentry = at("Sentry Point", 59.92, 40.9, dustwallow)
   local hendel = at("Private Hendel", 45.24, 24.65, dustwallow)
+  local tervoshSentry = at("Archmage Tervosh", sentry.x, sentry.y, dustwallow)
+  local tervoshCamp = at("Archmage Tervosh", hendel.x, hendel.y, dustwallow)
   local jaina = at("Lady Jaina Proudmoore", 66.27, 49.04, dustwallow)
 
   special({ id = "missing-diplomat", title = name, zone = m.stormwind, levels = { 28, 38 },
@@ -220,13 +222,13 @@ do
       finish(1264, samaul, "Take the Theramore boat from Menethil's south pier. From the docks in Theramore, go upstairs in Foothold Citadel to find Samaul."),
       accept(1265, samaul, "Ask Samaul about Hendel and Sentry Point."),
       goal(1265, sentry, "Follow the road northwest out of Theramore. Walk inside the first guard tower until you get exploration credit.", "Sentry Point explored"),
-      uncertain(finish(1265, sentry, "Look for Archmage Tervosh at Sentry Point. If he does not appear, check Jaina's tower in Theramore at 66.42, 49.26."),
+      uncertain(finish(1265, tervoshSentry, "Look for Archmage Tervosh at Sentry Point. If he does not appear, check Jaina's tower in Theramore at 66.42, 49.26."),
         "Reports place Tervosh at either Sentry Point or Jaina's tower after the exploration trigger."),
       accept(1266, nil, "Get the next lead from Tervosh where you turned in. If he has moved, check Jaina's tower in Theramore at 66.42, 49.26."),
       finish(1266, hendel, "Follow the road north past the next tower to the tents near the road. Find Hendel there and keep clear of Brackenwall Village."),
       accept(1324, hendel, "Set up your group before accepting. Level 35 Hendel and his guards can turn hostile immediately."),
       goal(1324, hendel, "Subdue Hendel and manage his guards. Stay nearby for the event and wait for Tervosh and Jaina to arrive.", "Subdue Private Hendel"),
-      uncertain(finish(1324, hendel, "Speak to Tervosh at the camp once Hendel surrenders. If Tervosh leaves, check Jaina's tower in Theramore."),
+      uncertain(finish(1324, tervoshCamp, "Speak to Tervosh at the camp once Hendel surrenders. If Tervosh leaves, check Jaina's tower in Theramore."),
         "The Forever spawn record places Tervosh in Theramore. The surrender scene can also bring him to Hendel's camp."),
       accept(1267, nil, "Ask Tervosh for the final introduction to Jaina. If he has left the camp, check her tower in Theramore at 66.42, 49.26."),
       finish(1267, jaina, "Speak to Jaina at the scene if she is still there. Otherwise return to the upper level of her tower in Theramore for the final reward."),
@@ -285,7 +287,7 @@ do
     links = { "dungeon-blackrock-depths", "dungeon-upper-blackrock-spire" },
     sources = { "https://www.wowhead.com/forever/quest=6502/drakefire-amulet",
       "https://warcraft.wiki.gg/wiki/Drakefire_Amulet",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = join(fromRoute("steppes-56", { 4182, 4183, 4184, 4185, 4186, 4223, 4224 }), {
       accept(4241, maxwell, "Marshal Maxwell asks what became of Marshal Windsor. He is a prisoner in Blackrock Depths: plan a run."),
       finish(4241, nil, "Find Marshal Windsor in a cell in Blackrock Depths' Detention Block, past the first bridge."),
@@ -298,10 +300,10 @@ do
       finish(4282, nil, "Bring the papers back to Windsor."), accept(4322, nil, "Free Marshal Windsor and escort him out. Clear the cell block first: the escort walks into several packs."),
       goal(4322, nil, "Keep Windsor alive while he collects his gear and frees his friends.", "Marshal Windsor freed"),
       finish(4322, maxwell, "Report to Marshal Maxwell at Morgan's Vigil."), accept(6402, maxwell),
-      finish(6402, at("Squire Rowe", 74.17, 90.33, m.stormwind),
-        "At Stormwind's main gate, talk to Squire Rowe and wait for Reginald Windsor to ride up."),
+      finish(6402, at("Reginald Windsor", 73.6, 91.0, m.stormwind),
+        "At Stormwind's main gate, talk to Squire Rowe by the gate and tell him you are ready. Wait for Reginald Windsor to ride up, then turn the quest in to Windsor."),
       accept(6403, nil, "Speak to Reginald Windsor when he arrives, and follow him to the keep."),
-      uncertain(goal(6403, nil, "Escort Reginald Windsor through Stormwind to the throne room. Fight off the dragonkin when Lady Prestor is unmasked.",
+      uncertain(goal(6403, nil, "Follow Reginald Windsor through Stormwind. When he stops before the keep, talk to him and tell him you are ready to continue. Follow him to the throne room and fight the dragonkin when Lady Prestor is unmasked.",
         "Reginald Windsor escorted"), "A group is needed for the throne room fight; check the Forever version."),
       finish(6403, bolvar), accept(6501, bolvar),
       finish(6501, haleh, "Haleh waits at the top of Mazthoril in Winterspring. Take the cave path up from the Mazthoril entrance."),
@@ -316,15 +318,15 @@ do
   special({ id = "ubrs-seal", title = "Seal of Ascension (Upper Blackrock Spire)", zone = searing, levels = { 57, 60 },
     links = { "dungeon-lower-blackrock-spire", "dungeon-upper-blackrock-spire" },
     sources = { "https://www.wowhead.com/forever/quest=4742/seal-of-ascension",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       action("goto", blackrock, "Meet your group at Blackrock Mountain and enter Lower Blackrock Spire."),
-      accept(4742, nil, "Vaelan, a captured dragon in disguise, stands near the start of Lower Blackrock Spire."),
-      goal(4742, nil, "Kill Highlord Omokk, War Master Voone and Overlord Wyrmthalak for their gemstones, and loot an Unadorned Seal of Ascension from the Scarshield orcs.",
+      accept(4742, nil, "First loot an Unadorned Seal of Ascension from the Scarshield orcs. Carry it to the lone Scarshield Infiltrator on the ledge near the start of Lower Blackrock Spire. Let him reveal himself as Vaelan, then finish his dialogue to unlock the quest."),
+      goal(4742, nil, "Keep your Unadorned Seal of Ascension. Kill Highlord Omokk, War Master Voone and Overlord Wyrmthalak for their three gemstones.",
         "Gemstone of Spirestone", "Gemstone of Smolderthorn", "Gemstone of Bloodaxe", "Unadorned Seal of Ascension"),
       finish(4742, nil, "Bring everything back to Vaelan."), accept(4743, nil, "Vaelan sends you to break a black drake with the unforged seal."),
       uncertain(goal(4743, at("Emberstrife", 56.66, 87.72, dustwallow),
-        "Fly to Theramore and ride to the Wyrmbog. Beat Emberstrife, a level 61 elite drake, down to low health and use the Unforged Seal on him. Bring a group.",
+        "Bring a group to Emberstrife in the Wyrmbog. Open Vaelan's Gift for the Orb of Draconic Energy. When Emberstrife's will falters, stop damage, place the Unforged Seal in front of him and use the Orb on him. Use his flame ability on the seal, then loot the Forged Seal from the ground.",
         "Forged Seal of Ascension"), "Emberstrife's guards and level; check in game."),
       finish(4743, nil, "Return to Vaelan in Lower Blackrock Spire. The Seal of Ascension opens Upper Blackrock Spire."),
     },
@@ -334,7 +336,7 @@ do
   special({ id = "molten-core-attunement", title = "Attunement to the Core", zone = searing, levels = { 55, 60 },
     links = { "dungeon-blackrock-depths" },
     sources = { "https://www.wowhead.com/forever/quest=7848/attunement-to-the-core",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       accept(7848, nil, "Lothos Riftwaker waits on the ledge inside Blackrock Mountain, just past the chain down to Blackrock Depths."),
       goal(7848, nil, "In Blackrock Depths, go past Lord Incendius to the Molten Core portal and take a Core Fragment from the rock beside it.",
@@ -351,7 +353,7 @@ do
   special({ id = "scholomance-key", title = "The Key to Scholomance", zone = wpl, levels = { 55, 60 },
     links = { "dungeon-scholomance" },
     sources = { "https://www.wowhead.com/forever/quest=5505/the-key-to-scholomance",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = join(fromRoute("wpl-51", { 5090, 5092 }), fromRoute("plaguelands-57", { 5097, 5533, 5537 }), {
       accept(5538, arbington, "Arbington needs the fragments shaped by a smith. Take them and 15 gold to Krinkle Goodsteel."),
       finish(5538, at("Krinkle Goodsteel", 51.46, 28.81, tanaris), "Krinkle Goodsteel is the smith in Gadgetzan."),
@@ -373,7 +375,7 @@ do
   special({ id = "shadowforge-key", title = "Dark Iron Legacy (Shadowforge Key)", zone = searing, levels = { 52, 60 },
     links = { "dungeon-blackrock-depths" },
     sources = { "https://www.wowhead.com/forever/quest=3802/dark-iron-legacy",
-      "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever" },
+      "Cached quest records (revision 0f7d8ad)" },
     steps = {
       uncertain(accept(3801, blackrock, "Franclorn Forgewright's ghost lies on the stone ledge in the middle of Blackrock Mountain. You only see him as a spirit: die nearby and talk to him before you resurrect."),
         "Check that Forever keeps the ghost-only rule."),

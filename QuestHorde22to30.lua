@@ -42,11 +42,13 @@ local function with(step, fields)
   return step
 end
 
--- Quests (facts: tools/questfacts.py, QuestieDB Forever 0f7d8ad; Forever IDs checked in tools/reference/forever.json).
+-- Quests (facts: tools/questfacts.py, quest database Forever 0f7d8ad; Forever IDs checked in tools/reference/forever.json).
 q(441, "Raleigh and the Undercity", 16, 10, 440)
 q(530, "A Husband's Revenge", 20, 10, 441)
 q(1013, "The Book of Ur", 26, 16)
 q(516, "Beren's Peril", 21, 16)
+q(479, "Ambermill Investigations", 16, 10, 482)
+quest[479].ifDone = 482
 q(95981, "Watching the Roads", 20, nil, nil, true)
 q(98299, "Stop the Spread", 20, nil, nil, true)
 q(493, "Journey to Hillsbrad Foothills", 20, 19)
@@ -92,7 +94,7 @@ q(893, "Weapons of Choice", 24, 17)
 q(1130, "Melor Sends Word", 30, 20)
 q(1131, "Steelsnap", 30, 20, 1130)
 -- Weapons of Choice: the three Razormane weapons drop in the southern camps around Kuz, Lok and Nak
--- (QuestieDB), which the route clears anyway. Its follow-up is taken on the Thousand Needles trip
+-- (quest database), which the route clears anyway. Its follow-up is taken on the Thousand Needles trip
 -- and only shows once Weapons of Choice is turned in.
 q(1153, "A New Ore Sample", 29, 25, 893)
 quest[1153].ifDone = 893
@@ -174,7 +176,7 @@ carriedQ(6462, "Troll Charm", 24, 19)
 -- Raleigh and the Undercity follows The Engraved Ring, which only the Undead route takes.
 quest[441].race, quest[530].race = "SCOURGE", "SCOURGE"
 
--- Thunder Bluff and Undercity trainers (QuestieDB spawns; RestedXP for the two it lacks).
+-- Thunder Bluff and Undercity trainers (quest database spawns; reference guide A for the two it lacks).
 local tb = function(name, x, y) return at(name, x, y, M.thunderBluff) end
 local ucTrainers = {
   { "WARRIOR", at("Angela Curthas", 48.3, 16.0, M.undercity) },
@@ -234,7 +236,8 @@ local sepulcher = (function()
   local dalar = sp("Dalar Dawnweaver", 44.2, 39.81)
   local stone = sp("Offering Stone", 58.12, 69.77)
   return {
-    action("boat", zeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower north-east of the city. Take the zeppelin to Tirisfal Glades."),
+    action("boat", zeppelin, "Leave Orgrimmar by the main gate and climb the zeppelin tower north-east of the city. Take the zeppelin to Tirisfal Glades.",
+      { skipOn = { M.tirisfal, M.undercity } }),
     accept(441, sevren, "If you carry Deliah's ring from the Sepulcher, Magistrate Sevren in Brill's town hall sends it on to the Undercity."),
     finish(441, raleigh, "Enter the Undercity through the ruined city south of Brill. Raleigh stands in the Trade Quarter."),
     accept(530, raleigh),
@@ -242,6 +245,7 @@ local sepulcher = (function()
     action("goto", karos, "Fly to the Sepulcher if you know the route. Otherwise leave the Undercity, follow the road west then south into Silverpine Forest and up to the Sepulcher."),
     taxi("getfp", karos, "The Sepulcher, Silverpine Forest", "Learn the Sepulcher flight path from Karos Razok."),
     accept(516, allister), accept(95981, allister),
+    accept(479, allister, "If you finished Dalaran's Intentions in the earlier Silverpine guide, ask Allister for the Ambermill investigation."),
     accept(98299, dalar, "Dalar Dawnweaver, just north of Allister, wants the sick refugees at the Greymane Wall put down."),
     accept(493, sp("Apothecary Renferrel", 42.8, 40.86)),
     finish(3301, sp("Mura Runetotem", 42.91, 41.99)),
@@ -259,8 +263,12 @@ local sepulcher = (function()
     withItem(210713, objectiveAt(95885, stone, "Heal up, then use the Tortured Soul at the Offering Stone and kill the spirit it releases.")),
     finish(95885, stone),
     objectiveAt(516, sp(nil, 58.3, 71.3), "Finish the Ravenclaw kills inside and outside the cave.", "6 Ravenclaw Drudgers", "6 Ravenclaw Guardians"),
-    objectiveAt(95981, sp(nil, 63.3, 76.0), "Kill Dalaran Watchers and Wizards at the Dalaran camp south-east of Beren's Peril. A second camp sits at Ambermill (64, 58).",
-      "8 Dalaran Watchers", "8 Dalaran Wizards"),
+    along(objectiveAt(95981, sp(nil, 64.1, 57.7),
+      "Go north to the camp above Ambermill for Watchers and Wizards. Another camp lies south-east of the cave at 63, 76.",
+      "8 Dalaran Watchers", "8 Dalaran Wizards"), 479),
+    objectiveAt(479, sp(nil, 61.1, 64.9),
+      "Loot pendants from the Protectors, Mages and Conjurors in Ambermill. Return to Allister on the Sepulcher stop after Tarren Mill.",
+      "8 Dalaran Pendants"),
   }
 end)()
 
@@ -281,14 +289,14 @@ local hillsbrad = (function()
     finish(493, lydon),
     finish(1065, lydon),
     accept(1066, lydon, "If you brought Zamah's note, Lydon now wants blood from the Syndicate mages."),
-    accept(496, lydon), accept(501, lydon),
+    accept(496, lydon),
     finish(494, darthalia), accept(527, darthalia),
     accept(549, hb("WANTED", 62.63, 20.75), "Read the WANTED poster outside the town hall."),
     accept(498, krusk),
     along(objectiveAt(496, hb(nil, 63.9, 34.9), "Go south-east toward Durnholde Keep. Kill Gray Bears and Forest Moss Creepers on the way for tongues and ichor.",
       "10 Gray Bear Tongues", "Creeper Ichor"), 498, 549),
-    along(objectivePart(498, 2, hb(nil, 79.79, 39.65), "Enter Durnholde Keep. Find Tog'thar chained at the east side of the keep (80, 40) and free him.", "Rescue Tog'thar"), 549, 1066),
-    along(objectivePart(498, 1, hb(nil, 75.33, 41.5), "Find Drull chained at the west side of the keep (75, 41) and free him.", "Rescue Drull"), 549, 1066),
+    along(objectivePart(498, 2, hb(nil, 79.79, 39.65), "Enter Durnholde Keep. Kill Jailor Marlgen for the Burnished Gold Key, then click Tog'thar's ball and chain on the east side of the keep (80, 40) to free him.", "Rescue Tog'thar"), 549, 1066),
+    along(objectivePart(498, 1, hb(nil, 75.33, 41.5), "Kill Jailor Eston for the Dull Iron Key, then click Drull's ball and chain in the west-side house (75, 41) to free him.", "Rescue Drull"), 549, 1066),
     along(objectiveAt(549, hb(nil, 77.6, 43.0), "Clear Syndicate Rogues and Watchmen inside the keep. Mages give the Vials of Innocent Blood.",
       "10 Syndicate Rogues", "10 Syndicate Watchmen"), 1066),
     objectiveAt(1066, hb(nil, 67.22, 45.85), "Kill Syndicate Shadow Mages in the keep and at the camp west of it until you have five vials.", "5 Vials of Innocent Blood"),
@@ -296,6 +304,7 @@ local hillsbrad = (function()
     finish(498, krusk), finish(549, darthalia),
     finish(1066, lydon), finish(496, lydon), accept(499, lydon), accept(1067, lydon),
     finish(499, hb("Umpi", 61.55, 19.14), "Give the elixir to Umpi beside Lydon."),
+    accept(501, lydon, "Take Lydon's lion-blood order now. You will pass the Starving Mountain Lions on the way to Hillsbrad Fields."),
     along(objectiveAt(501, hb(nil, 53.1, 35.3), "Head west toward Hillsbrad Fields. Kill Starving Mountain Lions in the hills along the way.", "10 Vials of Mountain Lion Blood"), 527),
     objectivePart(527, 4, hb("Farmer Getz", 35.21, 37.53), "Kill Farmer Getz in the house at the east edge of the fields.", "Farmer Getz slain"),
     objectivePart(527, 3, hb("Farmer Ray", 33.68, 35.44), "Kill Farmer Ray in the farmhouse to the north-west.", "Farmer Ray slain"),
@@ -319,7 +328,7 @@ local hillsbrad = (function()
     objectiveAt(546, hb(nil, 34.5, 42.5), "Finish the skulls on any Hillsbrad humans around the fields and orchards.", "30 Hillsbrad Human Skulls"),
     finish(529, darthalia, "Return to Tarren Mill."), finish(546, samsa),
     taxi("fly", fm.sepulcher, "The Sepulcher, Silverpine Forest", "Fly from Zarise to the Sepulcher."),
-    finish(516, allister), finish(95981, allister),
+    finish(516, allister), finish(95981, allister), finish(479, allister),
     forDungeon(accept(1098, at("High Executor Hadrec", 43.42, 40.86, M.silverpine), "High Executor Hadrec wants two deathstalkers found inside Shadowfang Keep."),
       "dungeon-shadowfang-keep"),
     finish(98299, dalar, "Tell Dalar Dawnweaver the refugees are dealt with."),
@@ -330,7 +339,9 @@ local hillsbrad = (function()
     action("train", nil, "Visit your class trainer in the Undercity. Train spells for level", { level = 24 }),
   }
   local home = {
-    action("boat", at(nil, 60.8, 58.7, M.tirisfal), "Leave the Undercity and take the zeppelin to Orgrimmar from the tower west of the ruins."),
+    action("boat", at(nil, 60.96, 58.63, M.tirisfal),
+      "Leave the Undercity and take the Durotar zeppelin from the tower between the city and Brill.",
+      { skipOn = { M.durotar, M.orgrimmar, M.thunderBluff } }),
     taxi("fly", tbPlaces.tal, "Thunder Bluff, Mulgore", "Enter Orgrimmar and fly to Thunder Bluff from Doras on the flight tower in the Valley of Strength."),
     -- Zangen and Tah on the central rise, the trainer, then Zamah below Spirit Rise last: Spirit Rise
     -- trainers (Shaman, Paladin) no longer cross the city twice.
@@ -674,7 +685,7 @@ local sources = {
   "https://bindonforever.com/zones/ashenvale",
   "https://bindonforever.com/zones/thousand-needles",
   "https://www.warcrafttavern.com/forever/guides/leveling",
-  "https://github.com/Questie/QuestieDB/tree/0f7d8adc92b28ac6594f4ad8745257f4d9784edf/data/Forever",
+  "Cached quest records (revision 0f7d8ad)",
 }
 
 for _, section in ipairs({
