@@ -11245,8 +11245,12 @@ function S.auctionAuctionator()
   MOCK.openAuction()
   MOCK.advance(8)
   local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
-  check(codexTab and codexTab._points[1] and codexTab._points[1][2] == atorTabs[4]
-    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(), "the Codex tabs start after Auctionator's last tab, above them")
+  local scanTab = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
+  local sp = scanTab and scanTab._points[1]
+  check(sp and sp[1] == "TOPRIGHT" and sp[2] == AuctionHouseFrame and sp[3] == "BOTTOMRIGHT"
+    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(),
+    "with Auctionator's tabs the row is full: the Codex tabs get a row of their own at the bottom right corner")
+  check(table.concat(MOCK.ns.auctionPanelDebugLines(), " "):find("own row", 1, true), "/codex debug says where the tabs went")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")
   local card = _G.LevelingCodexAHPanel
@@ -11449,6 +11453,17 @@ function S.auctionMarket()
   click(panel, "Chart Wool Cloth")
   check(questText(panel, "usual 3s") and questText(panel, "BUY") and questText(panel, "Range (days)"), "a click charts the item with its signal")
   check(questText(panel, "Since last look") and questText(panel, "Listed") and questText(panel, "Swings"), "the chart's figures")
+  -- an item a scan filed by ID only (page by page, or another addon's scan) gets its name and icon
+  -- from the item cache, not "item 763" and a question mark
+  do
+    local A = MOCK.ns.auction
+    MOCK.lootItems[763] = { name = "Tarnished Chain Boots" }
+    A.record(763, nil, 1625, 1)
+    local r = MOCK.ns.auctionMarket.row(763)
+    check(r and r.name == "Tarnished Chain Boots" and A.store().items[763].name == "Tarnished Chain Boots" and A.iconOf(763) == 134400,
+      "a nameless item takes the cache's name and icon (" .. tostring(r and r.name) .. ")")
+    A.store().items[763] = nil
+  end
   -- a price saved before the readings were kept is the first reading: one search gives a change
   do
     local A = MOCK.ns.auction

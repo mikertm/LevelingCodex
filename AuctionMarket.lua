@@ -51,7 +51,7 @@ end
 function M.row(id)
   local p = A().price(id)
   if not p or p.source or not p.low or p.low <= 0 or (p.n or 0) <= 0 then return end
-  local r = { id = id, name = p.name or ("item " .. id), last = p.low, n = p.n, usual = p.usual, days = p.days or 0,
+  local r = { id = id, name = p.name or A().nameOf(id) or ("item " .. id), last = p.low, n = p.n, usual = p.usual, days = p.days or 0,
     trend = p.days and p.days >= 2 and p.trend or nil, vendor = p.vendor, at = p.at }
   local ticks = A().ticks(id)
   local k = #ticks
@@ -203,7 +203,7 @@ function M.record()
       local p = A().price(id)
       local nowEach = p and ((p.n > 0 and p.low) or p.usual)
       local each = math.floor(b.cost / b.qty + 0.5)
-      local h = { id = id, name = b.name or ("item " .. id), qty = b.qty, each = each }
+      local h = { id = id, name = b.name or A().nameOf(id) or ("item " .. id), qty = b.qty, each = each }
       if nowEach then
         h.worth = math.floor(nowEach * (1 - cut))
         h.pnl = (h.worth - each) * b.qty
