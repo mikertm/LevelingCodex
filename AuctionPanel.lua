@@ -346,7 +346,7 @@ local function lineChart(points, x, y, w, h, opts)
   local n = #points
   if not opts.mini then rect(x, y, w, h, { 0, 0, 0, 0.35 }) end
   if n < 2 then
-    if not opts.mini then text(n == 1 and "One reading so far: scan again later to draw a line." or "No prices recorded yet.",
+    if not opts.mini then text(opts.empty or (n == 1 and "One reading so far: scan again later to draw a line." or "No prices recorded yet."),
       x + 8, y + h / 2 - 6, w - 16, "dim", ns.C.dim, "CENTER") end
     return
   end
@@ -399,19 +399,48 @@ local function daysAgo(day)
   local d = math.floor(now() / 86400) - day
   return d <= 0 and "today" or (d == 1 and "yesterday" or (d .. " days ago"))
 end
-local function chartPoints(id)
+-- The chart's intervals, like a trading chart's: each point is the last price seen in that slice
+-- of time (the newest slices, up to 30); 1d reads the daily history. Auto = days once there are
+-- two, else every reading.
+P.INTERVALS = { { "Auto" }, { "1m", 60 }, { "5m", 300 }, { "15m", 900 }, { "1h", 3600 }, { "12h", 43200 }, { "1d", 86400 } }
+local function spanText(sec)
+  if sec < 3600 then return math.floor(sec / 60 + 0.5) .. " min" end
+  if sec < 86400 * 2 then return math.floor(sec / 3600 + 0.5) .. " h" end
+  return math.floor(sec / 86400 + 0.5) .. " days"
+end
+local function chartPoints(id, interval)
   local hist, pts = A().history(id), {}
-  if #hist >= 2 then
+  if interval == 86400 or (not interval and #hist >= 2) then
     for _, d in ipairs(hist) do
       pts[#pts + 1] = { v = d.med or d.low, label = daysAgo(d.day),
         sub = d.low and d.med and d.low ~= d.med and ("lowest " .. ns.money(d.low)) or nil }
     end
     return pts, "days"
   end
-  for _, t in ipairs(A().ticks(id)) do
-    pts[#pts + 1] = { v = t.low, label = A().age(t.t), sub = t.n and (ns.thousands(t.n) .. " listed") or nil }
+  local ticks = A().ticks(id)
+  -- the price on file now counts as the newest reading
+  local it = A().store().items[id]
+  local at, low = type(it) == "table" and tonumber(it.at), type(it) == "table" and tonumber(it.low)
+  if at and low and (tonumber(it.n) or 0) > 0 and (#ticks == 0 or ticks[#ticks].t < at) then
+    ticks[#ticks + 1] = { t = at, low = low, n = tonumber(it.n) or 0 }
   end
-  return pts, "scans"
+  if not interval then
+    for _, t in ipairs(ticks) do
+      pts[#pts + 1] = { v = t.low, label = A().age(t.t), sub = t.n and (ns.thousands(t.n) .. " listed") or nil }
+    end
+    return pts, "scans"
+  end
+  local nowB = math.floor(now() / interval)
+  local byB = {}
+  for _, t in ipairs(ticks) do
+    local b = math.floor(t.t / interval)
+    if nowB - b < 30 then byB[b] = t end -- the last reading in the slice is its price
+  end
+  for b = nowB - 29, nowB do
+    local t = byB[b]
+    if t then pts[#pts + 1] = { v = t.low, label = A().age(t.t), sub = t.n and (ns.thousands(t.n) .. " listed") or nil } end
+  end
+  return pts, "interval"
 end
 
 -- A paged list: rows from offsets[key], as many as fit in height; returns the height used.
@@ -463,29 +492,72 @@ local function makePanel()
   body:SetAllPoints()
   body.tint = body:CreateTexture(nil, "BACKGROUND")
   body.tint:SetAllPoints()
-  -- the ticker: the biggest moves scrolling past (clipped where the client can clip a frame)
+  -- the ticker: a market strip across the whole panel (edge to edge), the biggest moves scrolling
+  -- past as icon, name, price, arrow and change; hovering it stops it, a click charts the item.
+  -- Clipped where the client can clip a frame, else it stands still and shows what fits.
   ticker = CreateFrame("Frame", nil, body)
-  ticker:SetHeight(18)
+  ticker:SetHeight(24)
   ticker:SetFrameLevel(body:GetFrameLevel() + 2)
-  if has(ticker, "SetClipsChildren") and pcall(ticker.SetClipsChildren, ticker, true) then ticker.clips = true end
   ticker.base = ticker:CreateTexture(nil, "BACKGROUND")
   ticker.base:SetAllPoints()
-  ticker.base:SetColorTexture(0, 0, 0, 0.5)
+  ticker.base:SetColorTexture(0.02, 0.02, 0.03, 0.92)
+  ticker.lineT = ticker:CreateTexture(nil, "BORDER")
+  ticker.lineT:SetPoint("TOPLEFT", ticker, "TOPLEFT", 0, 0)
+  ticker.lineT:SetPoint("TOPRIGHT", ticker, "TOPRIGHT", 0, 0)
+  ticker.lineT:SetHeight(1)
+  ticker.lineB = ticker:CreateTexture(nil, "BORDER")
+  ticker.lineB:SetPoint("BOTTOMLEFT", ticker, "BOTTOMLEFT", 0, 0)
+  ticker.lineB:SetPoint("BOTTOMRIGHT", ticker, "BOTTOMRIGHT", 0, 0)
+  ticker.lineB:SetHeight(1)
+  ticker.plate = ticker:CreateTexture(nil, "BORDER")
+  ticker.plate:SetPoint("TOPLEFT", ticker, "TOPLEFT", 0, -1)
+  ticker.plate:SetPoint("BOTTOMLEFT", ticker, "BOTTOMLEFT", 0, 1)
+  ticker.plate:SetWidth(84)
+  ticker.plateEdge = ticker:CreateTexture(nil, "ARTWORK")
+  ticker.plateEdge:SetPoint("TOPLEFT", ticker, "TOPLEFT", 84, -1)
+  ticker.plateEdge:SetPoint("BOTTOMLEFT", ticker, "BOTTOMLEFT", 84, 1)
+  ticker.plateEdge:SetWidth(2)
+  ticker.dot = ticker:CreateTexture(nil, "OVERLAY")
+  ticker.dot:SetSize(7, 7)
+  ticker.dot:SetPoint("LEFT", ticker, "LEFT", 9, 0)
   ticker.label = ticker:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  ticker.label:SetPoint("LEFT", ticker, "LEFT", 6, 0)
+  ticker.label:SetPoint("LEFT", ticker, "LEFT", 21, 0)
   ticker.label:SetText("MARKET")
   ticker.strip = CreateFrame("Frame", nil, ticker)
-  ticker.strip:SetPoint("TOPLEFT", ticker, "TOPLEFT", 62, 0)
-  ticker.strip:SetPoint("BOTTOMRIGHT", ticker, "BOTTOMRIGHT", -4, 0)
+  ticker.strip:SetPoint("TOPLEFT", ticker, "TOPLEFT", 90, -1)
+  ticker.strip:SetPoint("BOTTOMRIGHT", ticker, "BOTTOMRIGHT", -2, 1)
   if has(ticker.strip, "SetClipsChildren") and pcall(ticker.strip.SetClipsChildren, ticker.strip, true) then ticker.clips = true end
-  ticker.a = ticker.strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  ticker.b = ticker.strip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  for _, fs in ipairs({ ticker.a, ticker.b }) do fs:SetWordWrap(false); fs:SetJustifyH("LEFT") end
-  ticker:SetScript("OnUpdate", function(self)
+  ticker.empty = ticker.strip:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  ticker.empty:SetPoint("LEFT", ticker.strip, "LEFT", 6, 0)
+  ticker.empty:SetWordWrap(false)
+  ticker.tracks = {}
+  for i = 1, 2 do
+    local t = CreateFrame("Frame", nil, ticker.strip)
+    t:SetHeight(22)
+    t.items = {}
+    ticker.tracks[i] = t
+  end
+  ticker.off = 0
+  ticker:SetScript("OnUpdate", function(self, elapsed)
+    local tnow = tonumber(GetTime and GetTime()) or 0
+    -- the live dot breathes (drawn from the clock, never a looping animation)
+    if self.live then
+      self.dot:SetAlpha(0.45 + 0.55 * (0.5 + 0.5 * math.cos(tnow * 3)))
+    else
+      self.dot:SetAlpha(0.6)
+    end
     if not self.wide or not self.clips then return end
-    local off = (tonumber(GetTime and GetTime()) or 0) * 32 % self.wide
-    self.a:ClearAllPoints(); self.a:SetPoint("LEFT", self.strip, "LEFT", -off, 0)
-    self.b:ClearAllPoints(); self.b:SetPoint("LEFT", self.strip, "LEFT", self.wide - off, 0)
+    local over = false
+    if self.strip.IsMouseOver then
+      local ok, r = pcall(self.strip.IsMouseOver, self.strip)
+      over = ok and r and true or false
+    end
+    self.paused = over
+    if over then return end
+    self.off = ((self.off or 0) + (tonumber(elapsed) or 0) * 34) % self.wide
+    local a, b = self.tracks[1], self.tracks[2]
+    a:ClearAllPoints(); a:SetPoint("LEFT", self.strip, "LEFT", -self.off, 0)
+    b:ClearAllPoints(); b:SetPoint("LEFT", self.strip, "LEFT", self.wide - self.off, 0)
   end)
   panel:Hide()
 end
@@ -740,10 +812,17 @@ local function chartCard(x, y, w, h, id)
   local now1 = r and r.last or (p and p.low)
   text((now1 and ("Now " .. ns.money(now1)) or "None listed") .. (p and p.usual and ("  -  usual " .. ns.money(p.usual)) or "")
     .. (p and ("  -  " .. ns.thousands(p.n) .. " listed") or ""), x + 50, y + 46, w - 64, "dim", ns.C.dim)
-  local pts, kind = chartPoints(id)
-  local ch = math.max(60, h - 66 - 104)
-  lineChart(pts, x + 12, y + 66, w - 24, ch, { usual = p and p.days and p.days >= 2 and p.usual or nil })
-  local sy = y + 66 + ch + 8
+  -- the interval, like a trading chart's
+  local labels, lit, sec = {}, 1, nil
+  for k, e in ipairs(P.INTERVALS) do labels[k] = e[1]; if e[2] == view.interval then lit = k end end
+  sec = view.interval
+  segments(x + 12, y + 64, w - 24, labels, lit, function(k) view.interval = P.INTERVALS[k][2] end, "Interval ")
+  local pts, kind = chartPoints(id, sec)
+  local ch = math.max(60, h - 94 - 104)
+  local empty = sec and sec < 86400 and ("Fewer than two prices in the last " .. spanText(sec * 30)
+    .. ": Search it now, again a little later, or pick a longer interval.") or nil
+  lineChart(pts, x + 12, y + 94, w - 24, ch, { usual = p and p.days and p.days >= 2 and p.usual or nil, empty = empty })
+  local sy = y + 94 + ch + 8
   local col = math.floor((w - 28) / 2)
   local i = 0
   local function stat(label, value, color)
@@ -763,7 +842,8 @@ local function chartCard(x, y, w, h, id)
     or (p and p.n and (p.n .. " now")) or "--"
   stat("Listed", listed, r and r.supply and (r.supply <= -10 and ORANGE or ns.C.light))
   stat("Swings", r and r.vol and (math.floor(r.vol * 100 + 0.5) .. "%") or "needs 2 days", r and r.vol and (r.vol >= 0.25 and ns.C.accent or ns.C.light) or ns.C.dim)
-  stat(kind == "days" and "Range (days)" or "Range (scans)", lo and (ns.money(lo) .. " - " .. ns.money(hi)) or "--")
+  stat(kind == "days" and "Range (days)" or (kind == "interval" and ("Range (" .. spanText(sec * 30) .. ")")) or "Range (scans)",
+    lo and (ns.money(lo) .. " - " .. ns.money(hi)) or "--")
   local vendor = p and p.vendor
   stat("Vendor pays", vendor and vendor > 0 and ns.money(vendor) or "--")
   local by = sy + 3 * 16 + 4
@@ -1294,41 +1374,140 @@ P.REFRESH = {
   end },
 }
 
--- The ticker's text: name, price and change of the biggest moves, coloured.
-local function hex(c) return string.format("|cff%02x%02x%02x", math.floor(c[1] * 255), math.floor(c[2] * 255), math.floor(c[3] * 255)) end
-local function tickerText()
-  local rows = M().ticker(16)
-  if #rows == 0 then return nil end
-  local parts = {}
-  for _, r in ipairs(rows) do
-    parts[#parts + 1] = "|cffffd100" .. Q.plain(r.name) .. "|r " .. ns.money(r.last) .. " " .. hex(M().pctColor(r.change)) .. M().pctText(r.change) .. "|r"
-  end
-  return table.concat(parts, "      ") .. "      "
+-- The ticker's items: per move a button with the icon, the name, the price, an up or down arrow
+-- and the change on a coloured tag, then a small diamond before the next one.
+local ARROW_UP, ARROW_DOWN = "Interface\\Buttons\\Arrow-Up-Up", "Interface\\Buttons\\Arrow-Down-Up"
+local function tickerItem(track, i)
+  local it = track.items[i]
+  if it then return it end
+  it = CreateFrame("Button", nil, track)
+  it:SetHeight(22)
+  it.glow = it:CreateTexture(nil, "BACKGROUND")
+  it.glow:SetAllPoints()
+  it.glow:SetColorTexture(1, 1, 1, 0.08)
+  it.glow:Hide()
+  it.icon = it:CreateTexture(nil, "ARTWORK")
+  it.icon:SetSize(16, 16)
+  it.icon:SetPoint("LEFT", it, "LEFT", 4, 0)
+  it.name = it:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  it.price = it:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  it.arrow = it:CreateTexture(nil, "ARTWORK")
+  it.arrow:SetSize(12, 12)
+  it.tag = it:CreateTexture(nil, "BORDER")
+  it.tag:SetHeight(14)
+  it.pct = it:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  it.sep = it:CreateTexture(nil, "ARTWORK")
+  it.sep:SetSize(4, 4)
+  for _, fs in ipairs({ it.name, it.price, it.pct }) do fs:SetWordWrap(false); fs:SetJustifyH("LEFT") end
+  it:SetScript("OnEnter", function(self)
+    self.glow:Show()
+    ns.art.showTip(self)
+  end)
+  it:SetScript("OnLeave", function(self)
+    self.glow:Hide()
+    ns.art.hideTip(self)
+  end)
+  track.items[i] = it
+  return it
 end
 
-local function drawTicker(x, y, w)
+-- Lays one copy of the moves out on a track; returns its width.
+local function fillTrack(track, rows, limit)
+  local x = 0
+  for _, it in ipairs(track.items) do it:Hide() end
+  for i, r in ipairs(rows) do
+    local it = tickerItem(track, i)
+    local up = (r.change or 0) > 0
+    local c = M().pctColor(r.change)
+    ns.setIcon(it.icon, itemIcon(r.id))
+    it.name:SetText(Q.plain(r.name))
+    it.name:ClearAllPoints(); it.name:SetPoint("LEFT", it, "LEFT", 24, 0)
+    local nw = math.min(150, tonumber(it.name:GetStringWidth()) or 60)
+    it.name:SetWidth(nw)
+    it.price:SetText(ns.money(r.last))
+    it.price:ClearAllPoints(); it.price:SetPoint("LEFT", it, "LEFT", 24 + nw + 6, 0)
+    local pw = tonumber(it.price:GetStringWidth()) or 40
+    it.price:SetWidth(pw + 2)
+    local ax = 24 + nw + 6 + pw + 6
+    local file = up and ARROW_UP or ARROW_DOWN
+    it.arrow:ClearAllPoints(); it.arrow:SetPoint("LEFT", it, "LEFT", ax, 0)
+    if ns.art.hasFile(file) and it.arrow:SetTexture(file) ~= false then
+      it.arrow:SetVertexColor(c[1], c[2], c[3])
+      it.arrow:Show()
+    else
+      it.arrow:Hide()
+    end
+    local tx = ax + 14
+    it.pct:SetText(M().pctText(r.change))
+    it.pct:SetTextColor(c[1], c[2], c[3])
+    local cw = (tonumber(it.pct:GetStringWidth()) or 24) + 10
+    it.tag:ClearAllPoints(); it.tag:SetPoint("LEFT", it, "LEFT", tx, 0)
+    it.tag:SetWidth(cw)
+    it.tag:SetColorTexture(c[1], c[2], c[3], 0.2)
+    it.pct:ClearAllPoints(); it.pct:SetPoint("LEFT", it, "LEFT", tx + 5, 0)
+    it.pct:SetWidth(cw - 6)
+    local w = tx + cw + 8
+    it.sep:ClearAllPoints(); it.sep:SetPoint("CENTER", it, "LEFT", w + 6, 0)
+    it.sep:SetColorTexture(ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.5)
+    w = w + 14
+    it:SetWidth(w)
+    it:ClearAllPoints(); it:SetPoint("LEFT", track, "LEFT", x, 0)
+    it.tipTitle, it.tipText, it.codexLabel = r.name, moverTip(r), "Ticker " .. r.name
+    local id = r.id
+    it:SetScript("OnClick", function() chartItem(id, "movers") end)
+    if limit and x + w > limit then it:Hide() else it:Show() end
+    x = x + w
+  end
+  track:SetWidth(math.max(1, x))
+  return x
+end
+
+local function drawTicker(y, w)
+  local C = ns.C
   ticker:ClearAllPoints()
-  ticker:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
-  ticker:SetWidth(w)
+  ticker:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -y)
+  ticker:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -y)
   ticker:Show()
-  local s = tickerText()
+  ticker.lineT:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.45)
+  ticker.lineB:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.25)
+  ticker.plate:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.14)
+  ticker.plateEdge:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.6)
+  -- live: a scan running, the sniper on, or prices under 15 minutes old
+  local last = A().lastScanAt and A().lastScanAt() or 0
+  local live = A().scanning() or (A().sniper and A().sniper.on) or (last > 0 and now() - last < 900)
+  ticker.live = live and true or nil
+  local dc = live and GREEN or C.dim
+  ticker.dot:SetColorTexture(dc[1], dc[2], dc[3], 1)
+  ticker.label:SetText(live and "LIVE" or "MARKET")
+  ticker.label:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+  local rows = M().ticker(16)
+  local key = {}
+  for _, r in ipairs(rows) do key[#key + 1] = r.id .. ":" .. (r.last or 0) .. ":" .. (r.change or 0) end
+  key = table.concat(key, ",") .. "|" .. ns.themeVersion .. "|" .. w
+  if key == ticker.key then return end
+  ticker.key = key
   ticker.wide = nil
-  ticker.a:ClearAllPoints(); ticker.a:SetPoint("LEFT", ticker.strip, "LEFT", 0, 0)
-  ticker.b:ClearAllPoints(); ticker.b:SetPoint("LEFT", ticker.strip, "LEFT", 0, 0)
-  ticker.b:Hide()
-  if not s then
-    ticker.a:SetText("Prices start moving here once items have been scanned twice: Scan all now, and again later.")
-    ticker.a:SetTextColor(0.6, 0.6, 0.6)
+  local a, b = ticker.tracks[1], ticker.tracks[2]
+  if #rows == 0 then
+    fillTrack(a, {}); fillTrack(b, {})
+    ticker.empty:SetText("Prices start moving here once items have been scanned twice: Scan all now, and again later.")
+    ticker.empty:Show()
     return
   end
-  ticker.a:SetText(s)
-  ticker.a:SetTextColor(0.9, 0.9, 0.9)
-  local sw = tonumber(ticker.a:GetStringWidth()) or 0
-  if ticker.clips and sw > w - 70 then
-    ticker.b:SetText(s)
-    ticker.b:SetTextColor(0.9, 0.9, 0.9)
-    ticker.b:Show()
+  ticker.empty:Hide()
+  local room = w - 92
+  local sw = fillTrack(a, rows, not ticker.clips and room or nil)
+  a:ClearAllPoints(); a:SetPoint("LEFT", ticker.strip, "LEFT", ticker.clips and -(ticker.off or 0) or 0, 0)
+  if ticker.clips and sw > room then
+    fillTrack(b, rows)
+    b:Show()
     ticker.wide = math.max(1, sw)
+    ticker.off = (ticker.off or 0) % ticker.wide
+  else
+    fillTrack(b, {})
+    b:Hide()
+    ticker.off = 0
+    a:ClearAllPoints(); a:SetPoint("LEFT", ticker.strip, "LEFT", 0, 0)
   end
 end
 
@@ -1350,7 +1529,12 @@ function P.refresh()
     end
   end
   text(title, 44, 11, 220, "title", C.gold)
-  text(line, 262, 9, W - 262 - 16 - 270, "dim", C.dim, nil, true)
+  hit(16, 6, 240, 26, title, line)
+  -- your gold and the scan age sit in the header, so the ticker runs the whole width
+  local age, ageColor = scanAge()
+  local infoW = W - 262 - 16 - 270
+  text(money(tonumber(try(GetMoney)) or 0), 262, 9, infoW, "small", C.light)
+  text("Last scan " .. age, 262, 23, infoW, "dim", ageColor)
   local r = P.REFRESH[page]
   if r then
     local bx = W - 16 - 116 - 6 - 140
@@ -1385,12 +1569,8 @@ function P.refresh()
   local done, total, phase = A().fullProgress()
   scanAllButton(done and (phase == "filing" and "Saving..." or "Scanning...") or nil, W - 16 - 116, 8, 116)
   if done then bar(W - 16 - 116, 32, 116, 3, total and total > 0 and done / total or 0.5, phase == "filing" and GREEN or C.accent) end
-  drawTicker(16, 40, W - 32 - 200)
-  local age, ageColor = scanAge()
-  text(money(tonumber(try(GetMoney)) or 0), W - 16 - 190, 38, 190, "small", C.light, "RIGHT")
-  text("Last scan " .. age, W - 16 - 190, 51, 190, "dim", ageColor, "RIGHT")
-  rect(16, 66, W - 32, 1, { C.edge[1], C.edge[2], C.edge[3], 0.4 }, "BORDER")
-  local top = 76
+  drawTicker(40, W + 8)
+  local top = 74
   local draw = pages[page] or pages.overview
   local ok, err = pcall(draw, W, top, H - top - 4)
   if not ok then

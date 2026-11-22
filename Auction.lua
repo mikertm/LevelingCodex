@@ -122,18 +122,25 @@ end
 -- Recent readings for the market view (AuctionMarket.lua): it.tk = { t, low, n, t, low, n, ... },
 -- oldest first, at most A.TICKS readings; a reading within A.TICK_GAP of the newest one replaces
 -- its price and quantity, so two readings are always that far apart (a move "since the last scan").
-A.TICK_GAP, A.TICKS = 15 * 60, 6
+-- readings for the chart's intervals (1m ... 12h): a minute apart at least, the same price within
+-- A.TICK_SAME adds none, up to A.TICKS kept for A.TICK_KEEP
+A.TICK_GAP, A.TICKS, A.TICK_SAME, A.TICK_KEEP = 60, 40, 30 * 60, 7 * 86400
 local function tick(it, low, n)
   local tk = type(it.tk) == "table" and it.tk or {}
   it.tk = tk
   local t, k = now(), #tk
-  -- a reading soon after the last replaces it, as long as an earlier one stays to compare with
-  if k >= 6 and t - (tonumber(tk[k - 2]) or 0) < A.TICK_GAP then
-    tk[k - 1], tk[k] = low, n
+  local lastT, lastLow = tonumber(tk[k - 2]), tonumber(tk[k - 1])
+  if k >= 3 and lastLow == low and lastT and t - lastT < A.TICK_SAME then
+    tk[k] = n -- the same price again soon: the reading stands, its count follows
+  elseif k >= 6 and lastT and t - lastT < A.TICK_GAP then
+    -- a reading soon after the last replaces it (time too), as long as an earlier one stays to compare with
+    tk[k - 2], tk[k - 1], tk[k] = t, low, n
   else
     tk[k + 1], tk[k + 2], tk[k + 3] = t, low, n
   end
-  while #tk > A.TICKS * 3 do table.remove(tk, 1); table.remove(tk, 1); table.remove(tk, 1) end
+  while #tk > A.TICKS * 3 or (#tk > 6 and t - (tonumber(tk[1]) or t) > A.TICK_KEEP) do
+    table.remove(tk, 1); table.remove(tk, 1); table.remove(tk, 1)
+  end
 end
 
 -- The recent readings, oldest first: { { t, low, n } }.
