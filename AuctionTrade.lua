@@ -1,5 +1,5 @@
--- AuctionTrade.lua: selling and deals at the auction house, on the card LevelingCodexTradeCard
--- under the Codex prices card.
+-- AuctionTrade.lua: selling and deals at the auction house, shown on the Codex tab's Deals and
+-- Selling pages (AuctionPanel.lua).
 -- QUICK SELL: what's worth selling from your bags, priced under the lowest listing (Gold tab:
 -- Undercut by), with two protections: never below what a vendor pays (after the auction house's
 -- 5% cut), and a second click before a post far under the usual price (Gold tab: Warn under).
@@ -15,11 +15,11 @@ local T = {}
 ns.auctionTrade = T
 
 T.CUT = 0.05             -- the auction house keeps 5% of a sale
-T.ROWS, T.DEALS = 4, 4
 T.UNDERCUTS = { { "1c", 0, 1 }, { "1%", 1 }, { "5%", 5 }, { "10%", 10 } }
 T.WARNS = { { "20%", 20 }, { "30%", 30 }, { "50%", 50 }, { "Off", 0 } }
 T.FLIPS = { { "20%", 20 }, { "30%", 30 }, { "50%", 50 } }
 T.DURATIONS = { { "12 h", 1 }, { "24 h", 2 }, { "48 h", 3 } }
+T.MINPROFITS = { { "Any", 0 }, { "10c", 10 }, { "1s", 100 }, { "10s", 1000 }, { "1g", 10000 } }
 local HEARTHSTONE = 6948
 
 local function has(t, name) return type(t) == "table" and type(t[name]) == "function" end
@@ -45,6 +45,24 @@ function T.undercut() return setting(T.UNDERCUTS, ns.db().auctionUndercut, 0) en
 function T.warnPct() return setting(T.WARNS, ns.db().auctionWarnPct, 30)[2] end
 function T.flipPct() return setting(T.FLIPS, ns.db().auctionFlipPct, 30)[2] end
 function T.duration() return setting(T.DURATIONS, ns.db().auctionDuration, 2)[2] end
+function T.minProfit() return setting(T.MINPROFITS, ns.db().auctionMinProfit, 0)[2] end
+
+-- This realm's trading notes, kept with its prices: hidden[id] (left out of Selling and Deals),
+-- set[id] (a price you nudged, copper each), paid[id] = { each, qty } (what the Codex bought it for).
+function T.notes()
+  local s = ns.auction.store()
+  if type(s.trade) ~= "table" then s.trade = {} end
+  local t = s.trade
+  for _, k in ipairs({ "hidden", "set", "paid" }) do if type(t[k]) ~= "table" then t[k] = {} end end
+  return t
+end
+function T.isHidden(id) return T.notes().hidden[id] and true or false end
+function T.hide(id, on) T.notes().hidden[id] = on and true or nil; T.refresh() end
+function T.hiddenCount()
+  local n = 0
+  for _ in pairs(T.notes().hidden) do n = n + 1 end
+  return n
+end
 
 ----------------------------------------------------------------------------
 -- Prices and protections
@@ -62,7 +80,13 @@ function T.sellPrice(id)
   local u = T.undercut()
   local price = u[2] > 0 and math.floor(base * (100 - u[2]) / 100) or base - (u[3] or 1)
   if price < 1 then price = 1 end
-  local out = { price = price, base = base, usual = p.usual, vendor = vendorPrice(id, p), source = p.source }
+  local notes = T.notes()
+  local set = tonumber(notes.set[id])
+  if set and set >= 1 then price = set end
+  local out = { price = price, base = base, usual = p.usual, vendor = vendorPrice(id, p), source = p.source,
+    custom = set and true or nil, low = p.n > 0 and p.low or nil, n = p.n }
+  local paid = type(notes.paid[id]) == "table" and tonumber(notes.paid[id].each)
+  if paid and paid > 0 then out.paid = paid end
   if out.vendor then
     out.floor = math.ceil(out.vendor / (1 - T.CUT))
     if price < out.floor then
@@ -74,7 +98,50 @@ function T.sellPrice(id)
     local under = math.floor((p.usual - price) * 100 / p.usual + 0.5)
     if under >= warn then out.warn = under end
   end
+  -- a flip you'd sell for less than you paid, once the cut is taken
+  if not out.blocked and out.paid and math.floor(price * (1 - T.CUT)) < out.paid then out.loss = out.paid end
   return out
+end
+
+-- A nudged price: dir -1 / +1 moves it by 5% (at least a copper); nil forgets it.
+function T.nudge(id, dir)
+  local notes = T.notes()
+  if not dir then notes.set[id] = nil; T.refresh(); return end
+  local s = T.sellPrice(id)
+  if not s then return end
+  local step = math.max(1, math.floor(s.price * 0.05))
+  notes.set[id] = math.max(1, s.price + dir * step)
+  T.refresh()
+end
+
+-- How the market looks for selling this item: key, label, colour { r, g, b }.
+T.STATUS = {
+  vendor = { "Vendor pays more", { 1, 0.35, 0.3 } },
+  none = { "None listed: name your price", { 1, 0.82, 0 } },
+  high = { "Above usual: sell now", { 0.3, 0.9, 0.35 } },
+  few = { "Few listed: good spot", { 0.3, 0.9, 0.35 } },
+  fair = { "Fair price", { 0.85, 0.85, 0.85 } },
+  falling = { "Falling: sell soon", { 1, 0.82, 0 } },
+  low = { "Below usual: hold?", { 1, 0.55, 0.2 } },
+  new = { "New: little history", { 0.6, 0.6, 0.6 } },
+}
+function T.status(id, sell)
+  sell = sell or T.sellPrice(id)
+  local p = ns.auction.price(id)
+  local key = "new"
+  if not sell or not p then key = "new"
+  elseif sell.blocked then key = "vendor"
+  elseif p.n == 0 then key = "none"
+  elseif p.usual and p.days and p.days >= 2 and p.usual > 0 then
+    local r = sell.base / p.usual
+    if r >= 1.1 then key = "high"
+    elseif r <= 0.8 then key = "low"
+    elseif p.trend and p.trend <= -10 then key = "falling"
+    elseif p.n <= 3 then key = "few"
+    else key = "fair" end
+  end
+  local e = T.STATUS[key]
+  return key, e[1], e[2]
 end
 
 ----------------------------------------------------------------------------
@@ -91,11 +158,13 @@ end
 
 -- { { id, name, count, bag, slot, icon, sell = T.sellPrice } }, the most valuable first: items you
 -- can trade (not bound, not grey, not something your route or your professions still need) with a
--- price from the auction house.
-function T.sellable()
+-- price from the auction house. unpriced = also those without a price (sell = nil); hidden = also
+-- the ones you hid.
+function T.sellable(unpriced, hidden)
   local C = type(C_Container) == "table" and C_Container
   if not has(C, "GetContainerNumSlots") or not has(C, "GetContainerItemInfo") then return {} end
   local keep, byID, out = needed(), {}, {}
+  local notes = T.notes()
   for bag = 0, 4 do
     for slot = 1, tonumber(try(C.GetContainerNumSlots, bag)) or 0 do
       local info = try(C.GetContainerItemInfo, bag, slot)
@@ -103,11 +172,11 @@ function T.sellable()
       if id and not info.isBound and (tonumber(info.quality) or 1) >= 1 and id ~= HEARTHSTONE
         and not (ns.vendor and ns.vendor.kept and ns.vendor.kept(id)) then
         local name = ns.itemInfo(id) or (type(info.hyperlink) == "string" and info.hyperlink:match("%[(.-)%]"))
-        if name and not keep[name:lower()] then
+        if name and not keep[name:lower()] and (hidden or not notes.hidden[id]) then
           local e = byID[id]
           if not e then
             local sell = T.sellPrice(id)
-            if sell then
+            if sell or unpriced then
               local _, _, _, _, _, _, _, _, _, icon = ns.itemInfo(id)
               e = { id = id, name = name, count = 0, bag = bag, slot = slot, icon = icon or info.iconFileID, sell = sell }
               byID[id] = e
@@ -120,14 +189,16 @@ function T.sellable()
     end
   end
   table.sort(out, function(a, b)
-    local va, vb = a.sell.price * a.count, b.sell.price * b.count
+    local va, vb = a.sell and a.sell.price * a.count or -1, b.sell and b.sell.price * b.count or -1
     if va ~= vb then return va > vb end
     return a.name < b.name
   end)
   return out
 end
 
-local last = { posts = 0, buys = 0 }
+local last = { posts = 0, buys = 0, posted = 0, deposits = 0, spent = 0, cancels = 0 }
+-- This session at the auction house: { posts, posted (value), deposits, buys, spent, cancels }.
+function T.ledger() return last end
 local armed = {} -- key -> time of the first click of a two-click action
 
 local function arm(key)
@@ -167,9 +238,14 @@ function T.post(row)
   local sell = row and T.sellPrice(row.id)
   if not sell then return "failed" end
   if sell.blocked then ns.say(sell.blocked); return "blocked" end
-  if sell.warn and not arm("post:" .. row.id) then
-    ns.say(Q.plain(row.name) .. ": " .. ns.money(sell.price) .. " is " .. sell.warn .. "% under the usual "
-      .. ns.money(sell.usual) .. ". Click Post again within 5 s to post it anyway.")
+  if (sell.warn or sell.loss) and not arm("post:" .. row.id) then
+    if sell.loss then
+      ns.say(Q.plain(row.name) .. ": " .. ns.money(sell.price) .. " each is less than the " .. ns.money(sell.loss)
+        .. " you paid, after the 5% cut. Click Post again within 5 s to post it anyway.")
+    else
+      ns.say(Q.plain(row.name) .. ": " .. ns.money(sell.price) .. " is " .. sell.warn .. "% under the usual "
+        .. ns.money(sell.usual) .. ". Click Post again within 5 s to post it anyway.")
+    end
     return "armed"
   end
   local loc = location(row)
@@ -184,10 +260,30 @@ function T.post(row)
   if not ok then ns.say("The auction house didn't take the post for " .. Q.plain(row.name) .. "."); return "failed" end
   local deposit = T.deposit(row, loc, commodity, qty)
   last.posts = last.posts + 1
+  last.posted = last.posted + sell.price * qty
+  last.deposits = last.deposits + (deposit or 0)
+  local notes = T.notes()
+  local paid = notes.paid[row.id]
+  if type(paid) == "table" then
+    paid.qty = (tonumber(paid.qty) or 0) - qty
+    if paid.qty <= 0 then notes.paid[row.id] = nil end
+  end
   last.post = { name = row.name, qty = qty, price = sell.price, deposit = deposit }
   ns.say("Posted " .. qty .. " " .. Q.plain(row.name) .. " at " .. ns.money(sell.price) .. " each"
     .. (deposit and deposit > 0 and (" (deposit " .. ns.money(deposit) .. ")") or "") .. ".")
   return "posted"
+end
+
+-- The first row Post next would post (not blocked), or nil.
+function T.nextPost()
+  for _, row in ipairs(T.sellable()) do
+    if not row.sell.blocked then return row end
+  end
+end
+function T.postNext()
+  local row = T.nextPost()
+  if not row then ns.say("Nothing priced to post from your bags."); return "failed" end
+  return T.post(row)
 end
 
 ----------------------------------------------------------------------------
@@ -197,31 +293,38 @@ end
 -- { { id, name, kind = "vendor"|"flip", low, worth, profit, n } }, the biggest profit per unit
 -- first: listings a vendor pays more for (profit = vendor - low), and listings at least Flip at
 -- under the usual price of two days or more (profit = usual after the 5% cut - low).
-function T.deals()
+-- kind = "vendor" / "flip" keeps one kind; hidden = also the ones you hid. Deals under the Min
+-- profit setting (per item) are left out.
+function T.deals(kind, hidden)
   local out = {}
   local items = ns.auction.store().items
-  local flip = T.flipPct()
+  local flip, minProfit, notes = T.flipPct(), T.minProfit(), T.notes()
   for id, it in pairs(items) do
-    local p = type(it) == "table" and ns.auction.price(id)
+    local p = type(it) == "table" and (hidden or not notes.hidden[id]) and ns.auction.price(id)
     if p and p.n > 0 and p.low and p.low > 0 then
       local vendor = vendorPrice(id, p)
       if vendor and vendor > p.low then
         out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "vendor", low = p.low, worth = vendor,
-          profit = vendor - p.low, n = p.n }
+          profit = vendor - p.low, n = p.n, source = p.source, at = p.at }
       elseif p.usual and p.days and p.days >= 2 and p.low <= p.usual * (100 - flip) / 100 then
         local profit = math.floor(p.usual * (1 - T.CUT)) - p.low
         if profit > 0 then
           out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "flip", low = p.low, worth = p.usual,
-            profit = profit, n = p.n }
+            profit = profit, n = p.n, source = p.source, at = p.at }
         end
       end
     end
   end
-  table.sort(out, function(a, b)
+  local kept = {}
+  for _, d in ipairs(out) do
+    d.pct = d.low > 0 and math.floor(d.profit * 100 / d.low + 0.5) or 0
+    if d.profit >= minProfit and (not kind or d.kind == kind) then kept[#kept + 1] = d end
+  end
+  table.sort(kept, function(a, b)
     if a.profit ~= b.profit then return a.profit > b.profit end
     return a.id < b.id
   end)
-  return out
+  return kept
 end
 
 -- The buying state per item: { stage = "search"|"ready"|"pricing"|"confirm"|"none", qty, total, unit,
@@ -251,9 +354,124 @@ function T.check(deal)
   return true
 end
 
+----------------------------------------------------------------------------
+-- Your auctions: undercuts and cancelling
+----------------------------------------------------------------------------
+
+-- list = { { auction, id, name, qty, unit, timeLeft, sold } } from the last owned-auctions read;
+-- cheapest[id] = { unit, at } = the cheapest listing that isn't yours, from Check undercuts.
+local mine = { list = {}, cheapest = {}, queue = {}, waiting = nil, asked = false }
+T.mine = mine
+
+function T.queryOwned()
+  local C = api()
+  if not has(C, "QueryOwnedAuctions") then return false end
+  mine.asked = true
+  return pcall(C.QueryOwnedAuctions, {})
+end
+
+local function readOwned()
+  local C = api()
+  local list = {}
+  for i = 1, tonumber(try(C.GetNumOwnedAuctions)) or 0 do
+    local r = try(C.GetOwnedAuctionInfo, i)
+    if type(r) == "table" and r.auctionID then
+      local id = type(r.itemKey) == "table" and tonumber(r.itemKey.itemID) or nil
+      local link = type(r.itemLink) == "string" and r.itemLink or nil
+      local name = (link and link:match("%[(.-)%]")) or (id and ns.itemInfo(id)) or ("item " .. tostring(id))
+      list[#list + 1] = { auction = r.auctionID, id = id, name = name, qty = math.max(1, tonumber(r.quantity) or 1),
+        unit = tonumber(r.buyoutAmount), timeLeft = tonumber(r.timeLeftSeconds), sold = r.status == 1 }
+    end
+  end
+  table.sort(list, function(a, b)
+    if a.sold ~= b.sold then return not a.sold end
+    return a.name < b.name
+  end)
+  mine.list, mine.at = list, now()
+  T.refresh()
+end
+
+-- "undercut" (someone lists for less), "cheapest", "sold", or nil before a check.
+function T.ownedState(row)
+  if row.sold then return "sold" end
+  local c = row.id and mine.cheapest[row.id]
+  if not c or not row.unit then return nil end
+  if c.unit and c.unit < row.unit then return "undercut", c.unit end
+  return "cheapest", c.unit
+end
+
+function T.undercutCount()
+  local n = 0
+  for _, row in ipairs(mine.list) do if T.ownedState(row) == "undercut" then n = n + 1 end end
+  return n
+end
+
+local function nextUndercut()
+  local C = api()
+  mine.waiting = nil
+  local id = table.remove(mine.queue, 1)
+  if not id then mine.checking = nil; T.refresh(); return end
+  local key = has(C, "MakeItemKey") and try(C.MakeItemKey, id) or { itemID = id }
+  mine.waiting, mine.checking = id, true
+  if not pcall(C.SendSearchQuery, key, {}, false) then
+    mine.waiting, mine.checking, mine.queue = nil, nil, {}
+    ns.say("The auction house didn't take the search.")
+    T.refresh()
+    return
+  end
+  ns.after(5, function() if mine.waiting == id then nextUndercut() end end)
+end
+
+-- Searches each item you have listed for the cheapest listing that isn't yours.
+function T.checkUndercuts()
+  local C = api()
+  if not has(C, "SendSearchQuery") then return false end
+  local seen = {}
+  mine.queue = {}
+  for _, row in ipairs(mine.list) do
+    if row.id and not row.sold and not seen[row.id] then seen[row.id] = true; mine.queue[#mine.queue + 1] = row.id end
+  end
+  if #mine.queue == 0 then ns.say("You have nothing listed to check."); return false end
+  nextUndercut()
+  T.refresh()
+  return true
+end
+
+local function undercutRead(id, unit)
+  if mine.waiting ~= id then return end
+  mine.cheapest[id] = { unit = unit, at = now() }
+  ns.after(1, nextUndercut)
+end
+
+-- Cancels one of your auctions on a click; the first click arms it (the deposit is lost).
+function T.cancel(row)
+  local C = api()
+  if not row or not row.auction or not has(C, "CancelAuction") then return "failed" end
+  if not arm("cancel:" .. row.auction) then
+    ns.say("Cancel " .. Q.plain(row.name) .. "? The deposit is lost and the item comes back by mail. Click Cancel again within 5 s.")
+    T.refresh()
+    return "armed"
+  end
+  if not pcall(C.CancelAuction, row.auction) then ns.say("The auction house didn't cancel it."); return "failed" end
+  last.cancels = last.cancels + 1
+  ns.say("Cancelled " .. Q.plain(row.name) .. ": it comes back by mail. Relist it from Selling once it's in your bags.")
+  ns.after(1, T.queryOwned)
+  return "cancelled"
+end
+
 -- Search results: how many cost no more than the limit, and what they come to.
 local function readCommodity(id)
   local C, b = api(), buying[id]
+  if mine.waiting == id then
+    local best
+    for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
+      local r = try(C.GetCommoditySearchResultInfo, id, i)
+      local unit = type(r) == "table" and tonumber(r.unitPrice)
+      local others = type(r) == "table" and ((tonumber(r.quantity) or 0) - (tonumber(r.numOwnerItems) or (r.containsOwnerItem and r.quantity or 0)))
+      if unit and others and others > 0 and (not best or unit < best) then best = unit end
+    end
+    undercutRead(id, best)
+  end
   if not b or b.stage ~= "search" then return end
   local qty, total = 0, 0
   for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
@@ -271,6 +489,18 @@ end
 local function readItems(key)
   local C = api()
   local id = type(key) == "table" and tonumber(key.itemID)
+  if id and mine.waiting == id then
+    local best
+    for i = 1, tonumber(try(C.GetNumItemSearchResults, key)) or 0 do
+      local r = try(C.GetItemSearchResultInfo, key, i)
+      local buyout = type(r) == "table" and tonumber(r.buyoutAmount)
+      if buyout and not r.containsOwnerItem then
+        local unit = buyout / math.max(1, tonumber(r.quantity) or 1)
+        if not best or unit < best then best = math.floor(unit) end
+      end
+    end
+    undercutRead(id, best)
+  end
   local b = id and buying[id]
   if not b or b.stage ~= "search" then return end
   local best
@@ -290,6 +520,21 @@ end
 
 local function money() return tonumber(try(GetMoney)) or 0 end
 
+-- A purchase: the session ledger, and what you paid (a later post under it asks twice).
+local function boughtFor(id, b)
+  last.buys = last.buys + 1
+  last.spent = last.spent + b.total
+  last.buy = { name = b.deal.name, qty = b.qty, total = b.total }
+  local notes = T.notes()
+  local old = type(notes.paid[id]) == "table" and notes.paid[id]
+  local qty, cost = b.qty, b.total
+  if old and tonumber(old.qty) and tonumber(old.each) then
+    qty, cost = qty + old.qty, cost + old.qty * old.each
+  end
+  notes.paid[id] = { each = math.ceil(cost / qty), qty = qty }
+  ns.say("Bought " .. b.qty .. " " .. Q.plain(b.deal.name) .. " for " .. ns.money(b.total) .. ".")
+end
+
 -- Second click (and third for a commodity): buy what the search found.
 function T.buy(id)
   local C, b = api(), buying[id]
@@ -308,9 +553,7 @@ function T.buy(id)
     end
     if not pcall(C.PlaceBid, b.auction, b.total) then return false end
     if ns.stats then ns.stats.expect("buys", b.total) end
-    last.buys = last.buys + 1
-    last.buy = { name = b.deal.name, qty = b.qty, total = b.total }
-    ns.say("Bought " .. b.qty .. " " .. Q.plain(b.deal.name) .. " for " .. ns.money(b.total) .. ".")
+    boughtFor(id, b)
     buying[id] = nil
     T.refresh()
     return true
@@ -346,9 +589,7 @@ local function bought(ok)
   for id, b in pairs(buying) do
     if b.stage == "buying" then
       if ok then
-        last.buys = last.buys + 1
-        last.buy = { name = b.deal.name, qty = b.qty, total = b.total }
-        ns.say("Bought " .. b.qty .. " " .. Q.plain(b.deal.name) .. " for " .. ns.money(b.total) .. ".")
+        boughtFor(id, b)
         buying[id] = nil
       else
         b.stage, b.why = "none", "failed"
@@ -372,144 +613,9 @@ function T.dealLabel(id)
   return b.why == "price went up" and "Price went up" or "Gone"
 end
 
-----------------------------------------------------------------------------
--- The card
-----------------------------------------------------------------------------
-
-local card, place = nil, {}
-
-local function makeRow(h)
-  local r = {}
-  r.icon = h:CreateTexture(nil, "ARTWORK")
-  r.icon:SetSize(20, 20)
-  r.name = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  r.name:SetWidth(196)
-  r.name:SetJustifyH("LEFT")
-  r.sub = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  r.sub:SetWidth(196)
-  r.sub:SetJustifyH("LEFT")
-  r.btn = ns.art.button(h, 86, 20)
-  return r
-end
-
-local function makeCard()
-  local h = ns.art.frame("Frame", "LevelingCodexTradeCard", UIParent)
-  h:SetSize(320, 100)
-  h:SetFrameStrata("FULLSCREEN_DIALOG")
-  h:SetClampedToScreen(true)
-  h:EnableMouse(true)
-  h:Hide()
-  ns.art.cardChrome(h)
-  h.sellHead = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  h.sellHead:SetText("QUICK SELL")
-  h.dealHead = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  h.dealHead:SetText("DEALS")
-  h.note = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  h.note:SetWidth(296)
-  h.note:SetJustifyH("LEFT")
-  h.dealNote = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  h.dealNote:SetWidth(296)
-  h.dealNote:SetJustifyH("LEFT")
-  h.sells, h.deals = {}, {}
-  for i = 1, T.ROWS do h.sells[i] = makeRow(h) end
-  for i = 1, T.DEALS do h.deals[i] = makeRow(h) end
-  -- Never attached to the controller, like the other auction house cards.
-  return h
-end
-
-local function placeRow(r, y, shown)
-  r.icon:SetShown(shown); r.name:SetShown(shown); r.sub:SetShown(shown); r.btn:SetShown(shown)
-  if not shown then return end
-  r.icon:ClearAllPoints(); r.icon:SetPoint("TOPLEFT", 12, y)
-  r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 38, y)
-  r.sub:ClearAllPoints(); r.sub:SetPoint("TOPLEFT", 38, y - 13)
-  r.btn:ClearAllPoints(); r.btn:SetPoint("TOPRIGHT", -12, y)
-end
-
-local function hide()
-  if card then card:Hide() end
-end
-
+-- Redraws the Codex tab (AuctionPanel.lua) when it shows.
 function T.refresh()
-  if not card and (ns.db().noTradeCard or not ns.auction.isOpen()) then return end
-  if ns.db().noTradeCard or not ns.auction.isOpen() or not T.available() then hide(); return end
-  if not card then card = makeCard() end
-  ns.art.paintCard(card)
-  local y = -10
-  card.sellHead:ClearAllPoints(); card.sellHead:SetPoint("TOPLEFT", 12, y)
-  y = y - 18
-  local rows = T.sellable()
-  for i, r in ipairs(card.sells) do
-    local row = rows[i]
-    placeRow(r, y, row ~= nil)
-    if row then
-      local s = row.sell
-      ns.setIcon(r.icon, row.icon or "INV_Misc_Bag_10")
-      r.name:SetText(Q.plain(row.count .. " x " .. row.name))
-      local sub = ns.money(s.price) .. " each"
-      if s.usual and s.usual ~= s.price then sub = sub .. ", usual " .. ns.money(s.usual) end
-      if s.blocked then sub = "Vendor pays " .. ns.money(s.vendor) .. ": sell it there"
-      elseif s.warn then sub = sub .. " (" .. s.warn .. "% under)" end
-      r.sub:SetText(Q.plain(sub))
-      local key = "post:" .. row.id
-      local label = s.blocked and "Vendor it" or (T.armed(key) and "Post anyway" or "Post")
-      r.btn:SetLabel(label)
-      r.btn.codexLabel = "Post " .. row.name
-      r.btn:SetEnabled(not s.blocked)
-      r.btn:SetScript("OnClick", function() T.post(row); T.refresh() end)
-      y = y - 30
-    end
-  end
-  card.note:SetShown(#rows == 0)
-  if #rows == 0 then
-    card.note:ClearAllPoints(); card.note:SetPoint("TOPLEFT", 12, y)
-    card.note:SetText("Nothing priced to sell in your bags. Scan all prices what you carry.")
-    y = y - 20
-  end
-  y = y - 6
-  card.dealHead:ClearAllPoints(); card.dealHead:SetPoint("TOPLEFT", 12, y)
-  y = y - 18
-  local deals = T.deals()
-  for i, r in ipairs(card.deals) do
-    local d = deals[i]
-    placeRow(r, y, d ~= nil)
-    if d then
-      local _, _, _, _, _, _, _, _, _, icon = ns.itemInfo(d.id)
-      ns.setIcon(r.icon, icon or "INV_Misc_Coin_01")
-      r.name:SetText(Q.plain(d.name))
-      local sub = d.kind == "vendor"
-        and ("Listed " .. ns.money(d.low) .. ", vendor pays " .. ns.money(d.worth) .. ": +" .. ns.money(d.profit) .. " each")
-        or ("Listed " .. ns.money(d.low) .. ", usual " .. ns.money(d.worth) .. ": about +" .. ns.money(d.profit) .. " each")
-      r.sub:SetText(Q.plain(sub))
-      local label = T.dealLabel(d.id)
-      local b = buying[d.id]
-      r.btn:SetLabel(label)
-      r.btn.codexLabel = "Deal " .. d.name
-      r.btn:SetEnabled(not b or b.stage == "ready" or b.stage == "confirm" or b.stage == "none")
-      r.btn:SetScript("OnClick", function()
-        local x = buying[d.id]
-        if not x or x.stage == "none" then T.check(d) else T.buy(d.id) end
-        T.refresh()
-      end)
-      y = y - 30
-    end
-  end
-  card.dealNote:SetShown(#deals == 0)
-  if #deals == 0 then
-    card.dealNote:ClearAllPoints(); card.dealNote:SetPoint("TOPLEFT", 12, y)
-    card.dealNote:SetText("No deals in your prices yet. Scan all finds listings under vendor price and far under their usual price.")
-    y = y - 30
-  end
-  card:SetHeight(-y + 8)
-  local above = _G.LevelingCodexAuctionCard
-  card:ClearAllPoints()
-  if above and above:IsShown() then
-    card:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -4)
-  else
-    local root = type(AuctionHouseFrame) == "table" and AuctionHouseFrame or nil
-    if root then ns.placeByWindow(card, root, place) else card:SetPoint("TOP", UIParent, "TOP", 0, -100) end
-  end
-  card:Show()
+  if ns.auctionPanel then ns.auctionPanel.refresh() end
 end
 
 ----------------------------------------------------------------------------
@@ -522,17 +628,18 @@ function ns.startAuctionTrade()
   events = CreateFrame("Frame")
   for _, ev in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "BAG_UPDATE_DELAYED", "COMMODITY_SEARCH_RESULTS_UPDATED",
     "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE", "COMMODITY_PURCHASE_SUCCEEDED",
-    "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "REPLICATE_ITEM_LIST_UPDATE" }) do
+    "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "REPLICATE_ITEM_LIST_UPDATE", "OWNED_AUCTIONS_UPDATED",
+    "AUCTION_CANCELED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, event, a, b)
     if event == "AUCTION_HOUSE_SHOW" then
       for k in pairs(buying) do buying[k] = nil end
-      -- after the prices card has placed itself
-      ns.after(0, T.refresh)
+      mine.list, mine.queue, mine.waiting, mine.checking = {}, {}, nil, nil
+      ns.after(0.5, T.queryOwned)
     elseif event == "AUCTION_HOUSE_CLOSED" then
       for k in pairs(buying) do buying[k] = nil end
-      hide()
+      mine.queue, mine.waiting, mine.checking = {}, nil, nil
     elseif not ns.auction.isOpen() then return
     elseif event == "COMMODITY_SEARCH_RESULTS_UPDATED" then readCommodity(tonumber(a))
     elseif event == "ITEM_SEARCH_RESULTS_UPDATED" then readItems(a)
@@ -543,6 +650,8 @@ function ns.startAuctionTrade()
     elseif event == "COMMODITY_PURCHASE_SUCCEEDED" then bought(true)
     elseif event == "COMMODITY_PURCHASE_FAILED" then bought(false)
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then ns.after(2, T.refresh) -- the full scan has filed its prices by then
+    elseif event == "OWNED_AUCTIONS_UPDATED" then readOwned()
+    elseif event == "AUCTION_CANCELED" or event == "AUCTION_HOUSE_AUCTION_CREATED" then ns.after(0.5, T.queryOwned); T.refresh()
     else T.refresh() end
   end)
 end
@@ -550,7 +659,8 @@ end
 function ns.auctionTradeDebugLines()
   local out = { "auction trade: " .. (T.available() and "post and buy" or "no modern auction API") .. ", " .. last.posts
     .. " posts, " .. last.buys .. " buys this session; undercut " .. T.undercut()[1] .. ", warn " .. T.warnPct()
-    .. "%, flips " .. T.flipPct() .. "%" }
+    .. "%, flips " .. T.flipPct() .. "%; " .. #mine.list .. " of yours listed, " .. T.undercutCount() .. " undercut, "
+    .. last.cancels .. " cancelled, " .. T.hiddenCount() .. " hidden" }
   if last.post then
     out[#out + 1] = "auction last post: " .. last.post.qty .. " " .. Q.plain(last.post.name) .. " at " .. ns.money(last.post.price)
   end
@@ -572,7 +682,7 @@ ns.gold.addSection(20, function(y)
   y = y + 10
   U.T("SELLING AND DEALS", 14, y, W - 28, "label", C.gold)
   y = y + 20
-  y = y + U.T("At the auction house the Codex lists what to sell from your bags and deals to buy. Every post and purchase is one click on its card. It never posts below what a vendor pays.",
+  y = y + U.T("At the auction house the Codex tab lists what to sell from your bags and deals to buy. Every post and purchase is one click on its button. It never posts below what a vendor pays.",
     14, y, W - 28, "small", C.light) + 8
   local function row(label, list, current, key)
     U.T(label, 14, y + 5, 110, "small", C.light)
@@ -584,10 +694,7 @@ ns.gold.addSection(20, function(y)
   row("Warn under usual", T.WARNS, T.warnPct(), "auctionWarnPct")
   row("Flip deals at", T.FLIPS, T.flipPct(), "auctionFlipPct")
   row("Post for", T.DURATIONS, T.duration(), "auctionDuration")
-  U.check("Show the Quick sell and Deals card", 14, y, not db.noTradeCard, function()
-    db.noTradeCard = not db.noTradeCard; U.refresh(); T.refresh()
-  end, "The card under the Codex prices card at the auction house.")
-  y = y + 28
+  row("Deals worth at least", T.MINPROFITS, T.minProfit(), "auctionMinProfit")
   U.box(0, top, W, y - top, C.panel, C.edge)
   return y + 12
 end)
