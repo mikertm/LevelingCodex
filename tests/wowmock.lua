@@ -488,7 +488,7 @@ end
 function FontString:SetShadowColor() end
 function FontString:SetShadowOffset() end
 function FontString:SetSpacing() end
-function FontString:SetWordWrap() end
+function FontString:SetWordWrap(on) self._wrap = on end
 function FontString:SetNonSpaceWrap() end
 function FontString:SetMaxLines() end
 function FontString:SetJustifyH(j) if j ~= "LEFT" and j ~= "RIGHT" and j ~= "CENTER" then error("SetJustifyH: " .. tostring(j), 2) end end
@@ -512,6 +512,27 @@ function Frame:CreateTexture(name, layer, template, sub)
   MOCK.textures = MOCK.textures + 1
   return t
 end
+-- Lines (the auction charts): a texture with two end points; gone in the minimal client.
+function Frame:CreateLine(name, layer)
+  local l = self:CreateTexture(name, layer)
+  l._isLine = true
+  return l
+end
+function Texture:SetStartPoint(point, rel, x, y)
+  if not self._isLine then error("SetStartPoint: not a line", 2) end
+  if type(point) ~= "string" or type(x) ~= "number" or type(y) ~= "number" then error("SetStartPoint: bad args", 2) end
+  self._start = { point, rel, x, y }
+end
+function Texture:SetEndPoint(point, rel, x, y)
+  if not self._isLine then error("SetEndPoint: not a line", 2) end
+  if type(point) ~= "string" or type(x) ~= "number" or type(y) ~= "number" then error("SetEndPoint: bad args", 2) end
+  self._finish = { point, rel, x, y }
+end
+function Texture:SetThickness(n)
+  if not self._isLine or type(n) ~= "number" then error("SetThickness: bad args", 2) end
+  self._thick = n
+end
+function Frame:SetClipsChildren(on) self._clips = on and true or false end
 function Frame:CreateFontString(name, layer, template)
   local fs = new(FontString, "FontString", self, name)
   self._regions[#self._regions + 1] = fs
@@ -2022,6 +2043,8 @@ function MOCK.setup(opts)
     Frame.RegisterUnitEvent = nil
     Frame.SetMouseClickEnabled = nil
     Frame.SetMouseMotionEnabled = nil
+    Frame.CreateLine = nil
+    Frame.SetClipsChildren = nil
     -- an old-style client: no Blizzard button/check templates, no backdrops at all
     Frame.SetBackdrop = nil
     for _, t in ipairs({ "UIPanelButtonTemplate", "UICheckButtonTemplate", "BackdropTemplate" }) do
