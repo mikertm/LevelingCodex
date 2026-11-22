@@ -14,6 +14,8 @@
 - **Item tooltips** show the auction price, the usual price, the trend and the vendor price. Hold Shift for low, median and high and how many were listed.
 - **Sell helper**: put an item in the auction house's sell box and the card suggests one copper under the lowest listing, and its **Use ... each** button fills it in. You still press Post yourself: the Codex never buys, bids or posts.
 - The **Gold** tab shows how many prices you have, what your guide needs with today's prices, and switches for the tooltip lines, the card and the automatic searches.
+- **Works with Auctionator.** When Auctionator is installed, the Codex reads its prices for what your guide needs (shown as "(Auctionator)" on the card and in the Gold tab) and leaves the searching to it, so the two never send searches over each other. **Search in Auctionator** on the card puts your guide's items into Auctionator's search. Tooltips keep Auctionator's own price lines and add only the Codex's trend from your scans, and Scan all still builds a history of your own.
+
 ### A tidier Codex window
 
 - The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Journey, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.

@@ -27,6 +27,50 @@ local function api() return type(C_AuctionHouse) == "table" and C_AuctionHouse o
 local function has(t, name) return type(t) == "table" and type(t[name]) == "function" end
 
 ----------------------------------------------------------------------------
+-- Auctionator: when it is loaded, the Codex reads its prices through its public External API
+-- (Auctionator.API.v1, the only calls it supports for other add-ons) and leaves the auction house's
+-- searches to it, so the two never send queries over each other.
+----------------------------------------------------------------------------
+
+A.CALLER = "LevelingCodex"
+local ator = { reads = 0, found = 0, searches = 0 }
+
+-- Auctionator's API table while it is loaded, else nil.
+function A.auctionator()
+  local a = type(Auctionator) == "table" and Auctionator
+  local v1 = a and type(a.API) == "table" and a.API.v1
+  if has(v1, "GetAuctionPriceByItemID") then return v1 end
+end
+
+-- Auctionator's price for an item: copper, and its age in days when it says (nil = unknown).
+function A.auctionatorPrice(id)
+  local v1 = A.auctionator()
+  id = tonumber(id)
+  if not v1 or not id then return end
+  ator.reads = ator.reads + 1
+  local ok, v = pcall(v1.GetAuctionPriceByItemID, A.CALLER, id)
+  v = ok and tonumber(v) or nil
+  if not v or v <= 0 then return end
+  ator.found = ator.found + 1
+  local days
+  if has(v1, "GetAuctionAgeByItemID") then
+    local okAge, d = pcall(v1.GetAuctionAgeByItemID, A.CALLER, id)
+    days = okAge and tonumber(d) or nil
+  end
+  return v, days
+end
+
+-- Shows the names in Auctionator's search results (the auction house must be open).
+function A.searchAuctionator(names)
+  local v1 = A.auctionator()
+  if not has(v1, "MultiSearch") or type(names) ~= "table" or #names == 0 then return false end
+  local ok, err = pcall(v1.MultiSearch, A.CALLER, names)
+  ator.searches = ator.searches + 1
+  ator.last = ok and (#names .. (#names == 1 and " item" or " items")) or ("failed: " .. tostring(err))
+  return ok
+end
+
+----------------------------------------------------------------------------
 -- The price store: LevelingCodexDB.auction.realms[realm] = { fullAt, items = { [itemID] =
 -- { name, low, med, high, n, at, days = { [day] = { low, med } } } } }
 ----------------------------------------------------------------------------
@@ -104,9 +148,15 @@ end
 -- What the history says about an item: { name, low, med, high, n, at, usual, trend, days }.
 -- usual = the median of the daily values (median, else lowest); trend = the last day against the
 -- usual of the days before it, in percent (two days or more).
+-- Without a record of your own, Auctionator's price stands in ({ source = "Auctionator" }).
 function A.price(id)
   local it = tonumber(id) and A.store().items[tonumber(id)]
-  if type(it) ~= "table" then return end
+  if type(it) ~= "table" then
+    local v, days = A.auctionatorPrice(id)
+    if not v then return end
+    return { name = (ns.itemInfo(tonumber(id))), low = v, usual = v, n = 1, days = 0, source = "Auctionator",
+      at = days and (now() - days * 86400) or nil }
+  end
   local values, lastDay, last = {}, nil, nil
   for d, rec in pairs(type(it.days) == "table" and it.days or {}) do
     local v = type(rec) == "table" and (rec.med or rec.low)
@@ -436,7 +486,7 @@ local function pricedNeeds()
   for _, w in ipairs(A.needs()) do
     local id = w.id or A.idFor(w.name)
     local p = id and A.price(id)
-    if w.prof or (p and (p.n > 0 or p.usual)) or (not p and open and not searched[w.name:lower()]) then
+    if w.prof or (p and (p.n > 0 or p.usual)) or (not p and open and (A.auctionator() or not searched[w.name:lower()])) then
       w.id, w.p = id, p
       rows[#rows + 1] = w
     end
@@ -449,10 +499,13 @@ A.pricedNeeds = pricedNeeds
 local function rowPrice(w)
   local p = w.p
   if not p then
-    if open and not ns.db().noAuctionSearch and not searched[w.name:lower()] then return "searching" end
-    return "not seen yet"
+    if open and not ns.db().noAuctionSearch and not A.auctionator() and not searched[w.name:lower()] then return "searching" end
+    return A.auctionator() and "not in Auctionator yet" or "not seen yet"
   end
   local s
+  if p.source == "Auctionator" then
+    return ns.money(p.low) .. " each (Auctionator" .. (p.at and (", " .. A.age(p.at)) or "") .. ")"
+  end
   if p.n > 0 and p.low then s = ns.money(p.low) .. " each" else s = "none listed" end
   if p.usual and p.usual ~= p.low then s = s .. ", usual " .. ns.money(p.usual) end
   local t = A.trendText(p)
@@ -462,7 +515,7 @@ end
 A.rowPrice = rowPrice
 
 local function queueNeeds()
-  if ns.db().noAuctionSearch then return end
+  if ns.db().noAuctionSearch or A.auctionator() then return end
   for _, w in ipairs(A.needs()) do
     local id = w.id or A.idFor(w.name)
     local p = id and A.price(id)
@@ -571,6 +624,16 @@ local function makeCard()
   h.use:SetScript("OnClick", function() A.usePrice() end)
   h.scan = Art.button(h, 296, 22)
   h.scan:SetScript("OnClick", function() A.fullScan() end)
+  h.ator = Art.button(h, 296, 22)
+  h.ator:SetLabel("Search in Auctionator")
+  h.ator.codexLabel = "Search in Auctionator"
+  h.ator:SetScript("OnClick", function()
+    local names = {}
+    for _, w in ipairs(pricedNeeds()) do names[#names + 1] = w.name end
+    if A.searchAuctionator(names) then
+      ns.say("Searching Auctionator for " .. #names .. (#names == 1 and " item" or " items") .. " your guide needs.")
+    end
+  end)
   -- Never attached to the controller (ns.gamepad): like the vendor card, a popup that shows by
   -- itself must not take the focus from Blizzard's window.
   return h
@@ -608,6 +671,12 @@ function refreshCard()
     card.empty:SetText("Your guide needs nothing from the auction house right now.")
     y = y - 20
   end
+  local v1 = A.auctionator()
+  card.ator:SetShown(v1 ~= nil and #rows > 0 and has(v1, "MultiSearch"))
+  if card.ator:IsShown() then
+    card.ator:ClearAllPoints(); card.ator:SetPoint("TOPLEFT", 12, y - 2)
+    y = y - 28
+  end
   -- selling
   local s = A.sellItem()
   local key = s and (tostring(s.id) .. ":" .. tostring(s.name)) or nil
@@ -615,7 +684,7 @@ function refreshCard()
     sellSeen = key
     if s and s.name then
       local p = s.id and A.price(s.id)
-      if not (p and p.at and now() - p.at < 5 * 60) then A.search(s.name); A.pump() end
+      if not A.auctionator() and not (p and p.at and now() - p.at < 5 * 60) then A.search(s.name); A.pump() end
     end
   end
   local price, vendor = nil, nil
@@ -654,7 +723,8 @@ function refreshCard()
   card.scan:ClearAllPoints(); card.scan:SetPoint("TOPLEFT", 12, y - 4)
   y = y - 32
   local fullAt = A.store().fullAt
-  card.status:SetText(fullAt and ("Full scan " .. A.age(fullAt)) or (A.count() > 0 and (A.count() .. " prices") or "No prices yet"))
+  card.status:SetText(fullAt and ("Full scan " .. A.age(fullAt)) or (A.count() > 0 and (A.count() .. " prices"))
+    or (v1 and "Prices from Auctionator") or "No prices yet")
   card:SetHeight(-y + 8)
   if type(root) == "table" and has(root, "IsShown") then
     ns.placeByWindow(card, root, place)
@@ -679,6 +749,11 @@ function A.tooltipLines(id, shift)
   local out = {}
   local p = A.price(id)
   local vendor = tonumber((select(11, ns.itemInfo(id))))
+  -- Auctionator draws its own auction and vendor lines: the Codex adds only what its scans know
+  if A.auctionator() then
+    vendor = nil
+    if p and p.source then p = nil end
+  end
   if p then
     local line = p.n > 0 and p.low and ("Codex AH: " .. ns.coins(p.low)) or "Codex AH: none listed"
     if p.usual and p.usual ~= p.low then line = line .. "  usual " .. ns.coins(p.usual) end
@@ -693,7 +768,7 @@ function A.tooltipLines(id, shift)
         .. " / " .. ns.coins(p.high or p.low)
     end
     out[#out + 1] = "Codex AH listed: " .. ns.thousands(p.n) .. " at the last look"
-  elseif shift then
+  elseif shift and not A.auctionator() then
     out[#out + 1] = "Codex AH: not seen yet. Scan at the auction house to start."
   end
   return out
@@ -794,6 +869,11 @@ function ns.auctionDebugLines()
   out[#out + 1] = "auction: " .. (has(C, "ReplicateItems") and "C_AuctionHouse" or type(QueryAuctionItems) == "function"
     and "classic QueryAuctionItems" or "no auction API") .. ", " .. A.count() .. " prices on " .. realm()
     .. ", full scan " .. A.age(A.store().fullAt) .. (open and ", open" or "")
+  if A.auctionator() then
+    out[#out + 1] = "auction: Auctionator loaded, " .. ator.found .. " of " .. ator.reads .. " price reads answered, "
+      .. ator.searches .. " searches sent" .. (ator.last and (" (last " .. ator.last .. ")") or "")
+      .. "; the Codex's own searches are off"
+  end
   if last.full then
     out[#out + 1] = "auction full scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items"))
   end
@@ -821,7 +901,10 @@ ns.gold.addSection(10, function(y)
   local count, fullAt = A.count(), A.store().fullAt
   U.T(fullAt and ("Full scan " .. A.age(fullAt)) or "", 14, y, W - 28, "small", C.light, "RIGHT")
   y = y + 22
-  if count == 0 then
+  if count == 0 and A.auctionator() then
+    y = y + U.T("Auctionator is loaded: the Codex reads its prices, and Scan all adds a history of your own for the trend.",
+      14, y, W - 28, "small", C.light) + 6
+  elseif count == 0 then
     y = y + U.T("No price history yet: open the auction house and press Scan all to start. Prices come from your own scans.",
       14, y, W - 28, "small", C.dim) + 6
   else
@@ -860,6 +943,10 @@ ns.gold.addSection(10, function(y)
     "Lists what your guide still needs with today's price, the Scan all button, and a price for the item you're selling. The Codex never buys or posts.")
   tick("Search for my guide's items when I open it", not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end,
     "Quick searches for the items on the card, one at a time, when you open the auction house.")
+  if A.auctionator() then
+    y = y + U.T("With Auctionator loaded the Codex leaves searching to it: use Search in Auctionator on the card.",
+      14, y, W - 28, "small", C.dim) + 6
+  end
   if count > 0 then
     local armed = forgetAt and now() - forgetAt < 5
     local b = U.btn(armed and "Click again to forget" or "Forget prices", 14, y + 4, 180, function()
