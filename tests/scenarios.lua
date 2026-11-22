@@ -11052,6 +11052,12 @@ function S.auctionTools()
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 },
     { id = 2589, name = "Linen Cloth", count = 10, buyout = 1500 },
     { id = 2592, name = "Wool Cloth", count = 5, buyout = 1000 } }
+  -- the old floating card's off switch (an earlier build) must not take the tabs away, and a
+  -- "*Tab*" button away from the tab row must not carry them off
+  LevelingCodexDB.noAuctionCard = true
+  local stray = CreateFrame("Button", "AuctionHouseFrameStrayTab", AuctionHouseFrame)
+  stray:SetSize(40, 20)
+  stray._left, stray._top = 2000, 600
   MOCK.openAuction()
   MOCK.advance(8)
   check(not _G.LevelingCodexAuctionCard and not _G.LevelingCodexTradeCard, "no cards float over the auction house")
@@ -11063,12 +11069,20 @@ function S.auctionTools()
   local panel = _G.LevelingCodexAHPanel
   check(panel and panel:IsShown() and questText(panel, "LEVELING CODEX"), "the Codex tab shows its panel")
   check(tabButton._points[1] and tabButton._points[1][2] == AuctionHouseFrame.Tabs[3], "the tab sits after the last tab")
+  local deals = findButton(AuctionHouseFrame, function(l) return l == "Deals" end)
+  local sell = findButton(AuctionHouseFrame, function(l) return l == "Quick Sell" end)
+  local scan = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
+  check(deals and sell and scan and deals:GetParent() == AuctionHouseFrame and deals._points[1][2] == tabButton
+    and sell._points[1][2] == deals and scan._points[1][2] == sell, "Deals, Quick Sell and Scan are tabs of their own after Codex")
+  click(AuctionHouseFrame, "Deals")
+  check(panel:IsShown() and questText(panel, "CODEX DEALS"), "the Deals tab opens its page")
+  click(AuctionHouseFrame, "Codex")
   check(questText(panel, "FOR YOUR GUIDE") and questText(panel, "x Linen Cloth") and questText(panel, "1s each"),
     "Overview prices the cloth the guide needs")
   click(AuctionHouseFrame, "Buy")
   check(not panel:IsShown() and MOCK.displayMode == "Buy", "another tab hides the Codex panel")
   click(AuctionHouseFrame, "Codex")
-  click(panel, "Scan")
+  click(AuctionHouseFrame, "Scan")
   check(questText(panel, "FULL SCAN") and questText(panel, "LOOK UP AN ITEM"), "the Scan page")
   click(panel, "Scan speed Fast")
   check(LevelingCodexDB.auctionScanSpeed == 16, "Scan speed sets how much of a frame a scan may use")
@@ -11111,10 +11125,10 @@ function S.auctionTools()
   click(win(), "Forget prices")
   click(win(), "Forget prices")
   check(questText(win(), "No price history yet"), "Forget prices clears the history")
-  click(win(), "Add a Codex tab to the auction house")
+  click(win(), "Add the Codex tabs to the auction house")
   MOCK.openAuction()
   MOCK.advance(0.5)
-  check(not findButton(AuctionHouseFrame, function(l) return l == "Codex" end) and not panel:IsShown(), "the setting takes the tab away")
+  check(not findButton(AuctionHouseFrame, function(l) return l == "Codex" or l == "Deals" end) and not panel:IsShown(), "the setting takes the tabs away")
   MOCK.closeAuction()
   MOCK.removeSkill("Tailoring")
 end
@@ -11182,8 +11196,20 @@ function S.auctionAuctionator()
   check(tipHas("Codex prices") and tipHas("(Auctionator)") and tipHas("Trend") and not tipHas("Lowest now"),
     "with days of history the block adds the trend and leaves the price to Auctionator")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
+  -- Auctionator's tabs: unnamed buttons on a frame of their own, in the row after Auctions
+  local holder = CreateFrame("Frame", nil, AuctionHouseFrame)
+  local atorTabs = {}
+  for i = 1, 4 do
+    local t = CreateFrame("Button", nil, holder)
+    t:SetSize(90, 32)
+    t._left, t._top = 279 + (i - 1) * 93, 102
+    atorTabs[i] = t
+  end
   MOCK.openAuction()
   MOCK.advance(8)
+  local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
+  check(codexTab and codexTab._points[1] and codexTab._points[1][2] == atorTabs[4]
+    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(), "the Codex tabs start after Auctionator's last tab, above them")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")
   local card = _G.LevelingCodexAHPanel
@@ -11245,7 +11271,7 @@ function S.auctionTrade()
   click(AuctionHouseFrame, "Codex")
   local card = _G.LevelingCodexAHPanel
   check(questText(card, "MONEY TO MAKE") and questText(card, "to sell, about"), "Overview sums up what there is to sell")
-  click(card, "Selling")
+  click(AuctionHouseFrame, "Quick Sell")
   check(card:IsShown() and questText(card, "20 x Linen Cloth"), "Selling lists what to sell")
   check(not questText(card, "Bound Ring"), "a bound item isn't offered")
   check(questText(card, "A vendor pays 50c each: sell it there"), "a price under the vendor's is blocked")
@@ -11283,7 +11309,7 @@ function S.auctionTrade()
   MOCK.advance(2)
   check(MOCK.cancelled == 1 and chatHas("comes back by mail") and questText(card, "nothing listed"), "the second click cancels it")
   -- deals
-  click(card, "Deals")
+  click(AuctionHouseFrame, "Deals")
   check(questText(card, "Light Leather") and questText(card, "vendor pays 50c") and questText(card, "+30c each"),
     "Deals lists flips and listings under vendor price")
   click(card, "Deal Tigerseye")
@@ -11320,7 +11346,7 @@ function S.auctionTrade()
   -- a flip posted under what you paid asks twice
   MOCK.bagItems[#MOCK.bagItems + 1] = { name = "Light Leather", id = 2318, quality = 1, level = 1, sell = 0, count = 1, class = "Trade Goods", item = true }
   check(T.sellPrice(2318).loss == 40, "a post under what you paid is flagged")
-  click(card, "Selling")
+  click(AuctionHouseFrame, "Quick Sell")
   click(card, "Post Light Leather")
   check(#MOCK.posted == 3 and chatHas("you paid"), "posting it under what you paid asks for a second click")
   check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 2 buys", 1, true), "/codex debug counts posts and buys")
@@ -11330,7 +11356,7 @@ function S.auctionTrade()
   click(win(), "5%")
   check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
   -- the sniper
-  click(card, "Deals")
+  click(AuctionHouseFrame, "Deals")
   MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 1, buyout = 20 }
   local before = #MOCK.browsed
   click(card, "Snipe deals")
@@ -11344,7 +11370,7 @@ function S.auctionTrade()
   local after = #MOCK.browsed
   MOCK.advance(5)
   check(not MOCK.ns.auction.sniper.on and #MOCK.browsed <= after + 1, "a second click stops it")
-  for _, pg in ipairs({ "Overview", "Deals", "Selling", "Scan" }) do click(card, pg) end
+  for _, pg in ipairs({ "Codex", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
   MOCK.closeAuction()
 end

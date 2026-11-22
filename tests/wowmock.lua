@@ -1497,7 +1497,7 @@ function AuctionHouseFrame:SetDisplayMode(mode) MOCK.displayMode = mode end
 for i, label in ipairs({ "Buy", "Sell", "Auctions" }) do
   local t = CreateFrame("Button", "AuctionHouseFrame" .. label .. "Tab", AuctionHouseFrame)
   t:SetSize(90, 32)
-  t._left = (i - 1) * 93
+  t._left, t._top = (i - 1) * 93, 102
   t:SetText(label)
   t:SetScript("OnClick", function() AuctionHouseFrame:SetDisplayMode(label) end)
   AuctionHouseFrame.Tabs[i] = t
@@ -2061,6 +2061,7 @@ ALLOWED_GLOBALS.QuestInfoRewardsFrame = true
 ALLOWED_GLOBALS.ClassTrainerFrame = true
 ALLOWED_GLOBALS.TaxiFrame = true
 for i = 1, 4 do ALLOWED_GLOBALS["TaxiButton" .. i] = true end
+ALLOWED_GLOBALS.AuctionHouseFrameStrayTab = true
 function MOCK.snapshotGlobals()
   MOCK.globals0 = {}
   for k in pairs(_G) do MOCK.globals0[k] = true end
