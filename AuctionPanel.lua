@@ -41,21 +41,36 @@ function P.page() return page end
 -- The tab button
 ----------------------------------------------------------------------------
 
--- Tab buttons hanging under the auction house: its Tabs list and named children with "Tab".
+-- Tab buttons hanging under the auction house: its Tabs list, named children with "Tab", and any
+-- button in the row under it, however deep (Auctionator puts its tabs on a frame of its own, so
+-- they were missed and drew over the Codex tabs).
+local function inRow(r, b)
+  local bottom = tonumber((try(r.GetBottom, r)))
+  local t = has(b, "GetTop") and tonumber((try(b.GetTop, b)))
+  if not (bottom and t) then return nil end
+  return t >= bottom - 40 and t <= bottom + 12
+end
+
 local function tabsOf(r)
   local list, seen = {}, {}
   local function add(b)
     if type(b) == "table" and not ours[b] and not seen[b] and has(b, "IsShown") then seen[b] = true; list[#list + 1] = b end
   end
   if type(r.Tabs) == "table" then for _, b in ipairs(r.Tabs) do add(b) end end
-  if has(r, "GetChildren") then
-    for _, c in ipairs({ r:GetChildren() }) do
-      local name = has(c, "GetName") and c:GetName()
-      local kind = has(c, "GetObjectType") and c:GetObjectType()
-      if type(name) == "string" and name:lower():find("tab", 1, true) and kind == "Button"
-        and not name:find("^LevelingCodex") then add(c) end
+  local function walk(f, depth)
+    if not has(f, "GetChildren") or depth > 3 then return end
+    for _, c in ipairs({ f:GetChildren() }) do
+      if not ours[c] and c ~= panel then
+        local name = has(c, "GetName") and c:GetName()
+        local kind = has(c, "GetObjectType") and c:GetObjectType()
+        local button = kind == "Button" or kind == "CheckButton"
+        local named = type(name) == "string" and name:lower():find("tab", 1, true) and not name:find("^LevelingCodex")
+        if button and ((depth == 1 and named) or inRow(r, c)) then add(c)
+        elseif not button and has(c, "IsShown") and c:IsShown() then walk(c, depth + 1) end
+      end
     end
   end
+  walk(r, 1)
   return list
 end
 
@@ -73,18 +88,19 @@ local function place()
   if not tab or not root then return end
   -- only buttons in the row under the auction house (a stray "*Tab*" button elsewhere would
   -- carry the Codex tabs off with it)
-  local bottom = tonumber((try(root.GetBottom, root)))
-  local shown = {}
+  local shown, level = {}, 0
   for _, b in ipairs(tabsOf(root)) do
-    if b:IsShown() then
+    local visible = has(b, "IsVisible") and b:IsVisible() or (not has(b, "IsVisible") and b:IsShown())
+    if visible and inRow(root, b) ~= false then
       local l, r = edges(b)
-      local t = tonumber((try(b.GetTop, b)))
-      local inRow = not (bottom and t) or math.abs(t - bottom) <= 40
-      if l and r and inRow then shown[#shown + 1] = { b = b, l = l, r = r } end
+      if l and r then shown[#shown + 1] = { b = b, l = l, r = r } end
+      level = math.max(level, tonumber((try(b.GetFrameLevel, b))) or 0)
     end
   end
-  placedAfter = shown[#shown] and shown[#shown].b or nil
   table.sort(shown, function(a, b) return a.r < b.r end)
+  placedAfter = shown[#shown] and shown[#shown].b or nil
+  -- above every other tab, so nothing that lands on the row later can cover them
+  for _, t in ipairs(tabs) do if has(t, "SetFrameLevel") then pcall(t.SetFrameLevel, t, level + 2) end end
   tab:ClearAllPoints()
   local last, prev = shown[#shown], shown[#shown - 1]
   if last then
@@ -862,7 +878,9 @@ function P.onShow(r)
   hookTabs()
   place()
   -- Auctionator and other add-ons add their tabs a moment later
-  ns.after(1, function() if root and root:IsShown() and tabs[1] then hookTabs(); place() end end)
+  for _, wait in ipairs({ 0.3, 1, 3 }) do
+    ns.after(wait, function() if root and root:IsShown() and tabs[1] then hookTabs(); place() end end)
+  end
   picked = false
   if reopen then
     P.open()

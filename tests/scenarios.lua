@@ -11196,8 +11196,20 @@ function S.auctionAuctionator()
   check(tipHas("Codex prices") and tipHas("(Auctionator)") and tipHas("Trend") and not tipHas("Lowest now"),
     "with days of history the block adds the trend and leaves the price to Auctionator")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
+  -- Auctionator's tabs: unnamed buttons on a frame of their own, in the row after Auctions
+  local holder = CreateFrame("Frame", nil, AuctionHouseFrame)
+  local atorTabs = {}
+  for i = 1, 4 do
+    local t = CreateFrame("Button", nil, holder)
+    t:SetSize(90, 32)
+    t._left, t._top = 279 + (i - 1) * 93, 102
+    atorTabs[i] = t
+  end
   MOCK.openAuction()
   MOCK.advance(8)
+  local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
+  check(codexTab and codexTab._points[1] and codexTab._points[1][2] == atorTabs[4]
+    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(), "the Codex tabs start after Auctionator's last tab, above them")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")
   local card = _G.LevelingCodexAHPanel
