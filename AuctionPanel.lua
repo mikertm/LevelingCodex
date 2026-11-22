@@ -109,8 +109,8 @@ local function place()
   for _, t in ipairs(tabs) do if has(t, "SetFrameLevel") then pcall(t.SetFrameLevel, t, level + 2) end end
   tab:ClearAllPoints()
   local last, prev = shown[#shown], shown[#shown - 1]
-  -- a row too long to take them (Auctionator adds four tabs): a second row under it, ending at the
-  -- auction house's bottom right corner
+  -- a row too long to take them (Auctionator adds four tabs): a column on the auction house's
+  -- right edge, up from its bottom right corner
   local width = 0
   for i, t in ipairs(tabs) do width = width + (tonumber((try(t.GetWidth, t))) or 90) - (i > 1 and 8 or 0) end
   local rootRight, rootBottom = tonumber((try(root.GetRight, root))), tonumber((try(root.GetBottom, root)))
@@ -121,13 +121,14 @@ local function place()
   end
   placedBelow = nil
   if last and rootRight and rootBottom and rowBottom and last.r + 10 + width > rootRight + 4 then
+    -- a column up the auction house's right edge from its bottom corner, Codex on top
     placedBelow = true
     local n = #tabs
     tabs[n]:ClearAllPoints()
-    tabs[n]:SetPoint("TOPRIGHT", root, "BOTTOMRIGHT", -8, rowBottom - rootBottom + 6)
+    tabs[n]:SetPoint("BOTTOMLEFT", root, "BOTTOMRIGHT", -2, 8)
     for i = n - 1, 1, -1 do
       tabs[i]:ClearAllPoints()
-      tabs[i]:SetPoint("RIGHT", tabs[i + 1], "LEFT", 8, 0)
+      tabs[i]:SetPoint("BOTTOMLEFT", tabs[i + 1], "TOPLEFT", 0, 2)
     end
     return
   end
@@ -1461,7 +1462,7 @@ function ns.auctionPanelDebugLines()
     local l, t = tonumber((try(tabs[1].GetLeft, tabs[1]))), tonumber((try(tabs[1].GetTop, tabs[1])))
     local name = placedAfter and has(placedAfter, "GetName") and placedAfter:GetName()
     where = (tabs[1]:IsVisible() and "visible" or "not visible") .. " at " .. (l and math.floor(l) or "?") .. ", " .. (t and math.floor(t) or "?")
-      .. (placedBelow and ", in their own row at the bottom right corner (the tab row is full)"
+      .. (placedBelow and ", in a column up the right edge from the bottom corner (the tab row is full)"
         or (", after " .. (placedAfter and (name or "an unnamed tab") or "nothing (bottom left)")))
   end
   local rootName = type(root) == "table" and has(root, "GetName") and root:GetName() or (root and "unnamed frame" or "none")

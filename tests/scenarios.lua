@@ -11247,10 +11247,11 @@ function S.auctionAuctionator()
   local codexTab = findButton(AuctionHouseFrame, function(l) return l == "Codex" end)
   local scanTab = findButton(AuctionHouseFrame, function(l) return l == "Scan" end)
   local sp = scanTab and scanTab._points[1]
-  check(sp and sp[1] == "TOPRIGHT" and sp[2] == AuctionHouseFrame and sp[3] == "BOTTOMRIGHT"
-    and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(),
-    "with Auctionator's tabs the row is full: the Codex tabs get a row of their own at the bottom right corner")
-  check(table.concat(MOCK.ns.auctionPanelDebugLines(), " "):find("own row", 1, true), "/codex debug says where the tabs went")
+  local cp = codexTab._points[1]
+  check(sp and sp[1] == "BOTTOMLEFT" and sp[2] == AuctionHouseFrame and sp[3] == "BOTTOMRIGHT"
+    and cp and cp[1] == "BOTTOMLEFT" and cp[3] == "TOPLEFT" and codexTab:GetFrameLevel() > atorTabs[4]:GetFrameLevel(),
+    "with Auctionator's tabs the row is full: the Codex tabs stand in a column up the right edge from the bottom corner")
+  check(table.concat(MOCK.ns.auctionPanelDebugLines(), " "):find("column up the right edge", 1, true), "/codex debug says where the tabs went")
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
   click(AuctionHouseFrame, "Codex")
   local card = _G.LevelingCodexAHPanel
