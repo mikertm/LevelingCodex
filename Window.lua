@@ -272,7 +272,7 @@ local function icon(name, x, y, size, title, text)
   f.tex:SetVertexColor(1, 1, 1)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
-  f.tipTitle, f.tipText = title, text
+  f.tipTitle, f.tipText, f.codexLabel = title, text, nil
   return f
 end
 

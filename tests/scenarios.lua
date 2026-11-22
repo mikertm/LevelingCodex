@@ -12774,6 +12774,19 @@ function S.journeyTab()
     if p[1] then click(win(), p[1]) end
     for i = 2, #p do check(questText(win(), p[i]), "the Journey " .. (p[1] or "Overview") .. " page has " .. p[i]) end
   end
+  -- the Map page: every moment it holds, layers that switch on and off
+  if not MOCK.minimal then
+  click(win(), "Map")
+  check(questText(win(), "WHAT HAPPENED HERE"), "the Map page lists what happened on that map")
+  check(findButton(win(), function(l) return l == "Layer Quests" end), "the Map page has a switch per layer")
+  click(win(), "Layer Quests")
+  check(type(LevelingCodexDB.journeyMapHide) == "table" and LevelingCodexDB.journeyMapHide.quests, "a layer switch hides its moments")
+  check(findButton(win(), function(l) return l == "Layer Quests" end), "the switch stays after the redraw")
+  click(win(), "Layer Quests")
+  check(not LevelingCodexDB.journeyMapHide.quests, "and shows them again")
+  check(MOCK.ns.journey.pageError == nil, "the Map page draws without an error: " .. tostring(MOCK.ns.journey.pageError))
+  click(win(), "Story")
+  end
   check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
   if MOCK.minimal then return end -- no optional events, no map positions
   check(questText(win(), "Brought down Hogger"), "the story has the turn-in")

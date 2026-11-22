@@ -261,7 +261,9 @@ end
 -- Every map with a trail or a pinned moment, in the order you first saw it.
 local function mapList(j)
   local maps, listed = {}, {}
-  local function addMap(m) if m and not listed[m] then listed[m] = true; maps[#maps + 1] = m end end
+  local function addMap(m)
+    if m and not listed[m] and not select(3, zoneOf(m)) then listed[m] = true; maps[#maps + 1] = m end
+  end
   local pinned = {}
   for _, e in ipairs(j.events) do if e.m then pinned[e.m] = true end end
   for _, m in ipairs(j.order) do if j.trail[m] or pinned[m] then addMap(m) end end
@@ -269,6 +271,45 @@ local function mapList(j)
   for m in pairs(j.trail) do addMap(m) end
   return maps
 end
+
+-- The map's layers: the trail, then the moments by kind (each a switch on the Map page, kept in
+-- db.journeyMapHide; the chapter plates show them all). pin = a raid marker for its own kinds.
+local LAYERS = {
+  { key = "trail", label = "Trail", tip = "The roads you walked, coloured by your level." },
+  { key = "levels", label = "Levels", pin = PIN.level, color = { 1, 0.85, 0.3 }, kinds = { level = true, start = true, cap = true },
+    tip = "Where you reached each level." },
+  { key = "quests", label = "Quests", icon = ICON.quest, color = { 0.95, 0.8, 0.35 },
+    kinds = { quest = true, chain = true, abandon = true }, tip = "Where you finished quests and stories." },
+  { key = "battles", label = "Battles", pin = PIN.boss, color = { 0.85, 0.35, 0.25 },
+    kinds = { boss = true, rare = true, elite = true, pvp = true, bg = true, duel = true, dungeon = true, run = true },
+    tip = "Bosses, rares, elites, dungeons and fights with other players." },
+  { key = "falls", label = "Falls", pin = PIN.death, color = { 0.6, 0.15, 0.12 }, kinds = { death = true, close = true, wipe = true },
+    tip = "Where you fell, wiped or nearly did." },
+  { key = "travels", label = "Travels", icon = ICON.zone, color = { 0.35, 0.7, 0.95 },
+    kinds = { zone = true, flight = true, mount = true, home = true, rest = true, camp = true, milestone = true },
+    tip = "New lands, flight paths, inns, homes, campfires and milestones." },
+  { key = "fortunes", label = "Fortunes", icon = ICON.gold, color = { 0.4, 0.8, 0.35 },
+    kinds = { first = true, upgrade = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
+      mine = true, herb = true, skin = true, fish = true }, tip = "Loot, gear, crafting, gathering, fishing and gold." },
+  { key = "fellowship", label = "Fellowship", icon = ICON.pal, color = { 0.75, 0.55, 0.95 },
+    kinds = { pal = true, rez = true, trade = true, emote = true, guild = true }, tip = "Companions, rezzes, trades and kind words." },
+}
+local function layerOf(e)
+  for i = 2, #LAYERS do if LAYERS[i].kinds[e.k] then return LAYERS[i] end end
+  return LAYERS[6] -- anything else is part of the road
+end
+local function layerOn(key, all)
+  if all then return true end
+  local hide = ns.db().journeyMapHide
+  return not (type(hide) == "table" and hide[key])
+end
+local function toggleLayer(key)
+  local db = ns.db()
+  if type(db.journeyMapHide) ~= "table" then db.journeyMapHide = {} end
+  db.journeyMapHide[key] = not db.journeyMapHide[key] or nil
+end
+-- how much a moment matters when pins share a spot (the top one shows)
+local WEIGHT = { falls = 6, battles = 5, levels = 4, fellowship = 3, quests = 2, fortunes = 2, travels = 1 }
 
 local function mapLabel(j, map)
   local _, name = zoneOf(map)
@@ -282,7 +323,7 @@ local function lore(name)
 end
 
 -- The map plate at (mx, my, mw x mh): art or a gridded parchment, the trail, you and the pins.
-local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel)
+local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
   local U, C, j = V.U, V.C, V.j
   local ink = C.ink or C.light
   U.rect(mx - 4, my - 4, mw + 8, mh + 8, { ink[1], ink[2], ink[3], 0.55 }, "border", -5)
@@ -299,7 +340,7 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel)
   -- the trail: each dot a bright centre on a dark halo, so it reads on light and dark map art
   local small = mw < 400
   local hs, ds = small and 5 or 7, small and 3 or 4
-  for _, r in ipairs(J.runs(map, small and 200 or 400, onlyLevel)) do
+  for _, r in ipairs(layerOn("trail", all) and J.runs(map, small and 200 or 400, onlyLevel) or {}) do
     local c = J.bandColor(r.level)
     for _, pt in ipairs(r.pts) do
       local cx, cy = mx + pt[1] / 100 * mw, my + pt[2] / 100 * mh
@@ -317,39 +358,105 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel)
     U.T("You", cx + 8, cy - 7, 40, "small", gold, nil, true)
     U.hit(cx - 8, cy - 8, 16, 16, "You are here", nil, nil, "You are here")
   end
+  -- the moments: one pin per spot (moments a pin apart share it, the weightiest on top, a count beside)
+  local cell = pinSize + 2
+  local spots, order = {}, {}
   for _, e in ipairs(J.pinsOn(map, onlyLevel)) do
-    local file = PIN[e.k]
-    local big = highlight == e
-    if file or big then
-      local size = big and pinSize + 8 or pinSize
-      local px, py = mx + e.x / 100 * mw - size / 2, my + e.y / 100 * mh - size / 2
-      local gold = ns.C.gold
-      if big then disc(U, px - 4, py - 4, size + 8, { gold[1], gold[2], gold[3], 0.6 }, nil, "journeyRing", true) end
-      pinArt(U, ns.C, file or PIN.level, px, py, size)
-      U.hit(px, py, size, size, e.s, "Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t), nil, "Pin " .. e.s)
+    local lay = layerOf(e)
+    if layerOn(lay.key, all) or highlight == e then
+      local px, py = mx + e.x / 100 * mw, my + e.y / 100 * mh
+      local key = math.floor(px / cell) .. ":" .. math.floor(py / cell)
+      local sp = spots[key]
+      if not sp then sp = { x = px, y = py, list = {} }; spots[key] = sp; order[#order + 1] = sp end
+      sp.list[#sp.list + 1] = { e = e, lay = lay }
+    end
+  end
+  local gold = ns.C.gold
+  for _, sp in ipairs(order) do
+    table.sort(sp.list, function(a, b)
+      if (a.e == highlight) ~= (b.e == highlight) then return a.e == highlight end
+      local wa, wb = WEIGHT[a.lay.key] or 0, WEIGHT[b.lay.key] or 0
+      if wa ~= wb then return wa > wb end
+      return (a.e.t or 0) > (b.e.t or 0)
+    end)
+    local top = sp.list[1]
+    local e, lay = top.e, top.lay
+    local big = highlight and e == highlight
+    local size = big and pinSize + 8 or pinSize
+    local px, py = sp.x - size / 2, sp.y - size / 2
+    local tipText = "Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t) .. (e.d and ("  -  " .. e.d) or "")
+    if #sp.list > 1 then
+      local more = { tipText, "", "Also here:" }
+      for i = 2, math.min(7, #sp.list) do more[#more + 1] = "- " .. sp.list[i].e.s end
+      if #sp.list > 7 then more[#more + 1] = "... and " .. (#sp.list - 7) .. " more" end
+      tipText = table.concat(more, "\n")
+    end
+    if big then disc(U, px - 4, py - 4, size + 8, { gold[1], gold[2], gold[3], 0.7 }, nil, "journeyRing", true) end
+    local file = lay.pin and PIN[e.k]
+    local function pick() highlight = (highlight ~= e) and e or nil; U.refresh() end
+    if file then
+      disc(U, px - 2, py - 2, size + 4, { 0.08, 0.05, 0.02, 0.6 }, 1, "journeyHalo", true)
+      pinArt(U, ns.C, file, px, py, size)
+      U.hit(px, py, size, size, e.s, tipText, pick, "Pin " .. e.s)
+    else
+      local c = lay.color or gold
+      disc(U, px - 2, py - 2, size + 4, { c[1], c[2], c[3], 1 }, 1, "journeyHalo", true)
+      local f = U.icon(ICON[e.k] or lay.icon or ICON.quest, px, py, size, e.s, tipText)
+      if f then
+        if f.ring then f.ring:SetColorTexture(c[1], c[2], c[3], 1) end
+        f:SetScript("OnClick", pick)
+        f.codexLabel = "Pin " .. e.s
+      end
+    end
+    if #sp.list > 1 then
+      local n = #sp.list > 9 and "9+" or tostring(#sp.list)
+      disc(U, px + size - 5, py + size - 7, 12, { 0.1, 0.06, 0.03, 0.9 }, 3, "journeyRing", true)
+      U.T(n, px + size - 7, py + size - 6, 16, "small", { 1, 0.9, 0.6 }, "CENTER", true)
     end
   end
 end
 
--- The map's key: the level bands, then the pins (on two lines when narrow).
-local function legend(V, x, y, w)
+-- The map's key: the level bands, then a switch per layer (four to a row; a click shows or hides it,
+-- "Layer <label>"); counts = moments of each layer on this map. Returns the height.
+local function legend(V, x, y, w, counts)
   local U, C = V.U, V.C
   local lx = x
+  local bw = math.floor(w / #J.BANDS)
   for _, b in ipairs(J.BANDS) do
     disc(U, lx, y + 2, 10, b[3], nil, "journeyDot")
-    U.T(b[4], lx + 13, y + 1, 44, "small", C.dim)
-    lx = lx + 56
+    U.T(b[4], lx + 13, y + 1, bw - 13, "small", C.dim)
+    lx = lx + bw
   end
-  local narrow = w < 500
-  local kx, ky = narrow and x or (x + w - 150), narrow and (y + 18) or y
-  for _, k in ipairs({ { "level", "level up" }, { "death", "fell" }, { "boss", "boss" }, { "close", "close call" } }) do
-    if narrow or k[1] == "level" or k[1] == "death" then
-      pinArt(U, C, PIN[k[1]], kx, ky, 14)
-      U.T(k[2], kx + 18, ky + 1, 70, "small", C.dim)
-      kx = kx + 84
+  y = y + 20
+  local per, gap = 4, 6
+  local cw = math.floor((w - (per - 1) * gap) / per)
+  local ink = C.ink or C.light
+  for i, lay in ipairs(LAYERS) do
+    local cx, cy = x + ((i - 1) % per) * (cw + gap), y + math.floor((i - 1) / per) * 30
+    local on = layerOn(lay.key)
+    local c = lay.color or C.gold
+    U.rect(cx, cy, cw, 26, { ink[1], ink[2], ink[3], on and 0.12 or 0.03 }, "border", -2)
+    U.rect(cx, cy, 3, 26, { c[1], c[2], c[3], on and 1 or 0.3 }, "border", -1)
+    if lay.key == "trail" then
+      disc(U, cx + 9, cy + 8, 10, { 0.08, 0.05, 0.02, on and 0.55 or 0.2 }, 1, "journeyHalo")
+      disc(U, cx + 11, cy + 10, 6, { c[1], c[2], c[3], on and 1 or 0.3 }, 2, "journeyDot")
+    elseif lay.pin then
+      local t = pinArt(U, C, lay.pin, cx + 7, cy + 6, 14)
+      t:SetAlpha(on and 1 or 0.35)
+    else
+      disc(U, cx + 7, cy + 6, 14, { c[1], c[2], c[3], on and 1 or 0.3 }, 1, "journeyHalo")
+      local f = U.icon(lay.icon, cx + 9, cy + 8, 10, nil, nil)
+      if f then f:EnableMouse(false); f.tex:SetAlpha(on and 1 or 0.35) end
     end
+    local n = counts and counts[lay.key]
+    U.T(lay.label, cx + 26, cy + 6, cw - 28, "small", on and ink or (C.inkSoft or C.dim))
+    if n and n > 0 then U.T(tostring(n), cx + 26, cy + 6, cw - 30, "small", C.inkSoft or C.dim, "RIGHT") end
+    U.hit(cx, cy, cw, 26, (on and "Hide " or "Show ") .. lay.label:lower(), lay.tip, function()
+      toggleLayer(lay.key)
+      U.refresh()
+    end, "Layer " .. lay.label)
   end
-  return narrow and 40 or 22
+  return 20 + math.ceil(#LAYERS / per) * 30
 end
 
 -- Chapters by level, newest first; each with its moments newest first.
@@ -450,7 +557,7 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
     local pw = 148
     local ph = math.floor(pw * 668 / 1002)
     local px, py = x + w - 14 - pw, y + 4
-    drawPlate(V, plateMap, px, py, pw, ph, 9, l)
+    drawPlate(V, plateMap, px, py, pw, ph, 9, l, true)
     U.hit(px, py, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
       mapPick, highlight = plateMap, nil
       openPage(P_MAP, U)
@@ -765,7 +872,7 @@ local function whereCard(V, y)
     y = y + 18
     local mw = W - 28
     local mh = math.floor(mw * 668 / 1002)
-    drawPlate(V, show, 14, y, mw, mh, 10)
+    drawPlate(V, show, 14, y, mw, mh, 10, nil, true)
     y = y + mh + 10
     U.btn("Open the map", 14, y, 130, function() mapPick, highlight = show, nil; openPage(P_MAP, U) end, false,
       "Your whole trail, land by land.")
@@ -860,7 +967,14 @@ local function mapPage(V, y)
     local mh = math.floor(mw * 668 / 1002)
     drawPlate(L, mapPick, 14, ly, mw, mh, 13)
     ly = ly + mh + 10
-    ly = ly + legend(L, 14, ly, W - 28)
+    local counts = { trail = nil }
+    for _, e in ipairs(J.pinsOn(mapPick)) do
+      local k = layerOf(e).key
+      counts[k] = (counts[k] or 0) + 1
+    end
+    ly = ly + legend(L, 14, ly, W - 28, counts)
+    ly = ly + U.T("Hover a pin to read what happened there; click it to mark it. A number beside a pin counts the moments it holds.",
+      14, ly, W - 28, "small", C.dim) + 8
   end
   U.box(0, top, W, ly - top, C.panel, C.edge)
   ly = ly + 12
@@ -930,6 +1044,39 @@ local function mapPage(V, y)
     end
     ry = ry + 8
     page(U, C, 0, top, W, ry - top)
+    ry = ry + 12
+    -- the moments on this map, newest first, following the layers
+    local here = {}
+    for _, e in ipairs(J.pinsOn(mapPick)) do
+      if layerOn(layerOf(e).key) then table.insert(here, 1, e) end
+    end
+    top = ry
+    ry = cardTitle(R, "WHAT HAPPENED HERE", 0, ry, W, #here > 0 and plural(#here, "moment") or nil)
+    if #here == 0 then
+      ry = ry + U.T(n > 0 and "The layers you switched off hide what happened here." or "Nothing written on this map yet.", 14, ry, W - 28,
+        "small", C.dim) + 10
+    end
+    for i, e in ipairs(here) do
+      if i > 12 then
+        ry = ry + U.T("... and " .. plural(#here - 12, "more moment") .. " (the Story has them all).", 14, ry, W - 28, "small", C.dim) + 6
+        break
+      end
+      local lay = layerOf(e)
+      local c = lay.color or C.gold
+      local lit = highlight == e
+      if lit then U.rect(8, ry - 3, W - 16, 30, { C.gold[1], C.gold[2], C.gold[3], 0.18 }) end
+      U.rect(14, ry, 3, 24, { c[1], c[2], c[3], 1 }, "border")
+      U.icon(ICON[e.k] or lay.icon or ICON.quest, 22, ry, 22, e.s, e.d)
+      local h = U.T(e.s, 50, ry, W - 64, "small", C.ink or C.light)
+      U.T("Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t) .. "  -  " .. lay.label:lower(), 50, ry + h + 1, W - 64, "small", C.dim)
+      U.hit(8, ry - 3, W - 16, math.max(28, h + 18), e.s, "Click to mark it on the map.", function()
+        highlight = (highlight ~= e) and e or nil
+        U.refresh()
+      end, "Moment " .. e.s)
+      ry = ry + math.max(30, h + 20)
+    end
+    ry = ry + 4
+    U.box(0, top, W, ry - top, C.panel, C.edge)
     ry = ry + 12
   end
   if #maps > 0 then
@@ -1124,7 +1271,7 @@ local function chapterSpread(V, y, l, events)
   if plateMap then
     local pw = R.W - 20
     local ph = math.floor(pw * 668 / 1002)
-    drawPlate(R, plateMap, 10, ry, pw, ph, 11, l)
+    drawPlate(R, plateMap, 10, ry, pw, ph, 11, l, true)
     R.U.hit(10, ry, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
       mapPick, highlight = plateMap, nil
       openPage(P_MAP, R.U)
