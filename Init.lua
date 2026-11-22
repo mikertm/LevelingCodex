@@ -45,6 +45,7 @@ local function start()
   ns.startVendor()
   ns.startPace()
   ns.startStats()
+  ns.startGold()
 end
 
 local events = CreateFrame("Frame")

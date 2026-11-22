@@ -1179,6 +1179,7 @@ def main():
             runs.append(("WARRIOR/minimal/step-buttons", "WARRIOR", True, ["stepButtons"]))
             runs.append(("WARRIOR/minimal/elite-fresh", "WARRIOR", True, ["questEliteFresh"]))
         runs.append(("WARRIOR/%s/stats-tab" % variant, "WARRIOR", minimal, ["statsTab", "tabRowFits"]))
+        runs.append(("WARRIOR/%s/gold-mount" % variant, "WARRIOR", minimal, ["goldMountFund"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))
         runs.append(("WARRIOR/%s/pace" % variant, "WARRIOR", minimal, ["paceCard"]))

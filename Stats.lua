@@ -183,6 +183,17 @@ end
 
 function S.data() return session, saved() end
 
+-- Net gold per hour this session (copper), nil before 5 minutes of play or without a gain.
+function S.goldRate()
+  local now = time and time() or 0
+  local seconds = now - (tonumber(session.started) or now)
+  if seconds < 300 then return end
+  local function total(t) local n = 0; for _, v in pairs(t or {}) do n = n + (tonumber(v) or 0) end; return n end
+  local net = total(session.totals.goldIn) - total(session.totals.goldOut)
+  if net <= 0 then return end
+  return math.floor(net * 3600 / seconds + 0.5)
+end
+
 -- A level's record (the saved one; this session's when saved settings didn't load), never made here.
 function S.levelRecord(lvl)
   local tree = ns.settingsLost and session or saved() or session

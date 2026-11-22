@@ -10943,7 +10943,7 @@ function S.statsTab()
   check(LevelingCodexCharDB.stats.totals.quests == 0, "two clicks reset the saved stats")
 end
 
--- Nine tabs fit along the bottom of the window (they shrink when the labels are too wide).
+-- Eleven tabs fit along the bottom of the window (they shrink when the labels are too wide).
 function S.tabRowFits()
   S.login()
   slash("")
@@ -10951,11 +10951,42 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
+  check(#tabs == 11, "eleven tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
   check(total <= frame:GetWidth() - 32 + 0.5, "the tab row fits under the window: " .. total .. " of " .. frame:GetWidth())
+end
+
+-- The Gold tab's mount fund: progress against the goal, steppers, a riding trainer's price and the
+-- level-up line at the goal level.
+function S.goldMountFund()
+  MOCK.money = 300000 -- 30g
+  MOCK.level = 38
+  S.login()
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "MOUNT FUND") and questText(win(), "Riding at level 40"), "the Gold tab has the mount fund")
+  if MOCK.minimal then
+    check(questText(win(), "can't be read"), "without GetMoney it says so")
+    return
+  end
+  check(questText(win(), "33%") and questText(win(), "60g to go"), "30g of 90g: 33% and 60g to go")
+  click(win(), "Goal +")
+  check(LevelingCodexDB.mountGoal == 950000 and questText(win(), "65g to go"), "Goal + adds 5g")
+  click(win(), "Level -")
+  check(questText(win(), "Riding at level 39"), "Level - moves the goal level")
+  click(win(), "Reset goal")
+  check(LevelingCodexDB.mountGoal == nil and questText(win(), "Riding at level 40"), "Reset goal goes back to the default")
+  MOCK.trainer = { { "Apprentice Riding", cost = 200000 } }
+  MOCK.event("TRAINER_SHOW")
+  check(LevelingCodexDB.mountTraining == 200000 and chatHas("costs 20g"), "a riding trainer's price is read and said")
+  MOCK.trainer = {}
+  MOCK.level = 40
+  MOCK.event("PLAYER_LEVEL_UP", 40)
+  check(chatHas("riding fund 30g"), "the goal level's level-up says where the fund stands")
+  MOCK.setMoney(1000000)
+  check(questText(win(), "You have it"), "with the gold at the goal level it says go buy it")
 end
 
 -- Without saved data the tab says it counts from login.

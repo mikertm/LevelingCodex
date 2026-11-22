@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## v0.31.0
+
+### Gold
+
+- New **Gold** tab with a **mount fund**: how much of your riding goal you have, what's left, and about how long it takes at this session's net gold per hour. Set the goal amount and level with the - and + buttons. A riding trainer's price is noted when you visit one, and reaching the goal level tells you in chat where the fund stands.
+- **Stats > Zones** has a **Time | Gold** switch: gold earned and spent in each zone, net gold, and net gold per hour there.
+
 ## v0.30.6
 
 ### Quest guide fix
