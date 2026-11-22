@@ -11189,6 +11189,23 @@ function S.auctionBigScan()
   local frames = tonumber(debug:match("items, (%d+) frames"))
   check(chatHas("Full scan: 5,000 listings, 1,200 items priced"), "the big scan files every item")
   check(frames and frames >= 20, "it spread over frames (" .. tostring(frames) .. ")")
+  -- an item that errors while its price is saved is skipped; the scan still finishes
+  do
+    local A = MOCK.ns.auction
+    local record = A.record
+    A.record = function(id, ...)
+      if id == 30007 then error("broken item") end
+      return record(id, ...)
+    end
+    A.store().fullAt, A.store().fullTriedAt = 0, 0
+    MOCK.advance(1)
+    A.fullScan()
+    MOCK.advance(15)
+    A.record = record
+    check(chatHas("Full scan: 5,000 listings, 1,199 items priced") and not A.scanning(),
+      "a broken item is skipped and the scan finishes")
+    check(table.concat(MOCK.ns.auctionDebugLines(), " "):find("auction scan error: row", 1, true), "/codex debug names the error")
+  end
   debugprofilestop = clock
   MOCK.closeAuction()
 end

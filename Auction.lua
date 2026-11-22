@@ -442,7 +442,14 @@ local function spread(j, from, to, step, done)
     local cap = start and (j.cap or A.CAP_START) or A.ROWS_NO_CLOCK
     local rows = 0
     while i <= to do
-      step(i)
+      -- one row or item that errors is skipped, never the end of the scan (an error here once left
+      -- a scan stuck at "Saving prices 4,025 of 6,900")
+      local ok, err = pcall(step, i)
+      if not ok then
+        j.errors = (j.errors or 0) + 1
+        if not j.firstError then j.firstError = "row " .. i .. ": " .. tostring(err) end
+        last.scanError = j.firstError
+      end
       i, rows = i + 1, rows + 1
       if rows >= cap then break end
       if start then
@@ -456,7 +463,15 @@ local function spread(j, from, to, step, done)
       if refreshCard and j.frames % 15 == 1 then refreshCard() end -- the scan's progress
       ns.after(0, frame)
     else
-      done()
+      local ok, err = pcall(done)
+      if not ok then
+        -- the end of a scan must still let go of the job, or every later scan waits on it
+        last.scanError = "finishing: " .. tostring(err)
+        if job == j then job = nil end
+        A.recordFast = nil
+        ns.say("The scan hit an error while finishing; the prices read so far are kept.")
+        finished("full")
+      end
     end
   end
   frame()
@@ -1391,6 +1406,7 @@ function ns.auctionDebugLines()
       .. " searches, " .. (snipe.found or 0) .. " deals"
       .. "; the Codex's own searches are off"
   end
+  if last.scanError then out[#out + 1] = "auction scan error: " .. ns.plain(tostring(last.scanError)) end
   if last.full then
     out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
       .. (last.full.frames or 0) .. " frames (" .. (last.full.slow or 0) .. " slow), " .. (last.full.seconds or 0) .. " s"
