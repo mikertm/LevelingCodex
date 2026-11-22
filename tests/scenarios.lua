@@ -12811,6 +12811,19 @@ function S.journeyTab()
     if p[1] then click(win(), p[1]) end
     for i = 2, #p do check(questText(win(), p[i]), "the Journey " .. (p[1] or "Overview") .. " page has " .. p[i]) end
   end
+  -- the Map page: every moment it holds, layers that switch on and off
+  if not MOCK.minimal then
+  click(win(), "Map")
+  check(questText(win(), "WHAT HAPPENED HERE"), "the Map page lists what happened on that map")
+  check(findButton(win(), function(l) return l == "Layer Quests" end), "the Map page has a switch per layer")
+  click(win(), "Layer Quests")
+  check(type(LevelingCodexDB.journeyMapHide) == "table" and LevelingCodexDB.journeyMapHide.quests, "a layer switch hides its moments")
+  check(findButton(win(), function(l) return l == "Layer Quests" end), "the switch stays after the redraw")
+  click(win(), "Layer Quests")
+  check(not LevelingCodexDB.journeyMapHide.quests, "and shows them again")
+  check(MOCK.ns.journey.pageError == nil, "the Map page draws without an error: " .. tostring(MOCK.ns.journey.pageError))
+  click(win(), "Story")
+  end
   check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
   if MOCK.minimal then return end -- no optional events, no map positions
   check(questText(win(), "Brought down Hogger"), "the story has the turn-in")
@@ -13277,7 +13290,7 @@ function S.journeyVoice()
   local copy = _G.LevelingCodexCopy
   check(copy and copy:IsShown(), "Set last name opens the box")
   copy.edit:SetText("-")
-  click(copy, "Use this code")
+  click(copy, "Save name")
   check(select(2, J.voice.names()) == nil, "a dash means no last name")
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
@@ -13329,7 +13342,9 @@ function S.journeyCompanions()
   local copy = _G.LevelingCodexCopy
   check(copy and copy:IsShown(), "Write a note opens the box")
   copy.edit:SetText("Steady tank from Lakeshire, owes me a drink")
-  click(copy, "Use this code")
+  check(findButton(copy, function(l) return l == "Save note" end) and not findButton(copy, function(l) return l == "Use this code" end),
+    "the note box says Save note, not Use this code")
+  click(copy, "Save note")
   check(j.notes.Bo == "Steady tank from Lakeshire, owes me a drink", "the note is kept")
   check(questText(win(), "owes me a drink"), "the note shows on their page")
   check(findButton(win(), function(l) return l == "Note Bo" end), "the note button stays on their page")

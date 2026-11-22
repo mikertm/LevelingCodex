@@ -272,7 +272,7 @@ local function icon(name, x, y, size, title, text)
   f.tex:SetVertexColor(1, 1, 1)
   f.ring:SetColorTexture(0.72, 0.58, 0.3, 0.9)
   f:SetScript("OnClick", nil)
-  f.tipTitle, f.tipText = title, text
+  f.tipTitle, f.tipText, f.codexLabel = title, text, nil
   return f
 end
 
@@ -2155,6 +2155,11 @@ function ns.showMacroCopy(m, list, step)
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
   copy.paste = cur.paste and true or false
   copy.useB:SetShown(copy.paste)
+  -- a paste box names its own action ("Save note"); Done then reads Cancel, since it keeps nothing
+  local use = cur.acceptLabel or "Use this code"
+  copy.useB:SetLabel(use)
+  copy.useB.codexLabel = use
+  copy.done:SetLabel(copy.paste and cur.acceptLabel and "Cancel" or "Done")
   copy.body = cur.body or ""
   copy:Show()
   copy.edit:SetText(copy.body)
