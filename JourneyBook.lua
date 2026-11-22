@@ -534,21 +534,29 @@ local function palRow(V, p, most, x, y, w, compact)
   local cls = token and (token:sub(1, 1) .. token:sub(2):lower()) or ""
   local cc = token and type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token]
   local nameColor = type(cc) == "table" and tonumber(cc.r) and { cc.r, cc.g, cc.b } or C.light
-  if C.book then nameColor = readable(C, nameColor) end
+  local barColor = C.book and readable(C, nameColor) or nameColor
+  if C.book then nameColor = C.ink end
+  local shown = J.companions and J.companions.nameText(p.name) or Q.plain(p.name)
   if token then U.icon("classicon_" .. token:lower(), x, y, 22, cls, nil) end
   local secs = tonumber(p.rec.seconds) or 0
   local together = secs < 60 and "just met" or (duration(secs) .. " together")
   local track = C.book and { 0, 0, 0, 0.12 } or { 0.05, 0.05, 0.08, 0.9 }
-  U.T(Q.plain(p.name), x + 30, y + 1, w - 150, "body", nameColor)
+  U.T(shown, x + 30, y + 1, w - 150, "body", nameColor)
   U.T(together, x + 30, y + 1, w - 30, "small", C.light, "RIGHT")
   if compact then
     U.rect(x + 30, y + 18, w - 30, 4, track)
-    U.rect(x + 30, y + 18, math.max(2, (w - 30) * secs / most), 4, nameColor)
+    U.rect(x + 30, y + 18, math.max(2, (w - 30) * secs / most), 4, barColor)
+    if J.companions then
+      U.hit(x, y - 2, w, 28, shown, "Click to open their page.", function()
+        J.companions.select(p.name)
+        openPage(P_COMPANIONS, U)
+      end, "Companion " .. Q.plain(p.name))
+    end
     return 30
   end
   U.T(cls .. (p.rec.level and ("  -  met at level " .. p.rec.level) or ""), x + 30, y + 17, w - 30, "small", C.dim)
   U.rect(x + 30, y + 33, w - 30, 4, track)
-  U.rect(x + 30, y + 33, math.max(2, (w - 30) * secs / most), 4, nameColor)
+  U.rect(x + 30, y + 33, math.max(2, (w - 30) * secs / most), 4, barColor)
   return 44
 end
 
@@ -1238,51 +1246,10 @@ end
 ----------------------------------------------------------------------------
 -- Page: Companions
 ----------------------------------------------------------------------------
+-- JourneyCompanions.lua draws it (J.companions.page); this stays as the page's entry.
 local function companionsPage(V, y)
-  local L, R, j = V.L, V.R, V.j
-  local U, C, W = L.U, L.C, L.W
-  local pals = palList(j)
-  local top, ly = y, y
-  local total = 0
-  for _, p in ipairs(pals) do total = total + (tonumber(p.rec.seconds) or 0) end
-  ly = cardTitle(L, "FELLOW ADVENTURERS", 0, ly, W, #pals > 0 and plural(#pals, "companion") or nil)
-  if total >= 60 then ly = ly + U.T(duration(total) .. " in good company", 14, ly - 6, W - 28, "small", C.dim) + 4 end
-  if #pals == 0 then
-    ly = ly + U.T("Nobody has shared the road with you yet. Group up and they are remembered here: who they are, when you met and how long you travelled together.",
-      14, ly, W - 28, "small", C.dim) + 8
-  end
-  local most = math.max(60, pals[1] and tonumber(pals[1].rec.seconds) or 60)
-  for i, p in ipairs(pals) do
-    if i > 40 then break end
-    ly = ly + palRow(L, p, most, 14, ly, W - 28)
-  end
-  ly = ly + 6
-  U.box(0, top, W, ly - top, C.panel, C.edge)
-  ly = ly + 12
-  -- right: your closest companion, then everyone else you met
-  local ry = y
-  local best = pals[1]
-  if best and (tonumber(best.rec.seconds) or 0) >= 60 then
-    local RU, RC, RW = R.U, R.C, R.W
-    top = ry
-    ry = ry + 12
-    ry = ry + RU.sectionTitle("A TRUE COMPANION", ry)
-    local token = type(best.rec.class) == "string" and best.rec.class or nil
-    if token then RU.icon("classicon_" .. token:lower(), math.floor(RW / 2) - 20, ry, 40, Q.plain(best.name), nil) end
-    ry = ry + (token and 46 or 0)
-    ry = ry + RU.T(Q.plain(best.name), 14, ry, RW - 28, "head", RC.ink, "CENTER") + 4
-    local cls = token and (token:sub(1, 1) .. token:sub(2):lower()) or nil
-    local line = (cls and (cls .. ", ") or "") .. "met " .. (best.rec.level and ("at level " .. best.rec.level .. ", ") or "")
-      .. "day " .. dayOf(j, best.rec.first) .. ". " .. duration(best.rec.seconds) .. " on the road together."
-    ry = ry + RU.T(line, 14, ry, RW - 28, "small", RC.inkSoft, "CENTER") + 6
-    local words = J.lore and J.lore.companionLine and J.lore.companionLine(best.name, best.rec)
-    if words then ry = ry + RU.T('"' .. words .. '"', 24, ry, RW - 48, "body", RC.ink, "CENTER") + 8 end
-    ry = ry + 6
-    page(RU, RC, 0, top, RW, ry - top)
-    ry = ry + 12
-  end
-  if J.tales and J.tales.companions then ry = J.tales.companions(R, ry) + 12 end
-  return ly, ry
+  if J.companions then return J.companions.page(V, y) end
+  return y, y
 end
 
 ----------------------------------------------------------------------------
