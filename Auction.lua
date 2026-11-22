@@ -1,7 +1,7 @@
 -- Auction.lua: the auction tools. Prices from your own scans (a full scan, and quick searches for
 -- what your guide needs), a price history per realm with a trend, price lines on item tooltips, a
 -- card at the auction house, and a sell helper that fills in a price when you click it.
--- Read-only toward the auction house: it never buys, bids or posts. You press Post yourself.
+-- This file never buys, bids or posts: AuctionTrade.lua's buttons do that, one click each.
 -- Built for the modern C_AuctionHouse API (what other Forever add-ons use), with the classic
 -- QueryAuctionItems calls as a fallback. Saved prices may not load back on Forever: everything
 -- works with an empty history, and the Gold tab says so.
@@ -132,6 +132,9 @@ function A.record(id, name, low, n, med, high)
     if indexFor == s then nameIndex[name:lower()] = id end
   end
   it.n, it.at = tonumber(n) or 0, now()
+  -- the vendor price, kept for the deal finder (the item cache may not hold every listed item)
+  local vendor = tonumber((select(11, ns.itemInfo(id))))
+  if vendor and vendor > 0 then it.vendor = vendor end
   local d = today()
   if low then
     it.low, it.med, it.high = low, med or it.med, high or it.high
@@ -178,7 +181,7 @@ function A.price(id)
   local usual, base = median(all), median(before)
   local trend = base and base > 0 and last and math.floor((last - base) * 100 / base + 0.5) or nil
   return { name = it.name, low = it.low, med = it.med, high = it.high, n = tonumber(it.n) or 0, at = it.at,
-    usual = usual, trend = trend, days = #all }
+    usual = usual, trend = trend, days = #all, vendor = tonumber(it.vendor) }
 end
 
 function A.age(t)
@@ -940,7 +943,7 @@ ns.gold.addSection(10, function(y)
   tick("Price lines on item tooltips", not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
     "The lowest price seen, the usual price, the trend and the vendor price. Hold Shift for low, median, high and how many were listed.")
   tick("Show the Codex card at the auction house", not db.noAuctionCard, function() db.noAuctionCard = not db.noAuctionCard end,
-    "Lists what your guide still needs with today's price, the Scan all button, and a price for the item you're selling. The Codex never buys or posts.")
+    "Lists what your guide still needs with today's price, the Scan all button, and a price for the item you're selling. Posting and buying are on the Quick sell and Deals card below it.")
   tick("Search for my guide's items when I open it", not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end,
     "Quick searches for the items on the card, one at a time, when you open the auction house.")
   if A.auctionator() then

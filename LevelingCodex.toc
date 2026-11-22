@@ -84,6 +84,7 @@ QuestTab.lua
 Stats.lua
 Gold.lua
 Auction.lua
+AuctionTrade.lua
 Journey.lua
 Minimap.lua
 Tracking.lua

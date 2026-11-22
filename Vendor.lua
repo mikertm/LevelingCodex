@@ -65,6 +65,7 @@ local function kept(id)
   end
   return shopItems and shopItems[id] or false
 end
+V.kept = kept
 
 -- Grey items with a sell price, in bag order.
 local function scan()

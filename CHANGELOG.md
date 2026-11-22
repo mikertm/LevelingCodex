@@ -16,6 +16,14 @@
 - The **Gold** tab shows how many prices you have, what your guide needs with today's prices, and switches for the tooltip lines, the card and the automatic searches.
 - **Works with Auctionator.** When Auctionator is installed, the Codex reads its prices for what your guide needs (shown as "(Auctionator)" on the card and in the Gold tab) and leaves the searching to it, so the two never send searches over each other. **Search in Auctionator** on the card puts your guide's items into Auctionator's search. Tooltips keep Auctionator's own price lines and add only the Codex's trend from your scans, and Scan all still builds a history of your own.
 
+### Selling and deals at the auction house
+
+- A **Quick sell** card under the Codex prices lists what's worth selling from your bags: your most valuable tradeable items, priced just under the lowest listing. **Post** puts the whole stack up in one click and shows the deposit. Items your route or professions still need, bound items and greys stay out.
+- **Protections:** the Codex never posts below what a vendor pays after the auction house's 5% cut. It shows "Vendor it" instead. A price far under the usual one (30% by default) needs a second click.
+- **Deals** lists listings a vendor pays more for, and listings far under their usual price (flips), with the profit per item. **Check** looks up the listings, then the button shows how many and the total ("Buy 2 for 40c"). A commodity purchase asks you to confirm the server's total, and the Codex cancels it when the price went up. Relist what you flip through Quick sell.
+- Every post and every purchase is one click on a Codex button: nothing posts or buys by itself.
+- Gold tab > Selling and deals sets the undercut (1c, 1%, 5% or 10%), the loss warning (20%, 30%, 50% or off), how far under usual a flip must be (20%, 30% or 50%), the auction length and whether the card shows.
+
 ### A tidier Codex window
 
 - The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Journey, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.

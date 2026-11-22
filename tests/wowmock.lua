@@ -62,7 +62,9 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
   "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED",
   "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
-  "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" }) do
+  "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
+  "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
+  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -654,9 +656,12 @@ function Button:SetCheckedTexture() end
 function Button:Click(btn)
   if self._disabled then return end
   if self._type == "CheckButton" then self._checked = not self._checked end
+  local was = MOCK.inClick
+  MOCK.inClick = true -- a hardware event: protected auction house calls are allowed now
   fire(self, "PreClick", btn or "LeftButton", false)
   fire(self, "OnClick", btn or "LeftButton", false)
   fire(self, "PostClick", btn or "LeftButton", false)
+  MOCK.inClick = was
 end
 function Button:SetText(s) ascii(s, "Button:SetText"); self._text = s end
 function Button:GetText() return self._text end
@@ -1324,7 +1329,7 @@ C_Container = {
     local it = bag == 0 and MOCK.bagItems[slot]
     if not it or it.empty then return end
     return { itemID = bagID(slot), hyperlink = bagLink(slot), stackCount = it.count or 1, quality = it.quality,
-      hasNoValue = it.sell == 0, isLocked = it.locked or false }
+      hasNoValue = it.sell == 0, isLocked = it.locked or false, isBound = it.bound or false }
   end,
   UseContainerItem = function(bag, slot)
     local it = bag == 0 and MOCK.bagItems[slot]
@@ -1501,6 +1506,111 @@ C_AuctionHouse = {
     for _, a in ipairs(MOCK.auctions) do if a.id == key.itemID then return { itemName = a.name } end end
   end,
 }
+-- Posting and buying (protected: only during a click, MOCK.inClick, like the client's hardware
+-- events). A bag item or listing with item = true is an item (one auction each), else a commodity.
+-- Posts land in MOCK.posted ({ id, qty, unit, kind }), purchases in MOCK.purchases ({ id, qty, total });
+-- MOCK.priceBump = copper added to a started commodity purchase's total by the server.
+MOCK.posted, MOCK.purchases = {}, {}
+local function hardware(name)
+  if not MOCK.inClick then problem("hardware", name .. " outside a click") ; error(name .. ": blocked", 2) end
+end
+local function bagEntry(loc) return type(loc) == "table" and loc.bagID == 0 and MOCK.bagItems[loc.slotIndex] end
+ItemLocation = {}
+function ItemLocation:CreateFromBagAndSlot(bag, slot)
+  local it = bag == 0 and MOCK.bagItems[slot]
+  return { bagID = bag, slotIndex = slot, mockItemID = it and (it.id or (90000 + slot)) }
+end
+Enum = Enum or {}
+Enum.ItemCommodityStatus = { Unknown = 0, Item = 1, Commodity = 2 }
+local function sortedListings(id, items)
+  local out = {}
+  for _, a in ipairs(MOCK.auctions) do
+    if a.id == id and (a.item and true or false) == items then out[#out + 1] = a end
+  end
+  table.sort(out, function(x, y) return x.buyout / (x.count or 1) < y.buyout / (y.count or 1) end)
+  return out
+end
+local commodityCart
+C_AuctionHouse.GetItemCommodityStatus = function(loc)
+  local it = bagEntry(loc)
+  if not it then return 0 end
+  return it.item and 1 or 2
+end
+C_AuctionHouse.CalculateCommodityDeposit = function(_, duration, qty) return 3 * duration * qty end
+C_AuctionHouse.CalculateItemDeposit = function(_, duration, qty) return 15 * duration * qty end
+C_AuctionHouse.PostCommodity = function(loc, duration, qty, unit)
+  hardware("PostCommodity")
+  local it = bagEntry(loc)
+  if not it or it.item or type(unit) ~= "number" or qty < 1 or qty > (it.count or 1) then error("PostCommodity: bad post", 2) end
+  table.insert(MOCK.posted, { id = loc.mockItemID, qty = qty, unit = unit, kind = "commodity", duration = duration })
+  it.count = (it.count or 1) - qty
+  if it.count <= 0 then MOCK.bagItems[loc.slotIndex] = { empty = true } end
+  C_Timer.After(0.2, function() MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", #MOCK.posted); MOCK.event("BAG_UPDATE_DELAYED") end)
+end
+C_AuctionHouse.PostItem = function(loc, duration, qty, bid, buyout)
+  hardware("PostItem")
+  local it = bagEntry(loc)
+  if not it or not it.item or qty ~= 1 or type(buyout) ~= "number" then error("PostItem: bad post", 2) end
+  table.insert(MOCK.posted, { id = loc.mockItemID, qty = 1, unit = buyout, kind = "item", duration = duration })
+  MOCK.bagItems[loc.slotIndex] = { empty = true }
+  C_Timer.After(0.2, function() MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", #MOCK.posted); MOCK.event("BAG_UPDATE_DELAYED") end)
+end
+C_AuctionHouse.MakeItemKey = function(id) return { itemID = id, itemLevel = 0, itemSuffix = 0, battlePetSpeciesID = 0 } end
+C_AuctionHouse.SendSearchQuery = function(key, sorts, separate)
+  if type(key) ~= "table" or type(key.itemID) ~= "number" or type(sorts) ~= "table" then error("SendSearchQuery: bad query", 2) end
+  MOCK.searched = (MOCK.searched or 0) + 1
+  auctionLater(function()
+    if #sortedListings(key.itemID, true) > 0 then MOCK.event("ITEM_SEARCH_RESULTS_UPDATED", key)
+    else MOCK.event("COMMODITY_SEARCH_RESULTS_UPDATED", key.itemID) end
+  end)
+end
+C_AuctionHouse.GetNumCommoditySearchResults = function(id) return #sortedListings(id, false) end
+C_AuctionHouse.GetCommoditySearchResultInfo = function(id, i)
+  local a = sortedListings(id, false)[i]
+  if a then return { itemID = id, unitPrice = math.floor(a.buyout / (a.count or 1)), quantity = a.count or 1, containsOwnerItem = a.mine or false } end
+end
+C_AuctionHouse.GetNumItemSearchResults = function(key) return #sortedListings(key.itemID, true) end
+C_AuctionHouse.GetItemSearchResultInfo = function(key, i)
+  local a = sortedListings(key.itemID, true)[i]
+  if a then a.auctionID = a.auctionID or (key.itemID * 100 + i) end
+  if a then return { itemKey = key, auctionID = a.auctionID, buyoutAmount = a.buyout, quantity = a.count or 1, containsOwnerItem = a.mine or false } end
+end
+C_AuctionHouse.StartCommoditiesPurchase = function(id, qty)
+  local total, left = 0, qty
+  for _, a in ipairs(sortedListings(id, false)) do
+    if left <= 0 then break end
+    local n = math.min(left, a.count or 1)
+    total, left = total + math.floor(a.buyout / (a.count or 1)) * n, left - n
+  end
+  if left > 0 then auctionLater(function() MOCK.event("COMMODITY_PRICE_UNAVAILABLE") end); return end
+  total = total + (MOCK.priceBump or 0)
+  commodityCart = { id = id, qty = qty, total = total }
+  auctionLater(function() MOCK.event("COMMODITY_PRICE_UPDATED", math.floor(total / qty), total) end)
+end
+C_AuctionHouse.CancelCommoditiesPurchase = function() commodityCart = nil; MOCK.cancelledPurchase = true end
+C_AuctionHouse.ConfirmCommoditiesPurchase = function(id, qty)
+  hardware("ConfirmCommoditiesPurchase")
+  if not commodityCart or commodityCart.id ~= id or commodityCart.qty ~= qty then error("ConfirmCommoditiesPurchase: nothing started", 2) end
+  local cart = commodityCart
+  commodityCart = nil
+  auctionLater(function()
+    table.insert(MOCK.purchases, { id = id, qty = qty, total = cart.total })
+    MOCK.money = (MOCK.money or 0) - cart.total
+    MOCK.event("COMMODITY_PURCHASE_SUCCEEDED")
+  end)
+end
+C_AuctionHouse.PlaceBid = function(auctionID, amount)
+  hardware("PlaceBid")
+  for i, a in ipairs(MOCK.auctions) do
+    if a.item and a.auctionID == auctionID then
+      table.insert(MOCK.purchases, { id = a.id, qty = a.count or 1, total = amount, auction = auctionID })
+      MOCK.money = (MOCK.money or 0) - amount
+      table.remove(MOCK.auctions, i)
+      return
+    end
+  end
+  error("PlaceBid: no such auction", 2)
+end
 function GetRealmName() return "Mockrealm" end
 function MOCK.openAuction()
   AuctionHouseFrame:Show()
@@ -1793,7 +1903,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
-  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName" }
+  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

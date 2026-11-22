@@ -11149,6 +11149,93 @@ function S.auctionAuctionator()
   MOCK.itemIDs["Linen Cloth"] = nil
 end
 
+-- Quick sell and deals: posting from your bags with the undercut, the vendor floor and the loss
+-- warning; buying a commodity (search, total, confirm), an item (one click) and a cancelled
+-- purchase whose price went up. Every protected call happens inside a click (the mock checks).
+function S.auctionTrade()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local function hist(low, n, before, vendor)
+    return { low = low, med = low, n = n, at = 1700000000, vendor = vendor,
+      days = { [day - 2] = { low = before, med = before }, [day - 1] = { low = before, med = before }, [day] = { low = low, med = low } } }
+  end
+  LevelingCodexDB = LevelingCodexDB or {}
+  local items = {
+    [2589] = hist(100, 30, 100), [2592] = hist(150, 4, 300), [5001] = hist(1000, 2, 1000), [5002] = hist(800, 1, 800),
+    [774] = hist(10, 3, 10, 50), [818] = hist(20, 2, 20, 50), [2318] = hist(40, 1, 100),
+  }
+  items[2589].name, items[2592].name, items[5001].name, items[5002].name = "Linen Cloth", "Wool Cloth", "Rough Bracers", "Bound Ring"
+  items[774].name, items[818].name, items[2318].name = "Malachite", "Tigerseye", "Light Leather"
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = items } } }
+  MOCK.bagItems = {
+    { name = "Linen Cloth", id = 2589, quality = 1, level = 1, sell = 13, count = 20, class = "Trade Goods" },
+    { name = "Wool Cloth", id = 2592, quality = 1, level = 1, sell = 33, count = 5, class = "Trade Goods" },
+    { name = "Rough Bracers", id = 5001, quality = 2, level = 10, sell = 40, count = 1, class = "Armor", item = true },
+    { name = "Bound Ring", id = 5002, quality = 2, level = 10, sell = 40, count = 1, class = "Armor", item = true, bound = true },
+    { name = "Malachite", id = 774, quality = 1, level = 1, sell = 50, count = 3, class = "Trade Goods" },
+  }
+  MOCK.money = 100000
+  MOCK.auctions = { { id = 818, name = "Tigerseye", count = 2, buyout = 40 }, { id = 818, name = "Tigerseye", count = 1, buyout = 200 },
+    { id = 2318, name = "Light Leather", count = 1, buyout = 40, item = true } }
+  S.login()
+  if MOCK.minimal then check(not _G.LevelingCodexTradeCard, "no trade card without the modern auction house"); return end
+  MOCK.openAuction()
+  MOCK.advance(2)
+  local card = _G.LevelingCodexTradeCard
+  check(card and card:IsShown() and questText(card, "QUICK SELL") and questText(card, "20 x Linen Cloth"), "the card lists what to sell")
+  check(not questText(card, "Bound Ring"), "a bound item isn't offered")
+  check(questText(card, "Vendor pays 50c: sell it there"), "a price under the vendor's is blocked")
+  local T = MOCK.ns.auctionTrade
+  check(T.sellPrice(774).blocked and T.sellPrice(2589).price == 99, "the undercut is a copper, the vendor floor holds")
+  check(not pcall(MOCK.ns.auction.store) or #MOCK.posted == 0, "nothing posts by itself")
+  click(card, "Post Linen Cloth")
+  check(#MOCK.posted == 1 and MOCK.posted[1].qty == 20 and MOCK.posted[1].unit == 99 and MOCK.posted[1].kind == "commodity",
+    "Post puts the whole stack up at the undercut price")
+  check(chatHas("Posted 20 Linen Cloth at 99c each %(deposit 1s 20c%)"), "the post is said in chat with the deposit")
+  MOCK.advance(1)
+  click(card, "Post Wool Cloth")
+  check(#MOCK.posted == 1 and chatHas("50%% under the usual 3s"), "a post far under the usual price asks for a second click")
+  click(card, "Post Wool Cloth")
+  check(#MOCK.posted == 2 and MOCK.posted[2].unit == 149, "the second click posts it")
+  MOCK.advance(1)
+  click(card, "Post Rough Bracers")
+  check(#MOCK.posted == 3 and MOCK.posted[3].kind == "item" and MOCK.posted[3].unit == 999, "an item posts one at a time")
+  MOCK.advance(1)
+  click(card, "Post Malachite")
+  check(#MOCK.posted == 3, "the vendor floor stops a post")
+  -- deals
+  check(questText(card, "DEALS") and questText(card, "Light Leather") and questText(card, "vendor pays 50c: +30c each"),
+    "deals list flips and listings under vendor price")
+  click(card, "Deal Tigerseye")
+  MOCK.advance(1)
+  check(T.dealLabel(818) == "Buy 2 for 40c", "the search shows how many are under the limit and the total")
+  click(card, "Deal Tigerseye")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 0 and T.dealLabel(818) == "Confirm 40c", "a commodity purchase asks to confirm the server's total")
+  click(card, "Deal Tigerseye")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 2 and chatHas("Bought 2 Tigerseye for 40c."), "Confirm buys them")
+  click(card, "Deal Light Leather")
+  MOCK.advance(1)
+  click(card, "Deal Light Leather")
+  check(#MOCK.purchases == 2 and MOCK.purchases[2].id == 2318, "an item listing is bought with one click after the search")
+  MOCK.priceBump = 10
+  click(card, "Deal Tigerseye")
+  MOCK.advance(1)
+  click(card, "Deal Tigerseye")
+  MOCK.advance(1)
+  check(MOCK.cancelledPurchase and #MOCK.purchases == 2 and chatHas("the price went up"), "a price that rose is cancelled")
+  MOCK.priceBump = nil
+  check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 2 buys", 1, true), "/codex debug counts posts and buys")
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "SELLING AND DEALS"), "the Gold tab has the selling settings")
+  click(win(), "5%")
+  check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
+  click(win(), "Show the Quick sell and Deals card")
+  check(not card:IsShown(), "the setting hides the card")
+  MOCK.closeAuction()
+end
+
 -- Without saved data the tab says it counts from login.
 function S.statsTabLost()
   slash("")
