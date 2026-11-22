@@ -12141,10 +12141,18 @@ function S.journeyTab()
   MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
   slash("")
   click(win(), "Journey")
-  for _, head in ipairs({ "THE JOURNEY OF", "THE ROAD TO 60", "THE MAP", "THE STORY SO FAR", "FELLOW ADVENTURERS",
-      "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level }) do
-    check(questText(win(), head), "the Journey tab has " .. head)
+  local pages = {
+    { nil, "THE JOURNEY OF", "THE ROAD TO 60", "WHERE YOU ARE", "FELLOW ADVENTURERS",
+      "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level },
+    { "Map", "THE MAP", "YOUR JOURNAL" },
+    { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
+    { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
+  }
+  for _, p in ipairs(pages) do
+    if p[1] then click(win(), p[1]) end
+    for i = 2, #p do check(questText(win(), p[i]), "the Journey " .. (p[1] or "Overview") .. " page has " .. p[i]) end
   end
+  check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
   if MOCK.minimal then return end -- no optional events, no map positions
   check(questText(win(), "Brought down Hogger"), "the story has the turn-in")
   click(win(), "Deaths")
@@ -12155,6 +12163,7 @@ function S.journeyTab()
   check(MOCK.minimal or moment, "a moment with a spot can be shown on the map")
   if moment then moment:Click() end
   check(MOCK.minimal or findButton(win(), function(l) return l:find("^Pin ") end), "moments are pinned on the map")
+  check(questText(win(), "LANDS EXPLORED"), "a moment opens the Map page")
   if not MOCK.minimal then
     MOCK.worldMapID = 1429
     WorldMapFrame:Show()

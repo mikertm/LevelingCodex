@@ -805,50 +805,287 @@ local function page(U, C, x, y, w, h)
   U.box(x, y, w, h, C.parch)
 end
 
-local function render()
-  local U, C = ns.ui, ns.C
-  local W = U.W
-  local j = J.data()
-  local lvl = level()
-  local name = Q.plain(try(UnitName, "player") or "Adventurer")
-  local className = Q.plain((try(UnitClass, "player")) or "")
-  local race = Q.plain((try(UnitRace, "player")) or "")
-  local st = ns.stats and select(2, ns.stats.data())
-  if ns.settingsLost or not st then st = ns.stats and (ns.stats.data()) end
-  local totals = st and st.totals or {}
-  local _, curName = here()
-  local y = 0
+-- The pages of the journal, one at a time instead of one long scroll.
+local PAGES = { "Overview", "Map", "Story", "Companions" }
+local PAGE_TIPS = { "Your journey at a glance: the numbers, the road, the latest chapter and where you are.",
+  "Your trail on every land you have walked, and the lands explored.", "Every chapter of your story, level by level.",
+  "Everyone who shared the road with you." }
+local pageNo = 1
+local function openPage(n, U) pageNo = n; U.refreshTop() end
 
-  -- 1. The cover: the title page of your book.
-  local coverH = 124
-  page(U, C, 0, y, W, coverH)
-  -- the portrait in a gold frame
-  U.rect(14, y + 18, 72, 72, C.edge, "border", 2)
-  U.rect(16, y + 20, 68, 68, { 0, 0, 0, 1 }, "border", 3)
-  U.playerPortrait(18, y + 22, 64, select(2, try(UnitClass, "player")) or "WARRIOR", true)
-  U.T("THE JOURNEY OF", 104, y + 18, W - 220, "label", C.inkSoft)
-  U.T(name:upper(), 104, y + 32, W - 220, "title", C.ink)
-  -- a thin rule under the name, fading out to the right
-  local rule = U.rect(104, y + 64, 260, 1, { 1, 1, 1, 1 }, "border", 3, "fade")
+-- One disc-shaped dot (a square without the circle art).
+local function disc(U, x, y, size, c, sub, kind, onTop)
+  local file = ns.art.hasFile(ns.art.FILES.circle) and ns.art.FILES.circle
+  local t = U.rect(x, y, size, size, c, onTop and nil or "border", sub, kind, onTop)
+  if file then t:SetTexture(file); t:SetVertexColor(c[1], c[2], c[3], c[4] or 1) end
+  return t
+end
+
+-- A pin's art, gold when the file is missing.
+local function pinArt(U, C, file, x, y, size)
+  local t = U.rect(x, y, size, size, { 1, 1, 1, 1 }, nil, 2, "journeyPin", true)
+  if t:SetTexture(file) == false then t:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1)
+  else t:SetTexCoord(0, 1, 0, 1); t:SetVertexColor(1, 1, 1, 1) end
+  return t
+end
+
+-- Every map with a trail or a pinned moment, in the order you first saw it.
+local function mapList(j)
+  local maps, listed = {}, {}
+  local function addMap(m) if m and not listed[m] then listed[m] = true; maps[#maps + 1] = m end end
+  local pinned = {}
+  for _, e in ipairs(j.events) do if e.m then pinned[e.m] = true end end
+  for _, m in ipairs(j.order) do if j.trail[m] or pinned[m] then addMap(m) end end
+  for _, e in ipairs(j.events) do if e.m and (j.trail[e.m] or pinned[e.m]) then addMap(e.m) end end
+  for m in pairs(j.trail) do addMap(m) end
+  return maps
+end
+
+local function mapLabel(j, map)
+  local _, name = zoneOf(map)
+  if map and j.zones[map] then name = j.zones[map].name or name end
+  return Q.plain(name or "?")
+end
+
+-- The map plate at (mx, my, mw x mh): art or a gridded parchment, the trail, you and the pins.
+local function drawPlate(V, map, mx, my, mw, mh, pinSize)
+  local U, C, j = V.U, V.C, V.j
+  U.rect(mx - 4, my - 4, mw + 8, mh + 8, C.edge, "border", -5)
+  U.rect(mx - 3, my - 3, mw + 6, mh + 6, { 0, 0, 0, 1 }, "border", -5)
+  U.rect(mx - 1, my - 1, mw + 2, mh + 2, C.edgeSoft, "border", -4)
+  if not mapArt(U, C, map, mx, my, mw, mh) then
+    U.rect(mx, my, mw, mh, C.parch, "border", -3)
+    local ink = C.ink or C.light
+    for g = 1, 9 do
+      U.rect(mx + mw * g / 10, my, 1, mh, { ink[1], ink[2], ink[3], 0.08 }, "border", -2)
+      U.rect(mx, my + mh * g / 10, mw, 1, { ink[1], ink[2], ink[3], 0.08 }, "border", -2)
+    end
+    U.T(mapLabel(j, map), mx, my + mh / 2 - 10, mw, "head", { ink[1], ink[2], ink[3], 0.35 }, "CENTER")
+  end
+  -- the trail: each dot a bright centre on a dark halo, so it reads on light and dark map art
+  local small = mw < 400
+  local hs, ds = small and 5 or 7, small and 3 or 4
+  for _, r in ipairs(J.runs(map, small and 200 or 400)) do
+    local c = J.bandColor(r.level)
+    for _, pt in ipairs(r.pts) do
+      local cx, cy = mx + pt[1] / 100 * mw, my + pt[2] / 100 * mh
+      disc(U, cx - hs / 2, cy - hs / 2, hs, { 0.08, 0.05, 0.02, 0.55 }, 1, "journeyHalo")
+      disc(U, cx - ds / 2, cy - ds / 2, ds, { c[1], c[2], c[3], 1 }, 2, "journeyDot")
+    end
+  end
+  -- you, when this is the map you're on
+  local hereMap, hx, hy = Q.position()
+  if hereMap == map and hx and hy then
+    local cx, cy = mx + hx / 100 * mw, my + hy / 100 * mh
+    disc(U, cx - 8, cy - 8, 16, { 0, 0, 0, 0.8 }, nil, "journeyRing", true)
+    disc(U, cx - 5, cy - 5, 10, { C.gold[1], C.gold[2], C.gold[3], 1 }, 1, "journeyRing", true)
+    U.T("You", cx + 8, cy - 7, 40, "small", C.gold, nil, true)
+    U.hit(cx - 8, cy - 8, 16, 16, "You are here", nil, nil, "You are here")
+  end
+  for _, e in ipairs(J.pinsOn(map)) do
+    local file = PIN[e.k]
+    local big = highlight == e
+    if file or big then
+      local size = big and pinSize + 8 or pinSize
+      local px, py = mx + e.x / 100 * mw - size / 2, my + e.y / 100 * mh - size / 2
+      if big then disc(U, px - 4, py - 4, size + 8, { C.gold[1], C.gold[2], C.gold[3], 0.6 }, nil, "journeyRing", true) end
+      pinArt(U, C, file or PIN.level, px, py, size)
+      U.hit(px, py, size, size, e.s, "Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t), nil, "Pin " .. e.s)
+    end
+  end
+end
+
+local function legend(V, x, y, w)
+  local U, C = V.U, V.C
+  local lx = x
+  for _, b in ipairs(J.BANDS) do
+    disc(U, lx, y + 2, 10, b[3], nil, "journeyDot")
+    U.T(b[4], lx + 13, y + 1, 44, "small", C.dim)
+    lx = lx + 56
+  end
+  local kx = x + w - 150
+  for _, k in ipairs({ { "level", "level up" }, { "death", "fell" } }) do
+    pinArt(U, C, PIN[k[1]], kx, y, 14)
+    U.T(k[2], kx + 18, y + 1, 56, "small", C.dim)
+    kx = kx + 78
+  end
+  return 22
+end
+
+-- Chapters by level, newest first; each with its moments newest first.
+local function chapterData(j)
+  local kinds = FILTER_KINDS[filter]
+  local chapters, byLevel = {}, {}
+  for i = #j.events, 1, -1 do
+    local e = j.events[i]
+    local l = tonumber(e.l) or 1
+    if not byLevel[l] then byLevel[l] = {}; chapters[#chapters + 1] = l end
+    if filter == 1 or kinds[e.k] or e.k == "level" then table.insert(byLevel[l], e) end
+  end
+  table.sort(chapters, function(a, b) return a > b end)
+  return chapters, byLevel
+end
+
+-- One chapter card at (x, y), w wide, showing up to limit moments; nil when the filter leaves it empty.
+local function drawChapter(V, l, events, x, y, w, limit, compact)
+  local U, C, j, lvl = V.U, V.C, V.j, V.lvl
+  -- a chapter reads in order: the level-up that opened it is its epigraph, then what happened
+  local list, opening = {}, nil
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if (e.k == "level" or e.k == "start") and not opening then opening = e else list[#list + 1] = e end
+  end
+  if filter ~= 1 and #list == 0 then return nil end
+  local top = y
+  local rec = ns.stats and ns.stats.levelRecord(l)
+  -- the land where most of the chapter happened names it
+  local count, zoneList, best, bestN = {}, {}, nil, 0
+  for _, e in ipairs(events) do
+    local zn = e.m and select(2, zoneOf(e.m))
+    if zn then
+      if not count[zn] then count[zn] = 0; zoneList[#zoneList + 1] = zn end
+      count[zn] = count[zn] + 1
+      if count[zn] > bestN then best, bestN = zn, count[zn] end
+    end
+  end
+  local band = J.bandColor(l)
+  local ix, iw = x + 16, w - 32
+  U.rect(x, y, w, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
+  U.T("CHAPTER " .. roman(l), ix, y + 12, iw, "label", C.inkSoft)
+  if l == lvl then U.T("you are here", ix, y + 12, iw, "small", C.inkSoft, "RIGHT") end
+  y = y + 26
+  y = y + U.T("Level " .. l .. (best and ("  -  " .. best) or ""), ix, y, iw, "head", C.ink) + 8
+  if opening then
+    y = y + U.T('"' .. opening.s .. '"', ix, y, iw, compact and "small" or "body", C.inkSoft) + 6
+  end
+  if not compact then
+    local facts = {}
+    if rec then
+      facts[1] = duration(rec.seconds) .. ", " .. plural(tonumber(rec.quests) or 0, "quest") .. ", "
+        .. plural(tonumber(rec.kills) or 0, "foe") .. ", " .. plural(tonumber(rec.deaths) or 0, "fall")
+    end
+    if #zoneList > 1 then facts[#facts + 1] = "through " .. table.concat(zoneList, ", ") end
+    if #facts > 0 then y = y + U.T(table.concat(facts, "  -  "), ix, y, iw, "small", C.inkSoft) + 6 end
+  end
+  U.rect(ix, y + 2, iw, 1, { band[1], band[2], band[3], 0.35 }, "border", 3)
+  y = y + 12
+  -- the overview shows the latest moments, the story reads them in order
+  local order = list
+  if compact then
+    order = {}
+    for i = #list, math.max(1, #list - limit + 1), -1 do order[#order + 1] = list[i] end
+  end
+  local drawn, spineTop, spineEnd, lastDay = 0, nil, nil, nil
+  local textW = iw - 34 - (compact and 0 or 70)
+  for _, e in ipairs(order) do
+    if drawn >= limit then break end
+    drawn = drawn + 1
+    spineTop = spineTop or (y + 10)
+    spineEnd = y + 10
+    U.icon(ICON[e.k] or ICON.quest, ix, y, 22, e.s, e.d)
+    local th = U.T(e.s, ix + 32, y + 3, textW, compact and "small" or "body", e.k == "death" and DEATH_INK or C.ink)
+    local day = dayOf(j, e.t)
+    if not compact and day ~= lastDay then U.T("day " .. day, x + w - 82, y + 4, 66, "small", C.inkSoft, "RIGHT") end
+    lastDay = day
+    local rowH = math.max(24, th + 6)
+    if e.d and not compact then rowH = rowH + U.T(e.d, ix + 32, y + th + 5, textW, "small", C.inkSoft) + 2 end
+    if e.m and e.x then
+      U.hit(x + 12, y - 2, w - 24, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
+        mapPick, highlight = e.m, e
+        openPage(2, U)
+      end, "Moment " .. e.s)
+    end
+    y = y + rowH + (compact and 2 or 6)
+  end
+  if spineTop and spineEnd > spineTop then
+    U.rect(ix + 10, spineTop, 2, spineEnd - spineTop, { band[1], band[2], band[3], 0.5 }, "border", 3)
+  end
+  if #list > drawn and not compact then
+    y = y + U.T("... and " .. plural(#list - drawn, "more moment") .. " in this chapter (Read the whole story).", ix + 32, y,
+      iw - 32, "small", C.inkSoft) + 6
+  end
+  if #list == 0 then y = y + U.T("A quiet chapter: nothing else written yet.", ix, y, iw, "small", C.inkSoft) + 6 end
+  y = y + 10
+  page(U, C, x, top, w, y - top)
+  return y
+end
+
+local function palList(j)
+  local pals = {}
+  for pname, rec in pairs(j.pals) do
+    if type(rec) == "table" then pals[#pals + 1] = { name = pname, rec = rec } end
+  end
+  table.sort(pals, function(a, b) return (tonumber(a.rec.seconds) or 0) > (tonumber(b.rec.seconds) or 0) end)
+  return pals
+end
+
+-- One companion row at (x, y), w wide; returns its height.
+local function palRow(V, p, most, x, y, w, compact)
+  local U, C = V.U, V.C
+  local token = type(p.rec.class) == "string" and p.rec.class or nil
+  local cls = token and (token:sub(1, 1) .. token:sub(2):lower()) or ""
+  local cc = token and type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token]
+  local nameColor = type(cc) == "table" and tonumber(cc.r) and { cc.r, cc.g, cc.b } or C.light
+  if token then U.icon("classicon_" .. token:lower(), x, y, 22, cls, nil) end
+  local secs = tonumber(p.rec.seconds) or 0
+  local together = secs < 60 and "just met" or (duration(secs) .. " together")
+  U.T(Q.plain(p.name), x + 30, y + 1, compact and w - 30 or 150, "body", nameColor)
+  if compact then
+    U.T(together, x + 30, y + 1, w - 30, "small", C.light, "RIGHT")
+    U.rect(x + 30, y + 18, w - 30, 4, { 0.05, 0.05, 0.08, 0.9 })
+    U.rect(x + 30, y + 18, math.max(2, (w - 30) * secs / most), 4, nameColor)
+    return 30
+  end
+  U.T(cls .. (p.rec.level and ("  -  met at level " .. p.rec.level) or ""), x + 30, y + 15, 200, "small", C.dim)
+  local bx = x + 236
+  local bw = w - 236 - 120
+  U.rect(bx, y + 8, bw, 6, { 0.05, 0.05, 0.08, 0.9 })
+  U.rect(bx, y + 8, math.max(2, bw * secs / most), 6, nameColor)
+  U.T(together, x + w - 114, y + 5, 114, "small", C.light, "RIGHT")
+  return 32
+end
+
+-- The title strip over every page: who you are, where, and the chapter you're in.
+local function header(V)
+  local U, C, W, j, lvl = V.U, V.C, V.W, V.j, V.lvl
+  local h = 92
+  page(U, C, 0, 0, W, h)
+  U.rect(14, 12, 68, 68, C.edge, "border", 2)
+  U.rect(16, 14, 64, 64, { 0, 0, 0, 1 }, "border", 3)
+  U.playerPortrait(18, 16, 60, select(2, try(UnitClass, "player")) or "WARRIOR", true)
+  U.T("THE JOURNEY OF", 96, 12, W - 220, "label", C.inkSoft)
+  U.T(V.name:upper(), 96, 25, W - 220, "title", C.ink)
+  local rule = U.rect(96, 56, 260, 1, { 1, 1, 1, 1 }, "border", 3, "fade")
   local ink = C.ink or C.light
   ns.fade(rule, "HORIZONTAL", ink[1], ink[2], ink[3], 0.5, 0)
-  U.T((race ~= "" and (race .. " ") or "") .. className .. ", level " .. lvl
-    .. (curName and ("  -  now in " .. curName) or ""), 104, y + 72, W - 220, "body", C.inkSoft)
-  U.T("Day " .. dayOf(j, now()) .. " of the journey, " .. plural(#j.events, "moment") .. " written so far",
-    104, y + 92, W - 220, "small", C.inkSoft)
+  U.T((V.race ~= "" and (V.race .. " ") or "") .. V.className .. ", level " .. lvl
+    .. (V.curName and ("  -  now in " .. V.curName) or ""), 96, 62, W - 220, "small", C.inkSoft)
+  U.T("Day " .. dayOf(j, now()) .. ", " .. plural(#j.events, "moment") .. " written", 96, 76, W - 220, "small", C.inkSoft)
   -- the chapter you're in, set large on the right like a book's running head
-  U.T("CHAPTER", W - 118, y + 26, 100, "label", C.inkSoft, "CENTER")
-  U.T(roman(lvl), W - 118, y + 40, 100, "title", C.ink, "CENTER")
-  U.T(lvl >= 60 and "the summit" or "of 60", W - 118, y + 72, 100, "small", C.inkSoft, "CENTER")
-  y = y + coverH + 8
+  U.rect(W - 112, 14, 1, 64, { ink[1], ink[2], ink[3], 0.2 }, "border", 3)
+  U.T("CHAPTER", W - 106, 18, 96, "label", C.inkSoft, "CENTER")
+  U.T(roman(lvl), W - 106, 32, 96, "title", C.ink, "CENTER")
+  U.T(lvl >= 60 and "the summit" or "of 60", W - 106, 64, 96, "small", C.inkSoft, "CENTER")
+  local y = h + 8
   if ns.settingsLost then
     y = y + U.T("Forever didn't load your saved journal: this chapter of the story starts at this login.", 0, y, W,
       "small", C.dim) + 8
   end
+  y = y + U.segments(0, y, W, PAGES, pageNo, function(i) openPage(i, U) end, PAGE_TIPS) + 12
+  return y
+end
 
-  -- 2. Seals: the journey in numbers.
+-- A dark card with a gold label; returns the y its content starts at.
+local function cardTitle(V, title, x, y, w, right)
+  V.U.T(title, x + 14, y + 10, w - 28, "label", V.C.gold)
+  if right then V.U.T(right, x + 14, y + 10, w - 28, "small", V.C.light, "RIGHT") end
+  return y + 30
+end
+
+local function seals(V, y)
+  local U, C, W, j, totals = V.U, V.C, V.W, V.j, V.totals
   local miles = (tonumber(j.walked) or 0) / 1760
-  local seals = {
+  local list = {
     { "INV_Misc_Note_01", ns.thousands(tonumber(totals.quests) or 0), "quests done", "Quests turned in." },
     { "Ability_Warrior_Rampage", ns.thousands(tonumber(totals.kills) or 0), "foes defeated", "Creatures that gave you experience." },
     { "INV_Misc_Map_01", tostring(#j.order), "lands explored", "Zones you have set foot in." },
@@ -858,21 +1095,23 @@ local function render()
     { "INV_Misc_Bone_HumanSkull_01", ns.thousands(tonumber(j.deaths) or 0), "deaths", "Every fall, and every time you got back up." },
   }
   local sw = math.floor((W - 5 * 8) / 6)
-  for i, s in ipairs(seals) do
+  for i, s in ipairs(list) do
     local sx = (i - 1) * (sw + 8)
-    U.box(sx, y, sw, 70, C.panel, C.edge)
-    U.icon(s[1], sx + math.floor(sw / 2) - 12, y + 8, 24, s[3]:sub(1, 1):upper() .. s[3]:sub(2), s[4])
-    U.T(s[2], sx + 4, y + 36, sw - 8, "head", C.gold, "CENTER")
-    U.T(s[3], sx + 4, y + 55, sw - 8, "small", C.dim, "CENTER")
+    U.box(sx, y, sw, 66, C.panel, C.edge)
+    U.icon(s[1], sx + math.floor(sw / 2) - 11, y + 7, 22, s[3]:sub(1, 1):upper() .. s[3]:sub(2), s[4])
+    U.T(s[2], sx + 4, y + 33, sw - 8, "head", C.gold, "CENTER")
+    U.T(s[3], sx + 4, y + 51, sw - 8, "small", C.dim, "CENTER")
   end
-  y = y + 78
+  return y + 74
+end
 
-  -- 3. The road from 1 to 60: one notch per level, coloured by band, stars on the levels reached.
+-- The road from 1 to 60: one notch per level, coloured by band, a star over your level.
+local function road(V, y)
+  local U, C, W, lvl = V.U, V.C, V.W, V.lvl
   local roadH = 64
   U.box(0, y, W, roadH, C.panel, C.edge)
-  U.T("THE ROAD TO 60", 14, y + 8, W - 28, "label", C.gold)
-  U.T(lvl >= 60 and "the summit reached" or ("level " .. lvl .. " of 60, " .. (60 - lvl) .. " to go"), 14, y + 8, W - 28,
-    "small", C.light, "RIGHT")
+  cardTitle(V, "THE ROAD TO 60", 0, y - 2, W,
+    lvl >= 60 and "the summit reached" or ("level " .. lvl .. " of 60, " .. (60 - lvl) .. " to go"))
   local rx, rw = 14, W - 28
   local notch = rw / 60
   local ny = y + 32
@@ -889,23 +1128,90 @@ local function render()
       or (l == lvl and "You are here." or reached and "Before the journal began." or "Still ahead.")
     U.hit(nx, ny - 6, math.max(2, notch), 22, "Level " .. l, tip, nil, "Road level " .. l)
   end
-  -- you, a star over your level
-  local sx = rx + (lvl - 0.5) * notch - 8
-  local star = U.rect(sx, ny - 19, 16, 16, C.gold, nil, nil, "journeyPin", true)
-  if star:SetTexture(PIN.level) == false then star:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1)
-  else star:SetTexCoord(0, 1, 0, 1); star:SetVertexColor(1, 1, 1, 1) end
+  pinArt(U, C, PIN.level, rx + (lvl - 0.5) * notch - 8, ny - 19, 16)
   for l = 10, 60, 10 do U.T(tostring(l), rx + (l - 0.5) * notch - 10, ny + 14, 20, "small", l <= lvl and C.light or C.dim, "CENTER") end
-  y = y + roadH + 10
+  return y + roadH + 10
+end
 
-  -- 4. The map: the trail on the chosen zone.
-  -- every map with a trail or a pinned moment, in the order you first saw it
-  local maps, listed = {}, {}
-  local function addMap(m) if m and not listed[m] then listed[m] = true; maps[#maps + 1] = m end end
-  local pinned = {}
-  for _, e in ipairs(j.events) do if e.m then pinned[e.m] = true end end
-  for _, m in ipairs(j.order) do if j.trail[m] or pinned[m] then addMap(m) end end
-  for _, e in ipairs(j.events) do if e.m and (j.trail[e.m] or pinned[e.m]) then addMap(e.m) end end
-  for m in pairs(j.trail) do addMap(m) end
+----------------------------------------------------------------------------
+-- Page 1: Overview
+----------------------------------------------------------------------------
+local function overviewPage(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  y = seals(V, y)
+  y = road(V, y)
+  local gap = 10
+  local lw = 312
+  local rx, rw = lw + gap, W - lw - gap
+  local top = y
+
+  -- left: the latest chapter, its newest moments
+  local ly = y
+  local chapters, byLevel = chapterData(j)
+  local l = chapters[1]
+  if l then
+    ly = drawChapter(V, l, byLevel[l], 0, ly, lw, 5, true) or ly
+  else
+    page(U, C, 0, ly, lw, 80)
+    U.T("The first page is still blank. Your story is written here as you go.", 16, ly + 16, lw - 32, "body", C.ink)
+    ly = ly + 80
+  end
+  ly = ly + 6
+  U.btn("Read the story", 0, ly, 150, function() openPage(3, U) end, false, "Every chapter, level by level.")
+  if #chapters > 1 then U.T(plural(#chapters, "chapter") .. " so far", 160, ly + 6, lw - 160, "small", C.dim) end
+  ly = ly + 30
+
+  -- right: where you are now, then your companions
+  local ry = y
+  local maps = mapList(j)
+  local curMap = Q.position()
+  local show
+  for _, m in ipairs(maps) do if m == curMap then show = m end end
+  show = show or maps[#maps]
+  local cardTop = ry
+  ry = cardTitle(V, "WHERE YOU ARE", rx, ry, rw)
+  if show then
+    U.T(mapLabel(j, show), rx + 14, ry - 4, rw - 28, "body", C.light)
+    ry = ry + 18
+    local mw = rw - 28
+    local mh = math.floor(mw * 668 / 1002)
+    drawPlate(V, show, rx + 14, ry, mw, mh, 10)
+    ry = ry + mh + 10
+    U.btn("Open the map", rx + 14, ry, 130, function() mapPick, highlight = show, nil; openPage(2, U) end, false,
+      "Your whole trail, land by land.")
+    U.T(plural(#maps, "land"), rx + 150, ry + 6, rw - 164, "small", C.dim)
+    ry = ry + 32
+  else
+    ry = ry + U.T("Your trail appears here as you travel.", rx + 14, ry, rw - 28, "small", C.dim) + 10
+  end
+  U.box(rx, cardTop, rw, ry - cardTop, C.panel, C.edge)
+  ry = ry + gap
+
+  local pals = palList(j)
+  cardTop = ry
+  ry = cardTitle(V, "FELLOW ADVENTURERS", rx, ry, rw, #pals > 0 and tostring(#pals) or nil)
+  if #pals == 0 then
+    ry = ry + U.T("Nobody has shared the road with you yet.", rx + 14, ry, rw - 28, "small", C.dim) + 8
+  else
+    local most = math.max(60, tonumber(pals[1].rec.seconds) or 60)
+    for i = 1, math.min(3, #pals) do ry = ry + palRow(V, pals[i], most, rx + 14, ry, rw - 28, true) end
+    if #pals > 3 then
+      U.btn("All companions", rx + 14, ry, 130, function() openPage(4, U) end, false)
+      ry = ry + 30
+    end
+  end
+  ry = ry + 4
+  U.box(rx, cardTop, rw, ry - cardTop, C.panel, C.edge)
+
+  return math.max(ly, ry) + 10
+end
+
+----------------------------------------------------------------------------
+-- Page 2: Map
+----------------------------------------------------------------------------
+local function mapPage(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  local maps = mapList(j)
   local curMap = Q.position()
   if not mapPick then
     for _, m in ipairs(maps) do if m == curMap then mapPick = m end end
@@ -913,18 +1219,15 @@ local function render()
   end
   local idx = 1
   for i, m in ipairs(maps) do if m == mapPick then idx = i end end
-  local mapTop = y
-  U.T("THE MAP", 14, y + 10, W - 28, "label", C.gold)
-  y = y + 32
+  local top = y
+  y = cardTitle(V, "THE MAP", 0, y, W)
   if #maps == 0 then
     y = y + U.T("Your trail appears here as you travel: every road you walk, coloured by your level, with stars where you grew stronger and skulls where you fell.",
       14, y, W - 28, "small", C.dim) + 10
   else
-    local _, mapName = zoneOf(mapPick)
-    if mapPick and j.zones[mapPick] then mapName = j.zones[mapPick].name or mapName end
     U.btn("<", 14, y, 28, function() mapPick = maps[(idx - 2) % #maps + 1]; highlight = nil; U.refresh() end, false,
       "The previous land on your journey.")
-    U.T(Q.plain(mapName or "?"), 46, y - 1, W - 92, "head", C.light, "CENTER")
+    U.T(mapLabel(j, mapPick), 46, y - 1, W - 92, "head", C.light, "CENTER")
     local zrec = j.zones[mapPick]
     U.T((zrec and zrec.level and ("first reached at level " .. zrec.level .. ", day " .. dayOf(j, zrec.first) .. "  -  ") or "")
       .. "land " .. idx .. " of " .. #maps, 46, y + 21, W - 92, "small", C.dim, "CENTER")
@@ -933,84 +1236,42 @@ local function render()
     y = y + 40
     local mw = W - 28
     local mh = math.floor(mw * 668 / 1002)
-    local mx, my = 14, y
-    -- a double frame around the map, like a page plate
-    U.rect(mx - 4, my - 4, mw + 8, mh + 8, C.edge, "border", -5)
-    U.rect(mx - 3, my - 3, mw + 6, mh + 6, { 0, 0, 0, 1 }, "border", -5)
-    U.rect(mx - 1, my - 1, mw + 2, mh + 2, C.edgeSoft, "border", -4)
-    if not mapArt(U, C, mapPick, mx, my, mw, mh) then
-      U.rect(mx, my, mw, mh, C.parch, "border", -3)
-      local ink = C.ink or C.light
-      for g = 1, 9 do
-        U.rect(mx + mw * g / 10, my, 1, mh, { ink[1], ink[2], ink[3], 0.08 }, "border", -2)
-        U.rect(mx, my + mh * g / 10, mw, 1, { ink[1], ink[2], ink[3], 0.08 }, "border", -2)
-      end
-      U.T(Q.plain(mapName or ""), mx, my + mh / 2 - 10, mw, "head", { ink[1], ink[2], ink[3], 0.35 }, "CENTER")
-    end
-    local disc = ns.art.hasFile(ns.art.FILES.circle) and ns.art.FILES.circle
-    -- the trail: each dot a bright centre on a dark halo, so it reads on light and dark map art
-    local runs = J.runs(mapPick, 400)
-    for _, r in ipairs(runs) do
-      local c = J.bandColor(r.level)
-      for _, pt in ipairs(r.pts) do
-        local cx, cy = mx + pt[1] / 100 * mw, my + pt[2] / 100 * mh
-        local halo = U.rect(cx - 3.5, cy - 3.5, 7, 7, { 0.08, 0.05, 0.02, 0.55 }, "border", 1, "journeyHalo")
-        if disc then halo:SetTexture(disc); halo:SetVertexColor(0.08, 0.05, 0.02, 0.55) end
-        local d = U.rect(cx - 2, cy - 2, 4, 4, { c[1], c[2], c[3], 1 }, "border", 2, "journeyDot")
-        if disc then d:SetTexture(disc); d:SetVertexColor(c[1], c[2], c[3], 1) end
-      end
-    end
-    -- you, when this is the map you're on
-    local hereMap, hx, hy = Q.position()
-    if hereMap == mapPick and hx and hy then
-      local cx, cy = mx + hx / 100 * mw, my + hy / 100 * mh
-      local ring = U.rect(cx - 8, cy - 8, 16, 16, { 0, 0, 0, 0.8 }, nil, nil, "journeyRing", true)
-      if disc then ring:SetTexture(disc); ring:SetVertexColor(0, 0, 0, 0.8) end
-      local me = U.rect(cx - 5, cy - 5, 10, 10, C.gold, nil, 1, "journeyRing", true)
-      if disc then me:SetTexture(disc); me:SetVertexColor(C.gold[1], C.gold[2], C.gold[3], 1) end
-      U.T("You", cx + 8, cy - 7, 40, "small", C.gold, nil, true)
-      U.hit(cx - 8, cy - 8, 16, 16, "You are here", nil, nil, "You are here")
-    end
-    for _, e in ipairs(J.pinsOn(mapPick)) do
-      local file = PIN[e.k]
-      local big = highlight == e
-      if file or big then
-        local size = big and 22 or 14
-        local px, py = mx + e.x / 100 * mw - size / 2, my + e.y / 100 * mh - size / 2
-        if big then
-          local ring = U.rect(px - 4, py - 4, size + 8, size + 8, C.gold, nil, nil, "journeyRing", true)
-          if disc then ring:SetTexture(disc); ring:SetVertexColor(C.gold[1], C.gold[2], C.gold[3], 0.6) end
-        end
-        local t = U.rect(px, py, size, size, { 1, 1, 1, 1 }, nil, 2, "journeyPin", true)
-        if t:SetTexture(file or PIN.level) == false then t:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1) end
-        t:SetTexCoord(0, 1, 0, 1)
-        t:SetVertexColor(1, 1, 1, 1)
-        U.hit(px, py, size, size, e.s, "Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t), nil, "Pin " .. e.s)
-      end
-    end
+    drawPlate(V, mapPick, 14, y, mw, mh, 14)
     y = y + mh + 8
-    -- the legend
-    local lx = 14
-    for _, b in ipairs(J.BANDS) do
-      local dot = U.rect(lx, y + 2, 10, 10, b[3], nil, nil, "journeyDot")
-      if disc then dot:SetTexture(disc); dot:SetVertexColor(b[3][1], b[3][2], b[3][3], 1) end
-      U.T(b[4], lx + 13, y + 1, 44, "small", C.dim)
-      lx = lx + 56
-    end
-    -- the pins, drawn as they are on the map
-    local kx = W - 14 - 150
-    for _, k in ipairs({ { "level", "level up" }, { "death", "fell" } }) do
-      local t = U.rect(kx, y, 14, 14, { 1, 1, 1, 1 }, nil, 2, "journeyPin", true)
-      if t:SetTexture(PIN[k[1]]) == false then t:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 1)
-      else t:SetTexCoord(0, 1, 0, 1); t:SetVertexColor(1, 1, 1, 1) end
-      U.T(k[2], kx + 18, y + 1, 56, "small", C.dim)
-      kx = kx + 78
-    end
-    y = y + 22
+    y = y + legend(V, 14, y, W - 28)
   end
-  U.box(0, mapTop, W, y - mapTop, C.panel, C.edge)
+  U.box(0, top, W, y - top, C.panel, C.edge)
   y = y + 10
-  U.check("Show my trail on the world map", 0, y, not ns.db().noJourneyMap, function()
+
+  -- the lands, as a grid of chips: click one to show it
+  if #maps > 0 then
+    top = y
+    y = cardTitle(V, "LANDS EXPLORED", 0, y, W, plural(#maps, "land"))
+    local cols, gap = 3, 8
+    local cw = math.floor((W - 28 - (cols - 1) * gap) / cols)
+    for i, m in ipairs(maps) do
+      local cx = 14 + ((i - 1) % cols) * (cw + gap)
+      local cy = y + math.floor((i - 1) / cols) * 46
+      local lit = m == mapPick
+      local zrec = j.zones[m]
+      local band = J.bandColor(zrec and zrec.level or 1)
+      U.box(cx, cy, cw, 40, lit and C.btnOn or C.btnOff, lit and C.gold or C.edgeSoft)
+      U.rect(cx + 1, cy + 1, 3, 38, { band[1], band[2], band[3], 1 }, "border", 3)
+      U.T(mapLabel(j, m), cx + 10, cy + 5, cw - 16, "body", lit and C.gold or C.light)
+      U.T(zrec and zrec.level and ("level " .. zrec.level .. ", day " .. dayOf(j, zrec.first)) or "passed through",
+        cx + 10, cy + 22, cw - 16, "small", C.dim)
+      U.hit(cx, cy, cw, 40, mapLabel(j, m), "Show your trail here.", function() mapPick, highlight = m, nil; U.refreshTop() end,
+        "Land " .. mapLabel(j, m))
+    end
+    y = y + math.ceil(#maps / cols) * 46 + 6
+    U.box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 10
+  end
+
+  -- the journal's own switches
+  top = y
+  y = cardTitle(V, "YOUR JOURNAL", 0, y, W)
+  U.check("Show my trail on the world map", 14, y, not ns.db().noJourneyMap, function()
     local db = LevelingCodexDB
     if type(db) == "table" then db.noJourneyMap = not db.noJourneyMap or nil end
     J.drawWorld(true)
@@ -1022,158 +1283,9 @@ local function render()
     last = nil
     U.refresh()
   end, "Keeps a breadcrumb every 35 yards you walk. The journal's moments are written either way.")
-  y = y + 34
-
-  -- 5. The story: chapters by level, newest first.
-  U.sectionTitle("THE STORY SO FAR", y)
   y = y + 30
-  U.segments(0, y, W, FILTERS, filter, function(i) filter = i; U.refresh() end,
-    { "Every moment.", "Quests and the stories they finished.", "Dungeons, bosses and elite foes.",
-      "New lands, flight paths and companions.", "Every time you fell." })
-  y = y + 32
-  local kinds = FILTER_KINDS[filter]
-  local chapters, byLevel = {}, {}
-  for i = #j.events, 1, -1 do
-    local e = j.events[i]
-    local l = tonumber(e.l) or 1
-    if not byLevel[l] then byLevel[l] = {}; chapters[#chapters + 1] = l end
-    if filter == 1 or kinds[e.k] or e.k == "level" then table.insert(byLevel[l], e) end
-  end
-  table.sort(chapters, function(a, b) return a > b end)
-  if #chapters == 0 then
-    page(U, C, 0, y, W, 60)
-    U.T("The first page is still blank. Your story is written here as you go: every level, every land, every quest and every fall.",
-      16, y + 14, W - 32, "body", C.ink)
-    y = y + 68
-  end
-  local shownChapters = 0
-  for _, l in ipairs(chapters) do
-    if shownChapters >= 4 and not showAll then break end
-    -- a chapter reads in order: the level-up that opened it is its epigraph, then what happened
-    local list, opening = {}, nil
-    for i = #byLevel[l], 1, -1 do
-      local e = byLevel[l][i]
-      if (e.k == "level" or e.k == "start") and not opening then opening = e else list[#list + 1] = e end
-    end
-    if filter == 1 or #list > 0 then
-      shownChapters = shownChapters + 1
-      local top = y
-      local rec = ns.stats and ns.stats.levelRecord(l)
-      -- the land where most of the chapter happened names it
-      local count, zoneList, best, bestN = {}, {}, nil, 0
-      for _, e in ipairs(byLevel[l]) do
-        local zn = e.m and select(2, zoneOf(e.m))
-        if zn then
-          if not count[zn] then count[zn] = 0; zoneList[#zoneList + 1] = zn end
-          count[zn] = count[zn] + 1
-          if count[zn] > bestN then best, bestN = zn, count[zn] end
-        end
-      end
-      local band = J.bandColor(l)
-      U.rect(0, y, W, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
-      U.T("CHAPTER " .. roman(l), 18, y + 12, W - 36, "label", C.inkSoft)
-      if l == lvl then U.T("you are here", 18, y + 12, W - 36, "small", C.inkSoft, "RIGHT") end
-      U.T("Level " .. l .. (best and ("  -  " .. best) or ""), 18, y + 26, W - 36, "head", C.ink)
-      y = y + 52
-      if opening then
-        y = y + U.T('"' .. opening.s .. '"', 18, y, W - 36, "body", C.inkSoft) + 6
-      end
-      local facts = {}
-      if rec then
-        facts[1] = duration(rec.seconds) .. ", " .. plural(tonumber(rec.quests) or 0, "quest") .. ", "
-          .. plural(tonumber(rec.kills) or 0, "foe") .. ", " .. plural(tonumber(rec.deaths) or 0, "fall")
-      end
-      if #zoneList > 1 then facts[#facts + 1] = "through " .. table.concat(zoneList, ", ") end
-      if #facts > 0 then
-        y = y + U.T(table.concat(facts, "  -  "), 18, y, W - 36, "small", C.inkSoft) + 6
-      end
-      U.rect(18, y + 2, W - 36, 1, { band[1], band[2], band[3], 0.35 }, "border", 3)
-      y = y + 12
-      local limit = showAll and 999 or 8
-      local drawn, spineTop, spineEnd = 0, nil, nil
-      local lastDay
-      for _, e in ipairs(list) do
-        if drawn >= limit then break end
-        drawn = drawn + 1
-        spineTop = spineTop or (y + 10)
-        spineEnd = y + 10
-        U.icon(ICON[e.k] or ICON.quest, 18, y, 22, e.s, e.d)
-        local th = U.T(e.s, 50, y + 3, W - 140, "body", e.k == "death" and DEATH_INK or C.ink)
-        local day = dayOf(j, e.t)
-        if day ~= lastDay then U.T("day " .. day, W - 84, y + 4, 66, "small", C.inkSoft, "RIGHT") end
-        lastDay = day
-        local rowH = math.max(24, th + 6)
-        if e.d then
-          rowH = rowH + U.T(e.d, 50, y + th + 5, W - 140, "small", C.inkSoft) + 2
-        end
-        if e.m and e.x then
-          U.hit(14, y - 2, W - 28, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
-            mapPick, highlight = e.m, e
-            U.refresh()
-          end, "Moment " .. e.s)
-        end
-        y = y + rowH + 6
-      end
-      -- the timeline's spine behind the icons
-      if spineTop and spineEnd > spineTop then
-        U.rect(28, spineTop, 2, spineEnd - spineTop, { band[1], band[2], band[3], 0.5 }, "border", 3)
-      end
-      if #list > drawn then
-        y = y + U.T("... and " .. plural(#list - drawn, "more moment") .. " in this chapter (Read the whole story).", 50, y, W - 68,
-          "small", C.inkSoft) + 6
-      end
-      if #list == 0 then
-        y = y + U.T("A quiet chapter: nothing else written yet.", 18, y, W - 36, "small", C.inkSoft) + 6
-      end
-      y = y + 10
-      page(U, C, 0, top, W, y - top)
-      y = y + 10
-    end
-  end
-  if #chapters > 4 or showAll then
-    U.btn(showAll and "Show the last chapters" or "Read the whole story", 0, y, 200, function()
-      showAll = not showAll
-      U.refresh()
-    end, showAll)
-    y = y + 32
-  end
-
-  -- 6. Companions.
-  local pals = {}
-  for pname, rec in pairs(j.pals) do
-    if type(rec) == "table" then pals[#pals + 1] = { name = pname, rec = rec } end
-  end
-  table.sort(pals, function(a, b) return (tonumber(a.rec.seconds) or 0) > (tonumber(b.rec.seconds) or 0) end)
-  local palTop = y
-  U.T("FELLOW ADVENTURERS", 14, y + 10, W - 28, "label", C.gold)
-  y = y + 32
-  if #pals == 0 then
-    y = y + U.T("Nobody has shared the road with you yet. Group up and they are remembered here.", 14, y, W - 28, "small", C.dim) + 8
-  end
-  local most = math.max(60, pals[1] and tonumber(pals[1].rec.seconds) or 60)
-  for i, p in ipairs(pals) do
-    if i > 6 then break end
-    local token = type(p.rec.class) == "string" and p.rec.class or nil
-    local cls = token and (token:sub(1, 1) .. token:sub(2):lower()) or ""
-    local cc = token and type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token]
-    local nameColor = type(cc) == "table" and tonumber(cc.r) and { cc.r, cc.g, cc.b } or C.light
-    if token then U.icon("classicon_" .. token:lower(), 14, y, 22, cls, nil) end
-    U.T(Q.plain(p.name), 44, y + 1, 150, "body", nameColor)
-    U.T(cls .. (p.rec.level and ("  -  met at level " .. p.rec.level) or ""), 44, y + 15, 200, "small", C.dim)
-    local secs = tonumber(p.rec.seconds) or 0
-    local bx, bw = 250, W - 14 - 250 - 120
-    U.rect(bx, y + 8, bw, 6, { 0.05, 0.05, 0.08, 0.9 })
-    U.rect(bx, y + 8, math.max(2, bw * secs / most), 6, nameColor)
-    U.T(secs < 60 and "just met" or (duration(secs) .. " together"), W - 14 - 114, y + 5, 114, "small", C.light, "RIGHT")
-    y = y + 32
-  end
-  y = y + 6
-  U.box(0, palTop, W, y - palTop, C.panel, C.edge)
-  y = y + 12
-
-  -- 7. Erase, two clicks within 5 s.
   local armed = confirmReset and GetTime() - (confirmAt or 0) < 5
-  U.btn(armed and "Click again to erase" or "Erase the journal", 0, y, 200, function()
+  U.btn(armed and "Click again to erase" or "Erase the journal", 14, y, 200, function()
     if confirmReset and GetTime() - (confirmAt or 0) < 5 then
       confirmReset, mapPick, highlight = nil, nil, nil
       J.reset()
@@ -1183,7 +1295,82 @@ local function render()
     end
     U.refresh()
   end, armed, "Erases every moment and your whole trail. Click twice to confirm.")
-  return y + 40
+  U.T("Two clicks erase every moment and the whole trail.", 224, y + 6, W - 238, "small", C.dim)
+  y = y + 34
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  return y + 10
+end
+
+----------------------------------------------------------------------------
+-- Page 3: Story
+----------------------------------------------------------------------------
+local function storyPage(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  U.sectionTitle("THE STORY SO FAR", y)
+  y = y + 30
+  y = y + U.segments(0, y, W, FILTERS, filter, function(i) filter = i; U.refresh() end,
+    { "Every moment.", "Quests and the stories they finished.", "Dungeons, bosses and elite foes.",
+      "New lands, flight paths and companions.", "Every time you fell." }) + 8
+  local chapters, byLevel = chapterData(j)
+  if #chapters == 0 then
+    page(U, C, 0, y, W, 60)
+    U.T("The first page is still blank. Your story is written here as you go: every level, every land, every quest and every fall.",
+      16, y + 14, W - 32, "body", C.ink)
+    y = y + 68
+  end
+  local shown = 0
+  for _, l in ipairs(chapters) do
+    if shown >= 4 and not showAll then break end
+    local ny = drawChapter(V, l, byLevel[l], 0, y, W, showAll and 999 or 8)
+    if ny then shown = shown + 1; y = ny + 10 end
+  end
+  if #chapters > 4 or showAll then
+    U.btn(showAll and "Show the last chapters" or "Read the whole story", 0, y, 200, function()
+      showAll = not showAll
+      U.refresh()
+    end, showAll)
+    y = y + 32
+  end
+  return y
+end
+
+----------------------------------------------------------------------------
+-- Page 4: Companions
+----------------------------------------------------------------------------
+local function companionsPage(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  local pals = palList(j)
+  local top = y
+  local total = 0
+  for _, p in ipairs(pals) do total = total + (tonumber(p.rec.seconds) or 0) end
+  y = cardTitle(V, "FELLOW ADVENTURERS", 0, y, W,
+    #pals > 0 and (plural(#pals, "companion") .. (total >= 60 and (", " .. duration(total) .. " in good company") or "")) or nil)
+  if #pals == 0 then
+    y = y + U.T("Nobody has shared the road with you yet. Group up and they are remembered here: who they are, when you met and how long you travelled together.",
+      14, y, W - 28, "small", C.dim) + 8
+  end
+  local most = math.max(60, pals[1] and tonumber(pals[1].rec.seconds) or 60)
+  for i, p in ipairs(pals) do
+    if i > 40 then break end
+    y = y + palRow(V, p, most, 14, y, W - 28)
+  end
+  y = y + 6
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  return y + 10
+end
+
+local PAGE_DRAW = { overviewPage, mapPage, storyPage, companionsPage }
+
+local function render()
+  local U, C = ns.ui, ns.C
+  local st = ns.stats and select(2, ns.stats.data())
+  if ns.settingsLost or not st then st = ns.stats and (ns.stats.data()) end
+  local _, curName = here()
+  local V = { U = U, C = C, W = U.W, j = J.data(), lvl = level(), totals = st and st.totals or {}, curName = curName,
+    name = Q.plain(try(UnitName, "player") or "Adventurer"), className = Q.plain((try(UnitClass, "player")) or ""),
+    race = Q.plain((try(UnitRace, "player")) or "") }
+  local y = header(V)
+  return PAGE_DRAW[pageNo](V, y) + 20
 end
 
 ns.addTab("journey", "Journey", render)
