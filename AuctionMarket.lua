@@ -59,11 +59,12 @@ function M.row(id)
     local a, b = ticks[k - 1], ticks[k]
     if b.t - a.t <= 2 * 86400 then
       r.move, r.moveAge = pct(b.low, a.low), b.t - a.t
+      r.wasN = a.n
       if a.n and a.n > 0 then r.supply = pct(b.n, a.n) end
     end
   end
   local hist = A().history(id)
-  if #hist >= 3 then
+  if #hist >= 2 then
     local sum, n = 0, 0
     for _, d in ipairs(hist) do sum, n = sum + (d.med or d.low), n + 1 end
     local mean, var = sum / n, 0
