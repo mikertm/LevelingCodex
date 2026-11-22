@@ -985,7 +985,9 @@ local function tradesView(W, y, bottom)
   local x, w = 16, W - 32
   local tw = math.floor((w - 24) / 4)
   local closed = rec.wins + rec.losses
-  tile(x, y, tw, 52, "NET PROFIT", signed(rec.net), "flips, sales and lost deposits", rec.net >= 0 and GREEN or RED)
+  tile(x, y, tw, 52, "NET PROFIT", signed(rec.net), (rec.pending or 0) > 0
+    and (rec.pending .. (rec.pending == 1 and " sale waits" or " sales wait") .. " for its mail") or "flips, sales and lost deposits",
+    rec.net >= 0 and GREEN or RED)
   tile(x + (tw + 8), y, tw, 52, "FLIPS WON", rec.winRate and (rec.winRate .. "%") or "--",
     closed > 0 and (rec.wins .. " won, " .. rec.losses .. " lost") or "no flip sold yet", rec.winRate and (rec.winRate >= 50 and GREEN or RED))
   tile(x + 2 * (tw + 8), y, tw, 52, "STILL HOLDING", #rec.holdings > 0 and signed(rec.unrealized) or "--",

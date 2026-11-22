@@ -175,6 +175,11 @@ function M.record()
       b.qty, b.cost, b.name = b.qty + qty, b.cost + each * qty, e.name or b.name
       basis[id] = b
       out.bought, out.spent = out.bought + qty, out.spent + each * qty
+    elseif e.k == "sold" and not each then
+      -- a sale the chat reported for something not posted through the Codex: its price comes
+      -- with the mailbox's invoice (until then it counts as a sale but no money)
+      out.sales = out.sales + 1
+      out.pending = (out.pending or 0) + 1
     elseif e.k == "sold" then
       out.sales = out.sales + 1
       local got = each and math.floor(each * qty * (1 - cut)) or 0
@@ -256,16 +261,81 @@ function M.onSystem(text)
   end
   name = itemName(name)
   if not name then return end
-  T().closePost(name, kind)
+  local e = T().closePost(name, kind)
+  if e then e.chat = true end
   if ns.auctionPanel then ns.auctionPanel.refresh() end
+end
+
+----------------------------------------------------------------------------
+-- Sales from the mailbox: every "Auction successful" mail carries an invoice (item, the price it
+-- sold for, the deposit, the house's cut, how many), whoever posted it (Blizzard's Sell tab,
+-- Auctionator, the Codex) and whether you were online when it sold.
+----------------------------------------------------------------------------
+
+-- A mail can't be told apart from an identical one, so the record keeps how many of each
+-- (item, price, deposit, cut, count) it has seen in the inbox: more in the box = new sales; fewer
+-- (taken out) lowers the count, so the next identical sale counts again.
+function M.readInbox()
+  if type(GetNumInboxItems) ~= "function" or type(GetInboxInvoiceInfo) ~= "function" then return 0 end
+  local notes = T().notes()
+  notes.mail = type(notes.mail) == "table" and notes.mail or {}
+  local seen = notes.mail
+  local inbox, sales = {}, {}
+  local n = tonumber((pcall(GetNumInboxItems) and (GetNumInboxItems()))) or 0
+  for i = 1, n do
+    local ok, kind, item, _, bid, _, deposit, cut, _, _, _, count = pcall(GetInboxInvoiceInfo, i)
+    if ok and kind == "seller" and type(item) == "string" and tonumber(bid) then
+      count = math.max(1, tonumber(count) or 1)
+      local key = table.concat({ item, bid, tonumber(deposit) or 0, tonumber(cut) or 0, count }, "|")
+      inbox[key] = (inbox[key] or 0) + 1
+      if inbox[key] > (seen[key] or 0) then
+        sales[#sales + 1] = { item = item, bid = tonumber(bid), deposit = tonumber(deposit), cut = tonumber(cut), count = count }
+      end
+    end
+  end
+  for key, had in pairs(seen) do
+    local now = inbox[key] or 0
+    if now < had then seen[key] = now > 0 and now or nil end
+  end
+  for key, c in pairs(inbox) do if c > (seen[key] or 0) then seen[key] = c end end
+  for _, v in ipairs(sales) do M.mailSale(v) end
+  if #sales > 0 and ns.auctionPanel then ns.auctionPanel.refresh() end
+  return #sales
+end
+
+-- One invoice into the record: it fills a sale the chat already logged without a price (the same
+-- item, within two days), else it closes that item's oldest open post, else it's a sale of its own.
+function M.mailSale(v)
+  local log, lower = T().notes().log, v.item:lower()
+  local each = math.floor(v.bid / v.count + 0.5)
+  local t = tonumber(time and time()) or 0
+  for _, e in ipairs(log) do
+    -- a sale the chat logged (with or without the post's price) that no invoice has filled yet
+    if e.k == "sold" and e.chat and not e.mail and type(e.name) == "string" and e.name:lower() == lower
+      and t - (e.t or 0) < 2 * 86400 then
+      e.each, e.qty, e.mail = each, v.count, true
+      if v.deposit and not e.dep then e.dep = v.deposit end
+      T().logVersion = (T().logVersion or 0) + 1
+      return e
+    end
+  end
+  local e = T().closePost(v.item, "sold", nil, v.count, each)
+  if e then
+    e.each, e.qty, e.mail = each, v.count, true
+    T().logVersion = (T().logVersion or 0) + 1
+  end
+  return e
 end
 
 local events
 function ns.startAuctionMarket()
   if events then return end
   events = CreateFrame("Frame")
-  pcall(events.RegisterEvent, events, "CHAT_MSG_SYSTEM")
-  events:SetScript("OnEvent", function(_, _, text) M.onSystem(text) end)
+  for _, ev in ipairs({ "CHAT_MSG_SYSTEM", "MAIL_SHOW", "MAIL_INBOX_UPDATE" }) do pcall(events.RegisterEvent, events, ev) end
+  events:SetScript("OnEvent", function(_, ev, text)
+    if ev == "CHAT_MSG_SYSTEM" then M.onSystem(text)
+    else ns.after(0.2, M.readInbox) end
+  end)
 end
 
 function ns.auctionMarketDebugLines()

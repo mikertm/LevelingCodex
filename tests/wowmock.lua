@@ -67,7 +67,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "OWNED_AUCTIONS_UPDATED",
   "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "UNIT_HEALTH",
   "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
-  "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED",
+  "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
   "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
@@ -1741,6 +1741,20 @@ C_AuctionHouse.CancelAuction = function(auctionID)
   error("CancelAuction: not yours", 2)
 end
 function GetRealmName() return "Mockrealm" end
+-- The mailbox: MOCK.inbox = { { sender, subject, money, daysLeft, invoice = { type, item, buyer, bid,
+-- buyout, deposit, cut, count } } } (an auction house invoice); gone in the minimal client.
+MOCK.inbox = {}
+function GetNumInboxItems() return #MOCK.inbox, #MOCK.inbox end
+function GetInboxHeaderInfo(i)
+  local m = MOCK.inbox[i]
+  if not m then return end
+  return nil, nil, m.sender, m.subject, m.money or 0, 0, m.daysLeft or 30
+end
+function GetInboxInvoiceInfo(i)
+  local v = MOCK.inbox[i] and MOCK.inbox[i].invoice
+  if not v then return end
+  return v.type, v.item, v.buyer, v.bid, v.buyout, v.deposit, v.cut, 0, 0, 0, v.count
+end
 -- A millisecond clock, like the client's (the full scan reads rows within a time budget).
 function debugprofilestop() return os.clock() * 1000 end
 function MOCK.openAuction()
@@ -2036,7 +2050,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
-  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop" }
+  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop",
+  "GetNumInboxItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

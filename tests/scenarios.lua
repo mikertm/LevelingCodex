@@ -11598,6 +11598,43 @@ function S.auctionMarket()
   for _, pg in ipairs({ "Codex", "Market", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
   check(table.concat(MOCK.ns.auctionMarketDebugLines(), " "):find("1 won", 1, true), "/codex debug sums the record")
+  -- sales of auctions posted elsewhere (Auctionator, Blizzard's Sell tab), and sales while offline:
+  -- the listing joins the record from your auctions list, the price comes from the mail's invoice
+  do
+    MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000, mine = true } }
+    T.queryOwned()
+    MOCK.advance(1)
+    local posts = 0
+    for _, e in ipairs(T.notes().log) do if e.k == "post" and e.name == "Linen Cloth" then posts = posts + 1 end end
+    check(posts == 1, "a listing posted outside the Codex joins the record (" .. posts .. ")")
+    T.queryOwned()
+    MOCK.advance(1)
+    posts = 0
+    for _, e in ipairs(T.notes().log) do if e.k == "post" and e.name == "Linen Cloth" then posts = posts + 1 end end
+    check(posts == 1, "only once")
+    local before = M.record().income
+    MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Linen Cloth.")
+    MOCK.inbox = { { sender = "Stormwind Auction House", subject = "Auction successful: Linen Cloth", money = 1900,
+      invoice = { type = "seller", item = "Linen Cloth", buyer = "Bo", bid = 2000, buyout = 2000, deposit = 60, cut = 100, count = 20 } } }
+    MOCK.event("MAIL_SHOW")
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    local rec = M.record()
+    check(rec.income - before == 1900 and (rec.pending or 0) == 0, "the chat's sale takes its price from the mail (" .. (rec.income - before) .. ")")
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    check(M.record().income - before == 1900, "the same mail counts once")
+    -- sold while you were offline: no chat line, only the mail
+    MOCK.inbox[2] = { sender = "Stormwind Auction House", subject = "Auction successful: Wool Cloth", money = 950,
+      invoice = { type = "seller", item = "Wool Cloth", buyer = "Cy", bid = 1000, buyout = 1000, deposit = 20, cut = 50, count = 5 } }
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    check(M.record().income - before == 1900 + 950, "a sale made while offline counts from its mail")
+    MOCK.inbox = {}
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    check(M.record().income - before == 2850, "taking the mail changes nothing")
+  end
   MOCK.closeAuction()
 end
 

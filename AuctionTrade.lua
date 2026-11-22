@@ -485,7 +485,38 @@ local function readOwned()
     return a.name < b.name
   end)
   mine.list, mine.at = list, now()
+  T.notePosts(list)
   T.refresh()
+end
+
+-- Auctions posted outside the Codex (Blizzard's Sell tab, Auctionator) join the trade record the
+-- first time your auctions list shows them, so their sales close a post like the Codex's own. A
+-- Codex post is matched to its listing (same item and quantity, open, under two days old) instead.
+function T.notePosts(list)
+  local notes = T.notes()
+  notes.owned = type(notes.owned) == "table" and notes.owned or {}
+  local known, keep = notes.owned, {}
+  for _, row in ipairs(list) do
+    local key = tostring(row.auction)
+    keep[key] = true
+    if not known[key] and not row.sold then
+      known[key] = true
+      local linked
+      for _, e in ipairs(notes.log) do
+        if e.k == "post" and not e.done and not e.auction and e.id == row.id and e.qty == row.qty
+          and stamp() - (e.t or 0) < 2 * 86400 then
+          e.auction, linked = key, true
+          break
+        end
+      end
+      if not linked then
+        local e = T.logTrade("post", row.id, row.name, row.qty, row.unit)
+        e.auction, e.outside = key, true
+      end
+    end
+  end
+  -- listings that left (sold, expired, cancelled) are forgotten: their IDs never come back
+  if #list > 0 then for key in pairs(known) do if not keep[key] then known[key] = nil end end end
 end
 
 -- "undercut" (someone lists for less), "cheapest", "sold", or nil before a check.
