@@ -13244,6 +13244,66 @@ function S.journeyVoice()
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
+-- Journey: companions remember what you did together (quests, foes, falls, lands, moments tagged with
+-- who was there), each has a page, and you can write a note on them.
+function S.journeyCompanions()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local Co = J.companions
+  check(Co.nameText("") == "a stranger" and Co.nameText("Ann") == "Ann", "a name always prints")
+  check(Co.nameText("\195\137lya") == "\195\137lya", "a name with letters beyond ASCII keeps them")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  check(questText(win(), "FELLOW ADVENTURERS") and questText(win(), "Nobody has shared the road"), "an empty Companions page draws")
+  check(J.pageError == nil, "the Companions page draws without an error: " .. tostring(J.pageError))
+  if MOCK.minimal then return end
+  local j = LevelingCodexCharDB.journey
+  MOCK.party, MOCK.partyMembers = true, { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", level = 4, class = "WARRIOR" } }
+  MOCK.advance(12)
+  check(j.fellows.Ann and j.fellows.Ann.met and j.fellows.Ann.theirLevel == 5, "a companion's first meeting is kept")
+  MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
+  local q
+  for _, e in ipairs(j.events) do if e.q == 176 then q = e end end
+  check(q and q.with == "Ann,Bo", "a quest done in a party names who was there (" .. tostring(q and q.with) .. ")")
+  check(j.fellows.Ann.quests == 1 and j.fellows.Bo.quests == 1, "the quest counts for each companion")
+  MOCK.ns.stats.count("kills", 3)
+  MOCK.advance(6)
+  check(j.fellows.Ann.kills == 3, "foes felled together are counted (" .. tostring(j.fellows.Ann.kills) .. ")")
+  MOCK.event("PLAYER_DEAD")
+  check(j.fellows.Bo.deaths == 1, "a fall in their company is counted")
+  MOCK.advance(120)
+  check(j.fellows.Ann.zones and next(j.fellows.Ann.zones), "the lands walked together are kept")
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  for _, t in ipairs({ "FELLOW ADVENTURERS", "Ann", "Bo", "A TRUE COMPANION", "SHARED MOMENTS", "YOUR NOTE", "side by side",
+    "with you now", "Lands walked together" }) do
+    check(questText(win(), t), "the Companions page has " .. t)
+  end
+  check(J.pageError == nil, "the Companions page draws without an error: " .. tostring(J.pageError))
+  click(win(), "Companion Bo")
+  check(Co.chosen() == "Bo", "a row opens that companion's page")
+  click(win(), "Note Bo")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown(), "Write a note opens the box")
+  copy.edit:SetText("Steady tank from Lakeshire, owes me a drink")
+  click(copy, "Use this code")
+  check(j.notes.Bo == "Steady tank from Lakeshire, owes me a drink", "the note is kept")
+  check(questText(win(), "owes me a drink"), "the note shows on their page")
+  check(findButton(win(), function(l) return l == "Note Bo" end), "the note button stays on their page")
+  check(Co.setNote("Bo", string.rep("x", 201)) == false and j.notes.Bo, "a note too long is refused")
+  check(Co.setNote("Bo", "") == true and j.notes.Bo == nil, "an empty note removes it")
+  MOCK.party, MOCK.partyMembers = nil, {}
+  MOCK.advance(6)
+  click(win(), "Companions")
+  check(questText(win(), "Bo") and not questText(win(), "with you now"), "a companion who left is remembered as last seen")
+  for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]"), "moments are ASCII: " .. e.s) end
+end
+
 -- The window's height: Auto keeps the plain tabs at 620 and lets the Journey book fill the screen;
 -- Fit the screen and Short apply to every tab; Settings steps it.
 function S.windowHeight()

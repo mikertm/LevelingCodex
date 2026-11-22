@@ -761,6 +761,12 @@ function T.companions(V, y)
       U.T(plain(p.name), 44, yy + 1, W - 150, "body", C.light)
       U.T("met on day " .. D.dayOf(V.j, p.rec.met), 14, yy + 1, W - 28, "small", C.dim, "RIGHT")
       U.T(deedsOf(p.rec), 44, yy + 16, W - 58, "small", C.dim)
+      if J.companions then
+        U.hit(10, yy - 2, W - 20, 32, plain(p.name), deedsOf(p.rec) .. "\nClick to open their page.", function()
+          J.companions.select(p.name)
+          U.refresh()
+        end, "Companion " .. plain(p.name))
+      end
       return 34
     end) + 10
 end
