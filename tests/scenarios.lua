@@ -10837,6 +10837,21 @@ function S.statsCounters()
   MOCK.advance(1)
   MOCK.closeMerchant()
   check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+  local z = st.zones[1429]
+  check(z.goldIn == L().goldIn.quest + L().goldIn.loot + L().goldIn.junk + L().goldIn.other and z.goldIn == 1640
+    and z.goldOut == 250, "gold goes to the zone you were in (" .. tostring(z.goldIn) .. " / "
+    .. tostring(z.goldOut) .. ")")
+  MOCK.questMap = 12
+  MOCK.setMoney(MOCK.money - 30)
+  check(z.goldOut == 280 and not st.zones[12], "gold in a subzone goes to its zone")
+  MOCK.questMap = 1429
+  local old = { seconds = 60, xp = 0, quests = 0, name = "Westfall" }
+  st.zones[1436] = old -- a zone saved before zones kept gold
+  MOCK.questMap = 1436
+  MOCK.mapInfo[1436] = { name = "Westfall", mapType = 3, parentMapID = 1415 }
+  MOCK.setMoney(MOCK.money + 5)
+  check(old.goldIn == 5 and old.goldOut == 0, "an older zone record starts counting gold")
+  MOCK.questMap = 1429
 end
 
 -- Stats: a turn-in that levels you up keeps its gold with the level you turned it in at, whichever
@@ -10907,6 +10922,18 @@ function S.statsTab()
     "hovering a split gives its XP by source")
   MOCK.fire(split, "OnLeave")
   check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
+  check(findButton(win(), function(l) return l == "Time" end), "zones switch between time and gold")
+  click(win(), "Gold")
+  check(questText(win(), "Earned") and questText(win(), "Spent"), "the gold view has its key")
+  if not MOCK.minimal then
+    local zone = findButton(win(), function(l) return l == "Zone Elwynn Forest" end)
+    check(zone, "each zone's gold is hoverable")
+    MOCK.fire(zone, "OnEnter")
+    check(GameTooltip._lines and GameTooltip._lines[1] and GameTooltip._lines[2]
+      and GameTooltip._lines[2]:find("Earned", 1, true), "hovering a zone gives earned and spent")
+    MOCK.fire(zone, "OnLeave")
+  end
+  click(win(), "Time")
   click(win(), "This session")
   check(seg("This session").codexOn and not findButton(win(), function(l) return l == "Level " .. (MOCK.level + 1) end),
     "this session's figures leave out levels from saved sessions")
