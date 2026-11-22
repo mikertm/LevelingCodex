@@ -131,7 +131,7 @@ function A.record(id, name, low, n, med, high)
     it.name = name
     if indexFor == s then nameIndex[name:lower()] = id end
   end
-  it.n, it.at = tonumber(n) or 0, now()
+  it.n, it.at, it.ator = tonumber(n) or 0, now(), nil
   -- the vendor price, kept for the deal finder (the item cache may not hold every listed item)
   local vendor = tonumber((select(11, ns.itemInfo(id))))
   if vendor and vendor > 0 then it.vendor = vendor end
@@ -140,6 +140,7 @@ function A.record(id, name, low, n, med, high)
     it.low, it.med, it.high = low, med or it.med, high or it.high
     local rec = it.days[d]
     if type(rec) ~= "table" then rec = {}; it.days[d] = rec end
+    if rec.ator then rec.low, rec.med, rec.ator = nil, nil, nil end -- the Codex's own reading wins the day
     rec.low = rec.low and math.min(rec.low, low) or low
     if med then rec.med = med end
   end
@@ -148,11 +149,46 @@ function A.record(id, name, low, n, med, high)
   end
 end
 
+-- Auctionator's prices in the history: once a session per item, its last scanned price is filed
+-- for the day Auctionator scanned it (its age when it says, else today), never over a day the
+-- Codex read itself. An item the Codex never scanned takes that price (ator = true, source
+-- "Auctionator") until a scan of its own. Only the public API: Auctionator hands over no history.
+local absorbed = {}
+function A.absorb(id)
+  id = tonumber(id)
+  if not id or absorbed[id] or not A.auctionator() then return end
+  absorbed[id] = true
+  local v, age = A.auctionatorPrice(id)
+  if not v then return end
+  age = math.max(0, math.floor(tonumber(age) or 0))
+  local s = A.store()
+  local it = s.items[id]
+  if type(it) ~= "table" then
+    local name = ns.itemInfo(id)
+    it = { name = name, n = 1, ator = true, days = {} }
+    s.items[id] = it
+    if type(name) == "string" and indexFor == s then nameIndex[name:lower()] = id end
+  end
+  if type(it.days) ~= "table" then it.days = {} end
+  local d = today() - age
+  local rec = it.days[d]
+  if type(rec) ~= "table" then it.days[d] = { low = v, med = v, ator = true }
+  elseif rec.ator then rec.low, rec.med = v, v end
+  if it.ator then it.low, it.at = v, now() - age * 86400 end
+  local vendor = tonumber((select(11, ns.itemInfo(id))))
+  if vendor and vendor > 0 then it.vendor = vendor end
+  for k in pairs(it.days) do
+    if type(k) ~= "number" or k <= today() - A.DAYS then it.days[k] = nil end
+  end
+  ator.filed = (ator.filed or 0) + 1
+end
+
 -- What the history says about an item: { name, low, med, high, n, at, usual, trend, days }.
 -- usual = the median of the daily values (median, else lowest); trend = the last day against the
 -- usual of the days before it, in percent (two days or more).
 -- Without a record of your own, Auctionator's price stands in ({ source = "Auctionator" }).
 function A.price(id)
+  if tonumber(id) and A.auctionator() then A.absorb(id) end
   local it = tonumber(id) and A.store().items[tonumber(id)]
   if type(it) ~= "table" then
     local v, days = A.auctionatorPrice(id)
@@ -181,7 +217,7 @@ function A.price(id)
   local usual, base = median(all), median(before)
   local trend = base and base > 0 and last and math.floor((last - base) * 100 / base + 0.5) or nil
   return { name = it.name, low = it.low, med = it.med, high = it.high, n = tonumber(it.n) or 0, at = it.at,
-    usual = usual, trend = trend, days = #all, vendor = tonumber(it.vendor) }
+    usual = usual, trend = trend, days = #all, vendor = tonumber(it.vendor), source = it.ator and "Auctionator" or nil }
 end
 
 function A.age(t)
@@ -204,6 +240,7 @@ function A.forget()
   local db = ns.db()
   if type(db.auction) == "table" and type(db.auction.realms) == "table" then db.auction.realms[realm()] = nil end
   indexFor = nil
+  absorbed = {}
 end
 
 -- low, median (by quantity), high (90th percentile: one silly listing doesn't count) and quantity
@@ -300,7 +337,7 @@ local function file(acc, full)
   end
   if full then
     for id, it in pairs(A.store().items) do
-      if not acc[id] and type(it) == "table" then it.n, it.at = 0, now() end
+      if not acc[id] and type(it) == "table" then it.n, it.at, it.ator = 0, now(), nil end
     end
   end
   return items
@@ -688,15 +725,17 @@ function A.tooltipLines(id, shift)
   local out = {}
   local p = A.price(id)
   local vendor = tonumber((select(11, ns.itemInfo(id))))
-  -- Auctionator draws its own auction and vendor lines: the Codex adds only what its scans know
-  if A.auctionator() then
-    vendor = nil
-    if p and p.source then p = nil end
-  end
+  -- Auctionator draws its own auction and vendor lines: the Codex leaves out the vendor line and,
+  -- when the price is Auctionator's, the lowest price; it adds the usual price, the trend and the
+  -- verdict from the history (which Auctionator's scans feed too)
+  local fromAtor = p and p.source == "Auctionator"
+  if A.auctionator() then vendor = nil end
   local function add(l, r, lc, rc) out[#out + 1] = { l, r, lc or INK, rc or INK } end
   if p then
-    add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", A.age(p.at), GOLD, SOFT)
-    if p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
+    add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", A.age(p.at)
+      .. (fromAtor and " (Auctionator)" or ""), GOLD, SOFT)
+    if fromAtor then -- Auctionator shows it
+    elseif p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
     if p.usual and p.usual ~= p.low then add("  Usual" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual)) end
     if p.trend then
       local spark = A.sparkline(id) or ""
@@ -719,6 +758,7 @@ function A.tooltipLines(id, shift)
   elseif vendor and vendor > 0 and shift then
     add("  Vendor pays", A.coins(vendor))
   end
+  if #out == 1 then return {} end -- a heading alone says nothing
   return out
 end
 
@@ -820,6 +860,7 @@ function ns.auctionDebugLines()
   if A.auctionator() then
     out[#out + 1] = "auction: Auctionator loaded, " .. ator.found .. " of " .. ator.reads .. " price reads answered, "
       .. ator.searches .. " searches sent" .. (ator.last and (" (last " .. ator.last .. ")") or "")
+      .. ", " .. (ator.filed or 0) .. " prices filed into the history"
       .. "; the Codex's own searches are off"
   end
   if last.full then

@@ -11138,6 +11138,16 @@ function S.auctionAuctionator()
   end
   check(#asked > 0 and not tipHas("Codex prices") and not tipHas("Vendor pays"),
     "Auctionator draws its own tooltip lines: the Codex adds none from its price")
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local rec = LevelingCodexDB.auction.realms.Mockrealm.items[2589]
+  check(rec and rec.ator and rec.days[day - 1] and rec.days[day - 1].low == 120,
+    "Auctionator's price is filed into the history for the day it scanned it")
+  rec.days[day - 3] = { low = 60, med = 60 }
+  rec.days[day - 2] = { low = 60, med = 60 }
+  GameTooltip:SetHyperlink("item:2591")
+  GameTooltip:SetHyperlink("item:2589")
+  check(tipHas("Codex prices") and tipHas("(Auctionator)") and tipHas("Trend") and not tipHas("Lowest now"),
+    "with days of history the block adds the trend and leaves the price to Auctionator")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
   MOCK.openAuction()
   MOCK.advance(8)

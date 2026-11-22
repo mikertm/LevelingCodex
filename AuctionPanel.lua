@@ -456,7 +456,7 @@ function pages.deals(W, top, H)
       local vendor = d.kind == "vendor"
       text(vendor and "UNDER VENDOR" or "FLIP", rx + 280, ry + 7, 110, "dim", vendor and GREEN or ns.C.accent)
       local sub = "Listed " .. ns.money(d.low) .. (vendor and ", vendor pays " or ", usual ") .. ns.money(d.worth)
-        .. "  -  " .. (vendor and "+" or "about +") .. ns.money(d.profit) .. " each (" .. d.pct .. "%)" .. "  -  " .. ns.thousands(d.n) .. " listed"
+        .. "  -  " .. (vendor and "+" or "about +") .. ns.money(d.profit) .. " each (" .. d.pct .. "%)" .. "  -  " .. (d.source and ("Auctionator, " .. A().age(d.at)) or (ns.thousands(d.n) .. " listed"))
       text(sub, rx + 42, ry + 21, rw - 270, "dim", ns.C.dim)
       local b = T().buying[d.id]
       button(T().dealLabel(d.id), rx + rw - 216, ry + 9, 150, function()

@@ -305,12 +305,12 @@ function T.deals(kind, hidden)
       local vendor = vendorPrice(id, p)
       if vendor and vendor > p.low then
         out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "vendor", low = p.low, worth = vendor,
-          profit = vendor - p.low, n = p.n }
+          profit = vendor - p.low, n = p.n, source = p.source, at = p.at }
       elseif p.usual and p.days and p.days >= 2 and p.low <= p.usual * (100 - flip) / 100 then
         local profit = math.floor(p.usual * (1 - T.CUT)) - p.low
         if profit > 0 then
           out[#out + 1] = { id = id, name = p.name or ("item " .. id), kind = "flip", low = p.low, worth = p.usual,
-            profit = profit, n = p.n }
+            profit = profit, n = p.n, source = p.source, at = p.at }
         end
       end
     end
