@@ -87,6 +87,8 @@ Auction.lua
 AuctionTrade.lua
 Journey.lua
 JourneyDeeds.lua
+JourneyTales.lua
+JourneyQuestLog.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua

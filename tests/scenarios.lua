@@ -12583,6 +12583,138 @@ function S.journeyDeeds()
   end
 end
 
+-- Journey tales: dungeon runs and wipes, battlegrounds, honor, duels, killed by a player,
+-- resurrections, trades, emotes, the guild, crafting, the auction house and the mailbox, the purse
+-- and a quest given up; the Quest Log page; the ledger and friends.
+function S.journeyTales()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.money = 500
+  MOCK.questLog = { { isHeader = true, title = "Elwynn Forest" },
+    { questID = 33, title = "Wolves Across the Border", level = 2,
+      objectives = { { text = "Tough Wolf Meat: 4/8", numFulfilled = 4, numRequired = 8, finished = false, type = "item" } } },
+    { questID = 47, title = "Gold Dust Exchange", level = 3, objectives = {} } }
+  S.login()
+  MOCK.advance(3)
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Quest Log")
+  check(questText(win(), "THE QUEST LOG"), "the Quest Log page draws")
+  if MOCK.minimal then return end
+  for _, t in ipairs({ "2 quests in hand", "ELWYNN FOREST", "Wolves Across the Border", "GOALS",
+    "Tough Wolf Meat: 4/8" }) do
+    check(questText(win(), t), "the Quest Log page has " .. t)
+  end
+  if MOCK.minimal then return end
+  check(questText(win(), "WHEN IT'S DONE, THE JOURNAL WILL READ"), "the quest page tells the line it will write")
+  click(win(), "Quest Gold Dust Exchange")
+  check(questText(win(), "LEVEL 3 QUEST"), "a quest in the list opens its page")
+  local j = LevelingCodexCharDB.journey
+  -- the purse: a first gold coin
+  MOCK.setMoney(15000)
+  check(journeyHas("gold", "first gold coin"), "a first gold coin is a moment")
+  -- a dungeon run with two wipes, then the boss
+  MOCK.instanceName, MOCK.instanceID = "The Deadmines", 36
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 0)
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 0)
+  local wipe = journeyHas("wipe")
+  check(wipe and wipe.s:find("Wiped 2 times on Rhahk'Zor", 1, true), "a second wipe rewrites the first (" .. tostring(wipe and wipe.s) .. ")")
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 1)
+  local boss = journeyHas("boss", "Rhahk'Zor")
+  check(boss and boss.d and boss.d:find("after 2 wipes", 1, true), "the boss remembers the wipes")
+  MOCK.advance(400)
+  MOCK.instanceName, MOCK.instanceID = nil, nil
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  local run = journeyHas("run", "The Deadmines")
+  check(run and run.d and run.d:find("2 wipes", 1, true), "leaving tells the run")
+  -- a battleground won
+  MOCK.instanceName, MOCK.instanceType = "Warsong Gulch", "pvp"
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.bgWinner = 1
+  MOCK.event("UPDATE_BATTLEFIELD_SCORE")
+  check(journeyHas("bg", "Warsong Gulch") and journeyHas("bg", "Alliance"), "a battleground and its victory")
+  MOCK.instanceName, MOCK.instanceType, MOCK.bgWinner = nil, nil, nil
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.event("CHAT_MSG_COMBAT_HONOR_GAIN", "Grukk dies, honorable kill Rank: Scout (Estimated Honor Points: 20)")
+  check(journeyHas("pvp", "first honorable kill: Grukk"), "a first honorable kill")
+  MOCK.event("CHAT_MSG_SYSTEM", "Tester has defeated Bo in a duel")
+  check(journeyHas("duel", "Bo") and j.tally.duelsWon == 1, "a duel won")
+  -- killed by another player, then raised by a friend
+  MOCK.target = { name = "Grukk", hostile = true, player = true, race = "Orc", class = "WARRIOR" }
+  MOCK.event("PLAYER_DEAD")
+  MOCK.target = nil
+  local pvp = journeyHas("death", "Grukk, Orc Warrior")
+  check(pvp and pvp.pvp, "a death to another player says who they were")
+  MOCK.event("RESURRECT_REQUEST", "Ann")
+  MOCK.event("PLAYER_ALIVE")
+  check(journeyHas("rez", "Ann") and j.people.Ann and j.people.Ann.rez == 1, "a resurrection names who raised you")
+  MOCK.tradeName = "Ann"
+  MOCK.event("TRADE_SHOW")
+  MOCK.event("UI_INFO_MESSAGE", 0, "Trade complete.")
+  check(journeyHas("trade", "Ann"), "a first trade with someone")
+  MOCK.event("CHAT_MSG_TEXT_EMOTE", "Ann waves at you.", "Ann")
+  MOCK.event("CHAT_MSG_TEXT_EMOTE", "Ann waves at you.", "Ann")
+  local waves = 0
+  for _, e in ipairs(j.events) do if e.k == "emote" then waves = waves + 1 end end
+  check(waves == 1, "a wave is written once a day per person")
+  MOCK.guild = "Dawn Watch"
+  MOCK.event("PLAYER_GUILD_UPDATE")
+  check(journeyHas("guild", "Dawn Watch"), "joining a guild")
+  -- a crafting session
+  MOCK.trade = { line = "Blacksmithing", rank = 48, max = 75, recipes = {} }
+  MOCK.event("TRADE_SKILL_SHOW")
+  MOCK.event("CHAT_MSG_LOOT", "You create: |cffffffff|Hitem:2862::::::::|h[Rough Sharpening Stone]|h|rx3.")
+  MOCK.event("CHAT_MSG_LOOT", "You create: |cffffffff|Hitem:2862::::::::|h[Rough Sharpening Stone]|h|r.")
+  MOCK.event("CHAT_MSG_SKILL", "Your skill in Blacksmithing has increased to 50.")
+  MOCK.event("TRADE_SKILL_CLOSE")
+  MOCK.trade = nil
+  local craft = journeyHas("craft", "the anvil")
+  check(craft and craft.s:find("4 Rough Sharpening Stone", 1, true) and craft.d == "Blacksmithing 49 to 50",
+    "a crafting session is one moment (" .. tostring(craft and craft.s) .. ")")
+  check(journeyHas("skill", "Blacksmithing reached 50"), "a profession milestone")
+  -- the auction house: a visit, two sales, the mailbox, an expired lot
+  MOCK.openAuction()
+  MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", 1)
+  MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", 2)
+  MOCK.setMoney(14800)
+  MOCK.closeAuction()
+  check(journeyHas("auction", "Your first auction"), "a first auction house visit")
+  MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Linen Cloth.")
+  MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Wool Cloth.")
+  check(journeyHas("sold", "Buyers snapped up your Linen Cloth and Wool Cloth"), "sales close together are one moment")
+  MOCK.event("MAIL_SHOW")
+  MOCK.setMoney(19800)
+  MOCK.event("MAIL_CLOSED")
+  check(journeyHas("gold", "Collected 50s"), "the mailbox gold from sales")
+  MOCK.event("CHAT_MSG_SYSTEM", "Your auction of Copper Bar has expired.")
+  check(journeyHas("expired", "Copper Bar"), "an expired auction")
+  -- a quest given up
+  MOCK.event("QUEST_ACCEPTED", 47)
+  table.remove(MOCK.questLog, 3)
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.event("QUEST_REMOVED", 47)
+  MOCK.advance(3)
+  check(journeyHas("abandon", "Gold Dust Exchange"), "a quest given up is remembered")
+  -- the pages
+  click(win(), "Trophies")
+  for _, t in ipairs({ "THE LEDGER", "Honorable kills", "AT THE WORKBENCH", "THE AUCTION HOUSE", "DUNGEON RUNS", "BATTLEFIELDS",
+    "Rough Sharpening Stone" }) do
+    check(questText(win(), t), "the Trophies page has " .. t)
+  end
+  click(win(), "Companions")
+  check(questText(win(), "FRIENDS AND STRANGERS") and questText(win(), "one resurrection, one trade"), "friends are remembered")
+  click(win(), "Story")
+  click(win(), "Fortunes")
+  check(questText(win(), "Buyers snapped up") and not questText(win(), "Bested Bo"), "the Fortunes filter")
+  click(win(), "Fellowship")
+  check(questText(win(), "Joined the guild"), "the Fellowship filter")
+  click(win(), "Overview")
+  check(questText(win(), "Someone brought you back from the dead"), "today's entry tells the MMO moments")
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are ASCII with no template left: " .. e.s)
+  end
+end
+
 -- Journey: past the point limit the busiest zone's trail is thinned, never cut off.
 function S.journeyThin()
   local p = {}

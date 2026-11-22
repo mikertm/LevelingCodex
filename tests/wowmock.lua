@@ -64,7 +64,10 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
   "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
   "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
-  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "UNIT_HEALTH" }) do
+  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "UNIT_HEALTH",
+  "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
+  "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED",
+  "AUCTION_HOUSE_PURCHASE_COMPLETED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -170,7 +173,7 @@ C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = 
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
 function GetInstanceInfo()
-  return MOCK.instanceName, MOCK.instanceName and "party" or "none", nil, nil, nil, nil, nil, MOCK.instanceID
+  return MOCK.instanceName, MOCK.instanceName and (MOCK.instanceType or "party") or "none", nil, nil, nil, nil, nil, MOCK.instanceID
 end
 function UnitOnTaxi() return MOCK.onTaxi or false end
 -- XP: MOCK.xp / MOCK.xpMax / MOCK.rested; MOCK.rewardXP[questID] for GetQuestLogRewardXP.
@@ -934,12 +937,14 @@ function UnitName(unit)
   local m = MOCK.partyMember(unit)
   if m then return m.name, m.realm end
   if unit == "target" and MOCK.target then return MOCK.target.name end
+  if unit == "NPC" and MOCK.tradeName then return MOCK.tradeName end
   return "Tester"
 end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
   PALADIN = "Paladin", SHAMAN = "Shaman", WARLOCK = "Warlock", DRUID = "Druid" }
 function UnitClass(unit)
   local m = MOCK.partyMember(unit)
+  if unit == "target" and MOCK.target and MOCK.target.class then m = { class = MOCK.target.class } end
   local class = m and m.class or MOCK.class
   return CLASS_NAMES[class] or class, class
 end
@@ -1304,9 +1309,16 @@ function UnitCanAttack(a, b) return b == "target" and MOCK.target and MOCK.targe
 function UnitIsDead(unit) return unit == "target" and MOCK.target and MOCK.target.dead or false end
 function UnitClassification(unit) return unit == "target" and MOCK.target and MOCK.target.kind or "normal" end
 function UnitIsTapDenied(unit) return unit == "target" and MOCK.target and MOCK.target.tapDenied or false end
+-- MOCK.target.player / race / class: another player; MOCK.guild (GetGuildInfo), MOCK.bgWinner (0 Horde, 1 Alliance).
+function UnitIsPlayer(unit) return unit == "target" and MOCK.target and MOCK.target.player or false end
+function GetGuildInfo(unit) if unit == "player" then return MOCK.guild end end
+function GetBattlefieldWinner() return MOCK.bgWinner end
 function GetInventoryItemQuality(unit, slot) return MOCK.wornQuality and MOCK.wornQuality[slot] end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
-function UnitRace() local r = MOCK.race or "Human"; return r, r end
+function UnitRace(unit)
+  if unit == "target" and MOCK.target and MOCK.target.race then return MOCK.target.race, MOCK.target.race end
+  local r = MOCK.race or "Human"; return r, r
+end
 function GetItemCount(name) return MOCK.bags[name] or 0 end
 -- Item cooldowns: MOCK.cooldowns[itemID] = { start, duration } (GetTime seconds).
 function GetItemCooldown(id)
@@ -1906,6 +1918,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "UnitHealth", "UnitHealthMax", "UnitClassification", "UnitIsTapDenied", "GetInventoryItemQuality",
+  "UnitIsPlayer", "GetGuildInfo", "GetBattlefieldWinner",
   "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",

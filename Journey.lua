@@ -41,6 +41,8 @@ local PIN = {
   close = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_7", -- the cross: nearly fell here
   rare = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_4", -- the triangle
   first = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3", -- the diamond
+  pvp = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_5", -- the moon: a fight with another player
+  camp = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_2", -- the circle: a campfire
 }
 J.PIN = PIN
 local ICON = {
@@ -49,7 +51,11 @@ local ICON = {
   boss = "INV_Misc_Head_Dragon_01", death = "INV_Misc_Bone_HumanSkull_01", flight = "Ability_Mount_Gryphon_01",
   pal = "Spell_Holy_PrayerOfHealing", start = "INV_Misc_Book_11", first = "INV_Misc_Bag_08",
   close = "Spell_Holy_SealOfSacrifice", upgrade = "INV_Chest_Chain", rare = "Ability_Hunter_SniperShot",
-  cap = "Trade_BlackSmithing",
+  cap = "Trade_BlackSmithing", wipe = "Spell_Shadow_DeathScream", run = "INV_Misc_Key_14",
+  pvp = "Ability_DualWield", bg = "INV_BannerPVP_02", duel = "Ability_Parry", rez = "Spell_Holy_Resurrection",
+  trade = "INV_Misc_Coin_02", emote = "Spell_Holy_Heal", guild = "INV_Misc_TabardSummer01", camp = "Spell_Fire_Fire",
+  craft = "Trade_Engineering", skill = "INV_Misc_Book_08", auction = "INV_Misc_Coin_04", sold = "INV_Misc_Coin_01",
+  expired = "INV_Misc_Bag_10", gold = "INV_Misc_Coin_03", abandon = "INV_Misc_Note_02",
 }
 J.ICON = ICON
 
@@ -156,6 +162,7 @@ local function partyText()
   if #names == 1 then return names[1] end
   return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
 end
+J.partyText, J.partyNames, J.inInstance, J.here = partyText, partyNames, inInstance, here
 
 ----------------------------------------------------------------------------
 -- The story's words
@@ -223,6 +230,8 @@ local DUNGEON = { "Ventured into %dungeon%", "Gathered your courage and stepped 
 local ZONE = { "Set foot in %zone% for the first time", "The road led on to %zone%", "Arrived in %zone%, a new land to explore",
   "First steps into %zone%" }
 local DEATH = { "Fell to %killer% in %zone%, then got back up", "Was bested by %killer% in %zone%: a lesson learned" }
+local PVP_DEATH = { "Ambushed by %killer% in %zone%. Not every enemy in Azeroth is a monster",
+  "Cut down by %killer% in %zone%: the war is real", "Fell to %killer% in %zone%, and swore to remember the name" }
 local DEATH_PLAIN = { "Met an untimely end in %zone%, but the story goes on", "Took a spill in %zone% and walked back from the graveyard" }
 local FLIGHT = { "Made friends with the flight master at %place%", "Found a new flight path at %place%" }
 local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled together" }
@@ -267,6 +276,8 @@ local function finisher(id)
   end
   return finishers[id]
 end
+
+J.finisher = finisher
 
 local function singular(name)
   name = name or ""
@@ -343,7 +354,7 @@ function J.add(kind, text, detail, extra)
   if extra and extra.at then map, x, y = extra.at[1], extra.at[2], extra.at[3] end
   if extra and extra.q then e.q = extra.q end
   if extra and extra.l then e.l = extra.l end
-  for _, f in ipairs({ "who", "i", "iq", "fk", "pct", "n" }) do
+  for _, f in ipairs({ "who", "i", "iq", "fk", "pct", "n", "pvp", "c" }) do
     if extra and extra[f] ~= nil then e[f] = type(extra[f]) == "string" and Q.plain(extra[f]) or extra[f] end
   end
   if map and x and y and not inInstance() then
@@ -492,7 +503,10 @@ local function bossDown(name)
   bossSeen = bossSeen or {}
   if bossSeen[name] then return end
   bossSeen[name] = true
-  J.add("boss", J.bossLine(name, dungeonHere), dungeonHere and Q.plain(dungeonHere))
+  local wipes = J.wipesOn and J.wipesOn(name) or 0
+  local detail = dungeonHere and Q.plain(dungeonHere)
+  if wipes > 0 then detail = (detail and (detail .. ", ") or "") .. "after " .. wipes .. (wipes == 1 and " wipe" or " wipes") end
+  J.add("boss", J.bossLine(name, dungeonHere), detail)
 end
 
 local HANDLERS = {
@@ -515,6 +529,18 @@ local HANDLERS = {
     local killer
     local hostile = try(UnitCanAttack, "player", "target")
     if hostile == true or hostile == 1 then killer = try(UnitName, "target") end
+    local enemy = killer and try(UnitIsPlayer, "target")
+    if enemy == true or enemy == 1 then
+      -- another player: a line of its own, with who they were
+      j.pvpDeaths = (tonumber(j.pvpDeaths) or 0) + 1
+      local race, cls = try(UnitRace, "target"), try(UnitClass, "target")
+      local who = Q.plain(killer) .. ((race or cls) and (", " .. Q.plain(((race or "") .. " " .. (cls or "")):gsub("^ ", ""))) or "")
+      if J.onDeath then J.onDeath() end
+      local zone = zoneName()
+      J.add("death", fill(pick(PVP_DEATH, killer .. j.deaths), { killer = who, zone = zone }), "Death " .. j.deaths
+        .. " (another player)", { who = killer, pvp = true })
+      return
+    end
     -- no hostile target: the last foe you fought this fight (JourneyDeeds.lua)
     if not killer and J.lastFoe then killer = J.lastFoe() end
     if J.onDeath then J.onDeath() end
@@ -746,13 +772,21 @@ end
 ----------------------------------------------------------------------------
 
 local filter = 1 -- All, Quests, Battles, Treasures, Travels, Deaths
-local FILTERS = { "All", "Quests", "Battles", "Treasures", "Travels", "Deaths" }
+local FILTERS = { "All", "Quests", "Battles", "Fortunes", "Fellowship", "Travels", "Deaths" }
 local FILTER_KINDS = {
-  { }, { quest = true, chain = true, elite = true }, { dungeon = true, boss = true, elite = true, close = true, rare = true },
-  { first = true, upgrade = true, cap = true }, { zone = true, flight = true, pal = true, start = true }, { death = true, close = true },
+  { },
+  { quest = true, chain = true, elite = true, abandon = true },
+  { dungeon = true, boss = true, elite = true, close = true, rare = true, wipe = true, run = true, pvp = true, bg = true, duel = true },
+  { first = true, upgrade = true, cap = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true },
+  { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true },
+  { zone = true, flight = true, start = true, camp = true },
+  { death = true, close = true, wipe = true, expired = true, abandon = true },
 }
-local FILTER_TIPS = { "Every moment.", "Quests and the stories they finished.", "Dungeons, bosses, elites, rares and close calls.",
-  "Firsts, gear upgrades and profession milestones.", "New lands, flight paths and companions.", "Every fall, and every near miss." }
+local FILTER_TIPS = { "Every moment.", "Quests and the stories they finished, and the ones you gave up.",
+  "Dungeons, bosses, wipes, elites, rares, close calls, duels, battlegrounds and fights with other players.",
+  "Firsts, gear upgrades, crafting, professions, the auction house and your purse.",
+  "Companions, dungeon parties, resurrections, trades, duels, waves and campfires.",
+  "New lands, flight paths and campfires.", "Every fall, wipe, near miss and lost cause." }
 local showAll, mapPick, highlight
 local confirmReset, confirmAt
 
@@ -828,14 +862,25 @@ local function page(U, C, x, y, w, h)
   U.box(x, y, w, h, C.parch)
 end
 
--- The pages of the journal, one at a time instead of one long scroll.
-local PAGES = { "Overview", "Story", "Map", "Trophies", "Companions" }
-local PAGE_TIPS = { "Your journey at a glance: today's entry, the numbers, the road, the latest chapter and where you are.",
-  "Every chapter of your story, level by level, each with its own map.", "Your trail on every land you have walked, and the lands explored.",
-  "Your firsts, your nemeses, close calls, rares, bosses, upgrades and crafts.", "Everyone who shared the road with you." }
-local P_OVERVIEW, P_STORY, P_MAP, P_TROPHIES, P_COMPANIONS = 1, 2, 3, 4, 5
-local pageNo = 1
-local function openPage(n, U) pageNo = n; U.refreshTop() end
+-- The pages of the journal, one at a time instead of one long scroll. Other files add pages with
+-- J.addPage(name, tip, draw, after) (draw(V, y) -> y); a page is opened by name.
+local PAGES = {
+  { name = "Overview", tip = "Your journey at a glance: today's entry, the numbers, the road, the latest chapter and where you are." },
+  { name = "Story", tip = "Every chapter of your story, level by level, each with its own map." },
+  { name = "Map", tip = "Your trail on every land you have walked, and the lands explored." },
+  { name = "Trophies", tip = "Your firsts, your nemeses, close calls, rares, bosses, upgrades and crafts." },
+  { name = "Companions", tip = "Everyone who shared the road with you." },
+}
+local P_OVERVIEW, P_STORY, P_MAP, P_TROPHIES, P_COMPANIONS = "Overview", "Story", "Map", "Trophies", "Companions"
+local pageName = P_OVERVIEW
+local function openPage(name, U) pageName = name; U.refreshTop() end
+J.openPage = function(name) openPage(name, ns.ui) end
+function J.addPage(name, tip, draw, after)
+  for _, p in ipairs(PAGES) do if p.name == name then p.tip, p.draw = tip, draw; return end end
+  local at = #PAGES + 1
+  for i, p in ipairs(PAGES) do if p.name == after then at = i + 1 end end
+  table.insert(PAGES, at, { name = name, tip = tip, draw = draw })
+end
 
 -- One disc-shaped dot (a square without the circle art).
 local function disc(U, x, y, size, c, sub, kind, onTop)
@@ -1133,7 +1178,12 @@ local function header(V)
     y = y + U.T("Forever didn't load your saved journal: this chapter of the story starts at this login.", 0, y, W,
       "small", C.dim) + 8
   end
-  y = y + U.segments(0, y, W, PAGES, pageNo, function(i) openPage(i, U) end, PAGE_TIPS) + 12
+  local names, tips, lit = {}, {}, 1
+  for i, p in ipairs(PAGES) do
+    names[i], tips[i] = p.name, p.tip
+    if p.name == pageName then lit = i end
+  end
+  y = y + U.segments(0, y, W, names, lit, function(i) openPage(PAGES[i].name, U) end, tips) + 12
   return y
 end
 
@@ -1437,7 +1487,9 @@ local function companionsPage(V, y)
   end
   y = y + 6
   U.box(0, top, W, y - top, C.panel, C.edge)
-  return y + 10
+  y = y + 10
+  if J.tales and J.tales.companions then y = J.tales.companions(V, y) end
+  return y
 end
 
 ----------------------------------------------------------------------------
@@ -1583,10 +1635,15 @@ local function trophiesPage(V, y)
     y = y + math.ceil(#caps / cols) * 34 + 4
   end
   U.box(0, top, W, y - top, C.panel, C.edge)
-  return y + 10
+  y = y + 10
+  if J.tales and J.tales.trophies then y = J.tales.trophies(V, y) end
+  return y
 end
 
-local PAGE_DRAW = { overviewPage, storyPage, mapPage, trophiesPage, companionsPage }
+for _, p in ipairs({ { P_OVERVIEW, overviewPage }, { P_STORY, storyPage }, { P_MAP, mapPage },
+  { P_TROPHIES, trophiesPage }, { P_COMPANIONS, companionsPage } }) do
+  for _, page in ipairs(PAGES) do if page.name == p[1] then page.draw = p[2] end end
+end
 
 local function render()
   local U, C = ns.ui, ns.C
@@ -1597,7 +1654,13 @@ local function render()
     name = Q.plain(try(UnitName, "player") or "Adventurer"), className = Q.plain((try(UnitClass, "player")) or ""),
     race = Q.plain((try(UnitRace, "player")) or "") }
   local y = header(V)
-  return PAGE_DRAW[pageNo](V, y) + 20
+  local draw = overviewPage
+  for _, p in ipairs(PAGES) do if p.name == pageName and p.draw then draw = p.draw end end
+  return draw(V, y) + 20
 end
+
+-- Drawing helpers for the pages other files add (JourneyQuestLog.lua).
+J.draw = { page = page, cardTitle = cardTitle, dayOf = dayOf, plural = plural, duration = duration, roman = roman,
+  listCard = listCard, itemIcon = itemIcon, DEATH_INK = DEATH_INK }
 
 ns.addTab("journey", "Journey", render)
