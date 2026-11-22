@@ -4,6 +4,12 @@ local B = LevelingCodexQuests.build
 local route = LevelingCodexQuests.ALLIANCE
 local M = B.maps
 
+-- A step for a quest the game locks once another one is turned in (exclusiveTo): skipped after that.
+function B.skipOnceDone(step, questID)
+  step.unlessDone = questID
+  return step
+end
+
 -- UiMap IDs and world sizes (yards) from UiMapAssignment in the Forever client reference.
 local zones = {
   stv = { 1434, 6381.25, 4254.166, 1 }, arathi = { 1417, 3600, 2400, 1 }, alterac = { 1416, 2800, 1866.667, 1 },
@@ -82,7 +88,7 @@ do
   road(M.swamp, M.blasted, on.swamp(nil, 34.2, 66.4), "Take the road south from the Swamp into the Blasted Lands")
   road(M.wetlands, M.arathi, on.wetlands(nil, 50.2, 13.6), "Cross Thandol Span north into Arathi")
   road(M.arathi, M.wetlands, on.arathi(nil, 43.4, 92.1), "Cross Thandol Span south into the Wetlands")
-  road(M.hillsbrad, M.arathi, on.hillsbrad(nil, 82.4, 39.6), "Take the east road out of Hillsbrad into Arathi")
+  road(M.hillsbrad, M.arathi, on.hillsbrad(nil, 87.36, 49.62), "Take the east road out of Hillsbrad into Arathi")
   road(M.arathi, M.hillsbrad, on.arathi(nil, 17.1, 35.3), "Take the west road into Hillsbrad")
   road(M.hillsbrad, M.alterac, on.hillsbrad(nil, 54.6, 40.9), "Climb the north road into the Alterac Mountains")
   road(M.hillsbrad, M.hinterlands, on.hillsbrad(nil, 86.4, 32.0), "Take the northeast pass into the Hinterlands")
@@ -330,7 +336,7 @@ do
     finish(555, jessen),
     accept(98463, hb("Barkeep Kelly", 51.57, 58.57), "Barkeep Kelly, behind the inn's bar, has gossip for a barkeep in Booty Bay. You get there at 36."),
     finish(505, maleb), finish(510, maleb), finish(564, darren),
-    action("goto", hb(nil, 82.4, 39.6), "Take the east road out of Hillsbrad through Thoradin's Wall into Arathi."),
+    action("goto", hb(nil, 87.36, 49.62), "Take the east road out of Hillsbrad through Thoradin's Wall into Arathi."),
     taxi("getfp", ar("Cedrik Prose", 45.7, 46.1), "Refuge Pointe, Arathi", "Follow the road to Refuge Pointe and learn its flight path."),
     accept(681, nials), finish(690, ar("Skuerto", 46.65, 47.01)),
     finish(659, quae, "Quae hides in the farmhouse ruins east of Refuge Pointe."), accept(658, quae),
@@ -397,8 +403,8 @@ do
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
     withGuide("missing-diplomat", finish(1302, dm("Clerk Lendry", 67.88, 48.24),
       "Clerk Lendry is in Foothold Citadel. Commander Samaul, in the same keep, finishes the Missing Diplomat.")),
-    accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."),
-    finish(1282, vimes, "Captain Vimes is on the citadel's top floor."),
+    B.skipOnceDone(accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."), 1302),
+    B.skipOnceDone(finish(1282, vimes, "Captain Vimes is on the citadel's top floor."), 1302),
     accept(1135, fiora, "Fiora Longears, outside the inn, wants venom sacs from the Highperch wyverns in Thousand Needles."),
     action("sethearth", janene, "Bind at the Theramore inn. You come back here after the Shimmering Flats.", theramore),
     action("buy", dm("Helenia Olden", 66.4, 51.5), "Buy 3 Soothing Spices from Helenia Olden, the trade supplier by the docks, for Swamp Eye Jarl.",
@@ -1463,8 +1469,8 @@ do
       { name = "Menethil Harbor - Theramore Isle" }),
     taxi("getfp", dm("Baldruc", 67.5, 51.3), "Theramore, Dustwallow Marsh", "Learn the Theramore flight path from Baldruc by the docks."),
     action("sethearth", janene, "Bind at the Theramore inn.", theramore),
-    accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."),
-    finish(1282, vimes, "Captain Vimes is on the citadel's top floor."),
+    B.skipOnceDone(accept(1282, dm("Guard Byron", 66.15, 46.07), "Guard Byron by the inn has a message for Captain Vimes."), 1302),
+    B.skipOnceDone(finish(1282, vimes, "Captain Vimes is on the citadel's top floor."), 1302),
     action("buy", dm("Helenia Olden", 66.4, 51.5), "Buy 3 Soothing Spices from Helenia Olden by the docks for Swamp Eye Jarl.",
       { item = 3713, count = 3 }),
     accept(1218, jarl, "Ride north to Swamp Eye Jarl's shack and hand him the spices."), finish(1218, jarl),
