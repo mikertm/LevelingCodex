@@ -108,6 +108,14 @@ def audit(data, ref, cap=20):
             ):
                 fail(where, "suggest must list other leveling section IDs")
 
+        # Encounters each instance's guides list between them: wings that share one instance (the
+        # Scarlet Monastery, Dire Maul, Blackrock Spire) each list only their own bosses.
+        instance_encounters = {}
+        for section in sections:
+            for boss in section.get("bosses") or [] if isinstance(section.get("bosses"), list) else []:
+                if isinstance(boss, dict) and boss.get("encounter") is not None:
+                    instance_encounters.setdefault(section.get("instanceID"), set()).add(boss["encounter"])
+
         rows, main_rows, alternates = [], [], {}
         for section in sections:
             label = section["id"]
@@ -163,7 +171,8 @@ def audit(data, ref, cap=20):
                     if enc in used:
                         fail(label, f"encounter {enc} is listed as more than one boss")
                     used.add(enc)
-                missing = [name for id_, name in dungeon["encounters"] if id_ not in used]
+                listed = instance_encounters.get(section.get("instanceID"), set())
+                missing = [name for id_, name in dungeon["encounters"] if id_ not in used and id_ not in listed]
                 if missing:
                     warn(label, "the game's encounters not in the boss list: " + ", ".join(missing))
             previous = None

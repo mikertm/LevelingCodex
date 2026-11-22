@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.30.7
+
+### Dungeon guides
+
+- Alliance Stratholme now lists Ezra Grimm and Magistrate Barthilas, and Alliance Scholomance lists Marduk Blackpool and Vectus, like the Horde guides. Each ticks off when it dies.
+
 ## v0.30.6
 
 ### Quest guide fix
