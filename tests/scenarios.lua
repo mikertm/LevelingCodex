@@ -11222,6 +11222,24 @@ function S.auctionBigScan()
       "slow game frames cut the slices and the scan finishes (" .. tostring(slow) .. " slow)")
   end
   debugprofilestop = clock
+  -- a frame chain that stops (an error, a lost timer) is restarted by the watchdog
+  do
+    local A = MOCK.ns.auction
+    A.store().fullAt, A.store().fullTriedAt = 0, 0
+    MOCK.advance(1)
+    local real, dropped = MOCK.ns.after, false
+    MOCK.ns.after = function(sec, fn)
+      if sec == 0 and not dropped and A.scanning() then dropped = true; return end
+      return real(sec, fn)
+    end
+    A.fullScan()
+    MOCK.advance(3)
+    MOCK.ns.after = real
+    check(dropped and A.scanning(), "the scan's chain was cut and it waits")
+    MOCK.advance(60)
+    check(not A.scanning() and table.concat(MOCK.ns.auctionDebugLines(), " "):find("restarted", 1, true),
+      "the watchdog restarts a stopped scan and it finishes")
+  end
   -- item data for thousands of items nobody in the loot code asked about (a scan loads them)
   -- folds into one refresh after the scan, not one every tenth of a second
   do

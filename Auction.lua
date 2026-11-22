@@ -424,6 +424,7 @@ local function spread(j, from, to, step, done)
   local lastEnd
   local function frame()
     if job ~= j then return end
+    j.beat, j.resume = GetTime and GetTime() or now(), frame
     local start, budget = clock(), A.budget()
     -- the time between our slices is the client's own frame; reading rows makes it load item data,
     -- and when that frame runs long (over A.SLOW_FRAME ms) the next slice is cut to A.MIN_BUDGET,
@@ -475,7 +476,9 @@ local function spread(j, from, to, step, done)
     end
     if i <= to then
       j.frames = (j.frames or 0) + 1
-      if refreshCard and j.frames % 15 == 1 then refreshCard() end -- the scan's progress
+      -- the scan's progress (pcall'd: an error in a redraw stopped the chain and left the scan
+      -- "Reading" forever)
+      if refreshCard and j.frames % 15 == 1 then pcall(refreshCard) end
       ns.after(0, frame)
     else
       local ok, err = pcall(done)
@@ -564,6 +567,22 @@ local function readFull()
 end
 
 A.FULL_WAIT = 60 -- seconds the instant scan waits for an answer before the paged scan takes over
+
+-- A watchdog: a scan whose frame chain stopped (nothing read for A.STALL seconds) starts again
+-- where it was, so a scan can't sit at "Reading" for good.
+A.STALL = 8
+function A.watchdog()
+  local j = job
+  if not (j and j.resume and j.beat) then return end
+  local t = GetTime and GetTime() or now()
+  if t - j.beat >= A.STALL then
+    j.stalls = (j.stalls or 0) + 1
+    last.stall = "a scan stopped for " .. math.floor(t - j.beat) .. " s and was restarted (" .. tostring(j.phase) .. ", row " .. (j.done or 0) .. ")"
+    j.beat = t
+    j.resume()
+  end
+end
+if ns.every then ns.every(2, function() pcall(A.watchdog) end) end
 
 function A.fullScan()
   local ok, why = A.canFullScan()
@@ -1424,6 +1443,7 @@ function ns.auctionDebugLines()
       .. "; the Codex's own searches are off"
   end
   if last.scanError then out[#out + 1] = "auction scan error: " .. ns.plain(tostring(last.scanError)) end
+  if last.stall then out[#out + 1] = "auction scan watchdog: " .. last.stall end
   if last.full then
     out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
       .. (last.full.frames or 0) .. " frames (" .. (last.full.slow or 0) .. " slow), " .. (last.full.seconds or 0) .. " s"
@@ -1438,8 +1458,11 @@ function ns.auctionDebugLines()
       .. (last.instantFailed and last.instantFailed ~= last.full and ("; the last unanswered one: " .. last.instantFailed.failed .. ", " .. A.age(last.instantFailed.at)) or "")
   end
   if job and (job.kind == "full" or job.kind == "paged") then
-    out[#out + 1] = "auction scan running: " .. job.kind .. ", " .. (now() - (job.started or now())) .. " s, "
+    local secs = now() - (job.started or now())
+    out[#out + 1] = "auction scan running: " .. job.kind .. ", " .. secs .. " s, "
       .. (job.kind == "paged" and (job.pages .. " pages, " .. (job.retries or 0) .. " retries") or ((job.polls or 0) .. " checks, phase " .. tostring(job.phase)))
+      .. string.format(", %d rows, %d frames (%d slow), %d rows a slice now, %d restarts",
+        job.done or 0, job.frames or 0, job.slow or 0, job.cap or A.CAP_START, job.stalls or 0)
   end
   if last.search then
     out[#out + 1] = "auction search: " .. Q.plain(last.search.name) .. " - " .. (last.search.failed or (last.search.results .. " results"))
