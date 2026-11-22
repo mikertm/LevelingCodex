@@ -14,6 +14,8 @@ paths or use your own weights and share codes. Tooltip advice, a separate gear-u
 marker, enchant suggestions and an optional target tracker use the same comparison rules.
 Scores are advisory; unknown facts and unsupported effects remain labeled for review.
 
+The **Journey** tab is a storybook of your adventure that writes itself as you play: chapters by level in a narrator's voice, your trail on the map, trophies and the companions you met. At the auction house, five Codex tabs (Codex, Market, Deals, Quick Sell, Scan) add a market view with charts and a ticker, a deal sniper, one-click selling with protections and a record of every trade; it works with Auctionator. The **Gold** page tracks your mount fund and gold by zone.
+
 See [CURSEFORGE_DESCRIPTION.md](CURSEFORGE_DESCRIPTION.md) for the full feature list and [RELEASING.md](RELEASING.md) for how releases are published.
 
 Fan-made. Not affiliated with or endorsed by Blizzard Entertainment.
