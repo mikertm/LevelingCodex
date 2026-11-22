@@ -10924,7 +10924,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
+  check(#tabs == 11, "eleven tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -12071,4 +12071,134 @@ function S.lootCacheLate()
   MOCK.lootItems[900003].loaded=true;MOCK.event("GET_ITEM_INFO_RECEIVED",900003,true);MOCK.advance(1)
   local canRead=type(GetItemInfo)=="function" or type(C_Item)=="table" and type(C_Item.GetItemInfo)=="function"
   check(questText(win(),canRead and "Better Vest" or "Item 900002"),"late response does not replace the selected candidate")
+end
+
+-- Journey: the adventure journal records the start, new zones, a trail, levels, quests, deaths,
+-- dungeons, bosses and companions, each as an ASCII line of the story.
+local function journeyHas(kind, pat)
+  local j = LevelingCodexCharDB.journey
+  for _, e in ipairs(j and j.events or {}) do
+    if (not kind or e.k == kind) and (not pat or e.s:find(pat, 1, true)) then return e end
+  end
+end
+
+function S.journeyRecord()
+  MOCK.mapInfo = STATS_MAPS
+  LevelingCodexCharDB = { journey = "broken" } -- a broken saved shape starts a fresh journal
+  S.login()
+  MOCK.advance(3)
+  local j = LevelingCodexCharDB.journey
+  check(type(j) == "table" and j.version == 1, "a broken journal starts fresh")
+  check(journeyHas("start", "begins in"), "the first zone starts the journey")
+  if not MOCK.minimal then
+    check(j.zones[1429], "Elwynn Forest is a land you have explored")
+    local before = j.points
+    for i = 1, 6 do MOCK.questX = 48 + i * 2; MOCK.advance(2.1) end
+    check(j.points > before and j.trail[1429] and #j.trail[1429] >= 1, "walking leaves a trail (" .. j.points .. ")")
+    MOCK.questX = 48
+  end
+  MOCK.level = MOCK.level + 1
+  MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
+  local up = journeyHas("level")
+  check(up and up.l == MOCK.level and up.s:find(tostring(MOCK.level), 1, true), "a level-up is a moment")
+  -- the minimal client knows none of the optional events (turn-ins, deaths, dungeons)
+  if MOCK.minimal then return end
+  MOCK.event("QUEST_TURNED_IN", 166, 100, 0)
+  check(journeyHas(nil, "Conquered Edwin VanCleef and saved Westfall"), "a famous turn-in has its own line")
+  MOCK.event("QUEST_TURNED_IN", 783, 100, 0)
+  local q = journeyHas(nil, nil)
+  for _, e in ipairs(j.events) do if e.q == 783 then q = e end end
+  check(q and q.q == 783 and #q.s > 10 and q.d and q.d:find("^Quest: "), "a turn-in reads as a line of the story")
+  MOCK.event("PLAYER_DEAD")
+  check(journeyHas("death") and j.deaths == 1, "a death is remembered")
+  MOCK.party, MOCK.partyMembers = true, { { name = "Bo", level = 6, class = "MAGE" } }
+  MOCK.advance(6)
+  check(journeyHas("pal", "Bo") and j.pals.Bo and j.pals.Bo.class == "MAGE", "a party member becomes a companion")
+  MOCK.instanceName, MOCK.instanceID = "The Deadmines", 36
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  check(journeyHas("dungeon", "The Deadmines") and journeyHas("dungeon", "with Bo"), "a dungeon run names who came")
+  MOCK.event("ENCOUNTER_END", 1, "Edwin VanCleef", 1, 5, 1)
+  MOCK.event("BOSS_KILL", 1, "Edwin VanCleef")
+  local bosses = 0
+  for _, e in ipairs(j.events) do if e.k == "boss" then bosses = bosses + 1 end end
+  check(bosses == 1 and journeyHas("boss", "saved Westfall"), "a boss is written once, a famous one in its own words")
+  MOCK.instanceName, MOCK.instanceID = nil, nil
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%"), "moments are ASCII with no template left: " .. e.s)
+  end
+end
+
+-- Journey: the tab draws the cover, the road, the map, the story and companions; filters and the
+-- world map trail.
+function S.journeyTab()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  for i = 1, 4 do MOCK.questX = 40 + i * 3; MOCK.advance(2.1) end
+  MOCK.event("PLAYER_DEAD")
+  MOCK.level = MOCK.level + 1
+  MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
+  MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
+  slash("")
+  click(win(), "Journey")
+  local pages = {
+    { nil, "THE JOURNEY OF", "THE ROAD TO 60", "WHERE YOU ARE", "FELLOW ADVENTURERS",
+      "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level },
+    { "Map", "THE MAP", "YOUR JOURNAL" },
+    { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
+    { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
+  }
+  for _, p in ipairs(pages) do
+    if p[1] then click(win(), p[1]) end
+    for i = 2, #p do check(questText(win(), p[i]), "the Journey " .. (p[1] or "Overview") .. " page has " .. p[i]) end
+  end
+  check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
+  if MOCK.minimal then return end -- no optional events, no map positions
+  check(questText(win(), "Brought down Hogger"), "the story has the turn-in")
+  click(win(), "Deaths")
+  check(not questText(win(), "Brought down Hogger") and questText(win(), "Elwynn Forest"),
+    "the Deaths filter leaves quests out")
+  click(win(), "All")
+  local moment = findButton(win(), function(l) return l:find("^Moment ") end)
+  check(MOCK.minimal or moment, "a moment with a spot can be shown on the map")
+  if moment then moment:Click() end
+  check(MOCK.minimal or findButton(win(), function(l) return l:find("^Pin ") end), "moments are pinned on the map")
+  check(questText(win(), "LANDS EXPLORED"), "a moment opens the Map page")
+  if not MOCK.minimal then
+    MOCK.worldMapID = 1429
+    WorldMapFrame:Show()
+    MOCK.advance(2.1)
+    local trail = _G.LevelingCodexJourneyTrail
+    local shown = 0
+    for _, r in ipairs(trail and { trail:GetRegions() } or {}) do if r:IsShown() then shown = shown + 1 end end
+    check(trail and trail:IsShown() and shown > 2, "the world map shows the trail (" .. shown .. ")")
+    click(win(), "Show my trail on the world map")
+    MOCK.advance(2.1)
+    check(not trail:IsShown(), "the setting hides the world map trail")
+    WorldMapFrame:Hide()
+  end
+  click(win(), "Erase the journal")
+  click(win(), "Click again to erase")
+  check(#LevelingCodexCharDB.journey.events == 0, "two clicks erase the journal")
+end
+
+-- Journey: past the point limit the busiest zone's trail is thinned, never cut off.
+function S.journeyThin()
+  local p = {}
+  for i = 1, 60 do p[#p + 1] = string.format("%03d%03d", i * 10, 500) end
+  local run = table.concat(p)
+  local runs = {}
+  for i = 1, 4 do runs[i] = { l = 5, p = run } end
+  LevelingCodexCharDB = { journey = { version = 1, started = 0, zones = {}, order = {}, trail = { [1429] = runs },
+    points = 240, walked = 0, events = {}, pals = {}, deaths = 0 } }
+  local journey = LevelingCodexCharDB.journey
+  S.login()
+  if MOCK.minimal then return end
+  -- a lower cap (the module's own table), so a few samples cross it
+  local J = MOCK.ns.journey
+  J.MAX_POINTS = 200
+  MOCK.questX = 20; MOCK.advance(2.1)
+  MOCK.questX = 30; MOCK.advance(2.1)
+  check(journey.points <= 200, "the trail is thinned under the cap (" .. tostring(journey.points) .. ")")
+  check(#journey.trail[1429] >= 4, "every run is kept")
 end
