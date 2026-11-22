@@ -88,9 +88,15 @@ local function level() return tonumber(UnitLevel("player")) or 1 end
 local function now() return time and time() or 0 end
 
 -- A small stable hash of a string, to pick a phrasing that doesn't change between reloads.
+-- The same moment always reads the same way, but two characters word it differently: the seed
+-- carries the character's name (J.salt).
 local function pick(list, seed)
   local h = 0
-  seed = tostring(seed or "")
+  if not J.salt then
+    local ok, who = pcall(UnitName, "player")
+    if ok and type(who) == "string" and who ~= "" then J.salt = who end
+  end
+  seed = (J.salt or "") .. tostring(seed or "")
   for i = 1, #seed do h = (h * 31 + seed:byte(i)) % 2147483647 end
   return list[h % #list + 1]
 end
@@ -105,7 +111,7 @@ local zoneCache = {}
 local function zoneOf(map)
   if type(map) ~= "number" then return end
   local hit = zoneCache[map]
-  if hit then return hit[1], hit[2] end
+  if hit then return hit[1], hit[2], hit[3] end
   local id = map
   local info = try(C_Map and C_Map.GetMapInfo, id)
   while type(info) == "table" and tonumber(info.mapType) and info.mapType > 3 and info.parentMapID do
@@ -121,10 +127,17 @@ local function zoneOf(map)
     end
   end
   name = name or ("Map " .. id)
-  zoneCache[map] = { id, name }
-  return id, name
+  -- a continent or the world map (a position read while zoomed out) is no land of its own
+  local broad = type(info) == "table" and tonumber(info.mapType) ~= nil and info.mapType <= 2 or nil
+  zoneCache[map] = { id, name, broad }
+  return id, name, broad
 end
 J.zoneOf = zoneOf
+-- The land a map belongs to, by name; nil for a continent or the world.
+function J.landOf(map)
+  local _, name, broad = zoneOf(map)
+  if not broad then return name end
+end
 
 local function inInstance()
   local _, kind = try(GetInstanceInfo)
@@ -133,7 +146,8 @@ end
 
 local function here()
   local map, x, y = Q.position()
-  local zone, name = zoneOf(map)
+  local zone, name, broad = zoneOf(map)
+  if broad then return nil, nil, map, x, y end
   return zone, name, map, x, y
 end
 
@@ -197,13 +211,21 @@ local FOES = {
 }
 local KILL = { "Answered %giver%'s call to arms against the %foe%s of %zone%", "Made %zone% a little safer from %foe%s",
   "Hunted %foe%s across %zone%", "Cleared the %foe%s out of %zone%", "Took the fight to the %foe%s of %zone% so %giver% could sleep at night",
-  "Went looking for %foe%s in %zone%, and found plenty" }
+  "Went looking for %foe%s in %zone%, and found plenty", "Thinned the %foe% numbers in %zone% at %giver%'s asking",
+  "Spent a bloody afternoon among the %foe%s of %zone%", "Sent the %foe%s of %zone% running, the ones still able to run",
+  "Did the grim work %giver% asked: %foe%s, and plenty of them, in %zone%", "Came back from %zone% with a tally of %foe%s and a few new scars" }
 local GATHER = { "Gathered %item% across %zone% for %giver%", "Rummaged through %zone% for %item%",
-  "Brought back the %item% %giver% needed", "Searched every corner of %zone% for %item%", "Came back to %giver% with arms full of %item%" }
-local COOK = { "Gathered %item% in %zone% so %giver% could get cooking", "Kept the kitchens of %zone% stocked with %item%" }
+  "Brought back the %item% %giver% needed", "Searched every corner of %zone% for %item%", "Came back to %giver% with arms full of %item%",
+  "Turned %zone% upside down looking for %item%", "Filled your bags with %item% from %zone% and hauled them to %giver%",
+  "Found every last %item% %giver% asked for, in the far corners of %zone%", "Picked %zone% clean of %item%, as promised" }
+local COOK = { "Gathered %item% in %zone% so %giver% could get cooking", "Kept the kitchens of %zone% stocked with %item%",
+  "Brought %giver% the %item% for supper, and maybe got a taste", "Fetched %item% from %zone%: somebody's stew depends on it" }
 local ERRAND = { "Ran an errand for %giver% in %zone%", "Carried word across %zone% for %giver%", "Did a good turn for %giver% in %zone%",
-  "Kept a promise to %giver% in %zone%", "Answered %giver%'s plea for help in %zone%" }
-local NO_GIVER = { "Lent a helping hand in %zone%", "Answered a call for help in %zone%" }
+  "Kept a promise to %giver% in %zone%", "Answered %giver%'s plea for help in %zone%", "Carried a message across %zone% for %giver%",
+  "Walked the long way round %zone% on %giver%'s business", "Did what %giver% couldn't, in %zone%",
+  "Played messenger for %giver%: %zone% is smaller now", "Made %giver%'s problem your problem, and then made it go away" }
+local NO_GIVER = { "Lent a helping hand in %zone%", "Answered a call for help in %zone%", "Did a stranger a good turn in %zone%",
+  "Set something right in %zone%" }
 
 -- Hand-picked moments: the turn-ins that end famous stories.
 J.FAMOUS_QUESTS = {
@@ -228,19 +250,28 @@ J.FAMOUS_BOSSES = {
   ["emperor dagran thaurissan"] = "Toppled Emperor Thaurissan in Blackrock Depths",
 }
 local BOSS = { "Defeated %boss% in %dungeon%", "Brought down %boss% deep in %dungeon%", "Bested %boss% in %dungeon%",
-  "Stood over the fallen %boss% in the heart of %dungeon%" }
+  "Stood over the fallen %boss% in the heart of %dungeon%", "%boss% fell in %dungeon%, and the party breathed again",
+  "Ended %boss%'s reign in %dungeon%", "Fought %boss% to the last in %dungeon%, and won", "Left %boss% where they fell, deep in %dungeon%" }
 local DUNGEON = { "Ventured into %dungeon%", "Gathered your courage and stepped into %dungeon%", "Delved into %dungeon%",
-  "Lit a torch and went down into %dungeon%" }
+  "Lit a torch and went down into %dungeon%", "Took a deep breath at the door of %dungeon% and walked in",
+  "Followed the party down into %dungeon%", "Stepped into the dark of %dungeon%, weapons ready" }
 local ZONE = { "Set foot in %zone% for the first time", "The road led on to %zone%", "Arrived in %zone%, a new land to explore",
-  "First steps into %zone%", "Crossed into %zone%, map in hand", "Left the familiar behind and walked into %zone%" }
+  "First steps into %zone%", "Crossed into %zone%, map in hand", "Left the familiar behind and walked into %zone%",
+  "Came over the rise and saw %zone% for the first time", "%zone%: new ground, new faces, new trouble", "Wandered into %zone% and stayed a while",
+  "Followed the road until it became %zone%" }
 local DEATH = { "Fell to %killer% in %zone%, then got back up", "Was bested by %killer% in %zone%: a lesson learned",
-  "%killer% got the better of you in %zone%. The spirit healer sends regards" }
+  "%killer% got the better of you in %zone%. The spirit healer sends regards", "Lost a fight to %killer% in %zone%. Pride hurts most",
+  "Went down to %killer% in %zone%. Back on your feet, eventually", "%killer% won the day in %zone%. Not the war, though",
+  "Underestimated %killer% in %zone%, and paid for it" }
 local PVP_DEATH = { "Ambushed by %killer% in %zone%. Not every enemy in Azeroth is a monster",
   "Cut down by %killer% in %zone%: the war is real", "Fell to %killer% in %zone%, and swore to remember the name" }
-local DEATH_PLAIN = { "Met an untimely end in %zone%, but the story goes on", "Took a spill in %zone% and walked back from the graveyard" }
+local DEATH_PLAIN = { "Met an untimely end in %zone%, but the story goes on", "Took a spill in %zone% and walked back from the graveyard",
+  "Died in %zone%. It happens to the best of us", "The world went grey in %zone%, for a while" }
 local FLIGHT = { "Made friends with the flight master at %place%", "Found a new flight path at %place%",
-  "Learned the skies over %place%" }
-local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled together", "Shared a road and a few fights with %name%" }
+  "Learned the skies over %place%", "Shook the flight master's hand at %place%: one more road through the air",
+  "Added %place% to the map of the skies", "Met the gryphons of %place%, or whatever flies there" }
+local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled together", "Shared a road and a few fights with %name%",
+  "Fell in with %name% for a stretch of the road", "Found a friend in %name%, or at least a second sword", "Teamed up with %name%; the road felt shorter" }
 
 -- What a quest was about, read from its objectives while it sat in your log.
 local questFacts = {} -- [id] = { title, kind = "kill"/"gather"/"errand", target }
@@ -349,7 +380,9 @@ function J.levelLine(lvl, zone)
   if special[lvl] then return special[lvl] end
   return fill(pick({ "Grew stronger: level %n% in %zone%", "Reached level %n% in %zone%",
     "Level %n%, earned the hard way in %zone%", "Level %n% in %zone%: a little taller, a little tougher",
-    "Felt the light of level %n% in %zone%" }, lvl), { n = tostring(lvl), zone = zone })
+    "Felt the light of level %n% in %zone%", "Level %n% came in %zone%, with a rush of new strength",
+    "Level %n%: the trainers in town will want a word", "Climbed to level %n% somewhere in %zone%",
+    "Level %n%. %zone% will remember this one" }, lvl), { n = tostring(lvl), zone = zone })
 end
 
 ----------------------------------------------------------------------------
@@ -363,6 +396,10 @@ J.KEEP = { level = true, zone = true, start = true, boss = true, first = true, c
 function J.add(kind, text, detail, extra)
   local j = J.data()
   local _, _, map, x, y = here()
+  if J.retell then
+    local ok, told = pcall(J.retell, kind, text, extra)
+    if ok and type(told) == "string" then text = told end
+  end
   local e = { t = now(), k = kind, l = level(), s = Q.plain(text or ""), d = detail and Q.plain(detail) or nil }
   if extra and extra.at then map, x, y = extra.at[1], extra.at[2], extra.at[3] end
   if extra and extra.q then e.q = extra.q end
@@ -519,7 +556,7 @@ local function bossDown(name)
   local wipes = J.wipesOn and J.wipesOn(name) or 0
   local detail = dungeonHere and Q.plain(dungeonHere)
   if wipes > 0 then detail = (detail and (detail .. ", ") or "") .. "after " .. wipes .. (wipes == 1 and " wipe" or " wipes") end
-  J.add("boss", J.bossLine(name, dungeonHere), detail)
+  J.add("boss", J.bossLine(name, dungeonHere), detail, { who = name })
 end
 
 local HANDLERS = {
@@ -534,7 +571,7 @@ local HANDLERS = {
     local title = (questFacts[id] and questFacts[id].title) or Q.questName(id)
       or try(C_QuestLog and C_QuestLog.GetTitleForQuestID, id)
     local text, kind = J.questLine(id, title, zoneName())
-    J.add(kind, text, title and ("Quest: " .. Q.plain(title)) or nil, { q = id })
+    J.add(kind, text, title and ("Quest: " .. Q.plain(title)) or nil, { q = id, who = kind == "elite" and Q.eliteName(id) or nil })
   end,
   PLAYER_DEAD = function()
     local j = J.data()
@@ -581,7 +618,7 @@ local function palTick()
     if type(rec) ~= "table" then
       rec = { seconds = 0, first = now(), level = level() }
       j.pals[p.name] = rec
-      J.add("pal", fill(pick(PAL, p.name), { name = Q.plain(p.name) }))
+      J.add("pal", fill(pick(PAL, p.name), { name = Q.plain(p.name) }), nil, { who = p.name })
     end
     rec.class = p.class or rec.class
     rec.seconds = (tonumber(rec.seconds) or 0) + PAL_TICK
@@ -594,7 +631,14 @@ function J.resetSample() last = nil end
 local events
 function ns.startJourney()
   if events then return end
-  J.data()
+  local j = J.data()
+  -- an older journal may list a continent among its lands: take it out (its moments stay)
+  pcall(function()
+    for i = #j.order, 1, -1 do
+      local _, _, broad = zoneOf(j.order[i])
+      if broad then j.zones[j.order[i]] = nil; table.remove(j.order, i) end
+    end
+  end)
   events = CreateFrame("Frame")
   for event in pairs(HANDLERS) do pcall(events.RegisterEvent, events, event) end
   events:SetScript("OnEvent", function(_, event, ...)

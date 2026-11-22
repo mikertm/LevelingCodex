@@ -114,6 +114,8 @@ local function read(text, global, fallback)
   return args
 end
 
+T.read = read
+
 -- Rewrite a moment in place (a second wipe on the same boss, another sale in the same hour).
 local function rewrite(e, text, detail)
   if type(e) ~= "table" then return end
@@ -704,9 +706,13 @@ local function momentsCard(title, kinds, empty)
   end
 end
 
--- The Trophies page's sections from this file, each fn(V, y) -> y (the book flows them into its columns).
+T.momentsCard = momentsCard
+
+-- The Trophies page's sections from this file, each fn(V, y) -> y (the book flows them into its columns),
+-- then those other files add to J.moreTrophies (JourneyWilds.lua).
 function T.trophySections()
   local out = {}
+  for _, fn in ipairs(J.moreTrophies or {}) do out[#out + 1] = fn end
   for _, col in ipairs(LEDGER) do out[#out + 1] = function(V, y) return ledgerCard(V, y, col) end end
   out[#out + 1] = momentsCard("AT THE WORKBENCH", { craft = true, skill = true },
     "Craft something, or raise a profession past 50, 100, 200 or 250, and it is written here.")

@@ -1143,7 +1143,7 @@ renderers.settings = function()
     box(0, top, W, y - top, C.parch, C.edge)
     y = y + 14
   end
-  local function row(label, x, w, on, fn, tip) btn(label, x, y, w, function() fn(); refresh() end, on, tip) end
+  local function row(label, x, w, on, fn, tip) return btn(label, x, y, w, function() fn(); refresh() end, on, tip) end
   local function tick(label, on, fn, tip)
     check(label, 0, y, on, function() fn(); refresh() end, tip)
     y = y + 28
@@ -1422,7 +1422,20 @@ renderers.settings = function()
     T(math.floor((db.windowScale or 1) * 100 + 0.5) .. "%", 92, y + 4, 50, "body", C.gold, "CENTER")
     row("+", 146, 28, false, function() db.windowScale = math.min(1.6, (db.windowScale or 1) + 0.1); ns.placeWindow() end)
     row("Reset position", 186, 140, false, function() db.windowPos = nil; ns.placeWindow() end)
+    y = y + 34
+    T("Height", 0, y + 4, 60, "body", C.light)
+    local hNow = ns.windowHeight()
+    local hb = row("-", 60, 28, false, function() db.windowHeight = math.max(ns.WINDOW_MIN_H, ns.windowHeight() - 80); ns.placeWindow() end)
+    if hb then hb.codexLabel = "Height -" end
+    T(hNow .. " px", 92, y + 4, 50, "body", C.gold, "CENTER")
+    hb = row("+", 146, 28, false, function() db.windowHeight = ns.windowHeight() + 80; ns.placeWindow() end)
+    if hb then hb.codexLabel = "Height +" end
+    row("Fit the screen", 186, 140, false, function() db.windowHeight = 9999; ns.placeWindow() end,
+      "As tall as your screen allows, so long pages need less scrolling.")
+    row("Normal", 334, 90, false, function() db.windowHeight = nil; ns.placeWindow() end)
     y = y + 40
+    T("Drag the grip in the window's bottom right corner to make it taller or shorter. Size scales everything down or up.", 0, y, W, "small", C.dim)
+    y = y + 30
     T("Drag the window by its header to move it. /codex reset puts the window and banner back where they started. /codex debug lists what the Codex can see, for bug reports.", 0, y, W, "small", C.dim)
     y = y + 40
   end }
@@ -1605,6 +1618,20 @@ function ns.refreshTab(key)
   if frame and frame:IsShown() and activeTab == key then refresh() end
 end
 
+-- The window's height: db.windowHeight (Settings > This window, or the corner grip), kept on screen.
+ns.WINDOW_H, ns.WINDOW_MIN_H = 620, 460
+local function screenRoom(scale)
+  local h = tonumber(UIParent:GetHeight())
+  if not h or h < 200 then return nil end
+  return math.floor((h - 70) / (scale or 1)) -- the banner above and the tabs below stay on screen
+end
+function ns.windowHeight(scale)
+  local want = tonumber(ns.db().windowHeight) or ns.WINDOW_H
+  local room = screenRoom(scale or (frame and frame:GetScale()) or 1)
+  if room then want = math.min(want, room) end
+  return math.floor(math.max(ns.WINDOW_MIN_H, want))
+end
+
 function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
@@ -1615,6 +1642,7 @@ function ns.placeWindow()
     if screenWidth and screenWidth > 32 then scale = math.min(scale, (screenWidth - 32) / frame:GetWidth()) end
   end
   frame:SetScale(scale)
+  frame:SetHeight(ns.windowHeight(scale))
   frame:ClearAllPoints()
   if p then frame:SetPoint(p[1], UIParent, p[2], p[3], p[4]) else frame:SetPoint("CENTER") end
 end
@@ -1906,6 +1934,35 @@ local function makeFrame()
   page = inset(frame)
   page:SetPoint("TOPLEFT", 14, -100)
   page:SetPoint("BOTTOMRIGHT", -14, 14)
+  -- the grip in the bottom right corner: drag it to make the window taller or shorter
+  local grip = CreateFrame("Button", "LevelingCodexSizeGrip", frame)
+  grip:SetSize(16, 16)
+  grip:SetPoint("BOTTOMRIGHT", -4, 4)
+  grip:SetFrameLevel(frame:GetFrameLevel() + 30)
+  local gt = grip:CreateTexture(nil, "OVERLAY")
+  gt:SetAllPoints(grip)
+  if gt:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up") == false then gt:SetColorTexture(0.8, 0.7, 0.4, 0.6) end
+  grip.tipTitle, grip.tipText = "Window height", "Drag up or down to make the window shorter or taller."
+  grip.codexLabel = "Size grip"
+  grip:SetScript("OnMouseDown", function()
+    local _, cy = GetCursorPosition()
+    grip.from, grip.startH = cy, frame:GetHeight()
+  end)
+  grip:SetScript("OnMouseUp", function()
+    if grip.from then grip.from = nil; refresh() end
+  end)
+  grip:SetScript("OnUpdate", function()
+    if not grip.from then return end
+    local _, cy = GetCursorPosition()
+    local s = (frame.GetEffectiveScale and frame:GetEffectiveScale()) or frame:GetScale() or 1
+    ns.db().windowHeight = math.floor(grip.startH + (grip.from - cy) / (s > 0 and s or 1))
+    -- the top stays put while the bottom follows the cursor
+    if not ns.db().windowPos then
+      local left, topEdge = frame:GetLeft(), frame:GetTop()
+      if left and topEdge then ns.db().windowPos = { "TOPLEFT", "BOTTOMLEFT", left, topEdge } end
+    end
+    ns.placeWindow()
+  end)
   scroll = CreateFrame("ScrollFrame", nil, page, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 8, -10)
   scroll:SetPoint("BOTTOMRIGHT", -28, 10)

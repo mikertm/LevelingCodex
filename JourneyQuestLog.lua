@@ -120,29 +120,37 @@ function L.quests()
   return out
 end
 
+local ROW_H = 34
 local function listRow(V, q, x, y, w, on, plevel)
   local U, C = V.U, V.C
   local diff = L.difficulty(q.entry.level, plevel)
-  local done, total = progress(q.entry)
+  local done, total, share = progress(q.entry)
+  local ink = C.book and diff[2] or diff[3]
   if on then
-    U.rect(x, y, w, 24, C.wash)
-    U.rect(x, y, 3, 24, C.gold)
+    U.rect(x, y, w, ROW_H - 2, C.wash)
+    U.rect(x, y, 3, ROW_H - 2, C.gold)
   end
+  -- a mark like the quest giver's: ? when it's ready, ! while it's open
+  U.T(q.entry.ready and "?" or "!", x + 8, y + 3, 16, "head", q.entry.ready and C.gold or C.inkSoft, "CENTER")
   local lvl = tonumber(q.entry.level)
-  U.T(lvl and lvl > 0 and ("[" .. lvl .. "]") or "[?]", x + 8, y + 5, 34, "small", C.book and diff[2] or diff[3])
-  local _, fs = U.T(q.title, x + 40, y + 5, w - 96, "small", on and C.light or (q.row and C.light or C.dim))
+  U.T(lvl and lvl > 0 and tostring(lvl) or "?", x + 26, y + 6, 26, "small", ink, "CENTER")
+  local _, fs = U.T(q.title, x + 56, y + 5, w - 120, "small", (on or q.row) and C.ink or C.inkSoft)
   if fs.SetWordWrap then fs:SetWordWrap(false) end
+  local bw = w - 120
+  U.rect(x + 56, y + 21, bw, 3, { 0, 0, 0, 0.12 })
+  if share > 0 then U.rect(x + 56, y + 21, math.max(2, bw * share), 3, q.entry.ready and C.green or ink) end
   if q.entry.ready then
-    U.T("Done", x + w - 56, y + 5, 50, "small", C.green, "RIGHT")
+    U.T("Done", x + w - 60, y + 6, 54, "small", C.green, "RIGHT")
   elseif total > 0 then
-    U.T(done .. "/" .. total, x + w - 56, y + 5, 50, "small", C.dim, "RIGHT")
+    U.T(done .. " of " .. total, x + w - 60, y + 6, 54, "small", C.inkSoft, "RIGHT")
   end
-  U.hit(x, y, w, 24, q.title, (q.entry.ready and "Ready to turn in." or diff[1] .. " for your level.")
+  if not q.row then U.T("not in your guide", x + w - 120, y + 20, 114, "small", C.inkSoft, "RIGHT") end
+  U.hit(x, y, w, ROW_H - 2, q.title, (q.entry.ready and "Ready to turn in." or diff[1] .. " for your level.")
     .. " Click to read it in the journal.", function()
     selected, confirmAbandon = q.id, nil
     ns.ui.refresh()
   end, "Quest " .. q.title)
-  return 24
+  return ROW_H
 end
 
 -- The chosen quest as a page of the journal; returns its height.
@@ -165,7 +173,7 @@ local function questPage(V, q, x, y, w)
   local taken = J.tales and J.tales.taken(id)
   local line
   if taken then
-    local where = taken.m and select(2, J.zoneOf(taken.m))
+    local where = taken.m and J.landOf(taken.m)
     line = "Taken up " .. ago(taken.t) .. (where and (" in " .. Q.plain(where)) or "") .. ", at level " .. (taken.l or "?")
       .. " (day " .. D.dayOf(V.j, taken.t) .. ")."
   else
@@ -207,10 +215,25 @@ local function questPage(V, q, x, y, w)
       x + 14, y, tw, "small", C.inkSoft) + 6
   end
   if entry.ready then
-    y = y + U.T("Ready to turn in" .. (to and (" to " .. to) or "") .. ".", x + 14, y, tw, "body", { 0.12, 0.45, 0.12 }) + 6
+    -- a stamp across the page, like a seal pressed into the paper
+    y = y + 6
+    local green = { 0.12, 0.45, 0.12 }
+    U.rect(x + 14, y, tw, 1, green, "border"); U.rect(x + 14, y + 33, tw, 1, green, "border")
+    U.rect(x + 14, y, 1, 34, green, "border"); U.rect(x + 13 + tw, y, 1, 34, green, "border")
+    U.T("READY TO TURN IN" .. (to and ("  -  " .. to:upper()) or ""), x + 14, y + 10, tw, "label", green, "CENTER")
+    y = y + 42
   end
-  local xp = tonumber(try(GetQuestLogRewardXP, id))
-  local cash = tonumber(try(GetQuestLogRewardMoney, id))
+  -- the guide's own words for it
+  local step = q.row and q.row.step
+  local note = step and type(step.text) == "string" and step.text ~= "" and Q.plain(step.text)
+  if note then
+    y = y + 2
+    U.T("THE GUIDE'S NOTE", x + 14, y, tw, "label", C.inkSoft)
+    y = y + 16
+    y = y + U.T(note, x + 14, y, tw, "small", C.ink) + 8
+  end
+  local xp = tonumber((try(GetQuestLogRewardXP, id)))
+  local cash = tonumber((try(GetQuestLogRewardMoney, id)))
   if (xp and xp > 0) or (cash and cash > 0) then
     local parts = {}
     if xp and xp > 0 then parts[#parts + 1] = ns.thousands(xp) .. " XP" end
@@ -265,6 +288,27 @@ end
 local QUOTES = { "Every quest is a promise made to someone in Azeroth.", "Somewhere out there, people are counting on you.",
   "A full log is a busy hero.", "Each page here is a road not yet walked." }
 
+-- The last quests the journal wrote down, as the journal tells them.
+function L.recent(V, y)
+  local U, C, W = V.U, V.C, V.W
+  local list = {}
+  local events = J.data().events
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if e.k == "quest" or e.k == "chain" or e.k == "elite" then list[#list + 1] = e end
+    if #list >= 5 then break end
+  end
+  if #list == 0 then return y end
+  y = y + U.sectionTitle("LATELY COMPLETED", y)
+  for _, e in ipairs(list) do
+    U.icon(J.ICON[e.k] or J.ICON.quest, 6, y, 20, e.s, e.d)
+    local h = U.T(e.s, 34, y + 2, W - 40, "small", C.ink)
+    if e.d then h = h + U.T(e.d .. "  -  level " .. tostring(e.l or "?"), 34, y + h + 4, W - 40, "small", C.inkSoft) + 2 end
+    y = y + math.max(24, h + 8)
+  end
+  return y + 4
+end
+
 local function questLogPage(V, y)
   local LV, RV = V.L, V.R
   local U, C, W = LV.U, LV.C, LV.W
@@ -276,20 +320,21 @@ local function questLogPage(V, y)
     if q.entry.ready then ready = ready + 1 end
     if not q.row then outside = outside + 1 end
   end
-  -- the left page: the banner, then the list
+  -- the left page: the heading, the log's fill, then the list
   local top = y
-  U.icon("INV_Misc_Book_08", 14, y + 14, 34, "Quest Log", "Every quest in your log, as the game's quest log keeps them.")
-  U.T("THE QUEST LOG", 58, y + 12, W - 140, "label", C.inkSoft)
-  U.T(#quests == 1 and "One quest in hand" or (#quests .. " quests in hand"), 58, y + 26, W - 140, "head", C.ink)
-  if max then U.T(count .. " of " .. max, W - 100, y + 14, 86, "head", C.ink, "RIGHT") end
+  y = y + LV.U.sectionTitle("THE QUEST LOG", y, (#quests == 1 and "One quest in hand" or (#quests .. " quests in hand"))
+    .. (max and ("  -  " .. count .. " of " .. max .. " places") or ""))
+  if max and max > 0 then
+    local fill = math.min(1, (tonumber(count) or 0) / max)
+    U.rect(40, y, W - 80, 4, { 0, 0, 0, 0.12 })
+    U.rect(40, y, math.max(2, (W - 80) * fill), 4, fill >= 0.9 and { 0.6, 0.15, 0.1 } or C.gold)
+    y = y + 12
+  end
   local facts = {}
   if ready > 0 then facts[#facts + 1] = ready .. " ready to turn in" end
   if tracked > 0 then facts[#facts + 1] = tracked .. " tracked" end
   if outside > 0 then facts[#facts + 1] = outside .. " not in your guide" end
-  local h = U.T(#facts > 0 and table.concat(facts, "  -  ") or QUOTES[(#quests % #QUOTES) + 1], 58, y + 50, W - 72, "small", C.inkSoft)
-  y = y + 50 + h + 12
-  D.page(U, C, 0, top, W, y - top)
-  y = y + 12
+  y = y + U.T(#facts > 0 and table.concat(facts, "  -  ") or QUOTES[(#quests % #QUOTES) + 1], 0, y, W, "small", C.inkSoft, "CENTER") + 12
   if #quests == 0 then
     local ry = y
     ry = ry + 16 + RV.U.T("Your quest log is empty. Somewhere a quest giver is waiting with a golden mark over their head.",
@@ -309,14 +354,18 @@ local function questLogPage(V, y)
   for _, q in ipairs(quests) do
     if q.heading ~= heading then
       heading = q.heading
-      if ly > y then ly = ly + 4 end
-      U.T(heading:upper(), 12, ly + 8, W - 24, "label", C.gold)
-      ly = ly + 26
+      if ly > y then ly = ly + 6 end
+      local n = 0
+      for _, o in ipairs(quests) do if o.heading == heading then n = n + 1 end end
+      U.T(heading:upper(), 12, ly + 6, W - 80, "label", C.gold)
+      U.T(tostring(n), W - 60, ly + 6, 48, "small", C.inkSoft, "RIGHT")
+      U.rect(12, ly + 22, W - 24, 1, { C.gold[1], C.gold[2], C.gold[3], 0.4 }, "border")
+      ly = ly + 28
     end
     ly = ly + listRow(LV, q, 4, ly, W - 8, q.id == selected, V.lvl)
   end
   ly = ly + 8
-  U.box(0, y, W, ly - y, C.panel, C.edge)
+  ly = L.recent(LV, ly + 8)
   -- the right page: the chosen quest
   local ph = questPage(RV, found, 0, top, RV.W)
   return ly + 10, top + ph + 10

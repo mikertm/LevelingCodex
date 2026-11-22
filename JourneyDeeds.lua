@@ -400,7 +400,7 @@ function D.today()
   for _, e in ipairs(J.data().events) do
     if (e.t or 0) >= since then
       c[e.k] = (c[e.k] or 0) + 1
-      local zn = e.m and select(2, J.zoneOf(e.m))
+      local zn = e.m and J.landOf(e.m)
       if zn and not seenZone[zn] then seenZone[zn] = true; zones[#zones + 1] = zn end
       if e.k == "first" then firsts[#firsts + 1] = e end
       if e.k == "level" then

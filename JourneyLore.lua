@@ -15,54 +15,96 @@ Lr.ZONES = {
     "Under the oaks of Elwynn, the road to everything begins." },
   ["Westfall"] = { "Golden fields gone to seed, scarecrows that walk, and a people asking who will help them now.",
     "Wind over empty farmland, and a red bandana behind every haystack." },
-  ["Redridge Mountains"] = { "Red cliffs over a blue lake, a town on the bridge and orcs in the hills." },
+  ["Redridge Mountains"] = { "Red cliffs over a blue lake, a town on the bridge and orcs in the hills.",
+    "Lakeside farms, gnolls in the hills and a town that could use a hero." },
   ["Duskwood"] = { "A forest where the sun forgot to rise. Lock the door and keep the lantern lit.",
     "Crows, cobwebs and a graveyard that will not stay quiet." },
-  ["Dun Morogh"] = { "Snow to the knees, ale by the fire, and troggs where the mines used to be." },
-  ["Loch Modan"] = { "A great dam, a deep loch and the smell of pipe smoke over the water." },
-  ["Wetlands"] = { "Rain, rot and raptors. Even the frogs here look tired." },
-  ["Teldrassil"] = { "A world tree's crown, wrapped in moonlight and old magic." },
-  ["Darkshore"] = { "A long grey coast where old ruins whisper and the sea keeps its secrets." },
-  ["Ashenvale"] = { "An ancient forest where every tree is watching, and some of them fight back." },
-  ["Stonetalon Mountains"] = { "Stone, smoke and saws: a mountain bleeding where the goblins cut it." },
-  ["Durotar"] = { "Red earth, hard sun and harder people. Nothing here is given." },
-  ["Mulgore"] = { "Wide grass under wide skies, where the wind carries the drums of the plains." },
-  ["Tirisfal Glades"] = { "Grey trees, cold light and the dead who refuse to rest." },
-  ["Silverpine Forest"] = { "Pines and fog, and howling under the moon." },
+  ["Dun Morogh"] = { "Snow to the knees, ale by the fire, and troggs where the mines used to be.",
+    "Frost on the beard and fire in the forge: the mountain makes its folk sturdy." },
+  ["Loch Modan"] = { "A great dam, a deep loch and the smell of pipe smoke over the water.",
+    "Fishermen, dwarven sentries and the long shadow of the Stonewrought Dam." },
+  ["Wetlands"] = { "Rain, rot and raptors. Even the frogs here look tired.",
+    "Grey skies over drowned roads, and something large moving in the reeds." },
+  ["Teldrassil"] = { "A world tree's crown, wrapped in moonlight and old magic.",
+    "Soft light through ancient leaves, and a quiet that makes you whisper." },
+  ["Darkshore"] = { "A long grey coast where old ruins whisper and the sea keeps its secrets.",
+    "Mist rolls off the water, and the old elven stones remember everything." },
+  ["Ashenvale"] = { "An ancient forest where every tree is watching, and some of them fight back.",
+    "Moss, moonlight and the long war between the forest and the axe." },
+  ["Stonetalon Mountains"] = { "Stone, smoke and saws: a mountain bleeding where the goblins cut it.",
+    "High peaks, deep scars and harpies screaming from the cliffs." },
+  ["Durotar"] = { "Red earth, hard sun and harder people. Nothing here is given.",
+    "Cactus, scorpids and a wind that tastes of iron." },
+  ["Mulgore"] = { "Wide grass under wide skies, where the wind carries the drums of the plains.",
+    "Rolling plains and gentle rains, where the Earth Mother still listens." },
+  ["Tirisfal Glades"] = { "Grey trees, cold light and the dead who refuse to rest.",
+    "Mist over dead fields, and the Undercity's lamps far below." },
+  ["Silverpine Forest"] = { "Pines and fog, and howling under the moon.",
+    "Grey wolves, grey trees and the grey walls of Shadowfang above it all." },
   ["The Barrens"] = { "Dust to the horizon, lions in the grass and a crossroads at the heart of it all.",
     "So much land, so little shade." },
-  ["Hillsbrad Foothills"] = { "Orchards and farms caught between two flags." },
-  ["Alterac Mountains"] = { "Frozen passes and fallen kings. Ogres hold what men lost." },
-  ["Arathi Highlands"] = { "Old stone circles and older grudges on the windswept highlands." },
-  ["Thousand Needles"] = { "Pillars of rock like a stone forest, and a long fall below every bridge." },
-  ["Desolace"] = { "A land of bones and ash, where centaur tribes wage endless war." },
+  ["Hillsbrad Foothills"] = { "Orchards and farms caught between two flags.",
+    "Apple carts, old farms and a quiet war just over the hill." },
+  ["Alterac Mountains"] = { "Frozen passes and fallen kings. Ogres hold what men lost.",
+    "Snow, ruin and the ghosts of a crown that betrayed its own." },
+  ["Arathi Highlands"] = { "Old stone circles and older grudges on the windswept highlands.",
+    "Wind over the grass, and the stones of the first human kingdom." },
+  ["Thousand Needles"] = { "Pillars of rock like a stone forest, and a long fall below every bridge.",
+    "Stone spires in the sun, and long drops between them." },
+  ["Desolace"] = { "A land of bones and ash, where centaur tribes wage endless war.",
+    "Dust and bones and the endless thunder of kodo herds." },
   ["Stranglethorn Vale"] = { "Jungle heat, pirate ships and tigers in the trees. Watch your back.",
     "Every vine hides a panther, and every panther has friends." },
-  ["Dustwallow Marsh"] = { "Mist, mud and the shadow of a black dragon over the swamp." },
-  ["Badlands"] = { "Cracked earth and the bones of giants, baking under a merciless sun." },
-  ["Swamp of Sorrows"] = { "A drowned land of grief, where the trees weep into black water." },
-  ["Feralas"] = { "Giant trees, wild beasts and the broken halls of the highborne." },
-  ["The Hinterlands"] = { "Green hills where gryphons nest and trolls guard their temples." },
-  ["Tanaris"] = { "Sand, sun and a goblin city that sells everything, including water." },
-  ["Searing Gorge"] = { "Ash falls like snow over a pit of fire and chains." },
-  ["Blasted Lands"] = { "Red sky, scorched earth and a dark portal humming with old war." },
-  ["Un'Goro Crater"] = { "A lost world of steaming jungle, where the ground shakes under every footstep." },
-  ["Azshara"] = { "Autumn colours over drowned palaces. Beautiful, and full of ghosts." },
-  ["Felwood"] = { "A poisoned forest, glowing sickly green. Breathe lightly." },
-  ["Burning Steppes"] = { "Black rock and red fire under the shadow of the mountain." },
-  ["Western Plaguelands"] = { "Fields of the dead and farms that remember being alive." },
-  ["Eastern Plaguelands"] = { "The heart of the plague. Even the light seems tired here." },
-  ["Winterspring"] = { "Snow, silence and the howl of wind over frozen falls." },
-  ["Silithus"] = { "A desert buzzing with things that should stay buried." },
-  ["Deadwind Pass"] = { "Dead trees, a dead wind and a tower that stares back." },
-  ["Moonglade"] = { "A quiet glade where druids gather and the moon is always near." },
-  ["Stormwind City"] = { "White stone, blue banners and the busiest bank in the kingdom." },
-  ["Ironforge"] = { "A city carved into the mountain, loud with hammers and louder with stories." },
-  ["Darnassus"] = { "Moonwells, quiet paths and a temple open to the stars." },
-  ["Orgrimmar"] = { "Spikes, smoke and drums. A city built to stand." },
-  ["Thunder Bluff"] = { "Tents high on the mesas, where the wind is always singing." },
-  ["Undercity"] = { "Below the ruins of a fallen capital, the Forsaken keep their own counsel." },
-  ["Zephras Isle"] = { "A sky-touched island, all wind and wings, where the Skyborne first learn to fly." },
+  ["Dustwallow Marsh"] = { "Mist, mud and the shadow of a black dragon over the swamp.",
+    "Mosquitoes the size of sparrows, and something worse in the fog." },
+  ["Badlands"] = { "Cracked earth and the bones of giants, baking under a merciless sun.",
+    "Dust devils, dragonkin and a sky the colour of rust." },
+  ["Swamp of Sorrows"] = { "A drowned land of grief, where the trees weep into black water.",
+    "Rain on black water, and old sorrows under every root." },
+  ["Feralas"] = { "Giant trees, wild beasts and the broken halls of the highborne.",
+    "Rain-soaked giants of the forest, and ogres in the ruins of the elves." },
+  ["The Hinterlands"] = { "Green hills where gryphons nest and trolls guard their temples.",
+    "Wild forest, high nests and the drums of the Witherbark at night." },
+  ["Tanaris"] = { "Sand, sun and a goblin city that sells everything, including water.",
+    "Dunes to the edge of sight, and pirates on the coast." },
+  ["Searing Gorge"] = { "Ash falls like snow over a pit of fire and chains.",
+    "Slag, smoke and the hammering of the Dark Iron at their forges." },
+  ["Blasted Lands"] = { "Red sky, scorched earth and a dark portal humming with old war.",
+    "A wound in the world, still red and still open." },
+  ["Un'Goro Crater"] = { "A lost world of steaming jungle, where the ground shakes under every footstep.",
+    "Dinosaurs, glowing crystals and plants that would like to eat you." },
+  ["Azshara"] = { "Autumn colours over drowned palaces. Beautiful, and full of ghosts.",
+    "Broken columns by a lonely sea, still dreaming of a queen." },
+  ["Felwood"] = { "A poisoned forest, glowing sickly green. Breathe lightly.",
+    "Corruption in every root, and satyrs dancing where the dryads sang." },
+  ["Burning Steppes"] = { "Black rock and red fire under the shadow of the mountain.",
+    "Fire on the hills and the black dragonflight in the smoke." },
+  ["Western Plaguelands"] = { "Fields of the dead and farms that remember being alive.",
+    "Empty farms, crows on the fences and the dead tilling the fields." },
+  ["Eastern Plaguelands"] = { "The heart of the plague. Even the light seems tired here.",
+    "Bone and blight to the horizon, and a few stubborn souls holding the line." },
+  ["Winterspring"] = { "Snow, silence and the howl of wind over frozen falls.",
+    "Crystal snow and frostsabers, and a goblin town keeping warm." },
+  ["Silithus"] = { "A desert buzzing with things that should stay buried.",
+    "Sand, wind and the hum of a hive under your feet." },
+  ["Deadwind Pass"] = { "Dead trees, a dead wind and a tower that stares back.",
+    "No birds sing here. Even the crows keep their distance." },
+  ["Moonglade"] = { "A quiet glade where druids gather and the moon is always near.",
+    "Soft grass, silver water and peace that the rest of the world forgot." },
+  ["Stormwind City"] = { "White stone, blue banners and the busiest bank in the kingdom.",
+    "Canals, cathedral bells and a king's banners over every street." },
+  ["Ironforge"] = { "A city carved into the mountain, loud with hammers and louder with stories.",
+    "The Great Forge roars, and the tram rumbles somewhere far below." },
+  ["Darnassus"] = { "Moonwells, quiet paths and a temple open to the stars.",
+    "Wisps drift between the boughs, and the sentinels never sleep." },
+  ["Orgrimmar"] = { "Spikes, smoke and drums. A city built to stand.",
+    "Every street a shout, every shop a fortress, every orc ready." },
+  ["Thunder Bluff"] = { "Tents high on the mesas, where the wind is always singing.",
+    "Lifts creak, totems watch, and the plains stretch on forever below." },
+  ["Undercity"] = { "Below the ruins of a fallen capital, the Forsaken keep their own counsel.",
+    "Green water, dark halls and apothecaries who ask no questions." },
+  ["Zephras Isle"] = { "A sky-touched island, all wind and wings, where the Skyborne first learn to fly.",
+    "Wind over cliff and wave: a cradle for those born to the sky." },
 }
 
 local function pick(list, seed) return J.pick(list, seed) end
@@ -105,7 +147,7 @@ function Lr.chapterProse(l, events, rec, current)
     if n[k] then n[k] = n[k] + 1 end
     if k == "pal" and e.s then pals[#pals + 1] = e.s:match("with (.+)$") or e.s:match("Met (.-) on") end
     if k == "dungeon" and e.s then dungeons[#dungeons + 1] = e.s end
-    local zn = e.m and select(2, J.zoneOf(e.m))
+    local zn = e.m and J.landOf(e.m)
     if zn and not seen[zn] then seen[zn] = true; zones[#zones + 1] = zn end
   end
   local quests = rec and tonumber(rec.quests) or n.quest
@@ -169,7 +211,7 @@ end
 function Lr.preface(j, V)
   if type(j) ~= "table" or #j.events == 0 then return nil end
   local first = j.events[1]
-  local zone = first and first.m and select(2, J.zoneOf(first.m))
+  local zone = first and first.m and J.landOf(first.m)
   local lands = #j.order
   local totals = V and V.totals or {}
   local days = math.max(1, math.floor(((J.now() or 0) - (tonumber(j.started) or 0)) / 86400) + 1)
@@ -218,18 +260,23 @@ J.ICON.mount, J.ICON.home, J.ICON.rest, J.ICON.milestone = "Ability_Mount_Riding
 J.KEEP.mount, J.KEEP.milestone = true, true
 
 local MOUNT = { "Saddled up for the first time and rode out of %zone%: the world just got smaller",
-  "Rode out of %zone% on your own mount at last. Walking is for other people now" }
+  "Rode out of %zone% on your own mount at last. Walking is for other people now",
+  "Your own mount, at last: the roads of %zone% flew by", "Climbed into the saddle in %zone% and felt the wind for the first time",
+  "No more walking: you rode out of %zone% on four legs that were not your own" }
 local HOME = { "Made %place% your home: the hearthstone knows the way back now", "Settled on %place% as home, for now",
-  "Bound your hearthstone to %place%" }
+  "Bound your hearthstone to %place%", "Hung up your cloak at %place%: home, for a while", "Told the innkeeper at %place% to keep a bed ready",
+  "Home is wherever the hearthstone says. Today it says %place%" }
 local REST = { "Warmed your hands by the fire at %place% after a long road", "Rested your feet at %place%",
-  "Took a seat by the hearth at %place% and listened to the talk" }
+  "Took a seat by the hearth at %place% and listened to the talk", "Ordered something warm at %place% and let the road wait",
+  "Heard a bard murder a good song at %place%, and enjoyed it anyway", "Slept under a real roof at %place% for once",
+  "Traded rumours over a mug at %place%" }
 local REST_GAP = 7200 -- seconds between two inn moments
 
 -- Milestones: { key, thresholds, line(n) }
 local MARKS = {
-  { "quests", { 50, 100, 250, 500, 750, 1000 }, "The %n%th quest of your journey, done" },
-  { "kills", { 100, 500, 1000, 2500, 5000, 10000 }, "%n% foes defeated on the road so far" },
-  { "miles", { 5, 10, 25, 50, 100 }, "%n% miles walked since the journal began" },
+  { "quests", { 50, 100, 250, 500, 750, 1000 }, "The %n%th quest of your journey, done. The notice boards know you now" },
+  { "kills", { 100, 500, 1000, 2500, 5000, 10000 }, "%n% foes defeated on the road so far, and counting" },
+  { "miles", { 5, 10, 25, 50, 100 }, "%n% miles walked since the journal began. The boots are holding up" },
   { "deaths", { 10, 25, 50, 100 }, "Fell for the %n%th time. Still standing, in the end" },
 }
 
