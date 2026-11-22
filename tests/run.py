@@ -1188,6 +1188,7 @@ def main():
         runs.append(("WARRIOR/%s/journey-tab" % variant, "WARRIOR", minimal, ["journeyTab"]))
         runs.append(("WARRIOR/%s/journey-deeds" % variant, "WARRIOR", minimal, ["journeyDeeds"]))
         runs.append(("WARRIOR/%s/journey-tales" % variant, "WARRIOR", minimal, ["journeyTales"]))
+        runs.append(("WARRIOR/%s/journey-lore" % variant, "WARRIOR", minimal, ["journeyLore"]))
         if not minimal:
             runs.append(("WARRIOR/full/journey-thin", "WARRIOR", False, ["journeyThin"]))
         if not minimal:

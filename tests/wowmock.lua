@@ -68,7 +68,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "AUCTION_CANCELED", "UNIT_HEALTH",
   "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
   "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED",
-  "AUCTION_HOUSE_PURCHASE_COMPLETED" }) do
+  "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -173,6 +173,9 @@ C_SuperTrack = { SetSuperTrackedUserWaypoint = function(on) MOCK.superTracked = 
   IsSuperTrackingUserWaypoint = function() return MOCK.superTracked and true or false end }
 function GetPlayerFacing() return MOCK.facing end
 function GetBindLocation() return MOCK.bind end
+function IsMounted() return MOCK.mounted == true end
+function IsResting() return MOCK.resting == true end
+function GetSubZoneText() return MOCK.subZone or "" end
 function GetInstanceInfo()
   return MOCK.instanceName, MOCK.instanceName and (MOCK.instanceType or "party") or "none", nil, nil, nil, nil, nil, MOCK.instanceID
 end
@@ -1962,7 +1965,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
   "UnitHealth", "UnitHealthMax", "UnitClassification", "UnitIsTapDenied", "GetInventoryItemQuality",
-  "UnitIsPlayer", "GetGuildInfo", "GetBattlefieldWinner",
+  "UnitIsPlayer", "GetGuildInfo", "GetBattlefieldWinner", "IsMounted", "IsResting",
   "GetProfessions", "GetProfessionInfo", "GetItemCount", "C_Container", "GetItemInfo", "GetQuestLogSpecialItemInfo", "GetItemIcon",
   "GetTradeSkillLine", "GetNumTradeSkills", "GetTradeSkillInfo", "SelectTradeSkill", "GetTradeSkillSelectionIndex",
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",

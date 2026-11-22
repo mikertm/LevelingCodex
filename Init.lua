@@ -51,6 +51,7 @@ local function start()
   ns.startJourney()
   ns.startJourneyDeeds()
   ns.startJourneyTales()
+  ns.startJourneyLore()
 end
 
 local events = CreateFrame("Frame")
@@ -239,6 +240,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.journeyDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyDeedsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyTalesDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.journeyLoreDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questMapDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questSupportDebugLines()) do out[#out + 1] = line end

@@ -678,47 +678,45 @@ local LEDGER = {
     { "Raised by others", "rezzed" }, { "Trades", "trades" }, { "Campfires", "camps" }, { "Quests given up", "abandoned" } } },
 }
 
-function T.trophies(V, y)
+-- One column of the ledger as a passage of the page.
+local function ledgerCard(V, y, col)
   local U, C, W = V.U, V.C, V.W
-  local D = J.draw
-  U.sectionTitle("THE LEDGER", y)
-  y = y + 30
-  local gap = 8
-  local cw = math.floor((W - 2 * gap) / 3)
-  local tallest = 0
-  for i, col in ipairs(LEDGER) do
-    local cx = (i - 1) * (cw + gap)
-    local cy = y + 12
-    U.icon(col[2], cx + 12, cy, 22, col[1], nil)
-    U.T(col[1], cx + 40, cy + 5, cw - 50, "label", C.inkSoft)
-    cy = cy + 30
-    for _, r in ipairs(col[3]) do
-      local v = T.tally(r[2])
-      U.T(r[1], cx + 12, cy, cw - 24, "small", C.ink)
-      U.T(r[3] and (v > 0 and ns.money(v) or "-") or ns.thousands(v), cx + 12, cy, cw - 24, "small", v > 0 and C.ink or C.inkSoft, "RIGHT")
-      U.rect(cx + 12, cy + 15, cw - 24, 1, { 0, 0, 0, 0.1 }, "border")
-      cy = cy + 20
-    end
-    tallest = math.max(tallest, cy - y + 8)
+  local top = y
+  U.icon(col[2], 14, y + 12, 22, col[1], nil)
+  U.T("THE LEDGER  -  " .. col[1], 44, y + 17, W - 58, "label", C.inkSoft)
+  y = y + 42
+  for _, r in ipairs(col[3]) do
+    local v = T.tally(r[2])
+    U.T(r[1], 14, y, W - 28, "small", C.ink)
+    U.T(r[3] and (v > 0 and ns.money(v) or "-") or ns.thousands(v), 14, y, W - 28, "small", v > 0 and C.ink or C.inkSoft, "RIGHT")
+    U.rect(14, y + 15, W - 28, 1, { 0, 0, 0, 0.1 }, "border")
+    y = y + 20
   end
-  for i = 1, 3 do D.page(U, C, (i - 1) * (cw + gap), y, cw, tallest) end
-  y = y + tallest + 14
-  local lw = math.floor((W - 10) / 2)
-  local rx, rw = lw + 10, W - lw - 10
-  local ly = D.listCard(V, "AT THE WORKBENCH", nil, 0, y, lw, moments({ craft = true, skill = true }, 5),
-    "Craft something, or raise a profession past 50, 100, 200 or 250, and it is written here.",
-    function(e, yy) return momentRow(V, e, 0, yy, lw) end)
-  local ry = D.listCard(V, "THE AUCTION HOUSE", nil, rx, y, rw, moments({ auction = true, sold = true, expired = true, gold = true }, 5),
-    "Your auctions, sales, lots that came back and the gold you collected show up here.",
-    function(e, yy) return momentRow(V, e, rx, yy, rw) end)
-  y = math.max(ly, ry) + 10
-  ly = D.listCard(V, "DUNGEON RUNS", nil, 0, y, lw, moments({ run = true, wipe = true }, 5),
-    "Each dungeon run is told when you leave it: the time, the bosses, the wipes and who came along.",
-    function(e, yy) return momentRow(V, e, 0, yy, lw) end)
-  ry = D.listCard(V, "BATTLEFIELDS", nil, rx, y, rw, moments({ pvp = true, bg = true, duel = true }, 5),
-    "Duels, battlegrounds, honorable kills and fights with other players are kept here.",
-    function(e, yy) return momentRow(V, e, rx, yy, rw) end)
-  return math.max(ly, ry) + 10
+  y = y + 8
+  J.draw.page(U, C, 0, top, W, y - top)
+  return y
+end
+
+local function momentsCard(title, kinds, empty)
+  return function(V, y)
+    return J.draw.listCard(V, title, nil, 0, y, V.W, moments(kinds, 5), empty,
+      function(e, yy) return momentRow(V, e, 0, yy, V.W) end)
+  end
+end
+
+-- The Trophies page's sections from this file, each fn(V, y) -> y (the book flows them into its columns).
+function T.trophySections()
+  local out = {}
+  for _, col in ipairs(LEDGER) do out[#out + 1] = function(V, y) return ledgerCard(V, y, col) end end
+  out[#out + 1] = momentsCard("AT THE WORKBENCH", { craft = true, skill = true },
+    "Craft something, or raise a profession past 50, 100, 200 or 250, and it is written here.")
+  out[#out + 1] = momentsCard("THE AUCTION HOUSE", { auction = true, sold = true, expired = true, gold = true },
+    "Your auctions, sales, lots that came back and the gold you collected show up here.")
+  out[#out + 1] = momentsCard("DUNGEON RUNS", { run = true, wipe = true },
+    "Each dungeon run is told when you leave it: the time, the bosses, the wipes and who came along.")
+  out[#out + 1] = momentsCard("BATTLEFIELDS", { pvp = true, bg = true, duel = true },
+    "Duels, battlegrounds, honorable kills and fights with other players are kept here.")
+  return out
 end
 
 -- The people you met: { name, rec, score } with the most shared moments first.
@@ -754,7 +752,7 @@ function T.companions(V, y)
     "Players who raise you, trade with you, duel you or wave at you are remembered here.", function(p, yy)
       U.icon(p.rec.rez and J.ICON.rez or (p.rec.trades and J.ICON.trade) or (p.rec.duels and J.ICON.duel) or J.ICON.emote,
         14, yy, 22, plain(p.name), deedsOf(p.rec))
-      U.T(plain(p.name), 44, yy + 1, 200, "body", C.light)
+      U.T(plain(p.name), 44, yy + 1, W - 150, "body", C.light)
       U.T("met on day " .. D.dayOf(V.j, p.rec.met), 14, yy + 1, W - 28, "small", C.dim, "RIGHT")
       U.T(deedsOf(p.rec), 44, yy + 16, W - 58, "small", C.dim)
       return 34
