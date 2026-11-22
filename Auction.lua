@@ -15,7 +15,7 @@ ns.auction = A
 A.FULL_COOLDOWN = 15 * 60 -- seconds between full scans (the server throttles them too)
 A.DAYS = 14               -- days of history kept per item
 A.FRESH = 30 * 60         -- a price younger than this isn't searched again
-local SEARCH_GAP, SEARCH_WAIT, CHUNK = 1.5, 5, 400
+local SEARCH_GAP, SEARCH_WAIT = 1.5, 5
 
 local function now() return tonumber(time and time()) or 0 end
 local function today(t) return math.floor((t or now()) / 86400) end
@@ -120,9 +120,11 @@ function A.count()
 end
 
 -- Files a reading. med/high only when the reading had every listing (a full scan or a search page).
+A.version = 0 -- bumped by every change to the prices (for caches)
 function A.record(id, name, low, n, med, high)
   id = tonumber(id)
   if not id then return end
+  A.version = A.version + 1
   local s = A.store()
   local it = s.items[id]
   if type(it) ~= "table" then it = {}; s.items[id] = it end
@@ -132,8 +134,9 @@ function A.record(id, name, low, n, med, high)
     if indexFor == s then nameIndex[name:lower()] = id end
   end
   it.n, it.at, it.ator = tonumber(n) or 0, now(), nil
-  -- the vendor price, kept for the deal finder (the item cache may not hold every listed item)
-  local vendor = tonumber((select(11, ns.itemInfo(id))))
+  -- the vendor price, kept for the deal finder (the item cache may not hold every listed item);
+  -- a full scan leaves it for later (A.recordFast)
+  local vendor = not A.recordFast and tonumber((select(11, ns.itemInfo(id)))) or nil
   if vendor and vendor > 0 then it.vendor = vendor end
   local d = today()
   if low then
@@ -181,6 +184,7 @@ function A.absorb(id)
     if type(k) ~= "number" or k <= today() - A.DAYS then it.days[k] = nil end
   end
   ator.filed = (ator.filed or 0) + 1
+  A.version = A.version + 1
 end
 
 -- What the history says about an item: { name, low, med, high, n, at, usual, trend, days }.
@@ -241,6 +245,7 @@ function A.forget()
   if type(db.auction) == "table" and type(db.auction.realms) == "table" then db.auction.realms[realm()] = nil end
   indexFor = nil
   absorbed = {}
+  A.version = A.version + 1
 end
 
 -- low, median (by quantity), high (90th percentile: one silly listing doesn't count) and quantity
@@ -294,14 +299,16 @@ function A.canFullScan()
   return false, "This client has no full scan."
 end
 
+-- A replicate row: the client gives the name first and the item ID last; the link (slow: it
+-- builds a hyperlink and can load the item) only when the ID is missing.
 local function readModern(i)
   local C = api()
-  local _, _, count, _, _, _, _, _, _, buyout, _, _, _, _, _, _, itemID = try(C.GetReplicateItemInfo, i)
-  local name
-  if has(C, "GetReplicateItemLink") then
+  local ok, name, _, count, _, _, _, _, _, _, buyout, _, _, _, _, _, _, itemID = pcall(C.GetReplicateItemInfo, i)
+  if not ok then return end
+  if not itemID and has(C, "GetReplicateItemLink") then
     local link = try(C.GetReplicateItemLink, i)
-    name = type(link) == "string" and link:match("%[(.-)%]")
-    itemID = itemID or linkID(link)
+    itemID = linkID(link)
+    if type(name) ~= "string" and type(link) == "string" then name = link:match("%[(.-)%]") end
   end
   return itemID, name, count, buyout
 end
@@ -310,18 +317,29 @@ local function readClassic(i)
   return itemID or linkID(try(GetAuctionItemLink, "list", i)), name, count, buyout
 end
 
--- Rows from..to into acc[itemID] = { name, list }.
-local function collect(acc, read, from, to)
-  for i = from, to do
-    local id, name, count, buyout = read(i)
-    id, count, buyout = tonumber(id), math.max(1, tonumber(count) or 1), tonumber(buyout)
-    if id and buyout and buyout > 0 then
-      local e = acc[id]
-      if not e then e = { list = {} }; acc[id] = e end
-      if type(name) == "string" and name ~= "" then e.name = name end
-      e.list[#e.list + 1] = { math.floor(buyout / count + 0.5), count }
-    end
+-- How much of a frame a full scan may use, in milliseconds (Scan > Scan speed: Smooth, Balanced,
+-- Fast). Without debugprofilestop it reads A.ROWS_NO_CLOCK rows a frame.
+A.SPEEDS = { { "Smooth", 4 }, { "Balanced", 8 }, { "Fast", 16 } }
+A.ROWS_NO_CLOCK = 250
+function A.budget()
+  local want = ns.db().auctionScanSpeed
+  for _, e in ipairs(A.SPEEDS) do if e[2] == want then return e[2] end end
+  return 8
+end
+local function clock() return type(debugprofilestop) == "function" and debugprofilestop() or nil end
+
+-- One row into acc[itemID] = { name, list }.
+local function collectRow(acc, id, name, count, buyout)
+  id, count, buyout = tonumber(id), math.max(1, tonumber(count) or 1), tonumber(buyout)
+  if id and buyout and buyout > 0 then
+    local e = acc[id]
+    if not e then e = { list = {} }; acc[id] = e end
+    if type(name) == "string" and name ~= "" then e.name = name end
+    e.list[#e.list + 1] = { math.floor(buyout / count + 0.5), count }
   end
+end
+local function collect(acc, read, from, to)
+  for i = from, to do collectRow(acc, read(i)) end
 end
 
 -- A list of rows filed as prices: every item gets its low/median/high; a full scan also marks
@@ -343,37 +361,84 @@ local function file(acc, full)
   return items
 end
 
+-- Runs step(i) for i = from..to a frame at a time inside the time budget, then done().
+local function spread(j, from, to, step, done)
+  local i = from
+  local function frame()
+    if job ~= j then return end
+    local start, budget = clock(), A.budget()
+    local rows = 0
+    while i <= to do
+      step(i)
+      i, rows = i + 1, rows + 1
+      if start then
+        if rows % 25 == 0 and clock() - start >= budget then break end
+      elseif rows >= A.ROWS_NO_CLOCK then break end
+    end
+    if i <= to then
+      j.frames = (j.frames or 0) + 1
+      if refreshCard and j.frames % 15 == 1 then refreshCard() end -- the scan's progress
+      ns.after(0, frame)
+    else
+      done()
+    end
+  end
+  frame()
+end
+
+-- A full scan: wait until the row count stops growing (the rows arrive over several updates),
+-- read the rows a slice of each frame, then file the items a slice of each frame (vendor prices
+-- are left for later, so the item cache isn't asked thousands of times at once).
 local function readFull()
   local j = job
   if not j or j.kind ~= "full" or j.reading then return end
   j.reading = true
-  local total
-  if j.modern then total = tonumber(try(api().GetNumReplicateItems)) or 0
-  else total = tonumber(try(GetNumAuctionItems, "list")) or 0 end
-  j.total = total
-  local first = j.modern and 0 or 1
-  local stop = j.modern and total - 1 or total
-  local acc, read = {}, j.modern and readModern or readClassic
-  local function chunk(from)
-    if job ~= j then return end
-    local to = math.min(stop, from + CHUNK - 1)
-    collect(acc, read, from, to)
-    j.done = to - first + 1
-    if to < stop then
-      j.chunks = (j.chunks or 0) + 1
-      if refreshCard and j.chunks % 10 == 1 then refreshCard() end -- the scan's progress on the button
-      ns.after(0, function() chunk(to + 1) end)
-      return
-    end
-    local items = file(acc, true)
-    A.store().fullAt = now()
-    job = nil
-    last.full = { at = now(), listings = total, items = items }
-    ns.say("Full scan: " .. ns.thousands(total) .. " listings, " .. ns.thousands(items) .. " items priced.")
-    finished("full")
-    ns.after(SEARCH_GAP, A.pump)
+  local function count()
+    if j.modern then return tonumber(try(api().GetNumReplicateItems)) or 0 end
+    return tonumber(try(GetNumAuctionItems, "list")) or 0
   end
-  chunk(first)
+  local seen, still, waited = count(), 0, 0
+  local function settle()
+    if job ~= j then return end
+    local n = count()
+    if n == seen then still = still + 1 else seen, still = n, 0 end
+    waited = waited + 1
+    j.total = n
+    if still < 2 and waited < 40 then ns.after(0.25, settle); return end
+    local total = n
+    local first = j.modern and 0 or 1
+    local acc, read = {}, j.modern and readModern or readClassic
+    j.phase = "reading"
+    spread(j, first, j.modern and total - 1 or total, function(i)
+      collectRow(acc, read(i))
+      j.done = i - first + 1
+    end, function()
+      local ids = {}
+      for id in pairs(acc) do ids[#ids + 1] = id end
+      j.phase, j.filing, j.filed = "filing", #ids, 0
+      local items = 0
+      A.recordFast = true
+      spread(j, 1, #ids, function(k)
+        local e = acc[ids[k]]
+        local low, qty, med, high = summary(e.list)
+        if low then A.record(ids[k], e.name, low, qty, med, high); items = items + 1 end
+        j.filed = k
+      end, function()
+        A.recordFast = nil
+        for id, it in pairs(A.store().items) do
+          if not acc[id] and type(it) == "table" then it.n, it.at, it.ator = 0, now(), nil end
+        end
+        A.store().fullAt = now()
+        job = nil
+        last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0 }
+        ns.say("Full scan: " .. ns.thousands(total) .. " listings, " .. ns.thousands(items) .. " items priced.")
+        finished("full")
+        A.fillVendors()
+        ns.after(SEARCH_GAP, A.pump)
+      end)
+    end)
+  end
+  settle()
 end
 
 function A.fullScan()
@@ -404,6 +469,127 @@ function A.fullScan()
   return true
 end
 
+-- The paged scan (what Scan all does while the instant scan cools down, like Auctioneer's
+-- repeatable scan): a browse search for everything, page after page (RequestMoreBrowseResults until
+-- HasFullBrowseResults), each page filed a slice of a frame. A browse row has the lowest price and
+-- how many are listed for each item, so the median and high stay from the last instant scan. No
+-- cooldown; it takes longer than the instant scan.
+function A.canPagedScan()
+  local C = api()
+  if not open then return false, "Open the auction house first." end
+  if job and (job.kind == "full" or job.kind == "paged") then return false, "Scanning..." end
+  if not (has(C, "SendBrowseQuery") and has(C, "RequestMoreBrowseResults")) then return false, "This client has no paged scan." end
+  return true
+end
+
+local function pagedTimeout(j)
+  ns.after(20, function()
+    if job == j and now() - (j.lastPage or j.started) >= 20 then
+      job = nil
+      last.full = { at = now(), failed = "the auction house stopped answering", paged = true }
+      ns.say("The paged scan stopped: the auction house didn't answer. Prices so far are kept.")
+      finished("full")
+      ns.after(SEARCH_GAP, A.pump)
+    end
+  end)
+end
+
+function A.pagedScan()
+  local ok, why = A.canPagedScan()
+  if not ok then ns.say(why); return false end
+  queue = {}
+  local C = api()
+  local order = type(Enum) == "table" and type(Enum.AuctionHouseSortOrder) == "table" and Enum.AuctionHouseSortOrder.Name or 1
+  local j = { kind = "paged", started = now(), pages = 0, done = 0, seen = {}, items = 0 }
+  job = j
+  if not pcall(C.SendBrowseQuery, { searchString = "", sorts = { { sortOrder = order, reverseSort = false } }, filters = {} }) then
+    job = nil
+    ns.say("The auction house refused the paged scan.")
+    finished("full")
+    return false
+  end
+  ns.say("Paged scan started: the Codex reads the auction house page by page.")
+  pagedTimeout(j)
+  finished("start")
+  return true
+end
+
+-- Scan all: the instant scan when the server allows one, else the paged scan.
+function A.scanAll()
+  if A.canFullScan() then return A.fullScan() end
+  return A.pagedScan()
+end
+function A.canScanAll()
+  local ok, why = A.canFullScan()
+  if ok then return true, "instant" end
+  local okPaged = A.canPagedScan()
+  if okPaged then return true, "paged", why end
+  return false, nil, why
+end
+
+-- The newest scan of either kind.
+function A.lastScanAt()
+  local s = A.store()
+  local a, b = tonumber(s.fullAt), tonumber(s.pagedAt)
+  if a and b then return math.max(a, b) end
+  return a or b
+end
+
+local function readPage(rows)
+  local j = job
+  if not j or j.kind ~= "paged" or j.reading then return end
+  -- one reading per page: the client may send both UPDATED and ADDED for it
+  if j.pages > 0 and not j.waiting then return end
+  local C = api()
+  j.reading, j.waiting, j.lastPage = true, false, now()
+  j.pages = j.pages + 1
+  rows = type(rows) == "table" and rows or {}
+  local n = #rows
+  A.recordFast = true
+  spread(j, 1, n, function(i)
+    local r = rows[i]
+    local key = type(r) == "table" and r.itemKey
+    local id = type(key) == "table" and tonumber(key.itemID)
+    local low = tonumber(r and r.minPrice)
+    if id and low and low > 0 and not j.seen[id] then
+      j.seen[id] = true
+      local it = A.store().items[id]
+      local name = type(it) == "table" and it.name or nil
+      if not name and has(C, "GetItemKeyInfo") then
+        local info = try(C.GetItemKeyInfo, key)
+        name = type(info) == "table" and info.itemName or nil
+      end
+      A.record(id, name, low, tonumber(r.totalQuantity) or 1)
+      j.items = j.items + 1
+    end
+    j.done = j.done + 1
+  end, function()
+    A.recordFast = nil
+    j.reading = false
+    if job ~= j then return end
+    if has(C, "HasFullBrowseResults") and try(C.HasFullBrowseResults) == false then
+      ns.after(0.3, function()
+        if job ~= j then return end
+        j.waiting = true
+        if not pcall(C.RequestMoreBrowseResults) then j.stuck = true end
+      end)
+      pagedTimeout(j)
+      refreshCard()
+      return
+    end
+    for id, it in pairs(A.store().items) do
+      if not j.seen[id] and type(it) == "table" then it.n, it.at, it.ator = 0, now(), nil end
+    end
+    A.store().pagedAt = now()
+    job = nil
+    last.full = { at = now(), listings = j.done, items = j.items, seconds = now() - j.started, frames = j.frames or 0, paged = true, pages = j.pages }
+    ns.say("Paged scan: " .. ns.thousands(j.items) .. " items priced in " .. j.pages .. (j.pages == 1 and " page." or " pages."))
+    finished("full")
+    A.fillVendors()
+    ns.after(SEARCH_GAP, A.pump)
+  end)
+end
+
 -- Quick searches: one name at a time, a short gap between them.
 function A.search(name)
   if type(name) ~= "string" or searched[name:lower()] then return end
@@ -424,8 +610,66 @@ local function sendSearch(name)
   return false
 end
 
+-- The deal sniper (Deals > Snipe deals): while it is on and no other search waits, it searches
+-- the next item on its watch list (deal candidates: items with a vendor price or two days of
+-- history, the most valuable first), one every A.SNIPE_GAP seconds, lap after lap; a price that
+-- makes a deal is said in chat with a chime (AuctionTrade.lua's T.alert). It only searches:
+-- buying stays a click.
+A.SNIPE_GAP, A.SNIPE_SIZE = 1, 200
+local snipe = { on = false, list = {}, i = 0, checked = 0, laps = 0 }
+A.sniper = snipe
+
+function A.snipeList()
+  local T = ns.auctionTrade
+  local hidden = T and T.notes().hidden or {}
+  local rows = {}
+  for id, it in pairs(A.store().items) do
+    if type(it) == "table" and type(it.name) == "string" and not hidden[id] then
+      local days = 0
+      for _ in pairs(type(it.days) == "table" and it.days or {}) do days = days + 1 end
+      local worth = tonumber(it.vendor) or (days >= 2 and tonumber(it.med or it.low)) or nil
+      if worth and worth > 0 then rows[#rows + 1] = { it.name, worth } end
+    end
+  end
+  table.sort(rows, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+  local out, seen = {}, {}
+  for _, r in ipairs(rows) do
+    if #out >= A.SNIPE_SIZE then break end
+    if not seen[r[1]] then seen[r[1]] = true; out[#out + 1] = r[1] end
+  end
+  return out
+end
+
+function A.snipeAvailable() return has(api(), "SendBrowseQuery") end
+
+function A.toggleSnipe(on)
+  if on == nil then on = not snipe.on end
+  if not on then snipe.on = false; refreshCard(); return false end
+  if not open or not A.snipeAvailable() then ns.say("Open the auction house first."); return false end
+  snipe.list, snipe.i, snipe.checked, snipe.laps, snipe.found = A.snipeList(), 0, 0, 0, 0
+  if #snipe.list == 0 then
+    ns.say("Nothing to watch yet: Scan all first, so the Codex knows what's worth watching.")
+    return false
+  end
+  snipe.on = true
+  ns.say("Sniping deals: watching " .. #snipe.list .. " items, one search a second. Buying stays a click.")
+  A.pump()
+  refreshCard()
+  return true
+end
+
 function A.pump()
-  if not open or job or #queue == 0 then return end
+  if not open or job then return end
+  if #queue == 0 then
+    if not snipe.on then return end
+    snipe.i = snipe.i % math.max(1, #snipe.list) + 1
+    if snipe.i == 1 and snipe.checked > 0 then snipe.list, snipe.laps = A.snipeList(), snipe.laps + 1 end
+    local name = snipe.list[snipe.i]
+    if not name then snipe.on = false; return end
+    snipe.checked, snipe.current = snipe.checked + 1, name
+    queue[1] = name
+    searched[name:lower()] = nil
+  end
   local name = table.remove(queue, 1)
   local sent, modern = sendSearch(name)
   if sent == nil then -- the classic auction house isn't ready: try again shortly
@@ -454,10 +698,15 @@ local function searchDone(results)
   local id = A.idFor(j.name)
   if id and results == 0 then A.record(id, j.name, nil, 0) end
   finished("search")
-  ns.after(SEARCH_GAP, A.pump)
+  ns.after(snipe.on and #queue == 0 and A.SNIPE_GAP or SEARCH_GAP, A.pump)
 end
 
-local function readBrowse()
+local function readBrowse(added)
+  if job and job.kind == "paged" then
+    -- the first page arrives as UPDATED (the whole list), later pages as ADDED (only the new rows)
+    readPage(added or try(api().GetBrowseResults))
+    return
+  end
   local j = job
   if not j or j.kind ~= "search" or not j.modern then return end
   local C = api()
@@ -476,6 +725,7 @@ local function readBrowse()
       name = name or ns.itemInfo(id)
       -- a browse result only has the lowest price: the old median stays until a full scan
       A.record(id, name, low, tonumber(r.totalQuantity) or 1)
+      if snipe.on and ns.auctionTrade and ns.auctionTrade.alert then ns.auctionTrade.alert(id) end
       n = n + 1
     end
   end
@@ -580,8 +830,47 @@ end
 function A.queued()
   return #queue, job and job.kind == "search" and job.name or nil
 end
+-- Vendor prices for the items the store doesn't know one for, 40 every 0.1 s (a full scan files
+-- thousands of items: asking the item cache for all of them at once stutters the game). 0 = the
+-- item sells for nothing; an item the cache hasn't loaded is asked again next time.
+local filling
+function A.fillVendors()
+  if filling then return end
+  local ids = {}
+  for id, it in pairs(A.store().items) do
+    if type(it) == "table" and it.vendor == nil then ids[#ids + 1] = id end
+  end
+  if #ids == 0 then return end
+  filling = true
+  local k = 0
+  local function step()
+    for _ = 1, 40 do
+      k = k + 1
+      local id = ids[k]
+      if not id then
+        filling = nil
+        A.version = A.version + 1
+        refreshCard()
+        return
+      end
+      local it = A.store().items[id]
+      if type(it) == "table" then
+        local v = tonumber((select(11, ns.itemInfo(id))))
+        if v then it.vendor = v end
+      end
+    end
+    ns.after(0.1, step)
+  end
+  step()
+end
+
+-- done, total, phase ("reading" / "filing"; nil while the auction house hasn't answered).
 function A.fullProgress()
-  if job and job.kind == "full" then return job.done or 0, job.total end
+  if job and job.kind == "full" then
+    if job.phase == "filing" then return job.filed or 0, job.filing, "filing" end
+    return job.done or 0, job.total, job.phase
+  end
+  if job and job.kind == "paged" then return job.items, nil, "paged", job.pages end
 end
 
 local function queueNames(names)
@@ -814,11 +1103,13 @@ local function onShow()
   root = (type(AuctionHouseFrame) == "table" and AuctionHouseFrame) or (type(AuctionFrame) == "table" and AuctionFrame) or nil
   if ns.auctionPanel then ns.auctionPanel.onShow(root) end
   ns.after(1, function() if open then queueNeeds(); refreshCard() end end)
+  ns.after(3, function() if open then A.fillVendors() end end)
 end
 
 local function onClose()
   open = false
   job, queue = nil, {}
+  snipe.on = false
   if ns.auctionPanel then ns.auctionPanel.onClose() end
 end
 
@@ -835,15 +1126,16 @@ function ns.startAuction()
   end
   events = CreateFrame("Frame")
   for _, ev in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE",
-    "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_ITEM_LIST_UPDATE", "BAG_UPDATE_DELAYED" }) do
+    "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_ITEM_LIST_UPDATE", "BAG_UPDATE_DELAYED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
-  events:SetScript("OnEvent", function(_, event)
+  events:SetScript("OnEvent", function(_, event, arg)
     if event == "AUCTION_HOUSE_SHOW" then onShow()
     elseif event == "AUCTION_HOUSE_CLOSED" then onClose()
     elseif not open then return
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then readFull()
     elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then readBrowse()
+    elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" then if job and job.kind == "paged" then readBrowse(arg) end
     elseif event == "AUCTION_ITEM_LIST_UPDATE" then
       if job and job.kind == "full" and not job.modern then readFull() else readClassicSearch() end
     elseif event == "BAG_UPDATE_DELAYED" then refreshCard()
@@ -856,15 +1148,20 @@ function ns.auctionDebugLines()
   local C = api()
   out[#out + 1] = "auction: " .. (has(C, "ReplicateItems") and "C_AuctionHouse" or type(QueryAuctionItems) == "function"
     and "classic QueryAuctionItems" or "no auction API") .. ", " .. A.count() .. " prices on " .. realm()
-    .. ", full scan " .. A.age(A.store().fullAt) .. (open and ", open" or "")
+    .. ", full scan " .. A.age(A.store().fullAt) .. ", paged scan " .. A.age(A.store().pagedAt) .. (open and ", open" or "")
   if A.auctionator() then
     out[#out + 1] = "auction: Auctionator loaded, " .. ator.found .. " of " .. ator.reads .. " price reads answered, "
       .. ator.searches .. " searches sent" .. (ator.last and (" (last " .. ator.last .. ")") or "")
       .. ", " .. (ator.filed or 0) .. " prices filed into the history"
+  end
+  if snipe.on or snipe.checked > 0 then
+    out[#out + 1] = "auction sniper: " .. (snipe.on and "on" or "off") .. ", " .. #snipe.list .. " watched, " .. snipe.checked
+      .. " searches, " .. (snipe.found or 0) .. " deals"
       .. "; the Codex's own searches are off"
   end
   if last.full then
-    out[#out + 1] = "auction full scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items"))
+    out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
+      .. (last.full.frames or 0) .. " frames, " .. (last.full.seconds or 0) .. " s"))
   end
   if last.search then
     out[#out + 1] = "auction search: " .. Q.plain(last.search.name) .. " - " .. (last.search.failed or (last.search.results .. " results"))
@@ -884,8 +1181,8 @@ ns.gold.addSection(10, function(y)
   local top = y
   y = y + 10
   U.T("AUCTION HOUSE", 14, y, W - 28, "label", C.gold)
-  local count, fullAt = A.count(), A.store().fullAt
-  U.T(fullAt and ("Full scan " .. A.age(fullAt)) or "", 14, y, W - 28, "small", C.light, "RIGHT")
+  local count, fullAt = A.count(), A.lastScanAt()
+  U.T(fullAt and ("Last scan " .. A.age(fullAt)) or "", 14, y, W - 28, "small", C.light, "RIGHT")
   y = y + 22
   if count == 0 and A.auctionator() then
     y = y + U.T("Auctionator is loaded: the Codex reads its prices, and Scan all adds a history of your own for the trend.",
