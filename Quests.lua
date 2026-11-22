@@ -572,6 +572,38 @@ local function haveItems(s)
   return true
 end
 
+-- Vendor errands whose items route quests hand in (ns.questShop): done only once one of those quests is
+-- turned in. nil = no quest takes the item, so the caller falls back to "a later step is done" (an
+-- unrelated later step, such as a turn-in you finished long ago, must not skip the errand).
+local shopByItem
+local function shopUsedUp(s)
+  local shop = ns.questShop
+  if type(shop) ~= "table" then return nil end
+  if not shopByItem or shopByItem.source ~= shop then
+    shopByItem = { source = shop, items = {} }
+    for id, list in pairs(shop) do
+      for _, pair in ipairs(list) do
+        local quests = shopByItem.items[pair[1]]
+        if not quests then quests = {}; shopByItem.items[pair[1]] = quests end
+        quests[#quests + 1] = id
+      end
+    end
+  end
+  local found = false
+  local function check(item)
+    for _, id in ipairs(shopByItem.items[item] or {}) do
+      if turnedIn[id] ~= nil then found = true end -- only quests this route knows (the other faction's don't count)
+      if turnedIn[id] then return true end
+    end
+  end
+  if s.item and check(s.item) then return true end
+  for _, pair in ipairs(type(s.items) == "table" and s.items or {}) do
+    if type(pair) == "table" and pair[1] and check(pair[1]) then return true end
+  end
+  if found then return false end
+  return nil
+end
+
 local function state(row, skips, blockedQuests, later, map, x, y)
   local s = row.step
   if s.type == "plan" then
@@ -606,7 +638,9 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   if (s.type == "collect" or s.type == "buy") and (s.item or s.items) then
     -- Items get handed in and used up: once a later step of its guide is done (a reload after the
     -- hand-in finds empty bags), the errand is behind you.
-    if (s.quest and turnedIn[s.quest]) or haveItems(s) or (later and not s.ifDone and not s.ifOnQuest) then
+    local used = shopUsedUp(s)
+    if used == nil then used = later and not s.ifDone and not s.ifOnQuest end
+    if (s.quest and turnedIn[s.quest]) or haveItems(s) or used then
       visited[row.key] = true -- keep it done when the items get used up later
       return "done"
     end

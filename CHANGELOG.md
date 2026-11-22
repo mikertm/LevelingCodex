@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## v0.30.6
+
+### Quest guide fix
+
+- Theramore: "They Call Him Smiling Jim" is skipped once you have turned in "James Hyal" (the Missing Diplomat), because the game makes the two exclusive. Guard Byron no longer sends you for a quest he cannot give.
+- Vendor errands for a quest's items (such as the Soothing Spices Swamp Eye Jarl wants) no longer vanish because some unrelated later step of the guide was already done; they stay until that quest is handed in, so you buy before you accept.
+
 ## v0.30.5
 
 ### Quest guide fixes

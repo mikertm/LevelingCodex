@@ -2021,13 +2021,31 @@ end
 function S.questBuyUsedUp()
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
     if section.id == "northshire" then
-      table.insert(section.steps, 1, { type = "buy", items = { { 2320, 1 } }, name = "Used up thread",
+      table.insert(section.steps, 1, { type = "buy", items = { { 3713, 2 } }, name = "Used up thread",
         text = "Buy Fine Thread.", map = 1429, x = 48, y = 43 })
     end
   end
   MOCK.questDone[783] = true
+  MOCK.questDone[1218] = true -- the quest the spices were for, handed in
   S.login()
   check(not questText(questViewer(), "Buy - Used up thread"), "a buy step before a finished step doesn't come back")
+end
+
+-- A vendor errand for a quest's item stays until that quest is handed in: an unrelated later step done
+-- long ago (here Northshire's 783) must not skip it (Soothing Spices, bought for quest 1218).
+function S.questBuyNotSkipped()
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "northshire" then
+      table.insert(section.steps, 1, { type = "buy", item = 3713, count = 3, name = "Spices errand",
+        text = "Buy Soothing Spices.", map = 1429, x = 48, y = 43 })
+    end
+  end
+  MOCK.questDone[783] = true
+  S.login()
+  check(questText(questViewer(), "Buy - Spices errand"), "an unrelated finished step doesn't skip a buy for a quest not handed in")
+  MOCK.questDone[1218] = true
+  S.login()
+  check(not questText(questViewer(), "Buy - Spices errand"), "handing in the quest ends the errand")
 end
 
 -- Step types and gates: collect/buy by bag count, abandon, skipOn, profession, maxLevel, sticky goals.
