@@ -13240,7 +13240,7 @@ function S.journeyVoice()
   local copy = _G.LevelingCodexCopy
   check(copy and copy:IsShown(), "Set last name opens the box")
   copy.edit:SetText("-")
-  click(copy, "Use this code")
+  click(copy, "Save name")
   check(select(2, J.voice.names()) == nil, "a dash means no last name")
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
@@ -13292,7 +13292,9 @@ function S.journeyCompanions()
   local copy = _G.LevelingCodexCopy
   check(copy and copy:IsShown(), "Write a note opens the box")
   copy.edit:SetText("Steady tank from Lakeshire, owes me a drink")
-  click(copy, "Use this code")
+  check(findButton(copy, function(l) return l == "Save note" end) and not findButton(copy, function(l) return l == "Use this code" end),
+    "the note box says Save note, not Use this code")
+  click(copy, "Save note")
   check(j.notes.Bo == "Steady tank from Lakeshire, owes me a drink", "the note is kept")
   check(questText(win(), "owes me a drink"), "the note shows on their page")
   check(findButton(win(), function(l) return l == "Note Bo" end), "the note button stays on their page")

@@ -2155,6 +2155,11 @@ function ns.showMacroCopy(m, list, step)
   copy.nextB:SetShown(many); copy.prevB:SetShown(many)
   copy.paste = cur.paste and true or false
   copy.useB:SetShown(copy.paste)
+  -- a paste box names its own action ("Save note"); Done then reads Cancel, since it keeps nothing
+  local use = cur.acceptLabel or "Use this code"
+  copy.useB:SetLabel(use)
+  copy.useB.codexLabel = use
+  copy.done:SetLabel(copy.paste and cur.acceptLabel and "Cancel" or "Done")
   copy.body = cur.body or ""
   copy:Show()
   copy.edit:SetText(copy.body)

@@ -465,7 +465,8 @@ local function personPage(R, p, best, y)
   local name = p.name
   local b = U.btn(note and "Edit the note" or "Write a note", 14, y, 140, function()
     ns.showMacroCopy({ copyTitle = "A note on " .. Co.nameText(name), body = Co.note(name) or "", paste = true,
-      help = "A few words to remember them by, up to " .. Co.NOTE_MAX .. " characters. Leave it empty to remove the note.",
+      acceptLabel = "Save note",
+      help = "A few words to remember them by, up to " .. Co.NOTE_MAX .. " characters. Click Save note when you are done; save it empty to remove the note.",
       onAccept = function(text)
         local ok, why = Co.setNote(name, text)
         if ok then ns.ui.refresh() end

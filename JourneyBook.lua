@@ -1166,7 +1166,7 @@ local function narratorCard(CV, y)
   y = y + 18
   y = y + U.T(first .. (last and (" " .. last) or "  (no last name read)"), 14, y, W - 28, "body", C.ink) + 6
   local b = U.btn("Set last name", 14, y, 140, function()
-    ns.showMacroCopy({ copyTitle = "Your last name", body = last or "", paste = true,
+    ns.showMacroCopy({ copyTitle = "Your last name", body = last or "", paste = true, acceptLabel = "Save name",
       help = "WoW Forever gives every character a first and a last name. Type the last name the book should use, "
         .. "leave it empty to use the one the game gives, or type - for none.",
       onAccept = function(text)

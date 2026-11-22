@@ -5,7 +5,7 @@
 - Journey chapters: the map plate moved to the right page, so a chapter fits on one spread.
 - Your last name is read from the game (WoW Forever's UnitFullName), even with My Secondary Name off in the nameplate options.
 - **Journey > Companions** became a page for each person: click a name to read how you met (where, their level and yours), the time and lands you shared, the quests, foes, bosses, dungeons, falls and resurrections you went through together, in your narrator's voice, with their figures and every shared moment. Moments written while you're in a party now remember who was there.
-- **Write a note** on anyone in the book ("Steady tank from Lakeshire, owes me a drink"); a scroll marks the people you wrote about.
+- **Write a note** on anyone in the book ("Steady tank from Lakeshire, owes me a drink") and click **Save note** (Cancel leaves it as it was); a scroll marks the people you wrote about.
 - Companion names are written in ink, so a priest's white no longer vanishes on the paper. Friends and strangers moved under the list, and their names open their page too.
 
 ### Gold
