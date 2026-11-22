@@ -11447,7 +11447,22 @@ function S.auctionMarket()
   click(AuctionHouseFrame, "Codex")
   local panel = _G.LevelingCodexAHPanel
   check(questText(panel, "MARKET MOVERS") and questText(panel, "YOUR TRADES") and questText(panel, "+50%"), "Overview shows the movers")
-  check(questText(panel, "Silk Cloth|r 15s "), "the ticker names the moves")
+  do
+    local tk = findButton(panel, function(l) return l == "Ticker Silk Cloth" end)
+    check(tk and tk:IsShown() and questText(tk, "Silk Cloth") and questText(tk, "15s") and questText(tk, "+50%"),
+      "the ticker shows each move as a button with its name, price and change")
+    MOCK.advance(1)
+    check(not MOCK.ns.auctionPanel.lastError, "the ticker scrolls without an error")
+    tk:Click()
+    check(questText(panel, "CODEX MARKET") and questText(panel, "PRICE CHART") and questText(panel, "Silk Cloth"),
+      "a click on the ticker charts that item")
+    click(panel, "Interval 1h")
+    check(not MOCK.ns.auctionPanel.lastError and questText(panel, "Range (30 h)"), "the 1h interval buckets the readings")
+    click(panel, "Interval 1m")
+    check(not MOCK.ns.auctionPanel.lastError and questText(panel, "Range (30 min)"), "the 1m interval")
+    click(panel, "Interval Auto")
+    click(AuctionHouseFrame, "Codex")
+  end
   click(AuctionHouseFrame, "Market")
   check(questText(panel, "CODEX MARKET") and questText(panel, "TOP GAINERS") and questText(panel, "TOP LOSERS")
     and questText(panel, "PRICE CHART") and questText(panel, "-50%"), "the Market page lists gainers and losers with a chart")

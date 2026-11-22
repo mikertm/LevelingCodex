@@ -330,9 +330,14 @@ end
 -- profit setting (per item) are left out.
 local dealCache = {}
 function T.deals(kind, hidden)
-  local key = table.concat({ ns.auction.version or 0, notesVersion, kind or "", hidden and 1 or 0, T.flipPct(), T.minProfit(),
+  local key = table.concat({ notesVersion, kind or "", hidden and 1 or 0, T.flipPct(), T.minProfit(),
     ns.auction.realmKey and ns.auction.realmKey() or "" }, ":")
-  if dealCache.key == key then return dealCache.list end
+  local version, t = ns.auction.version or 0, tonumber(GetTime and GetTime()) or 0
+  -- the same choices: new prices are looked at every 3 s at most (the sniper and quick searches
+  -- change a price every second), and not at all while a scan is filing thousands
+  if dealCache.key == key and (dealCache.version == version or ns.auction.scanning() or t - (dealCache.at or 0) < 3) then
+    return dealCache.list
+  end
   local out = {}
   local items = ns.auction.store().items
   local flip, minProfit, notes = T.flipPct(), T.minProfit(), T.notes()
@@ -363,7 +368,7 @@ function T.deals(kind, hidden)
     if a.profit ~= b.profit then return a.profit > b.profit end
     return a.id < b.id
   end)
-  dealCache.key, dealCache.list = key, kept
+  dealCache.key, dealCache.list, dealCache.version, dealCache.at = key, kept, version, t
   return kept
 end
 
