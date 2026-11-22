@@ -469,6 +469,127 @@ function A.fullScan()
   return true
 end
 
+-- The paged scan (what Scan all does while the instant scan cools down, like Auctioneer's
+-- repeatable scan): a browse search for everything, page after page (RequestMoreBrowseResults until
+-- HasFullBrowseResults), each page filed a slice of a frame. A browse row has the lowest price and
+-- how many are listed for each item, so the median and high stay from the last instant scan. No
+-- cooldown; it takes longer than the instant scan.
+function A.canPagedScan()
+  local C = api()
+  if not open then return false, "Open the auction house first." end
+  if job and (job.kind == "full" or job.kind == "paged") then return false, "Scanning..." end
+  if not (has(C, "SendBrowseQuery") and has(C, "RequestMoreBrowseResults")) then return false, "This client has no paged scan." end
+  return true
+end
+
+local function pagedTimeout(j)
+  ns.after(20, function()
+    if job == j and now() - (j.lastPage or j.started) >= 20 then
+      job = nil
+      last.full = { at = now(), failed = "the auction house stopped answering", paged = true }
+      ns.say("The paged scan stopped: the auction house didn't answer. Prices so far are kept.")
+      finished("full")
+      ns.after(SEARCH_GAP, A.pump)
+    end
+  end)
+end
+
+function A.pagedScan()
+  local ok, why = A.canPagedScan()
+  if not ok then ns.say(why); return false end
+  queue = {}
+  local C = api()
+  local order = type(Enum) == "table" and type(Enum.AuctionHouseSortOrder) == "table" and Enum.AuctionHouseSortOrder.Name or 1
+  local j = { kind = "paged", started = now(), pages = 0, done = 0, seen = {}, items = 0 }
+  job = j
+  if not pcall(C.SendBrowseQuery, { searchString = "", sorts = { { sortOrder = order, reverseSort = false } }, filters = {} }) then
+    job = nil
+    ns.say("The auction house refused the paged scan.")
+    finished("full")
+    return false
+  end
+  ns.say("Paged scan started: the Codex reads the auction house page by page.")
+  pagedTimeout(j)
+  finished("start")
+  return true
+end
+
+-- Scan all: the instant scan when the server allows one, else the paged scan.
+function A.scanAll()
+  if A.canFullScan() then return A.fullScan() end
+  return A.pagedScan()
+end
+function A.canScanAll()
+  local ok, why = A.canFullScan()
+  if ok then return true, "instant" end
+  local okPaged = A.canPagedScan()
+  if okPaged then return true, "paged", why end
+  return false, nil, why
+end
+
+-- The newest scan of either kind.
+function A.lastScanAt()
+  local s = A.store()
+  local a, b = tonumber(s.fullAt), tonumber(s.pagedAt)
+  if a and b then return math.max(a, b) end
+  return a or b
+end
+
+local function readPage(rows)
+  local j = job
+  if not j or j.kind ~= "paged" or j.reading then return end
+  -- one reading per page: the client may send both UPDATED and ADDED for it
+  if j.pages > 0 and not j.waiting then return end
+  local C = api()
+  j.reading, j.waiting, j.lastPage = true, false, now()
+  j.pages = j.pages + 1
+  rows = type(rows) == "table" and rows or {}
+  local n = #rows
+  A.recordFast = true
+  spread(j, 1, n, function(i)
+    local r = rows[i]
+    local key = type(r) == "table" and r.itemKey
+    local id = type(key) == "table" and tonumber(key.itemID)
+    local low = tonumber(r and r.minPrice)
+    if id and low and low > 0 and not j.seen[id] then
+      j.seen[id] = true
+      local it = A.store().items[id]
+      local name = type(it) == "table" and it.name or nil
+      if not name and has(C, "GetItemKeyInfo") then
+        local info = try(C.GetItemKeyInfo, key)
+        name = type(info) == "table" and info.itemName or nil
+      end
+      A.record(id, name, low, tonumber(r.totalQuantity) or 1)
+      j.items = j.items + 1
+    end
+    j.done = j.done + 1
+  end, function()
+    A.recordFast = nil
+    j.reading = false
+    if job ~= j then return end
+    if has(C, "HasFullBrowseResults") and try(C.HasFullBrowseResults) == false then
+      ns.after(0.3, function()
+        if job ~= j then return end
+        j.waiting = true
+        if not pcall(C.RequestMoreBrowseResults) then j.stuck = true end
+      end)
+      pagedTimeout(j)
+      refreshCard()
+      return
+    end
+    for id, it in pairs(A.store().items) do
+      if not j.seen[id] and type(it) == "table" then it.n, it.at, it.ator = 0, now(), nil end
+    end
+    A.store().pagedAt = now()
+    job = nil
+    last.full = { at = now(), listings = j.done, items = j.items, seconds = now() - j.started, frames = j.frames or 0, paged = true, pages = j.pages }
+    ns.say("Paged scan: " .. ns.thousands(j.items) .. " items priced in " .. j.pages .. (j.pages == 1 and " page." or " pages."))
+    finished("full")
+    A.fillVendors()
+    ns.after(SEARCH_GAP, A.pump)
+  end)
+end
+
 -- Quick searches: one name at a time, a short gap between them.
 function A.search(name)
   if type(name) ~= "string" or searched[name:lower()] then return end
@@ -580,7 +701,12 @@ local function searchDone(results)
   ns.after(snipe.on and #queue == 0 and A.SNIPE_GAP or SEARCH_GAP, A.pump)
 end
 
-local function readBrowse()
+local function readBrowse(added)
+  if job and job.kind == "paged" then
+    -- the first page arrives as UPDATED (the whole list), later pages as ADDED (only the new rows)
+    readPage(added or try(api().GetBrowseResults))
+    return
+  end
   local j = job
   if not j or j.kind ~= "search" or not j.modern then return end
   local C = api()
@@ -744,6 +870,7 @@ function A.fullProgress()
     if job.phase == "filing" then return job.filed or 0, job.filing, "filing" end
     return job.done or 0, job.total, job.phase
   end
+  if job and job.kind == "paged" then return job.items, nil, "paged", job.pages end
 end
 
 local function queueNames(names)
@@ -999,15 +1126,16 @@ function ns.startAuction()
   end
   events = CreateFrame("Frame")
   for _, ev in ipairs({ "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE",
-    "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_ITEM_LIST_UPDATE", "BAG_UPDATE_DELAYED" }) do
+    "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_ITEM_LIST_UPDATE", "BAG_UPDATE_DELAYED" }) do
     pcall(events.RegisterEvent, events, ev)
   end
-  events:SetScript("OnEvent", function(_, event)
+  events:SetScript("OnEvent", function(_, event, arg)
     if event == "AUCTION_HOUSE_SHOW" then onShow()
     elseif event == "AUCTION_HOUSE_CLOSED" then onClose()
     elseif not open then return
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then readFull()
     elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then readBrowse()
+    elseif event == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" then if job and job.kind == "paged" then readBrowse(arg) end
     elseif event == "AUCTION_ITEM_LIST_UPDATE" then
       if job and job.kind == "full" and not job.modern then readFull() else readClassicSearch() end
     elseif event == "BAG_UPDATE_DELAYED" then refreshCard()
@@ -1020,7 +1148,7 @@ function ns.auctionDebugLines()
   local C = api()
   out[#out + 1] = "auction: " .. (has(C, "ReplicateItems") and "C_AuctionHouse" or type(QueryAuctionItems) == "function"
     and "classic QueryAuctionItems" or "no auction API") .. ", " .. A.count() .. " prices on " .. realm()
-    .. ", full scan " .. A.age(A.store().fullAt) .. (open and ", open" or "")
+    .. ", full scan " .. A.age(A.store().fullAt) .. ", paged scan " .. A.age(A.store().pagedAt) .. (open and ", open" or "")
   if A.auctionator() then
     out[#out + 1] = "auction: Auctionator loaded, " .. ator.found .. " of " .. ator.reads .. " price reads answered, "
       .. ator.searches .. " searches sent" .. (ator.last and (" (last " .. ator.last .. ")") or "")
@@ -1032,7 +1160,7 @@ function ns.auctionDebugLines()
       .. "; the Codex's own searches are off"
   end
   if last.full then
-    out[#out + 1] = "auction full scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
+    out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
       .. (last.full.frames or 0) .. " frames, " .. (last.full.seconds or 0) .. " s"))
   end
   if last.search then
@@ -1053,8 +1181,8 @@ ns.gold.addSection(10, function(y)
   local top = y
   y = y + 10
   U.T("AUCTION HOUSE", 14, y, W - 28, "label", C.gold)
-  local count, fullAt = A.count(), A.store().fullAt
-  U.T(fullAt and ("Full scan " .. A.age(fullAt)) or "", 14, y, W - 28, "small", C.light, "RIGHT")
+  local count, fullAt = A.count(), A.lastScanAt()
+  U.T(fullAt and ("Last scan " .. A.age(fullAt)) or "", 14, y, W - 28, "small", C.light, "RIGHT")
   y = y + 22
   if count == 0 and A.auctionator() then
     y = y + U.T("Auctionator is loaded: the Codex reads its prices, and Scan all adds a history of your own for the trend.",

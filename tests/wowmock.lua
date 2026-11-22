@@ -65,7 +65,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
   "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
   "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "OWNED_AUCTIONS_UPDATED",
-  "AUCTION_CANCELED" }) do
+  "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -1482,7 +1482,7 @@ end
 C_Item.GetItemID = function(loc) return type(loc) == "table" and loc.mockItemID or nil end
 local function auctionLater(fn) C_Timer.After(MOCK.auctionDelay or 0.5, fn) end
 local function auctionLink(a) return "|cffffffff|Hitem:" .. a.id .. "::::::::|h[" .. a.name .. "]|h|r" end
-local browseText
+local browseText, browsePage
 C_AuctionHouse = {
   ReplicateItems = function()
     MOCK.replicated = (MOCK.replicated or 0) + 1
@@ -1500,9 +1500,34 @@ C_AuctionHouse = {
     end
     MOCK.browsed[#MOCK.browsed + 1] = query.searchString
     browseText = query.searchString:lower()
+    browsePage = 1
     auctionLater(function() MOCK.event("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED") end)
   end,
+  -- MOCK.browsePage = groups per page (nil = all at once); more pages come with
+  -- RequestMoreBrowseResults and AUCTION_HOUSE_BROWSE_RESULTS_ADDED (the new slice).
+  HasFullBrowseResults = function()
+    local all = C_AuctionHouse.browseAll()
+    return not MOCK.browsePage or browsePage * MOCK.browsePage >= #all
+  end,
+  RequestMoreBrowseResults = function()
+    MOCK.moreRequested = (MOCK.moreRequested or 0) + 1
+    if C_AuctionHouse.HasFullBrowseResults() then return end
+    browsePage = browsePage + 1
+    local page = browsePage
+    auctionLater(function()
+      local all, added = C_AuctionHouse.browseAll(), {}
+      for i = (page - 1) * MOCK.browsePage + 1, math.min(#all, page * MOCK.browsePage) do added[#added + 1] = all[i] end
+      MOCK.event("AUCTION_HOUSE_BROWSE_RESULTS_ADDED", added)
+    end)
+  end,
   GetBrowseResults = function()
+    local all = C_AuctionHouse.browseAll()
+    if not MOCK.browsePage then return all end
+    local out = {}
+    for i = 1, math.min(#all, browsePage * MOCK.browsePage) do out[i] = all[i] end
+    return out
+  end,
+  browseAll = function()
     local byID, out = {}, {}
     for _, a in ipairs(MOCK.auctions) do
       if browseText and a.name:lower():find(browseText, 1, true) then

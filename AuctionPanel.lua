@@ -284,12 +284,22 @@ local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 
 
 local function money(c) return ns.auction.coins(c) end
 
--- How old the last full scan is, and its colour.
+-- How old the last scan (instant or paged) is, and its colour.
 local function scanAge()
-  local at = tonumber(A().store().fullAt)
+  local at = A().lastScanAt()
   if not at then return "never", RED end
   local s = now() - at
   return A().age(at), s < 3600 and GREEN or (s < 86400 and ns.C.gold or ORANGE)
+end
+
+-- The Scan all button: the instant scan when the server allows one, else the paged scan.
+local function scanAllButton(label, x, y, w)
+  local ok, how, why = A().canScanAll()
+  local tipText = how == "paged"
+    and ("The instant scan is cooling down (" .. tostring(why or "") .. "). This reads the auction house page by page instead: no cooldown, a little slower.")
+    or "Reads every listing at once. The server allows that once every 15 minutes; in between, Scan all reads page by page."
+  if not label then label = ok and (how == "paged" and "Scan all (paged)" or "Scan all") or why end
+  button(label, x, y, w, function() A().scanAll() end, { label = "Scan all", enabled = ok, tip = "Scan all", tipText = tipText })
 end
 
 local function itemIcon(id)
@@ -333,9 +343,7 @@ function pages.overview(W, top, H)
   text(ns.thousands(A().count()) .. " items priced on " .. Q.plain(GetRealmName and GetRealmName() or "this realm"), lx + 14, y + 34, lw - 28, "small")
   text("Full scan:", lx + 14, y + 52, 80, "small", ns.C.dim)
   text(age, lx + 90, y + 52, lw - 104, "small", ageColor)
-  local ok, why = A().canFullScan()
-  button(ok and "Scan all" or why, lx + 14, y + 76, math.floor((lw - 36) / 2), function() A().fullScan() end,
-    { label = "Scan all", enabled = ok, tip = "Scan all", tipText = "Reads every listing at once. The auction house allows one every 15 minutes." })
+  scanAllButton(nil, lx + 14, y + 76, math.floor((lw - 36) / 2))
   button("Scan my bags", lx + 22 + math.floor((lw - 36) / 2), y + 76, math.floor((lw - 36) / 2), function()
     ns.say("Searching " .. A().scanBags() .. " items from your bags.")
   end, { tip = "Scan my bags", tipText = "Searches each item you could sell whose price is older than 30 minutes." })
@@ -658,25 +666,25 @@ function pages.scan(W, top, H)
   -- full scan
   local age, ageColor = scanAge()
   card(lx, top, lw, 132, "FULL SCAN")
-  text("Last full scan:", lx + 14, top + 34, 110, "small", ns.C.dim)
+  text("Last scan:", lx + 14, top + 34, 110, "small", ns.C.dim)
   text(age, lx + 124, top + 34, lw - 138, "small", ageColor)
-  text(ns.thousands(A().count()) .. " items priced. One full scan per 15 min (a server limit).", lx + 14, top + 52, lw - 28, "small")
-  local done, total, phase = A().fullProgress()
+  text(ns.thousands(A().count()) .. " items priced. Instant scans every 15 min, paged scans any time.", lx + 14, top + 52, lw - 28, "small")
+  local done, total, phase, pages = A().fullProgress()
   if done then
-    bar(lx + 14, top + 72, lw - 28, 8, total and total > 0 and done / total or 0, phase == "filing" and GREEN or ns.C.accent)
+    local frac = total and total > 0 and done / total or ((pages or 0) % 10) / 10
+    bar(lx + 14, top + 72, lw - 28, 8, frac, phase == "filing" and GREEN or ns.C.accent)
   else
     local speeds, lit = {}, nil
     for i, e in ipairs(A().SPEEDS) do speeds[i] = e[1]; if e[2] == A().budget() then lit = i end end
     text("Speed", lx + 14, top + 70, 50, "dim", ns.C.dim)
     segments(lx + 64, top + 66, lw - 78, speeds, lit, function(i) db.auctionScanSpeed = A().SPEEDS[i][2] end, "Scan speed ")
   end
-  local ok, why = A().canFullScan()
-  local label = done and (phase == "filing" and ("Saving prices " .. ns.thousands(done) .. " of " .. ns.thousands(total or 0))
+  local label = done and (phase == "paged" and ("Paged scan: " .. ns.thousands(done) .. " items, page " .. (pages or 0))
+    or (phase == "filing" and ("Saving prices " .. ns.thousands(done) .. " of " .. ns.thousands(total or 0)))
     or (phase == "reading" and total and ("Reading " .. ns.thousands(done) .. " of " .. ns.thousands(total)))
     or "Waiting for the auction house...")
-    or (ok and "Scan all" or why)
-  button(label, lx + 14, top + 90, lw - 28, function() A().fullScan() end,
-    { label = "Scan all", enabled = ok, tip = "Scan all", tipText = "Reads every listing at once. The auction house allows one every 15 minutes." })
+    or nil
+  scanAllButton(label, lx + 14, top + 90, lw - 28)
   -- quick searches
   local y = top + 144
   local waiting, running = A().queued()
