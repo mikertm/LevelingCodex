@@ -12142,7 +12142,7 @@ function S.journeyTab()
   slash("")
   click(win(), "Journey")
   for _, head in ipairs({ "THE JOURNEY OF", "THE ROAD TO 60", "THE MAP", "THE STORY SO FAR", "FELLOW ADVENTURERS",
-      "CHAPTER " .. MOCK.level }) do
+      "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level }) do
     check(questText(win(), head), "the Journey tab has " .. head)
   end
   if MOCK.minimal then return end -- no optional events, no map positions

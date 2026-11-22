@@ -5,7 +5,7 @@
 ### New: the Journey tab, your adventure journal
 
 - A storybook of your character's journey that writes itself as you play: every level, every new land, quests turned in, dungeon runs and bosses, deaths, flight paths and the friends you grouped with, each told as a line of the story ("Conquered Edwin VanCleef and saved Westfall", "Heroically did the chores: murloc duty in Hillsbrad Foothills").
-- Chapters by level, newest first, with the time, quests, foes and falls of each level, and filters for Quests, Battles, Travels and Deaths.
+- Chapters by level (Chapter I, II, III...), newest first: each opens with the line of its level-up, names the land where most of it happened, shows the time, quests, foes and falls of that level, and tells its moments in order along a timeline. Filters for Quests, Battles, Travels and Deaths.
 - The map: your trail on each zone you visited, coloured by your level then, with stars where you levelled up and skulls where you fell. Click a moment to see where it happened.
 - The same trail on the world map (Journey > Show my trail on the world map), plus the road from 1 to 60, the journey in numbers (quests, foes, lands, miles walked, dungeons, deaths) and your fellow adventurers.
 
