@@ -38,13 +38,26 @@ local PIN = {
   death = "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
   level = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1", -- the star
   boss = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8",
+  close = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_7", -- the cross: nearly fell here
+  rare = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_4", -- the triangle
+  first = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3", -- the diamond
+  pvp = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_5", -- the moon: a fight with another player
+  camp = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_2", -- the circle: a campfire
 }
+J.PIN = PIN
 local ICON = {
   level = "Spell_Holy_SurgeOfLight", zone = "INV_Misc_Map_01", quest = "INV_Misc_Note_01",
   chain = "INV_Misc_Book_09", elite = "Ability_Warrior_BattleShout", dungeon = "INV_Misc_Key_03",
   boss = "INV_Misc_Head_Dragon_01", death = "INV_Misc_Bone_HumanSkull_01", flight = "Ability_Mount_Gryphon_01",
-  pal = "Spell_Holy_PrayerOfHealing", start = "INV_Misc_Book_11",
+  pal = "Spell_Holy_PrayerOfHealing", start = "INV_Misc_Book_11", first = "INV_Misc_Bag_08",
+  close = "Spell_Holy_SealOfSacrifice", upgrade = "INV_Chest_Chain", rare = "Ability_Hunter_SniperShot",
+  cap = "Trade_BlackSmithing", wipe = "Spell_Shadow_DeathScream", run = "INV_Misc_Key_14",
+  pvp = "Ability_DualWield", bg = "INV_BannerPVP_02", duel = "Ability_Parry", rez = "Spell_Holy_Resurrection",
+  trade = "INV_Misc_Coin_02", emote = "Spell_Holy_Heal", guild = "INV_Misc_TabardSummer01", camp = "Spell_Fire_Fire",
+  craft = "Trade_Engineering", skill = "INV_Misc_Book_08", auction = "INV_Misc_Coin_04", sold = "INV_Misc_Coin_01",
+  expired = "INV_Misc_Bag_10", gold = "INV_Misc_Coin_03", abandon = "INV_Misc_Note_02",
 }
+J.ICON = ICON
 
 ----------------------------------------------------------------------------
 -- The saved journal
@@ -85,6 +98,7 @@ end
 local function fill(text, vars)
   return (text:gsub("%%(%w+)%%", function(k) return vars[k] or "" end))
 end
+J.pick, J.fill = pick, fill
 
 -- Zone maps: up through parents while the map is smaller than a zone.
 local zoneCache = {}
@@ -148,6 +162,7 @@ local function partyText()
   if #names == 1 then return names[1] end
   return table.concat(names, ", ", 1, #names - 1) .. " and " .. names[#names]
 end
+J.partyText, J.partyNames, J.inInstance, J.here = partyText, partyNames, inInstance, here
 
 ----------------------------------------------------------------------------
 -- The story's words
@@ -215,6 +230,8 @@ local DUNGEON = { "Ventured into %dungeon%", "Gathered your courage and stepped 
 local ZONE = { "Set foot in %zone% for the first time", "The road led on to %zone%", "Arrived in %zone%, a new land to explore",
   "First steps into %zone%" }
 local DEATH = { "Fell to %killer% in %zone%, then got back up", "Was bested by %killer% in %zone%: a lesson learned" }
+local PVP_DEATH = { "Ambushed by %killer% in %zone%. Not every enemy in Azeroth is a monster",
+  "Cut down by %killer% in %zone%: the war is real", "Fell to %killer% in %zone%, and swore to remember the name" }
 local DEATH_PLAIN = { "Met an untimely end in %zone%, but the story goes on", "Took a spill in %zone% and walked back from the graveyard" }
 local FLIGHT = { "Made friends with the flight master at %place%", "Found a new flight path at %place%" }
 local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled together" }
@@ -259,6 +276,8 @@ local function finisher(id)
   end
   return finishers[id]
 end
+
+J.finisher = finisher
 
 local function singular(name)
   name = name or ""
@@ -324,6 +343,9 @@ end
 -- Recording
 ----------------------------------------------------------------------------
 
+-- Moments the journal never drops to make room: the story's spine and its trophies.
+J.KEEP = { level = true, zone = true, start = true, boss = true, first = true, cap = true, rare = true }
+
 -- Add a moment. fields: k (kind), s (text), d (detail), q (quest), at = { map, x, y } (else where you are).
 function J.add(kind, text, detail, extra)
   local j = J.data()
@@ -332,6 +354,9 @@ function J.add(kind, text, detail, extra)
   if extra and extra.at then map, x, y = extra.at[1], extra.at[2], extra.at[3] end
   if extra and extra.q then e.q = extra.q end
   if extra and extra.l then e.l = extra.l end
+  for _, f in ipairs({ "who", "i", "iq", "fk", "pct", "n", "pvp", "c" }) do
+    if extra and extra[f] ~= nil then e[f] = type(extra[f]) == "string" and Q.plain(extra[f]) or extra[f] end
+  end
   if map and x and y and not inInstance() then
     e.m, e.x, e.y = map, math.floor(x * 10 + 0.5) / 10, math.floor(y * 10 + 0.5) / 10
   end
@@ -340,7 +365,7 @@ function J.add(kind, text, detail, extra)
   if #events > J.MAX_EVENTS then
     -- drop the oldest small moment; levels and new zones are the story's spine
     for i = 1, #events do
-      if events[i].k ~= "level" and events[i].k ~= "zone" and events[i].k ~= "start" then table.remove(events, i); break end
+      if not J.KEEP[events[i].k] then table.remove(events, i); break end
     end
     if #events > J.MAX_EVENTS then table.remove(events, 1) end
   end
@@ -460,6 +485,7 @@ local function zoneName()
   local _, name = here()
   return name or "the wilds"
 end
+J.zoneName = zoneName
 
 local dungeonHere, bossSeen
 local function enteredWorld()
@@ -477,7 +503,10 @@ local function bossDown(name)
   bossSeen = bossSeen or {}
   if bossSeen[name] then return end
   bossSeen[name] = true
-  J.add("boss", J.bossLine(name, dungeonHere), dungeonHere and Q.plain(dungeonHere))
+  local wipes = J.wipesOn and J.wipesOn(name) or 0
+  local detail = dungeonHere and Q.plain(dungeonHere)
+  if wipes > 0 then detail = (detail and (detail .. ", ") or "") .. "after " .. wipes .. (wipes == 1 and " wipe" or " wipes") end
+  J.add("boss", J.bossLine(name, dungeonHere), detail)
 end
 
 local HANDLERS = {
@@ -500,10 +529,25 @@ local HANDLERS = {
     local killer
     local hostile = try(UnitCanAttack, "player", "target")
     if hostile == true or hostile == 1 then killer = try(UnitName, "target") end
+    local enemy = killer and try(UnitIsPlayer, "target")
+    if enemy == true or enemy == 1 then
+      -- another player: a line of its own, with who they were
+      j.pvpDeaths = (tonumber(j.pvpDeaths) or 0) + 1
+      local race, cls = try(UnitRace, "target"), try(UnitClass, "target")
+      local who = Q.plain(killer) .. ((race or cls) and (", " .. Q.plain(((race or "") .. " " .. (cls or "")):gsub("^ ", ""))) or "")
+      if J.onDeath then J.onDeath() end
+      local zone = zoneName()
+      J.add("death", fill(pick(PVP_DEATH, killer .. j.deaths), { killer = who, zone = zone }), "Death " .. j.deaths
+        .. " (another player)", { who = killer, pvp = true })
+      return
+    end
+    -- no hostile target: the last foe you fought this fight (JourneyDeeds.lua)
+    if not killer and J.lastFoe then killer = J.lastFoe() end
+    if J.onDeath then J.onDeath() end
     local zone = zoneName()
     local text = killer and fill(pick(DEATH, killer .. j.deaths), { killer = Q.plain(killer), zone = zone })
       or fill(pick(DEATH_PLAIN, zone .. j.deaths), { zone = zone })
-    J.add("death", text, "Death " .. j.deaths)
+    J.add("death", text, "Death " .. j.deaths, { who = killer })
   end,
   NEW_TAXI_PATH = function()
     local place = try(GetSubZoneText)
@@ -578,14 +622,17 @@ end
 -- Drawing the trail: helpers shared by the tab and the world map
 ----------------------------------------------------------------------------
 
--- Every run on a map, thinned to at most `cap` points overall: { { x, y, level }, ... } per run.
-function J.runs(map, cap)
+-- Every run on a map (only those walked at onlyLevel, when given), thinned to at most `cap` points
+-- overall: { { x, y, level }, ... } per run.
+function J.runs(map, cap, onlyLevel)
   local j = J.data()
   local runs, total = {}, 0
   for _, r in ipairs(j.trail[map] or {}) do
-    local pts = J.unpack(r.p)
-    total = total + #pts
-    runs[#runs + 1] = { level = r.l, pts = pts }
+    if not onlyLevel or r.l == onlyLevel then
+      local pts = J.unpack(r.p)
+      total = total + #pts
+      runs[#runs + 1] = { level = r.l, pts = pts }
+    end
   end
   local stride = math.max(1, math.ceil(total / (cap or 600)))
   if stride > 1 then
@@ -599,10 +646,10 @@ function J.runs(map, cap)
 end
 
 -- Moments with a spot on a map (deaths, level-ups, bosses outside, ...).
-function J.pinsOn(map)
+function J.pinsOn(map, onlyLevel)
   local out = {}
   for _, e in ipairs(J.data().events) do
-    if e.m == map and e.x and e.y then out[#out + 1] = e end
+    if e.m == map and e.x and e.y and (not onlyLevel or tonumber(e.l) == onlyLevel) then out[#out + 1] = e end
   end
   return out
 end
@@ -724,12 +771,22 @@ end
 -- The Journey tab
 ----------------------------------------------------------------------------
 
-local filter = 1 -- All, Quests, Battles, Travels, Deaths
-local FILTERS = { "All", "Quests", "Battles", "Travels", "Deaths" }
+local filter = 1 -- All, Quests, Battles, Treasures, Travels, Deaths
+local FILTERS = { "All", "Quests", "Battles", "Fortunes", "Fellowship", "Travels", "Deaths" }
 local FILTER_KINDS = {
-  { }, { quest = true, chain = true, elite = true }, { dungeon = true, boss = true, elite = true },
-  { zone = true, flight = true, pal = true, start = true }, { death = true },
+  { },
+  { quest = true, chain = true, elite = true, abandon = true },
+  { dungeon = true, boss = true, elite = true, close = true, rare = true, wipe = true, run = true, pvp = true, bg = true, duel = true },
+  { first = true, upgrade = true, cap = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true },
+  { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true },
+  { zone = true, flight = true, start = true, camp = true },
+  { death = true, close = true, wipe = true, expired = true, abandon = true },
 }
+local FILTER_TIPS = { "Every moment.", "Quests and the stories they finished, and the ones you gave up.",
+  "Dungeons, bosses, wipes, elites, rares, close calls, duels, battlegrounds and fights with other players.",
+  "Firsts, gear upgrades, crafting, professions, the auction house and your purse.",
+  "Companions, dungeon parties, resurrections, trades, duels, waves and campfires.",
+  "New lands, flight paths and campfires.", "Every fall, wipe, near miss and lost cause." }
 local showAll, mapPick, highlight
 local confirmReset, confirmAt
 
@@ -805,13 +862,25 @@ local function page(U, C, x, y, w, h)
   U.box(x, y, w, h, C.parch)
 end
 
--- The pages of the journal, one at a time instead of one long scroll.
-local PAGES = { "Overview", "Map", "Story", "Companions" }
-local PAGE_TIPS = { "Your journey at a glance: the numbers, the road, the latest chapter and where you are.",
-  "Your trail on every land you have walked, and the lands explored.", "Every chapter of your story, level by level.",
-  "Everyone who shared the road with you." }
-local pageNo = 1
-local function openPage(n, U) pageNo = n; U.refreshTop() end
+-- The pages of the journal, one at a time instead of one long scroll. Other files add pages with
+-- J.addPage(name, tip, draw, after) (draw(V, y) -> y); a page is opened by name.
+local PAGES = {
+  { name = "Overview", tip = "Your journey at a glance: today's entry, the numbers, the road, the latest chapter and where you are." },
+  { name = "Story", tip = "Every chapter of your story, level by level, each with its own map." },
+  { name = "Map", tip = "Your trail on every land you have walked, and the lands explored." },
+  { name = "Trophies", tip = "Your firsts, your nemeses, close calls, rares, bosses, upgrades and crafts." },
+  { name = "Companions", tip = "Everyone who shared the road with you." },
+}
+local P_OVERVIEW, P_STORY, P_MAP, P_TROPHIES, P_COMPANIONS = "Overview", "Story", "Map", "Trophies", "Companions"
+local pageName = P_OVERVIEW
+local function openPage(name, U) pageName = name; U.refreshTop() end
+J.openPage = function(name) openPage(name, ns.ui) end
+function J.addPage(name, tip, draw, after)
+  for _, p in ipairs(PAGES) do if p.name == name then p.tip, p.draw = tip, draw; return end end
+  local at = #PAGES + 1
+  for i, p in ipairs(PAGES) do if p.name == after then at = i + 1 end end
+  table.insert(PAGES, at, { name = name, tip = tip, draw = draw })
+end
 
 -- One disc-shaped dot (a square without the circle art).
 local function disc(U, x, y, size, c, sub, kind, onTop)
@@ -848,7 +917,7 @@ local function mapLabel(j, map)
 end
 
 -- The map plate at (mx, my, mw x mh): art or a gridded parchment, the trail, you and the pins.
-local function drawPlate(V, map, mx, my, mw, mh, pinSize)
+local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel)
   local U, C, j = V.U, V.C, V.j
   U.rect(mx - 4, my - 4, mw + 8, mh + 8, C.edge, "border", -5)
   U.rect(mx - 3, my - 3, mw + 6, mh + 6, { 0, 0, 0, 1 }, "border", -5)
@@ -865,7 +934,7 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize)
   -- the trail: each dot a bright centre on a dark halo, so it reads on light and dark map art
   local small = mw < 400
   local hs, ds = small and 5 or 7, small and 3 or 4
-  for _, r in ipairs(J.runs(map, small and 200 or 400)) do
+  for _, r in ipairs(J.runs(map, small and 200 or 400, onlyLevel)) do
     local c = J.bandColor(r.level)
     for _, pt in ipairs(r.pts) do
       local cx, cy = mx + pt[1] / 100 * mw, my + pt[2] / 100 * mh
@@ -875,14 +944,14 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize)
   end
   -- you, when this is the map you're on
   local hereMap, hx, hy = Q.position()
-  if hereMap == map and hx and hy then
+  if hereMap == map and hx and hy and (not onlyLevel or onlyLevel == V.lvl) then
     local cx, cy = mx + hx / 100 * mw, my + hy / 100 * mh
     disc(U, cx - 8, cy - 8, 16, { 0, 0, 0, 0.8 }, nil, "journeyRing", true)
     disc(U, cx - 5, cy - 5, 10, { C.gold[1], C.gold[2], C.gold[3], 1 }, 1, "journeyRing", true)
     U.T("You", cx + 8, cy - 7, 40, "small", C.gold, nil, true)
     U.hit(cx - 8, cy - 8, 16, 16, "You are here", nil, nil, "You are here")
   end
-  for _, e in ipairs(J.pinsOn(map)) do
+  for _, e in ipairs(J.pinsOn(map, onlyLevel)) do
     local file = PIN[e.k]
     local big = highlight == e
     if file or big then
@@ -926,6 +995,25 @@ local function chapterData(j)
   return chapters, byLevel
 end
 
+-- The map a chapter's plate shows: the one with the most trail walked at that level, else the most moments.
+local function chapterMap(j, l, events)
+  local best, most = nil, 0
+  for map, runs in pairs(j.trail) do
+    local n = 0
+    for _, r in ipairs(runs) do if r.l == l then n = n + math.floor(#(r.p or "") / 6) end end
+    if n > most then best, most = map, n end
+  end
+  if best and most >= 3 then return best end
+  local count = {}
+  for _, e in ipairs(events) do
+    if e.m and e.x then
+      count[e.m] = (count[e.m] or 0) + 1
+      if count[e.m] > most then best, most = e.m, count[e.m] end
+    end
+  end
+  return best
+end
+
 -- One chapter card at (x, y), w wide, showing up to limit moments; nil when the filter leaves it empty.
 local function drawChapter(V, l, events, x, y, w, limit, compact)
   local U, C, j, lvl = V.U, V.C, V.j, V.lvl
@@ -952,11 +1040,29 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
   local ix, iw = x + 16, w - 32
   U.rect(x, y, w, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
   U.T("CHAPTER " .. roman(l), ix, y + 12, iw, "label", C.inkSoft)
-  if l == lvl then U.T("you are here", ix, y + 12, iw, "small", C.inkSoft, "RIGHT") end
+  -- the chapter's plate: the land where you walked most at this level, with that level's trail and marks
+  local plateMap, plateBottom = not compact and chapterMap(j, l, events), nil
+  local hw = iw
+  if plateMap then
+    local pw = 176
+    local ph = math.floor(pw * 668 / 1002)
+    local px, py = x + w - 16 - pw, y + 14
+    drawPlate(V, plateMap, px, py, pw, ph, 10, l)
+    U.hit(px, py, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
+      mapPick, highlight = plateMap, nil
+      openPage(P_MAP, U)
+    end, "Plate level " .. l)
+    U.T(mapLabel(j, plateMap), px, py + ph + 5, pw, "small", C.inkSoft, "CENTER")
+    plateBottom = py + ph + 20
+    hw = iw - pw - 14
+  elseif l == lvl then
+    U.T("you are here", ix, y + 12, iw, "small", C.inkSoft, "RIGHT")
+  end
   y = y + 26
-  y = y + U.T("Level " .. l .. (best and ("  -  " .. best) or ""), ix, y, iw, "head", C.ink) + 8
+  y = y + U.T("Level " .. l .. (best and ("  -  " .. best) or ""), ix, y, hw, "head", C.ink) + 8
+  if plateMap and l == lvl then y = y + U.T("you are here", ix, y - 4, hw, "small", C.inkSoft) + 4 end
   if opening then
-    y = y + U.T('"' .. opening.s .. '"', ix, y, iw, compact and "small" or "body", C.inkSoft) + 6
+    y = y + U.T('"' .. opening.s .. '"', ix, y, hw, compact and "small" or "body", C.inkSoft) + 6
   end
   if not compact then
     local facts = {}
@@ -965,8 +1071,9 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
         .. plural(tonumber(rec.kills) or 0, "foe") .. ", " .. plural(tonumber(rec.deaths) or 0, "fall")
     end
     if #zoneList > 1 then facts[#facts + 1] = "through " .. table.concat(zoneList, ", ") end
-    if #facts > 0 then y = y + U.T(table.concat(facts, "  -  "), ix, y, iw, "small", C.inkSoft) + 6 end
+    if #facts > 0 then y = y + U.T(table.concat(facts, "  -  "), ix, y, hw, "small", C.inkSoft) + 6 end
   end
+  if plateBottom and plateBottom > y then y = plateBottom end
   U.rect(ix, y + 2, iw, 1, { band[1], band[2], band[3], 0.35 }, "border", 3)
   y = y + 12
   -- the overview shows the latest moments, the story reads them in order
@@ -992,7 +1099,7 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
     if e.m and e.x then
       U.hit(x + 12, y - 2, w - 24, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
         mapPick, highlight = e.m, e
-        openPage(2, U)
+        openPage(P_MAP, U)
       end, "Moment " .. e.s)
     end
     y = y + rowH + (compact and 2 or 6)
@@ -1071,7 +1178,12 @@ local function header(V)
     y = y + U.T("Forever didn't load your saved journal: this chapter of the story starts at this login.", 0, y, W,
       "small", C.dim) + 8
   end
-  y = y + U.segments(0, y, W, PAGES, pageNo, function(i) openPage(i, U) end, PAGE_TIPS) + 12
+  local names, tips, lit = {}, {}, 1
+  for i, p in ipairs(PAGES) do
+    names[i], tips[i] = p.name, p.tip
+    if p.name == pageName then lit = i end
+  end
+  y = y + U.segments(0, y, W, names, lit, function(i) openPage(PAGES[i].name, U) end, tips) + 12
   return y
 end
 
@@ -1136,8 +1248,25 @@ end
 ----------------------------------------------------------------------------
 -- Page 1: Overview
 ----------------------------------------------------------------------------
+-- Today's entry: this session in a few sentences, like a diary page.
+local function todayCard(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  local D = J.deeds
+  if not D then return y end
+  local top = y
+  local textW = W - 92
+  U.icon("INV_Feather_05", 16, y + 14, 34, "Today's entry", "Written from what happened since you logged in.")
+  U.T("TODAY'S ENTRY", 64, y + 12, textW, "label", C.inkSoft)
+  U.T("day " .. dayOf(j, now()), 64, y + 12, textW, "small", C.inkSoft, "RIGHT")
+  local h = U.T(D.today(), 64, y + 28, textW, "body", C.ink)
+  y = y + 28 + h + 14
+  page(U, C, 0, top, W, y - top)
+  return y + 10
+end
+
 local function overviewPage(V, y)
   local U, C, W, j = V.U, V.C, V.W, V.j
+  y = todayCard(V, y)
   y = seals(V, y)
   y = road(V, y)
   local gap = 10
@@ -1145,19 +1274,23 @@ local function overviewPage(V, y)
   local rx, rw = lw + gap, W - lw - gap
   local top = y
 
-  -- left: the latest chapter, its newest moments
+  -- left: the latest chapter, its newest moments (every kind, whatever the story's filter)
   local ly = y
+  local kept = filter
+  filter = 1
   local chapters, byLevel = chapterData(j)
   local l = chapters[1]
   if l then
     ly = drawChapter(V, l, byLevel[l], 0, ly, lw, 5, true) or ly
-  else
+  end
+  filter = kept
+  if not l then
     page(U, C, 0, ly, lw, 80)
     U.T("The first page is still blank. Your story is written here as you go.", 16, ly + 16, lw - 32, "body", C.ink)
     ly = ly + 80
   end
   ly = ly + 6
-  U.btn("Read the story", 0, ly, 150, function() openPage(3, U) end, false, "Every chapter, level by level.")
+  U.btn("Read the story", 0, ly, 150, function() openPage(P_STORY, U) end, false, "Every chapter, level by level.")
   if #chapters > 1 then U.T(plural(#chapters, "chapter") .. " so far", 160, ly + 6, lw - 160, "small", C.dim) end
   ly = ly + 30
 
@@ -1177,7 +1310,7 @@ local function overviewPage(V, y)
     local mh = math.floor(mw * 668 / 1002)
     drawPlate(V, show, rx + 14, ry, mw, mh, 10)
     ry = ry + mh + 10
-    U.btn("Open the map", rx + 14, ry, 130, function() mapPick, highlight = show, nil; openPage(2, U) end, false,
+    U.btn("Open the map", rx + 14, ry, 130, function() mapPick, highlight = show, nil; openPage(P_MAP, U) end, false,
       "Your whole trail, land by land.")
     U.T(plural(#maps, "land"), rx + 150, ry + 6, rw - 164, "small", C.dim)
     ry = ry + 32
@@ -1196,7 +1329,7 @@ local function overviewPage(V, y)
     local most = math.max(60, tonumber(pals[1].rec.seconds) or 60)
     for i = 1, math.min(3, #pals) do ry = ry + palRow(V, pals[i], most, rx + 14, ry, rw - 28, true) end
     if #pals > 3 then
-      U.btn("All companions", rx + 14, ry, 130, function() openPage(4, U) end, false)
+      U.btn("All companions", rx + 14, ry, 130, function() openPage(P_COMPANIONS, U) end, false)
       ry = ry + 30
     end
   end
@@ -1308,9 +1441,7 @@ local function storyPage(V, y)
   local U, C, W, j = V.U, V.C, V.W, V.j
   U.sectionTitle("THE STORY SO FAR", y)
   y = y + 30
-  y = y + U.segments(0, y, W, FILTERS, filter, function(i) filter = i; U.refresh() end,
-    { "Every moment.", "Quests and the stories they finished.", "Dungeons, bosses and elite foes.",
-      "New lands, flight paths and companions.", "Every time you fell." }) + 8
+  y = y + U.segments(0, y, W, FILTERS, filter, function(i) filter = i; U.refresh() end, FILTER_TIPS) + 8
   local chapters, byLevel = chapterData(j)
   if #chapters == 0 then
     page(U, C, 0, y, W, 60)
@@ -1356,10 +1487,163 @@ local function companionsPage(V, y)
   end
   y = y + 6
   U.box(0, top, W, y - top, C.panel, C.edge)
-  return y + 10
+  y = y + 10
+  if J.tales and J.tales.companions then y = J.tales.companions(V, y) end
+  return y
 end
 
-local PAGE_DRAW = { overviewPage, mapPage, storyPage, companionsPage }
+----------------------------------------------------------------------------
+-- Page 4: Trophies
+----------------------------------------------------------------------------
+
+-- Item quality inks that read on parchment (the game's own colours are made for dark tooltips).
+local QUALITY_INK = { [0] = { 0.4, 0.4, 0.4 }, [1] = { 0.2, 0.18, 0.15 }, [2] = { 0.08, 0.5, 0.08 },
+  [3] = { 0.0, 0.33, 0.75 }, [4] = { 0.5, 0.15, 0.72 }, [5] = { 0.8, 0.4, 0.0 } }
+local QUALITY_LIGHT = { [0] = { 0.62, 0.62, 0.62 }, [1] = { 1, 1, 1 }, [2] = { 0.12, 1, 0 }, [3] = { 0, 0.44, 0.87 },
+  [4] = { 0.64, 0.21, 0.93 }, [5] = { 1, 0.5, 0 } }
+
+local function itemIcon(id, fallback)
+  if id then
+    local tex = select(10, ns.itemInfo(id))
+    if tex then return tex end
+  end
+  return fallback
+end
+
+-- A list card at (x, y), w wide: a title, then rows drawn by row(item, y) -> height; returns the y below it.
+local function listCard(V, title, right, x, y, w, items, empty, row)
+  local U, C = V.U, V.C
+  local top = y
+  y = cardTitle(V, title, x, y, w, right)
+  if #items == 0 then
+    y = y + U.T(empty, x + 14, y, w - 28, "small", C.dim) + 10
+  else
+    for _, it in ipairs(items) do y = y + row(it, y) end
+    y = y + 4
+  end
+  U.box(x, top, w, y - top, C.panel, C.edge)
+  return y
+end
+
+local function trophiesPage(V, y)
+  local U, C, W, j = V.U, V.C, V.W, V.j
+  local D = J.deeds
+  if not D then return y end
+  local firsts = type(j.firsts) == "table" and j.firsts or {}
+
+  -- the firsts: four cards in a row
+  U.sectionTitle("FIRSTS", y)
+  y = y + 30
+  local gap = 8
+  local cw = math.floor((W - 3 * gap) / 4)
+  local ch = 104
+  for i, f in ipairs(D.FIRSTS) do
+    local cx = (i - 1) * (cw + gap)
+    local r = firsts[f.fk]
+    local got = r and not r.had
+    page(U, C, cx, y, cw, ch)
+    local q = r and tonumber(r.iq) or f.q or 1
+    local light = QUALITY_LIGHT[q] or QUALITY_LIGHT[1]
+    local ink = QUALITY_INK[q] or QUALITY_INK[1]
+    U.rect(cx + math.floor(cw / 2) - 20, y + 10, 40, 40, { light[1], light[2], light[3], got and 1 or 0.35 }, "border", 2)
+    local ic = U.icon(itemIcon(r and r.i, f.fk == "bag" and "INV_Misc_Bag_08" or ICON.first), cx + math.floor(cw / 2) - 18, y + 12, 36,
+      f.label, got and (r.n .. "\nLevel " .. (r.l or "?") .. ", day " .. dayOf(j, r.t)) or (r and r.had and "You had one before the journal began.")
+        or "Still out there.")
+    if not got then ic.tex:SetDesaturated(true); ic.tex:SetAlpha(0.55) end
+    U.T(f.label:upper(), cx + 6, y + 56, cw - 12, "label", C.inkSoft, "CENTER")
+    if got then
+      U.T(Q.plain(r.n or "?"), cx + 6, y + 70, cw - 12, "small", ink, "CENTER")
+      U.T("level " .. (r.l or "?") .. ", day " .. dayOf(j, r.t), cx + 6, y + 86, cw - 12, "small", C.inkSoft, "CENTER")
+    else
+      U.T(r and r.had and "before the journal" or "still out there", cx + 6, y + 72, cw - 12, "small", C.inkSoft, "CENTER")
+    end
+  end
+  y = y + ch + 14
+
+  -- two columns: nemeses beside close calls, then bosses and rares beside upgrades
+  local lw = math.floor((W - 10) / 2)
+  local rx, rw = lw + 10, W - lw - 10
+  local nem = D.nemeses()
+  local shown = {}
+  for i = 1, math.min(5, #nem) do shown[i] = nem[i] end
+  local most = nem[1] and nem[1].n or 1
+  local ly = listCard(V, "NEMESES", #nem > 0 and plural(tonumber(j.deaths) or 0, "fall") or nil, 0, y, lw, shown,
+    "Nobody has bested you yet. Long may it last.", function(r, ry)
+      U.icon("INV_Misc_Bone_HumanSkull_01", 14, ry, 22, r.name, plural(r.n, "fall") .. ", the last: " .. r.last.s)
+      U.T(Q.plain(r.name), 44, ry + 1, lw - 110, "body", C.light)
+      U.T(plural(r.n, "fall"), 14, ry + 1, lw - 28, "small", DEATH_INK[1] and { 0.9, 0.35, 0.3 } or C.light, "RIGHT")
+      local bw = lw - 58
+      U.rect(44, ry + 18, bw, 3, { 0.05, 0.05, 0.08, 0.9 })
+      U.rect(44, ry + 18, math.max(2, bw * r.n / most), 3, { 0.75, 0.2, 0.15, 1 })
+      return 30
+    end)
+  local closes = D.moments({ close = true }, 5)
+  local ry = listCard(V, "CLOSE CALLS", tonumber(j.closeCalls) and j.closeCalls > 0 and tostring(j.closeCalls) or nil, rx, y, rw,
+    closes, "No close shaves yet: every fight ended with health to spare.", function(e, yy)
+      U.icon(ICON.close, rx + 14, yy, 22, e.s, e.d)
+      local h = U.T(e.s, rx + 44, yy + 1, rw - 58, "small", C.light)
+      local pct = tonumber(e.pct)
+      if pct then
+        U.T(pct .. "% health  -  level " .. (e.l or "?"), rx + 44, yy + h + 3, rw - 58, "small", C.dim)
+        h = h + 14
+      end
+      return math.max(28, h + 8)
+    end)
+  y = math.max(ly, ry) + 10
+
+  local bosses = D.moments({ boss = true, rare = true }, 6)
+  local nb, nr = 0, tonumber(j.rares) or 0
+  for _, e in ipairs(j.events) do if e.k == "boss" then nb = nb + 1 end end
+  ly = listCard(V, "BOSSES AND RARES", (nb + nr > 0) and (plural(nb, "boss"):gsub("bosss", "bosses") .. ", " .. plural(nr, "rare")) or nil,
+    0, y, lw, bosses, "The great foes are still ahead. Dungeon bosses and rares you slay are kept here.", function(e, yy)
+      U.icon(ICON[e.k] or ICON.boss, 14, yy, 22, e.s, e.d)
+      local h = U.T(e.s, 44, yy + 1, lw - 58, "small", C.light)
+      U.T("level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t), 44, yy + h + 3, lw - 58, "small", C.dim)
+      return math.max(28, h + 22)
+    end)
+  local ups = D.moments({ upgrade = true }, 6)
+  ry = listCard(V, "GEAR UPGRADES", nil, rx, y, rw, ups, "Pieces you put on and keep wearing for a minute show up here.",
+    function(e, yy)
+      local q = tonumber(e.iq) or 1
+      local light = QUALITY_LIGHT[q] or QUALITY_LIGHT[1]
+      U.rect(rx + 13, yy - 1, 24, 24, light, "border", 2)
+      U.icon(itemIcon(e.i, ICON.upgrade), rx + 14, yy, 22, e.s, e.d)
+      local h = U.T(e.s, rx + 44, yy + 1, rw - 58, "small", C.light)
+      if e.d then U.T(e.d .. "  -  level " .. (e.l or "?"), rx + 44, yy + h + 3, rw - 58, "small", C.dim); h = h + 14 end
+      return math.max(28, h + 8)
+    end)
+  y = math.max(ly, ry) + 10
+
+  -- crafts: one chip per tier capped
+  local caps = D.moments({ cap = true })
+  local top = y
+  y = cardTitle(V, "CRAFT MILESTONES", 0, y, W, #caps > 0 and tostring(#caps) or nil)
+  if #caps == 0 then
+    y = y + U.T("Take a profession to the end of a tier (75, 150, 225 or 300) and it is written here.", 14, y, W - 28, "small", C.dim) + 10
+  else
+    local cols = 2
+    local chw = math.floor((W - 28 - 8) / cols)
+    for i, e in ipairs(caps) do
+      local cx = 14 + ((i - 1) % cols) * (chw + 8)
+      local cy = y + math.floor((i - 1) / cols) * 34
+      local key = type(e.n) == "string" and e.n:match("^(%w+):") or nil
+      local P = key and ns.P and ns.P[key]
+      U.box(cx, cy, chw, 28, C.btnOff, C.edgeSoft)
+      U.icon(P and P.icon or ICON.cap, cx + 3, cy + 3, 22, e.d or e.s, e.s)
+      U.T(e.d or e.s, cx + 32, cy + 7, chw - 40, "small", C.light)
+    end
+    y = y + math.ceil(#caps / cols) * 34 + 4
+  end
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  y = y + 10
+  if J.tales and J.tales.trophies then y = J.tales.trophies(V, y) end
+  return y
+end
+
+for _, p in ipairs({ { P_OVERVIEW, overviewPage }, { P_STORY, storyPage }, { P_MAP, mapPage },
+  { P_TROPHIES, trophiesPage }, { P_COMPANIONS, companionsPage } }) do
+  for _, page in ipairs(PAGES) do if page.name == p[1] then page.draw = p[2] end end
+end
 
 local function render()
   local U, C = ns.ui, ns.C
@@ -1370,7 +1654,13 @@ local function render()
     name = Q.plain(try(UnitName, "player") or "Adventurer"), className = Q.plain((try(UnitClass, "player")) or ""),
     race = Q.plain((try(UnitRace, "player")) or "") }
   local y = header(V)
-  return PAGE_DRAW[pageNo](V, y) + 20
+  local draw = overviewPage
+  for _, p in ipairs(PAGES) do if p.name == pageName and p.draw then draw = p.draw end end
+  return draw(V, y) + 20
 end
+
+-- Drawing helpers for the pages other files add (JourneyQuestLog.lua).
+J.draw = { page = page, cardTitle = cardTitle, dayOf = dayOf, plural = plural, duration = duration, roman = roman,
+  listCard = listCard, itemIcon = itemIcon, DEATH_INK = DEATH_INK }
 
 ns.addTab("journey", "Journey", render)

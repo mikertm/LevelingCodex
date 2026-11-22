@@ -12566,6 +12566,7 @@ function S.journeyTab()
     { nil, "THE JOURNEY OF", "THE ROAD TO 60", "WHERE YOU ARE", "FELLOW ADVENTURERS",
       "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "Level " .. MOCK.level },
     { "Map", "THE MAP", "YOUR JOURNAL" },
+    { "Trophies", "FIRSTS", "NEMESES", "CRAFT MILESTONES" },
     { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
     { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
   }
@@ -12601,6 +12602,230 @@ function S.journeyTab()
   click(win(), "Erase the journal")
   click(win(), "Click again to erase")
   check(#LevelingCodexCharDB.journey.events == 0, "two clicks erase the journal")
+end
+
+-- Journey deeds: firsts, close calls, rares, upgrades and profession caps become moments and
+-- fill the Trophies page; the Overview opens with today's entry.
+function S.journeyDeeds()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.bagItems = { { name = "Linen Scrap", id = 2589, quality = 1 } }
+  MOCK.lootItems[7001] = { name = "Worn Tunic", quality = 1, itemLevel = 5 }
+  MOCK.lootItems[7002] = { name = "Defias Vest", quality = 2, itemLevel = 18 }
+  MOCK.equipped[5] = "|cffffffff|Hitem:7001::::::::|h[Worn Tunic]|h|r"
+  MOCK.setSkill("Tailoring", 70, 75)
+  S.login()
+  MOCK.advance(3)
+  local j = LevelingCodexCharDB.journey
+  check(not journeyHas("first"), "what you carried at login is no first")
+  if MOCK.minimal then
+    slash("")
+    click(win(), "Journey")
+    click(win(), "Trophies")
+    check(questText(win(), "FIRSTS"), "the Trophies page draws in the minimal client")
+    return
+  end
+  -- firsts: a bag, then a green
+  MOCK.bagSlots = { [1] = 6 }
+  MOCK.bagItems[2] = { name = "Gnoll Paw Charm", id = 5001, quality = 2 }
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(j.firsts.green and j.firsts.green.n == "Gnoll Paw Charm" and journeyHas("first", "Gnoll Paw Charm"),
+    "a first green is a moment")
+  check(j.firsts.bag and not j.firsts.bag.had, "a first bag is a moment")
+  check(not j.firsts.blue, "a green is not a blue")
+  -- a close call
+  MOCK.target = { name = "Kobold Vermin", hostile = true }
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.health = 9
+  MOCK.event("UNIT_HEALTH", "player")
+  MOCK.health = 40
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  local close = journeyHas("close")
+  check(close and close.pct == 9 and close.who == "Kobold Vermin", "a fight under 15% health is a close call")
+  -- a fight that stays above 15% is not
+  MOCK.event("PLAYER_REGEN_DISABLED"); MOCK.health = 50; MOCK.event("UNIT_HEALTH", "player"); MOCK.event("PLAYER_REGEN_ENABLED")
+  check(j.closeCalls == 1, "an easy fight is no close call")
+  MOCK.health = 100
+  -- a rare you fought
+  MOCK.target = { name = "Mother Fang", hostile = true, kind = "rare" }
+  MOCK.targetGUID = "Creature-0-1-2-3-471-0001"
+  MOCK.event("PLAYER_TARGET_CHANGED")
+  MOCK.target.dead = true
+  MOCK.event("UNIT_HEALTH", "target")
+  MOCK.event("UNIT_HEALTH", "target")
+  check(journeyHas("rare", "Mother Fang") and j.rares == 1, "a rare you fought is written once")
+  MOCK.target, MOCK.targetGUID = nil, nil
+  -- an upgrade you keep on
+  MOCK.equipped[5] = "|cff1eff00|Hitem:7002::::::::|h[Defias Vest]|h|r"
+  MOCK.event("PLAYER_EQUIPMENT_CHANGED", 5, false)
+  MOCK.advance(30)
+  check(not journeyHas("upgrade"), "an upgrade waits to see if it stays on")
+  MOCK.advance(32)
+  local up = journeyHas("upgrade", "Defias Vest")
+  check(up and up.d == "Item level 5 to 18", "a piece kept on is an upgrade")
+  -- a profession cap
+  MOCK.setSkill("Tailoring", 75, 75)
+  check(journeyHas("cap", "Tailoring"), "reaching a tier's cap is a moment")
+  -- a death names the foe you fought last
+  MOCK.target = { name = "Kobold Tunneler", hostile = true }
+  MOCK.combat = true
+  MOCK.event("PLAYER_REGEN_DISABLED")
+  MOCK.event("PLAYER_DEAD")
+  MOCK.combat = false
+  MOCK.event("PLAYER_REGEN_ENABLED")
+  MOCK.target = nil
+  local death = journeyHas("death")
+  check(death and death.who == "Kobold Tunneler", "a death remembers who did it")
+  check(j.closeCalls == 1, "a fight you died in is no close call")
+  slash("")
+  click(win(), "Journey")
+  check(questText(win(), "TODAY'S ENTRY") and questText(win(), "Gnoll Paw Charm"), "the Overview opens with today's entry")
+  click(win(), "Trophies")
+  for _, t in ipairs({ "FIRSTS", "NEMESES", "CLOSE CALLS", "BOSSES AND RARES", "GEAR UPGRADES", "CRAFT MILESTONES",
+    "Gnoll Paw Charm", "Kobold Tunneler", "Mother Fang", "Defias Vest", "still out there" }) do
+    check(questText(win(), t), "the Trophies page has " .. t)
+  end
+  click(win(), "Story")
+  check(questText(win(), "Kobold Vermin"), "the story has the close call")
+  local plate = findButton(win(), function(l) return l:find("^Plate level ") end)
+  check(plate, "a chapter shows its map plate")
+  if plate then plate:Click(); check(questText(win(), "LANDS EXPLORED"), "a plate opens the Map page") end
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are ASCII with no template left: " .. e.s)
+  end
+end
+
+-- Journey tales: dungeon runs and wipes, battlegrounds, honor, duels, killed by a player,
+-- resurrections, trades, emotes, the guild, crafting, the auction house and the mailbox, the purse
+-- and a quest given up; the Quest Log page; the ledger and friends.
+function S.journeyTales()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.money = 500
+  MOCK.questLog = { { isHeader = true, title = "Elwynn Forest" },
+    { questID = 33, title = "Wolves Across the Border", level = 2,
+      objectives = { { text = "Tough Wolf Meat: 4/8", numFulfilled = 4, numRequired = 8, finished = false, type = "item" } } },
+    { questID = 47, title = "Gold Dust Exchange", level = 3, objectives = {} } }
+  S.login()
+  MOCK.advance(3)
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Quest Log")
+  check(questText(win(), "THE QUEST LOG"), "the Quest Log page draws")
+  if MOCK.minimal then return end
+  for _, t in ipairs({ "2 quests in hand", "ELWYNN FOREST", "Wolves Across the Border", "GOALS",
+    "Tough Wolf Meat: 4/8" }) do
+    check(questText(win(), t), "the Quest Log page has " .. t)
+  end
+  if MOCK.minimal then return end
+  check(questText(win(), "WHEN IT'S DONE, THE JOURNAL WILL READ"), "the quest page tells the line it will write")
+  click(win(), "Quest Gold Dust Exchange")
+  check(questText(win(), "LEVEL 3 QUEST"), "a quest in the list opens its page")
+  local j = LevelingCodexCharDB.journey
+  -- the purse: a first gold coin
+  MOCK.setMoney(15000)
+  check(journeyHas("gold", "first gold coin"), "a first gold coin is a moment")
+  -- a dungeon run with two wipes, then the boss
+  MOCK.instanceName, MOCK.instanceID = "The Deadmines", 36
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 0)
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 0)
+  local wipe = journeyHas("wipe")
+  check(wipe and wipe.s:find("Wiped 2 times on Rhahk'Zor", 1, true), "a second wipe rewrites the first (" .. tostring(wipe and wipe.s) .. ")")
+  MOCK.event("ENCOUNTER_END", 1, "Rhahk'Zor", 1, 5, 1)
+  local boss = journeyHas("boss", "Rhahk'Zor")
+  check(boss and boss.d and boss.d:find("after 2 wipes", 1, true), "the boss remembers the wipes")
+  MOCK.advance(400)
+  MOCK.instanceName, MOCK.instanceID = nil, nil
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  local run = journeyHas("run", "The Deadmines")
+  check(run and run.d and run.d:find("2 wipes", 1, true), "leaving tells the run")
+  -- a battleground won
+  MOCK.instanceName, MOCK.instanceType = "Warsong Gulch", "pvp"
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.bgWinner = 1
+  MOCK.event("UPDATE_BATTLEFIELD_SCORE")
+  check(journeyHas("bg", "Warsong Gulch") and journeyHas("bg", "Alliance"), "a battleground and its victory")
+  MOCK.instanceName, MOCK.instanceType, MOCK.bgWinner = nil, nil, nil
+  MOCK.event("PLAYER_ENTERING_WORLD", false, false)
+  MOCK.event("CHAT_MSG_COMBAT_HONOR_GAIN", "Grukk dies, honorable kill Rank: Scout (Estimated Honor Points: 20)")
+  check(journeyHas("pvp", "first honorable kill: Grukk"), "a first honorable kill")
+  MOCK.event("CHAT_MSG_SYSTEM", "Tester has defeated Bo in a duel")
+  check(journeyHas("duel", "Bo") and j.tally.duelsWon == 1, "a duel won")
+  -- killed by another player, then raised by a friend
+  MOCK.target = { name = "Grukk", hostile = true, player = true, race = "Orc", class = "WARRIOR" }
+  MOCK.event("PLAYER_DEAD")
+  MOCK.target = nil
+  local pvp = journeyHas("death", "Grukk, Orc Warrior")
+  check(pvp and pvp.pvp, "a death to another player says who they were")
+  MOCK.event("RESURRECT_REQUEST", "Ann")
+  MOCK.event("PLAYER_ALIVE")
+  check(journeyHas("rez", "Ann") and j.people.Ann and j.people.Ann.rez == 1, "a resurrection names who raised you")
+  MOCK.tradeName = "Ann"
+  MOCK.event("TRADE_SHOW")
+  MOCK.event("UI_INFO_MESSAGE", 0, "Trade complete.")
+  check(journeyHas("trade", "Ann"), "a first trade with someone")
+  MOCK.event("CHAT_MSG_TEXT_EMOTE", "Ann waves at you.", "Ann")
+  MOCK.event("CHAT_MSG_TEXT_EMOTE", "Ann waves at you.", "Ann")
+  local waves = 0
+  for _, e in ipairs(j.events) do if e.k == "emote" then waves = waves + 1 end end
+  check(waves == 1, "a wave is written once a day per person")
+  MOCK.guild = "Dawn Watch"
+  MOCK.event("PLAYER_GUILD_UPDATE")
+  check(journeyHas("guild", "Dawn Watch"), "joining a guild")
+  -- a crafting session
+  MOCK.trade = { line = "Blacksmithing", rank = 48, max = 75, recipes = {} }
+  MOCK.event("TRADE_SKILL_SHOW")
+  MOCK.event("CHAT_MSG_LOOT", "You create: |cffffffff|Hitem:2862::::::::|h[Rough Sharpening Stone]|h|rx3.")
+  MOCK.event("CHAT_MSG_LOOT", "You create: |cffffffff|Hitem:2862::::::::|h[Rough Sharpening Stone]|h|r.")
+  MOCK.event("CHAT_MSG_SKILL", "Your skill in Blacksmithing has increased to 50.")
+  MOCK.event("TRADE_SKILL_CLOSE")
+  MOCK.trade = nil
+  local craft = journeyHas("craft", "the anvil")
+  check(craft and craft.s:find("4 Rough Sharpening Stone", 1, true) and craft.d == "Blacksmithing 49 to 50",
+    "a crafting session is one moment (" .. tostring(craft and craft.s) .. ")")
+  check(journeyHas("skill", "Blacksmithing reached 50"), "a profession milestone")
+  -- the auction house: a visit, two sales, the mailbox, an expired lot
+  MOCK.openAuction()
+  MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", 1)
+  MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", 2)
+  MOCK.setMoney(14800)
+  MOCK.closeAuction()
+  check(journeyHas("auction", "Your first auction"), "a first auction house visit")
+  MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Linen Cloth.")
+  MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Wool Cloth.")
+  check(journeyHas("sold", "Buyers snapped up your Linen Cloth and Wool Cloth"), "sales close together are one moment")
+  MOCK.event("MAIL_SHOW")
+  MOCK.setMoney(19800)
+  MOCK.event("MAIL_CLOSED")
+  check(journeyHas("gold", "Collected 50s"), "the mailbox gold from sales")
+  MOCK.event("CHAT_MSG_SYSTEM", "Your auction of Copper Bar has expired.")
+  check(journeyHas("expired", "Copper Bar"), "an expired auction")
+  -- a quest given up
+  MOCK.event("QUEST_ACCEPTED", 47)
+  table.remove(MOCK.questLog, 3)
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.event("QUEST_REMOVED", 47)
+  MOCK.advance(3)
+  check(journeyHas("abandon", "Gold Dust Exchange"), "a quest given up is remembered")
+  -- the pages
+  click(win(), "Trophies")
+  for _, t in ipairs({ "THE LEDGER", "Honorable kills", "AT THE WORKBENCH", "THE AUCTION HOUSE", "DUNGEON RUNS", "BATTLEFIELDS",
+    "Rough Sharpening Stone" }) do
+    check(questText(win(), t), "the Trophies page has " .. t)
+  end
+  click(win(), "Companions")
+  check(questText(win(), "FRIENDS AND STRANGERS") and questText(win(), "one resurrection, one trade"), "friends are remembered")
+  click(win(), "Story")
+  click(win(), "Fortunes")
+  check(questText(win(), "Buyers snapped up") and not questText(win(), "Bested Bo"), "the Fortunes filter")
+  click(win(), "Fellowship")
+  check(questText(win(), "Joined the guild"), "the Fellowship filter")
+  click(win(), "Overview")
+  check(questText(win(), "Someone brought you back from the dead"), "today's entry tells the MMO moments")
+  for _, e in ipairs(j.events) do
+    check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are ASCII with no template left: " .. e.s)
+  end
 end
 
 -- Journey: past the point limit the busiest zone's trail is thinned, never cut off.

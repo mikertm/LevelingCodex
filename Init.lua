@@ -49,6 +49,8 @@ local function start()
   ns.startAuction()
   ns.startAuctionTrade()
   ns.startJourney()
+  ns.startJourneyDeeds()
+  ns.startJourneyTales()
 end
 
 local events = CreateFrame("Frame")
@@ -235,6 +237,8 @@ function ns.debugLines()
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.journeyDeedsDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.journeyTalesDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questMapDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questSupportDebugLines()) do out[#out + 1] = line end
