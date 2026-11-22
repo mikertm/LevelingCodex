@@ -373,6 +373,8 @@ end
 -- Fast). Without debugprofilestop it reads A.ROWS_NO_CLOCK rows a frame.
 A.SPEEDS = { { "Smooth", 4 }, { "Balanced", 8 }, { "Fast", 16 } }
 A.ROWS_NO_CLOCK = 250
+A.SLOW_FRAME, A.MIN_BUDGET = 50, 1.5 -- ms: a client frame this long cuts the next slice to MIN_BUDGET
+A.CAP_START, A.CAP_MIN, A.CAP_MAX = 1000, 50, 20000 -- rows per slice, adapted to how the client keeps up
 function A.budget()
   local want = ns.db().auctionScanSpeed
   for _, e in ipairs(A.SPEEDS) do if e[2] == want then return e[2] end end
@@ -418,17 +420,37 @@ end
 -- Runs step(i) for i = from..to a frame at a time inside the time budget, then done().
 local function spread(j, from, to, step, done)
   local i = from
+  local lastEnd
   local function frame()
     if job ~= j then return end
     local start, budget = clock(), A.budget()
+    -- the time between our slices is the client's own frame; reading rows makes it load item data,
+    -- and when that frame runs long (over A.SLOW_FRAME ms) the next slice is cut to A.MIN_BUDGET,
+    -- so the game keeps drawing
+    if start and lastEnd then
+      local gap = start - lastEnd
+      j.gap = gap
+      if gap > A.SLOW_FRAME then
+        budget = A.MIN_BUDGET
+        j.slow = (j.slow or 0) + 1
+        j.cap = math.max(A.CAP_MIN, math.floor((j.cap or A.CAP_START) / 2))
+      elseif gap < A.SLOW_FRAME / 2 then
+        j.cap = math.min(A.CAP_MAX, math.floor((j.cap or A.CAP_START) * 1.25))
+      end
+    end
+    -- rows a slice may read: halved after every slow client frame, grown again while frames are quick
+    local cap = start and (j.cap or A.CAP_START) or A.ROWS_NO_CLOCK
     local rows = 0
     while i <= to do
       step(i)
       i, rows = i + 1, rows + 1
+      if rows >= cap then break end
       if start then
-        if rows % 25 == 0 and clock() - start >= budget then break end
+        -- the clock every row: one row that loads an item can take a millisecond or more
+        if clock() - start >= budget then break end
       elseif rows >= A.ROWS_NO_CLOCK then break end
     end
+    lastEnd = clock()
     if i <= to then
       j.frames = (j.frames or 0) + 1
       if refreshCard and j.frames % 15 == 1 then refreshCard() end -- the scan's progress
@@ -496,6 +518,7 @@ local function readFull()
         A.store().fullAt = now()
         job = nil
         last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0,
+          slow = j.slow or 0,
           passive = j.passive, how = j.how }
         ns.say((j.passive and "Read another addon's full scan: " or "Full scan: ") .. ns.thousands(total) .. " listings, "
           .. ns.thousands(items) .. " items priced.")
@@ -1370,7 +1393,7 @@ function ns.auctionDebugLines()
   end
   if last.full then
     out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
-      .. (last.full.frames or 0) .. " frames, " .. (last.full.seconds or 0) .. " s"
+      .. (last.full.frames or 0) .. " frames (" .. (last.full.slow or 0) .. " slow), " .. (last.full.seconds or 0) .. " s"
       .. (last.full.pages and (", " .. last.full.pages .. " pages") or "")
       .. (last.full.passive and ", another addon's scan" or last.full.how and (", answer by " .. last.full.how) or "")))
   end
