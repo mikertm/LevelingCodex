@@ -10871,6 +10871,21 @@ function S.statsCounters()
   MOCK.advance(1)
   MOCK.closeMerchant()
   check(L().goldIn.junk == 40 and (L().goldIn.sales or 0) == 0, "the Codex's junk sales are junk, not sales")
+  local z = st.zones[1429]
+  check(z.goldIn == L().goldIn.quest + L().goldIn.loot + L().goldIn.junk + L().goldIn.other and z.goldIn == 1640
+    and z.goldOut == 250, "gold goes to the zone you were in (" .. tostring(z.goldIn) .. " / "
+    .. tostring(z.goldOut) .. ")")
+  MOCK.questMap = 12
+  MOCK.setMoney(MOCK.money - 30)
+  check(z.goldOut == 280 and not st.zones[12], "gold in a subzone goes to its zone")
+  MOCK.questMap = 1429
+  local old = { seconds = 60, xp = 0, quests = 0, name = "Westfall" }
+  st.zones[1436] = old -- a zone saved before zones kept gold
+  MOCK.questMap = 1436
+  MOCK.mapInfo[1436] = { name = "Westfall", mapType = 3, parentMapID = 1415 }
+  MOCK.setMoney(MOCK.money + 5)
+  check(old.goldIn == 5 and old.goldOut == 0, "an older zone record starts counting gold")
+  MOCK.questMap = 1429
 end
 
 -- Stats: a turn-in that levels you up keeps its gold with the level you turned it in at, whichever
@@ -10941,6 +10956,18 @@ function S.statsTab()
     "hovering a split gives its XP by source")
   MOCK.fire(split, "OnLeave")
   check(MOCK.minimal or questText(win(), "Elwynn Forest"), "zones show (the minimal client has no map API)")
+  check(findButton(win(), function(l) return l == "Time" end), "zones switch between time and gold")
+  click(win(), "Money")
+  check(questText(win(), "Earned") and questText(win(), "Spent"), "the gold view has its key")
+  if not MOCK.minimal then
+    local zone = findButton(win(), function(l) return l == "Zone Elwynn Forest" end)
+    check(zone, "each zone's gold is hoverable")
+    MOCK.fire(zone, "OnEnter")
+    check(GameTooltip._lines and GameTooltip._lines[1] and GameTooltip._lines[2]
+      and GameTooltip._lines[2]:find("Earned", 1, true), "hovering a zone gives earned and spent")
+    MOCK.fire(zone, "OnLeave")
+  end
+  click(win(), "Time")
   click(win(), "This session")
   check(seg("This session").codexOn and not findButton(win(), function(l) return l == "Level " .. (MOCK.level + 1) end),
     "this session's figures leave out levels from saved sessions")
@@ -10950,7 +10977,7 @@ function S.statsTab()
   check(LevelingCodexCharDB.stats.totals.quests == 0, "two clicks reset the saved stats")
 end
 
--- Nine tabs fit along the bottom of the window (they shrink when the labels are too wide).
+-- Eleven tabs fit along the bottom of the window (they shrink when the labels are too wide).
 function S.tabRowFits()
   S.login()
   slash("")
@@ -10963,6 +10990,106 @@ function S.tabRowFits()
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
   check(total <= frame:GetWidth() - 32 + 0.5, "the tab row fits under the window: " .. total .. " of " .. frame:GetWidth())
+end
+
+-- The Gold tab's mount fund: progress against the goal, steppers, a riding trainer's price and the
+-- level-up line at the goal level.
+function S.goldMountFund()
+  MOCK.money = 300000 -- 30g
+  MOCK.level = 38
+  S.login()
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "MOUNT FUND") and questText(win(), "Riding at level 40"), "the Gold tab has the mount fund")
+  if MOCK.minimal then
+    check(questText(win(), "can't be read"), "without GetMoney it says so")
+    return
+  end
+  check(questText(win(), "33%") and questText(win(), "60g to go"), "30g of 90g: 33% and 60g to go")
+  click(win(), "Goal +")
+  check(LevelingCodexDB.mountGoal == 950000 and questText(win(), "65g to go"), "Goal + adds 5g")
+  click(win(), "Level -")
+  check(questText(win(), "Riding at level 39"), "Level - moves the goal level")
+  click(win(), "Reset goal")
+  check(LevelingCodexDB.mountGoal == nil and questText(win(), "Riding at level 40"), "Reset goal goes back to the default")
+  MOCK.trainer = { { "Apprentice Riding", cost = 200000 } }
+  MOCK.event("TRAINER_SHOW")
+  check(LevelingCodexDB.mountTraining == 200000 and chatHas("costs 20g"), "a riding trainer's price is read and said")
+  MOCK.trainer = {}
+  MOCK.level = 40
+  MOCK.event("PLAYER_LEVEL_UP", 40)
+  check(chatHas("riding fund 30g"), "the goal level's level-up says where the fund stands")
+  MOCK.setMoney(1000000)
+  check(questText(win(), "You have it"), "with the gold at the goal level it says go buy it")
+end
+
+-- The auction tools: quick searches for what the guide needs, a full scan, the price history and its
+-- trend, tooltip lines, the sell helper (fills the price only on a click) and the Gold tab's card.
+function S.auctionTools()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  LevelingCodexDB = LevelingCodexDB or {}
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = {
+    [2592] = { name = "Wool Cloth", low = 90, med = 100, n = 4, at = 1700000000 - 86400,
+      days = { [day - 2] = { low = 90, med = 100 }, [day - 1] = { low = 95, med = 100 } } } } } } }
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.advance(1.2)
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "AUCTION HOUSE"), "the Gold tab has the auction house card")
+  if MOCK.minimal then
+    check(not _G.LevelingCodexAuctionCard, "no auction card without the auction house API")
+    return
+  end
+  check(questText(win(), "1 item priced on Mockrealm"), "the seeded history counts")
+  GameTooltip:SetOwner(UIParent)
+  GameTooltip:SetHyperlink("item:2592")
+  local function tipHas(text)
+    for _, line in ipairs(GameTooltip._lines or {}) do if line:find(text, 1, true) then return true end end
+    return false
+  end
+  check(tipHas("Codex AH: ") and tipHas("usual"), "the tooltip has the saved price")
+  MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 },
+    { id = 2589, name = "Linen Cloth", count = 10, buyout = 1500 },
+    { id = 2592, name = "Wool Cloth", count = 5, buyout = 1000 } }
+  MOCK.openAuction()
+  MOCK.advance(8)
+  local card = _G.LevelingCodexAuctionCard
+  check(card and card:IsShown() and questText(card, "CODEX PRICES"), "a card shows at the auction house")
+  local searchedLinen = false
+  for _, name in ipairs(MOCK.browsed) do if name == "Linen Cloth" then searchedLinen = true end end
+  check(searchedLinen, "it searched for the cloth the Tailoring step needs")
+  check(questText(card, "Linen Cloth  -  1s each"), "the card prices the cloth from the search")
+  click(card, "Scan all")
+  MOCK.advance(2)
+  check(MOCK.replicated == 1 and chatHas("Full scan: 3 listings, 2 items priced"), "Scan all scans the whole auction house")
+  check(card.scan._disabled and select(2, MOCK.ns.auction.canFullScan()) == "Next full scan in 15 min", "a second full scan waits")
+  card.scan:Click()
+  MOCK.advance(2)
+  check(MOCK.replicated == 1, "the second click doesn't scan again")
+  GameTooltip:SetHyperlink("item:2592")
+  check(tipHas("Codex trend: up 100% (3 days)"), "the tooltip shows the trend against earlier days")
+  MOCK.shift = true
+  GameTooltip:SetHyperlink("item:2589")
+  check(tipHas("low / median / high") and tipHas("listed: 30"), "Shift adds low, median, high and how many are listed")
+  MOCK.shift = false
+  MOCK.sellItem = 2589
+  MOCK.advance(1)
+  check(questText(card, "SELLING Linen Cloth") and card.use:IsShown() and card.use.codexLabel == "Use 99c each", "the sell helper offers one copper under the lowest")
+  check(MOCK.auctionPrice == nil, "nothing is filled in before the click")
+  click(card, "Use 99c each")
+  check(MOCK.auctionPrice == 99 and chatHas("press Post yourself"), "the click fills the price and you post it")
+  MOCK.closeAuction()
+  check(not card:IsShown(), "the card hides with the auction house")
+  click(win(), "Gold")
+  check(questText(win(), "FOR YOUR GUIDE") and questText(win(), "Linen Cloth"), "the Gold tab lists what the guide needs with prices")
+  click(win(), "Price lines on item tooltips")
+  GameTooltip:SetHyperlink("item:2589")
+  check(not tipHas("Codex AH"), "the setting turns the tooltip lines off")
+  click(win(), "Forget prices")
+  click(win(), "Forget prices")
+  check(questText(win(), "No price history yet"), "Forget prices clears the history")
+  MOCK.removeSkill("Tailoring")
 end
 
 -- Without saved data the tab says it counts from login.

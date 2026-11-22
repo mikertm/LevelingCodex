@@ -45,6 +45,8 @@ local function start()
   ns.startVendor()
   ns.startPace()
   ns.startStats()
+  ns.startGold()
+  ns.startAuction()
   ns.startJourney()
 end
 
@@ -226,6 +228,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.loot and ns.loot.debugLines() or {}) do out[#out + 1] = line end
   for _, line in ipairs(ns.trainerDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.classTrainerDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.auctionDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyDebugLines()) do out[#out + 1] = line end

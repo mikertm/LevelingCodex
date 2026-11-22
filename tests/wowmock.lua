@@ -61,7 +61,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL", "COMBAT_LOG_EVENT_UNFILTERED", "ADDON_ACTION_FORBIDDEN", "ADDON_ACTION_BLOCKED",
   "MERCHANT_SHOW", "MERCHANT_CLOSED", "MERCHANT_UPDATE", "PLAYER_MONEY", "LOOT_OPENED", "LOOT_CLOSED",
   "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED",
-  "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT" }) do
+  "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
+  "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -1440,6 +1441,72 @@ function MOCK.closeMerchant()
   MOCK.event("MERCHANT_CLOSED")
 end
 
+-- The auction house (MOCK.openAuction / MOCK.closeAuction): MOCK.auctions = { { id, name, count, buyout } }
+-- (buyout for the whole stack). C_AuctionHouse answers MOCK.auctionDelay seconds later (default 0.5):
+-- ReplicateItems with REPLICATE_ITEM_LIST_UPDATE, SendBrowseQuery with AUCTION_HOUSE_BROWSE_RESULTS_UPDATED
+-- (every listing whose name holds the search text; MOCK.browsed records the searches, MOCK.replicated
+-- counts full scans). MOCK.sellItem = itemID puts an item in the commodities sell frame; its
+-- PriceInput:SetAmount lands in MOCK.auctionPrice. The minimal client has none of it.
+MOCK.auctions, MOCK.browsed = {}, {}
+AuctionHouseFrame = CreateFrame("Frame", "AuctionHouseFrame", UIParent)
+AuctionHouseFrame:SetSize(800, 538)
+AuctionHouseFrame:Hide()
+do
+  local sf = CreateFrame("Frame", nil, AuctionHouseFrame)
+  AuctionHouseFrame.CommoditiesSellFrame = sf
+  sf.PriceInput = { SetAmount = function(_, copper) MOCK.auctionPrice = copper end }
+  function sf:GetItem() return MOCK.sellItem and { mockItemID = MOCK.sellItem } or nil end
+end
+C_Item.GetItemID = function(loc) return type(loc) == "table" and loc.mockItemID or nil end
+local function auctionLater(fn) C_Timer.After(MOCK.auctionDelay or 0.5, fn) end
+local function auctionLink(a) return "|cffffffff|Hitem:" .. a.id .. "::::::::|h[" .. a.name .. "]|h|r" end
+local browseText
+C_AuctionHouse = {
+  ReplicateItems = function()
+    MOCK.replicated = (MOCK.replicated or 0) + 1
+    auctionLater(function() MOCK.event("REPLICATE_ITEM_LIST_UPDATE") end)
+  end,
+  GetNumReplicateItems = function() return #MOCK.auctions end,
+  GetReplicateItemInfo = function(i)
+    local a = MOCK.auctions[i + 1]
+    if a then return a.name, 134400, a.count or 1, 1, true, 1, "", 0, 0, a.buyout, 0, false, nil, "Seller", "Seller", 0, a.id, true end
+  end,
+  GetReplicateItemLink = function(i) local a = MOCK.auctions[i + 1]; return a and auctionLink(a) end,
+  SendBrowseQuery = function(query)
+    if type(query) ~= "table" or type(query.searchString) ~= "string" or type(query.sorts) ~= "table" then
+      error("SendBrowseQuery: bad query", 2)
+    end
+    MOCK.browsed[#MOCK.browsed + 1] = query.searchString
+    browseText = query.searchString:lower()
+    auctionLater(function() MOCK.event("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED") end)
+  end,
+  GetBrowseResults = function()
+    local byID, out = {}, {}
+    for _, a in ipairs(MOCK.auctions) do
+      if browseText and a.name:lower():find(browseText, 1, true) then
+        local unit = math.floor(a.buyout / (a.count or 1))
+        local r = byID[a.id]
+        if not r then r = { itemKey = { itemID = a.id }, minPrice = unit, totalQuantity = 0 }; byID[a.id] = r; out[#out + 1] = r end
+        r.minPrice = math.min(r.minPrice, unit)
+        r.totalQuantity = r.totalQuantity + (a.count or 1)
+      end
+    end
+    return out
+  end,
+  GetItemKeyInfo = function(key)
+    for _, a in ipairs(MOCK.auctions) do if a.id == key.itemID then return { itemName = a.name } end end
+  end,
+}
+function GetRealmName() return "Mockrealm" end
+function MOCK.openAuction()
+  AuctionHouseFrame:Show()
+  MOCK.event("AUCTION_HOUSE_SHOW")
+end
+function MOCK.closeAuction()
+  AuctionHouseFrame:Hide()
+  MOCK.event("AUCTION_HOUSE_CLOSED")
+end
+
 -- Forever's controller UI (Blizzard_GamepadSharedUtility / Blizzard_GamepadSmartNavigation):
 -- MOCK.gamepadUI = its controller UI is on, MOCK.gamepad = the controller is in use,
 -- MOCK.padRefuse = FrameShown errors, MOCK.padNoFocus = the focus never lands on a frame.
@@ -1721,7 +1788,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
-  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item" }
+  "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
+  "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class

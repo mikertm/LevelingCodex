@@ -2,6 +2,18 @@
 
 ## v0.31.0
 
+### Gold
+
+- New **Gold** page (next to Stats) with a **mount fund**: how much of your riding goal you have, what's left, and about how long it takes at this session's net gold per hour. Set the goal amount and level with the - and + buttons. A riding trainer's price is noted when you visit one, and reaching the goal level tells you in chat where the fund stands.
+- **Stats > Zones** has a **Time | Money** switch: gold earned and spent in each zone, net gold, and net gold per hour there.
+
+### Auction tools
+
+- At the auction house a **Codex Prices** card lists what your route and your profession steps still need, with the lowest price listed, the usual price and the trend. The Codex searches for those items when you open the auction house (one at a time), and **Scan all** reads the whole auction house (once every 15 minutes).
+- **Price history and trends** per realm, from your own scans: the usual price over the last two weeks and whether today's price is up or down.
+- **Item tooltips** show the auction price, the usual price, the trend and the vendor price. Hold Shift for low, median and high and how many were listed.
+- **Sell helper**: put an item in the auction house's sell box and the card suggests one copper under the lowest listing, and its **Use ... each** button fills it in. You still press Post yourself: the Codex never buys, bids or posts.
+- The **Gold** tab shows how many prices you have, what your guide needs with today's prices, and switches for the tooltip lines, the card and the automatic searches.
 ### A tidier Codex window
 
 - The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Journey, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.

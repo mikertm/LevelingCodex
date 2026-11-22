@@ -2,7 +2,8 @@
 -- character's saved stats (LevelingCodexCharDB.stats, version 1; a missing or broken table starts
 -- fresh), so the tab works whether or not Forever loads saved data back.
 --   levels[lvl] = { seconds, xp, questXP, killXP, rested, quests, kills, deaths, goldIn, goldOut }
---   zones[mapID] = { name, seconds, xp, quests } (a subzone map rolls up to its zone)
+--   zones[mapID] = { name, seconds, xp, quests, goldIn, goldOut } (a subzone map rolls up to its zone;
+--   gold in copper, filed where you stood when the money moved)
 --   totals = { quests, kills, deaths, flights, flightSeconds, hearths, dungeons, bosses, goldIn, goldOut }
 --   played = { total, level, at } from the last /played (the Codex never asks for it: that prints)
 -- XP comes from Pace.lua (quest, kill and total gains); money changes are filed by where they
@@ -100,6 +101,7 @@ local function zoneRec(tree, id, name)
     z = { seconds = 0, xp = 0, quests = 0 }
     tree.zones[id] = z
   end
+  z.goldIn, z.goldOut = tonumber(z.goldIn) or 0, tonumber(z.goldOut) or 0 -- older saves have no gold
   z.name = name
   return z
 end
@@ -181,6 +183,17 @@ end
 
 function S.data() return session, saved() end
 
+-- Net gold per hour this session (copper), nil before 5 minutes of play or without a gain.
+function S.goldRate()
+  local now = time and time() or 0
+  local seconds = now - (tonumber(session.started) or now)
+  if seconds < 300 then return end
+  local function total(t) local n = 0; for _, v in pairs(t or {}) do n = n + (tonumber(v) or 0) end; return n end
+  local net = total(session.totals.goldIn) - total(session.totals.goldOut)
+  if net <= 0 then return end
+  return math.floor(net * 3600 / seconds + 0.5)
+end
+
 -- A level's record (the saved one; this session's when saved settings didn't load), never made here.
 function S.levelRecord(lvl)
   local tree = ns.settingsLost and session or saved() or session
@@ -217,10 +230,12 @@ local lastOther = { copper = 0, at = 0 } -- the last gain filed as other (a rewa
 local function addGold(dir, key, amount, lvl)
   if amount <= 0 then return end
   lvl = lvl or level()
+  local zone, name = hereZone()
   each(function(t)
     local l = levelOf(t, lvl)
     l[dir][key] = (l[dir][key] or 0) + amount
     t.totals[dir][key] = (tonumber(t.totals[dir][key]) or 0) + amount
+    if zone then local z = zoneRec(t, zone, name); z[dir] = z[dir] + amount end
   end)
 end
 
@@ -364,6 +379,7 @@ end
 local GOLD_NAMES = { quest = "Quest rewards", loot = "Looted", junk = "Junk sold by the Codex", sales = "Other vendor sales",
   other = "Other", repair = "Repairs", training = "Training", flights = "Flights", buys = "Vendor purchases" }
 local showAllLevels, showAllZones = false, false
+local zoneView = "time" -- the ZONES switch, this session: "time" or "gold"
 local confirmReset, confirmAt
 local scope = "character" -- the tab's switch, this session: "session" or "character"
 local SOURCE_COLORS = { { 0.88, 0.7, 0.29, 1 }, { 0.77, 0.33, 0.29, 1 }, { 0.36, 0.45, 0.46, 1 } }
@@ -541,25 +557,61 @@ local function render()
     { "Played", played and duration(played) or "-", played and "at your last /played" or "type /played" },
   }, 4)
 
-  -- 5. Zones by time, as bars against the longest.
+  -- 5. Zones: by time (bars against the longest) or by gold (earned and spent, net per hour).
   local zones = {}
   for _, z in pairs(tree.zones) do if type(z) == "table" then zones[#zones + 1] = z end end
-  table.sort(zones, function(a, b) return num(a.seconds) > num(b.seconds) end)
+  local byGold = zoneView == "gold"
+  local function net(z) return num(z.goldIn) - num(z.goldOut) end
+  if byGold then
+    table.sort(zones, function(a, b)
+      if net(a) ~= net(b) then return net(a) > net(b) end
+      return num(a.seconds) > num(b.seconds)
+    end)
+  else
+    table.sort(zones, function(a, b) return num(a.seconds) > num(b.seconds) end)
+  end
   top = y
   y = y + 10
   heading("ZONES")
-  y = y + 22
+  U.segments(W - 14 - 160, y - 4, 160, { "Time", "Money" }, byGold and 2 or 1, function(i)
+    zoneView = i == 2 and "gold" or "time"
+    U.refresh()
+  end, { "Where your leveling time went.", "Gold earned and spent in each zone, and net gold per hour there." })
+  y = y + 26
   if #zones == 0 then y = y + U.T("No zone time yet.", 14, y, W - 28, "small", C.dim) + 4 end
-  local most = math.max(1, zones[1] and num(zones[1].seconds) or 1)
+  local most = 1
+  for _, z in ipairs(zones) do
+    most = math.max(most, byGold and math.max(num(z.goldIn), num(z.goldOut)) or num(z.seconds))
+  end
   local zx, zw = 190, W - 14 - 190 - 150
   for i, z in ipairs(zones) do
     if i > 8 and not showAllZones then break end
-    U.T(Q.plain(z.name or "?"), 14, y, 170, "small", C.light)
+    local name = Q.plain(z.name or "?")
+    U.T(name, 14, y, 170, "small", C.light)
     U.rect(zx, y + 3, zw, 8, TRACK)
-    local bw = zw * num(z.seconds) / most
-    if bw >= 1 then U.rect(zx, y + 3, bw, 8, C.accent, nil, 1) end
-    U.T(duration(z.seconds) .. ", " .. plural(num(z.quests), "quest"), W - 14 - 146, y, 146, "small", C.light, "RIGHT")
+    if byGold then
+      local gin, gout = num(z.goldIn), num(z.goldOut)
+      local inW, outW = zw * gin / most, zw * gout / most
+      if inW >= 1 then U.rect(zx, y + 3, inW, 4, EARNED, nil, 1) end
+      if outW >= 1 then U.rect(zx, y + 7, outW, 4, SPENT, nil, 1) end
+      local hours = num(z.seconds) / 3600
+      local zoneRate = hours >= 1 / 60 and signed(math.floor(net(z) / hours + 0.5)) or nil
+      local rateText = zoneRate and (zoneRate .. " /h") or "-"
+      U.T(signed(net(z)) .. ", " .. rateText, W - 14 - 146, y, 146, "small", C.light, "RIGHT")
+      U.hit(10, y - 2, W - 20, 18, name, "Earned " .. ns.coins(gin) .. "\nSpent " .. ns.coins(gout)
+        .. "\nNet " .. signed(net(z)) .. " in " .. duration(z.seconds)
+        .. (zoneRate and ("\nNet per hour here: " .. zoneRate) or ""), nil, "Zone " .. name)
+    else
+      local bw = zw * num(z.seconds) / most
+      if bw >= 1 then U.rect(zx, y + 3, bw, 8, C.accent, nil, 1) end
+      U.T(duration(z.seconds) .. ", " .. plural(num(z.quests), "quest"), W - 14 - 146, y, 146, "small", C.light, "RIGHT")
+    end
     y = y + 18
+  end
+  if byGold then
+    U.rect(14, y + 4, 9, 4, EARNED); U.T("Earned", 27, y, 60, "small", C.dim)
+    U.rect(90, y + 4, 9, 4, SPENT); U.T("Spent", 103, y, 60, "small", C.dim)
+    y = y + 16
   end
   y = y + 8
   U.box(0, top, W, y - top, C.panel, C.edge)

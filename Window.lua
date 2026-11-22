@@ -1600,6 +1600,11 @@ ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface
   openLevel = function(l) viewLevel = l; activeTab = "level"; refresh() end,
   refreshTop = function() if scroll then scroll:SetVerticalScroll(0) end; refresh() end }
 
+-- Redraws the window when it shows that tab (an event-driven tab such as Gold).
+function ns.refreshTab(key)
+  if frame and frame:IsShown() and activeTab == key then refresh() end
+end
+
 function ns.placeWindow()
   if not frame then return end
   local db = ns.db()
