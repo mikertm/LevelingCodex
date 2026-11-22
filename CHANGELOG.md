@@ -1,6 +1,7 @@
 # Leveling Codex
 
 ## v0.31.0
+- Full auction scans no longer hitch the game: every item the scan loaded made the loot comparisons re-read your gear and bags ten times a second. Item data the loot code didn't ask for now waits until the scan is done.
 - The Journey book fills your screen, so long pages need less scrolling; the other tabs keep their usual height (Settings > This window: Auto, Fit the screen for every tab, or Short).
 - Journey chapters: the map plate moved to the right page, so a chapter fits on one spread.
 - Your last name is read from the game (WoW Forever's UnitFullName), even with My Secondary Name off in the nameplate options.

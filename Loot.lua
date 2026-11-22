@@ -25,8 +25,37 @@ function L.refresh(reason)
   pending=true
   ns.after(0.1,function()
     pending=false
+    local clock=type(debugprofilestop)=="function" and debugprofilestop
+    local t0=clock and clock()
     for fn in pairs(listeners) do L.call(fn,reason) end
+    L.flushes=(L.flushes or 0)+1
+    if t0 then
+      local ms=clock()-t0
+      L.lastFlushMs=ms
+      if ms>(L.worstFlushMs or 0) then L.worstFlushMs=ms end
+    end
   end)
+end
+-- Item data arrives for every item any code asks about: an auction house scan loads
+-- thousands, and refreshing the gear and bag comparisons for each one hitched the game.
+-- Only an item the loot code is waiting for refreshes at once; any other one is folded
+-- into one refresh 5 s later, and none while an auction scan runs.
+L.waiting={}
+local stray
+local function flushStray()
+  local A=ns.auction
+  if A and A.scanning and A.scanning() then ns.after(5,flushStray) return end
+  stray=false
+  L.refresh("item data")
+end
+function L.itemData(event,id)
+  L.itemEvents=(L.itemEvents or 0)+1
+  id=tonumber(id)
+  if id and L.waiting[id] then L.waiting[id]=nil; L.refresh(event) return end
+  L.strayEvents=(L.strayEvents or 0)+1
+  if stray or not ns.after then return end
+  stray=true
+  ns.after(5,flushStray)
 end
 function L.context(overrides)
   local _,class=UnitClass("player")
@@ -46,7 +75,9 @@ function L.debugLines()
   return {"loot: build "..tostring(d.build or "unavailable")..", items "..tostring(d.coverage and d.coverage.items or 0),
     "loot profile: "..tostring(p and p.label or "unavailable")..", refresh "..tostring(L.lastReason or "none"),
     "loot APIs: item stats "..tostring(type(GetItemStats)=="function" or type(C_Item)=="table" and type(C_Item.GetItemStats)=="function"),
-    "loot last comparison: "..tostring(L.lastComparison or "none")}
+    "loot last comparison: "..tostring(L.lastComparison or "none"),
+    string.format("loot refreshes: %d, last %.1f ms, longest %.1f ms; item data events %d (%d not ours)",
+      L.flushes or 0,L.lastFlushMs or 0,L.worstFlushMs or 0,L.itemEvents or 0,L.strayEvents or 0)}
 end
 if type(CreateFrame)=="function" then
   local events=CreateFrame("Frame")
@@ -54,5 +85,7 @@ if type(CreateFrame)=="function" then
     "ITEM_DATA_LOAD_RESULT","PLAYER_LEVEL_UP","SPELLS_CHANGED","SKILL_LINES_CHANGED","PLAYER_REGEN_ENABLED"}) do
     pcall(events.RegisterEvent,events,event)
   end
-  events:SetScript("OnEvent",function(_,event) L.refresh(event) end)
+  events:SetScript("OnEvent",function(_,event,id)
+    if event=="GET_ITEM_INFO_RECEIVED" or event=="ITEM_DATA_LOAD_RESULT" then L.itemData(event,id) else L.refresh(event) end
+  end)
 end

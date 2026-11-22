@@ -32,6 +32,7 @@ local function request(key,id)
   local r=requests[key]
   if r and (r.pending or r.n>=4) then return end
   r=r or {n=0}; requests[key]=r; r.n=r.n+1; r.pending=true
+  if L.waiting then L.waiting[id]=true end
   call(C_Item and C_Item.RequestLoadItemDataByID,id)
   if ns.after then ns.after(({0.5,1,2,2})[r.n],function()
     r.pending=false

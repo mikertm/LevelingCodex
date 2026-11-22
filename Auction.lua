@@ -504,7 +504,7 @@ local function readFull()
     local lp = last.passive
     if n > 0 and not (lp and lp.n == n and now() - lp.at < 300) then
       last.passive = { n = n, at = now() }
-      j = { kind = "full", started = now(), modern = true, passive = true }
+      j = { kind = "full", started = now(), modern = true, passive = true, loads0 = ns.loot and ns.loot.itemEvents or 0 }
       job = j
     end
   end
@@ -550,7 +550,8 @@ local function readFull()
         last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0,
           slow = j.slow or 0, worstSlice = j.worstSlice, worstGap = j.worstGap,
           avgGap = j.gapN and j.gapN > 0 and j.gapSum / j.gapN or nil,
-          passive = j.passive, how = j.how }
+          passive = j.passive, how = j.how,
+          loads = ns.loot and ns.loot.itemEvents and (ns.loot.itemEvents - (j.loads0 or 0)) or nil }
         ns.say((j.passive and "Read another addon's full scan: " or "Full scan: ") .. ns.thousands(total) .. " listings, "
           .. ns.thousands(items) .. " items priced.")
         finished("full")
@@ -568,7 +569,7 @@ function A.fullScan()
   local ok, why = A.canFullScan()
   if not ok then ns.say(why); return false end
   local C = api()
-  local j = { kind = "full", started = now(), modern = has(C, "ReplicateItems"), polls = 0 }
+  local j = { kind = "full", started = now(), modern = has(C, "ReplicateItems"), polls = 0, loads0 = ns.loot and ns.loot.itemEvents or 0 }
   job = j
   local before = j.modern and tonumber(try(C.GetNumReplicateItems)) or 0
   local sent
@@ -1428,6 +1429,7 @@ function ns.auctionDebugLines()
       .. (last.full.frames or 0) .. " frames (" .. (last.full.slow or 0) .. " slow), " .. (last.full.seconds or 0) .. " s"
       .. (last.full.worstSlice and string.format("; longest slice %d ms, game frames %d ms on average, longest %d ms",
         last.full.worstSlice, last.full.avgGap or 0, last.full.worstGap or 0) or "")
+      .. (last.full.loads and ("; " .. last.full.loads .. " item data loads") or "")
       .. (last.full.pages and (", " .. last.full.pages .. " pages") or "")
       .. (last.full.passive and ", another addon's scan" or last.full.how and (", answer by " .. last.full.how) or "")))
   end

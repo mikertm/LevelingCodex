@@ -11222,6 +11222,31 @@ function S.auctionBigScan()
       "slow game frames cut the slices and the scan finishes (" .. tostring(slow) .. " slow)")
   end
   debugprofilestop = clock
+  -- item data for thousands of items nobody in the loot code asked about (a scan loads them)
+  -- folds into one refresh after the scan, not one every tenth of a second
+  do
+    local A, L = MOCK.ns.auction, MOCK.ns.loot
+    A.store().fullAt, A.store().fullTriedAt = 0, 0
+    MOCK.advance(1)
+    A.fullScan()
+    MOCK.advance(0.5)
+    local before, during, ticks = L.flushes or 0, 0, 0
+    for i = 1, 40 do
+      if not A.scanning() then break end
+      for k = 1, 50 do MOCK.event("GET_ITEM_INFO_RECEIVED", 50000 + i * 50 + k, true) end
+      MOCK.advance(0.25)
+      ticks = i
+      if A.scanning() then during = (L.flushes or 0) - before end
+    end
+    check(ticks >= 2, "the scan ran while the item data came (" .. ticks .. ")")
+    MOCK.advance(60)
+    check(not A.scanning() and during == 0, "item data during a scan refreshes no loot comparisons (" .. during .. ")")
+    check(table.concat(MOCK.ns.auctionDebugLines(), " "):find("%d+ item data loads")
+      and table.concat(L.debugLines(), " "):find("not ours", 1, true), "/codex debug counts the item data loads")
+    local n = L.flushes or 0
+    MOCK.advance(10)
+    check((L.flushes or 0) - n <= 1, "at most one refresh follows the scan")
+  end
   MOCK.closeAuction()
 end
 
