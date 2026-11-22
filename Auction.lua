@@ -1,6 +1,6 @@
 -- Auction.lua: the auction tools. Prices from your own scans (a full scan, and quick searches for
--- what your guide needs), a price history per realm with a trend, price lines on item tooltips, a
--- card at the auction house, and a sell helper that fills in a price when you click it.
+-- what your guide needs and what's in your bags), a price history per realm with a trend, and the
+-- price block on item tooltips. The Codex tab at the auction house is AuctionPanel.lua.
 -- This file never buys, bids or posts: AuctionTrade.lua's buttons do that, one click each.
 -- Built for the modern C_AuctionHouse API (what other Forever add-ons use), with the classic
 -- QueryAuctionItems calls as a fallback. Saved prices may not load back on Forever: everything
@@ -15,7 +15,7 @@ ns.auction = A
 A.FULL_COOLDOWN = 15 * 60 -- seconds between full scans (the server throttles them too)
 A.DAYS = 14               -- days of history kept per item
 A.FRESH = 30 * 60         -- a price younger than this isn't searched again
-local SEARCH_GAP, SEARCH_WAIT, CHUNK, ROWS = 1.5, 5, 400, 6
+local SEARCH_GAP, SEARCH_WAIT, CHUNK = 1.5, 5, 400
 
 local function now() return tonumber(time and time()) or 0 end
 local function today(t) return math.floor((t or now()) / 86400) end
@@ -528,226 +528,162 @@ local function queueNeeds()
 end
 
 ----------------------------------------------------------------------------
--- The sell helper
+-- For the Codex tab
 ----------------------------------------------------------------------------
 
--- The item in Blizzard's sell frame: { id, name, count, frame, modern }.
-function A.sellItem()
-  local f = type(AuctionHouseFrame) == "table" and AuctionHouseFrame
-  if f then
-    for _, key in ipairs({ "CommoditiesSellFrame", "ItemSellFrame" }) do
-      local sf = f[key]
-      if type(sf) == "table" and has(sf, "IsShown") and sf:IsShown() and has(sf, "GetItem") then
-        local loc = try(sf.GetItem, sf)
-        local id = loc and type(C_Item) == "table" and try(C_Item.GetItemID, loc)
-        if id then
-          local p = A.price(id)
-          return { id = id, name = ns.itemInfo(id) or (p and p.name), count = 1, frame = sf, modern = true }
-        end
-      end
-    end
-  end
-  if type(GetAuctionSellItemInfo) == "function" then
-    local name, _, count, _, _, _, _, _, _, id = try(GetAuctionSellItemInfo)
-    if type(name) == "string" then return { id = tonumber(id) or A.idFor(name), name = name, count = math.max(1, tonumber(count) or 1) } end
-  end
-end
-
--- The price to ask each: one copper under the lowest listing, else the usual price. Also the
--- vendor's price when it pays more.
+-- The price to ask each: one copper under the lowest listing, else the usual price.
 function A.suggest(id)
   local p = A.price(id)
   if not p then return end
   local price = p.n > 0 and p.low and p.low - 1 or p.usual
-  if not price or price < 1 then return end
-  local vendor = tonumber((select(11, ns.itemInfo(id))))
-  return price, vendor and vendor > price and vendor or nil
+  if price and price >= 1 then return price end
 end
 
-function A.usePrice()
-  local s = A.sellItem()
-  local price = s and s.id and A.suggest(s.id)
-  if not price then return false end
-  local ok = false
-  if s.modern then
-    local input = s.frame.PriceInput
-    if has(s.frame, "SetPrice") then ok = pcall(s.frame.SetPrice, s.frame, price)
-    elseif has(input, "SetAmount") then ok = pcall(input.SetAmount, input, price) end
-  elseif type(MoneyInputFrame_SetCopper) == "function" then
-    if type(StartPrice) == "table" then ok = pcall(MoneyInputFrame_SetCopper, StartPrice, price * s.count) end
-    if type(BuyoutPrice) == "table" then ok = pcall(MoneyInputFrame_SetCopper, BuyoutPrice, price * s.count) or ok end
-  end
-  last.sell = { item = s.name, price = price, ok = ok }
-  if ok then ns.say("Price set to " .. ns.money(price) .. " each. Check it, then press Post yourself.")
-  else ns.say("Couldn't fill in the price here: type " .. ns.money(price) .. " each.") end
-  return ok
+-- The searches still waiting, and the one running: n, name.
+function A.queued()
+  return #queue, job and job.kind == "search" and job.name or nil
+end
+function A.fullProgress()
+  if job and job.kind == "full" then return job.done or 0, job.total end
 end
 
-----------------------------------------------------------------------------
--- The card at the auction house
-----------------------------------------------------------------------------
-
-local card, place, sellSeen = nil, {}, nil
-
-local function makeCard()
-  local Art = ns.art
-  local h = Art.frame("Frame", "LevelingCodexAuctionCard", UIParent)
-  h:SetSize(320, 100)
-  h:SetFrameStrata("FULLSCREEN_DIALOG")
-  h:SetClampedToScreen(true)
-  h:EnableMouse(true)
-  h:Hide()
-  Art.cardChrome(h)
-  h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-  h.label:SetPoint("TOPLEFT", 12, -10)
-  h.label:SetText("CODEX PRICES")
-  h.status = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  h.status:SetPoint("TOPRIGHT", -12, -10)
-  h.status:SetJustifyH("RIGHT")
-  h.rows = {}
-  for i = 1, ROWS do
-    local r = {}
-    r.icon = h:CreateTexture(nil, "ARTWORK")
-    r.icon:SetSize(20, 20)
-    r.name = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    r.name:SetWidth(250)
-    r.name:SetJustifyH("LEFT")
-    r.sub = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    r.sub:SetWidth(270)
-    r.sub:SetJustifyH("LEFT")
-    h.rows[i] = r
+local function queueNames(names)
+  local n = 0
+  for _, name in ipairs(names) do
+    searched[name:lower()] = nil
+    local before = #queue
+    A.search(name)
+    if #queue > before then n = n + 1 end
   end
-  h.empty = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-  h.empty:SetWidth(296)
-  h.empty:SetJustifyH("LEFT")
-  h.sell = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  h.sell:SetWidth(296)
-  h.sell:SetJustifyH("LEFT")
-  h.use = Art.button(h, 296, 22)
-  h.use:SetScript("OnClick", function() A.usePrice() end)
-  h.scan = Art.button(h, 296, 22)
-  h.scan:SetScript("OnClick", function() A.fullScan() end)
-  h.ator = Art.button(h, 296, 22)
-  h.ator:SetLabel("Search in Auctionator")
-  h.ator.codexLabel = "Search in Auctionator"
-  h.ator:SetScript("OnClick", function()
-    local names = {}
-    for _, w in ipairs(pricedNeeds()) do names[#names + 1] = w.name end
-    if A.searchAuctionator(names) then
-      ns.say("Searching Auctionator for " .. #names .. (#names == 1 and " item" or " items") .. " your guide needs.")
-    end
-  end)
-  -- Never attached to the controller (ns.gamepad): like the vendor card, a popup that shows by
-  -- itself must not take the focus from Blizzard's window.
-  return h
+  A.pump()
+  if refreshCard then refreshCard() end
+  return n
 end
 
-local function hideCard()
-  if card then card:Hide() end
-  place.edgeRoot = nil
+-- Searches every item in your bags you could sell whose price is older than 30 minutes.
+-- Returns how many it queued.
+function A.scanBags()
+  if not open then return 0 end
+  local names = {}
+  local T = ns.auctionTrade
+  for _, row in ipairs(T and T.sellable(true, true) or {}) do
+    local p = A.price(row.id)
+    if not (p and not p.source and p.at and now() - p.at < A.FRESH) then names[#names + 1] = row.name end
+  end
+  return queueNames(names)
 end
 
-function refreshCard()
-  if ns.db().noAuctionCard or not open then hideCard(); return end
-  if not card then card = makeCard() end
-  ns.art.paintCard(card)
-  local y = -28
-  local rows = pricedNeeds()
-  for i, r in ipairs(card.rows) do
-    local w = rows[i]
-    local shown = w ~= nil
-    r.icon:SetShown(shown); r.name:SetShown(shown); r.sub:SetShown(shown)
-    if w then
-      r.icon:ClearAllPoints(); r.icon:SetPoint("TOPLEFT", 12, y)
-      r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 38, y)
-      r.sub:ClearAllPoints(); r.sub:SetPoint("TOPLEFT", 38, y - 13)
-      local _, _, _, _, _, _, _, _, _, icon = ns.itemInfo(w.id or w.name)
-      ns.setIcon(r.icon, icon or "INV_Misc_Bag_10")
-      r.name:SetText(Q.plain(w.need .. " x " .. w.name .. "  -  " .. rowPrice(w)))
-      r.sub:SetText(Q.plain("for " .. (w.forText or "your guide")))
-      y = y - 30
-    end
-  end
-  card.empty:SetShown(#rows == 0)
-  if #rows == 0 then
-    card.empty:ClearAllPoints(); card.empty:SetPoint("TOPLEFT", 12, y)
-    card.empty:SetText("Your guide needs nothing from the auction house right now.")
-    y = y - 20
-  end
-  local v1 = A.auctionator()
-  card.ator:SetShown(v1 ~= nil and #rows > 0 and has(v1, "MultiSearch"))
-  if card.ator:IsShown() then
-    card.ator:ClearAllPoints(); card.ator:SetPoint("TOPLEFT", 12, y - 2)
-    y = y - 28
-  end
-  -- selling
-  local s = A.sellItem()
-  local key = s and (tostring(s.id) .. ":" .. tostring(s.name)) or nil
-  if key ~= sellSeen then
-    sellSeen = key
-    if s and s.name then
-      local p = s.id and A.price(s.id)
-      if not A.auctionator() and not (p and p.at and now() - p.at < 5 * 60) then A.search(s.name); A.pump() end
-    end
-  end
-  local price, vendor = nil, nil
-  if s and s.id then price, vendor = A.suggest(s.id) end
-  card.sell:SetShown(s ~= nil)
-  card.use:SetShown(price ~= nil)
-  if s then
-    y = y - 4
-    card.sell:ClearAllPoints(); card.sell:SetPoint("TOPLEFT", 12, y)
-    local p = s.id and A.price(s.id)
-    local text = "SELLING " .. Q.plain(s.name or "this item") .. ": "
-    if price then
-      text = text .. rowPrice({ name = s.name or "", p = p })
-      if vendor then text = text .. ". A vendor pays " .. ns.money(vendor) .. "." end
-    elseif job and job.kind == "search" then text = text .. "searching"
-    else text = text .. "no price seen yet" end
-    card.sell:SetText(text)
-    y = y - 30
-    if price then
-      card.use:ClearAllPoints(); card.use:SetPoint("TOPLEFT", 12, y)
-      local label = "Use " .. ns.money(price) .. " each"
-      card.use:SetLabel(label)
-      card.use.codexLabel = label
-      y = y - 26
-    end
-  end
-  -- status and the full scan
-  local ok, why = A.canFullScan()
-  local label
-  if job and job.kind == "full" then
-    label = job.total and ("Scanning " .. ns.thousands(job.done or 0) .. " of " .. ns.thousands(job.total)) or "Scanning..."
-  else label = ok and "Scan all" or why end
-  card.scan:SetLabel(label)
-  card.scan.codexLabel = "Scan all"
-  card.scan:SetEnabled(ok)
-  card.scan:ClearAllPoints(); card.scan:SetPoint("TOPLEFT", 12, y - 4)
-  y = y - 32
-  local fullAt = A.store().fullAt
-  card.status:SetText(fullAt and ("Full scan " .. A.age(fullAt)) or (A.count() > 0 and (A.count() .. " prices"))
-    or (v1 and "Prices from Auctionator") or "No prices yet")
-  card:SetHeight(-y + 8)
-  if type(root) == "table" and has(root, "IsShown") then
-    ns.placeByWindow(card, root, place)
-    if not place.hooked and has(root, "HookScript") then
-      place.hooked = true
-      pcall(root.HookScript, root, "OnHide", hideCard)
-    end
-  else
-    card:ClearAllPoints()
-    card:SetPoint("TOP", UIParent, "TOP", 0, -100)
-  end
-  card:Show()
+-- Searches what your guide needs now, even with Auctionator loaded. Returns how many it queued.
+function A.scanNeeds()
+  if not open then return 0 end
+  local names = {}
+  for _, w in ipairs(A.needs()) do names[#names + 1] = w.name end
+  return queueNames(names)
 end
+
+-- One item now (the Scan page's look-up).
+function A.searchNow(name)
+  if not open or type(name) ~= "string" or name == "" then return false end
+  return queueNames({ name }) > 0 or (job and job.kind == "search" and job.name == name) or false
+end
+
+-- Drops the searches still waiting (a running one finishes).
+function A.stopSearches() queue = {}; if refreshCard then refreshCard() end end
+
+-- The daily values, oldest first: { { day, low, med } } (up to A.DAYS).
+function A.history(id)
+  local it = tonumber(id) and A.store().items[tonumber(id)]
+  local out = {}
+  if type(it) ~= "table" or type(it.days) ~= "table" then return out end
+  for d, rec in pairs(it.days) do
+    if type(d) == "number" and type(rec) == "table" and (rec.low or rec.med) then
+      out[#out + 1] = { day = d, low = rec.low, med = rec.med }
+    end
+  end
+  table.sort(out, function(a, b) return a.day < b.day end)
+  return out
+end
+
+-- An item by link, ID or (part of a) name: id, name.
+function A.find(text)
+  if type(text) ~= "string" then return end
+  text = text:gsub("^%s+", ""):gsub("%s+$", "")
+  if text == "" then return end
+  local fromLink = linkID(text)
+  if fromLink then return fromLink, (text:match("%[(.-)%]")) or ns.itemInfo(fromLink) end
+  local id = tonumber(text) or A.idFor(text)
+  if id then
+    local p = A.price(id)
+    return id, (p and p.name) or ns.itemInfo(id) or text
+  end
+  local lower, best, bestName = text:lower(), nil, nil
+  for iid, it in pairs(A.store().items) do
+    if type(it) == "table" and type(it.name) == "string" and it.name:lower():find(lower, 1, true)
+      and (not bestName or #it.name < #bestName) then
+      best, bestName = iid, it.name
+    end
+  end
+  return best, bestName
+end
+
+-- The Codex tab redraws when prices change.
+refreshCard = function() if ns.auctionPanel then ns.auctionPanel.refresh() end end
+A.refresh = function() refreshCard() end
 
 ----------------------------------------------------------------------------
 -- Item tooltips
 ----------------------------------------------------------------------------
 
--- The lines for an item: the auction price, its trend, the vendor price; Shift adds low / median /
--- high and how many were listed.
+-- The tooltip's price block: { { left, right, lc, rc } } (right nil = one line across).
+-- A gold heading with its age, the lowest price now, the usual one, the trend as a coloured
+-- percentage with the last days as small bars, what a vendor pays, and a one-line verdict.
+-- Shift adds low / median / high and how many were listed.
+local GOLD, SOFT, INK = { 1, 0.82, 0 }, { 0.62, 0.62, 0.62 }, { 0.92, 0.88, 0.78 }
+local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 }
+local BAR = "Interface\\Buttons\\WHITE8X8"
+
+-- Coin icons where the client draws them (the game's own sell price line), else coloured text.
+function A.coins(copper)
+  if type(GetCoinTextureString) == "function" then
+    local ok, text = pcall(GetCoinTextureString, math.max(0, math.floor(tonumber(copper) or 0)))
+    if ok and type(text) == "string" and text ~= "" then return text end
+  end
+  return ns.coins(copper)
+end
+
+-- The last days as little bars (inline textures, the newest gold): nil with fewer than two days.
+function A.sparkline(id, days)
+  local hist = A.history(id)
+  local from = math.max(1, #hist - (days or 7) + 1)
+  local vals = {}
+  for i = from, #hist do vals[#vals + 1] = hist[i].med or hist[i].low end
+  if #vals < 2 then return end
+  local lo, hi = math.huge, 0
+  for _, v in ipairs(vals) do lo, hi = math.min(lo, v), math.max(hi, v) end
+  local parts, top = {}, 12
+  for i, v in ipairs(vals) do
+    local h = hi > lo and math.floor(3 + (top - 3) * (v - lo) / (hi - lo) + 0.5) or 7
+    local c = i == #vals and { 255, 209, 0 } or { 110, 190, 180 }
+    parts[#parts + 1] = string.format("|T%s:%d:4:0:%d:8:8:0:8:0:8:%d:%d:%d|t", BAR, h, math.floor((h - top) / 2), c[1], c[2], c[3])
+  end
+  return table.concat(parts, " ")
+end
+
+-- The verdict line for an item with a price: text, colour.
+function A.verdict(p, vendor)
+  local low = p.n > 0 and p.low or nil
+  if vendor and vendor > 0 and low and vendor >= math.floor(low * 0.95) then
+    return "Vendor it: a vendor pays more than a sale here", RED
+  end
+  if p.n == 0 then return "None listed: you set the price", GOLD end
+  if p.usual and p.days and p.days >= 2 and low then
+    if low >= p.usual * 1.1 then return "Above usual: a good time to sell", GREEN end
+    if low <= p.usual * 0.7 then return "Cheap now: buy, or hold yours", ORANGE end
+    if p.trend and p.trend <= -10 then return "Falling: sell soon", ORANGE end
+    return "Near its usual price", SOFT
+  end
+end
+
 function A.tooltipLines(id, shift)
   local out = {}
   local p = A.price(id)
@@ -757,22 +693,31 @@ function A.tooltipLines(id, shift)
     vendor = nil
     if p and p.source then p = nil end
   end
+  local function add(l, r, lc, rc) out[#out + 1] = { l, r, lc or INK, rc or INK } end
   if p then
-    local line = p.n > 0 and p.low and ("Codex AH: " .. ns.coins(p.low)) or "Codex AH: none listed"
-    if p.usual and p.usual ~= p.low then line = line .. "  usual " .. ns.coins(p.usual) end
-    out[#out + 1] = line .. "  (" .. A.age(p.at) .. ")"
-    local t = A.trendText(p)
-    if t then out[#out + 1] = "Codex trend: " .. t .. " (" .. p.days .. " days)" end
-  end
-  if vendor and vendor > 0 and (p or shift) then out[#out + 1] = "Codex vendor: " .. ns.coins(vendor) end
-  if shift and p then
-    if p.low then
-      out[#out + 1] = "Codex AH low / median / high: " .. ns.coins(p.low) .. " / " .. ns.coins(p.med or p.low)
-        .. " / " .. ns.coins(p.high or p.low)
+    add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", A.age(p.at), GOLD, SOFT)
+    if p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
+    if p.usual and p.usual ~= p.low then add("  Usual" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual)) end
+    if p.trend then
+      local spark = A.sparkline(id) or ""
+      local t = math.abs(p.trend) <= 5 and "steady" or ((p.trend > 0 and "+" or "-") .. math.abs(p.trend) .. "%")
+      add("  Trend", (spark ~= "" and (spark .. "  ") or "") .. t, nil, math.abs(p.trend) <= 5 and SOFT or (p.trend > 0 and GREEN or RED))
     end
-    out[#out + 1] = "Codex AH listed: " .. ns.thousands(p.n) .. " at the last look"
+    if vendor and vendor > 0 then add("  Vendor pays", A.coins(vendor)) end
+    local v, vc = A.verdict(p, vendor)
+    if v then add("  " .. v, nil, vc) end
+    if shift then
+      if p.low then
+        add("  Low / median / high", ns.coins(p.low) .. " / " .. ns.coins(p.med or p.low) .. " / " .. ns.coins(p.high or p.low), SOFT)
+      end
+      add("  Listed at the last look", ns.thousands(p.n), SOFT)
+    end
   elseif shift and not A.auctionator() then
-    out[#out + 1] = "Codex AH: not seen yet. Scan at the auction house to start."
+    add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", "not seen yet", GOLD, SOFT)
+    if vendor and vendor > 0 then add("  Vendor pays", A.coins(vendor)) end
+    add("  Scan at the auction house to start.", nil, SOFT)
+  elseif vendor and vendor > 0 and shift then
+    add("  Vendor pays", A.coins(vendor))
   end
   return out
 end
@@ -787,9 +732,18 @@ local function annotate(tip, ref)
   local key = tostring(link)
   if tip.codexPriceKey == key then return end
   tip.codexPriceKey = key
-  for _, line in ipairs(A.tooltipLines(id, IsShiftKeyDown and IsShiftKeyDown() and true or false)) do
-    tip:AddLine(line, 0.85, 0.78, 0.55)
+  local lines = A.tooltipLines(id, IsShiftKeyDown and IsShiftKeyDown() and true or false)
+  if #lines == 0 then return end
+  tip:AddLine(" ")
+  for _, e in ipairs(lines) do
+    local l, r, lc, rc = e[1], e[2], e[3], e[4]
+    if r and has(tip, "AddDoubleLine") then
+      tip:AddDoubleLine(l, r, lc[1], lc[2], lc[3], rc[1], rc[2], rc[3])
+    else
+      tip:AddLine(r and (l .. "  " .. r) or l, lc[1], lc[2], lc[3])
+    end
   end
+  if has(tip, "Show") then pcall(tip.Show, tip) end -- resizes it to the new lines
 end
 
 local function hookTip(tip)
@@ -814,27 +768,18 @@ end
 -- Events
 ----------------------------------------------------------------------------
 
-local ticker
 local function onShow()
   open = true
-  queue, searched, sellSeen = {}, {}, nil
+  queue, searched = {}, {}
   root = (type(AuctionHouseFrame) == "table" and AuctionHouseFrame) or (type(AuctionFrame) == "table" and AuctionFrame) or nil
-  refreshCard()
+  if ns.auctionPanel then ns.auctionPanel.onShow(root) end
   ns.after(1, function() if open then queueNeeds(); refreshCard() end end)
-  if ticker then ticker:Cancel() end
-  ticker = ns.every(0.5, function()
-    if not open then return end
-    local s = A.sellItem()
-    local key = s and (tostring(s.id) .. ":" .. tostring(s.name)) or nil
-    if key ~= sellSeen then refreshCard() end
-  end)
 end
 
 local function onClose()
   open = false
   job, queue = nil, {}
-  if ticker then ticker:Cancel(); ticker = nil end
-  hideCard()
+  if ns.auctionPanel then ns.auctionPanel.onClose() end
 end
 
 local events
@@ -882,9 +827,6 @@ function ns.auctionDebugLines()
   end
   if last.search then
     out[#out + 1] = "auction search: " .. Q.plain(last.search.name) .. " - " .. (last.search.failed or (last.search.results .. " results"))
-  end
-  if last.sell then
-    out[#out + 1] = "auction sell: " .. Q.plain(last.sell.item or "?") .. " at " .. ns.money(last.sell.price) .. (last.sell.ok and "" or " (not filled)")
   end
   return out
 end
@@ -942,12 +884,14 @@ ns.gold.addSection(10, function(y)
   end
   tick("Price lines on item tooltips", not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
     "The lowest price seen, the usual price, the trend and the vendor price. Hold Shift for low, median, high and how many were listed.")
-  tick("Show the Codex card at the auction house", not db.noAuctionCard, function() db.noAuctionCard = not db.noAuctionCard end,
-    "Lists what your guide still needs with today's price, the Scan all button, and a price for the item you're selling. Posting and buying are on the Quick sell and Deals card below it.")
+  tick("Add a Codex tab to the auction house", not db.noAuctionCard, function()
+    db.noAuctionCard = not db.noAuctionCard
+    if ns.auctionPanel and open then ns.auctionPanel.onShow(root) end
+  end, "Its pages: Overview, Deals, Selling and Scan.")
   tick("Search for my guide's items when I open it", not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end,
-    "Quick searches for the items on the card, one at a time, when you open the auction house.")
+    "Quick searches for what your guide needs, one at a time, when you open the auction house.")
   if A.auctionator() then
-    y = y + U.T("With Auctionator loaded the Codex leaves searching to it: use Search in Auctionator on the card.",
+    y = y + U.T("With Auctionator loaded the Codex leaves searching to it: use Search in Auctionator on the Codex tab.",
       14, y, W - 28, "small", C.dim) + 6
   end
   if count > 0 then

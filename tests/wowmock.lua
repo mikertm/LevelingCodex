@@ -64,7 +64,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
   "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
   "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
-  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED" }) do
+  "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "OWNED_AUCTIONS_UPDATED",
+  "AUCTION_CANCELED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -872,7 +873,7 @@ local function itemTooltip(name)
   function tip:SetOwner(owner,anchor) self._owner=owner;self._lines={} end
   function tip:SetText(s) ascii(s,name..":SetText");self._lines={s} end
   function tip:AddLine(s) ascii(s,name..":AddLine");self._lines[#self._lines+1]=s end
-  function tip:AddDoubleLine(a,b) ascii(a,name);ascii(b,name) end
+  function tip:AddDoubleLine(a,b) ascii(a,name);ascii(b,name);self._lines[#self._lines+1]=a.."  "..b end
   function tip:ClearLines() self._lines={} end
   function tip:IsOwned(f) return self._owner==f end
   function tip:GetItem() return self._lootName,self._lootLink end
@@ -1460,6 +1461,18 @@ MOCK.auctions, MOCK.browsed = {}, {}
 AuctionHouseFrame = CreateFrame("Frame", "AuctionHouseFrame", UIParent)
 AuctionHouseFrame:SetSize(800, 538)
 AuctionHouseFrame:Hide()
+-- Blizzard's tabs under it (Buy, Sell, Auctions), each switching SetDisplayMode like the client's;
+-- MOCK.displayMode records the last mode.
+AuctionHouseFrame.Tabs = {}
+function AuctionHouseFrame:SetDisplayMode(mode) MOCK.displayMode = mode end
+for i, label in ipairs({ "Buy", "Sell", "Auctions" }) do
+  local t = CreateFrame("Button", "AuctionHouseFrame" .. label .. "Tab", AuctionHouseFrame)
+  t:SetSize(90, 32)
+  t._left = (i - 1) * 93
+  t:SetText(label)
+  t:SetScript("OnClick", function() AuctionHouseFrame:SetDisplayMode(label) end)
+  AuctionHouseFrame.Tabs[i] = t
+end
 do
   local sf = CreateFrame("Frame", nil, AuctionHouseFrame)
   AuctionHouseFrame.CommoditiesSellFrame = sf
@@ -1567,7 +1580,7 @@ end
 C_AuctionHouse.GetNumCommoditySearchResults = function(id) return #sortedListings(id, false) end
 C_AuctionHouse.GetCommoditySearchResultInfo = function(id, i)
   local a = sortedListings(id, false)[i]
-  if a then return { itemID = id, unitPrice = math.floor(a.buyout / (a.count or 1)), quantity = a.count or 1, containsOwnerItem = a.mine or false } end
+  if a then return { itemID = id, unitPrice = math.floor(a.buyout / (a.count or 1)), quantity = a.count or 1, containsOwnerItem = a.mine or false, numOwnerItems = a.mine and (a.count or 1) or 0 } end
 end
 C_AuctionHouse.GetNumItemSearchResults = function(key) return #sortedListings(key.itemID, true) end
 C_AuctionHouse.GetItemSearchResultInfo = function(key, i)
@@ -1610,6 +1623,37 @@ C_AuctionHouse.PlaceBid = function(auctionID, amount)
     end
   end
   error("PlaceBid: no such auction", 2)
+end
+-- Your auctions: listings with mine = true (OWNED_AUCTIONS_UPDATED after QueryOwnedAuctions);
+-- CancelAuction (protected) removes one and records MOCK.cancelled.
+C_AuctionHouse.QueryOwnedAuctions = function(sorts)
+  if type(sorts) ~= "table" then error("QueryOwnedAuctions: sorts expected", 2) end
+  auctionLater(function() MOCK.event("OWNED_AUCTIONS_UPDATED") end)
+end
+local function owned()
+  local out = {}
+  for _, a in ipairs(MOCK.auctions) do if a.mine then out[#out + 1] = a end end
+  return out
+end
+C_AuctionHouse.GetNumOwnedAuctions = function() return #owned() end
+C_AuctionHouse.GetOwnedAuctionInfo = function(i)
+  local a = owned()[i]
+  if not a then return end
+  a.auctionID = a.auctionID or (a.id * 100 + 50 + i)
+  return { auctionID = a.auctionID, itemKey = { itemID = a.id }, itemLink = auctionLink(a), status = a.sold and 1 or 0,
+    quantity = a.count or 1, timeLeftSeconds = 3600, buyoutAmount = math.floor(a.buyout / (a.count or 1)) }
+end
+C_AuctionHouse.CancelAuction = function(auctionID)
+  hardware("CancelAuction")
+  for i, a in ipairs(MOCK.auctions) do
+    if a.mine and a.auctionID == auctionID then
+      table.remove(MOCK.auctions, i)
+      MOCK.cancelled = (MOCK.cancelled or 0) + 1
+      auctionLater(function() MOCK.event("AUCTION_CANCELED", auctionID) end)
+      return
+    end
+  end
+  error("CancelAuction: not yours", 2)
 end
 function GetRealmName() return "Mockrealm" end
 function MOCK.openAuction()

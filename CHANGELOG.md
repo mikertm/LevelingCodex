@@ -7,22 +7,20 @@
 - New **Gold** page (next to Stats) with a **mount fund**: how much of your riding goal you have, what's left, and about how long it takes at this session's net gold per hour. Set the goal amount and level with the - and + buttons. A riding trainer's price is noted when you visit one, and reaching the goal level tells you in chat where the fund stands.
 - **Stats > Zones** has a **Time | Money** switch: gold earned and spent in each zone, net gold, and net gold per hour there.
 
-### Auction tools
+### The Codex tab at the auction house
 
-- At the auction house a **Codex Prices** card lists what your route and your profession steps still need, with the lowest price listed, the usual price and the trend. The Codex searches for those items when you open the auction house (one at a time), and **Scan all** reads the whole auction house (once every 15 minutes).
+- A **Codex** tab joins the auction house's tab row (after Auctionator's, when it's installed), with four pages for making gold. Nothing floats over the auction house any more, and the tab opens again where you left it next time.
+- **Overview:** what you posted, bought and paid in deposits this visit, your mount fund, the market data and how old your last full scan is, the money to make (your best deal, what your bags are worth, undercut auctions), and what your guide still needs with today's prices.
+- **Deals:** every listing a vendor pays more for, and every flip (listed far under its usual price), with the profit per item after the 5% cut and how many are listed. Filter by **All deals / Under vendor / Flips**, drop small ones with **Worth at least** (any, 10c, 1s, 10s, 1g), and set how far under usual a flip must be. **Check** looks up the listings, then the button shows how many and the total ("Buy 2 for 40c"); a commodity asks you to confirm the server's total, and the Codex cancels it when the price went up. **Hide** an item you never want to see; Show hidden brings it back.
+- **Selling:** your tradeable bag items, most valuable first, each with a price status (Above usual: sell now, Fair price, Few listed, Falling: sell soon, Below usual: hold?, Vendor pays more), its price, the lowest and usual prices and what the stack comes to. **- / +** nudge a price by 5% (Auto goes back), **Post** posts the whole stack, and **Post next** posts the most valuable item in one click, then the next. Undercut and auction length sit at the top.
+- **Your auctions** (on Selling): **Check undercuts** searches each item you have listed and marks it UNDERCUT or CHEAPEST with the cheapest price that isn't yours. **Cancel** (two clicks) takes one down; the item comes back by mail and the deposit is lost.
+- **Scan:** Scan all with its progress, **Scan my bags** (prices everything you could sell), **Scan guide items**, a waiting list you can stop, and **Look up an item** (type a name or Shift-click an item): its lowest, usual, median and high prices, how many are listed, the vendor price, the trend, a verdict and a bar chart of its last two weeks.
+- **Protections:** the Codex never posts below what a vendor pays after the 5% cut ("Vendor it"). A price far under the usual one (30% by default) needs a second click, and so does posting something you bought through Deals for less than you paid.
+- Every post, purchase and cancel is one click on a Codex button: nothing happens by itself.
 - **Price history and trends** per realm, from your own scans: the usual price over the last two weeks and whether today's price is up or down.
-- **Item tooltips** show the auction price, the usual price, the trend and the vendor price. Hold Shift for low, median and high and how many were listed.
-- **Sell helper**: put an item in the auction house's sell box and the card suggests one copper under the lowest listing, and its **Use ... each** button fills it in. You still press Post yourself: the Codex never buys, bids or posts.
-- The **Gold** tab shows how many prices you have, what your guide needs with today's prices, and switches for the tooltip lines, the card and the automatic searches.
-- **Works with Auctionator.** When Auctionator is installed, the Codex reads its prices for what your guide needs (shown as "(Auctionator)" on the card and in the Gold tab) and leaves the searching to it, so the two never send searches over each other. **Search in Auctionator** on the card puts your guide's items into Auctionator's search. Tooltips keep Auctionator's own price lines and add only the Codex's trend from your scans, and Scan all still builds a history of your own.
-
-### Selling and deals at the auction house
-
-- A **Quick sell** card under the Codex prices lists what's worth selling from your bags: your most valuable tradeable items, priced just under the lowest listing. **Post** puts the whole stack up in one click and shows the deposit. Items your route or professions still need, bound items and greys stay out.
-- **Protections:** the Codex never posts below what a vendor pays after the auction house's 5% cut. It shows "Vendor it" instead. A price far under the usual one (30% by default) needs a second click.
-- **Deals** lists listings a vendor pays more for, and listings far under their usual price (flips), with the profit per item. **Check** looks up the listings, then the button shows how many and the total ("Buy 2 for 40c"). A commodity purchase asks you to confirm the server's total, and the Codex cancels it when the price went up. Relist what you flip through Quick sell.
-- Every post and every purchase is one click on a Codex button: nothing posts or buys by itself.
-- Gold tab > Selling and deals sets the undercut (1c, 1%, 5% or 10%), the loss warning (20%, 30%, 50% or off), how far under usual a flip must be (20%, 30% or 50%), the auction length and whether the card shows.
+- **A new price block on item tooltips:** a Codex prices heading with its age, the lowest price now and the usual one in coin icons, the trend as a coloured percentage with the last days drawn as small bars, the vendor price, and a one-line verdict ("Above usual: a good time to sell", "Vendor it: a vendor pays more than a sale here"). Hold Shift for low, median and high and how many were listed.
+- **Works with Auctionator.** The Codex reads Auctionator's prices for what your guide needs and leaves the automatic searching to it, so the two never search over each other. **Search in Auctionator** on Overview puts your guide's items into its search, and tooltips keep Auctionator's own lines.
+- Gold tab: how many prices you have, what your guide needs with today's prices, the selling settings (undercut 1c, 1%, 5% or 10%; loss warning; flips; auction length; deals worth at least), and switches for the tooltip block, the Codex tab and the automatic searches.
 
 ### A tidier Codex window
 

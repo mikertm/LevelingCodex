@@ -11038,7 +11038,7 @@ function S.auctionTools()
   click(win(), "Gold")
   check(questText(win(), "AUCTION HOUSE"), "the Gold tab has the auction house card")
   if MOCK.minimal then
-    check(not _G.LevelingCodexAuctionCard, "no auction card without the auction house API")
+    check(not _G.LevelingCodexAHPanel, "no Codex tab without the auction house API")
     return
   end
   check(questText(win(), "1 item priced on Mockrealm"), "the seeded history counts")
@@ -11048,47 +11048,64 @@ function S.auctionTools()
     for _, line in ipairs(GameTooltip._lines or {}) do if line:find(text, 1, true) then return true end end
     return false
   end
-  check(tipHas("Codex AH: ") and tipHas("usual"), "the tooltip has the saved price")
+  check(tipHas("Codex prices") and tipHas("Lowest now") and tipHas("Usual"), "the tooltip has the saved price block")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 },
     { id = 2589, name = "Linen Cloth", count = 10, buyout = 1500 },
     { id = 2592, name = "Wool Cloth", count = 5, buyout = 1000 } }
   MOCK.openAuction()
   MOCK.advance(8)
-  local card = _G.LevelingCodexAuctionCard
-  check(card and card:IsShown() and questText(card, "CODEX PRICES"), "a card shows at the auction house")
+  check(not _G.LevelingCodexAuctionCard and not _G.LevelingCodexTradeCard, "no cards float over the auction house")
+  check(not _G.LevelingCodexAHPanel or not LevelingCodexAHPanel:IsShown(), "the Codex tab waits for a click")
   local searchedLinen = false
   for _, name in ipairs(MOCK.browsed) do if name == "Linen Cloth" then searchedLinen = true end end
   check(searchedLinen, "it searched for the cloth the Tailoring step needs")
-  check(questText(card, "Linen Cloth  -  1s each"), "the card prices the cloth from the search")
-  click(card, "Scan all")
+  local tabButton = click(AuctionHouseFrame, "Codex")
+  local panel = _G.LevelingCodexAHPanel
+  check(panel and panel:IsShown() and questText(panel, "LEVELING CODEX"), "the Codex tab shows its panel")
+  check(tabButton._points[1] and tabButton._points[1][2] == AuctionHouseFrame.Tabs[3], "the tab sits after the last tab")
+  check(questText(panel, "FOR YOUR GUIDE") and questText(panel, "x Linen Cloth") and questText(panel, "1s each"),
+    "Overview prices the cloth the guide needs")
+  click(AuctionHouseFrame, "Buy")
+  check(not panel:IsShown() and MOCK.displayMode == "Buy", "another tab hides the Codex panel")
+  click(AuctionHouseFrame, "Codex")
+  click(panel, "Scan")
+  check(questText(panel, "FULL SCAN") and questText(panel, "LOOK UP AN ITEM"), "the Scan page")
+  click(panel, "Scan all")
   MOCK.advance(2)
   check(MOCK.replicated == 1 and chatHas("Full scan: 3 listings, 2 items priced"), "Scan all scans the whole auction house")
-  check(card.scan._disabled and select(2, MOCK.ns.auction.canFullScan()) == "Next full scan in 15 min", "a second full scan waits")
-  card.scan:Click()
+  check(select(2, MOCK.ns.auction.canFullScan()) == "Next full scan in 15 min", "a second full scan waits")
+  click(panel, "Scan all")
   MOCK.advance(2)
   check(MOCK.replicated == 1, "the second click doesn't scan again")
+  LevelingCodexAHLookup:SetText("linen")
+  click(panel, "Look up")
+  check(questText(panel, "Lowest now") and questText(panel, "Linen Cloth") and questText(panel, "Listed"), "the look-up shows the item's prices")
   GameTooltip:SetHyperlink("item:2592")
-  check(tipHas("Codex trend: up 100% (3 days)"), "the tooltip shows the trend against earlier days")
+  check(tipHas("Trend") and tipHas("+100%"), "the tooltip shows the trend against earlier days")
   MOCK.shift = true
   GameTooltip:SetHyperlink("item:2589")
-  check(tipHas("low / median / high") and tipHas("listed: 30"), "Shift adds low, median, high and how many are listed")
+  check(tipHas("Low / median / high") and tipHas("Listed at the last look  30"), "Shift adds low, median, high and how many are listed")
   MOCK.shift = false
-  MOCK.sellItem = 2589
-  MOCK.advance(1)
-  check(questText(card, "SELLING Linen Cloth") and card.use:IsShown() and card.use.codexLabel == "Use 99c each", "the sell helper offers one copper under the lowest")
-  check(MOCK.auctionPrice == nil, "nothing is filled in before the click")
-  click(card, "Use 99c each")
-  check(MOCK.auctionPrice == 99 and chatHas("press Post yourself"), "the click fills the price and you post it")
   MOCK.closeAuction()
-  check(not card:IsShown(), "the card hides with the auction house")
+  MOCK.openAuction()
+  MOCK.advance(0.5)
+  check(panel:IsShown() and questText(panel, "LOOK UP AN ITEM"), "the Codex tab opens again where you left it")
+  check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+  MOCK.closeAuction()
+  check(not panel:IsVisible(), "the panel goes with the auction house")
   click(win(), "Gold")
   check(questText(win(), "FOR YOUR GUIDE") and questText(win(), "Linen Cloth"), "the Gold tab lists what the guide needs with prices")
   click(win(), "Price lines on item tooltips")
   GameTooltip:SetHyperlink("item:2589")
-  check(not tipHas("Codex AH"), "the setting turns the tooltip lines off")
+  check(not tipHas("Codex prices"), "the setting turns the tooltip lines off")
   click(win(), "Forget prices")
   click(win(), "Forget prices")
   check(questText(win(), "No price history yet"), "Forget prices clears the history")
+  click(win(), "Add a Codex tab to the auction house")
+  MOCK.openAuction()
+  MOCK.advance(0.5)
+  check(not findButton(AuctionHouseFrame, function(l) return l == "Codex" end) and not panel:IsShown(), "the setting takes the tab away")
+  MOCK.closeAuction()
   MOCK.removeSkill("Tailoring")
 end
 
@@ -11119,17 +11136,17 @@ function S.auctionAuctionator()
     for _, line in ipairs(GameTooltip._lines or {}) do if line:find(text, 1, true) then return true end end
     return false
   end
-  check(#asked > 0 and not tipHas("Codex AH") and not tipHas("Codex vendor"),
+  check(#asked > 0 and not tipHas("Codex prices") and not tipHas("Vendor pays"),
     "Auctionator draws its own tooltip lines: the Codex adds none from its price")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
   MOCK.openAuction()
   MOCK.advance(8)
   check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
-  local card = _G.LevelingCodexAuctionCard
-  check(card and card:IsShown() and questText(card, "Linen Cloth  -  1s 20c each (Auctionator"),
-    "the card prices the cloth from Auctionator")
-  check(questText(card, "Prices from Auctionator"), "the card says where its prices come from")
-  check(questText(card, "Coarse Thread  -  not in Auctionator yet"), "an item Auctionator hasn't priced says so")
+  click(AuctionHouseFrame, "Codex")
+  local card = _G.LevelingCodexAHPanel
+  check(card and card:IsShown() and questText(card, "x Linen Cloth") and questText(card, "1s 20c each (Auctionator"),
+    "Overview prices the cloth from Auctionator")
+  check(questText(card, "not in Auctionator yet"), "an item Auctionator hasn't priced says so")
   click(card, "Search in Auctionator")
   check(#searches == 1 and searches[1]:find("Linen Cloth", 1, true) and chatHas("Searching Auctionator"),
     "the button hands the guide's items to Auctionator's search")
@@ -11137,7 +11154,7 @@ function S.auctionAuctionator()
   MOCK.advance(2)
   check(MOCK.replicated == 1, "Scan all still builds a history of your own")
   GameTooltip:SetHyperlink("item:2589")
-  check(tipHas("Codex AH: "), "with its own scan the Codex line comes back")
+  check(tipHas("Codex prices"), "with its own scan the Codex block comes back")
   local debug = table.concat(MOCK.ns.auctionDebugLines(), "\n")
   check(debug:find("Auctionator loaded", 1, true), "/codex debug names Auctionator")
   MOCK.closeAuction()
@@ -11176,20 +11193,31 @@ function S.auctionTrade()
   MOCK.money = 100000
   MOCK.auctions = { { id = 818, name = "Tigerseye", count = 2, buyout = 40 }, { id = 818, name = "Tigerseye", count = 1, buyout = 200 },
     { id = 2318, name = "Light Leather", count = 1, buyout = 40, item = true } }
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 5, buyout = 750, mine = true }
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 2, buyout = 280 }
   S.login()
-  if MOCK.minimal then check(not _G.LevelingCodexTradeCard, "no trade card without the modern auction house"); return end
+  if MOCK.minimal then check(not _G.LevelingCodexAHPanel, "no Codex tab without the modern auction house"); return end
   MOCK.openAuction()
   MOCK.advance(2)
-  local card = _G.LevelingCodexTradeCard
-  check(card and card:IsShown() and questText(card, "QUICK SELL") and questText(card, "20 x Linen Cloth"), "the card lists what to sell")
+  click(AuctionHouseFrame, "Codex")
+  local card = _G.LevelingCodexAHPanel
+  check(questText(card, "MONEY TO MAKE") and questText(card, "to sell, about"), "Overview sums up what there is to sell")
+  click(card, "Selling")
+  check(card:IsShown() and questText(card, "20 x Linen Cloth"), "Selling lists what to sell")
   check(not questText(card, "Bound Ring"), "a bound item isn't offered")
-  check(questText(card, "Vendor pays 50c: sell it there"), "a price under the vendor's is blocked")
+  check(questText(card, "A vendor pays 50c each: sell it there"), "a price under the vendor's is blocked")
   local T = MOCK.ns.auctionTrade
   check(T.sellPrice(774).blocked and T.sellPrice(2589).price == 99, "the undercut is a copper, the vendor floor holds")
-  check(not pcall(MOCK.ns.auction.store) or #MOCK.posted == 0, "nothing posts by itself")
-  click(card, "Post Linen Cloth")
+  check(select(2, T.status(2592)) == "Below usual: hold?" and select(2, T.status(774)) == "Vendor pays more", "each row says how its price looks")
+  check(#MOCK.posted == 0, "nothing posts by itself")
+  click(card, "Raise Linen Cloth")
+  check(T.sellPrice(2589).price == 103 and T.sellPrice(2589).custom and questText(card, "(your price)"), "+ raises the price 5%")
+  click(card, "Reset Linen Cloth")
+  check(T.sellPrice(2589).price == 99, "Auto goes back to the undercut")
+  check(findButton(card, function(l) return l == "Post next" end)._text == "Post next: 20 x Linen Cloth at 99c", "Post next names the most valuable item")
+  click(card, "Post next")
   check(#MOCK.posted == 1 and MOCK.posted[1].qty == 20 and MOCK.posted[1].unit == 99 and MOCK.posted[1].kind == "commodity",
-    "Post puts the whole stack up at the undercut price")
+    "Post next puts the whole stack up at the undercut price")
   check(chatHas("Posted 20 Linen Cloth at 99c each %(deposit 1s 20c%)"), "the post is said in chat with the deposit")
   MOCK.advance(1)
   click(card, "Post Wool Cloth")
@@ -11200,11 +11228,21 @@ function S.auctionTrade()
   click(card, "Post Rough Bracers")
   check(#MOCK.posted == 3 and MOCK.posted[3].kind == "item" and MOCK.posted[3].unit == 999, "an item posts one at a time")
   MOCK.advance(1)
-  click(card, "Post Malachite")
-  check(#MOCK.posted == 3, "the vendor floor stops a post")
+  check(not findButton(card, function(l) return l == "Post Malachite" end) or #MOCK.posted == 3, "the vendor floor stops a post")
+  -- your auctions
+  check(questText(card, "YOUR AUCTIONS") and questText(card, "1 listed") and questText(card, "5 x Wool Cloth"), "Selling lists your auctions")
+  click(card, "Check undercuts")
+  MOCK.advance(3)
+  check(T.undercutCount() == 1 and questText(card, "UNDERCUT") and questText(card, "cheapest 1s 40c"), "Check undercuts finds a cheaper listing")
+  click(card, "Cancel Wool Cloth")
+  check(not MOCK.cancelled and chatHas("deposit is lost"), "Cancel asks for a second click")
+  click(card, "Cancel Wool Cloth")
+  MOCK.advance(2)
+  check(MOCK.cancelled == 1 and chatHas("comes back by mail") and questText(card, "nothing listed"), "the second click cancels it")
   -- deals
-  check(questText(card, "DEALS") and questText(card, "Light Leather") and questText(card, "vendor pays 50c: +30c each"),
-    "deals list flips and listings under vendor price")
+  click(card, "Deals")
+  check(questText(card, "Light Leather") and questText(card, "vendor pays 50c") and questText(card, "+30c each"),
+    "Deals lists flips and listings under vendor price")
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
   check(T.dealLabel(818) == "Buy 2 for 40c", "the search shows how many are under the limit and the total")
@@ -11214,6 +11252,7 @@ function S.auctionTrade()
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
   check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 2 and chatHas("Bought 2 Tigerseye for 40c."), "Confirm buys them")
+  check(T.notes().paid[818].each == 20, "what you paid is kept")
   click(card, "Deal Light Leather")
   MOCK.advance(1)
   click(card, "Deal Light Leather")
@@ -11225,14 +11264,30 @@ function S.auctionTrade()
   MOCK.advance(1)
   check(MOCK.cancelledPurchase and #MOCK.purchases == 2 and chatHas("the price went up"), "a price that rose is cancelled")
   MOCK.priceBump = nil
+  click(card, "Hide Tigerseye")
+  check(T.isHidden(818) and not questText(card, "Tigerseye"), "Hide takes a deal off the list")
+  click(card, "Show hidden")
+  check(questText(card, "Tigerseye"), "Show hidden brings it back to view")
+  click(card, "Unhide Tigerseye")
+  click(card, "Hide hidden")
+  check(not T.isHidden(818), "Unhide")
+  click(card, "At least 10s")
+  check(#T.deals() == 0 and questText(card, "No deals"), "Worth at least drops small deals")
+  click(card, "At least Any")
+  -- a flip posted under what you paid asks twice
+  MOCK.bagItems[#MOCK.bagItems + 1] = { name = "Light Leather", id = 2318, quality = 1, level = 1, sell = 0, count = 1, class = "Trade Goods", item = true }
+  check(T.sellPrice(2318).loss == 40, "a post under what you paid is flagged")
+  click(card, "Selling")
+  click(card, "Post Light Leather")
+  check(#MOCK.posted == 3 and chatHas("you paid"), "posting it under what you paid asks for a second click")
   check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 2 buys", 1, true), "/codex debug counts posts and buys")
   slash("")
   click(win(), "Gold")
-  check(questText(win(), "SELLING AND DEALS"), "the Gold tab has the selling settings")
+  check(questText(win(), "SELLING AND DEALS") and questText(win(), "Deals worth at least"), "the Gold tab has the selling settings")
   click(win(), "5%")
   check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
-  click(win(), "Show the Quick sell and Deals card")
-  check(not card:IsShown(), "the setting hides the card")
+  for _, pg in ipairs({ "Overview", "Deals", "Selling", "Scan" }) do click(card, pg) end
+  check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
   MOCK.closeAuction()
 end
 
