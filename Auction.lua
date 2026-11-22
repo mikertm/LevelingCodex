@@ -285,18 +285,22 @@ end
 
 -- low, median (by quantity), high (90th percentile: one silly listing doesn't count) and quantity
 -- from { { unitPrice, quantity }, ... }.
-local function summary(list)
-  table.sort(list, function(a, b) return a[1] < b[1] end)
+-- e = { q = { [price] = quantity }, prices = { distinct prices } }: one table per item, not one
+-- per listing (a full scan has ~200,000 listings: a table each made the garbage collector stall)
+local function summary(e)
+  local prices, q = e.prices, e.q
+  if not prices or #prices == 0 then return end
+  table.sort(prices)
   local n = 0
-  for _, e in ipairs(list) do n = n + e[2] end
+  for _, pr in ipairs(prices) do n = n + q[pr] end
   if n == 0 then return end
   local med, high, run = nil, nil, 0
-  for _, e in ipairs(list) do
-    run = run + e[2]
-    if not med and run >= n / 2 then med = e[1] end
-    if not high and run >= n * 0.9 then high = e[1] end
+  for _, pr in ipairs(prices) do
+    run = run + q[pr]
+    if not med and run >= n / 2 then med = pr end
+    if not high and run >= n * 0.9 then high = pr end
   end
-  return list[1][1], n, med, high or list[#list][1]
+  return prices[1], n, med, high or prices[#prices]
 end
 
 ----------------------------------------------------------------------------
@@ -311,6 +315,8 @@ local refreshCard
 
 function A.isOpen() return open end
 function A.busy() return job end
+-- A full or paged scan is running: the market and deal lists keep their last answer until it ends.
+function A.scanning() return job and (job.kind == "full" or job.kind == "paged") and true or false end
 
 local function finished(kind)
   if kind == "full" and ns.refreshTab then ns.refreshTab("gold") end
@@ -372,9 +378,11 @@ local function collectRow(acc, id, name, count, buyout)
   id, count, buyout = tonumber(id), math.max(1, tonumber(count) or 1), tonumber(buyout)
   if id and buyout and buyout > 0 then
     local e = acc[id]
-    if not e then e = { list = {} }; acc[id] = e end
-    if type(name) == "string" and name ~= "" then e.name = name end
-    e.list[#e.list + 1] = { math.floor(buyout / count + 0.5), count }
+    if not e then e = { q = {}, prices = {} }; acc[id] = e end
+    if not e.name and type(name) == "string" and name ~= "" then e.name = name end
+    local unit = math.floor(buyout / count + 0.5)
+    local had = e.q[unit]
+    if had then e.q[unit] = had + count else e.q[unit] = count; e.prices[#e.prices + 1] = unit end
   end
 end
 local function collect(acc, read, from, to)
@@ -386,7 +394,7 @@ end
 local function file(acc, full)
   local items = 0
   for id, e in pairs(acc) do
-    local low, n, med, high = summary(e.list)
+    local low, n, med, high = summary(e)
     if low then
       A.record(id, e.name or ns.itemInfo(id), low, n, med, high)
       items = items + 1
@@ -470,7 +478,7 @@ local function readFull()
       A.recordFast = true
       spread(j, 1, #ids, function(k)
         local e = acc[ids[k]]
-        local low, qty, med, high = summary(e.list)
+        local low, qty, med, high = summary(e)
         if low then A.record(ids[k], e.name, low, qty, med, high); items = items + 1 end
         j.filed = k
       end, function()
@@ -1145,7 +1153,8 @@ local redrawDue = false
 refreshCard = function()
   if redrawDue or not ns.auctionPanel then return end
   redrawDue = true
-  ns.after(0.2, function() redrawDue = false; ns.auctionPanel.refresh() end)
+  -- while a scan files thousands of prices the page redraws once a second, not five times
+  ns.after(A.scanning() and 1 or 0.2, function() redrawDue = false; ns.auctionPanel.refresh() end)
 end
 A.refresh = function() refreshCard() end
 

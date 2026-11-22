@@ -101,7 +101,7 @@ local cache = { key = nil, rows = nil, at = 0, version = nil }
 function M.rows()
   local key = table.concat({ M.minPrice(), T().hiddenCount(), A().realmKey and A().realmKey() or "" }, ":")
   local version = A().version or 0
-  if cache.rows and cache.key == key and (cache.version == version or clock() - cache.at < 10) then return cache.rows end
+  if cache.rows and cache.key == key and (cache.version == version or clock() - cache.at < 10 or A().scanning()) then return cache.rows end
   local out, notes, min = {}, T().notes(), M.minPrice()
   for id, it in pairs(A().store().items) do
     if type(it) == "table" and not notes.hidden[id] and (tonumber(it.n) or 0) > 0 and (tonumber(it.low) or 0) >= math.max(1, min) then
