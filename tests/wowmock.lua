@@ -1361,7 +1361,11 @@ local function lootItem(ref)
   local id=tonumber(tostring(ref):match("item:(%d+)")) or tonumber(ref)
   return MOCK.lootItems[ref] or MOCK.lootItems[id]
 end
+-- MOCK.itemIDs[name] = id: items the client has cached, found by name (opt-in, like the client's cache)
+MOCK.itemIDs = {}
 function GetItemInfo(ref)
+  local known = type(ref) == "string" and MOCK.itemIDs[ref]
+  if known then return ref, "|cffffffff|Hitem:" .. known .. "::::::::|h[" .. ref .. "]|h|r", 1, 5, 0, "Trade Goods", "Cloth", 20, "", 134400, 13, 7 end
   local it=lootItem(ref)
   if not it then return beforeLootItemInfo(ref) end
   if it.loaded==false then return end
@@ -1837,6 +1841,7 @@ local ALLOWED_GLOBALS = {
   GetNumQuestLogEntries = true, GetQuestLogTitle = true, GetNumQuestLeaderBoards = true,
   GetQuestLogLeaderBoard = true, IsQuestFlaggedCompleted = true,
   Questie = true, Questie_BaseFrame = true, LibQuestieDB = true, EllesmereUI = true,
+  Auctionator = true,
 }
 for i = 1, 8 do ALLOWED_GLOBALS["TradeSkillSkill" .. i] = true end
 for i = 1, 4 do ALLOWED_GLOBALS["QuestInfoRewardsFrameQuestInfoItem" .. i] = true end

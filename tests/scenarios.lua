@@ -11092,6 +11092,63 @@ function S.auctionTools()
   MOCK.removeSkill("Tailoring")
 end
 
+-- With Auctionator loaded: its prices through its public API, no searches of the Codex's own
+-- over its queries, and a button that hands the guide's items to its search.
+function S.auctionAuctionator()
+  local asked, searches = {}, {}
+  Auctionator = { API = { v1 = {
+    GetAuctionPriceByItemID = function(caller, id)
+      assert(caller == "LevelingCodex", "the caller ID is the Codex's")
+      asked[#asked + 1] = id
+      if id == 2589 then return 120 end
+    end,
+    GetAuctionAgeByItemID = function(_, id) if id == 2589 then return 1 end end,
+    MultiSearch = function(caller, terms)
+      assert(caller == "LevelingCodex" and type(terms) == "table", "MultiSearch gets the caller and a list")
+      assert(AuctionHouseFrame:IsShown(), "Auction house is not open")
+      searches[#searches + 1] = table.concat(terms, ",")
+    end,
+  } } }
+  MOCK.itemIDs["Linen Cloth"] = 2589
+  S.login()
+  MOCK.setSkill("Tailoring", 40, 75)
+  MOCK.advance(1.2)
+  GameTooltip:SetOwner(UIParent)
+  GameTooltip:SetHyperlink("item:2589")
+  local function tipHas(text)
+    for _, line in ipairs(GameTooltip._lines or {}) do if line:find(text, 1, true) then return true end end
+    return false
+  end
+  check(#asked > 0 and not tipHas("Codex AH") and not tipHas("Codex vendor"),
+    "Auctionator draws its own tooltip lines: the Codex adds none from its price")
+  MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
+  MOCK.openAuction()
+  MOCK.advance(8)
+  check(#MOCK.browsed == 0, "no quick searches over Auctionator's (" .. #MOCK.browsed .. " sent)")
+  local card = _G.LevelingCodexAuctionCard
+  check(card and card:IsShown() and questText(card, "Linen Cloth  -  1s 20c each (Auctionator"),
+    "the card prices the cloth from Auctionator")
+  check(questText(card, "Prices from Auctionator"), "the card says where its prices come from")
+  check(questText(card, "Coarse Thread  -  not in Auctionator yet"), "an item Auctionator hasn't priced says so")
+  click(card, "Search in Auctionator")
+  check(#searches == 1 and searches[1]:find("Linen Cloth", 1, true) and chatHas("Searching Auctionator"),
+    "the button hands the guide's items to Auctionator's search")
+  click(card, "Scan all")
+  MOCK.advance(2)
+  check(MOCK.replicated == 1, "Scan all still builds a history of your own")
+  GameTooltip:SetHyperlink("item:2589")
+  check(tipHas("Codex AH: "), "with its own scan the Codex line comes back")
+  local debug = table.concat(MOCK.ns.auctionDebugLines(), "\n")
+  check(debug:find("Auctionator loaded", 1, true), "/codex debug names Auctionator")
+  MOCK.closeAuction()
+  slash("")
+  click(win(), "Gold")
+  check(questText(win(), "leaves searching to it"), "the Gold tab explains the searches")
+  MOCK.removeSkill("Tailoring")
+  Auctionator = nil
+  MOCK.itemIDs["Linen Cloth"] = nil
+end
+
 -- Without saved data the tab says it counts from login.
 function S.statsTabLost()
   slash("")
