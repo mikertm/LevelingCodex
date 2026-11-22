@@ -1,6 +1,9 @@
 # Leveling Codex
 
 ## v0.31.0
+- The Codex window now fills your screen by default, so long pages need less scrolling (Settings > This window: Short brings back the old height).
+- Journey chapters: the map plate moved to the right page, so a chapter fits on one spread.
+- Your last name is read from the game (WoW Forever's UnitFullName), even with My Secondary Name off in the nameplate options.
 
 ### Gold
 

@@ -1094,18 +1094,6 @@ local function chapterSpread(V, y, l, events)
   if opening then
     ly = ly + LU.T('"' .. opening.s .. '"', 16, ly, L.W - 32, "body", LC.inkSoft, "CENTER") + 12
   end
-  local plateMap = chapterMap(j, l, events)
-  if plateMap then
-    local pw = L.W - 20
-    local ph = math.floor(pw * 668 / 1002)
-    drawPlate(L, plateMap, 10, ly, pw, ph, 11, l)
-    LU.hit(10, ly, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
-      mapPick, highlight = plateMap, nil
-      openPage(P_MAP, LU)
-    end, "Plate level " .. l)
-    ly = ly + ph + 4
-    ly = ly + LU.T(mapLabel(j, plateMap) .. ", as you walked it at level " .. l, 10, ly, pw, "small", LC.inkSoft, "CENTER") + 12
-  end
   local prose = J.lore and J.lore.chapterProse and J.lore.chapterProse(l, events, rec, l == lvl)
   if prose and prose ~= "" then ly = ly + initialed(LU, LC, prose, 0, ly, L.W, "body", LC.ink) + 12 end
   if rec then
@@ -1123,6 +1111,19 @@ local function chapterSpread(V, y, l, events)
   if #zoneList > 1 then ly = ly + LU.T("Through " .. table.concat(zoneList, ", ") .. ".", 0, ly, L.W, "small", LC.inkSoft, "CENTER") + 6 end
   -- right: what happened
   local ry = y
+  -- the plate heads the right page, so the two sheets run about as long
+  local plateMap = chapterMap(j, l, events)
+  if plateMap then
+    local pw = R.W - 20
+    local ph = math.floor(pw * 668 / 1002)
+    drawPlate(R, plateMap, 10, ry, pw, ph, 11, l)
+    R.U.hit(10, ry, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
+      mapPick, highlight = plateMap, nil
+      openPage(P_MAP, R.U)
+    end, "Plate level " .. l)
+    ry = ry + ph + 4
+    ry = ry + R.U.T(mapLabel(j, plateMap) .. ", as you walked it at level " .. l, 10, ry, pw, "small", R.C.inkSoft, "CENTER") + 14
+  end
   local sub = #list == 0 and nil or (plural(#list, "moment") .. (filter ~= 1 and ("  -  " .. FILTERS[filter]:lower()) or ""))
   ry = ry + R.U.sectionTitle("WHAT HAPPENED", ry, sub)
   if #list == 0 then
