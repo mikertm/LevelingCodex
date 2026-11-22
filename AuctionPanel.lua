@@ -677,10 +677,12 @@ end
 -- The Scan all button: the instant scan when the server allows one, else the paged scan.
 local function scanAllButton(label, x, y, w)
   local ok, how, why = A().canScanAll()
-  local tipText = how == "paged"
+  local tipText = A().scanAllKind() == "paged"
+    and "Reads the auction house page by page: smooth, no cooldown. Change it on the Scan tab (Scan all uses)."
+    or how == "paged"
     and ("The instant scan is cooling down (" .. tostring(why or "") .. "). This reads the auction house page by page instead: no cooldown, a little slower.")
     or "Reads every listing at once. The server allows that once every 15 minutes; in between, Scan all reads page by page."
-  if not label then label = ok and (how == "paged" and "Scan all (paged)" or "Scan all") or why end
+  if not label then label = ok and ((how == "paged" and A().scanAllKind() == "instant") and "Scan all (paged)" or "Scan all") or why end
   button(label, x, y, w, function() A().scanAll() end, { label = "Scan all", enabled = ok, tip = "Scan all", tipText = tipText })
 end
 
@@ -1386,6 +1388,10 @@ function pages.scan(W, top, H)
   local sy = y + 32
   sy = sy + check("Price block on item tooltips", lx + 10, sy, not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
     "Lowest now, usual, trend, vendor price and a verdict. Hold Shift for more.")
+  text("Scan all uses", lx + 14, sy + 4, 100, "dim", ns.C.dim)
+  segments(lx + 114, sy, lw - 128, { "Paged scan", "Instant scan" }, A().scanAllKind() == "instant" and 2 or 1,
+    function(i) db.auctionScanAll = i == 2 and "instant" or nil end, "Scan all uses ")
+  sy = sy + 30
   sy = sy + check("Search my guide's items when I open it", lx + 10, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end)
   if A().count() > 0 then
     local armed = forgetAt and now() - forgetAt < 5

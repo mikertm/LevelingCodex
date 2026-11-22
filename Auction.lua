@@ -692,13 +692,21 @@ function A.pagedScan()
 end
 
 -- Scan all: the instant scan when the server allows one, else the paged scan.
+-- Scan all's kind (db.auctionScanAll, Settings on the Scan page): "paged" (the default: smooth,
+-- no cooldown) or "instant" (the instant scan when the server allows one, else the paged one).
+function A.scanAllKind() return ns.db().auctionScanAll == "instant" and "instant" or "paged" end
 function A.scanAll()
-  if A.canFullScan() then return A.fullScan() end
+  if A.scanAllKind() == "instant" and A.canFullScan() then return A.fullScan() end
   return A.pagedScan()
 end
 function A.canScanAll()
   local ok, why = A.canFullScan()
-  if ok then return true, "instant" end
+  if ok and A.scanAllKind() == "instant" then return true, "instant" end
+  if A.scanAllKind() == "paged" then
+    local okPaged, whyPaged = A.canPagedScan()
+    if okPaged then return true, "paged" end
+    return false, nil, whyPaged
+  end
   local okPaged = A.canPagedScan()
   if okPaged then return true, "paged", why end
   return false, nil, why
