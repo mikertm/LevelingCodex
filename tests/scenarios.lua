@@ -33,8 +33,26 @@ local function findButton(root, pred)
   end
 end
 
+-- Tabs that sit in a group's strip (the tab under the window opens the group).
+local TAB_GROUP = { ["This Level"] = "Leveling", Talents = "Leveling", Trainer = "Leveling", Macros = "Leveling",
+  Tips = "Leveling", Gold = "Stats" }
+
 local function click(root, text, mouse)
   local b = findButton(root, function(l) return l == text end)
+  if not b and root == win() and TAB_GROUP[text] then
+    local group = findButton(root, function(l) return l == TAB_GROUP[text] end)
+    if group then group:Click(mouse) end
+    b = findButton(root, function(l) return l == text end)
+  end
+  -- Settings come in pages: look through each one.
+  if not b and root == win() and findButton(root, function(l) return l == "Map and arrow" end) then
+    for _, page in ipairs({ "General", "Questing", "Map and arrow", "Group", "Helpers" }) do
+      local control = findButton(root, function(l) return l == page end)
+      if control then control:Click() end
+      b = findButton(root, function(l) return l == text end)
+      if b then break end
+    end
+  end
   -- Follow the redesigned board's visible navigation when an older scenario asks for a
   -- control that moved to an area, a focused options page, or another grid page.
   if not b and root == win() then
@@ -2317,6 +2335,7 @@ function S.questPreviewAhead()
   check(LevelingCodexDB.questPreview == 2 and seg("2 steps").codexOn and not questText(frame, Q.label(ahead[8].step)),
     "and back to 2")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   local function stepsButton(label)
     for _, b in ipairs(MOCK.buttons(win())) do
       if labelOf(b) == label and b.tipText and b.tipText:find("steps the step window lists", 1, true) then return b end
@@ -3415,6 +3434,7 @@ function S.questEliteModes()
   check(not questText(frame, "Elite quest") and questText(frame, 'Accept - WANTED: "Hogger"'),
     "Always take goes straight to the pickup: " .. allText(frame))
   click(win(), "Settings")
+  click(win(), "Questing")
   local function lit(label)
     local b = findButton(win(), function(l) return l == label end)
     return b and b.codexOn
@@ -3771,6 +3791,7 @@ function S.questIntegrationAuto()
   check(MOCK.gossipPicked == nil, "an older quest tracker's autoaccept counts too")
   slash("quests")
   click(win(), "Settings")
+  click(win(), "Questing")
   check(questText(win(), "Your quest tracker's auto-accept is on and handles quest pickups."), "the tickbox says quest tracker handles it")
 
   MOCK.makeQuestProvider({}) -- auto-accept off, key Shift
@@ -3895,6 +3916,7 @@ function S.questIntegrationDB()
   S.login()
   slash("quests")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   check(not questText(win(), "Point the arrow at the nearest objective"), "no setting without quest database")
   MOCK.chat = {}
   slash("debug")
@@ -3912,6 +3934,7 @@ function S.questIntegrationDB()
   slash("debug")
   check(chatHas("quest database: contract 4 %(baked%), 2 zone maps, arrow: "), "a usable quest database is reported")
   click(win(), "Settings")
+  click(win(), "Map and arrow")
   check(questText(win(), "Point the arrow at the nearest objective"), "the setting shows with quest database")
 end
 
@@ -4436,6 +4459,7 @@ function S.questButtonOptions()
   local frame, item, target = questButtonFixture()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Quest item position: Right")
   check(item:GetLeft() ~= nil and select(1, item:GetPoint()) == "TOPLEFT", "item can move to the right")
   check(select(1, target:GetPoint()) == "TOPRIGHT", "target keeps its own left placement")
@@ -4514,6 +4538,7 @@ function S.questButtonSavedLayout()
     "buttons follow the panel when it is dragged")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Compact step window")
   check(math.abs(select(5, target:GetPoint()) - ((600 - frame:GetHeight()) * 0.7 + 1)) < 0.001,
     "bottom placement follows compact mode's new height")
@@ -4525,6 +4550,7 @@ function S.questButtonInvalidLayout()
   check(select(1, item:GetPoint()) == "TOPRIGHT" and select(1, target:GetPoint()) == "TOPRIGHT", "invalid sides fall back to the left")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   check(questOffsetSlider("Quest item horizontal offset"):GetValue() == 0
     and questOffsetSlider("Target horizontal offset"):GetValue() == UIParent:GetWidth()
     and questOffsetSlider("Target vertical offset"):GetValue() == 0, "invalid offsets fall back or clamp to the slider range")
@@ -4548,6 +4574,7 @@ function S.questButtonDragging()
   local frame, item, target = questButtonFixture()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Unlock button dragging")
   local itemMover, targetMover = _G.LevelingCodexQuestItemMover, _G.LevelingCodexQuestTargetMover
   check(itemMover and itemMover:IsShown() and targetMover and targetMover:IsShown(), "unlock shows both drag handles")
@@ -4604,6 +4631,7 @@ function S.questButtonDragPreview()
   S.login()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Unlock button dragging")
   local mover = _G.LevelingCodexQuestItemMover
   check(mover and mover:IsShown() and not (_G.LevelingCodexQuestItem and _G.LevelingCodexQuestItem:IsShown()),
@@ -4627,6 +4655,7 @@ function S.questButtonMinimalLayout()
   check(target and target:IsShown(), "target works without optional APIs")
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   click(win(), "Target position: Right")
   check(select(1, target:GetPoint()) == "TOPLEFT", "minimal client can reposition the target")
   questOffsetSlider("Target horizontal offset"):SetValue(18)
@@ -4645,6 +4674,7 @@ function S.questButtonController()
   S.login()
   slash("")
   click(win(), "Settings")
+  click(win(), "Questing")
   local function press(button) MOCK.fire(win(), "OnGamePadButtonDown", button) end
   local function adjust()
     local minus, plus = "Quest item horizontal offset -", "Quest item horizontal offset +"
@@ -7185,6 +7215,7 @@ function S.padBackup()
     if how == "setting" then LevelingCodexDB.padNative = false end
     if how == "no manager" then GamepadMode = nil; MOCK.gamepad = true end
     openAt(30, "Settings")
+    click(win(), "Helpers")
     MOCK.advance(0.6)
     check(LevelingCodexPadFocus and LevelingCodexPadFocus:IsShown(), "highlight shown (" .. how .. ")")
     check(reachSkillUpTick(), "D-pad reaches the skill-up tick (" .. how .. ")")
@@ -7209,6 +7240,7 @@ function S.padBackupScroll()
   if not D() or not GamepadMode then return end
   LevelingCodexDB.padNative = false; MOCK.gamepadUI = true
   openAt(30, "Settings")
+  click(win(), "Map and arrow")
   for _ = 1, 80 do -- down past the first screen (the content shows about 480 px)
     local t = LevelingCodexPadFocus.target
     if t.padY and t.padY > 600 then break end
@@ -9061,7 +9093,7 @@ function S.tabGlow()
   openAt(20, "Tips")
   for _, b in ipairs(MOCK.buttons(win())) do
     if b.glow then
-      local selected = labelOf(b) == "Tips"
+      local selected = labelOf(b) == "Leveling"
       check(b.glow:IsShown() == not selected, "hover glow " .. (selected and "off" or "on") .. " for " .. labelOf(b))
     end
   end
@@ -9549,6 +9581,7 @@ function S.herbalismTab()
   MOCK.setSkill("Herbalism", 300, 300); MOCK.advance(1.2)
   check(profText():find("ROUTE COMPLETE") and profText():find("Black Lotus opens at 300"), "cap and Black Lotus")
   click(win(), "Settings")
+  click(win(), "Helpers")
   local cards = findButton(win(), function(label) return label == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("Herbalism"), "Settings explains Herbalism cards")
 end
@@ -9875,6 +9908,7 @@ function S.tailorTab()
   check(profText():find("Tailoring 150 / 225"), "the picked profession stays after reopening")
   MOCK.staleUnder(win(), "Professions")
   click(win(), "Settings")
+  click(win(), "Helpers")
   local cards = findButton(win(), function(l) return l == "Profession skill-up cards" end)
   check(cards and cards.tipText and cards.tipText:find("every profession the Codex guides", 1, true),
     "Settings: skill-up cards cover every guided profession")
@@ -10924,7 +10958,7 @@ function S.tabRowFits()
   for _, b in ipairs({ frame:GetChildren() }) do
     if b._type == "Button" and b.label and b.SetSelected then tabs[#tabs + 1] = b end
   end
-  check(#tabs == 10, "ten tabs (" .. #tabs .. ")")
+  check(#tabs == 6, "six tabs (" .. #tabs .. ")")
   local total = 0
   for _, b in ipairs(tabs) do total = total + b:GetWidth() end
   total = total - 12 * (#tabs - 1)
@@ -11430,6 +11464,7 @@ end
 function S.euiThemePick()
   if not D() then return end
   openAt(30, "Settings")
+  click(win(), "General")
   check(findButton(win(), function(l) return l == "External skin" end), "Settings offers the external UI theme")
   local before = LevelingCodexDB.theme
   click(win(), "Forever (teal)")
@@ -11440,6 +11475,7 @@ function S.euiThemePick()
   local v = _G.LevelingCodexQuestViewer
   if v and v:IsShown() then check(not (v.euiSkin and v.euiSkin:IsShown()), "the step window drops the external UI panel") end
   click(win(), "Settings")
+  click(win(), "General")
   click(win(), "External skin")
   check(LevelingCodexDB.euiTheme == "ellesmere", "external UI chosen again")
   check(win().euiSkin and win().euiSkin:IsShown(), "the external UI shell is back")
@@ -11457,6 +11493,7 @@ function S.euiAccent()
   MOCK.advance(0.5)
   check(not (win() and win():IsShown()), "an accent change leaves the window closed")
   openAt(30, "Settings")
+  click(win(), "General")
   local accent = MOCK.ns.C.accent
   check(accent[1] == 1 and accent[2] == 0.5 and accent[3] == 0, "the Codex follows external UI's new accent")
   local function shells()

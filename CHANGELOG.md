@@ -1,5 +1,12 @@
 # Leveling Codex
 
+## v0.31.0
+
+### A tidier Codex window
+
+- The tabs under the window are now groups: **Leveling** (This Level, Talents, Trainer, Macros and Tips), Quests, Professions, Loot, Stats and Settings. A group with several pages shows them as a strip of buttons above the page and opens the one you used last. The tab row no longer squeezes to fit.
+- Settings is split into pages instead of one long list: General, Questing, Map and arrow, Group, and Helpers (trainers, professions, gathering and the vendor).
+
 ## v0.30.7
 
 ### Dungeon guides
