@@ -185,6 +185,8 @@ function UnitXP() return MOCK.xp or 0 end
 function UnitXPMax() return MOCK.xpMax or 0 end
 function GetXPExhaustion() return MOCK.rested end
 function GetQuestLogRewardXP(id) return MOCK.rewardXP and MOCK.rewardXP[id] or 0 end
+-- MOCK.rewardMoney[questID]; a second return value like the client's, so tonumber(f()) breaks here too
+function GetQuestLogRewardMoney(id) return MOCK.rewardMoney and MOCK.rewardMoney[id] or 0, 0 end
 -- Death: MOCK.ghost = released, MOCK.corpse = { map, x, y } (percent) for C_DeathInfo.
 function UnitIsGhost() return MOCK.ghost or false end
 C_DeathInfo = {
@@ -2019,7 +2021,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetNumTrainerServices", "GetTrainerServiceInfo", "GetTrainerServiceSkillReq", "IsPlayerSpell", "AddonCompartmentFrame",
   "InputUtil", "IsUsingGamepad", "GamepadMode", "SmartNavigation", "SmartNavigation_MarkFrameIgnored",
   "SmartNavigation_ClearIgnoreStatus", "UnitIsGhost", "C_DeathInfo", "TakeTaxiNode", "ConfirmBinder", "StaticPopup_Hide",
-  "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestItemInfo", "GetQuestItemLink",
+  "UnitXP", "UnitXPMax", "GetXPExhaustion", "GetQuestLogRewardXP", "GetQuestLogRewardMoney", "GetQuestItemInfo", "GetQuestItemLink",
   "GetTrainerServiceCost", "IsTradeskillTrainer", "GetMoney", "C_SuperTrack", "GetItemCooldown", "OpenWorldMap",
   "IsInGroup", "IsInRaid", "GetNumSubgroupMembers", "UnitIsConnected", "C_ChatInfo", "SendChatMessage", "QuestLogPushQuest", "GetUnitSpeed", "issecretvalue",
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",

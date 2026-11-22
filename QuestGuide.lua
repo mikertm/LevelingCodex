@@ -834,7 +834,7 @@ end
 local function readyQuestXP()
   local total = 0
   for id, entry in pairs(Q.logEntries()) do
-    if entry.ready then total = total + (tonumber(try(GetQuestLogRewardXP, id)) or 0) end
+    if entry.ready then total = total + (tonumber((try(GetQuestLogRewardXP, id))) or 0) end
   end
   return total
 end

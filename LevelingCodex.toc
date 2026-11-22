@@ -93,6 +93,8 @@ JourneyDeeds.lua
 JourneyTales.lua
 JourneyQuestLog.lua
 JourneyLore.lua
+JourneyVoice.lua
+JourneyWilds.lua
 Minimap.lua
 Tracking.lua
 TalentGuide.lua

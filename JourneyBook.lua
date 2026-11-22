@@ -26,17 +26,17 @@ local FILTER_KINDS = {
   { dungeon = true, boss = true, elite = true, close = true, rare = true, wipe = true, run = true, pvp = true, bg = true, duel = true,
     milestone = true },
   { first = true, upgrade = true, cap = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
-    mount = true },
+    mount = true, mine = true, herb = true, skin = true, fish = true },
   { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true },
   { zone = true, flight = true, start = true, camp = true, mount = true, home = true, rest = true, milestone = true },
   { death = true, close = true, wipe = true, expired = true, abandon = true },
 }
 local FILTER_TIPS = { "Every moment.", "Quests and the stories they finished, and the ones you gave up.",
   "Dungeons, bosses, wipes, elites, rares, close calls, duels, battlegrounds and fights with other players.",
-  "Firsts, gear upgrades, crafting, professions, the auction house, your purse and your first mount.",
+  "Firsts, gear upgrades, crafting, professions, gathering and fishing, the auction house, your purse and your first mount.",
   "Companions, dungeon parties, resurrections, trades, duels, waves and campfires.",
   "New lands, flight paths, inns, new homes, campfires and the miles behind you.", "Every fall, wipe, near miss and lost cause." }
-local showAll, mapPick, highlight
+local storyLevel, mapPick, highlight
 local confirmReset, confirmAt
 
 local function duration(seconds)
@@ -94,12 +94,16 @@ end
 local function inkPalette(C)
   local P = setmetatable({ book = true }, { __index = C })
   local ink, soft = C.ink or C.light, C.inkSoft or C.dim
-  P.light, P.dim = ink, soft
   if not C.eui then
-    local g = C.gold
-    P.gold = { g[1] * 0.55, g[2] * 0.55, g[3] * 0.55, 1 }
-    P.green = { 0.12, 0.45, 0.12 }
+    -- every theme's book is old paper in sepia ink, so the pages read as a journal and not a form
+    P.parch = { 0.92, 0.85, 0.7, 1 }
+    ink, soft = { 0.22, 0.14, 0.07 }, { 0.43, 0.31, 0.18 }
+    P.ink, P.inkSoft = ink, soft
+    P.gold = { 0.52, 0.33, 0.08, 1 }
+    P.green = { 0.12, 0.42, 0.12 }
+    P.accent = { 0.45, 0.2, 0.1, 1 }
   end
+  P.light, P.dim = ink, soft
   P.edge = { ink[1], ink[2], ink[3], 0.45 }
   P.edgeSoft = { ink[1], ink[2], ink[3], 0.22 }
   P.wash = { ink[1], ink[2], ink[3], 0.1 }
@@ -407,7 +411,7 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
   -- the land where most of the chapter happened names it
   local count, zoneList, best, bestN = {}, {}, nil, 0
   for _, e in ipairs(events) do
-    local zn = e.m and select(2, zoneOf(e.m))
+    local zn = e.m and J.landOf(e.m)
     if zn then
       if not count[zn] then count[zn] = 0; zoneList[#zoneList + 1] = zn end
       count[zn] = count[zn] + 1
@@ -573,8 +577,15 @@ local function cover(V)
   U.T(V.name:upper(), 112, 34, 420, "title", C.titleInk or C.light)
   local rule = U.rect(112, 66, 300, 1, { 1, 1, 1, 1 }, "border", 3, "fade")
   ns.fade(rule, "HORIZONTAL", gold[1], gold[2], gold[3], 0.7, 0)
-  U.T((V.race ~= "" and (V.race .. " ") or "") .. V.className .. ", level " .. lvl
-    .. (V.curName and ("  -  now in " .. V.curName) or ""), 112, 72, 420, "small", C.light)
+  local ep = J.voice and J.voice.epithet(j)
+  local ex = 112
+  if ep then
+    local _, fs = U.T(ep, 112, 72, 200, "small", gold)
+    ex = 112 + math.min(200, math.ceil(tonumber(fs and fs.GetStringWidth and fs:GetStringWidth()) or 90)) + 10
+    if fs and fs.SetWordWrap then fs:SetWordWrap(false) end
+  end
+  U.T((ep and "-  " or "") .. (V.race ~= "" and (V.race .. " ") or "") .. V.className .. ", level " .. lvl
+    .. (V.curName and ("  -  now in " .. V.curName) or ""), ex, 72, 532 - ex, "small", C.light)
   U.T("Day " .. dayOf(j, now()) .. ", " .. plural(#j.events, "moment") .. " written", 112, 86, 420, "small", C.dim)
   -- a line about the land you stand in, like a book's epigraph
   local tale = V.curName and lore(V.curName)
@@ -798,7 +809,8 @@ local function overviewPage(V, y)
     ry = ry + 80
   end
   ry = ry + 8
-  R.U.btn("Read the story", 0, ry, 150, function() openPage(P_STORY, R.U) end, false, "Every chapter, level by level.")
+  R.U.btn("Read the story", 0, ry, 150, function() storyLevel = l; openPage(P_STORY, R.U) end, false,
+    "Turn to your chapter; every level of your story is its own page.")
   if #chapters > 1 then R.U.T(plural(#chapters, "chapter") .. " so far", 160, ry + 6, R.W - 160, "small", R.C.dim) end
   ry = ry + 34
   ry = palsCard(R, ry, 4)
@@ -889,7 +901,7 @@ local function mapPage(V, y)
     -- what happened here
     local n, deaths, levels, quests, bosses = 0, 0, 0, 0, 0
     for _, e in ipairs(j.events) do
-      if e.m and select(2, zoneOf(e.m)) == name or e.m == mapPick then
+      if e.m and J.landOf(e.m) == name or e.m == mapPick then
         n = n + 1
         if e.k == "death" then deaths = deaths + 1 elseif e.k == "level" then levels = levels + 1
         elseif e.k == "quest" or e.k == "chain" or e.k == "elite" then quests = quests + 1
@@ -941,51 +953,285 @@ end
 ----------------------------------------------------------------------------
 -- Page: Story
 ----------------------------------------------------------------------------
+
+-- The Story reads one chapter (one level) per spread, like the pages of a book: the chapter's
+-- opening, its plate and prose on the left, everything that happened on the right, and the page
+-- turns at the bottom. Turning back past the first chapter opens the contents and the preface.
+local CONTENTS = "contents"
+local function allChapters(j)
+  local seen, list = {}, {}
+  for _, e in ipairs(j.events) do
+    local l = tonumber(e.l) or 1
+    if not seen[l] then seen[l] = true; list[#list + 1] = l end
+  end
+  table.sort(list)
+  return list -- oldest first
+end
+local function chapterIndex(list, l)
+  for i, v in ipairs(list) do if v == l then return i end end
+end
+-- The chapter the Story shows: the one picked, else your latest.
+local function storyAt(list)
+  if storyLevel == CONTENTS then return CONTENTS end
+  if storyLevel and chapterIndex(list, storyLevel) then return storyLevel end
+  return list[#list] or CONTENTS
+end
+function J.openChapter(l)
+  storyLevel = l
+  openPage(P_STORY, ns.ui)
+end
+
+local function turnTo(U, l)
+  storyLevel = l
+  U.refreshTop()
+end
+
+local function chapterLabel(l) return "Chapter " .. roman(l) end
+
+-- The top of the Story: the filters, then the turning bar (Contents, back, where you are, on).
 local function storyFilters(V, y)
-  return y + V.U.segments(EDGE, y, V.W - 2 * EDGE, FILTERS, filter, function(i) filter = i; V.U.refresh() end, FILTER_TIPS) + 8
+  local U = V.U
+  y = y + U.segments(EDGE, y, V.W - 2 * EDGE, FILTERS, filter, function(i) filter = i; U.refresh() end, FILTER_TIPS) + 6
+  local list = allChapters(V.j)
+  local at = storyAt(list)
+  local i = at ~= CONTENTS and chapterIndex(list, at) or 0
+  local prev = i > 1 and list[i - 1] or (i == 1 and CONTENTS) or nil
+  local nxt = (at == CONTENTS and list[1]) or (i > 0 and list[i + 1]) or nil
+  local x = EDGE
+  U.btn("Contents", x, y, 96, function() turnTo(U, CONTENTS) end, at == CONTENTS, "The preface and every chapter of your story.")
+  U.btn("< Previous chapter", x + 104, y, 150, function() if prev then turnTo(U, prev) end end, false,
+    prev and (prev == CONTENTS and "Back to the contents." or ("Turn back to " .. chapterLabel(prev) .. ", level " .. prev .. "."))
+    or "This is the first page.")
+  local mid = at == CONTENTS and "THE CONTENTS" or ("CHAPTER " .. roman(at) .. "  -  " .. i .. " OF " .. #list)
+  U.T(mid, x + 262, y + 6, V.W - 2 * EDGE - 524, "label", V.C.gold, "CENTER")
+  U.btn("Next chapter >", V.W - EDGE - 254, y, 150, function() if nxt then turnTo(U, nxt) end end, false,
+    nxt and ("Turn to " .. chapterLabel(nxt) .. ", level " .. nxt .. ".") or "The page after this one is still blank.")
+  U.btn("Latest", V.W - EDGE - 96, y, 96, function() turnTo(U, list[#list] or CONTENTS) end, at == list[#list],
+    "Your chapter: the one being written now.")
+  return y + 32
+end
+
+-- The moments of a chapter in order, as a timeline with the days marked; returns the new y.
+local function momentRows(V, list, x, y, w, band)
+  local U, C, j = V.U, V.C, V.j
+  local spineTop, spineEnd, lastDay
+  local textW = w - 34
+  for _, e in ipairs(list) do
+    local day = dayOf(j, e.t)
+    if day ~= lastDay then
+      if lastDay then y = y + 4 end
+      U.T("Day " .. day, x, y, w, "small", C.gold)
+      U.rect(x + 46, y + 7, w - 46, 1, { band[1], band[2], band[3], 0.3 }, "border", 3)
+      y = y + 18
+    end
+    lastDay = day
+    spineTop = spineTop or (y + 10)
+    spineEnd = y + 10
+    U.icon(ICON[e.k] or ICON.quest, x, y, 22, e.s, e.d)
+    local th = U.T(e.s, x + 30, y + 3, textW, "body", e.k == "death" and DEATH_INK or C.ink)
+    local rowH = math.max(24, th + 6)
+    if e.d then rowH = rowH + U.T(e.d, x + 30, y + th + 5, textW, "small", C.inkSoft) + 2 end
+    if e.m and e.x then
+      U.hit(x - 4, y - 2, w + 8, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
+        mapPick, highlight = e.m, e
+        openPage(P_MAP, U)
+      end, "Moment " .. e.s)
+    end
+    y = y + rowH + 6
+  end
+  if spineTop and spineEnd > spineTop then
+    U.rect(x + 10, spineTop, 2, spineEnd - spineTop, { band[1], band[2], band[3], 0.5 }, "border", 3)
+  end
+  return y
+end
+
+-- One chapter across the spread.
+local function chapterSpread(V, y, l, events)
+  local L, R, j, lvl = V.L, V.R, V.j, V.lvl
+  local LU, LC = L.U, L.C
+  local list, opening = {}, nil
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if (e.k == "level" or e.k == "start") and not opening then opening = e else list[#list + 1] = e end
+  end
+  local rec = ns.stats and ns.stats.levelRecord(l)
+  local count, zoneList, best, bestN = {}, {}, nil, 0
+  local first, latest
+  for _, e in ipairs(events) do
+    local zn = e.m and J.landOf(e.m)
+    if zn then
+      if not count[zn] then count[zn] = 0; zoneList[#zoneList + 1] = zn end
+      count[zn] = count[zn] + 1
+      if count[zn] > bestN then best, bestN = zn, count[zn] end
+    end
+    local t = tonumber(e.t)
+    if t then first = (not first or t < first) and t or first; latest = (not latest or t > latest) and t or latest end
+  end
+  local band = J.bandColor(l)
+  -- left: the chapter's opening
+  local ly = y
+  LU.rect(0, ly, L.W, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
+  ly = ly + 12
+  LU.T("CHAPTER " .. roman(l), 0, ly, L.W, "title", LC.gold, "CENTER")
+  ly = ly + 30
+  local days
+  if l == lvl then days = "the page you are writing now"
+  elseif first then
+    local d1, d2 = dayOf(j, first), dayOf(j, latest)
+    days = d1 == d2 and ("day " .. d1) or ("days " .. d1 .. " to " .. d2)
+  end
+  ly = ly + LU.T("Level " .. l .. (best and ("  -  " .. best) or ""), 0, ly, L.W, "head", LC.ink, "CENTER") + 8
+  if days then ly = ly + LU.T(days, 0, ly, L.W, "small", LC.inkSoft, "CENTER") + 2 end
+  ly = ly + ornament(LU, LC, 0, ly + 2, L.W) + 10
+  if best then
+    local reached
+    for _, z in pairs(j.zones) do
+      if type(z) == "table" and z.name == best and tonumber(z.level) == l then reached = true end
+    end
+    local tale = reached and lore(best)
+    if tale then ly = ly + LU.T(tale, 10, ly, L.W - 20, "small", LC.inkSoft, "CENTER") + 10 end
+  end
+  if opening then
+    ly = ly + LU.T('"' .. opening.s .. '"', 16, ly, L.W - 32, "body", LC.inkSoft, "CENTER") + 12
+  end
+  local plateMap = chapterMap(j, l, events)
+  if plateMap then
+    local pw = L.W - 20
+    local ph = math.floor(pw * 668 / 1002)
+    drawPlate(L, plateMap, 10, ly, pw, ph, 11, l)
+    LU.hit(10, ly, pw, ph, mapLabel(j, plateMap) .. " at level " .. l, "Click to open it on the map.", function()
+      mapPick, highlight = plateMap, nil
+      openPage(P_MAP, LU)
+    end, "Plate level " .. l)
+    ly = ly + ph + 4
+    ly = ly + LU.T(mapLabel(j, plateMap) .. ", as you walked it at level " .. l, 10, ly, pw, "small", LC.inkSoft, "CENTER") + 12
+  end
+  local prose = J.lore and J.lore.chapterProse and J.lore.chapterProse(l, events, rec, l == lvl)
+  if prose and prose ~= "" then ly = ly + initialed(LU, LC, prose, 0, ly, L.W, "body", LC.ink) + 12 end
+  if rec then
+    local cells = { { duration(rec.seconds), "on the road" }, { tostring(tonumber(rec.quests) or 0), "quests" },
+      { tostring(tonumber(rec.kills) or 0), "foes" }, { tostring(tonumber(rec.deaths) or 0), "falls" } }
+    local cw = math.floor((L.W - 18) / 4)
+    for i, c in ipairs(cells) do
+      local cx = (i - 1) * (cw + 6)
+      L.U.box(cx, ly, cw, 44, LC.panel)
+      LU.T(c[1], cx, ly + 7, cw, "head", LC.ink, "CENTER")
+      LU.T(c[2], cx, ly + 27, cw, "small", LC.inkSoft, "CENTER")
+    end
+    ly = ly + 54
+  end
+  if #zoneList > 1 then ly = ly + LU.T("Through " .. table.concat(zoneList, ", ") .. ".", 0, ly, L.W, "small", LC.inkSoft, "CENTER") + 6 end
+  -- right: what happened
+  local ry = y
+  local sub = #list == 0 and nil or (plural(#list, "moment") .. (filter ~= 1 and ("  -  " .. FILTERS[filter]:lower()) or ""))
+  ry = ry + R.U.sectionTitle("WHAT HAPPENED", ry, sub)
+  if #list == 0 then
+    local quiet = filter ~= 1 and ("No " .. FILTERS[filter]:lower() .. " in this chapter. Choose All to read the whole of it.")
+      or "A quiet chapter: nothing else written yet. The next moment will be the first line on this page."
+    ry = ry + R.U.T(quiet, 10, ry, R.W - 20, "body", R.C.inkSoft) + 10
+  else
+    ry = momentRows(R, list, 0, ry, R.W, band)
+  end
+  return ly, ry
+end
+
+-- Who tells the story and what the book calls you: the narrator's voice and your last name.
+local function narratorCard(CV, y)
+  local Vo = J.voice
+  if not Vo then return y end
+  local U, C, W = CV.U, CV.C, CV.W
+  local top = y
+  y = y + 12
+  U.T("THE NARRATOR", 14, y, W - 28, "label", C.inkSoft)
+  y = y + 18
+  local lit = 1
+  for i, s in ipairs(Vo.STYLES) do if s == Vo.style() then lit = i end end
+  y = y + U.segments(14, y, W - 28, Vo.STYLE_LABELS, lit, function(i)
+    Vo.setStyle(Vo.STYLES[i])
+    U.refresh()
+  end, Vo.STYLE_TIPS) + 6
+  y = y + U.T(Vo.STYLE_TIPS[lit] .. " Chapters already written keep their moments; the prose is retold in the new voice.", 14, y,
+    W - 28, "small", C.inkSoft) + 10
+  local first, last = Vo.names()
+  U.T("YOUR NAME", 14, y, W - 28, "label", C.inkSoft)
+  y = y + 18
+  y = y + U.T(first .. (last and (" " .. last) or "  (no last name read)"), 14, y, W - 28, "body", C.ink) + 6
+  local b = U.btn("Set last name", 14, y, 140, function()
+    ns.showMacroCopy({ copyTitle = "Your last name", body = last or "", paste = true,
+      help = "WoW Forever gives every character a first and a last name. Type the last name the book should use, "
+        .. "leave it empty to use the one the game gives, or type - for none.",
+      onAccept = function(text)
+        local ok, why = Vo.setSurname(text)
+        if ok then ns.ui.refresh() end
+        return ok, why
+      end })
+  end, false, "Change the last name the book uses.")
+  if b then b.codexLabel = "Set last name" end
+  y = y + 34
+  page(U, C, 0, top, W, y - top)
+  return y + 12
+end
+
+-- The contents: the preface on the left, every chapter listed on both sheets.
+local function contentsSpread(V, y, list, byLevel)
+  local L, R, j = V.L, V.R, V.j
+  local ly = y + L.U.sectionTitle("THE STORY SO FAR", y)
+  local lines = J.lore and J.lore.preface and J.lore.preface(j, V) or nil
+  if lines then ly = ly + initialed(L.U, L.C, lines, 0, ly, L.W, "body", L.C.ink) + 16 end
+  ly = narratorCard(L, ly)
+  if #list == 0 then
+    ly = ly + L.U.T("The first page is still blank. Your story is written here as you go: every level, every land, every quest and every fall.",
+      0, ly, L.W, "body", L.C.ink) + 10
+    return ly, y
+  end
+  local ry = y + R.U.sectionTitle("CONTENTS", y, plural(#list, "chapter") .. " written")
+  -- the list runs down the right sheet, then carries on under the preface
+  local rowH = 24
+  local room = math.max(8, math.floor((ly - ry) / rowH) + 12)
+  for n, l in ipairs(list) do
+    local CV = n <= room and R or L
+    local cy = CV == R and ry or ly
+    local events = byLevel[l] or {}
+    local zn
+    for _, e in ipairs(events) do if e.m then zn = J.landOf(e.m); if zn then break end end end
+    local band = J.bandColor(l)
+    CV.U.rect(0, cy + 4, 3, 14, { band[1], band[2], band[3], 0.9 }, "border", 3)
+    CV.U.T(roman(l), 10, cy + 4, 50, "label", CV.C.gold)
+    CV.U.T("Level " .. l .. (zn and ("  -  " .. zn) or ""), 62, cy + 4, CV.W - 150, "body", CV.C.ink)
+    CV.U.T(plural(#events, "moment"), CV.W - 90, cy + 5, 90, "small", CV.C.inkSoft, "RIGHT")
+    CV.U.hit(0, cy, CV.W, rowH - 2, chapterLabel(l) .. ": level " .. l, "Click to turn to this chapter.", function()
+      turnTo(CV.U, l)
+    end, "Chapter level " .. l)
+    if CV == R then ry = ry + rowH else ly = ly + rowH end
+  end
+  return ly, ry
 end
 
 local function storyPage(V, y)
-  local L, R, j = V.L, V.R, V.j
-  local ly = y + L.U.sectionTitle("THE STORY SO FAR", y)
-  local ry = y
-  local chapters, byLevel = chapterData(j)
-  -- the right page opens with the book's own preface
-  local lines = J.lore and J.lore.preface and J.lore.preface(j, V) or nil
-  if lines then
-    local top = ry
-    ry = ry + 14
-    ry = ry + initialed(R.U, R.C, lines, 14, ry, R.W - 28, "body", R.C.ink) + 12
-    page(R.U, R.C, 0, top, R.W, ry - top)
-    ry = ry + 12
+  local j = V.j
+  local list = allChapters(j)
+  local _, byLevel = chapterData(j)
+  local at = storyAt(list)
+  if at == CONTENTS then
+    V.pageNo = 2
+    return contentsSpread(V, y, list, byLevel)
   end
-  if #chapters == 0 then
-    page(L.U, L.C, 0, ly, L.W, 70)
-    L.U.T("The first page is still blank. Your story is written here as you go: every level, every land, every quest and every fall.",
-      16, ly + 14, L.W - 32, "body", L.C.ink)
-    ly = ly + 78
+  V.pageNo = 2 + 2 * (chapterIndex(list, at) or 1)
+  local ly, ry = chapterSpread(V, y, at, byLevel[at] or {})
+  -- the page turns at the foot of each sheet
+  local by = math.max(ly, ry) + 8
+  local i = chapterIndex(list, at) or 1
+  local prev = list[i - 1]
+  local nxt = list[i + 1]
+  V.L.U.btn(prev and ("< " .. chapterLabel(prev)) or "< Contents", 0, by, 150, function() turnTo(V.L.U, prev or CONTENTS) end,
+    false, prev and ("Turn back to level " .. prev .. ".") or "Back to the preface and the contents.")
+  if nxt then
+    V.R.U.btn(chapterLabel(nxt) .. " >", V.R.W - 150, by, 150, function() turnTo(V.R.U, nxt) end, false,
+      "Turn the page to level " .. nxt .. ".")
+  else
+    V.R.U.T("To be continued...", 0, by + 6, V.R.W, "small", V.R.C.inkSoft, "RIGHT")
   end
-  local shown = 0
-  for _, l in ipairs(chapters) do
-    if shown >= 4 and not showAll then break end
-    local onLeft = ly <= ry
-    local CV = onLeft and L or R
-    local ny = drawChapter(CV, l, byLevel[l], 0, onLeft and ly or ry, CV.W, showAll and 999 or 8)
-    if ny then
-      shown = shown + 1
-      if onLeft then ly = ny + 12 else ry = ny + 12 end
-    end
-  end
-  if #chapters > 4 or showAll then
-    local CV = ly <= ry and L or R
-    local by = ly <= ry and ly or ry
-    CV.U.btn(showAll and "Show the last chapters" or "Read the whole story", 0, by, 200, function()
-      showAll = not showAll
-      CV.U.refresh()
-    end, showAll)
-    if CV == L then ly = by + 32 else ry = by + 32 end
-  end
-  return ly, ry
+  return by + 30, by + 30
 end
 
 ----------------------------------------------------------------------------
@@ -1216,7 +1462,7 @@ local function render()
   if ns.settingsLost or not st then st = ns.stats and (ns.stats.data()) end
   local _, curName = here()
   local V = { U = U, C = C, W = BOOK_W, j = J.data(), lvl = level(), totals = st and st.totals or {}, curName = curName,
-    name = Q.plain(try(UnitName, "player") or "Adventurer"), className = Q.plain((try(UnitClass, "player")) or ""),
+    name = J.voice and J.voice.fullName() or Q.plain(try(UnitName, "player") or "Adventurer"), className = Q.plain((try(UnitClass, "player")) or ""),
     race = Q.plain((try(UnitRace, "player")) or "") }
   local P = inkPalette(C)
   V.readable = function(c) return readable(C, c) end
@@ -1237,11 +1483,19 @@ local function render()
   U.rect(lx + PAD + 40, headY + 16, COL_W - 80, 1, { ink[1], ink[2], ink[3], 0.25 }, "border")
   U.rect(rx + PAD + 40, headY + 16, COL_W - 80, 1, { ink[1], ink[2], ink[3], 0.25 }, "border")
   local draw = pg.draw or overviewPage
-  local ly, ry = draw(V, headY + 30)
+  -- a page that fails keeps the book standing: a line says so, and the chat names the error once
+  local ok, ly, ry = pcall(draw, V, headY + 30)
+  if not ok then
+    local why = Q.plain(tostring(ly))
+    J.pageError = why
+    if not J.pageErrorSaid then J.pageErrorSaid = true; ns.say("journey page error: " .. why) end
+    U.T("This page hit a snag and could not be drawn: " .. why, lx + PAD, headY + 30, COL_W, "small", DEATH_INK)
+    ly, ry = headY + 90, headY + 90
+  end
   ry = ry or ly
   local bottom = math.max(ly, ry, top + 260) + 6
   local h = bottom - top + FOOTER
-  local n = lit * 2
+  local n = V.pageNo or lit * 2
   U.T("- " .. n .. " -", lx + PAD, bottom + 8, COL_W, "small", P.inkSoft, "CENTER")
   U.T("- " .. (n + 1) .. " -", rx + PAD, bottom + 8, COL_W, "small", P.inkSoft, "CENTER")
   sheet(V, P, lx, top, h, "left")

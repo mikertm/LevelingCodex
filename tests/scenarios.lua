@@ -12693,7 +12693,7 @@ function S.journeyTab()
     { "Map", "THE MAP", "YOUR JOURNAL" },
     { "Trophies", "FIRSTS", "NEMESES", "CRAFT MILESTONES" },
     { "Companions", "FELLOW ADVENTURERS", "THE JOURNEY OF" },
-    { "Story", "THE STORY SO FAR", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level) },
+    { "Story", "WHAT HAPPENED", "CHAPTER " .. MOCK.ns.journey.roman(MOCK.level), "OF 2" },
   }
   for _, p in ipairs(pages) do
     if p[1] then click(win(), p[1]) end
@@ -12755,8 +12755,11 @@ function S.journeyLore()
     check(questText(win(), t), "the book's Overview spread has " .. t)
   end
   click(win(), "Story")
-  check(questText(win(), "is the story of Tester"), "the Story opens with the preface")
-  check(questText(win(), "- 4 -"), "the Story spread has its page numbers")
+  check(questText(win(), "- 4 -") and questText(win(), "WHAT HAPPENED"), "the Story opens on your chapter, with its page numbers")
+  click(win(), "Contents")
+  check(questText(win(), "THE STORY SO FAR") and questText(win(), "THE NARRATOR"), "the contents open with the preface and the narrator")
+  check(J.lore.preface(j, { className = "Warrior", race = "Human", totals = {} }):find("Tester", 1, true), "the preface names you")
+  check(questText(win(), "- 2 -"), "the contents are the first pages")
   click(win(), "Map")
   check(questText(win(), "THE MAP"), "the Map spread draws")
   if not MOCK.minimal then
@@ -12801,7 +12804,9 @@ function S.journeyLore()
   check(prose:find("Elwynn Forest", 1, true) and prose:find("still", 1, true), "the chapter prose names the land and the open page")
   check(not prose:find("%", 1, true), "the chapter prose fills every word")
   click(win(), "Story")
-  check(questText(win(), "Saddled up") or questText(win(), "Rode out of"), "the story has the first ride")
+  click(win(), "Latest")
+  local ride = journeyHas("mount")
+  check(ride and questText(win(), ride.s), "the story has the first ride")
   for _, e in ipairs(j.events) do check(not e.s:find("[\128-\255]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
@@ -12913,6 +12918,7 @@ function S.journeyTales()
   click(win(), "Journey")
   click(win(), "Quest Log")
   check(questText(win(), "THE QUEST LOG"), "the Quest Log page draws")
+  check(MOCK.ns.journey.pageError == nil, "the Quest Log page draws without an error: " .. tostring(MOCK.ns.journey.pageError))
   if MOCK.minimal then return end
   for _, t in ipairs({ "2 quests in hand", "ELWYNN FOREST", "Wolves Across the Border", "GOALS",
     "Tough Wolf Meat: 4/8" }) do
@@ -13026,6 +13032,155 @@ function S.journeyTales()
   check(questText(win(), "Someone brought you back from the dead"), "today's entry tells the MMO moments")
   for _, e in ipairs(j.events) do
     check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are ASCII with no template left: " .. e.s)
+  end
+end
+
+-- Journey wilds: mining, herbs, skinning and fishing. A gathering cast and its loot lines make a
+-- haul: the first of a kind, a new material, a rare find, the tenth and a long session are moments,
+-- the Trophies page counts them and the chapter's prose mentions them.
+function S.journeyWilds()
+  MOCK.mapInfo = STATS_MAPS
+  MOCK.spells[2575], MOCK.spells[7620] = "Mining", "Fishing"
+  MOCK.lootItems[2770] = { name = "Copper Ore", quality = 1 }
+  MOCK.lootItems[774] = { name = "Malachite", quality = 2 }
+  MOCK.lootItems[6291] = { name = "Raw Brilliant Smallfish", quality = 1 }
+  MOCK.lootItems[6351] = { name = "Dented Crate", quality = 1 }
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local j = LevelingCodexCharDB.journey
+  local function loot(id, name, n)
+    MOCK.event("CHAT_MSG_LOOT", "You receive loot: |cffffffff|Hitem:" .. id .. "::::::::|h[" .. name .. "]|h|r" .. (n and ("x" .. n) or "") .. ".")
+  end
+  local function mine(withGem)
+    MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 2575)
+    loot(2770, "Copper Ore", 2)
+    if withGem then loot(774, "Malachite") end
+    MOCK.advance(3.5)
+  end
+  if MOCK.minimal then -- no spell or loot events: the page still draws
+    slash("")
+    click(win(), "Journey")
+    click(win(), "Trophies")
+    check(questText(win(), "IN THE WILDS"), "the Trophies page has the wilds in the minimal client")
+    return
+  end
+  loot(2770, "Copper Ore") -- loot with no gathering cast first is no vein
+  MOCK.advance(3.5)
+  check(J.wilds.count("mining") == 0, "loot without a gathering cast counts nothing")
+  mine()
+  check(J.wilds.count("mining") == 1 and journeyHas("mine", "Copper Ore"), "the first vein is a moment")
+  mine(true)
+  check(journeyHas("mine", "Malachite") and j.wilds.mining.best.name == "Malachite", "a rare find is a moment and the best find")
+  for _ = 3, 10 do mine() end
+  local tenth
+  for _, e in ipairs(j.events) do if e.k == "mine" and e.d == "10 veins" then tenth = e end end
+  check(J.wilds.count("mining") == 10 and tenth, "the tenth vein is a milestone")
+  check(j.wilds.mining.items["Copper Ore"] == 20, "the ore is counted (" .. tostring(j.wilds.mining.items["Copper Ore"]) .. ")")
+  MOCK.advance(601)
+  check(journeyHas("mine", "10 veins in a row") or (function()
+    for _, e in ipairs(j.events) do if e.k == "mine" and e.d and e.d:find("in a row") then return true end end
+  end)(), "a long session is told when it ends")
+  -- fishing: a catch per cast, a new fish, something odd from the water
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 7620)
+  loot(6291, "Raw Brilliant Smallfish")
+  MOCK.advance(3.5)
+  check(J.wilds.count("fishing") == 1 and journeyHas("fish", "Raw Brilliant Smallfish"), "the first catch is a moment")
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 7620)
+  loot(6351, "Dented Crate")
+  MOCK.advance(3.5)
+  check(journeyHas("fish", "Dented Crate"), "something odd from the water is a moment")
+  -- the prose and the Trophies page
+  local prose = J.lore.chapterProse(MOCK.level, j.events, nil, true)
+  check(prose:find("vein", 1, true) and prose:find("fish", 1, true), "the chapter's prose tells the gathering and the fishing: " .. prose)
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Trophies")
+  check(questText(win(), "IN THE WILDS") and questText(win(), "Veins mined") and questText(win(), "Best find: Malachite"),
+    "the Trophies page has the wilds")
+  click(win(), "Story")
+  click(win(), "Latest")
+  click(win(), "Fortunes")
+  check(questText(win(), "Malachite"), "the Fortunes filter keeps gathering")
+  for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
+end
+
+-- Journey voice: a first and last name, the narrator, traits and the epithet; the Story turns a
+-- level per spread.
+function S.journeyVoice()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local j = LevelingCodexCharDB.journey
+  local first, last = J.voice.names()
+  check(first == "Tester" and last == nil, "a name without a surname reads as a first name")
+  check(J.voice.setSurname("Ashford") and select(2, J.voice.names()) == "Ashford", "a last name can be set")
+  check(not J.voice.setSurname("Ash<ford>"), "a last name is letters only")
+  check(J.voice.epithet(j) == nil or type(J.voice.epithet(j)) == "string", "the epithet is a word or nothing")
+  for i = 1, 3 do
+    MOCK.level = MOCK.level + 1
+    MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
+    MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
+    MOCK.advance(2.1)
+  end
+  slash("")
+  click(win(), "Journey")
+  check(questText(win(), "TESTER ASHFORD"), "the cover carries the full name")
+  click(win(), "Story")
+  check(questText(win(), "CHAPTER " .. J.roman(MOCK.level)), "the Story opens on your chapter")
+  click(win(), "< Previous chapter")
+  check(questText(win(), "CHAPTER " .. J.roman(MOCK.level - 1)), "Previous turns back a level")
+  click(win(), "Next chapter >")
+  check(questText(win(), "CHAPTER " .. J.roman(MOCK.level)), "Next turns forward again")
+  click(win(), "Contents")
+  check(questText(win(), "CONTENTS") and findButton(win(), function(l) return l == "Chapter level " .. (MOCK.level - 2) end),
+    "the contents list every chapter")
+  findButton(win(), function(l) return l == "Chapter level " .. (MOCK.level - 2) end):Click()
+  check(questText(win(), "CHAPTER " .. J.roman(MOCK.level - 2)), "a chapter in the contents opens it")
+  -- the narrator changes the voice, and each voice reads differently
+  click(win(), "Contents")
+  local seen = {}
+  for _, label in ipairs({ "Chronicler", "Fireside", "Bard" }) do
+    click(win(), label)
+    check(J.voice.style() == label:lower():gsub("chronicler", "chronicle"), "the narrator is " .. label)
+    seen[J.lore.preface(j, { className = "Warrior", race = "Human", totals = {} })] = true
+  end
+  local n = 0
+  for _ in pairs(seen) do n = n + 1 end
+  check(n == 3, "the three narrators tell the preface three ways")
+  check(J.lore.preface(j, { className = "Warrior", race = "Human", totals = {} }):find("Ashford", 1, true), "the preface uses the last name")
+  click(win(), "Set last name")
+  local copy = _G.LevelingCodexCopy
+  check(copy and copy:IsShown(), "Set last name opens the box")
+  copy.edit:SetText("-")
+  click(copy, "Use this code")
+  check(select(2, J.voice.names()) == nil, "a dash means no last name")
+  for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
+end
+
+-- The window's height: Settings steps it, Fit the screen fills the screen, Normal puts it back.
+function S.windowHeight()
+  S.login()
+  slash("")
+  local f = _G.LevelingCodexFrame
+  check(math.floor(f:GetHeight() + 0.5) == 620, "the window starts at 620 (" .. tostring(f:GetHeight()) .. ")")
+  click(win(), "Settings")
+  click(win(), "Height +")
+  check(math.floor(f:GetHeight() + 0.5) == 700, "Height + makes it taller (" .. tostring(f:GetHeight()) .. ")")
+  click(win(), "Fit the screen")
+  check(f:GetHeight() > 900 and f:GetHeight() <= 1080, "Fit the screen fills the screen (" .. tostring(f:GetHeight()) .. ")")
+  click(win(), "Normal")
+  check(math.floor(f:GetHeight() + 0.5) == 620, "Normal puts it back")
+  local grip = _G.LevelingCodexSizeGrip
+  check(grip, "the window has a size grip")
+  if grip then
+    MOCK.cursor = { 500, 500 }
+    grip:GetScript("OnMouseDown")(grip)
+    MOCK.cursor = { 500, 400 }
+    grip:GetScript("OnUpdate")(grip, 0.1)
+    grip:GetScript("OnMouseUp")(grip)
+    check(f:GetHeight() > 650, "dragging the grip down makes it taller (" .. tostring(f:GetHeight()) .. ")")
   end
 end
 
