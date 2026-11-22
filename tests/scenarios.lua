@@ -11206,6 +11206,21 @@ function S.auctionBigScan()
       "a broken item is skipped and the scan finishes")
     check(table.concat(MOCK.ns.auctionDebugLines(), " "):find("auction scan error: row", 1, true), "/codex debug names the error")
   end
+  -- with the clock: game frames that run long (the mock's frames pass 50 ms or more) make the scan
+  -- read smaller slices and rest, and it still finishes
+  do
+    local A = MOCK.ns.auction
+    local c = 0
+    debugprofilestop = function() c = c + 0.02; return GetTime() * 1000 + c end
+    A.store().fullAt, A.store().fullTriedAt = 0, 0
+    MOCK.advance(1)
+    A.fullScan()
+    MOCK.advance(60)
+    local dbg = table.concat(MOCK.ns.auctionDebugLines(), " ")
+    local slow = tonumber(dbg:match("frames %((%d+) slow%)"))
+    check(not A.scanning() and slow and slow > 0 and dbg:find("longest slice", 1, true),
+      "slow game frames cut the slices and the scan finishes (" .. tostring(slow) .. " slow)")
+  end
   debugprofilestop = clock
   MOCK.closeAuction()
 end

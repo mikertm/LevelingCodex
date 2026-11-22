@@ -373,8 +373,9 @@ end
 -- Fast). Without debugprofilestop it reads A.ROWS_NO_CLOCK rows a frame.
 A.SPEEDS = { { "Smooth", 4 }, { "Balanced", 8 }, { "Fast", 16 } }
 A.ROWS_NO_CLOCK = 250
-A.SLOW_FRAME, A.MIN_BUDGET = 50, 1.5 -- ms: a client frame this long cuts the next slice to MIN_BUDGET
-A.CAP_START, A.CAP_MIN, A.CAP_MAX = 1000, 50, 20000 -- rows per slice, adapted to how the client keeps up
+A.SLOW_FRAME, A.MIN_BUDGET = 40, 1.5 -- ms: a client frame this long cuts the next slice to MIN_BUDGET
+A.CAP_START, A.CAP_MIN, A.CAP_MAX = 300, 50, 20000
+A.BREATHER = 0.1 -- s without reading after a slow client frame -- rows per slice, adapted to how the client keeps up
 function A.budget()
   local want = ns.db().auctionScanSpeed
   for _, e in ipairs(A.SPEEDS) do if e[2] == want then return e[2] end end
@@ -430,10 +431,19 @@ local function spread(j, from, to, step, done)
     if start and lastEnd then
       local gap = start - lastEnd
       j.gap = gap
+      j.gapSum, j.gapN = (j.gapSum or 0) + gap, (j.gapN or 0) + 1
+      if gap > (j.worstGap or 0) then j.worstGap = gap end
       if gap > A.SLOW_FRAME then
         budget = A.MIN_BUDGET
         j.slow = (j.slow or 0) + 1
         j.cap = math.max(A.CAP_MIN, math.floor((j.cap or A.CAP_START) / 2))
+        -- and a breather: the client still has the item data our rows asked for to load
+        if not j.rested then
+          j.rested = true
+          lastEnd = nil
+          ns.after(A.BREATHER, frame)
+          return
+        end
       elseif gap < A.SLOW_FRAME / 2 then
         j.cap = math.min(A.CAP_MAX, math.floor((j.cap or A.CAP_START) * 1.25))
       end
@@ -457,7 +467,12 @@ local function spread(j, from, to, step, done)
         if clock() - start >= budget then break end
       elseif rows >= A.ROWS_NO_CLOCK then break end
     end
+    j.rested = nil
     lastEnd = clock()
+    if start then
+      local took = lastEnd - start
+      if took > (j.worstSlice or 0) then j.worstSlice = took end
+    end
     if i <= to then
       j.frames = (j.frames or 0) + 1
       if refreshCard and j.frames % 15 == 1 then refreshCard() end -- the scan's progress
@@ -533,7 +548,8 @@ local function readFull()
         A.store().fullAt = now()
         job = nil
         last.full = { at = now(), listings = total, items = items, seconds = now() - (j.started or now()), frames = j.frames or 0,
-          slow = j.slow or 0,
+          slow = j.slow or 0, worstSlice = j.worstSlice, worstGap = j.worstGap,
+          avgGap = j.gapN and j.gapN > 0 and j.gapSum / j.gapN or nil,
           passive = j.passive, how = j.how }
         ns.say((j.passive and "Read another addon's full scan: " or "Full scan: ") .. ns.thousands(total) .. " listings, "
           .. ns.thousands(items) .. " items priced.")
@@ -1199,7 +1215,7 @@ refreshCard = function()
   if redrawDue or not ns.auctionPanel then return end
   redrawDue = true
   -- while a scan files thousands of prices the page redraws once a second, not five times
-  ns.after(A.scanning() and 1 or 0.2, function() redrawDue = false; ns.auctionPanel.refresh() end)
+  ns.after(A.scanning() and 2 or 0.2, function() redrawDue = false; ns.auctionPanel.refresh() end)
 end
 A.refresh = function() refreshCard() end
 
@@ -1410,6 +1426,8 @@ function ns.auctionDebugLines()
   if last.full then
     out[#out + 1] = "auction " .. (last.full.paged and "paged" or "full") .. " scan: " .. (last.full.failed or (last.full.listings .. " listings, " .. last.full.items .. " items, "
       .. (last.full.frames or 0) .. " frames (" .. (last.full.slow or 0) .. " slow), " .. (last.full.seconds or 0) .. " s"
+      .. (last.full.worstSlice and string.format("; longest slice %d ms, game frames %d ms on average, longest %d ms",
+        last.full.worstSlice, last.full.avgGap or 0, last.full.worstGap or 0) or "")
       .. (last.full.pages and (", " .. last.full.pages .. " pages") or "")
       .. (last.full.passive and ", another addon's scan" or last.full.how and (", answer by " .. last.full.how) or "")))
   end
