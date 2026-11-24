@@ -1,5 +1,9 @@
 # Leveling Codex
 
+## v0.31.4
+- **Take all at the mailbox:** a small MAILBOX card beside the mail window counts the items and gold in your inbox, with one **Take all** button that empties it mail by mail (click again to stop). It waits for the server between takes, never pays for Cash on Delivery mail, keeps taking gold when your bags are full and says what stayed behind. Items back from an expired or cancelled auction are tagged **RELIST** for Quick Sell.
+- **Controller and key binding:** Esc > Options > Keybindings > AddOns > **Take all mail**, so a controller button can empty the mailbox too. Settings > Helpers > MAILBOX can also take all by itself whenever you open a mailbox (off by default).
+
 ## v0.31.3
 - **Deals and the sniper: price guards you can trust:**
   - **Resale check on flips:** once you buy everything under your limit, the cheapest listing left is what you'll compete with. The Codex now prices your resale just under that listing (never above the usual price), and leaves out the dear end of a stack when it sits too close to that listing to keep your profit. A flip with no profit left after that shows **No margin**. The tooltip says where the resale price comes from and how many it left out.

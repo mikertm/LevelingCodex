@@ -1153,12 +1153,15 @@ def main():
         runs.append(("WARRIOR/%s/vendor-repair" % variant, "WARRIOR", minimal, ["vendorRepair"]))
         runs.append(("WARRIOR/%s/vendor-shopping" % variant, "WARRIOR", minimal, ["vendorShopping"]))
         runs.append(("WARRIOR/%s/vendor-prof-supplies" % variant, "WARRIOR", minimal, ["vendorProfSupplies"]))
+        runs.append(("WARRIOR/%s/mail-take-all" % variant, "WARRIOR", minimal, ["mailTakeAll"]))
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))
             runs.append(("WARRIOR/full/vendor-pad", "WARRIOR", False, ["vendorPad"]))
             runs.append(("WARRIOR/full/vendor-buy-fails", "WARRIOR", False, ["vendorBuyFails"]))
             runs.append(("WARRIOR/full/vendor-late-window", "WARRIOR", False, ["vendorLateWindow"]))
+            runs.append(("WARRIOR/full/mail-bags-full", "WARRIOR", False, ["mailBagsFull"]))
+            runs.append(("WARRIOR/full/mail-auto-take", "WARRIOR", False, ["mailAutoTake"]))
             # WoW: Forever reads item info through C_Item.GetItemInfo only
             runs.append(("WARRIOR/full/c-item-junk", "WARRIOR", False, ["noGlobalItemInfo", "vendorJunk"]))
             runs.append(("WARRIOR/full/c-item-reward", "WARRIOR", False, ["noGlobalItemInfo", "questReward"]))

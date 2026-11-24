@@ -13995,3 +13995,93 @@ function S.journeyThin()
   check(journey.points <= 200, "the trail is thinned under the cap (" .. tostring(journey.points) .. ")")
   check(#journey.trail[1429] >= 4, "every run is kept")
 end
+
+-- Mailbox: Take all empties the inbox one take at a time (gold, then each attachment), leaves Cash
+-- on Delivery mail, says what it took, and tags items back from an expired auction RELIST.
+local function mailFixture()
+  return {
+    { sender = "Alliance Auction House", subject = "Auction won: Ivycloth Pants of the Eagle", auction = true,
+      items = { { id = 9798, name = "Ivycloth Pants of the Eagle" } } },
+    { sender = "Alliance Auction House", subject = "Auction successful: Linen Cloth", auction = true, money = 12345 },
+    { sender = "Alliance Auction House", subject = "Auction won: Delicate Ribcage (3)", auction = true,
+      items = { { id = 5003, name = "Delicate Ribcage", count = 3 } } },
+    { sender = "Alliance Auction House", subject = "Auction expired: Nimble Leather Gloves", auction = true,
+      items = { { id = 7281, name = "Nimble Leather Gloves" } } },
+    { sender = "Bo", subject = "Pay me", cod = 500, items = { { id = 2589, name = "Linen Cloth", count = 20 } } },
+    { sender = "Ann", subject = "Gift", money = 100, items = { { id = 2589, name = "Linen Cloth", count = 5 },
+      { id = 2592, name = "Wool Cloth", count = 2 } } },
+  }
+end
+
+function S.mailTakeAll()
+  S.login()
+  MOCK.money = 0
+  MOCK.openMail(mailFixture())
+  MOCK.advance(1)
+  local card = _G.LevelingCodexMailCard
+  if MOCK.minimal then
+    check(not (card and card:IsShown()), "no card without the mail API")
+    return
+  end
+  check(card and card:IsShown(), "the mail card shows at the mailbox")
+  check(questText(card, "5 mails: 5 items, 1g 24s 45c"), "it counts the mails, items and gold (COD apart)")
+  check(questText(card, "1 COD left alone"), "and says the COD mail is left")
+  click(card, "Take all")
+  check(findButton(card, function(l) return l == "Stop" end), "the button stops a run")
+  MOCK.advance(10)
+  check(#MOCK.inbox == 2, "the auction mails are emptied and gone, " .. #MOCK.inbox .. " left")
+  check(MOCK.inbox[1].sender == "Bo" and MOCK.inbox[1].items[1], "the COD mail keeps its item")
+  check(MOCK.money == 12445, "all the gold was taken (" .. tostring(MOCK.money) .. ")")
+  check(#MOCK.mailTaken == 7, "one take per gold and item (" .. #MOCK.mailTaken .. ")")
+  check(chatHas("Took 5 items and 1g 24s 45c from 5 mails%."), "chat says what it took")
+  check(chatHas("Left 1 Cash on Delivery mail for you to pay"), "and the COD mail it left")
+  check(chatHas("1 item came back from the auction house: Quick Sell marks them RELIST"), "returned items are noted")
+  local store = LevelingCodexDB.auction and LevelingCodexDB.auction.realms and LevelingCodexDB.auction.realms.Mockrealm
+  check(store and store.trade and store.trade.relist and store.trade.relist[7281], "the expired auction's item is tagged RELIST")
+  check(questText(card, "Nothing to take."), "the card says the inbox is empty")
+  MOCK.closeMail()
+  check(not card:IsShown(), "closing the mailbox hides the card")
+end
+
+-- Full bags: the gold still comes, the items stay; the key binding runs it; closing stops it.
+function S.mailBagsFull()
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.money, MOCK.freeSlots = 0, 1
+  MOCK.openMail(mailFixture())
+  MOCK.advance(1)
+  _G.LevelingCodexMailTakeAll:Click()
+  MOCK.advance(15)
+  check(MOCK.money == 12445, "the gold is taken with full bags (" .. tostring(MOCK.money) .. ")")
+  local items = 0
+  for _, t in ipairs(MOCK.mailTaken) do if t[1] == "item" then items = items + 1 end end
+  check(items == 1, "only one item fit (" .. items .. ")")
+  check(chatHas("Your bags are full: %d+ items stay in the mail%."), "chat says items stayed")
+  -- closing the mailbox mid-run stops it
+  MOCK.freeSlots, MOCK.mailDelay = 20, 1
+  MOCK.chat = {}
+  _G.LevelingCodexMailTakeAll:Click()
+  MOCK.advance(0.5)
+  MOCK.closeMail()
+  check(chatHas("%(the mailbox closed%)"), "closing the mailbox ends the run")
+  local n = #MOCK.mailTaken
+  MOCK.advance(5)
+  check(#MOCK.mailTaken <= n + 1, "nothing more is taken after closing")
+end
+
+-- Settings: Take all as the mailbox opens; an item the server won't give is passed over.
+function S.mailAutoTake()
+  S.login()
+  if MOCK.minimal then return end
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Take all as the mailbox opens")
+  check(LevelingCodexDB.mailAutoTake, "the setting is saved")
+  MOCK.money = 0
+  MOCK.mailRefuse = { [9798] = true }
+  MOCK.openMail(mailFixture())
+  MOCK.advance(15)
+  check(MOCK.money == 12445, "the inbox is emptied by itself (" .. tostring(MOCK.money) .. ")")
+  check(MOCK.inbox[1].items[1] and MOCK.inbox[1].items[1].id == 9798, "a refused item is passed over")
+  check(chatHas("Took 4 items"), "the rest is taken")
+end

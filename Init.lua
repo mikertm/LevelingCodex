@@ -43,6 +43,7 @@ local function start()
   ns.startCraftGuide()
   ns.startTrainerGuide()
   ns.startVendor()
+  ns.startMailbox()
   ns.startPace()
   ns.startStats()
   ns.startGold()
@@ -160,6 +161,7 @@ BINDING_HEADER_LEVELINGCODEX = "Leveling Codex"
 BINDING_NAME_LEVELINGCODEX_TOGGLE = "Open or close the Codex"
 _G["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = "Use the quest guide item"
 _G["BINDING_NAME_CLICK LevelingCodexQuestTarget:LeftButton"] = "Target the quest guide NPC"
+_G["BINDING_NAME_CLICK LevelingCodexMailTakeAll:LeftButton"] = "Take all mail"
 function LevelingCodex_Toggle() ns.toggleWindow() end
 
 SLASH_LEVELINGCODEX1 = "/codex"
@@ -243,6 +245,7 @@ function ns.debugLines()
   if ns.auctionMarketDebugLines then for _, line in ipairs(ns.auctionMarketDebugLines()) do out[#out + 1] = line end end
   for _, line in ipairs(ns.auctionPanelDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.mailDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.paceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyDeedsDebugLines()) do out[#out + 1] = line end

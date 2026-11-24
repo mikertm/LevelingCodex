@@ -67,7 +67,7 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "OWNED_AUCTIONS_UPDATED",
   "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "AUCTION_HOUSE_BROWSE_FAILURE", "UNIT_HEALTH",
   "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
-  "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
+  "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE", "UI_ERROR_MESSAGE",
   "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
@@ -1383,6 +1383,7 @@ C_Container = {
     return { itemID = bagID(slot), hyperlink = bagLink(slot), stackCount = it.count or 1, quality = it.quality,
       hasNoValue = it.noValue or it.sell == 0, isLocked = it.locked or false, isBound = it.bound or false }
   end,
+  GetContainerNumFreeSlots = function(bag) return bag == 0 and (MOCK.freeSlots or 20) or 0, 0 end,
   UseContainerItem = function(bag, slot)
     local it = bag == 0 and MOCK.bagItems[slot]
     if not it or it.empty or not (MerchantFrame and MerchantFrame:IsShown()) then return end
@@ -1761,8 +1762,83 @@ function GetNumInboxItems() return #MOCK.inbox, #MOCK.inbox end
 function GetInboxHeaderInfo(i)
   local m = MOCK.inbox[i]
   if not m then return end
-  return nil, nil, m.sender, m.subject, m.money or 0, 0, m.daysLeft or 30
+  local n = 0
+  for _ in pairs(m.items or {}) do n = n + 1 end
+  return nil, nil, m.sender, m.subject, m.money or 0, m.cod or 0, m.daysLeft or 30, n, false, false, false, false, m.gm or false
 end
+-- Mail with attachments: m.items = { { id, name, count } }, m.cod (Cash on Delivery copper), m.gm;
+-- MOCK.freeSlots = free bag slots (nil = plenty); MOCK.mailDelay = the server's answer (default 0.1 s);
+-- an auction house mail (m.auction, or an invoice) is deleted once empty, like the client's.
+-- MOCK.mailTaken = { { kind, id, n } }; MOCK.mailRefuse[id] = the server never gives that item.
+function GetInboxItem(i, a)
+  local it = MOCK.inbox[i] and MOCK.inbox[i].items and MOCK.inbox[i].items[a]
+  if not it then return end
+  return it.name, it.id, 134400, it.count or 1, 2, true
+end
+function GetInboxItemLink(i, a)
+  local it = MOCK.inbox[i] and MOCK.inbox[i].items and MOCK.inbox[i].items[a]
+  if not it then return end
+  return "|cff1eff00|Hitem:" .. it.id .. "::::::::|h[" .. it.name .. "]|h|r"
+end
+local function mailLater(fn)
+  C_Timer.After(MOCK.mailDelay or 0.1, function()
+    fn()
+    MOCK.event("MAIL_INBOX_UPDATE")
+  end)
+end
+local function mailEmpty(m)
+  if (m.money or 0) > 0 then return false end
+  for _ in pairs(m.items or {}) do return false end
+  return true
+end
+local function mailGone(m)
+  if (m.auction or m.invoice) and mailEmpty(m) then
+    for k, v in ipairs(MOCK.inbox) do if v == m then table.remove(MOCK.inbox, k); break end end
+  end
+end
+function TakeInboxMoney(i)
+  local m = MOCK.inbox[i]
+  if not m or (m.money or 0) <= 0 then return end
+  MOCK.mailTaken = MOCK.mailTaken or {}
+  mailLater(function()
+    table.insert(MOCK.mailTaken, { "money", nil, m.money })
+    MOCK.setMoney((MOCK.money or 0) + m.money)
+    m.money = 0
+    mailGone(m)
+  end)
+end
+function TakeInboxItem(i, a)
+  local m = MOCK.inbox[i]
+  local it = m and m.items and m.items[a]
+  if not it then return end
+  MOCK.mailTaken = MOCK.mailTaken or {}
+  if (MOCK.mailRefuse and MOCK.mailRefuse[it.id]) then return end
+  if MOCK.freeSlots and MOCK.freeSlots <= 0 then
+    C_Timer.After(0.05, function() MOCK.event("UI_ERROR_MESSAGE", 3, "Inventory is full.") end)
+    return
+  end
+  mailLater(function()
+    if m.items[a] ~= it then return end
+    table.insert(MOCK.mailTaken, { "item", it.id, it.count or 1 })
+    if MOCK.freeSlots then MOCK.freeSlots = MOCK.freeSlots - 1 end
+    -- the client packs the attachments: later slots keep their numbers (a gap stays)
+    m.items[a] = nil
+    mailGone(m)
+  end)
+end
+function MOCK.openMail(list)
+  MOCK.inbox = list or MOCK.inbox
+  if MailFrame then MailFrame:Show() end
+  MOCK.event("MAIL_SHOW")
+  MOCK.event("MAIL_INBOX_UPDATE")
+end
+function MOCK.closeMail()
+  if MailFrame then MailFrame:Hide() end
+  MOCK.event("MAIL_CLOSED")
+end
+MailFrame = CreateFrame("Frame", "MailFrame", UIParent)
+MailFrame:SetSize(384, 512)
+MailFrame:Hide()
 function GetInboxInvoiceInfo(i)
   local v = MOCK.inbox[i] and MOCK.inbox[i].invoice
   if not v then return end
@@ -2064,7 +2140,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
   "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop",
-  "GetNumInboxItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo" }
+  "GetNumInboxItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo", "GetInboxItem", "GetInboxItemLink", "TakeInboxMoney",
+  "TakeInboxItem", "MailFrame" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -2104,6 +2181,7 @@ local ALLOWED_GLOBALS = {
   LevelingCodexDB = true, LevelingCodexCharDB = true, LevelingCodexData = true, SLASH_LEVELINGCODEX1 = true,
   BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true, ["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = true,
   ["BINDING_NAME_CLICK LevelingCodexQuestTarget:LeftButton"] = true,
+  ["BINDING_NAME_CLICK LevelingCodexMailTakeAll:LeftButton"] = true,
   LevelingCodexQuests = true, LevelingCodexQuestViewer = true, LevelingCodexQuestArrow = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,

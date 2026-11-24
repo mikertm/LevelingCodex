@@ -1240,6 +1240,13 @@ renderers.settings = function()
       "The card also lists the thread, vials, flux, dye, spices, tools and rods your current profession steps need, when this vendor sells them.")
     y = y + 12
   end }
+  sections[#sections + 1] = { "MAILBOX", "Helpers", function()
+    tick("Show Take all at the mailbox", not db.noMailCard, function() db.noMailCard = not db.noMailCard end,
+      "At a mailbox, a card shows the items and gold in your inbox with one button that takes them all, mail by mail. Cash on Delivery mail is left for you. You can bind it to a key or controller button: Esc > Options > Keybindings > AddOns > Take all mail.")
+    tick("Take all as the mailbox opens", db.mailAutoTake, function() db.mailAutoTake = not db.mailAutoTake end,
+      "Empties your inbox by itself every time you open a mailbox (Cash on Delivery mail is left alone). Click Stop on the card to stop it.")
+    y = y + 12
+  end }
   sections[#sections + 1] = { "QUEST GUIDE", "Questing", function()
     tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
       "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")

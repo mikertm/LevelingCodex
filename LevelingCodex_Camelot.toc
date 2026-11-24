@@ -102,4 +102,5 @@ TalentGuide.lua
 ProfessionGuide.lua
 TrainerGuide.lua
 Vendor.lua
+Mailbox.lua
 Init.lua

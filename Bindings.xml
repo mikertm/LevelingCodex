@@ -9,4 +9,6 @@
   <Binding name="CLICK LevelingCodexQuestItem:LeftButton" category="ADDONS"/>
   <!-- Targets the current step's quest giver (the button below the item button). -->
   <Binding name="CLICK LevelingCodexQuestTarget:LeftButton" category="ADDONS"/>
+  <!-- Takes the gold and items from every mail while a mailbox is open (Take all on the mail card). -->
+  <Binding name="CLICK LevelingCodexMailTakeAll:LeftButton" category="ADDONS"/>
 </Bindings>
