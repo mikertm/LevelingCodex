@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.31.5
+- **The Codex, Market and Scan tabs get the same look as Deals and Quick Sell:** dark trading-desk cards, the new buttons and switches, and item icons framed in their quality colour.
+- **Codex tab:** a scoreboard across the top shows your gold (and mount fund), this visit's posts and buys with their estimated profit, what your bags would sell for, the deals waiting with their potential profit, and your net profit with wins and losses. Click TO SELL, DEALS or NET PROFIT to open that page. YOUR TRADES now shows what you made and lost, a small profit line and your latest trades.
+- **Market tab:** a pulse strip shows how many items are tracked, how many are rising and falling, the share going up, the hot items and signals, and whether the data is live or stale. Click RISING, FALLING or HOT / SIGNALS to jump to that list.
+- **Scan tab:** a strip shows the health of your price data: items priced, how many have two days of history, how many were priced in the last hour, vendor prices known, this session's live updates and the last scan. A running scan shows its speed and about how long is left. The look-up card lists your recent look-ups (or your bags' most valuable items) to click, and **x** clears the look-up.
+
 ## v0.31.4
 - **Take all at the mailbox:** a small MAILBOX card beside the mail window counts the items and gold in your inbox, with one **Take all** button that empties it mail by mail (click again to stop). It waits for the server between takes, never pays for Cash on Delivery mail, keeps taking gold when your bags are full and says what stayed behind. Items back from an expired or cancelled auction are tagged **RELIST** for Quick Sell.
 - **Controller and key binding:** Esc > Options > Keybindings > AddOns > **Take all mail**, so a controller button can empty the mailbox too. Settings > Helpers > MAILBOX can also take all by itself whenever you open a mailbox (off by default).
