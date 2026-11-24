@@ -327,6 +327,141 @@ local function shopping()
   return rows, total
 end
 
+local SNIPE_ROWS = 4
+local snipeWatch
+
+local function bagCountOf(targetID)
+  local total, vendor, foundName, foundIcon = 0, nil, nil, nil
+  for bag = 0, 4 do
+    for slot = 1, numSlots(bag) do
+      local id, count, _, noValue, _, link = slotInfo(bag, slot)
+      if id == targetID then
+        total = total + (tonumber(count) or 1)
+        if not vendor or not foundName then
+          local name, _, _, _, _, _, _, _, _, icon, price = ns.itemInfo(link or id)
+          if name and not foundName then foundName = name end
+          if icon and not foundIcon then foundIcon = icon end
+          price = (noValue and 0) or tonumber(price)
+          if price and price > 0 and not vendor then vendor = price end
+        end
+      end
+    end
+  end
+  return total, vendor, foundName, foundIcon
+end
+
+local function equippedCountOf(targetID)
+  if type(GetInventoryItemLink) ~= "function" then return 0 end
+  local n = 0
+  for s = 1, 19 do
+    local link = try(GetInventoryItemLink, "player", s)
+    local id = type(link) == "string" and tonumber(link:match("item:(%d+)"))
+    if id == targetID then n = n + 1 end
+  end
+  return n
+end
+
+-- Snapshots bag counts of any item the Codex bought on the AH so selling them to a vendor (either
+-- manually by right-clicking or with the Sell snipes button) logs a completed trade win/loss.
+local function snapshotSnipes()
+  if not (ns.auctionTrade and ns.auctionMarket and ns.auctionMarket.record) then snipeWatch = nil; return end
+  local open = ns.auctionMarket.record().openByID or {}
+  local paid = ns.auctionTrade.notes and ns.auctionTrade.notes().paid or {}
+  local watch, any = {}, false
+  local ids = {}
+  for id in pairs(open) do ids[id] = true end
+  for id in pairs(paid) do if tonumber(id) then ids[tonumber(id)] = true end end
+  for id in pairs(ids) do
+    local h, p = open[id], paid[id]
+    local bagN, seenVendor, seenName = bagCountOf(id)
+    if bagN > 0 or h or p then
+      local v = seenVendor or (h and h.vendor) or (type(p) == "table" and p.vendor)
+        or (ns.auctionTrade.vendorPrice and ns.auctionTrade.vendorPrice(id, ns.auction and ns.auction.price(id)))
+      watch[id] = {
+        bag = bagN,
+        eq = equippedCountOf(id),
+        name = seenName or (h and h.name) or (type(p) == "table" and p.name),
+        vendor = ns.auction.vendorValue(id, v),
+      }
+      any = true
+    end
+  end
+  snipeWatch = any and watch or nil
+end
+
+local function checkSnipeSales()
+  if not snipeWatch or not (ns.auctionTrade and ns.auctionTrade.recordVendorSale) then return end
+  for id, w in pairs(snipeWatch) do
+    local nowBag, seenVendor, seenName = bagCountOf(id)
+    local nowEq = equippedCountOf(id)
+    if seenVendor and seenVendor > 0 and not w.vendor then w.vendor = seenVendor end
+    if seenName and not w.name then w.name = seenName end
+    if nowBag > w.bag then
+      w.bag, w.eq = nowBag, nowEq
+    elseif nowBag < w.bag then
+      local eqDelta = math.max(0, nowEq - w.eq)
+      local soldQty = (w.bag - nowBag) - eqDelta
+      w.bag, w.eq = nowBag, nowEq
+      if soldQty > 0 and w.vendor and w.vendor > 0 then
+        ns.auctionTrade.recordVendorSale(id, w.name, soldQty, w.vendor)
+      end
+    else
+      w.eq = nowEq
+    end
+  end
+end
+
+-- Finds sniped under-vendor items currently in your bags for the vendor card's 1-click Sell snipes button.
+local function snipeBagQueue()
+  if not (ns.auctionTrade and ns.auctionMarket and ns.auctionMarket.record) then return {}, {}, 0, 0, 0 end
+  local open = ns.auctionMarket.record().openByID or {}
+  local paid = ns.auctionTrade.notes and ns.auctionTrade.notes().paid or {}
+  local rows, byID, slots = {}, {}, {}
+  local leftByID = {}
+  local grossTotal, profitTotal, totalCount = 0, 0, 0
+  for bag = 0, 4 do
+    for slot = 1, numSlots(bag) do
+      local id, count, quality, noValue, locked, link = slotInfo(bag, slot)
+      count = tonumber(count) or 1
+      if id and not locked and not noValue and not kept(id) then
+        local h, p = open[id], paid[id]
+        if h or type(p) == "table" then
+          local name, _, q, _, _, _, _, _, _, icon, sell = ns.itemInfo(link or id)
+          quality = quality or q or 1
+          local v = tonumber(sell) or (h and h.vendor) or (type(p) == "table" and p.vendor)
+            or (ns.auction and ns.auction.price(id) and ns.auction.price(id).vendor)
+          v = ns.auction.vendorValue(id, v) or 0
+          local eachPaid = (h and h.each) or (type(p) == "table" and tonumber(p.each)) or 0
+          local isVendorSnipe = (h and (h.kind == "vendor" or h.via == "vendor"))
+            or (type(p) == "table" and p.kind == "vendor")
+            or (v > 0 and eachPaid > 0 and v > eachPaid)
+          if quality >= 1 and v > 0 and isVendorSnipe then
+            if leftByID[id] == nil then
+              leftByID[id] = (h and h.qty) or (type(p) == "table" and tonumber(p.qty)) or count
+            end
+            if leftByID[id] >= count and leftByID[id] > 0 then
+              leftByID[id] = leftByID[id] - count
+              local gross = v * count
+              local profit = (v - eachPaid) * count
+              slots[#slots + 1] = { bag = bag, slot = slot, id = id, count = count, value = gross }
+              local r = byID[id]
+              if not r then
+                r = { id = id, name = name or (h and h.name) or ("item " .. id),
+                  icon = icon or (ns.auction and ns.auction.iconOf(id)), n = 0, gross = 0, profit = 0 }
+                byID[id] = r
+                rows[#rows + 1] = r
+              end
+              r.n, r.gross, r.profit = r.n + count, r.gross + gross, r.profit + profit
+              grossTotal, profitTotal, totalCount = grossTotal + gross, profitTotal + profit, totalCount + count
+            end
+          end
+        end
+      end
+    end
+  end
+  return rows, slots, grossTotal, profitTotal, totalCount
+end
+
 local function makeCard()
   local A, C = ns.art, ns.C
   local h = A.frame("Frame", "LevelingCodexShopCard", UIParent)
@@ -361,6 +496,25 @@ local function makeCard()
   end
   h.buy = A.button(h, 276, 22)
   h.buy:SetScript("OnClick", function() V.buy() end)
+  h.snipeHead = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  h.snipeHead:SetText("SNIPED FOR VENDOR")
+  h.snipeRows = {}
+  for i = 1, SNIPE_ROWS do
+    local r = {}
+    r.icon = h:CreateTexture(nil, "ARTWORK")
+    r.icon:SetSize(20, 20)
+    r.name = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.name:SetWidth(190)
+    r.name:SetJustifyH("LEFT")
+    r.price = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.price:SetJustifyH("RIGHT")
+    r.sub = h:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    r.sub:SetWidth(250)
+    r.sub:SetJustifyH("LEFT")
+    h.snipeRows[i] = r
+  end
+  h.sellSnipes = A.button(h, 276, 22)
+  h.sellSnipes:SetScript("OnClick", function() V.sellSnipes() end)
   -- Never attached to the controller (ns.gamepad): the card shows up by itself at every vendor, and
   -- as a controller popup it took the focus from the vendor window, so A bought its items.
   return h
@@ -374,28 +528,76 @@ end
 local function refreshCard()
   if ns.db().noShopCard or not isOpen() then hideCard(); return end
   local rows, total = shopping()
-  if #rows == 0 then hideCard(); return end
+  local snipes, _, snipeGross, snipeProfit, snipeCount = snipeBagQueue()
+  if #rows == 0 and #snipes == 0 then hideCard(); return end
   if not card then card = makeCard() end
   ns.art.paintCard(card)
+  local y = 10
+  card.label:SetShown(#rows > 0)
   for i, r in ipairs(card.rows) do
     local row = rows[i]
     local shown = row ~= nil
     r.icon:SetShown(shown); r.name:SetShown(shown); r.price:SetShown(shown); r.sub:SetShown(shown)
     if row then
+      local top = -(y + 16 + (i - 1) * 30)
+      r.icon:ClearAllPoints(); r.icon:SetPoint("TOPLEFT", 12, top)
+      r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 38, top)
+      r.price:ClearAllPoints(); r.price:SetPoint("TOPRIGHT", -12, top)
+      r.sub:ClearAllPoints(); r.sub:SetPoint("TOPLEFT", 38, top - 13)
       ns.setIcon(r.icon, row.good.icon or "INV_Misc_Bag_10")
       r.name:SetText(Q.plain(row.n .. " x " .. row.good.name))
       r.price:SetText(ns.money(row.cost))
       r.sub:SetText(Q.plain("for " .. row.forText .. (row.short and ("  (only " .. row.n .. " in stock)") or "")))
     end
   end
-  local money = tonumber(try(GetMoney)) or 0
-  local label = money >= total and ("Buy for " .. ns.money(total)) or ("Need " .. ns.money(total - money) .. " more")
-  if buying then label = "Buying..." end
-  card.buy:SetLabel(label)
-  card.buy.codexLabel = label
-  card.buy:ClearAllPoints()
-  card.buy:SetPoint("TOPLEFT", 12, -30 - #rows * 30)
-  card:SetHeight(30 + #rows * 30 + 34)
+  if #rows > 0 then
+    local money = tonumber(try(GetMoney)) or 0
+    local label = money >= total and ("Buy for " .. ns.money(total)) or ("Need " .. ns.money(total - money) .. " more")
+    if buying then label = "Buying..." end
+    card.buy:SetLabel(label)
+    card.buy.codexLabel = label
+    card.buy:ClearAllPoints()
+    card.buy:SetPoint("TOPLEFT", 12, -(y + 20 + #rows * 30))
+    card.buy:Show()
+    y = y + 20 + #rows * 30 + 28
+  else
+    card.buy:Hide()
+  end
+  card.snipeHead:SetShown(#snipes > 0)
+  if #snipes > 0 then
+    card.snipeHead:ClearAllPoints()
+    card.snipeHead:SetPoint("TOPLEFT", 12, -y)
+    local showN = math.min(#snipes, SNIPE_ROWS)
+    for i, r in ipairs(card.snipeRows) do
+      local s = i <= showN and snipes[i] or nil
+      local shown = s ~= nil
+      r.icon:SetShown(shown); r.name:SetShown(shown); r.price:SetShown(shown); r.sub:SetShown(shown)
+      if s then
+        local top = -(y + 16 + (i - 1) * 30)
+        r.icon:ClearAllPoints(); r.icon:SetPoint("TOPLEFT", 12, top)
+        r.name:ClearAllPoints(); r.name:SetPoint("TOPLEFT", 38, top)
+        r.price:ClearAllPoints(); r.price:SetPoint("TOPRIGHT", -12, top)
+        r.sub:ClearAllPoints(); r.sub:SetPoint("TOPLEFT", 38, top - 13)
+        ns.setIcon(r.icon, s.icon or "INV_Misc_Coin_01")
+        r.name:SetText(Q.plain(s.n .. " x " .. s.name))
+        r.price:SetText(ns.money(s.gross))
+        r.sub:SetText(Q.plain((s.profit >= 0 and "+" or "-") .. ns.money(math.abs(s.profit)) .. " snipe profit"))
+        r.sub:SetTextColor(0.3, 0.9, 0.35)
+      end
+    end
+    local slabel = "Sell " .. snipeCount .. (snipeCount == 1 and " snipe for " or " snipes for ") .. ns.money(snipeGross)
+      .. (snipeProfit > 0 and (" (+" .. ns.money(snipeProfit) .. ")") or "")
+    card.sellSnipes:SetLabel(slabel)
+    card.sellSnipes.codexLabel = "Sell snipes"
+    card.sellSnipes:ClearAllPoints()
+    card.sellSnipes:SetPoint("TOPLEFT", 12, -(y + 20 + showN * 30))
+    card.sellSnipes:Show()
+    y = y + 20 + showN * 30 + 28
+  else
+    for _, r in ipairs(card.snipeRows) do r.icon:Hide(); r.name:Hide(); r.price:Hide(); r.sub:Hide() end
+    card.sellSnipes:Hide()
+  end
+  card:SetHeight(y + 6)
   local root = MerchantFrame
   if type(root) == "table" and type(root.IsShown) == "function" then
     ns.placeByWindow(card, root, place)
@@ -437,6 +639,24 @@ local function settle(final)
 end
 
 -- Buy everything the card lists (only when you can pay for all of it).
+function V.sellSnipes()
+  if not isOpen() then hideCard(); return 0 end
+  snapshotSnipes()
+  local _, slots = snipeBagQueue()
+  local sold = 0
+  for _, s in ipairs(slots) do
+    local id, count, _, _, locked = slotInfo(s.bag, s.slot)
+    if id == s.id and count == s.count and not locked then
+      V.onSold(s.value)
+      useItem(s.bag, s.slot)
+      sold = sold + count
+    end
+  end
+  checkSnipeSales()
+  refreshCard()
+  return sold
+end
+
 function V.buy()
   if not isOpen() then hideCard(); return end
   -- the items arrive after a server round trip: until then another click must not buy them again
@@ -487,6 +707,7 @@ end
 local function onShow()
   merchantOpen = true
   seen.visits = seen.visits + 1
+  snapshotSnipes()
   if run then finish(true) end
   local v = { at = GetTime() }
   visit = v
@@ -508,6 +729,8 @@ end
 
 -- A purchase still on its way is kept: its items can arrive after the window closes.
 local function onClose()
+  checkSnipeSales()
+  snipeWatch = nil
   merchantOpen, pendingRepair = false, nil
   if visit and not visit.window and not visit.note then visit.note = "closed before its window showed" end
   finish(true)
@@ -529,9 +752,13 @@ function ns.startVendor()
     elseif event == "MERCHANT_CLOSED" then
       onClose()
     elseif event == "PLAYER_MONEY" then
+      if merchantOpen then checkSnipeSales(); refreshCard() end
       moneyArrived()
     else
-      if event == "BAG_UPDATE_DELAYED" then settle(false) end
+      if event == "BAG_UPDATE_DELAYED" then
+        settle(false)
+        if merchantOpen then checkSnipeSales() end
+      end
       if merchantOpen then refreshCard() end
     end
   end)

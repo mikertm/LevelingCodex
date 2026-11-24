@@ -44,7 +44,7 @@ L.waiting={}
 local stray
 local function flushStray()
   local A=ns.auction
-  if A and A.scanning and A.scanning() then ns.after(5,flushStray) return end
+  if A and ((A.scanning and A.scanning()) or (A.sniper and A.sniper.on)) then ns.after(5,flushStray) return end
   stray=false
   L.refresh("item data")
 end

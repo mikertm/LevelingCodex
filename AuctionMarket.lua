@@ -44,35 +44,70 @@ local function pct(a, b)
   return math.floor((a - b) * 100 / b + 0.5)
 end
 
+local function isGreyItem(id, it)
+  local q = type(it) == "table" and it.q
+  if q ~= nil then return q == 0 end
+  local base = ns.lootData and ns.lootData.items and ns.lootData.items[id]
+  if base and base.quality ~= nil then
+    if type(it) == "table" then it.q = base.quality end
+    return base.quality == 0
+  end
+  return false
+end
+
 -- One item's market row, or nil without a price now:
 -- { id, name, last, n, usual, days, trend (% vs the days before), move (% since the reading before),
 --   moveAge (seconds), supply (% change in listed quantity), vol (spread of the daily prices, 0-1),
---   change (trend, else move), basis ("days"/"scan"), hot (score), signal (key), hist, ticks }
-function M.row(id)
+--   change (trend, else move), basis ("days"/"scan"), hot (score), signal (key) }
+function M.row(id, bulk)
   local p = A().price(id)
   if not p or p.source or not p.low or p.low <= 0 or (p.n or 0) <= 0 then return end
-  local r = { id = id, name = p.name or A().nameOf(id) or ("item " .. id), last = p.low, n = p.n, usual = p.usual, days = p.days or 0,
+  local it = A().store().items[id]
+  if isGreyItem(id, it) then return end
+  local name = p.name or (not bulk and A().nameOf(id))
+    or (ns.lootData and ns.lootData.items and ns.lootData.items[id] and ns.lootData.items[id].name)
+    or ("item " .. id)
+  if not p.name and name and not name:find("^item %d+$") and type(it) == "table" then it.name = name end
+  local r = { id = id, name = name, last = p.low, n = p.n, usual = p.usual, days = p.days or 0,
     trend = p.days and p.days >= 2 and p.trend or nil, vendor = p.vendor, at = p.at }
-  local ticks = A().ticks(id)
-  local k = #ticks
-  if k >= 2 then
-    local a, b = ticks[k - 1], ticks[k]
-    if b.t - a.t <= 2 * 86400 then
-      r.move, r.moveAge = pct(b.low, a.low), b.t - a.t
-      r.wasN = a.n
-      if a.n and a.n > 0 then r.supply = pct(b.n, a.n) end
+  -- Read the last two ticks directly from it.tk without allocating a full ticks array per item
+  local tk = type(it) == "table" and type(it.tk) == "table" and it.tk or nil
+  local tkLen = tk and #tk or 0
+  if tkLen >= 6 then
+    local aT, aLow, aN = tonumber(tk[tkLen - 5]), tonumber(tk[tkLen - 4]), tonumber(tk[tkLen - 3])
+    local bT, bLow, bN = tonumber(tk[tkLen - 2]), tonumber(tk[tkLen - 1]), tonumber(tk[tkLen])
+    if aT and bT and aLow and bLow and (bT - aT <= 2 * 86400) then
+      r.move, r.moveAge = pct(bLow, aLow), bT - aT
+      r.wasN = aN or 0
+      if aN and aN > 0 then r.supply = pct(bN or 0, aN) end
     end
   end
-  local hist = A().history(id)
-  if #hist >= 2 then
-    local sum, n = 0, 0
-    for _, d in ipairs(hist) do sum, n = sum + (d.med or d.low), n + 1 end
-    local mean, var = sum / n, 0
-    for _, d in ipairs(hist) do var = var + ((d.med or d.low) - mean) ^ 2 end
-    r.vol = mean > 0 and math.sqrt(var / n) / mean or 0
+  -- Compute daily volatility directly from it.days without sorting or allocating a history array
+  if type(it) == "table" and type(it.days) == "table" and (r.days or 0) >= 2 then
+    local dToday = math.floor(now() / 86400)
+    local cur = (tonumber(it.n) or 0) > 0 and tonumber(it.low) or nil
+    local sum, cnt = 0, 0
+    for d, rec in pairs(it.days) do
+      if type(d) == "number" and type(rec) == "table" then
+        local v = (d == dToday and (cur or rec.last)) or rec.med or rec.low
+        if v then sum, cnt = sum + v, cnt + 1 end
+      end
+    end
+    if cnt >= 2 and sum > 0 then
+      local mean, var = sum / cnt, 0
+      for d, rec in pairs(it.days) do
+        if type(d) == "number" and type(rec) == "table" then
+          local v = (d == dToday and (cur or rec.last)) or rec.med or rec.low
+          if v then var = var + (v - mean) ^ 2 end
+        end
+      end
+      r.vol = math.sqrt(var / cnt) / mean
+    end
   end
   if r.trend then r.change, r.basis = r.trend, "days"
   elseif r.move then r.change, r.basis = r.move, "scan" end
+  r.live = T().isLive and T().isLive(id) or false
+  r.fresh = r.at and (now() - r.at <= 120) or false
   local c, s = r.change or 0, r.supply or 0
   r.hot = math.abs(c) + math.max(0, -s) / 2 + math.abs(r.move or 0) / 2 + (r.vol or 0) * 20
   -- the signal
@@ -95,22 +130,73 @@ function M.row(id)
   return r
 end
 
--- Every row passing Price at least, not hidden. Cached by the prices' version and the settings; while
--- the sniper files a price a second it is worked out again at most every 10 s.
-local cache = { key = nil, rows = nil, at = 0, version = nil }
+-- Every row passing Price at least, not hidden, excluding grey vendor trash (quality 0).
+-- Incrementally updates only the items in A().dirtyIDs during live sniper sweeps instead of
+-- recomputing all 7,000+ realm items on every page!
+local cache = { key = nil, rows = nil, byID = nil, storeRef = nil, at = 0, version = nil }
 function M.rows()
+  local store = A().store()
+  local items = store.items
   local key = table.concat({ M.minPrice(), T().hiddenCount(), A().realmKey and A().realmKey() or "" }, ":")
   local version = A().version or 0
-  if cache.rows and cache.key == key and (cache.version == version or clock() - cache.at < 10 or A().scanning()) then return cache.rows end
-  local out, notes, min = {}, T().notes(), M.minPrice()
-  for id, it in pairs(A().store().items) do
-    if type(it) == "table" and not notes.hidden[id] and (tonumber(it.n) or 0) > 0 and (tonumber(it.low) or 0) >= math.max(1, min) then
-      local r = M.row(id)
-      if r then out[#out + 1] = r end
+  if cache.rows and cache.storeRef == items and cache.key == key
+    and (cache.version == version or clock() - cache.at < 1.2 or A().scanning()) then
+    return cache.rows
+  end
+  local notes, min = T().notes(), math.max(1, M.minPrice())
+  if cache.rows and cache.byID and cache.storeRef == items and cache.key == key
+    and not A().dirtyFull and A().recordVersion == version then
+    local dirty = A().dirtyIDs or {}
+    local byID, rows = cache.byID, cache.rows
+    for id in pairs(dirty) do
+      local it = items[id]
+      local r
+      if type(it) == "table" and not notes.hidden[id] and (tonumber(it.n) or 0) > 0 and (tonumber(it.low) or 0) >= min then
+        r = M.row(id, true)
+      end
+      local idx = byID[id]
+      if r then
+        if idx then rows[idx] = r
+        else idx = #rows + 1; rows[idx] = r; byID[id] = idx end
+      elseif idx then
+        local lastIdx = #rows
+        local moved = rows[lastIdx]
+        rows[lastIdx] = nil
+        byID[id] = nil
+        if idx < lastIdx and moved then
+          rows[idx] = moved
+          byID[moved.id] = idx
+        end
+      end
+      dirty[id] = nil
+    end
+    cache.at, cache.version = clock(), version
+    return rows
+  end
+  local out, byID = {}, {}
+  for id, it in pairs(items) do
+    if type(it) == "table" and not notes.hidden[id] and (tonumber(it.n) or 0) > 0 and (tonumber(it.low) or 0) >= min then
+      if it.q == nil then
+        local _, _, q = ns.itemInfo(id)
+        if q ~= nil then it.q = q end
+      end
+      if not isGreyItem(id, it) then
+        local r = M.row(id, true)
+        if r then
+          local idx = #out + 1
+          out[idx] = r
+          byID[id] = idx
+        end
+      end
     end
   end
-  cache.key, cache.rows, cache.at, cache.version = key, out, clock(), version
+  A().dirtyFull, A().dirtyIDs = false, {}
+  cache.key, cache.rows, cache.byID, cache.storeRef, cache.at, cache.version = key, out, byID, items, clock(), version
   return out
+end
+
+local function isVanitySpike(r)
+  return (r.change or 0) > 1500 and (r.n or 0) <= 2 and (r.usual or 0) < 2500
 end
 
 local function top(filter, score, n)
@@ -126,19 +212,65 @@ local function top(filter, score, n)
   return out
 end
 
-function M.gainers(n) return top(function(r) return (r.change or 0) >= 3 end, function(r) return r.change end, n) end
+function M.gainers(n)
+  return top(function(r) return (r.change or 0) >= 3 and not isVanitySpike(r) end, function(r) return r.change end, n)
+end
 function M.losers(n) return top(function(r) return (r.change or 0) <= -3 end, function(r) return -r.change end, n) end
 function M.hot(n)
-  return top(function(r) return r.hot >= 5 and r.signal ~= "steady" and r.signal ~= "new" end, function(r) return r.hot end, n)
+  return top(function(r) return r.hot >= 5 and r.signal ~= "steady" and r.signal ~= "new" and not isVanitySpike(r) end, function(r) return r.hot end, n)
 end
 function M.signals(n)
-  return top(function(r) return r.signal == "buy" or r.signal == "sell" end,
+  return top(function(r) return (r.signal == "buy" or r.signal == "sell") and not isVanitySpike(r) end,
     function(r) return math.abs(pct(r.last, r.usual) or 0) * math.max(1, math.log10(r.last)) end, n)
 end
 
--- The ticker: the biggest moves either way, as { r } rows (up to n).
+-- The live ticker: prioritizes verified live deals and freshly scanned items (sniper sweeps &
+-- searches) ahead of older market movers, with outlier capping so +12,000% 1-item vanity posts
+-- never freeze the ticker.
 function M.ticker(n)
-  return top(function(r) return r.change and math.abs(r.change) >= 1 end, function(r) return math.abs(r.change) end, n or 16)
+  local limit = n or 16
+  local tnow = now()
+  local sniperOn = A().sniper and A().sniper.on
+  local tier1, tier2, tier3, tier4 = {}, {}, {}, {}
+  for _, r in ipairs(M.rows()) do
+    local age = r.at and math.max(0, tnow - r.at) or 999999
+    local absC = r.change and math.abs(r.change) or 0
+    local capped = math.min(absC, 400)
+    local volWeight = math.max(1, math.log10((r.n or 1) + 1))
+    if r.live then
+      tier1[#tier1 + 1] = { r = r, s = 1e9 + capped * 10 - age }
+    elseif not isVanitySpike(r) then
+      if age <= 180 and absC >= 1 then
+        tier2[#tier2 + 1] = { r = r, s = (180 - age) * 1000 + capped * volWeight }
+      elseif sniperOn and age <= 75 and not (T().dealVendorBlocked and T().dealVendorBlocked(r.id)) then
+        tier3[#tier3 + 1] = { r = r, s = (75 - age) * 1000 + (r.n or 0) }
+      elseif absC >= 1 then
+        tier4[#tier4 + 1] = { r = r, s = capped * volWeight - math.min(age, 7200) * 0.02 }
+      end
+    end
+  end
+  local function sortBucket(b)
+    table.sort(b, function(a, b2)
+      if a.s ~= b2.s then return a.s > b2.s end
+      return a.r.id < b2.r.id
+    end)
+  end
+  sortBucket(tier1); sortBucket(tier2); sortBucket(tier3); sortBucket(tier4)
+  local out = {}
+  local function takeFrom(b, maxTake)
+    local taken = 0
+    for _, e in ipairs(b) do
+      if #out >= limit or (maxTake and taken >= maxTake) then break end
+      out[#out + 1] = e.r
+      taken = taken + 1
+    end
+  end
+  takeFrom(tier1)
+  takeFrom(tier2, sniperOn and #tier3 > 0 and math.max(8, limit - 4) or limit)
+  if sniperOn then takeFrom(tier3, 6) end
+  takeFrom(tier2)
+  takeFrom(tier4)
+  return out
 end
 
 -- A change as "+12%" / "-8%" / "0%".
@@ -156,25 +288,67 @@ end
 -- The trade record: wins and losses
 ----------------------------------------------------------------------------
 
--- Worked out from the log (oldest first): a sale of something the Codex bought is a flip (its
--- profit = what the sale brings after the 5% cut minus what those pieces cost, average cost);
--- a sale of your own loot is income; an expired or cancelled post loses its deposit.
--- { flips = { { t, id, name, qty, cost, got, profit } } newest first, profit, income, lost, wins,
---   losses, best, worst, holdings = { { id, name, qty, each, worth, pnl } }, bought, sales }
+-- Worked out from the log (oldest first): a sale of something the Codex bought (on the AH or to an
+-- NPC vendor) closes its cost basis as a flip/snipe win or loss; a sale of your own loot is income;
+-- an expired or cancelled post loses its deposit.
+-- { flips = { { t, id, name, qty, cost, got, profit, via } } newest first, profit, vendorProfit,
+--   income, earned, spent, winAmount, lossAmount, lost, wins, losses, best, worst,
+--   holdings = { { id, name, qty, each, worth, pnl, via } }, openByID, bought, sales, vendorSales }
 local recordCache = {}
 function M.record()
-  local key = (T().logVersion or 0) .. ":" .. (A().version or 0)
-  if recordCache.key == key and recordCache.value then return recordCache.value end
-  local out = { flips = {}, profit = 0, income = 0, lost = 0, wins = 0, losses = 0, bought = 0, spent = 0, sales = 0, holdings = {} }
+  local logVer, priceVer, tnow = T().logVersion or 0, A().version or 0, clock()
+  if recordCache.value and recordCache.logVer == logVer
+    and (recordCache.priceVer == priceVer or #recordCache.value.holdings == 0 or tnow - (recordCache.at or 0) < 3) then
+    return recordCache.value
+  end
+  local out = {
+    flips = {}, profit = 0, vendorProfit = 0, income = 0, earned = 0, spent = 0,
+    winAmount = 0, lossAmount = 0, lost = 0, wins = 0, losses = 0,
+    bought = 0, sales = 0, vendorSales = 0, holdings = {}, openByID = {},
+  }
   local basis = {}
   local cut = T().CUT or 0.05
+  local function closeBasis(e, id, qty, got, via)
+    local b = id and basis[id]
+    if b and b.qty > 0 then
+      local q = math.min(qty, b.qty)
+      local cost = math.floor(b.cost * q / b.qty + 0.5)
+      local share = math.floor(got * q / qty)
+      b.cost, b.qty = math.max(0, b.cost - cost), b.qty - q
+      local f = { t = e.t, id = id, name = e.name or b.name, qty = q, cost = cost, got = share, profit = share - cost, via = via }
+      table.insert(out.flips, 1, f)
+      out.profit = out.profit + f.profit
+      if via == "vendor" then out.vendorProfit = out.vendorProfit + f.profit end
+      if f.profit >= 0 then
+        out.wins = out.wins + 1
+        out.winAmount = out.winAmount + f.profit
+      else
+        out.losses = out.losses + 1
+        out.lossAmount = out.lossAmount + (-f.profit)
+      end
+      if not out.best or f.profit > out.best.profit then out.best = f end
+      if not out.worst or f.profit < out.worst.profit then out.worst = f end
+      out.income = out.income + (got - share)
+    else
+      out.income = out.income + got
+    end
+  end
   for _, e in ipairs(T().notes().log) do
-    local id, qty, each = e.id, tonumber(e.qty) or 1, tonumber(e.each)
-    if e.k == "buy" and id and each then
+    local id, qty, each = e.id, math.max(1, tonumber(e.qty) or 1), tonumber(e.each)
+    if e.k == "buy" and id and (each or e.total) then
+      local totalCost = tonumber(e.total) or ((each or 0) * qty)
       local b = basis[id] or { qty = 0, cost = 0, name = e.name }
-      b.qty, b.cost, b.name = b.qty + qty, b.cost + each * qty, e.name or b.name
+      b.qty, b.cost, b.name = b.qty + qty, b.cost + totalCost, e.name or b.name
+      if e.dealKind == "vendor" or not b.kind then b.kind = e.dealKind or b.kind end
+      if e.vendor and e.vendor > 0 then b.vendor = e.vendor end
       basis[id] = b
-      out.bought, out.spent = out.bought + qty, out.spent + each * qty
+      out.bought, out.spent = out.bought + qty, out.spent + totalCost
+    elseif e.k == "vendor" and (each or e.total) then
+      local got = tonumber(e.total) or ((each or 0) * qty)
+      out.sales = out.sales + 1
+      out.vendorSales = out.vendorSales + 1
+      out.earned = out.earned + got
+      closeBasis(e, id, qty, got, "vendor")
     elseif e.k == "sold" and not each then
       -- a sale the chat reported for something not posted through the Codex: its price comes
       -- with the mailbox's invoice (until then it counts as a sale but no money)
@@ -183,37 +357,48 @@ function M.record()
     elseif e.k == "sold" then
       out.sales = out.sales + 1
       local got = each and math.floor(each * qty * (1 - cut)) or 0
-      local b = id and basis[id]
-      if b and b.qty > 0 then
-        local q = math.min(qty, b.qty)
-        local cost = math.floor(b.cost * q / b.qty + 0.5)
-        local share = math.floor(got * q / qty)
-        b.cost, b.qty = b.cost - cost, b.qty - q
-        local f = { t = e.t, id = id, name = e.name or b.name, qty = q, cost = cost, got = share, profit = share - cost }
-        table.insert(out.flips, 1, f)
-        out.profit = out.profit + f.profit
-        if f.profit >= 0 then out.wins = out.wins + 1 else out.losses = out.losses + 1 end
-        if not out.best or f.profit > out.best.profit then out.best = f end
-        if not out.worst or f.profit < out.worst.profit then out.worst = f end
-        out.income = out.income + (got - share)
-      else
-        out.income = out.income + got
-      end
+      out.earned = out.earned + got
+      closeBasis(e, id, qty, got, "ah")
+    elseif e.k == "clear" and id and basis[id] and basis[id].qty > 0 then
+      local b = basis[id]
+      local q = math.min(qty, b.qty)
+      local cost = math.floor(b.cost * q / b.qty + 0.5)
+      b.cost, b.qty = math.max(0, b.cost - cost), b.qty - q
     elseif (e.k == "expired" or e.k == "cancel") and e.dep then
       out.lost = out.lost + e.dep
+      out.lossAmount = out.lossAmount + e.dep
     end
   end
   for id, b in pairs(basis) do
     if b.qty > 0 then
       local p = A().price(id)
-      local nowEach = p and ((p.n > 0 and p.low) or p.usual)
+      local vendor = (p and p.vendor and p.vendor > 0 and p.vendor) or b.vendor or (T().vendorPrice and T().vendorPrice(id, p))
+      vendor = A().vendorValue(id, vendor)
       local each = math.floor(b.cost / b.qty + 0.5)
-      local h = { id = id, name = b.name or A().nameOf(id) or ("item " .. id), qty = b.qty, each = each }
-      if nowEach then
-        h.worth = math.floor(nowEach * (1 - cut))
-        h.pnl = (h.worth - each) * b.qty
+      local h = { id = id, name = b.name or A().nameOf(id) or ("item " .. id), qty = b.qty, cost = b.cost,
+        each = each, kind = b.kind, vendor = vendor }
+      if b.kind == "vendor" and vendor and vendor > 0 then
+        h.worth, h.via = vendor, "vendor"
+      else
+        local ahEach
+        if p then
+          if p.days and p.days >= 2 and p.usual and p.usual > 0 then
+            -- guard against a lone absurd listing after buying out the cheap ones
+            ahEach = (p.n and p.n > 0 and p.low and p.low <= p.usual * 2) and p.low or p.usual
+          else
+            ahEach = (p.n and p.n > 0 and p.low) or p.usual
+          end
+        end
+        local ahWorth = ahEach and math.floor(ahEach * (1 - cut)) or nil
+        if vendor and vendor > 0 and (not ahWorth or vendor >= ahWorth) then
+          h.worth, h.via = vendor, "vendor"
+        elseif ahWorth then
+          h.worth, h.via = ahWorth, "ah"
+        end
       end
+      if h.worth then h.pnl = h.worth * b.qty - b.cost end
       out.holdings[#out.holdings + 1] = h
+      out.openByID[id] = h
     end
   end
   table.sort(out.holdings, function(a, b) return (a.pnl or 0) > (b.pnl or 0) end)
@@ -222,8 +407,15 @@ function M.record()
   out.net = out.profit + out.income - out.lost
   local closed = out.wins + out.losses
   out.winRate = closed > 0 and math.floor(out.wins * 100 / closed + 0.5) or nil
-  recordCache.key, recordCache.value = key, out
+  recordCache.logVer, recordCache.priceVer, recordCache.at, recordCache.value = logVer, priceVer, tnow, out
   return out
+end
+
+function M.openCost(id, qty)
+  local h = id and M.record().openByID[id]
+  if not h or h.qty <= 0 then return nil end
+  local q = math.min(math.max(1, tonumber(qty) or 1), h.qty)
+  return math.floor(h.cost * q / h.qty + 0.5)
 end
 
 -- The newest log entries (newest first), for the trade list: { e }.

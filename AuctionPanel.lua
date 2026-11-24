@@ -22,7 +22,7 @@ P.PAGES = {
   { "scan", "Scan", "Full and paged scans, quick searches, settings and item look-up." },
 }
 local page, reopen, picked = "overview", false, false
-local root, panel, body, lookupBox
+local root, panel, body, lookupBox, minBox
 local tabs, ours = {}, {}
 local placedAfter, shows = nil, 0 -- tabs[i] = the button for P.PAGES[i]; ours[button] = true
 local hooked = {}
@@ -31,6 +31,16 @@ local view = { deals = nil, hidden = false, lookup = nil, market = nil, marketMo
 local ticker
 local forgetAt
 local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 }
+local CYAN, MINT = { 0.35, 0.84, 0.92 }, { 0.45, 0.96, 0.58 }
+local ORNAMENT = "Interface\\AddOns\\LevelingCodex\\media\\loot-ornament.tga"
+local QUAL_RING = {
+  [0] = { 0.52, 0.52, 0.52, 0.7 },
+  [1] = { 0.78, 0.80, 0.84, 0.65 },
+  [2] = { 0.20, 0.88, 0.28, 0.85 },
+  [3] = { 0.12, 0.52, 1.00, 0.90 },
+  [4] = { 0.68, 0.28, 0.96, 0.92 },
+  [5] = { 1.00, 0.52, 0.08, 0.95 },
+}
 local function M() return ns.auctionMarket end
 
 local function has(t, name) return type(t) == "table" and type(t[name]) == "function" end
@@ -295,6 +305,7 @@ local function releaseAll()
     p.used = 0
   end
   if lookupBox then lookupBox:Hide() end
+  if minBox then minBox:Hide() end
 end
 
 local FONTS = { title = "GameFontNormalLarge", head = "GameFontNormal", body = "GameFontHighlight",
@@ -436,6 +447,147 @@ local function pill(s, x, y, w, color)
   text(s, x + 3, y + 2, w - 4, "dim", c, "CENTER")
 end
 
+-- Graphical console surface with gradient wash, top accent rule, inner bevel and subtle ornament.
+local function surfaceDeck(x, y, w, h, accent, withOrnament)
+  local ac = accent or ns.C.accent
+  rect(x, y, w, h, { 0.04, 0.06, 0.09, 0.95 })
+  local wash = take("wash", function() return body:CreateTexture(nil, "BORDER") end)
+  wash:SetPoint("TOPLEFT", body, "TOPLEFT", x + 1, -(y + 1))
+  wash:SetSize(math.max(1, w - 2), math.min(h - 2, 36))
+  ns.fade(wash, "VERTICAL", ac[1], ac[2], ac[3], 0.0, 0.12)
+  if withOrnament and ns.art.hasFile(ORNAMENT) then
+    local orn = take("orn", function() return body:CreateTexture(nil, "BORDER") end)
+    if orn:SetTexture(ORNAMENT) ~= false then
+      orn:SetPoint("TOPRIGHT", body, "TOPRIGHT", -(body:GetWidth() > 0 and (body:GetWidth() - x - w + 2) or 18), -(y + 2))
+      orn:ClearAllPoints()
+      orn:SetPoint("TOPLEFT", body, "TOPLEFT", x + w - math.min(w - 4, 180), -(y + 2))
+      orn:SetSize(math.min(w - 4, 178), math.min(h - 4, 28))
+      orn:SetVertexColor(ac[1], ac[2], ac[3], 0.11)
+    else
+      orn:Hide()
+    end
+  end
+  local e = { ac[1], ac[2], ac[3], 0.45 }
+  rect(x, y, w, 2, { ac[1], ac[2], ac[3], 0.78 }, "ARTWORK")
+  rect(x, y + h - 1, w, 1, e, "BORDER")
+  rect(x, y, 1, h, e, "BORDER")
+  rect(x + w - 1, y, 1, h, e, "BORDER")
+  rect(x + 1, y + 2, w - 2, 1, { 1, 1, 1, 0.06 }, "ARTWORK")
+end
+
+-- Quality-rimmed icon slot for professional item presentation.
+local function framedIcon(id, path, x, y, size)
+  local q = id and tonumber((select(3, ns.itemInfo(id))))
+  local ring = (q and QUAL_RING[q]) or { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.55 }
+  rect(x - 2, y - 2, size + 4, size + 4, { 0.02, 0.03, 0.05, 0.96 }, "BORDER")
+  rect(x - 2, y - 2, size + 4, 1, ring, "ARTWORK")
+  rect(x - 2, y + size + 1, size + 4, 1, ring, "ARTWORK")
+  rect(x - 2, y - 2, 1, size + 4, ring, "ARTWORK")
+  rect(x + size + 1, y - 2, 1, size + 4, ring, "ARTWORK")
+  return icon(path, x, y, size)
+end
+
+-- Sleek beveled custom button ("emerald", "gold", "radar", "pill", "ghost", "danger") so sniper
+-- controls look like a dedicated trading terminal rather than generic red UI buttons.
+local PRO_STYLES = {
+  emerald = { bg = { 0.05, 0.24, 0.14, 0.96 }, sheen = { 0.22, 0.90, 0.48, 0.22 }, edge = { 0.28, 0.88, 0.45, 0.95 }, fg = { 0.94, 1.0, 0.96 }, bar = { 0.35, 0.98, 0.52, 1 } },
+  gold    = { bg = { 0.14, 0.11, 0.05, 0.95 }, sheen = { 1.00, 0.82, 0.22, 0.18 }, edge = { 0.92, 0.76, 0.22, 0.85 }, fg = { 1.0, 0.86, 0.26 }, bar = { 1.0, 0.82, 0.18, 0.95 } },
+  radar   = { bg = { 0.05, 0.16, 0.22, 0.96 }, sheen = { 0.28, 0.82, 0.95, 0.18 }, edge = { 0.32, 0.78, 0.90, 0.85 }, fg = { 0.92, 0.98, 1.0 }, bar = { 0.35, 0.85, 0.95, 0.95 } },
+  radarOn = { bg = { 0.05, 0.26, 0.16, 0.97 }, sheen = { 0.28, 0.95, 0.52, 0.26 }, edge = { 0.32, 0.95, 0.50, 1.00 }, fg = { 0.95, 1.0, 0.96 }, bar = { 0.35, 1.0, 0.55, 1 } },
+  pillOn  = { bg = { 0.10, 0.22, 0.29, 0.96 }, sheen = { 0.35, 0.82, 0.95, 0.20 }, edge = { 0.96, 0.80, 0.24, 0.90 }, fg = { 1.0, 0.95, 0.80 }, bottom = { 1.0, 0.82, 0.18, 1 } },
+  pill    = { bg = { 0.04, 0.06, 0.09, 0.90 }, sheen = { 0.40, 0.55, 0.70, 0.06 }, edge = { 0.24, 0.33, 0.42, 0.52 }, fg = { 0.76, 0.82, 0.88 } },
+  ghost   = { bg = { 0.06, 0.08, 0.11, 0.92 }, sheen = { 0.55, 0.65, 0.78, 0.07 }, edge = { 0.28, 0.36, 0.45, 0.58 }, fg = { 0.86, 0.90, 0.94 } },
+  danger  = { bg = { 0.22, 0.06, 0.06, 0.94 }, sheen = { 1.00, 0.35, 0.30, 0.16 }, edge = { 0.92, 0.36, 0.32, 0.85 }, fg = { 1.0, 0.86, 0.84 } },
+}
+
+local function proBtn(label, x, y, w, h, style, onClick, opts)
+  opts = opts or {}
+  local b = take("pbtn", function()
+    local f = CreateFrame("Button", nil, body)
+    f.bg = f:CreateTexture(nil, "BACKGROUND")
+    f.bg:SetAllPoints()
+    f.sheen = f:CreateTexture(nil, "BORDER")
+    f.sheen:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
+    f.sheen:SetPoint("TOPRIGHT", f, "TOPRIGHT", -1, -1)
+    f.bevel = f:CreateTexture(nil, "ARTWORK")
+    f.bevel:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
+    f.bevel:SetPoint("TOPRIGHT", f, "TOPRIGHT", -1, -1)
+    f.bevel:SetHeight(1)
+    f.eT = f:CreateTexture(nil, "BORDER"); f.eT:SetPoint("TOPLEFT"); f.eT:SetPoint("TOPRIGHT"); f.eT:SetHeight(1)
+    f.eB = f:CreateTexture(nil, "BORDER"); f.eB:SetPoint("BOTTOMLEFT"); f.eB:SetPoint("BOTTOMRIGHT"); f.eB:SetHeight(1)
+    f.eL = f:CreateTexture(nil, "BORDER"); f.eL:SetPoint("TOPLEFT"); f.eL:SetPoint("BOTTOMLEFT"); f.eL:SetWidth(1)
+    f.eR = f:CreateTexture(nil, "BORDER"); f.eR:SetPoint("TOPRIGHT"); f.eR:SetPoint("BOTTOMRIGHT"); f.eR:SetWidth(1)
+    f.accent = f:CreateTexture(nil, "OVERLAY")
+    f.hl = f:CreateTexture(nil, "HIGHLIGHT")
+    f.hl:SetAllPoints()
+    f.hl:SetColorTexture(1, 1, 1, 0.09)
+    f.fs = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    f.fs:SetPoint("LEFT", f, "LEFT", 4, 0)
+    f.fs:SetPoint("RIGHT", f, "RIGHT", -4, 0)
+    f.fs:SetJustifyH("CENTER")
+    f.fs:SetWordWrap(false)
+    f.label = f.fs
+    function f:SetLabel(t) self._text = t; self.fs:SetText(t or "") end
+    function f:GetText() return self._text or self.fs:GetText() end
+    f:SetScript("OnEnter", ns.art.showTip)
+    f:SetScript("OnLeave", ns.art.hideTip)
+    return f
+  end)
+  h = h or 22
+  b:SetSize(w, h)
+  b:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
+  b:SetFrameLevel(body:GetFrameLevel() + 4)
+  local key = style or "ghost"
+  if key == "pill" and opts.lit then key = "pillOn"
+  elseif key == "radar" and opts.lit then key = "radarOn" end
+  local st = PRO_STYLES[key] or PRO_STYLES.ghost
+  local enabled = opts.enabled ~= false
+  b:SetEnabled(enabled)
+  local alpha = enabled and 1 or 0.42
+  b.bg:SetColorTexture(st.bg[1], st.bg[2], st.bg[3], st.bg[4] * alpha)
+  b.sheen:SetHeight(math.max(4, math.floor(h * 0.55)))
+  ns.fade(b.sheen, "VERTICAL", st.sheen[1], st.sheen[2], st.sheen[3], 0.0, st.sheen[4] * alpha)
+  b.bevel:SetColorTexture(1, 1, 1, 0.09 * alpha)
+  for _, ed in ipairs({ b.eT, b.eB, b.eL, b.eR }) do
+    ed:SetColorTexture(st.edge[1], st.edge[2], st.edge[3], st.edge[4] * alpha)
+  end
+  b.accent:ClearAllPoints()
+  if st.bar and enabled then
+    b.accent:SetPoint("TOPLEFT", b, "TOPLEFT", 1, -1)
+    b.accent:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 1, 1)
+    b.accent:SetWidth(2)
+    b.accent:SetColorTexture(st.bar[1], st.bar[2], st.bar[3], st.bar[4])
+    b.accent:Show()
+  elseif st.bottom and enabled then
+    b.accent:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", 2, 1)
+    b.accent:SetPoint("BOTTOMRIGHT", b, "BOTTOMRIGHT", -2, 1)
+    b.accent:SetHeight(2)
+    b.accent:SetColorTexture(st.bottom[1], st.bottom[2], st.bottom[3], st.bottom[4])
+    b.accent:Show()
+  else
+    b.accent:Hide()
+  end
+  b:SetLabel(label)
+  b.fs:SetTextColor(st.fg[1], st.fg[2], st.fg[3], alpha)
+  b.codexLabel = opts.label or label
+  b.codexOn = opts.lit and true or nil
+  b.tipTitle, b.tipText = opts.tip, opts.tipText
+  b:SetScript("OnClick", onClick and function() onClick(); P.refresh() end or nil)
+  return b
+end
+
+local function proPills(x, y, w, h, labels, lit, onPick, prefix, tips)
+  local n = #labels
+  local gap = 3
+  local bw = math.floor((w - (n - 1) * gap) / n)
+  for i, label in ipairs(labels) do
+    local w2 = i == n and (w - (n - 1) * (bw + gap)) or bw
+    proBtn(label, x + (i - 1) * (bw + gap), y, w2, h or 20, "pill", function() onPick(i) end,
+      { label = (prefix or "") .. label, lit = i == lit, tip = tips and tips[i] and label or nil, tipText = tips and tips[i] or nil })
+  end
+  return h or 20
+end
+
 -- A line chart of points = { { v, label, sub } } (oldest first) in x, y, w, h.
 -- opts: usual (a dashed line), mini (no labels, grid or hover), color, title (hover heading).
 local function lineChart(points, x, y, w, h, opts)
@@ -574,6 +726,8 @@ local function wheel(delta)
   P.refresh()
 end
 
+local drawTicker
+
 local function makePanel()
   panel = CreateFrame("Frame", "LevelingCodexAHPanel", root)
   panel:SetPoint("TOPLEFT", root, "TOPLEFT", 4, -24)
@@ -643,14 +797,22 @@ local function makePanel()
     else
       self.dot:SetAlpha(0.6)
     end
-    if not self.wide or not self.clips then return end
     local over = false
     if self.strip.IsMouseOver then
       local ok, r = pcall(self.strip.IsMouseOver, self.strip)
       over = ok and r and true or false
     end
     self.paused = over
-    if over then return end
+    -- Real-time ticker update: whenever the sniper or searches file new prices, update the track in place
+    if not over and self.lastW and tnow - (self.lastCheck or 0) >= 1.5 then
+      self.lastCheck = tnow
+      local sniperOn = A().sniper and A().sniper.on
+      if not A().scanning() and ((A().version or 0) ~= self.seenVersion or (sniperOn and tnow - (self.lastRebuild or 0) >= 6)) then
+        self.lastRebuild = tnow
+        pcall(drawTicker, 40, self.lastW)
+      end
+    end
+    if not self.wide or not self.clips or over then return end
     self.off = ((self.off or 0) + (tonumber(elapsed) or 0) * 34) % self.wide
     local a, b = self.tracks[1], self.tracks[2]
     a:ClearAllPoints(); a:SetPoint("LEFT", self.strip, "LEFT", -self.off, 0)
@@ -708,9 +870,11 @@ local function chartItem(id, mode)
   P.open("market")
 end
 
--- A mover's tooltip: now, usual, the change and its basis, supply, the signal.
+-- A mover's tooltip: now, usual, the change and its basis, supply, the signal, and live freshness.
 local function moverTip(r)
   local lines = { "Now " .. ns.money(r.last) .. (r.usual and (", usual " .. ns.money(r.usual)) or "") }
+  if r.live then lines[#lines + 1] = "LIVE SNIPE DEAL: verified buyout ready on Deals tab" end
+  if r.at then lines[#lines + 1] = "Updated: " .. A().age(r.at) end
   if r.trend then lines[#lines + 1] = "Against earlier days: " .. M().pctText(r.trend) end
   if r.move then lines[#lines + 1] = "Since the reading " .. A().age(now() - (r.moveAge or 0)):gsub(" ago$", "") .. " before: " .. M().pctText(r.move) end
   lines[#lines + 1] = ns.thousands(r.n) .. " listed" .. (r.supply and (" (" .. M().pctText(r.supply) .. ")") or "")
@@ -769,8 +933,11 @@ function pages.overview(W, top, H)
   local age, ageColor = scanAge()
   card(lx, y, lw, 96, "MARKET DATA")
   text(ns.thousands(A().count()) .. " items priced on " .. Q.plain(GetRealmName and GetRealmName() or "this realm"), lx + 14, y + 32, lw - 28, "small")
+  local liveN, liveAt = 0, nil
+  if A().liveStats then liveN, liveAt = A().liveStats() end
+  local scanSummary = age .. ((liveN > 0 and liveAt) and ("  |  Live DB: +" .. ns.thousands(liveN) .. " (" .. A().age(liveAt) .. ")") or "")
   text("Last scan:", lx + 14, y + 49, 80, "small", ns.C.dim)
-  text(age, lx + 90, y + 49, lw - 104, "small", ageColor)
+  text(scanSummary, lx + 90, y + 49, lw - 104, "small", (liveN > 0 and liveAt and now() - liveAt < 120) and GREEN or ageColor)
   scanAllButton(nil, lx + 14, y + 68, math.floor((lw - 36) / 2))
   button("Scan my bags", lx + 22 + math.floor((lw - 36) / 2), y + 68, math.floor((lw - 36) / 2), function()
     ns.say("Searching " .. A().scanBags() .. " items from your bags.")
@@ -779,11 +946,11 @@ function pages.overview(W, top, H)
   y = y + 108
   local rec = M().record()
   local th = top + H - y
-  card(lx, y, lw, th, "YOUR TRADES", "kept between visits")
+  card(lx, y, lw, th, "YOUR TRADES")
   button("See trades", lx + lw - 104, y + 6, 92, function() view.marketMode = "trades"; P.open("market") end, { label = "See trades" })
-  local ty = y + 34
+  local ty = y + 32
   if #T().notes().log == 0 then
-    text("Buys from Deals, posts from Quick Sell and every sale the game reports are kept here, with your wins and losses.",
+    text("Buys from Deals, vendor-snipe sales, posts from Quick Sell and AH sales are tracked here with wins and losses.",
       lx + 14, ty, lw - 28, "small", ns.C.dim, nil, true)
   else
     local third = math.floor((lw - 28) / 3)
@@ -791,11 +958,17 @@ function pages.overview(W, top, H)
       text(label, lx + 14 + (i - 1) * third, ty, third - 6, "dim", ns.C.dim)
       text(value, lx + 14 + (i - 1) * third, ty + 13, third - 6, "body", color or ns.C.light)
     end
-    stat(1, "Net", signed(rec.net), rec.net >= 0 and GREEN or RED)
-    stat(2, "Flips won", rec.winRate and (rec.winRate .. "%  (" .. rec.wins .. " of " .. (rec.wins + rec.losses) .. ")") or "none sold yet")
+    local closed = rec.wins + rec.losses
+    stat(1, "Net profit", signed(rec.net), rec.net >= 0 and GREEN or RED)
+    stat(2, "Wins / losses", closed > 0 and (rec.wins .. "W - " .. rec.losses .. "L (" .. rec.winRate .. "%)") or "none sold yet",
+      rec.winRate and (rec.winRate >= 50 and GREEN or RED))
     stat(3, "Still holding", #rec.holdings > 0 and signed(rec.unrealized) or "nothing", rec.unrealized >= 0 and GREEN or RED)
-    if rec.best and ty + 40 < y + th - 8 then
-      text("Best flip: " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit), lx + 14, ty + 36, lw - 28, "dim", GREEN)
+    if ty + 38 < y + th - 6 then
+      local made = (rec.winAmount or 0) + (rec.income or 0)
+      local lost = rec.lossAmount or rec.lost or 0
+      local tail = "Made +" .. ns.money(made) .. "  |  Lost -" .. ns.money(lost)
+      if rec.best then tail = tail .. "  |  Best " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit) end
+      text(tail, lx + 14, ty + 34, lw - 28, "dim", made >= lost and GREEN or ORANGE)
     end
   end
   -- money to make
@@ -979,69 +1152,97 @@ local function tile(x, y, w, h, label, value, sub, color)
   if sub then text(sub, x + 10, y + h - 15, w - 16, "dim", ns.C.dim) end
 end
 
-local KIND_TAGS = { buy = { "BOUGHT", { 0.35, 0.8, 0.85 } }, post = { "POSTED", { 0.85, 0.85, 0.85 } }, sold = { "SOLD", GREEN },
-  expired = { "EXPIRED", ORANGE }, cancel = { "CANCELLED", RED } }
+local KIND_TAGS = {
+  buy = { "BOUGHT", { 0.35, 0.8, 0.85 } },
+  post = { "POSTED", { 0.85, 0.85, 0.85 } },
+  sold = { "SOLD", GREEN },
+  vendor = { "VENDORED", MINT },
+  clear = { "CLEARED", { 0.55, 0.58, 0.62 } },
+  expired = { "EXPIRED", ORANGE },
+  cancel = { "CANCELLED", RED },
+}
 
 local function tradesView(W, y, bottom)
   local rec = M().record()
   local x, w = 16, W - 32
   local tw = math.floor((w - 24) / 4)
   local closed = rec.wins + rec.losses
+  local made = (rec.winAmount or 0) + (rec.income or 0)
+  local lost = rec.lossAmount or rec.lost or 0
   tile(x, y, tw, 52, "NET PROFIT", signed(rec.net), (rec.pending or 0) > 0
-    and (rec.pending .. (rec.pending == 1 and " sale waits" or " sales wait") .. " for its mail") or "flips, sales and lost deposits",
+    and (rec.pending .. (rec.pending == 1 and " sale waits" or " sales wait") .. " for its mail")
+    or ("Made +" .. ns.money(made) .. " | Lost -" .. ns.money(lost)),
     rec.net >= 0 and GREEN or RED)
   tile(x + (tw + 8), y, tw, 52, "FLIPS WON", rec.winRate and (rec.winRate .. "%") or "--",
-    closed > 0 and (rec.wins .. " won, " .. rec.losses .. " lost") or "no flip sold yet", rec.winRate and (rec.winRate >= 50 and GREEN or RED))
+    closed > 0 and (rec.wins .. " won, " .. rec.losses .. " lost" .. ((rec.vendorSales or 0) > 0 and (" (" .. rec.vendorSales .. " vendor)") or ""))
+      or "no flip or snipe sold yet", rec.winRate and (rec.winRate >= 50 and GREEN or RED))
   tile(x + 2 * (tw + 8), y, tw, 52, "STILL HOLDING", #rec.holdings > 0 and signed(rec.unrealized) or "--",
-    #rec.holdings .. (#rec.holdings == 1 and " item if sold now" or " items if sold now"), rec.unrealized >= 0 and GREEN or RED)
-  tile(x + 3 * (tw + 8), y, tw, 52, "DEPOSITS LOST", ns.money(rec.lost), rec.sales .. (rec.sales == 1 and " sale" or " sales") .. " in all", rec.lost > 0 and ORANGE)
+    "Spent " .. ns.money(rec.spent or 0) .. " (" .. #rec.holdings .. " open)", rec.unrealized >= 0 and GREEN or RED)
+  tile(x + 3 * (tw + 8), y, tw, 52, "MONEY LOST / FEES", "-" .. ns.money(lost),
+    "Gross in " .. ns.money(rec.earned or 0) .. " (" .. rec.sales .. (rec.sales == 1 and " sale)" or " sales)"),
+    lost > 0 and ORANGE or ns.C.dim)
   y = y + 62
   -- profit over time
   local pts, run = {}, 0
   for i = #rec.flips, 1, -1 do
     local f = rec.flips[i]
     run = run + f.profit
-    pts[#pts + 1] = { v = run, label = A().age(f.t), sub = Q.plain(f.name) .. " " .. signed(f.profit) }
+    pts[#pts + 1] = { v = run, label = A().age(f.t), sub = Q.plain(f.name) .. " " .. signed(f.profit) .. (f.via == "vendor" and " (vendor)" or "") }
   end
   local chh = 84
-  card(x, y, w, chh + 34, "PROFIT FROM FLIPS", rec.best and ("best " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit)) or nil)
+  card(x, y, w, chh + 34, "PROFIT FROM FLIPS & SNIPES", rec.best and ("best " .. Q.plain(rec.best.name) .. " " .. signed(rec.best.profit)) or nil)
   if #pts >= 2 then
     local base = 0
     for _, pt in ipairs(pts) do base = math.min(base, pt.v) end
     local shifted = {}
     for i, pt in ipairs(pts) do shifted[i] = { v = pt.v - base, label = pt.label, sub = pt.sub } end
     lineChart(shifted, x + 12, y + 28, w - 24, chh, { color = run >= 0 and GREEN or RED })
+  elseif #pts == 1 then
+    local only = rec.flips[1]
+    text("First closed trade: " .. Q.plain(only.qty .. " x " .. only.name) .. " -> " .. signed(only.profit)
+      .. (only.via == "vendor" and " (vendored)" or " (AH sale)") .. ". Close one more to plot your profit curve.",
+      x + 14, y + 42, w - 28, "small", only.profit >= 0 and GREEN or RED, nil, true)
   else
-    text("Buy a deal and sell it again: each flip adds a point here, the line climbing with every win.",
+    text("Buy a deal and sell it at a vendor or on the AH: every closed snipe or flip plots your cumulative profit here.",
       x + 14, y + 36, w - 28, "small", ns.C.dim, nil, true)
   end
   y = y + chh + 44
   local hw = math.floor((w - 16) / 2)
   local h = bottom - y
-  card(x, y, hw, h, "HOLDINGS", "bought, not sold yet")
+  card(x, y, hw, h, "HOLDINGS", "auto-tracks at vendors")
   if #rec.holdings == 0 then
     text("Nothing the Codex bought is waiting to sell.", x + 14, y + 34, hw - 28, "small", ns.C.dim, nil, true)
   else
-    list("holdings", rec.holdings, x + 6, y + 30, hw - 12, 30, h - 36, function(hd, ix, iy, iw)
-      icon(itemIcon(hd.id), ix + 4, iy + 4, 20)
-      text(Q.plain(hd.qty .. " x " .. hd.name), ix + 30, iy + 2, iw - 130, "small")
-      text("paid " .. ns.money(hd.each) .. (hd.worth and (", worth " .. ns.money(hd.worth)) or ""), ix + 30, iy + 15, iw - 130, "dim", ns.C.dim)
-      text(hd.pnl and signed(hd.pnl) or "--", ix + iw - 96, iy + 8, 92, "small", hd.pnl and (hd.pnl >= 0 and GREEN or RED) or ns.C.dim, "RIGHT")
-      hit(ix, iy, iw, 28, hd.name, "Click to chart it.", function() chartItem(hd.id, "movers") end, "Chart " .. hd.name)
+    list("holdings", rec.holdings, x + 6, y + 30, hw - 12, 32, h - 36, function(hd, ix, iy, iw)
+      framedIcon(hd.id, itemIcon(hd.id), ix + 4, iy + 5, 20)
+      local actW = 78
+      local pnlW = 72
+      local textW = math.max(60, iw - 30 - actW - pnlW - 8)
+      text(Q.plain(hd.qty .. " x " .. hd.name), ix + 30, iy + 2, textW, "small")
+      local viaNote = hd.via == "vendor" and "vendor " or "worth "
+      text("paid " .. ns.money(hd.each) .. (hd.worth and (", " .. viaNote .. ns.money(hd.worth)) or ""), ix + 30, iy + 16, textW, "dim", ns.C.dim)
+      text(hd.pnl and signed(hd.pnl) or "--", ix + iw - actW - pnlW - 4, iy + 9, pnlW, "small", hd.pnl and (hd.pnl >= 0 and GREEN or RED) or ns.C.dim, "RIGHT")
+      hit(ix, iy, iw - actW - 4, 30, hd.name, "Click to chart it.", function() chartItem(hd.id, "movers") end, "Chart " .. hd.name)
+      proBtn("Vendor", ix + iw - actW, iy + 5, 52, 20, "emerald", function() T().resolveHolding(hd.id, hd.name, hd.qty, "vendor") end,
+        { label = "Vendored " .. hd.name, enabled = (hd.vendor or 0) > 0, tip = "Mark as vendored",
+          tipText = "Already sold this item to an NPC vendor? Logs " .. hd.qty .. " x " .. Q.plain(hd.name) .. " at " .. ns.money(hd.vendor or 0) .. " each." })
+      proBtn("x", ix + iw - 24, iy + 5, 22, 20, "ghost", function() T().resolveHolding(hd.id, hd.name, hd.qty, "clear") end,
+        { label = "Clear holding " .. hd.name, tip = "Clear holding",
+          tipText = "Remove from open holdings without logging a sale (for items you equipped, learned or used)." })
     end)
   end
   local rx = x + hw + 16
   card(rx, y, hw, h, "RECENT TRADES")
   local recent = M().recent(60)
   if #recent == 0 then
-    text("Nothing yet. Buys from Deals, posts from Quick Sell and the sales the game reports land here.",
+    text("Nothing yet. Buys from Deals, vendor-snipe sales, posts from Quick Sell and AH sales land here.",
       rx + 14, y + 34, hw - 28, "small", ns.C.dim, nil, true)
   else
     list("trades", recent, rx + 6, y + 30, hw - 12, 22, h - 36, function(e, ix, iy, iw)
       local tag = KIND_TAGS[e.k] or KIND_TAGS.post
-      pill(tag[1], ix + 2, iy + 3, 70, tag[2])
-      text(Q.plain((e.qty or 1) .. " x " .. (e.name or "?")), ix + 78, iy + 4, iw - 78 - 140, "small")
-      text(e.each and (ns.money(e.each) .. " each") or "", ix + iw - 210, iy + 4, 120, "dim", ns.C.dim, "RIGHT")
+      pill(tag[1], ix + 2, iy + 3, 72, tag[2])
+      text(Q.plain((e.qty or 1) .. " x " .. (e.name or "?")), ix + 80, iy + 4, iw - 80 - 140, "small")
+      text(e.each and e.each > 0 and (ns.money(e.each) .. " each") or "", ix + iw - 210, iy + 4, 120, "dim", ns.C.dim, "RIGHT")
       text(A().age(e.t), ix + iw - 86, iy + 4, 82, "dim", ns.C.dim, "RIGHT")
     end)
   end
@@ -1090,93 +1291,417 @@ end
 -- Deals
 ----------------------------------------------------------------------------
 
-local KINDS = { { "All deals", nil }, { "Under vendor", "vendor" }, { "Flips", "flip" } }
+local KINDS = { { "All deals", nil, 68 }, { "Under vendor", "vendor", 100 }, { "Flips", "flip", 58 } }
+local SNIPE_MODES = {
+  { "Watch", "watch", "Watch list", "Smart Watch List: checks your pinned (*) items first, then active deals, proven past winners, and items trading near vendor/flip floor." },
+  { "Newest", "newest", "Newest", "Multi-page fresh sweep: walks pages 1-4 of newest and lowest-priced server listings to catch 12h, 24h and 48h snipes fast." },
+  { "Pages", "sweep", "Pages", "Continuous page scanner: walks page by page across the entire auction house on its own, finding sniping deals and updating price histories." },
+}
+
+local function dealTip(d)
+  local b = T().buying[d.id]
+  local vendor = d.kind == "vendor"
+  local lines = {
+    (T().isLive(d.id) and "Verified buyout: " or "Last seen: ") .. ns.money(d.low) .. " each (" .. ns.thousands(d.n) .. " seen " .. A().age(d.at) .. ")",
+    vendor and ("Vendor pays: " .. ns.money(d.worth) .. " each (no AH cut)")
+      or ("Usual price: " .. ns.money(d.worth) .. " (" .. ns.money(math.floor(d.worth * (1 - T().CUT))) .. " after 5% cut)"),
+  }
+  if not vendor and d.vendor and d.vendor > 0 then
+    lines[#lines + 1] = "Vendor floor: " .. ns.money(d.vendor) .. " each"
+  elseif vendor and d.usual and d.days and d.days >= 2 then
+    lines[#lines + 1] = "Usual AH price: " .. ns.money(d.usual) .. " (" .. d.days .. " days)"
+  end
+  lines[#lines + 1] = "Profit: +" .. ns.money(d.profit) .. " each (+" .. d.pct .. "%), max buy limit " .. ns.money(T().limitFor(d)) .. " each"
+  if b and b.stage == "ready" then
+    if b.commodity == false then
+      local lots = b.lots and #b.lots or 1
+      lines[#lines + 1] = "Verified item auctions: " .. lots .. (lots == 1 and " listing" or " separate listings")
+        .. " (" .. (b.allQty or b.qty) .. " total for " .. ns.money(b.allTotal or b.total) .. ")."
+      if lots > 1 then
+        lines[#lines + 1] = "WoW buys equipment/recipes/bags 1 listing per click: next click buys " .. b.qty .. " for " .. ns.money(b.total) .. "."
+      end
+    else
+      lines[#lines + 1] = "Verified commodity stack: buying " .. b.qty .. (b.fullQty and b.qty < b.fullQty and (" of " .. b.fullQty) or "")
+        .. " for " .. ns.money(b.total) .. " (up to " .. ns.money(b.maxUnit or d.low) .. " each)."
+      lines[#lines + 1] = "Price lock cancels automatically if the server quotes even 1c more."
+    end
+  end
+  lines[#lines + 1] = "Click to open its price chart."
+  return table.concat(lines, "\n")
+end
+
+local function applyMinBox()
+  if not minBox then return end
+  local raw = minBox:GetText() or ""
+  local parsed = T().parseMoney(raw)
+  if parsed == nil then
+    ns.say("Enter a minimum profit like 50c, 5s, 25s or 1g 50s (or Any).")
+  else
+    T().setMinProfit(parsed)
+    A().retarget(view.deals)
+    offsets.deals = 0
+  end
+  minBox:ClearFocus()
+  P.refresh()
+end
+
+local function makeMinBox()
+  local eb = CreateFrame("EditBox", "LevelingCodexAHMinBox", body)
+  eb:SetAutoFocus(false)
+  eb:SetSize(66, 19)
+  if has(eb, "SetFontObject") then pcall(eb.SetFontObject, eb, "GameFontHighlightSmall") end
+  if has(eb, "SetJustifyH") then pcall(eb.SetJustifyH, eb, "CENTER") end
+  if has(eb, "SetMaxLetters") then pcall(eb.SetMaxLetters, eb, 16) end
+  if has(eb, "SetTextInsets") then pcall(eb.SetTextInsets, eb, 3, 3, 0, 0) end
+  eb:SetScript("OnEnterPressed", function() applyMinBox() end)
+  eb:SetScript("OnEscapePressed", function(self) self:ClearFocus(); P.refresh() end)
+  eb.tipTitle = "Custom minimum profit"
+  eb.tipText = "Type any minimum per-item profit (e.g. 25c, 5s, 35s, 1g 50s, or Any) and press Enter or Set."
+  if has(eb, "HookScript") then
+    eb:HookScript("OnEnter", ns.art.showTip)
+    eb:HookScript("OnLeave", ns.art.hideTip)
+  end
+  minBox = eb
+  return eb
+end
 
 function pages.deals(W, top, H)
   local x, w = 16, W - 32
   local db = ns.db()
-  local lit = 1
-  for i, k in ipairs(KINDS) do if k[2] == view.deals then lit = i end end
-  local labels = {}
-  for i, k in ipairs(KINDS) do labels[i] = k[1] end
-  segments(x, top, 330, labels, lit, function(i) view.deals = KINDS[i][2]; offsets.deals = 0; A().retarget(view.deals) end)
-  local mins, minLit = {}, nil
-  for i, e in ipairs(T().MINPROFITS) do mins[i] = e[1]; if e[2] == T().minProfit() then minLit = i end end
-  text("Worth at least", x + 344, top + 4, 100, "small", ns.C.dim, "RIGHT")
-  segments(x + 450, top, w - 450, mins, minLit, function(i) db.auctionMinProfit = T().MINPROFITS[i][2]; A().retarget(view.deals) end, "At least ")
-  local y = top + 30
-  local flips, flipLit = {}, nil
-  for i, e in ipairs(T().FLIPS) do flips[i] = e[1]; if e[2] == T().flipPct() then flipLit = i end end
-  text("A flip is listed under its usual by", x, y + 4, 210, "small", ns.C.dim)
-  segments(x + 214, y, 180, flips, flipLit, function(i) db.auctionFlipPct = T().FLIPS[i][2]; A().retarget(view.deals) end, "Flip at ")
   local rows = T().deals(view.deals, view.hidden)
   local profit = 0
   for _, d in ipairs(rows) do profit = profit + (T().potential(d)) end
-  text(#rows .. (#rows == 1 and " deal" or " deals") .. (#rows > 0 and (", about +" .. ns.money(profit) .. " to make") or ""),
-    x + 404, y + 4, w - 404, "small", #rows > 0 and GREEN or ns.C.dim, "RIGHT")
-  y = y + 30
-  -- the sniper
+
+  -- 1. Filter & Custom Threshold Console Deck
+  surfaceDeck(x, top, w, 56, ns.C.gold, true)
+  local y1 = top + 6
+  local kx = x + 8
+  for _, k in ipairs(KINDS) do
+    local kw = k[3] or 76
+    proBtn(k[1], kx, y1, kw, 21, "pill", function()
+      view.deals = k[2]; offsets.deals = 0; A().retarget(view.deals)
+    end, { label = k[1], lit = k[2] == view.deals })
+    kx = kx + kw + 3
+  end
+
+  local curMin = T().minProfit()
+  local mins, minLit = {}, nil
+  for i, e in ipairs(T().MINPROFITS) do mins[i] = e[1]; if e[2] == curMin then minLit = i end end
+  text("Min", x + 244, y1 + 4, 26, "dim", ns.C.gold, "RIGHT")
+  proPills(x + 274, y1, 206, 21, mins, minLit, function(i)
+    T().setMinProfit(T().MINPROFITS[i][2]); offsets.deals = 0; A().retarget(view.deals)
+  end, "At least ")
+
+  -- Custom minimum profit stepper + editable coin box
+  local mx = x + 486
+  proBtn("-", mx, y1, 20, 21, "ghost", function() T().stepMinProfit(-1); offsets.deals = 0; A().retarget(view.deals) end,
+    { label = "Min profit -", tip = "Lower min profit", tipText = "Step minimum profit down." })
+  rect(mx + 22, y1, 68, 21, { 0.02, 0.03, 0.05, 0.96 }, "BORDER")
+  rect(mx + 22, y1, 68, 1, { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.55 }, "ARTWORK")
+  rect(mx + 22, y1 + 20, 68, 1, { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.55 }, "ARTWORK")
+  if not minBox then makeMinBox() end
+  minBox:ClearAllPoints()
+  minBox:SetPoint("TOPLEFT", body, "TOPLEFT", mx + 23, -(y1 + 1))
+  minBox:SetSize(66, 19)
+  minBox.codexLabel = "Custom min profit"
+  if not (has(minBox, "HasFocus") and minBox:HasFocus()) then
+    minBox:SetText(curMin > 0 and ns.money(curMin) or "Any")
+  end
+  minBox:Show()
+  proBtn("+", mx + 92, y1, 20, 21, "ghost", function() T().stepMinProfit(1); offsets.deals = 0; A().retarget(view.deals) end,
+    { label = "Min profit +", tip = "Raise min profit", tipText = "Step minimum profit up." })
+  proBtn("Set", mx + 114, y1, 32, 21, "gold", function() applyMinBox() end,
+    { label = "Set min profit", tip = "Apply custom min profit", tipText = "Filter out deals below the typed coin amount (e.g. 25c, 5s, 50s, 2g)." })
+
+  -- Deal count badge on top right
+  local badgeX = mx + 152
+  local badgeW = math.max(96, x + w - 8 - badgeX)
+  rect(badgeX, y1, badgeW, 21, #rows > 0 and { 0.06, 0.20, 0.12, 0.92 } or { 0.06, 0.08, 0.10, 0.85 }, "BORDER")
+  rect(badgeX, y1, 2, 21, #rows > 0 and GREEN or ns.C.dim, "ARTWORK")
+  text(#rows .. (#rows == 1 and " deal" or " deals"), badgeX + 6, y1 + 4, badgeW - 10, "small", #rows > 0 and MINT or ns.C.dim, "CENTER")
+
+  -- Row 2 of Filter Console: Flip %, Max Pay Cap, Sort Mode
+  local y2 = top + 31
+  local flips, flipLit = {}, nil
+  for i, e in ipairs(T().FLIPS) do flips[i] = e[1]; if e[2] == T().flipPct() then flipLit = i end end
+  text("Flip", x + 8, y2 + 3, 28, "dim", ns.C.dim)
+  proPills(x + 36, y2, 126, 19, flips, flipLit, function(i)
+    db.auctionFlipPct = T().FLIPS[i][2]; offsets.deals = 0; A().retarget(view.deals)
+  end, "Flip at ")
+
+  local maxLabels, maxLit, curMax = {}, nil, T().maxBuy()
+  for i, e in ipairs(T().MAXBUYS) do maxLabels[i] = e[1]; if e[2] == curMax then maxLit = i end end
+  text("Max pay", x + 168, y2 + 3, 50, "dim", ns.C.dim, "RIGHT")
+  proPills(x + 222, y2, 232, 19, maxLabels, maxLit, function(i)
+    T().setMaxBuy(T().MAXBUYS[i][2]); offsets.deals = 0
+  end, "Max buy ")
+
+  local sortLabels, sortLit, curSort = {}, 1, T().dealSort()
+  for i, e in ipairs(T().SORTS) do sortLabels[i] = e[1]; if e[2] == curSort then sortLit = i end end
+  text("Sort", x + 460, y2 + 3, 30, "dim", ns.C.dim, "RIGHT")
+  proPills(x + 494, y2, w - 502, 19, sortLabels, sortLit, function(i)
+    db.auctionDealSort = T().SORTS[i][2]; offsets.deals = 0
+  end, "Sort deals ")
+
+  -- 2. Sniper Radar, Live P&L Scoreboard & Rapid Trigger Deck
+  local y = top + 60
   local sn = A().sniper
-  rect(x, y - 2, w, 50, sn.on and { GREEN[1], GREEN[2], GREEN[3], 0.07 } or { 1, 1, 1, 0.03 })
-  button(sn.on and "Stop sniping" or "Snipe deals", x + 6, y + 4, 140, function() A().retarget(view.deals); A().toggleSnipe() end,
-    { label = "Snipe deals", lit = sn.on, enabled = A().snipeAvailable(), h = 36, tip = "Snipe deals",
-      tipText = "Searches the items your choices above can make a deal on, one a second, lap after lap. A deal chimes, is checked at once (how many, and the total) and waits for your Buy click." })
+  local smode = A().snipeMode()
+  surfaceDeck(x, y, w, 58, sn.on and GREEN or CYAN, false)
+  rect(x, y, 3, 58, sn.on and GREEN or CYAN, "OVERLAY")
+
+  proBtn(sn.on and "Stop sniping" or "Snipe deals", x + 8, y + 6, 132, 23, "radar", function()
+    A().retarget(view.deals); A().toggleSnipe()
+  end, { label = "Snipe deals", lit = sn.on, enabled = A().snipeAvailable(), tip = "Sniper radar",
+    tipText = "Watch checks your smart watch list & pinned (*) items; Newest sweeps pages 1-4 of newest & cheapest listings; Pages continuously scans every auction house page on its own." })
+  proBtn(db.noSnipeSound and "Mute" or "Sfx", x + 143, y + 6, 37, 23, "pill", function()
+    db.noSnipeSound = not db.noSnipeSound
+  end, { label = "Snipe sound", lit = not db.noSnipeSound, tip = "Deal alert chime",
+    tipText = db.noSnipeSound and "Sound muted. Click to chime when a live deal appears." or "Chimes once per new live deal. Click to mute." })
+  local smw = math.floor((172 - 6) / #SNIPE_MODES)
+  for i, m in ipairs(SNIPE_MODES) do
+    local bw2 = i == #SNIPE_MODES and (172 - (i - 1) * (smw + 3)) or smw
+    proBtn(m[1], x + 8 + (i - 1) * (smw + 3), y + 32, bw2, 20, "pill",
+      function() A().setSnipeMode(m[2]) end,
+      { label = "Snipe " .. m[3], lit = smode == m[2], tip = "Snipe mode: " .. m[3], tipText = m[4] })
+  end
+
+  -- Right Zone: Rapid 1-click Trigger
+  local nextDeal, nextAct, nextB = T().nextDealAction(view.deals, view.hidden)
+  local actionW = 186
+  if A().scanning() then
+    proBtn("Scanning auction house", x + w - actionW - 8, y + 6, actionW, 46, "ghost", nil,
+      { label = "Next deal", enabled = false, tip = "Scanning auction house",
+        tipText = "Top deal actions resume when the scan finishes." })
+  elseif nextDeal then
+    local displayed = T().dealLabel(nextDeal.id)
+    local itemName = Q.plain(nextDeal.name):sub(1, 22)
+    local nextLabel = nextAct == "cancel" and ("Cancel quote\n" .. itemName)
+      or nextAct == "confirm" and ("Confirm " .. ns.money(nextB.total) .. "\n" .. itemName)
+      or (nextAct == "buy" and ("Buy top: " .. nextB.qty .. " for " .. ns.money(nextB.total) .. "\n" .. itemName))
+      or ("Check top\n" .. itemName)
+    proBtn(nextLabel, x + w - actionW - 8, y + 6, actionW, 46,
+      (nextAct == "confirm" or nextAct == "buy") and "emerald" or "gold",
+      function()
+        local trade = T()
+        if trade.buying[nextDeal.id] ~= nextB or trade.dealLabel(nextDeal.id) ~= displayed then
+          trade.refresh()
+          return
+        end
+        if nextAct == "check" then trade.check(nextDeal)
+        elseif nextAct == "cancel" then trade.cancelBuy(nextDeal.id)
+        else trade.buy(nextDeal.id) end
+      end,
+      { label = "Next deal", lit = nextAct == "confirm" or nextAct == "buy",
+        tip = "Rapid sniper trigger: " .. Q.plain(nextDeal.name),
+        tipText = nextAct == "cancel" and "Release the held quote to let scans and checks continue."
+          or "Steps through your top deal: Check listings, buy at the quoted price, then confirm if asked." })
+  else
+    proBtn("Recheck visible", x + w - actionW - 8, y + 6, actionW, 46, "ghost", function()
+      local n = T().recheckDeals(rows)
+      A().startBatch("deals", n)
+      ns.say("Checking " .. n .. " deals.")
+    end, { label = "Next deal", enabled = #rows > 0 and A().isOpen() })
+  end
+
+  -- Center Zone: Radar Status + Live Wins/Losses & Money Made/Lost Scoreboard
+  local cx = x + 188
+  local cw = w - 188 - actionW - 16
   local kindName = view.deals == "vendor" and "under-vendor" or (view.deals == "flip" and "flip" or "deal")
   if sn.on then
-    local n, total, best = T().sniperHaul()
-    text("Watching " .. #sn.list .. " " .. kindName .. " items at " .. (T().minProfit() > 0 and (ns.money(T().minProfit()) .. "+") or "any profit")
-      .. ": " .. ns.thousands(sn.checked) .. " searches" .. ((sn.laps or 0) > 0 and (", lap " .. (sn.laps + 1)) or "")
-      .. (sn.current and (", now " .. Q.plain(sn.current)) or ""), x + 156, y + 4, w - 162, "small", GREEN)
-    if n > 0 then
-      text(n .. (n == 1 and " live deal" or " live deals") .. ": +" .. ns.money(total) .. " potential profit"
-        .. (best and (", best " .. Q.plain(best.name) .. " +" .. ns.money(best.amount)) or ""), x + 156, y + 22, w - 162, "body", ns.C.gold)
+    local liveN, liveTotal, liveBest = T().sniperHaul()
+    if liveN > 0 then
+      text(liveN .. (liveN == 1 and " live deal: +" or " live deals: +") .. ns.money(liveTotal) .. " potential profit"
+        .. (liveBest and (" (best " .. Q.plain(liveBest.name):sub(1, 20) .. ")") or ""), cx, y + 5, cw, "small", ns.C.gold)
+    elseif smode == "sweep" then
+      local head = "RADAR LIVE: page " .. math.max(1, sn.page or 1) .. " (" .. (sn.sortTag or "cheapest")
+        .. ", " .. ns.thousands(sn.priced or 0) .. " priced" .. ((sn.laps or 0) > 0 and (", lap " .. (sn.laps + 1)) or "") .. ")"
+      text(head, cx, y + 5, cw, "small", GREEN)
+    elseif smode == "newest" then
+      local head = "RADAR LIVE: " .. (sn.sortTag or "newest") .. " p." .. math.max(1, sn.page or 1) .. "/" .. A().NEWEST_PAGES
+        .. " (" .. ns.thousands(sn.checked) .. " sweeps, " .. ns.thousands(sn.priced or 0) .. " priced)"
+      text(head, cx, y + 5, cw, "small", GREEN)
     else
-      text("No live deal yet. Each one found chimes, shows LIVE and is checked for you.", x + 156, y + 22, w - 162, "dim", ns.C.dim)
+      local pinned = T().watchCount and T().watchCount() or 0
+      local head = "RADAR LIVE: watching " .. #sn.list .. " " .. kindName .. "s (" .. ns.thousands(sn.checked) .. " checks"
+        .. (pinned > 0 and (", " .. pinned .. " pinned") or "")
+        .. (sn.current and (", " .. Q.plain(sn.current):sub(1, 16)) or "") .. ")"
+      text(head, cx, y + 5, cw, "small", GREEN)
     end
   else
-    text("The sniper watches what your choices above can make: change them and it follows.", x + 156, y + 4, w - 162, "small", ns.C.light)
-    text("Check finds the listings, Buy shows the total, a commodity asks to confirm. Profits count the 5% cut.",
-      x + 156, y + 22, w - 162, "dim", ns.C.dim)
+    local potText = #rows > 0 and ("Potential haul: +" .. ns.money(profit) .. " across " .. #rows .. (#rows == 1 and " deal" or " deals") .. "  -  1c price guard on")
+      or "Radar idle: start Snipe deals (Pages scans every page; Newest sweeps fresh posts)."
+    text(potText, cx, y + 5, cw, "small", #rows > 0 and MINT or ns.C.dim)
   end
-  y = y + 56
-  local bottom = top + H - 30
+
+  -- 3-Tile Live P&L Scoreboard Strip (clickable -> opens Market > Your trades)
+  local rec = M().record()
+  local closed = rec.wins + rec.losses
+  local made = (rec.winAmount or 0) + (rec.income or 0)
+  local lost = rec.lossAmount or rec.lost or 0
+  local mw = math.floor((cw - 8) / 3)
+  local function miniStat(i, titleS, valS, col)
+    local sx = cx + (i - 1) * (mw + 4)
+    local sy = y + 23
+    rect(sx, sy, mw, 29, { 0.02, 0.03, 0.05, 0.88 }, "BORDER")
+    rect(sx, sy, 2, 29, col, "ARTWORK")
+    text(titleS, sx + 6, sy + 2, mw - 8, "dim", ns.C.dim)
+    text(valS, sx + 6, sy + 14, mw - 8, "small", col)
+  end
+  miniStat(1, "WINS / LOSSES", closed > 0 and (rec.wins .. "W - " .. rec.losses .. "L (" .. rec.winRate .. "%)") or "0W - 0L",
+    closed > 0 and (rec.wins >= rec.losses and GREEN or RED) or ns.C.light)
+  miniStat(2, "MADE / LOST", "+" .. ns.money(made) .. " / -" .. ns.money(lost), made >= lost and MINT or ORANGE)
+  miniStat(3, closed > 0 and "NET PROFIT" or (#rec.holdings > 0 and "HOLDING EST." or "NET PROFIT"),
+    (closed == 0 and #rec.holdings > 0 and rec.net == 0) and signed(rec.unrealized) or signed(rec.net),
+    ((closed == 0 and #rec.holdings > 0 and rec.net == 0) and rec.unrealized or rec.net) >= 0 and GREEN or RED)
+  local scoreTip = table.concat({
+    "Closed flips & vendor snipes: " .. rec.wins .. " won, " .. rec.losses .. " lost" .. (rec.winRate and (" (" .. rec.winRate .. "%)") or ""),
+    "Money made (profits + sales): +" .. ns.money(made) .. ((rec.vendorSales or 0) > 0 and (" (" .. rec.vendorSales .. " vendored: " .. signed(rec.vendorProfit or 0) .. ")") or ""),
+    "Money lost (losses + lost deposits): -" .. ns.money(lost),
+    "Spent on deals: " .. ns.money(rec.spent or 0) .. "  |  Open holdings: " .. #rec.holdings .. (#rec.holdings > 0 and (" (" .. signed(rec.unrealized) .. ")") or ""),
+    "Vendor sales of sniped items track automatically when you visit any merchant.",
+    "Click to open full trade history & holdings.",
+  }, "\n")
+  hit(cx, y + 23, cw, 29, "Sniper & Flip Record", scoreTip, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
+
+  -- 3. Column Header Bar + Graphical Deal Cards
+  y = top + 122
+  rect(x, y, w, 18, { 0.03, 0.05, 0.08, 0.94 }, "BORDER")
+  rect(x, y + 17, w, 1, { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.30 }, "ARTWORK")
+  text("ITEM & SUPPLY", x + 10, y + 3, 180, "dim", ns.C.gold)
+  text("LISTED vs TARGET", x + w - 490, y + 3, 160, "dim", ns.C.gold)
+  text("EST. GAIN", x + w - 312, y + 3, 114, "dim", ns.C.gold, "RIGHT")
+  text("SNIPE ACTION", x + w - 190, y + 3, 182, "dim", ns.C.gold, "CENTER")
+
+  local listY = y + 20
+  local listH = top + H - 2 - listY
+  local rowH = 46
   if #rows == 0 then
-    text("No deals in your prices yet. Scan all finds listings under vendor price and far under their usual price.",
-      x, y + 6, w, "small", ns.C.dim, nil, true)
+    surfaceDeck(x, listY + 4, w, math.min(92, listH - 30), ns.C.edge, false)
+    local msg = curMin > 0
+      and ("No deals worth at least " .. ns.money(curMin) .. " right now. Lower Min profit, Scan all, or start Snipe deals on Newest.")
+      or "No deals in your prices yet. Scan all finds under-vendor and flip deals, or start Snipe deals on Newest."
+    text(msg, x + 16, listY + 22, w - 32, "body", ns.C.dim, "CENTER", true)
   else
-    list("deals", rows, x, y, w, 40, bottom - y, function(d, rx, ry, rw)
+    local fit = math.max(1, math.floor((listH - 26) / rowH))
+    local first = math.max(0, math.min(offsets.deals or 0, math.max(0, #rows - fit)))
+    offsets.deals = first
+    if #rows > fit then wheelKey = "deals" end
+    for i = 1, fit do
+      local d = rows[first + i]
+      if not d then break end
+      local ry = listY + (i - 1) * rowH
+      local ch = rowH - 3
       local live = T().isLive(d.id)
-      if live then rect(rx, ry, 3, 38, GREEN, "BORDER") end
-      icon(itemIcon(d.id), rx + 8, ry + 5, 28)
-      local name = Q.plain(d.name)
-      text(name, rx + 44, ry + 4, 220, "body", live and ns.C.gold or ns.C.light)
-      local vendor = d.kind == "vendor"
-      pill(vendor and "UNDER VENDOR" or "FLIP", rx + 270, ry + 4, 92, vendor and GREEN or ns.C.accent)
-      if live then pill("LIVE", rx + 366, ry + 4, 40, GREEN) end
-      local sub = "Listed " .. ns.money(d.low) .. (vendor and ", vendor pays " or ", usual ") .. ns.money(d.worth)
-        .. "  -  +" .. ns.money(d.profit) .. " each (" .. d.pct .. "%)  -  " .. (d.source and ("Auctionator, " .. A().age(d.at)) or (ns.thousands(d.n) .. " listed"))
-      text(sub, rx + 44, ry + 22, rw - 44 - 360, "dim", ns.C.dim)
-      hit(rx + 40, ry, 220, 18, d.name, "Click to chart it.", function() chartItem(d.id) end, "Chart " .. d.name)
-      -- potential profit
-      local amount, qty, exact = T().potential(d)
-      text("+" .. ns.money(amount), rx + rw - 352, ry + 4, 128, "body", GREEN, "RIGHT")
-      text(exact and ("potential, " .. qty .. " under the limit") or "each, Check for more", rx + rw - 352, ry + 22, 128, "dim", ns.C.dim, "RIGHT")
       local b = T().buying[d.id]
-      button(T().dealLabel(d.id), rx + rw - 216, ry + 9, 150, function()
+      local ready = b and (b.stage == "ready" or b.stage == "confirm")
+      local vendor = d.kind == "vendor"
+      local accent = live and GREEN or (ready and ns.C.gold or (vendor and MINT or CYAN))
+
+      -- Card frame + subtle vertical sheen + status bar
+      rect(x, ry, w, ch, (live or ready) and { 0.05, 0.13, 0.10, 0.95 } or { 0.045, 0.068, 0.098, 0.93 })
+      local rWash = take("rwash", function() return body:CreateTexture(nil, "BORDER") end)
+      rWash:SetPoint("TOPLEFT", body, "TOPLEFT", x + 1, -(ry + 1))
+      rWash:SetSize(w - 2, 18)
+      ns.fade(rWash, "VERTICAL", accent[1], accent[2], accent[3], 0.0, (live or ready) and 0.14 or 0.05)
+      local edgeCol = (live or ready) and { accent[1], accent[2], accent[3], 0.65 } or { 0.20, 0.28, 0.36, 0.55 }
+      rect(x, ry, w, 1, edgeCol, "BORDER")
+      rect(x, ry + ch - 1, w, 1, edgeCol, "BORDER")
+      rect(x + w - 1, ry, 1, ch, edgeCol, "BORDER")
+      rect(x, ry, 3, ch, accent, "ARTWORK")
+
+      -- Col 1: Quality-rimmed icon, Name, VENDOR/FLIP + LIVE + Supply
+      framedIcon(d.id, itemIcon(d.id), x + 10, ry + 7, 28)
+      local col1W = math.max(150, w - 504)
+      local name = Q.plain(d.name)
+      text(name, x + 46, ry + 5, col1W - 44, "body", live and ns.C.gold or ns.C.light)
+      pill(vendor and "VENDOR" or "FLIP", x + 46, ry + 23, 56, vendor and MINT or CYAN)
+      local sx = x + 106
+      if live then
+        pill("LIVE", sx, ry + 23, 38, GREEN)
+        sx = sx + 42
+      end
+      local stale = d.at and (now() - d.at > 600)
+      local sup = (d.source and "Auctionator" or (ns.thousands(d.n) .. " listed"))
+        .. (d.at and not live and ("  " .. A().age(d.at)) or "")
+      text(sup, sx, ry + 25, math.max(40, x + col1W - sx + 2), "dim", stale and ORANGE or ns.C.dim)
+
+      -- Col 2: Side-by-side Listed vs Target + Visual Margin Meter
+      local c2x = x + w - 490
+      local pay = b and b.commodity == false and b.stage == "ready" and b.unit or d.low
+      text("Pay " .. money(pay), c2x, ry + 4, 172, "small", ns.C.light)
+      text((vendor and "Vendor " or "Usual ") .. money(d.worth), c2x, ry + 18, 172, "small", vendor and MINT or ns.C.gold)
+      local margin = d.worth > 0 and math.max(0.06, math.min(1, (d.worth - pay) / d.worth)) or 0.5
+      bar(c2x, ry + 34, 162, 5, margin, vendor and MINT or CYAN)
+
+      -- Col 3: Profit + ROI % / Stack Caps / Separate Lots
+      local amount, qty, exact, lots = T().potential(d)
+      local c3x = x + w - 312
+      text("+" .. ns.money(amount), c3x, ry + 4, 114, "body", GREEN, "RIGHT")
+      if b and b.commodity and b.stage == "ready" and (b.fullQty or 0) > 1 then
+        proBtn("1", c3x + 2, ry + 21, 24, 18, "pill", function() T().setDealQty(d.id, "one") end,
+          { label = "Buy 1 " .. d.name, lit = b.qty == 1, tip = "Buy 1", tipText = "Cap this commodity purchase to 1 unit." })
+        proBtn("1/2", c3x + 28, ry + 21, 32, 18, "pill", function() T().setDealQty(d.id, "half") end,
+          { label = "Buy half " .. d.name, lit = b.qty == math.max(1, math.floor(b.fullQty / 2)) and b.qty ~= 1 and b.qty ~= b.fullQty,
+            tip = "Buy half", tipText = "Buy half (" .. math.max(1, math.floor(b.fullQty / 2)) .. ") of the profitable stack." })
+        proBtn("All " .. b.fullQty, c3x + 62, ry + 21, 52, 18, "pill", function() T().setDealQty(d.id, "all") end,
+          { label = "Buy all " .. d.name, lit = b.qty == b.fullQty, tip = "Buy all under limit",
+            tipText = "Buy all " .. b.fullQty .. " profitable units under " .. ns.money(b.limit) .. " each." })
+      else
+        local note = not exact and ("+" .. d.pct .. "% each")
+          or (lots and lots > 1 and (lots .. " separate lots") or (qty .. " under limit (+" .. d.pct .. "%)"))
+        text(note, c3x - 8, ry + 23, 122, "dim", (lots and lots > 1) and ns.C.gold or ns.C.dim, "RIGHT")
+      end
+
+      -- Hover / Chart click target across item + price area
+      hit(x + 6, ry + 2, w - 200, ch - 4, d.name, dealTip(d), function() chartItem(d.id) end, "Chart " .. d.name)
+
+      -- Col 4: Sleek Action Buttons (Primary Deal + Pin Watch + Live Refresh/Cancel + Hide)
+      local c4x = x + w - 196
+      local btnStyle = ready and "emerald" or ((not b or b.stage == "none") and "gold" or "ghost")
+      proBtn(T().dealLabel(d.id), c4x, ry + 9, 120, 25, btnStyle, function()
         local x2 = T().buying[d.id]
         if not x2 or x2.stage == "none" then T().check(d) else T().buy(d.id) end
-      end, { label = "Deal " .. d.name, enabled = not b or b.stage == "ready" or b.stage == "confirm" or b.stage == "none",
-        lit = b and (b.stage == "ready" or b.stage == "confirm"),
-        tip = d.name, tipText = "Check searches its listings; then Buy, and Confirm for a commodity." })
+      end, { label = "Deal " .. d.name, enabled = not A().scanning()
+          and (not b or b.stage == "ready" or b.stage == "confirm" or b.stage == "none"),
+        lit = ready, tip = d.name, tipText = dealTip(d) })
+      local watched = T().isWatched and T().isWatched(d.id)
+      proBtn("*", c4x + 123, ry + 9, 21, 25, watched and "gold" or "ghost", function()
+        T().toggleWatch(d.id, d.name, not watched)
+      end, { label = (watched and "Unwatch " or "Watch ") .. d.name, lit = watched,
+        tip = watched and "Pinned to Watch list" or "Pin to Watch list",
+        tipText = "Starred (*) items jump to #1 priority on the Sniper's Watch list." })
+      local inLock = b and (b.stage == "pricing" or b.stage == "confirm")
+      proBtn(inLock and "X" or "R", c4x + 147, ry + 9, 21, 25, inLock and "danger" or "ghost", function()
+        if inLock then T().cancelBuy(d.id) else T().check(d) end
+      end, { label = (inLock and "Cancel " or "Refresh ") .. d.name, enabled = A().isOpen() and (not b or (b.stage ~= "search" and b.stage ~= "buying" and b.stage ~= "buyingItem")),
+        tip = inLock and "Cancel purchase" or "Refresh price now",
+        tipText = inLock and "Cancels this unconfirmed commodity lock." or "Re-queries the exact live listings and price for this item right now." })
       local hidden = T().isHidden(d.id)
-      button(hidden and "Unhide" or "Hide", rx + rw - 60, ry + 9, 56, function() T().hide(d.id, not hidden); A().retarget(view.deals) end,
-        { label = (hidden and "Unhide " or "Hide ") .. d.name, tip = "Hide", tipText = "Leave it out of Deals, Quick Sell and the sniper." })
-    end)
+      proBtn(hidden and "+" or "x", c4x + 171, ry + 9, 21, 25, "ghost", function()
+        T().hide(d.id, not hidden); A().retarget(view.deals)
+      end, { label = (hidden and "Unhide " or "Hide ") .. d.name,
+        tip = hidden and "Unhide item" or "Hide item", tipText = "Leave this item out of Deals, Quick Sell and the sniper." })
+    end
+
+    -- Footer bar: Pager on left, Hidden toggle on right
+    local fy = listY + math.min(#rows, fit) * rowH + 2
+    if #rows > fit then
+      proBtn("<", x, fy, 26, 21, "ghost", function() offsets.deals = math.max(0, first - fit) end,
+        { label = "Previous deals", enabled = first > 0 })
+      proBtn(">", x + 30, fy, 26, 21, "ghost", function() offsets.deals = first + fit end,
+        { label = "Next deals", enabled = first + fit < #rows })
+      text((first + 1) .. "-" .. math.min(#rows, first + fit) .. " of " .. #rows .. "  (mouse wheel scrolls)",
+        x + 64, fy + 4, w - 220, "dim", ns.C.dim)
+    end
   end
-  local n = T().hiddenCount()
-  if n > 0 or view.hidden then
-    button(view.hidden and "Hide hidden" or ("Show hidden (" .. n .. ")"), x, bottom + 4, 160, function() view.hidden = not view.hidden end,
-      { label = view.hidden and "Hide hidden" or "Show hidden" })
+
+  local nHidden = T().hiddenCount()
+  if nHidden > 0 or view.hidden then
+    local fy = top + H - 24
+    proBtn(view.hidden and "Hide hidden" or ("Show hidden (" .. nHidden .. ")"), x + w - 148, fy, 148, 21, "pill",
+      function() view.hidden = not view.hidden end,
+      { label = view.hidden and "Hide hidden" or "Show hidden", lit = view.hidden })
   end
 end
 
@@ -1448,9 +1973,15 @@ function pages.scan(W, top, H)
     button("Open in Market", rx + 14, ly, lw - 28, function() chartItem(v.id, "movers") end, { label = "Chart " .. (p.name or v.name) })
     ly = ly + 26
   end
-  button("Search it now", rx + 14, ly, lw - 28, function()
+  local halfAct = math.floor((lw - 34) / 2)
+  button("Search it now", rx + 14, ly, halfAct, function()
     if A().searchNow(p.name or v.name) then ns.say("Searching " .. Q.plain(p.name or v.name) .. ".") end
   end, { enabled = A().isOpen() })
+  local watched = T().isWatched and T().isWatched(v.id)
+  button(watched and "Pinned on Watch (*)" or "Pin to Watch list", rx + 20 + halfAct, ly, halfAct, function()
+    T().toggleWatch(v.id, p.name or v.name, not watched)
+  end, { label = (watched and "Unwatch " or "Watch ") .. (p.name or v.name), lit = watched,
+    tip = "Sniper Watch list", tipText = "Pin this item to #1 priority on the Deals Sniper Watch list." })
 end
 
 ----------------------------------------------------------------------------
@@ -1482,8 +2013,14 @@ P.REFRESH = {
     if view.market then local p = A().price(view.market); if p and p.name then table.insert(rows, 1, { name = p.name }) end end
     return "Rechecking " .. A().searchNames(namesOf(rows, 30)) .. " items."
   end },
-  deals = { "Recheck deals", "Searches each deal on the list again: gone ones drop off, new prices show.", function()
-    return "Rechecking " .. A().searchNames(namesOf(T().deals(view.deals, view.hidden), 30)) .. " deals."
+  deals = { "Recheck deals", "Queries exact live listings for the deals on this page: gone ones drop off, and ready deals show their exact buy total.", function()
+    local listRows = T().deals(view.deals, view.hidden)
+    local first = (offsets.deals or 0) + 1
+    local ordered = {}
+    for i = first, #listRows do ordered[#ordered + 1] = listRows[i] end
+    for i = 1, first - 1 do ordered[#ordered + 1] = listRows[i] end
+    local n = T().recheckDeals(ordered)
+    return "Rechecking " .. n .. (n == 1 and " deal" or " deals") .. " with live listing checks.", n
   end },
   selling = { "Reprice bags", "Searches everything you could sell again, reads your auctions and checks them for undercuts.", function()
     local n = A().scanBags(true)
@@ -1536,13 +2073,23 @@ end
 -- Lays one copy of the moves out on a track; returns its width.
 local function fillTrack(track, rows, limit)
   local x = 0
+  local tnow = now()
   for _, it in ipairs(track.items) do it:Hide() end
   for i, r in ipairs(rows) do
     local it = tickerItem(track, i)
+    local hasMove = r.change and r.change ~= 0
     local up = (r.change or 0) > 0
-    local c = M().pctColor(r.change)
+    local fresh = r.live or (r.at and (tnow - r.at <= 90))
+    local c = r.live and MINT or (hasMove and M().pctColor(r.change) or CYAN)
     ns.setIcon(it.icon, itemIcon(r.id))
     it.name:SetText(Q.plain(r.name))
+    if r.live then
+      it.name:SetTextColor(MINT[1], MINT[2], MINT[3])
+    elseif fresh then
+      it.name:SetTextColor(1, 0.93, 0.62)
+    else
+      it.name:SetTextColor(ns.C.gold[1], ns.C.gold[2], ns.C.gold[3])
+    end
     it.name:ClearAllPoints(); it.name:SetPoint("LEFT", it, "LEFT", 24, 0)
     local nw = math.min(150, tonumber(it.name:GetStringWidth()) or 60)
     it.name:SetWidth(nw)
@@ -1551,26 +2098,33 @@ local function fillTrack(track, rows, limit)
     local pw = tonumber(it.price:GetStringWidth()) or 40
     it.price:SetWidth(pw + 2)
     local ax = 24 + nw + 6 + pw + 6
-    local file = up and ARROW_UP or ARROW_DOWN
-    it.arrow:ClearAllPoints(); it.arrow:SetPoint("LEFT", it, "LEFT", ax, 0)
-    if ns.art.hasFile(file) and it.arrow:SetTexture(file) ~= false then
-      it.arrow:SetVertexColor(c[1], c[2], c[3])
-      it.arrow:Show()
+    local tx = ax
+    if hasMove then
+      local file = up and ARROW_UP or ARROW_DOWN
+      it.arrow:ClearAllPoints(); it.arrow:SetPoint("LEFT", it, "LEFT", ax, 0)
+      if ns.art.hasFile(file) and it.arrow:SetTexture(file) ~= false then
+        it.arrow:SetVertexColor(c[1], c[2], c[3])
+        it.arrow:Show()
+      else
+        it.arrow:Hide()
+      end
+      tx = ax + 14
     else
       it.arrow:Hide()
     end
-    local tx = ax + 14
-    it.pct:SetText(M().pctText(r.change))
+    local badge = r.live and (hasMove and ("DEAL " .. M().pctText(r.change)) or "SNIPE DEAL")
+      or (hasMove and M().pctText(r.change) or "LIVE")
+    it.pct:SetText(badge)
     it.pct:SetTextColor(c[1], c[2], c[3])
     local cw = (tonumber(it.pct:GetStringWidth()) or 24) + 10
     it.tag:ClearAllPoints(); it.tag:SetPoint("LEFT", it, "LEFT", tx, 0)
     it.tag:SetWidth(cw)
-    it.tag:SetColorTexture(c[1], c[2], c[3], 0.2)
+    it.tag:SetColorTexture(c[1], c[2], c[3], r.live and 0.28 or 0.2)
     it.pct:ClearAllPoints(); it.pct:SetPoint("LEFT", it, "LEFT", tx + 5, 0)
     it.pct:SetWidth(cw - 6)
     local w = tx + cw + 8
     it.sep:ClearAllPoints(); it.sep:SetPoint("CENTER", it, "LEFT", w + 6, 0)
-    it.sep:SetColorTexture(ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.5)
+    it.sep:SetColorTexture(fresh and CYAN[1] or ns.C.gold[1], fresh and CYAN[2] or ns.C.gold[2], fresh and CYAN[3] or ns.C.gold[3], fresh and 0.85 or 0.5)
     w = w + 14
     it:SetWidth(w)
     it:ClearAllPoints(); it:SetPoint("LEFT", track, "LEFT", x, 0)
@@ -1584,8 +2138,10 @@ local function fillTrack(track, rows, limit)
   return x
 end
 
-local function drawTicker(y, w)
+drawTicker = function(y, w)
   local C = ns.C
+  ticker.lastW = w
+  ticker.seenVersion = A().version or 0
   ticker:ClearAllPoints()
   ticker:SetPoint("TOPLEFT", body, "TOPLEFT", 0, -y)
   ticker:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -y)
@@ -1594,37 +2150,45 @@ local function drawTicker(y, w)
   ticker.lineB:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.25)
   ticker.plate:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.14)
   ticker.plateEdge:SetColorTexture(C.gold[1], C.gold[2], C.gold[3], 0.6)
-  -- live: a scan running, the sniper on, or prices under 15 minutes old
+  -- live: a scan running, the sniper on, or prices/live updates under 15 minutes old
   local last = A().lastScanAt and A().lastScanAt() or 0
-  local live = A().scanning() or (A().sniper and A().sniper.on) or (last > 0 and now() - last < 900)
+  local _, liveAt = 0, nil
+  if A().liveStats then _, liveAt = A().liveStats() end
+  local tnow = now()
+  local live = A().scanning() or (A().sniper and A().sniper.on)
+    or (liveAt and tnow - liveAt < 900) or (last > 0 and tnow - last < 900)
   ticker.live = live and true or nil
-  local dc = live and GREEN or C.dim
+  local dc = (A().sniper and A().sniper.on) and MINT or (live and GREEN or C.dim)
   ticker.dot:SetColorTexture(dc[1], dc[2], dc[3], 1)
   ticker.label:SetText(live and "LIVE" or "MARKET")
-  ticker.label:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+  ticker.label:SetTextColor(live and MINT[1] or C.gold[1], live and MINT[2] or C.gold[2], live and MINT[3] or C.gold[3])
   local rows = M().ticker(16)
   local key = {}
-  for _, r in ipairs(rows) do key[#key + 1] = r.id .. ":" .. (r.last or 0) .. ":" .. (r.change or 0) end
-  key = table.concat(key, ",") .. "|" .. ns.themeVersion .. "|" .. w
+  for _, r in ipairs(rows) do
+    local freshBit = (r.at and (tnow - r.at <= 90)) and 1 or 0
+    key[#key + 1] = table.concat({ r.id, r.last or 0, r.change or 0, r.live and 1 or 0, freshBit }, ":")
+  end
+  key = table.concat(key, ",") .. "|" .. ns.themeVersion .. "|" .. w .. "|" .. (live and 1 or 0)
   if key == ticker.key then return end
   ticker.key = key
   ticker.wide = nil
   local a, b = ticker.tracks[1], ticker.tracks[2]
   if #rows == 0 then
     fillTrack(a, {}); fillTrack(b, {})
-    ticker.empty:SetText("Prices start moving here once items have been scanned twice: Scan all now, and again later.")
+    ticker.empty:SetText("Prices stream here as items are scanned: press Snipe deals or Scan all to start.")
     ticker.empty:Show()
     return
   end
   ticker.empty:Hide()
   local room = w - 92
   local sw = fillTrack(a, rows, not ticker.clips and room or nil)
-  a:ClearAllPoints(); a:SetPoint("LEFT", ticker.strip, "LEFT", ticker.clips and -(ticker.off or 0) or 0, 0)
   if ticker.clips and sw > room then
     fillTrack(b, rows)
     b:Show()
     ticker.wide = math.max(1, sw)
     ticker.off = (ticker.off or 0) % ticker.wide
+    a:ClearAllPoints(); a:SetPoint("LEFT", ticker.strip, "LEFT", -ticker.off, 0)
+    b:ClearAllPoints(); b:SetPoint("LEFT", ticker.strip, "LEFT", ticker.wide - ticker.off, 0)
   else
     fillTrack(b, {})
     b:Hide()
@@ -1652,11 +2216,15 @@ function P.refresh()
   end
   text(title, 44, 11, 220, "title", C.gold)
   hit(16, 6, 240, 26, title, line)
-  -- your gold and the scan age sit in the header, so the ticker runs the whole width
+  -- your gold and the scan / live DB status sit in the header, so the ticker runs the whole width
   local age, ageColor = scanAge()
+  local liveN, liveAt = 0, nil
+  if A().liveStats then liveN, liveAt = A().liveStats() end
   local infoW = W - 262 - 16 - 270
   text(money(tonumber(try(GetMoney)) or 0), 262, 9, infoW, "small", C.light)
-  text("Last scan " .. age, 262, 23, infoW, "dim", ageColor)
+  local hdrLine = "Last scan " .. age .. ((liveN > 0 and liveAt) and ("  |  Live DB: +" .. ns.thousands(liveN) .. " (" .. A().age(liveAt) .. ")") or "")
+  local hdrCol = (liveN > 0 and liveAt and now() - liveAt < 120) and GREEN or ageColor
+  text(hdrLine, 262, 23, infoW, "dim", hdrCol)
   local r = P.REFRESH[page]
   if r then
     local bx = W - 16 - 116 - 6 - 140
@@ -1668,8 +2236,8 @@ function P.refresh()
       blabel = "Done"
     end
     button(blabel, bx, 8, 140, function()
-      local said = r[3]()
-      A().startBatch(page)
+      local said, extra = r[3]()
+      A().startBatch(page, extra)
       ns.say(said)
       P.refresh()
     end, { label = r[1], tip = r[1], tipText = r[2] })
@@ -1682,7 +2250,8 @@ function P.refresh()
         ns.after(4, function()
           view.batchTimer = nil
           local b = A().batch
-          if b and b.doneAt and now() - b.doneAt >= 3.5 then A().endBatch() end
+          local clk = GetTime and GetTime() or now()
+          if b and b.doneAt and clk - b.doneAt >= 3.5 then A().endBatch() end
           P.refresh()
         end)
       end

@@ -11375,7 +11375,7 @@ function S.auctionTrade()
   LevelingCodexDB = LevelingCodexDB or {}
   local items = {
     [2589] = hist(100, 30, 100), [2592] = hist(150, 4, 300), [5001] = hist(1000, 2, 1000), [5002] = hist(800, 1, 800),
-    [774] = hist(10, 3, 10, 50), [818] = hist(20, 2, 20, 50), [2318] = hist(40, 1, 100),
+    [774] = hist(10, 3, 10, 50), [818] = hist(20, 2, 20, 50), [2318] = hist(40, 2, 100, 1),
   }
   items[2589].name, items[2592].name, items[5001].name, items[5002].name = "Linen Cloth", "Wool Cloth", "Rough Bracers", "Bound Ring"
   items[774].name, items[818].name, items[2318].name = "Malachite", "Tigerseye", "Light Leather"
@@ -11389,7 +11389,8 @@ function S.auctionTrade()
   }
   MOCK.money = 100000
   MOCK.auctions = { { id = 818, name = "Tigerseye", count = 2, buyout = 40 }, { id = 818, name = "Tigerseye", count = 1, buyout = 200 },
-    { id = 2318, name = "Light Leather", count = 1, buyout = 40, item = true } }
+    { id = 2318, name = "Light Leather", count = 1, buyout = 40, item = true },
+    { id = 2318, name = "Light Leather", count = 1, buyout = 80, item = true } }
   MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 5, buyout = 750, mine = true }
   MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 2, buyout = 280 }
   S.login()
@@ -11438,29 +11439,84 @@ function S.auctionTrade()
   check(MOCK.cancelled == 1 and chatHas("comes back by mail") and questText(card, "nothing listed"), "the second click cancels it")
   -- deals
   click(AuctionHouseFrame, "Deals")
-  check(questText(card, "Light Leather") and questText(card, "vendor pays 50c") and questText(card, "+30c each"),
-    "Deals lists flips and listings under vendor price")
+  check(questText(card, "Light Leather") and questText(card, "Vendor") and questText(card, "50c") and questText(card, "+30c"),
+    "Deals lists flips and listings under vendor price with side-by-side comparison")
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
   check(T.dealLabel(818) == "Buy 2 for 40c", "the search shows how many are under the limit and the total")
+  -- commodity stack cap buttons: 1 / half / all
+  click(card, "Buy 1 Tigerseye")
+  check(T.dealLabel(818) == "Buy 1 for 20c", "Buy 1 caps the commodity purchase to 1 unit")
+  click(card, "Buy all Tigerseye")
+  check(T.dealLabel(818) == "Buy 2 for 40c", "Buy all restores the full profitable quantity")
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
   check(#MOCK.purchases == 0 and T.dealLabel(818) == "Confirm 40c", "a commodity purchase asks to confirm the server's total")
+  T.recheckDeals({ T.buying[818].deal })
+  MOCK.advance(1)
+  check(T.dealLabel(818) == "Confirm 40c", "background rechecks leave the displayed confirmation open")
+  T.setMaxBuy(19)
+  check(questText(card, "Cancel quote"), "the top action can release a quote even when its row is filtered out")
+  check(not T.buy(818) and MOCK.cancelledPurchase and #MOCK.purchases == 0,
+    "a locked quote above a new max pay is cancelled at confirmation")
+  T.setMaxBuy(0)
+  MOCK.advance(5)
+  click(card, "Refresh Tigerseye")
+  MOCK.advance(1)
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
-  check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 2 and chatHas("Bought 2 Tigerseye for 40c."), "Confirm buys them")
+  click(card, "Next deal")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 2 and chatHas("Bought 2 Tigerseye for 40c"), "Confirm buys them")
   check(T.notes().paid[818].each == 20, "what you paid is kept")
   click(card, "Deal Light Leather")
   MOCK.advance(1)
   click(card, "Deal Light Leather")
   check(#MOCK.purchases == 2 and MOCK.purchases[2].id == 2318, "an item listing is bought with one click after the search")
-  MOCK.priceBump = 10
+  -- strict 1-copper price safeguard: even a 1c rise over the shown price cancels the purchase
+  MOCK.priceBump = 1
+  MOCK.ns.auctionPanel.refresh()
+  click(card, "Refresh Tigerseye")
+  MOCK.advance(1)
+  check(T.dealLabel(818) == "Buy 2 for 40c", "per-row Refresh re-checks the item right away (" .. T.dealLabel(818) .. ")")
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
-  click(card, "Deal Tigerseye")
-  MOCK.advance(1)
-  check(MOCK.cancelledPurchase and #MOCK.purchases == 2 and chatHas("the price went up"), "a price that rose is cancelled")
+  check(MOCK.cancelledPurchase and #MOCK.purchases == 2 and chatHas("cancelled it to protect your gold"),
+    "even a 1c price increase above the shown total is cancelled")
   MOCK.priceBump = nil
+  -- multi-item non-commodity auctions (like bags/patterns): never say 'Buy 80 for 2s 50c' and log 80
+  -- when WoW only buys 1 auction per click; step through each lot accurately (1/3 -> 1/2 -> 1)
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 5003, name = "Small Red Pouch", count = 1, buyout = 3, item = true, auctionID = 500301 }
+  local duplicateLot = #MOCK.auctions + 1
+  MOCK.auctions[duplicateLot] = { id = 5003, name = "Small Red Pouch", count = 1, buyout = 3, item = true, auctionID = 500301 }
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 5003, name = "Small Red Pouch", count = 1, buyout = 4, item = true }
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 5003, name = "Small Red Pouch", count = 1, buyout = 5, item = true }
+  MOCK.ns.auction.store().items[5003] = hist(3, 80, 3, 250)
+  MOCK.ns.auction.store().items[5003].name = "Small Red Pouch"
+  MOCK.ns.auction.version = MOCK.ns.auction.version + 1
+  MOCK.advance(1.2)
+  MOCK.ns.auctionPanel.refresh()
+  click(card, "Deal Small Red Pouch")
+  MOCK.advance(1)
+  check(T.dealLabel(5003) == "Buy 1 for 3c (1/3)" and questText(card, "3 separate lots"),
+    "multi-listing non-commodity items show 1 auction per click (1/3) instead of claiming all 80 at once (" .. T.dealLabel(5003) .. ")")
+  table.remove(MOCK.auctions, duplicateLot)
+  click(card, "Deal Small Red Pouch")
+  check(#MOCK.purchases == 3 and MOCK.purchases[3].qty == 1 and MOCK.purchases[3].total == 3
+    and chatHas("Bought 1 Small Red Pouch for 3c") and T.dealLabel(5003) == "Buy 1 for 4c (1/2)",
+    "clicking Buy buys 1 pouch for 3c, logs 1 (not 80), and queues the next lot (1/2)")
+  check(questText(card, "Pay " .. MOCK.ns.auction.coins(4)), "the row quotes the next lot after the 3c listing is bought")
+  -- if a lot was already bought by someone else (PlaceBid completes no purchase), nothing is logged
+  MOCK.itemPurchaseGone = true
+  local buysBefore = #T.notes().log
+  click(card, "Deal Small Red Pouch")
+  MOCK.setMoney(MOCK.money - 1)
+  MOCK.advance(3)
+  MOCK.itemPurchaseGone = nil
+  check(#T.notes().log == buysBefore and chatHas("Couldn't buy Small Red Pouch"),
+    "an unavailable item listing logs no fake purchase and advances to the remaining lot")
+  MOCK.ns.auction.store().items[5003] = nil
+  T.buying[5003] = nil
   click(card, "Hide Tigerseye")
   check(T.isHidden(818) and not questText(card, "Tigerseye"), "Hide takes a deal off the list")
   click(card, "Show hidden")
@@ -11477,30 +11533,177 @@ function S.auctionTrade()
   click(AuctionHouseFrame, "Quick Sell")
   click(card, "Post Light Leather")
   check(#MOCK.posted == 3 and chatHas("you paid"), "posting it under what you paid asks for a second click")
-  check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 2 buys", 1, true), "/codex debug counts posts and buys")
+  check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 3 buys", 1, true), "/codex debug counts posts and buys")
   slash("")
   click(win(), "Gold")
   check(questText(win(), "SELLING AND DEALS") and questText(win(), "Deals worth at least"), "the Gold tab has the selling settings")
   click(win(), "5%")
   check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
-  -- the sniper
+  -- the sniper (Watch list and Newest modes) + Recheck deals clearing stale deals
   click(AuctionHouseFrame, "Deals")
+  local A = MOCK.ns.auction
+  MOCK.bagItems[#MOCK.bagItems + 1] = {
+    name = "Unsellable Reagent", id = 99903, quality = 1, level = 1, sell = 500, noValue = true, count = 1,
+  }
+  A.record(99903, "Unsellable Reagent", 1, 1)
+  MOCK.event("BAG_UPDATE_DELAYED")
+  check(not questText(card, "Unsellable Reagent")
+      and not table.concat(A.snipeList(), "|"):find("Unsellable Reagent", 1, true)
+      and not T.check({ id = 99903, vendor = 500 }), "a bag no-value flag overrides a positive sell price across Deals")
   MOCK.auctions[#MOCK.auctions + 1] = { id = 2592, name = "Wool Cloth", count = 1, buyout = 20 }
+  -- A cheap browse result can be a bid or a vanished listing. Only a buyout
+  -- from the exact search should appear as a sniper deal.
+  MOCK.auctions[#MOCK.auctions].browsePrice = 1
   local before = #MOCK.browsed
+  local beforeSearchCount = MOCK.ns.auction.searchCount
+  local throttled = true
+  C_AuctionHouse.IsThrottledMessageSystemReady = function() return not throttled end
   click(card, "Snipe deals")
+  MOCK.advance(0.8)
+  check(#MOCK.browsed == before, "a throttled sniper waits before sending the query")
+  throttled = false
   check(MOCK.ns.auction.sniper.on and chatHas("Sniping deals: watching"), "Snipe deals starts watching")
-  MOCK.advance(20)
+  MOCK.advance(12)
   check(#MOCK.browsed > before + 3 and chatHas("Deal: Wool Cloth listed at 20c"), "the sniper finds a deal and says so")
+  check(MOCK.ns.auction.searchCount == beforeSearchCount,
+    "the throttled watch query stays a sniper query when retried")
+  check(not chatHas("Deal: Wool Cloth listed at 1c") and MOCK.ns.auction.price(2592).low == 20,
+    "the sniper only announces and keeps the exact buyout, even after another browse")
   local chimed = false
   for _, snd in ipairs(MOCK.sounds or {}) do if snd.id == 18019 then chimed = true end end
   check(chimed and T.isLive(2592), "with a chime, marked live")
+  click(card, "Snipe Newest")
+  check(MOCK.ns.auction.snipeMode() == "newest", "switching sniper to Newest sweeps newest listings")
+  MOCK.bagItems[#MOCK.bagItems + 1] = {
+    name = "Blinding Powder", id = 5530, quality = 1, level = 1, sell = 125, count = 1, class = "Trade Goods",
+  }
+  MOCK.ns.auction.record(5530, "Blinding Powder", 100, 74)
+  MOCK.auctions[#MOCK.auctions + 1] = { name = "Blinding Powder", id = 5530, buyout = 100 }
+  MOCK.auctions[#MOCK.auctions - 1].buyout = 100
+  MOCK.bagItems[#MOCK.bagItems + 1] = {
+    name = "White Leather Bag", id = 99902, quality = 1, level = 1, sell = 75, count = 1, class = "Container",
+  }
+  MOCK.auctions[#MOCK.auctions + 1] = {
+    name = "White Leather Bag", id = 99902, buyout = 10000, browsePrice = 62, item = true, itemSuffix = 77,
+  }
+  MOCK.advance(10)
+  check(not T.isLive(5530) and not T.buying[5530] and not chatHas("Deal: Blinding Powder")
+      and not questText(card, "Blinding Powder"),
+    "Newest and the Deals page exclude Blinding Powder even when client and cache report 1s 25c")
+  check(not table.concat(A.snipeList(), "|"):find("Blinding Powder", 1, true)
+      and not T.check({ id = 5530, vendor = 125 }), "Watch list and manual checks skip the same exclusion")
+  check(MOCK.ns.auction.price(2592).low == 100 and not T.isLive(2592),
+    "an old cheap browse price cannot keep a deal live after the buyout rises")
+  check(MOCK.ns.auction.price(99902).low == 10000 and not T.isLive(99902)
+      and not chatHas("Deal: White Leather Bag"),
+    "the bag's 62c browse price is replaced by its exact 1g buyout without a false alert")
+  check(MOCK.searchKeys[99902].itemSuffix == 77, "the exact verification keeps the browse result's variant key")
+  click(card, "Snipe Watch list")
   click(card, "Snipe deals")
   local after = #MOCK.browsed
   MOCK.advance(5)
   check(not MOCK.ns.auction.sniper.on and #MOCK.browsed <= after + 1, "a second click stops it")
+  -- Forever can group several identical non-stackable listings in a result.
+  -- The buyout applies to the one auction ID exposed by the row.
+  local bag = MOCK.auctions[#MOCK.auctions]
+  bag.buyout, bag.resultQuantity = 877, 14
+  local auction = MOCK.ns.auction
+  local bagItem = MOCK.bagItems[#MOCK.bagItems]
+  bagItem.sell = 875
+  auction.record(99902, "White Leather Bag", 63, 14)
+  T.refresh()
+  MOCK.advance(1.2)
+  T.refresh()
+  click(card, "Refresh White Leather Bag")
+  MOCK.advance(1)
+  check(auction.price(99902).low == 877 and not findButton(card, function(label)
+    return label == "Deal White Leather Bag"
+  end), "refresh removes the false bag deal at 8s 77c against a vendor price of 8s 75c")
+  bag.buyout, bag.resultQuantity = 874, 12
+  auction.record(99902, "White Leather Bag", 63, 12)
+  MOCK.advance(1.2)
+  T.refresh()
+  click(card, "Refresh White Leather Bag")
+  MOCK.event("ITEM_SEARCH_RESULTS_UPDATED", { itemID = 99902, itemSuffix = 12 })
+  check(T.dealLabel(99902) == "Looking...", "results for a different variant cannot finish the pending check")
+  MOCK.advance(1)
+  check(auction.price(99902).low == 874 and T.dealLabel(99902) == "Buy 1 for 8s 74c",
+    "refresh offers one bag at the full buyout when it is a real deal")
+  check(MOCK.searchKeys[99902].itemSuffix == 77, "the row refresh keeps the verified variant key")
+  -- Recheck deals performs live exact listing checks and clears vanished deals
+  for i = #MOCK.auctions, 1, -1 do if MOCK.auctions[i].id == 818 then table.remove(MOCK.auctions, i) end end
+  click(card, "Recheck deals")
+  MOCK.advance(4)
+  check(MOCK.ns.auction.store().items[818].n == 0, "Recheck deals removes vanished listings from the deal list")
   for _, pg in ipairs({ "Codex", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+  click(AuctionHouseFrame, "Deals")
+  MOCK.advance(10)
+  T.refresh()
+  click(card, "Scan all")
+  check(auction.scanning(), "Scan all starts from the Deals page")
+  T.refresh()
+  check(questText(card, "Scanning auction house") and not T.buy(99902),
+    "a full-market scan pauses the top purchase action and blocks an old ready quote")
+  MOCK.advance(4)
+  check(not auction.scanning() and not questText(card, "Scanning auction house"),
+    "top actions resume after scan completion")
+  local hotfixed = {
+    { id = 4390, name = "Iron Grenade", old = 500, price = 125, listing = 200 },
+    { id = 247754, name = "Minor Arcane Elixir", old = 25, price = 5, listing = 10 },
+  }
+  for _, item in ipairs(hotfixed) do
+    auction.store().items[item.id] = { name = item.name, vendor = item.old, low = item.listing, n = 1 }
+    check(auction.price(item.id).vendor == item.price, "saved pre-hotfix price is corrected for " .. item.name)
+    MOCK.bagItems[#MOCK.bagItems + 1] = { id = item.id, name = item.name, sell = item.old, quality = 1, level = 1 }
+    check(T.vendorPrice(item.id, auction.price(item.id)) == item.price, "stale live item data is corrected for " .. item.name)
+    auction.record(item.id, item.name, item.listing, 1)
+    check(not T.sniperCandidate(item.id, item.name, item.listing, 1), "the old vendor price cannot create a snipe")
+  end
+  for _, deal in ipairs(T.deals("vendor", false, true)) do
+    check(deal.id ~= 4390 and deal.id ~= 247754, "the Deals list uses the corrected vendor prices")
+  end
+  -- Watch-list pinning (*) puts a chosen item at #1 priority, and Pages mode continuously walks
+  -- multi-page browse results, updating market price histories and finding deals past page 1.
+  T.toggleWatch(2589, "Linen Cloth", true)
+  check(T.isWatched(2589) and A.snipeList()[1] == "Linen Cloth", "pinned watch item jumps to #1 on the Watch list")
+  T.toggleWatch(2589, "Linen Cloth", false)
+  MOCK.bagItems[#MOCK.bagItems + 1] = { id = 99911, name = "Deep Page Gem", sell = 400, quality = 2, level = 20 }
+  MOCK.auctions = {
+    { id = 2589, name = "Linen Cloth", count = 1, buyout = 180 },
+    { id = 2592, name = "Wool Cloth", count = 1, buyout = 290 },
+    { id = 99911, name = "Deep Page Gem", count = 1, buyout = 80 },
+  }
+  MOCK.browsePage = 1
+  local moreBefore = MOCK.moreRequested or 0
+  click(card, "Snipe Pages")
+  check(A.snipeMode() == "sweep", "Pages mode selects continuous page scanning")
+  click(card, "Snipe deals")
+  MOCK.advance(6)
+  check((MOCK.moreRequested or 0) >= moreBefore + 2 and (A.sniper.priced or 0) >= 2,
+    "Pages mode walks through multiple browse pages and updates market price histories (" .. tostring(A.sniper.priced) .. " priced)")
+  check(auction.price(2589).low == 180, "non-deal listings scanned on sniper pages update their stored price history")
+  check(T.isLive(99911) and T.dealLabel(99911) == "Buy 1 for 80c",
+    "Pages mode discovers and verifies a sniping deal sitting on a later page (" .. T.dealLabel(99911) .. ")")
+  click(card, "Snipe deals")
+  MOCK.browsePage = nil
   MOCK.closeAuction()
+  -- The listing cost becomes a realized win when the purchased stack is sold to an NPC.
+  MOCK.bagItems = {
+    { name = "Tigerseye", id = 818, quality = 1, level = 1, sell = 50, count = 2, class = "Trade Goods" },
+  }
+  local market = MOCK.ns.auctionMarket
+  local beforeSale = market.record()
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(0.5)
+  local shop = _G.LevelingCodexShopCard
+  check(shop and shop:IsShown(), "the vendor card offers the tracked snipe")
+  shop.sellSnipes:Click()
+  MOCK.advance(1)
+  local afterSale = market.record()
+  check(afterSale.wins == beforeSale.wins + 1 and afterSale.profit == beforeSale.profit + 60
+      and not T.notes().paid[818], "vendoring the two bargains closes their holding for a 60c win")
+  MOCK.closeMerchant()
 end
 
 -- The Market tab: movers from days and from readings, the chart, hot items, the ticker; the
@@ -11597,7 +11800,7 @@ function S.auctionMarket()
     return b and b:GetText() or ""
   end
   check(recheckText():find("Working 0 / ", 1, true), "a quick refresh shows its progress on the button (" .. recheckText() .. ")")
-  MOCK.advance(8)
+  MOCK.advance(4.5)
   check(recheckText() == "Done", "the button says Done when its searches are back (" .. recheckText() .. ")")
   MOCK.advance(5)
   check(recheckText() == "Recheck movers", "then it goes back to its name")
@@ -11608,16 +11811,31 @@ function S.auctionMarket()
   click(AuctionHouseFrame, "Deals")
   click(panel, "Flips")
   local sn = MOCK.ns.auction.sniper
-  click(panel, "Snipe deals")
-  check(sn.on and sn.kind == "flip", "the sniper takes the kind chosen on the page")
+  MOCK.bagItems = {
+    { name = "Mageweave Cloth", id = 4338, quality = 1, level = 1, sell = 3, count = 1, class = "Trade Goods" },
+    { name = "Blinding Powder", id = 99901, quality = 1, level = 1, sell = 0, count = 1, class = "Trade Goods" },
+  }
+  local A = MOCK.ns.auction
+  A.record(4338, "Mageweave Cloth", 200, 3)
   local T = MOCK.ns.auctionTrade
+  A.retarget(nil)
+  T.setMinProfit(10)
+  check(("," .. table.concat(A.snipeList(), ",") .. ","):find(",Mageweave Cloth,", 1, true),
+    "All deals watches a profitable flip even if the vendor value is below the profit threshold")
+  T.setMinProfit(0)
+  A.retarget("flip")
+  A.store().items[99901] = hist("Blinding Powder", 900, 1, 1, 500) -- stale vendor value
+  A.record(99901, "Blinding Powder", 1, 1)
+  MOCK.auctions[#MOCK.auctions + 1] = { id = 99901, name = "Blinding Powder", count = 1, buyout = 1 }
+  click(panel, "Snipe deals")
+  for _, name in ipairs(sn.list) do check(name ~= "Blinding Powder", "watch list skips items with no NPC sell price") end
+  check(sn.on and sn.kind == "flip", "the sniper takes the kind chosen on the page")
   MOCK.advance(12)
   check(T.dealLabel(4338) == "Buy 3 for 6s", "a deal the sniper finds is checked at once (" .. T.dealLabel(4338) .. ")")
-  check(questText(panel, "+8s 25c") and questText(panel, "potential, 3 under the limit") and questText(panel, "potential profit"),
-    "its row and the sniper show the potential profit")
-  local watched = #sn.list
+  check(questText(panel, "+8s 25c") and findButton(panel, function(l) return l == "Buy all Mageweave Cloth" end) and questText(panel, "potential profit"),
+    "its row and the sniper show the potential profit and stack cap choices")
   click(panel, "Under vendor")
-  check(sn.kind == "vendor" and (not sn.on or #sn.list ~= watched), "a new choice changes what the sniper watches")
+  check(sn.kind == "vendor", "a new choice changes what the sniper watches")
   if sn.on then click(panel, "Snipe deals") end
   click(panel, "All deals")
   check(findButton(panel, function(l) return l == "Recheck deals" end) and findButton(panel, function(l) return l == "Scan all" end),
@@ -11633,10 +11851,8 @@ function S.auctionMarket()
   MOCK.event("BAG_UPDATE_DELAYED")
   click(AuctionHouseFrame, "Quick Sell")
   check(findButton(panel, function(l) return l == "Reprice bags" end), "Quick Sell has Reprice bags")
-  for _ = 1, 4 do click(panel, "Raise Mageweave Cloth") end
   click(panel, "Post Mageweave Cloth")
-  click(panel, "Post Mageweave Cloth")
-  check(#MOCK.posted == 1, "the flip is posted")
+  check(#MOCK.posted == 1, "the flip is posted at its usual price once none remain listed")
   MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Mageweave Cloth.")
   local rec = M.record()
   check(rec.wins == 1 and rec.profit > 0 and rec.flips[1].name == "Mageweave Cloth", "the sale closes the post as a won flip")
@@ -11683,6 +11899,38 @@ function S.auctionMarket()
     MOCK.event("MAIL_INBOX_UPDATE")
     MOCK.advance(1)
     check(M.record().income - before == 2850, "taking the mail changes nothing")
+  end
+  -- Live DB + Ticker sync: sniper/search readings immediately update A.price(id).trend and A.history(id)
+  -- even when today's full-scan median existed, filter grey trash, and rank fresh items ahead of stale +9900% spikes.
+  do
+    local A = MOCK.ns.auction
+    local dNow = math.floor(MOCK.time / 86400)
+    MOCK.lootItems[99950] = { name = "A Pretty Rock", quality = 0, sell = 1 }
+    A.store().items[99950] = {
+      name = "A Pretty Rock", low = 8500, n = 1, at = MOCK.time - 1800,
+      days = { [dNow - 1] = { low = 100, med = 100 }, [dNow] = { low = 8500, med = 8500 } },
+    }
+    A.store().items[99951] = {
+      name = "Neophyte's Robe", low = 10000, n = 1, at = MOCK.time - 1800,
+      days = { [dNow - 1] = { low = 100, med = 100 }, [dNow] = { low = 10000, med = 10000 } },
+    }
+    -- Linen Cloth (2589) had days[dNow].med = 150 (+50% vs 100); sniper/search finds a live 180c listing (no med passed)
+    local prevLive = select(1, A.liveStats())
+    A.record(2589, "Linen Cloth", 180, 25)
+    local pAfter = A.price(2589)
+    local hAfter = A.history(2589)
+    check(pAfter.trend == 80 and hAfter[#hAfter].med == 180 and select(1, A.liveStats()) > prevLive,
+      "live sniper/search updates immediately update trend and today's chart point (" .. tostring(pAfter.trend) .. ")")
+    local tk = M.ticker(8)
+    local hasGrey, hasVanity = false, false
+    for _, r in ipairs(tk) do
+      if r.id == 99950 then hasGrey = true end
+      if r.id == 99951 then hasVanity = true end
+    end
+    check(not hasGrey and not hasVanity and tk[1] and tk[1].id == 2589,
+      "the live ticker excludes grey trash and vanity spikes, placing freshly scanned movers at #1")
+    MOCK.ns.auctionPanel.refresh()
+    check(questText(panel, "Live DB: +"), "header displays Live DB update telemetry")
   end
   MOCK.closeAuction()
 end

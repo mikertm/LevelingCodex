@@ -107,6 +107,9 @@ local function blockedStack()
     if #lines < 16 then lines[#lines + 1] = line end
     if sawC then
       local file, num = line:match("LevelingCodex[/\\]([%w_]+%.lua)[^:]*:(%d+)")
+      if not file and not line:find("[/\\]tests[/\\]") then
+        file, num = line:match("LevelingCodex[/\\][^/\\]+[/\\]([%w_]+%.lua)[^:]*:(%d+)")
+      end
       if file and #below < 6 then below[#below + 1] = file .. ":" .. num end
     elseif line:find("^%s*%[C%]") then
       sawC = true

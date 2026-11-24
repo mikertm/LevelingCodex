@@ -63,9 +63,9 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "TIME_PLAYED_MSG", "UNIT_SPELLCAST_SUCCEEDED", "PLAYER_TARGET_CHANGED", "TRAIT_CONFIG_UPDATED", "CHARACTER_POINTS_CHANGED",
   "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT",
   "AUCTION_HOUSE_SHOW", "AUCTION_HOUSE_CLOSED", "REPLICATE_ITEM_LIST_UPDATE", "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED",
-  "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
+  "COMMODITY_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_UPDATED", "ITEM_SEARCH_RESULTS_ADDED", "COMMODITY_PRICE_UPDATED", "COMMODITY_PRICE_UNAVAILABLE",
   "COMMODITY_PURCHASE_SUCCEEDED", "COMMODITY_PURCHASE_FAILED", "AUCTION_HOUSE_AUCTION_CREATED", "OWNED_AUCTIONS_UPDATED",
-  "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "UNIT_HEALTH",
+  "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "AUCTION_HOUSE_BROWSE_FAILURE", "UNIT_HEALTH",
   "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
   "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE",
   "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED" }) do
@@ -1381,7 +1381,7 @@ C_Container = {
     local it = bag == 0 and MOCK.bagItems[slot]
     if not it or it.empty then return end
     return { itemID = bagID(slot), hyperlink = bagLink(slot), stackCount = it.count or 1, quality = it.quality,
-      hasNoValue = it.sell == 0, isLocked = it.locked or false, isBound = it.bound or false }
+      hasNoValue = it.noValue or it.sell == 0, isLocked = it.locked or false, isBound = it.bound or false }
   end,
   UseContainerItem = function(bag, slot)
     local it = bag == 0 and MOCK.bagItems[slot]
@@ -1593,8 +1593,8 @@ C_AuctionHouse = {
       if browseText and a.name:lower():find(browseText, 1, true) then
         local unit = math.floor(a.buyout / (a.count or 1))
         local r = byID[a.id]
-        if not r then r = { itemKey = { itemID = a.id }, minPrice = unit, totalQuantity = 0 }; byID[a.id] = r; out[#out + 1] = r end
-        r.minPrice = math.min(r.minPrice, unit)
+        if not r then r = { itemKey = { itemID = a.id, itemSuffix = a.itemSuffix }, minPrice = unit, totalQuantity = 0 }; byID[a.id] = r; out[#out + 1] = r end
+        r.minPrice = math.min(r.minPrice, a.browsePrice or unit)
         r.totalQuantity = r.totalQuantity + (a.count or 1)
       end
     end
@@ -1657,6 +1657,8 @@ C_AuctionHouse.MakeItemKey = function(id) return { itemID = id, itemLevel = 0, i
 C_AuctionHouse.SendSearchQuery = function(key, sorts, separate)
   if type(key) ~= "table" or type(key.itemID) ~= "number" or type(sorts) ~= "table" then error("SendSearchQuery: bad query", 2) end
   MOCK.searched = (MOCK.searched or 0) + 1
+  MOCK.searchKeys = MOCK.searchKeys or {}
+  MOCK.searchKeys[key.itemID] = key
   auctionLater(function()
     if #sortedListings(key.itemID, true) > 0 then MOCK.event("ITEM_SEARCH_RESULTS_UPDATED", key)
     else MOCK.event("COMMODITY_SEARCH_RESULTS_UPDATED", key.itemID) end
@@ -1671,7 +1673,7 @@ C_AuctionHouse.GetNumItemSearchResults = function(key) return #sortedListings(ke
 C_AuctionHouse.GetItemSearchResultInfo = function(key, i)
   local a = sortedListings(key.itemID, true)[i]
   if a then a.auctionID = a.auctionID or (key.itemID * 100 + i) end
-  if a then return { itemKey = key, auctionID = a.auctionID, buyoutAmount = a.buyout, quantity = a.count or 1, containsOwnerItem = a.mine or false } end
+  if a then return { itemKey = key, auctionID = a.auctionID, buyoutAmount = a.buyout, quantity = a.resultQuantity or a.count or 1, containsOwnerItem = a.mine or false } end
 end
 C_AuctionHouse.StartCommoditiesPurchase = function(id, qty)
   local total, left = 0, qty
@@ -1701,9 +1703,20 @@ C_AuctionHouse.PlaceBid = function(auctionID, amount)
   hardware("PlaceBid")
   for i, a in ipairs(MOCK.auctions) do
     if a.item and a.auctionID == auctionID then
-      table.insert(MOCK.purchases, { id = a.id, qty = a.count or 1, total = amount, auction = auctionID })
-      MOCK.money = (MOCK.money or 0) - amount
-      table.remove(MOCK.auctions, i)
+      if MOCK.itemPurchaseGone then
+        table.remove(MOCK.auctions, i)
+        return
+      end
+      local settle = function()
+        table.insert(MOCK.purchases, { id = a.id, qty = a.count or 1, total = amount, auction = auctionID })
+        MOCK.money = (MOCK.money or 0) - amount
+        for j, x in ipairs(MOCK.auctions) do
+          if x == a then table.remove(MOCK.auctions, j); break end
+        end
+        MOCK.event("AUCTION_HOUSE_PURCHASE_COMPLETED", auctionID)
+        MOCK.event("PLAYER_MONEY")
+      end
+      if MOCK.asyncItemBuy then auctionLater(settle) else settle() end
       return
     end
   end
