@@ -1,5 +1,17 @@
 # Leveling Codex
 
+## v0.31.2
+- **Quick Sell, rebuilt for making gold:**
+  - **Live price checks:** opening Quick Sell searches what's listed right now for the items in your bags (rows say LIVE, OLD or QUEUED). A post whose price is older than 10 minutes checks it first, and the next click posts at the live price. **Live check** turns this off.
+  - **Never undercut yourself:** your own listings are left out of the price to beat. When you're already the cheapest, Quick Sell matches your price (YOURS).
+  - **Lone listings passed over:** a few items listed 30% or more under the rest no longer drag your price down (LONE). **Beat all** undercuts the very cheapest instead.
+  - **Pricing modes:** Undercut, Smart (undercut, but never under 80% of the usual price) or Usual (post at the usual price).
+  - **What you keep:** every row shows what you keep after the 5% cut and the deposit, and what that gains over a vendor. The new summary strip shows TO POST, YOU KEEP and VS VENDOR.
+  - **Cancel undercut:** one click per auction cancels your undercut auctions, the most valuable first (the first click arms it). They come back by mail tagged RELIST.
+- **Deals and the sniper:**
+  - **Spending budget per visit:** No cap, 1g, 5g, 25g or 100g. A buy that would go over the budget is refused, and a commodity stack is cut to fit what's left.
+  - **Flip confidence:** each flip is SAFE, FAIR or RISKY, scored from its days of prices, how many are listed, how steady the price is, and whether the discount looks too good to be true. **Risky flips hidden** removes risky ones from the list and the sniper.
+
 ## v0.31.1
 - **Deals and sniping overhaul:**
   - **Graphical sniper console and custom profit filters:** redesigned the **Deals** tab with a trading-terminal layout, custom minimum-profit input (`-`, coin box, `+`, `Set`), **Max pay** cap (`10s` to `25g`), **Sort** modes (`Profit`, `ROI %`, `Price`, `Newest`), quality-rimmed item cards, and margin meters.

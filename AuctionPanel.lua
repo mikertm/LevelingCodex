@@ -1312,6 +1312,9 @@ local function dealTip(d)
     lines[#lines + 1] = "Usual AH price: " .. ns.money(d.usual) .. " (" .. d.days .. " days)"
   end
   lines[#lines + 1] = "Profit: +" .. ns.money(d.profit) .. " each (+" .. d.pct .. "%), max buy limit " .. ns.money(T().limitFor(d)) .. " each"
+  if not vendor and d.conf then
+    lines[#lines + 1] = T().CONFIDENCE[d.conf][3] .. ": " .. table.concat(d.confWhy or {}, ", ")
+  end
   if b and b.stage == "ready" then
     if b.commodity == false then
       local lots = b.lots and #b.lots or 1
@@ -1373,7 +1376,7 @@ function pages.deals(W, top, H)
   for _, d in ipairs(rows) do profit = profit + (T().potential(d)) end
 
   -- 1. Filter & Custom Threshold Console Deck
-  surfaceDeck(x, top, w, 56, ns.C.gold, true)
+  surfaceDeck(x, top, w, 80, ns.C.gold, true)
   local y1 = top + 6
   local kx = x + 8
   for _, k in ipairs(KINDS) do
@@ -1443,8 +1446,27 @@ function pages.deals(W, top, H)
     db.auctionDealSort = T().SORTS[i][2]; offsets.deals = 0
   end, "Sort deals ")
 
+  -- Row 3: spending budget for this visit, risky flips
+  local y3 = top + 55
+  local budLabels, budLit, curBud = {}, nil, T().budget()
+  for i, e in ipairs(T().BUDGETS) do budLabels[i] = e[1]; if e[2] == curBud then budLit = i end end
+  text("Budget", x + 8, y3 + 3, 44, "dim", ns.C.dim)
+  proPills(x + 54, y3, 262, 19, budLabels, budLit, function(i) db.auctionBudget = T().BUDGETS[i][2] end, "Budget ",
+    { "No spending cap.", "Buy at most 1g of deals this visit.", "Buy at most 5g of deals this visit.",
+      "Buy at most 25g of deals this visit.", "Buy at most 100g of deals this visit." })
+  local left = T().budgetLeft()
+  local spent = T().visit.spent
+  local budText = left and ("Spent " .. ns.money(spent) .. " of " .. ns.money(curBud) .. (left == 0 and ": budget used up" or ""))
+    or (spent > 0 and ("Spent " .. ns.money(spent) .. " this visit") or "Spent nothing this visit")
+  text(budText, x + 324, y3 + 3, w - 324 - 150, "dim", left == 0 and RED or ns.C.light)
+  local risky = T().skipRisky()
+  proBtn(risky and "Risky flips hidden" or "Risky flips shown", x + w - 146, y3, 138, 19, "pill", function()
+    db.auctionSkipRisky = not risky or nil; offsets.deals = 0; A().retarget(view.deals)
+  end, { label = "Skip risky flips", lit = risky, tip = "Risky flips",
+    tipText = "Each flip gets SAFE, FAIR or RISKY from its days of prices, how many are listed and how steady the price is. Hidden: the list and the sniper leave RISKY ones out." })
+
   -- 2. Sniper Radar, Live P&L Scoreboard & Rapid Trigger Deck
-  local y = top + 60
+  local y = top + 84
   local sn = A().sniper
   local smode = A().snipeMode()
   surfaceDeck(x, y, w, 58, sn.on and GREEN or CYAN, false)
@@ -1565,7 +1587,7 @@ function pages.deals(W, top, H)
   hit(cx, y + 23, cw, 29, "Sniper & Flip Record", scoreTip, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
 
   -- 3. Column Header Bar + Graphical Deal Cards
-  y = top + 122
+  y = top + 146
   rect(x, y, w, 18, { 0.03, 0.05, 0.08, 0.94 }, "BORDER")
   rect(x, y + 17, w, 1, { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.30 }, "ARTWORK")
   text("ITEM & SUPPLY", x + 10, y + 3, 180, "dim", ns.C.gold)
@@ -1617,6 +1639,12 @@ function pages.deals(W, top, H)
       text(name, x + 46, ry + 5, col1W - 44, "body", live and ns.C.gold or ns.C.light)
       pill(vendor and "VENDOR" or "FLIP", x + 46, ry + 23, 56, vendor and MINT or CYAN)
       local sx = x + 106
+      local cf = not vendor and d.conf and T().CONFIDENCE[d.conf]
+      if cf then
+        pill(cf[1], sx, ry + 23, 46, cf[2])
+        hit(sx, ry + 23, 46, 16, cf[3], "Score " .. (d.confScore or 0) .. ": " .. table.concat(d.confWhy or {}, ", ") .. ".")
+        sx = sx + 50
+      end
       if live then
         pill("LIVE", sx, ry + 23, 38, GREEN)
         sx = sx + 42
@@ -1710,93 +1738,224 @@ end
 ----------------------------------------------------------------------------
 
 local OWNED_STATES = { undercut = { "UNDERCUT", RED }, cheapest = { "CHEAPEST", GREEN }, sold = { "SOLD", { 1, 0.82, 0 } } }
+local PRICING_TIPS = {
+  "Post just under the cheapest listing that isn't yours.",
+  "Undercut, but never under 80% of the usual price: when someone dumps, you wait for the market to come back.",
+  "Post at the usual price (two days of history or more): slower, but full price.",
+}
+
+-- The tooltip of a Quick Sell row: where its price comes from and what you keep.
+local function sellTip(row, s, net)
+  local l = s.live
+  local out = {}
+  if s.blocked then out[#out + 1] = s.blocked end
+  if l then
+    local secs = math.max(0, math.floor((GetTime and GetTime() or 0) - (l.at or 0)))
+    out[#out + 1] = "Checked live " .. (secs < 60 and "just now" or (math.floor(secs / 60) .. " min ago"))
+  end
+  if s.low then out[#out + 1] = "Cheapest listing: " .. ns.money(s.low) .. (s.n and s.n > 0 and (" (" .. ns.thousands(s.n) .. " listed)") or "") end
+  if s.skipped then
+    out[#out + 1] = "Passed over a lone listing of " .. s.skipped.qty .. " at " .. ns.money(s.skipped.price)
+      .. ": it's far under the rest, so you undercut " .. ns.money(s.base) .. " instead."
+  end
+  if s.matched then out[#out + 1] = "You're already the cheapest at " .. ns.money(s.base) .. ": this matches your own price instead of undercutting it." end
+  if s.usual then out[#out + 1] = "Usual price: " .. ns.money(s.usual) end
+  if s.vendor then out[#out + 1] = "A vendor pays " .. ns.money(s.vendor) .. " each (" .. ns.money(s.vendor * row.count) .. " for all)" end
+  if net then
+    out[#out + 1] = "Post " .. row.count .. " at " .. ns.money(s.price) .. ": " .. ns.money(net.gross) .. ", less the 5% cut "
+      .. ns.money(net.cut) .. (net.deposit and (" and the deposit " .. ns.money(net.deposit)) or "") .. " = " .. ns.money(net.net) .. " to you"
+  end
+  if s.paid then out[#out + 1] = "You paid " .. ns.money(s.paid) .. " each" end
+  if s.mode ~= "under" then out[#out + 1] = "Pricing: " .. (s.mode == "smart" and "Smart" or "Usual") end
+  return table.concat(out, "\n")
+end
 
 function pages.selling(W, top, H)
   local db = ns.db()
-  local rw = 290
+  local rw = 250
   local lw = W - 48 - rw
   local x, rx = 16, 16 + lw + 16
-  local bottom = top + H - 30
-  -- settings
+  local bottom = top + H - 28
+  local live = T().liveFirst()
+  local clock = GetTime and GetTime() or now()
+  if live and A().isOpen() and (view.sellChecked ~= shows or clock - (view.sellAutoAt or 0) > 5) then
+    view.sellChecked, view.sellAutoAt = shows, clock
+    ns.after(0.1, function() if P.shown() and P.page() == "selling" then T().checkBagPrices() end end)
+  end
+  -- 1. settings console
+  surfaceDeck(x, top, lw, 54, ns.C.gold, true)
+  local y1 = top + 6
   local cuts, cutLit = {}, nil
   for i, e in ipairs(T().UNDERCUTS) do cuts[i] = e[1]; if e[2] == T().undercut()[2] then cutLit = i end end
-  text("Undercut", x, top + 4, 58, "small", ns.C.dim)
-  segments(x + 60, top, 184, cuts, cutLit, function(i) db.auctionUndercut = T().UNDERCUTS[i][2] end, "Undercut ")
+  text("Undercut", x + 8, y1 + 4, 54, "dim", ns.C.gold)
+  proPills(x + 62, y1, 156, 20, cuts, cutLit, function(i) db.auctionUndercut = T().UNDERCUTS[i][2] end, "Undercut ")
   local durs, durLit = {}, nil
   for i, e in ipairs(T().DURATIONS) do durs[i] = e[1]; if e[2] == T().duration() then durLit = i end end
-  text("Post for", x + 254, top + 4, 54, "small", ns.C.dim)
-  segments(x + 310, top, math.max(150, lw - 310), durs, durLit, function(i) db.auctionDuration = T().DURATIONS[i][2] end, "Post for ")
-  local y = top + 30
-  local nextRow = T().nextPost()
-  button(nextRow and ("Post next: " .. nextRow.count .. " x " .. Q.plain(nextRow.name) .. " at " .. ns.money(nextRow.sell.price))
-    or "Nothing to post", x, y, lw, function() T().postNext() end,
-    { label = "Post next", enabled = nextRow ~= nil and T().available(), h = 26, lit = nextRow ~= nil, tip = "Post next",
-      tipText = "Posts the most valuable item in the list. Click again for the next one." })
-  y = y + 34
+  text("Post for", x + 226, y1 + 4, 50, "dim", ns.C.gold)
+  proPills(x + 278, y1, lw - 286, 20, durs, durLit, function(i) db.auctionDuration = T().DURATIONS[i][2] end, "Post for ")
+  local y2 = top + 30
+  local modes, modeLit = {}, nil
+  for i, e in ipairs(T().PRICINGS) do modes[i] = e[1]; if e[2] == T().pricing() then modeLit = i end end
+  text("Price", x + 8, y2 + 3, 54, "dim", ns.C.gold)
+  proPills(x + 62, y2, 186, 19, modes, modeLit, function(i) db.auctionPricing = T().PRICINGS[i][2] end, "Pricing ", PRICING_TIPS)
+  proBtn(live and "Live check on" or "Live check off", x + 256, y2, 104, 19, "pill", function()
+    db.auctionNoLiveCheck = live and true or nil
+  end, { label = "Live check", lit = live, tip = "Live price check",
+    tipText = "On: Quick Sell searches what's listed right now before a post (your own listings left out), so you never undercut yourself or an old price. Off: it posts at the last price seen." })
+  proBtn(T().skipLone() and "Skip lone" or "Beat all", x + 364, y2, lw - 372, 19, "pill", function()
+    db.auctionKeepLone = T().skipLone() and true or nil
+  end, { label = "Skip lone listings", lit = T().skipLone(), tip = "Lone cheap listings",
+    tipText = "Skip lone: a few listed far under the rest (30% or more) are passed over, and you undercut the real price. Beat all: always undercut the very cheapest." })
+
+  -- 2. what your bags are worth, and Post next
   local rows = T().sellable(false, view.hidden)
-  if #rows == 0 then
-    text("Nothing priced to sell in your bags. Reprice bags, top right, prices what you carry.", x, y + 4, lw, "small", ns.C.dim, nil, true)
+  local gross, keep, vend, posts = 0, 0, 0, 0
+  for _, row in ipairs(rows) do
+    if not row.sell.blocked then
+      local n = T().sellNet(row, row.sell)
+      if n then gross, keep, vend, posts = gross + n.gross, keep + n.net, vend + n.vendor, posts + 1 end
+    end
+  end
+  local y = top + 58
+  surfaceDeck(x, y, lw, 52, GREEN, false)
+  local nextRow = T().nextPost()
+  local aw = 176
+  local cw = lw - aw - 20
+  local mw = math.floor((cw - 8) / 3)
+  local function miniStat(i, titleS, valS, col, tip)
+    local sx = x + 8 + (i - 1) * (mw + 4)
+    rect(sx, y + 6, mw, 40, { 0.02, 0.03, 0.05, 0.88 }, "BORDER")
+    rect(sx, y + 6, 2, 40, col, "ARTWORK")
+    text(titleS, sx + 6, y + 9, mw - 8, "dim", ns.C.dim)
+    text(valS, sx + 6, y + 24, mw - 8, "body", col)
+    hit(sx, y + 6, mw, 40, titleS, tip)
+  end
+  miniStat(1, "TO POST (" .. posts .. ")", ns.money(gross), ns.C.gold, "What the items you could post come to at their Quick Sell prices.")
+  miniStat(2, "YOU KEEP", ns.money(keep), MINT, "After the 5% cut and the deposits.")
+  miniStat(3, "VS VENDOR", signed(keep - vend), keep >= vend and GREEN or RED,
+    "What you keep over selling the same items to a vendor (" .. ns.money(vend) .. ").")
+  local checking = nextRow and T().needsCheck(nextRow)
+  local nextLabel = nextRow and ((checking and (T().sellChecking(nextRow.id) and "Checking: " or "Check next: ") or "Post next: ")
+    .. nextRow.count .. " x " .. Q.plain(nextRow.name) .. " at " .. ns.money(nextRow.sell.price)) or "Nothing to post"
+  local nb = proBtn(nextLabel, x + lw - aw - 8, y + 6, aw, 40, nextRow and (checking and "gold" or "emerald") or "ghost",
+    function() T().postNext() end,
+    { label = "Post next", enabled = nextRow ~= nil and T().available(), lit = nextRow ~= nil, tip = "Post next",
+      tipText = "Posts the most valuable item in the list; click again for the next one. With Live check on, an item whose price isn't fresh is searched first and the next click posts it." })
+  if nb.fs.SetWordWrap then nb.fs:SetWordWrap(true) end
+
+  -- 3. rows
+  y = y + 56
+  local done, left, waiting = T().sellCheckState()
+  rect(x, y, lw, 18, { 0.03, 0.05, 0.08, 0.94 }, "BORDER")
+  rect(x, y + 17, lw, 1, { ns.C.gold[1], ns.C.gold[2], ns.C.gold[3], 0.30 }, "ARTWORK")
+  text("ITEM & MARKET", x + 10, y + 3, 160, "dim", ns.C.gold)
+  local pcx = x + lw - 284
+  text("PRICE / YOU KEEP", pcx, y + 3, 150, "dim", ns.C.gold)
+  if left > 0 then
+    text("Checking live " .. done .. " / " .. (done + left), x + lw - 146, y + 3, 138, "dim", CYAN, "RIGHT")
   else
-    list("selling", rows, x, y, lw, 44, bottom - y, function(row, ix, iy, iw)
+    text("SELL", x + lw - 146, y + 3, 138, "dim", ns.C.gold, "CENTER")
+  end
+  y = y + 20
+  if #rows == 0 then
+    text("Nothing priced to sell in your bags. Reprice bags, top right, prices what you carry.", x + 8, y + 8, lw - 16, "small", ns.C.dim, nil, true)
+  else
+    list("selling", rows, x, y, lw, 46, bottom - y, function(row, ix, iy, iw)
       local s = row.sell
-      icon(row.icon or itemIcon(row.id), ix + 6, iy + 6, 30)
-      local bx = ix + iw - 172
-      local tagX = bx - 96 - (s.custom and 48 or 0)
-      text(Q.plain(row.count .. " x " .. row.name), ix + 44, iy + 5, tagX - ix - 50, "body")
-      hit(ix + 40, iy, tagX - ix - 44, 20, row.name, "Click to chart it.", function() chartItem(row.id) end, "Chart " .. row.name)
-      local _, label, color, short = T().status(row.id, s)
-      pill(short or label, tagX, iy + 5, 92, color)
-      hit(tagX, iy + 5, 92, 16, label, "How the market looks for selling it now.")
-      local sub
-      if s.blocked then sub = "A vendor pays " .. ns.money(s.vendor) .. " each: sell it there"
+      local net = not s.blocked and T().sellNet(row, s) or nil
+      local key, label, color, short = T().status(row.id, s)
+      local accent = s.blocked and RED or (s.loss and ORANGE or color)
+      rect(ix, iy, 3, 43, accent, "ARTWORK")
+      framedIcon(row.id, row.icon or itemIcon(row.id), ix + 10, iy + 7, 28)
+      local nameW = pcx - ix - 50
+      text(Q.plain(row.count .. " x " .. row.name), ix + 46, iy + 5, nameW, "body")
+      hit(ix + 40, iy, nameW + 4, 22, row.name, sellTip(row, s, net) .. "\nClick to chart it.", function() chartItem(row.id) end, "Chart " .. row.name)
+      local tx = ix + 46
+      local function tag(t, tw, col, tipT, tipX)
+        if tx + tw > pcx - 4 then return end
+        pill(t, tx, iy + 24, tw, col)
+        hit(tx, iy + 24, tw, 16, tipT, tipX)
+        tx = tx + tw + 4
+      end
+      tag(short or label, 70, color, label, "How the market looks for selling it now.")
+      if row.relist then tag("RELIST", 46, CYAN, "Relist", "You cancelled this one after it was undercut: post it again.") end
+      if s.live then tag("LIVE", 34, GREEN, "Live price", "Checked against what's listed right now.")
+      elseif T().sellChecking(row.id) then tag(waiting == row.id and "..." or "QUEUED", 46, CYAN, "Checking", "A live price check is on its way.")
+      elseif live then tag("OLD", 34, ORANGE, "Old price", "From the last scan: the next Post searches it first.") end
+      if s.matched then tag("YOURS", 44, GREEN, "Your price", "You're already the cheapest: it matches your own listing.") end
+      if s.skipped then tag("LONE", 38, ORANGE, "Lone listing passed over", sellTip(row, s, nil)) end
+      -- price and what you keep
+      if s.blocked then
+        text("A vendor pays " .. ns.money(s.vendor) .. " each: sell it there", pcx, iy + 6, 138, "small", RED, nil, true)
       else
-        sub = ns.money(s.price) .. " each" .. (s.custom and " (your price)" or "")
-        if s.low then sub = sub .. ", lowest " .. ns.money(s.low) end
-        if s.usual and s.usual ~= s.low then sub = sub .. ", usual " .. ns.money(s.usual) end
-        sub = sub .. "  -  " .. ns.money(s.price * row.count) .. " in all"
-        if s.paid then sub = sub .. "  -  paid " .. ns.money(s.paid) end
+        text(ns.money(s.price) .. " each" .. (s.custom and " (your price)" or ""), pcx, iy + 5, 138, "small", s.custom and ns.C.gold or ns.C.light)
+        local keepS = net and ("keep " .. ns.money(net.net)) or ""
+        if net and net.vendor > 0 then keepS = keepS .. " (" .. signed(net.gain) .. ")" end
+        text(keepS, pcx, iy + 19, 138, "dim", net and net.gain < 0 and RED or (s.loss and ORANGE or MINT))
+        if s.low and s.low > 0 then
+          bar(pcx, iy + 35, 130, 4, math.max(0.05, math.min(1, s.price / math.max(s.usual or s.low, s.low, s.price))), accent)
+        end
       end
-      text(sub, ix + 44, iy + 24, bx - ix - 50 - (s.custom and 48 or 0), "dim", s.blocked and RED or (s.loss and ORANGE or ns.C.dim))
+      -- buttons
+      local bx = ix + iw - 142
       if s.custom then
-        button("Auto", bx - 46, iy + 11, 42, function() T().nudge(row.id, nil) end,
-          { label = "Reset " .. row.name, tip = "Auto price", tipText = "Back to the undercut price." })
+        proBtn("Auto", bx - 38, iy + 10, 34, 24, "ghost", function() T().nudge(row.id, nil) end,
+          { label = "Reset " .. row.name, tip = "Auto price", tipText = "Back to the Quick Sell price." })
       end
-      button("-", bx, iy + 11, 24, function() T().nudge(row.id, -1) end,
+      proBtn("-", bx, iy + 10, 20, 24, "ghost", function() T().nudge(row.id, -1) end,
         { label = "Lower " .. row.name, enabled = not s.blocked, tip = "Lower the price", tipText = "5% less each click. It never goes under the vendor floor: below it the post is blocked." })
-      button("+", bx + 26, iy + 11, 24, function() T().nudge(row.id, 1) end,
+      proBtn("+", bx + 22, iy + 10, 20, 24, "ghost", function() T().nudge(row.id, 1) end,
         { label = "Raise " .. row.name, enabled = not s.blocked, tip = "Raise the price", tipText = "5% more each click." })
       local armed = T().armed("post:" .. row.id)
-      button(s.blocked and "Vendor it" or (armed and "Post anyway" or "Post"), bx + 54, iy + 11, 70, function() T().post(row) end,
-        { label = "Post " .. row.name, enabled = not s.blocked and T().available(), lit = armed })
+      local needs = T().needsCheck(row)
+      local plabel = s.blocked and "Vendor it" or (needs and (T().sellChecking(row.id) and "..." or "Check") or (armed and "Sure?" or "Post"))
+      proBtn(plabel, bx + 44, iy + 10, 72, 24, s.blocked and "ghost" or (needs and "gold" or (armed and "danger" or "emerald")),
+        function() T().post(row) end,
+        { label = "Post " .. row.name, enabled = not s.blocked and T().available(), lit = armed,
+          tip = needs and "Check, then post" or "Post", tipText = needs and "Searches what's listed now; click again to post at that price."
+            or ("Posts " .. (row.count) .. " at " .. ns.money(s.price) .. " each" .. (net and (": you keep " .. ns.money(net.net)) or "") .. ".") })
       local hidden = T().isHidden(row.id)
-      button(hidden and "Unhide" or "Hide", bx + 126, iy + 11, 46, function() T().hide(row.id, not hidden) end,
-        { label = (hidden and "Unhide " or "Hide ") .. row.name, tip = "Hide", tipText = "Leave it out of Quick Sell and Deals." })
+      proBtn(hidden and "+" or "x", bx + 118, iy + 10, 22, 24, "ghost", function() T().hide(row.id, not hidden) end,
+        { label = (hidden and "Unhide " or "Hide ") .. row.name, tip = hidden and "Unhide" or "Hide", tipText = "Leave it out of Quick Sell and Deals." })
     end)
   end
   local n = T().hiddenCount()
   if n > 0 or view.hidden then
-    button(view.hidden and "Hide hidden" or ("Show hidden (" .. n .. ")"), x, bottom + 4, 160, function() view.hidden = not view.hidden end,
-      { label = view.hidden and "Hide hidden" or "Show hidden" })
+    proBtn(view.hidden and "Hide hidden" or ("Show hidden (" .. n .. ")"), x, bottom + 2, 150, 21, "pill", function() view.hidden = not view.hidden end,
+      { label = view.hidden and "Hide hidden" or "Show hidden", lit = view.hidden })
   end
   local unpriced = #T().sellable(true, false) - #T().sellable(false, false)
   if unpriced > 0 then
-    text(unpriced .. " more " .. (unpriced == 1 and "has" or "have") .. " no price yet", x + 170, bottom + 8, lw - 300, "dim", ns.C.dim)
-    button("Scan my bags", x + lw - 120, bottom + 4, 120, function()
-      ns.say("Searching " .. A().scanBags() .. " items from your bags.")
-    end)
+    text(unpriced .. " more " .. (unpriced == 1 and "has" or "have") .. " no price yet", x + 158, bottom + 6, lw - 290, "dim", ns.C.dim)
+    proBtn("Scan my bags", x + lw - 120, bottom + 2, 120, 21, "gold", function()
+      local k = T().checkBagPrices()
+      if k == 0 then k = A().scanBags() end
+      ns.say("Searching " .. k .. " items from your bags.")
+    end, { label = "Scan my bags" })
   end
-  -- your auctions
+
+  -- 4. your auctions
   local mine = T().mine
   card(rx, top, rw, H, "YOUR AUCTIONS")
-  button(mine.checking and "Checking..." or "Check undercuts", rx + 12, top + 32, 160, function() T().checkUndercuts() end,
+  button(mine.checking and "Checking..." or "Check undercuts", rx + 12, top + 32, 150, function() T().checkUndercuts() end,
     { label = "Check undercuts", enabled = not mine.checking and #mine.list > 0, tip = "Check undercuts",
       tipText = "Searches each item you have listed for the cheapest listing that isn't yours." })
-  button("Refresh", rx + 178, top + 32, rw - 190, function() T().queryOwned() end, { label = "Refresh auctions" })
+  button("Refresh", rx + 168, top + 32, rw - 180, function() T().queryOwned() end, { label = "Refresh auctions" })
   local under = T().undercutCount()
+  local worth = 0
+  for _, row in ipairs(mine.list) do if not row.sold then worth = worth + (row.unit or 0) * (row.qty or 1) end end
   text(#mine.list == 0 and (mine.at and "You have nothing listed." or "Reading your auctions...")
-    or (#mine.list .. " listed" .. (under > 0 and (", " .. under .. " undercut") or "")), rx + 12, top + 62, rw - 24, "small",
+    or (#mine.list .. " listed, " .. ns.money(worth) .. (under > 0 and (", " .. under .. " undercut") or "")), rx + 12, top + 62, rw - 24, "small",
     under > 0 and RED or ns.C.light)
-  local oy = top + 82
+  local oy = top + 80
+  if under > 0 then
+    local armedW = T().cancelUndercutArmed()
+    proBtn((armedW and "Cancel next undercut (" or "Cancel undercut (") .. under .. ")", rx + 12, oy, rw - 24, 22, armedW and "danger" or "gold",
+      function() T().cancelNextUndercut() end,
+      { label = "Cancel undercut", lit = armedW, tip = "Cancel undercut auctions",
+        tipText = "One click per auction, the most valuable first: the first click arms it, then each click cancels the next. The deposit is lost and the item comes back by mail, tagged RELIST in Quick Sell." })
+    oy = oy + 28
+  end
   list("mine", mine.list, rx + 6, oy, rw - 12, 38, top + H - 46 - oy, function(row, ix, iy, iw)
     text(Q.plain(row.qty .. " x " .. row.name), ix + 6, iy + 4, iw - 80, "small")
     local state, cheapest = T().ownedState(row)
@@ -2022,8 +2181,9 @@ P.REFRESH = {
     local n = T().recheckDeals(ordered)
     return "Rechecking " .. n .. (n == 1 and " deal" or " deals") .. " with live listing checks.", n
   end },
-  selling = { "Reprice bags", "Searches everything you could sell again, reads your auctions and checks them for undercuts.", function()
-    local n = A().scanBags(true)
+  selling = { "Reprice bags", "Checks everything you could sell against what's listed now, reads your auctions and checks them for undercuts.", function()
+    local n = T().checkBagPrices(true)
+    if n == 0 then n = A().scanBags(true) end
     T().queryOwned()
     if #T().mine.list > 0 then ns.after(1, T().checkUndercuts) end
     return "Repricing " .. n .. " items from your bags."

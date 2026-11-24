@@ -22,6 +22,7 @@ T.DURATIONS = { { "12 h", 1 }, { "24 h", 2 }, { "48 h", 3 } }
 T.MINPROFITS = { { "Any", 0 }, { "1s", 100 }, { "10s", 1000 }, { "25s", 2500 }, { "1g", 10000 } }
 T.MAXBUYS = { { "No cap", 0 }, { "10s", 1000 }, { "1g", 10000 }, { "5g", 50000 }, { "25g", 250000 } }
 T.SORTS = { { "Profit", "profit" }, { "ROI %", "roi" }, { "Price", "low" }, { "Newest", "age" } }
+T.BUDGETS = { { "No cap", 0 }, { "1g", 10000 }, { "5g", 50000 }, { "25g", 250000 }, { "100g", 1000000 } }
 local MIN_STEPS = { 0, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000 }
 local HEARTHSTONE = 6948
 
@@ -109,11 +110,145 @@ function T.maxBuy()
   local v = tonumber(ns.db().auctionMaxBuy)
   return v and v > 0 and math.floor(v) or 0
 end
+function T.budget()
+  local v = tonumber(ns.db().auctionBudget)
+  return v and v > 0 and math.floor(v) or 0
+end
+function T.skipRisky() return ns.db().auctionSkipRisky and true or false end
 function T.dealSort()
   local s = ns.db().auctionDealSort
   for _, e in ipairs(T.SORTS) do if e[2] == s then return s end end
   return "profit"
 end
+
+----------------------------------------------------------------------------
+-- Quick Sell: live price checks
+----------------------------------------------------------------------------
+
+-- How Quick Sell prices a post: Undercut = under the lowest listing; Smart = the same, but never
+-- under 80% of a usual price of two days or more (a dumped market waits for you); Usual = the usual
+-- price (a patient seller), else the undercut.
+T.PRICINGS = { { "Undercut", "under" }, { "Smart", "smart" }, { "Usual", "usual" } }
+T.SMART_FLOOR = 0.8
+T.SELL_FRESH = 600     -- a live check is trusted for 10 minutes
+T.SELL_GAP = 1.2       -- seconds between two live checks
+T.SELL_AUTO = 30       -- items checked when Quick Sell opens
+T.LONE_UNDER = 0.7     -- a listing under 70% of the next price ...
+T.LONE_SHARE = 0.1     -- ... holding at most a tenth of what's listed is a lone listing
+function T.pricing() return setting(T.PRICINGS, ns.db().auctionPricing, "under")[2] end
+function T.skipLone() return not ns.db().auctionKeepLone end
+function T.liveFirst() return not ns.db().auctionNoLiveCheck end
+
+-- live[id] = { at, cheapest, depth, second, listed, mine, mineQty }: what a search for the item saw,
+-- others' listings and yours apart (cheapest / second = others' two lowest prices, depth = how many
+-- of them at the cheapest, mine = your own lowest).
+local sellq = { queue = {}, waiting = nil, live = {}, total = 0, done = 0, tried = {} }
+T.sellLive = sellq.live
+
+function T.liveCheck(id)
+  local l = id and sellq.live[id]
+  if l and now() - l.at < T.SELL_FRESH then return l end
+end
+function T.sellCheckWaiting() return sellq.waiting end
+function T.sellCheckState() return sellq.done, #sellq.queue + (sellq.waiting and 1 or 0), sellq.waiting end
+function T.sellChecking(id) if sellq.waiting == id then return true end
+  for _, q in ipairs(sellq.queue) do if q == id then return true end end
+  return false
+end
+
+local function sellSearchable() return has(api(), "SendSearchQuery") and ns.auction.isOpen() end
+
+local stepSell
+local function nextSell()
+  sellq.waiting = nil
+  sellq.done = sellq.done + 1
+  ns.after(T.SELL_GAP, stepSell)
+end
+stepSell = function()
+  if sellq.waiting then return end
+  if not sellSearchable() then sellq.queue = {}; return end
+  local id = sellq.queue[1]
+  if not id then T.refresh(); return end
+  local _, left = T.recheckState()
+  if ns.auction.busy() or T.busyBuying() or left > 0 or T.mine.checking then ns.after(0.3, stepSell); return end
+  local C = api()
+  if has(C, "IsThrottledMessageSystemReady") and try(C.IsThrottledMessageSystemReady) == false then ns.after(0.3, stepSell); return end
+  table.remove(sellq.queue, 1)
+  sellq.tried[id] = now()
+  local key = has(C, "MakeItemKey") and try(C.MakeItemKey, id) or { itemID = id }
+  local enum = type(Enum) == "table" and type(Enum.AuctionHouseSortOrder) == "table" and Enum.AuctionHouseSortOrder
+  local sorts = enum and enum.Price and { { sortOrder = enum.Price, reverseSort = false } } or {}
+  sellq.waiting = id
+  if not pcall(C.SendSearchQuery, key, sorts, false) then sellq.queue = {}; sellq.waiting = nil; T.refresh(); return end
+  ns.after(5, function()
+    if sellq.waiting == id then nextSell(); T.refresh() end
+  end)
+end
+
+-- Queues live checks for ids (front = first, for a click). Returns how many were queued.
+function T.checkSellPrices(ids, front)
+  if not sellSearchable() then return 0 end
+  local n = 0
+  for _, id in ipairs(ids or {}) do
+    id = tonumber(id)
+    if id and not T.sellChecking(id) then
+      if front then table.insert(sellq.queue, 1 + n, id) else sellq.queue[#sellq.queue + 1] = id end
+      n = n + 1
+    end
+  end
+  if n > 0 then
+    if sellq.done >= sellq.total then sellq.done, sellq.total = 0, 0 end
+    sellq.total = sellq.total + n
+    stepSell()
+    T.refresh()
+  end
+  return n
+end
+
+-- Checks the bag items Quick Sell lists that have no fresh live check (all = also fresh ones).
+function T.checkBagPrices(all)
+  local ids = {}
+  for _, row in ipairs(T.sellable(true, false)) do
+    if #ids >= T.SELL_AUTO then break end
+    local tried = sellq.tried[row.id]
+    if all or (not T.liveCheck(row.id) and not (tried and now() - tried < 60)) then ids[#ids + 1] = row.id end
+  end
+  return T.checkSellPrices(ids)
+end
+function T.stopSellChecks() sellq.queue = {}; T.refresh() end
+function T.resetSellChecks() sellq.queue, sellq.waiting, sellq.done, sellq.total = {}, nil, 0, 0 end
+
+-- tiers = { { unit, others, own } } from a search: files what it saw.
+local function sellRead(id, tiers)
+  if sellq.waiting ~= id then return end
+  table.sort(tiers, function(a, b) return a.unit < b.unit end)
+  local l = { at = now(), listed = 0, depth = 0 }
+  for _, t in ipairs(tiers) do
+    if t.own > 0 and (not l.mine or t.unit < l.mine) then l.mine = t.unit end
+    if t.own > 0 then l.mineQty = (l.mineQty or 0) + t.own end
+    if t.others > 0 then
+      l.listed = l.listed + t.others
+      if not l.cheapest then l.cheapest, l.depth = t.unit, t.others
+      elseif t.unit == l.cheapest then l.depth = l.depth + t.others
+      elseif not l.second then l.second = t.unit end
+    end
+  end
+  sellq.live[id] = l
+  if l.cheapest then ns.auction.record(id, nil, l.cheapest, l.listed)
+  elseif not l.mine then ns.auction.record(id, nil, nil, 0) end
+  nextSell()
+  T.refresh()
+end
+T.sellRead = sellRead -- for the readers below
+
+-- After a post your own listing is the price to match.
+local function notePosted(id, unit, qty)
+  local l = sellq.live[id]
+  if not l then return end
+  if not l.mine or unit < l.mine then l.mine = unit end
+  l.mineQty = (l.mineQty or 0) + (qty or 1)
+end
+T.notePosted = notePosted
 
 -- Parses a user-entered coin string ("25s", "1g 50s", "1.5g", "50c", "0", "any") into copper, or nil if invalid.
 function T.parseMoney(raw)
@@ -177,7 +312,7 @@ function T.notes()
   local s = ns.auction.store()
   if type(s.trade) ~= "table" then s.trade = {} end
   local t = s.trade
-  for _, k in ipairs({ "hidden", "watch", "noVendor", "set", "paid", "log" }) do
+  for _, k in ipairs({ "hidden", "watch", "noVendor", "set", "paid", "log", "relist" }) do
     if type(t[k]) ~= "table" then t[k] = {} end
   end
   return t
@@ -215,23 +350,63 @@ end
 -- Prices and protections
 ----------------------------------------------------------------------------
 
--- The price to post one at: { price, base, usual, vendor, floor, blocked, warn }.
--- base = the lowest listing (else the usual price); price = base minus the undercut; floor = the
--- least that pays more than a vendor once the 5% cut is taken; blocked = a reason not to post;
--- warn = percent under the usual price when that passes the Warn under setting.
+local function location(row)
+  if type(ItemLocation) ~= "table" or not has(ItemLocation, "CreateFromBagAndSlot") then return end
+  return try(ItemLocation.CreateFromBagAndSlot, ItemLocation, row.bag, row.slot)
+end
+
+local function isCommodity(loc)
+  local C = api()
+  local status = has(C, "GetItemCommodityStatus") and try(C.GetItemCommodityStatus, loc)
+  local enum = type(Enum) == "table" and type(Enum.ItemCommodityStatus) == "table" and Enum.ItemCommodityStatus
+  local commodity = enum and enum.Commodity or 2
+  return status == commodity
+end
+
+-- The price to post one at: { price, base, usual, vendor, floor, blocked, warn, ... }.
+-- base = the price to beat: a fresh live check's cheapest listing that isn't yours (a lone listing
+-- far under the next one is passed over: skipped = { price, qty }), else the stored lowest, else
+-- the usual price. Your own listing at or under it is matched, never undercut (matched = true).
+-- price = base minus the undercut, then the pricing mode (Smart keeps it at 80% of usual or more,
+-- Usual posts at the usual price); a nudged price wins. floor = the least that pays more than a
+-- vendor after the 5% cut: below it the post is blocked. warn = percent under the usual price when
+-- that passes the Warn under setting. live = the live check used, if any.
 function T.sellPrice(id)
   local p = ns.auction.price(id)
-  if not p then return nil, "No price seen yet: scan or search first." end
-  local base = p.n > 0 and p.low or p.usual
+  local l = T.liveCheck(id)
+  if not p and not l then return nil, "No price seen yet: scan or search first." end
+  p = p or { n = 0 }
+  local usual = p.days and p.days >= 2 and p.usual or nil
+  local base, skipped, matched
+  if l then
+    base = l.cheapest
+    if base and l.second and T.skipLone() and base < l.second * T.LONE_UNDER
+      and l.depth <= math.max(1, math.floor(l.listed * T.LONE_SHARE)) then
+      skipped = { price = base, qty = l.depth }
+      base = l.second
+    end
+    if l.mine and (not base or l.mine <= base) then base, matched = l.mine, true end
+    if not base then base = p.usual end
+  else
+    base = p.n > 0 and p.low or p.usual
+  end
   if not base or base < 1 then return nil, "No price seen yet: scan or search first." end
-  local u = T.undercut()
-  local price = u[2] > 0 and math.floor(base * (100 - u[2]) / 100) or base - (u[3] or 1)
+  local price = base
+  if not matched then
+    local u = T.undercut()
+    price = u[2] > 0 and math.floor(base * (100 - u[2]) / 100) or base - (u[3] or 1)
+  end
+  local mode = T.pricing()
+  if usual and mode == "usual" then price = usual
+  elseif usual and mode == "smart" then price = math.max(price, math.floor(usual * T.SMART_FLOOR)) end
   if price < 1 then price = 1 end
   local notes = T.notes()
   local set = tonumber(notes.set[id])
   if set and set >= 1 then price = set end
+  local low = l and l.cheapest or (p.n > 0 and p.low or nil)
   local out = { price = price, base = base, usual = p.usual, vendor = vendorPrice(id, p), source = p.source,
-    custom = set and true or nil, low = p.n > 0 and p.low or nil, n = p.n }
+    custom = set and true or nil, low = low, n = l and l.listed or p.n, live = l, skipped = skipped, matched = matched,
+    mode = mode }
   local paid = type(notes.paid[id]) == "table" and tonumber(notes.paid[id].each)
   if paid and paid > 0 then out.paid = paid end
   if out.vendor then
@@ -241,13 +416,37 @@ function T.sellPrice(id)
     end
   end
   local warn = T.warnPct()
-  if not out.blocked and warn > 0 and p.usual and p.usual > 0 and p.days and p.days >= 2 then
-    local under = math.floor((p.usual - price) * 100 / p.usual + 0.5)
+  if not out.blocked and warn > 0 and usual and usual > 0 then
+    local under = math.floor((usual - price) * 100 / usual + 0.5)
     if under >= warn then out.warn = under end
   end
   -- a flip you'd sell for less than you paid, once the cut is taken
   if not out.blocked and out.paid and math.floor(price * (1 - T.CUT)) < out.paid then out.loss = out.paid end
   return out
+end
+
+-- What a post of qty at sell.price leaves you: { gross, cut, deposit, net, vendor (what a vendor
+-- pays for them all), gain (net minus vendor) }. deposit may be nil when the client doesn't say.
+function T.sellNet(row, sell, qty)
+  sell = sell or (row and T.sellPrice(row.id))
+  if not row or not sell then return nil end
+  qty = qty or row.count or 1
+  local gross = sell.price * qty
+  local cut = math.ceil(gross * T.CUT)
+  local deposit = row.deposit
+  if deposit == nil then
+    local loc = location(row)
+    if loc then
+      local com = isCommodity(loc)
+      deposit = T.deposit(row, loc, com, com and qty or 1)
+      if deposit and not com then deposit = deposit * qty end
+    end
+    row.deposit = deposit or false
+  end
+  if deposit == false then deposit = nil end
+  local net = gross - cut - (deposit or 0)
+  local vendor = sell.vendor and sell.vendor * qty or 0
+  return { gross = gross, cut = cut, deposit = deposit, net = net, vendor = vendor, gain = net - vendor }
 end
 
 -- A nudged price: dir -1 / +1 moves it by 5% (at least a copper); nil forgets it.
@@ -326,7 +525,8 @@ function T.sellable(unpriced, hidden)
             local sell = T.sellPrice(id)
             if sell or unpriced then
               local _, _, _, _, _, _, _, _, _, icon = ns.itemInfo(id)
-              e = { id = id, name = name, count = 0, bag = bag, slot = slot, icon = icon or info.iconFileID, sell = sell }
+              e = { id = id, name = name, count = 0, bag = bag, slot = slot, icon = icon or info.iconFileID, sell = sell,
+                relist = T.isRelist(id) or nil }
               byID[id] = e
               out[#out + 1] = e
             end
@@ -345,6 +545,15 @@ function T.sellable(unpriced, hidden)
 end
 
 local last = { posts = 0, buys = 0, posted = 0, deposits = 0, spent = 0, cancels = 0, vendored = 0, vendorEarned = 0, vendorProfit = 0 }
+-- This visit to the auction house: what the Codex spent (the budget counts it).
+local visit = { spent = 0, buys = 0 }
+T.visit = visit
+-- The budget left for this visit, or nil without one.
+function T.budgetLeft()
+  local cap = T.budget()
+  if cap <= 0 then return nil end
+  return math.max(0, cap - visit.spent)
+end
 -- This session at the auction house: { posts, posted (value), deposits, buys, spent, cancels, vendored, vendorEarned, vendorProfit }.
 function T.ledger() return last end
 
@@ -396,23 +605,20 @@ function T.deposit(row, loc, commodity, qty)
   end
 end
 
-local function location(row)
-  if type(ItemLocation) ~= "table" or not has(ItemLocation, "CreateFromBagAndSlot") then return end
-  return try(ItemLocation.CreateFromBagAndSlot, ItemLocation, row.bag, row.slot)
-end
-
-local function isCommodity(loc)
-  local C = api()
-  local status = has(C, "GetItemCommodityStatus") and try(C.GetItemCommodityStatus, loc)
-  local enum = type(Enum) == "table" and type(Enum.ItemCommodityStatus) == "table" and Enum.ItemCommodityStatus
-  local commodity = enum and enum.Commodity or 2
-  return status == commodity
-end
-
 -- Posts row (a T.sellable() entry) on a click: the whole stack of a commodity at the unit price, or
 -- one piece of an item. A post far under the usual price needs a second click within 5 s.
 -- Returns what happened: "posted", "armed", "blocked", "failed".
+-- With live checks on (the default) a row without a fresh one is checked first: that click
+-- searches it ("checking"), the next one posts at the price it found.
+function T.needsCheck(row)
+  return row and T.liveFirst() and sellSearchable() and not T.liveCheck(row.id) and not T.notes().set[row.id] and true or false
+end
 function T.post(row)
+  if T.needsCheck(row) then
+    if not T.sellChecking(row.id) then T.checkSellPrices({ row.id }, true) end
+    ns.say("Checking what " .. Q.plain(row.name) .. " sells for right now: click again once the price is in.")
+    return "checking"
+  end
   local sell = row and T.sellPrice(row.id)
   if not sell then return "failed" end
   if sell.blocked then ns.say(sell.blocked); return "blocked" end
@@ -448,6 +654,8 @@ function T.post(row)
   end
   last.post = { name = row.name, qty = qty, price = sell.price, deposit = deposit }
   T.logTrade("post", row.id, row.name, qty, sell.price, deposit)
+  notePosted(row.id, sell.price, qty)
+  notes.relist[row.id] = nil
   ns.say("Posted " .. qty .. " " .. Q.plain(row.name) .. " at " .. ns.money(sell.price) .. " each"
     .. (deposit and deposit > 0 and (" (deposit " .. ns.money(deposit) .. ")") or "") .. ".")
   return "posted"
@@ -474,6 +682,42 @@ end
 -- under the usual price of two days or more (profit = usual after the 5% cut - low).
 -- kind = "vendor" / "flip" keeps one kind; hidden = also the ones you hid. Deals under the Min
 -- profit setting (per item) are left out.
+-- How sure a flip is to resell at its usual price: key ("safe" / "fair" / "risky"), score, why.
+-- More days of history, more listed, steady daily prices count for it; a single listing, prices
+-- that swing, and a discount so deep the usual price may be a fluke count against it. Under-vendor
+-- deals are always safe: a vendor pays a fixed price.
+T.CONFIDENCE = {
+  safe = { "SAFE", { 0.3, 0.9, 0.35 }, "Safe flip" },
+  fair = { "FAIR", { 1, 0.82, 0 }, "Fair flip" },
+  risky = { "RISKY", { 1, 0.55, 0.2 }, "Risky flip" },
+}
+function T.confidence(id, kind, days, listed, pct)
+  if kind == "vendor" then return "safe", 9, { "a vendor pays a fixed price" } end
+  local score, why = 0, {}
+  days = tonumber(days) or 0
+  if days >= 5 then score = score + 2; why[#why + 1] = days .. " days of prices"
+  elseif days >= 3 then score = score + 1; why[#why + 1] = days .. " days of prices"
+  else why[#why + 1] = "only " .. days .. " days of prices" end
+  listed = tonumber(listed) or 0
+  if listed >= 10 then score = score + 2; why[#why + 1] = listed .. " listed: it trades a lot"
+  elseif listed >= 4 then score = score + 1; why[#why + 1] = listed .. " listed"
+  elseif listed <= 1 then score = score - 1; why[#why + 1] = "a single listing" end
+  local vals = {}
+  local today = math.floor((tonumber(time and time()) or 0) / 86400)
+  for _, h in ipairs(ns.auction.history and ns.auction.history(id) or {}) do
+    if h.day ~= today and tonumber(h.med or h.low) then vals[#vals + 1] = tonumber(h.med or h.low) end
+  end
+  if #vals >= 2 then
+    table.sort(vals)
+    local mid = vals[math.floor((#vals + 1) / 2)]
+    local spread = mid > 0 and (vals[#vals] - vals[1]) / mid or 0
+    if spread < 0.25 then score = score + 1; why[#why + 1] = "steady price"
+    elseif spread > 0.6 then score = score - 1; why[#why + 1] = "the price swings a lot" end
+  end
+  if (tonumber(pct) or 0) > 150 then score = score - 1; why[#why + 1] = "so cheap the usual price may be a fluke" end
+  return score >= 4 and "safe" or (score >= 2 and "fair" or "risky"), score, why
+end
+
 local function dealAt(id, p, low, qty, vendor, kind, maxBuy)
   if not vendor or vendor <= 0 or not low or low <= 0 or qty <= 0 or (maxBuy > 0 and low > maxBuy) then return end
   local dealKind, worth, profit
@@ -484,9 +728,12 @@ local function dealAt(id, p, low, qty, vendor, kind, maxBuy)
     profit = math.floor(worth * (1 - T.CUT)) - low
   end
   if not profit or profit <= 0 or profit < T.minProfit() or (kind and kind ~= dealKind) then return end
+  local pct = math.floor(profit * 100 / low + 0.5)
+  local conf, score, why = T.confidence(id, dealKind, p.days, qty, pct)
+  if conf == "risky" and T.skipRisky() then return end
   return { id = id, name = p.name or ns.auction.nameOf(id) or ("item " .. id), kind = dealKind,
     low = low, worth = worth, vendor = vendor and vendor > 0 and vendor or nil, usual = p.usual, days = p.days,
-    profit = profit, n = qty, source = p.source, at = p.at, pct = math.floor(profit * 100 / low + 0.5) }
+    profit = profit, n = qty, source = p.source, at = p.at, pct = pct, conf = conf, confScore = score, confWhy = why }
 end
 
 local function buildDealForID(id, it, kind, hidden, maxBuy, notes)
@@ -508,7 +755,7 @@ function T.deals(kind, hidden, fresh)
   local store = A.store()
   local items = store.items
   local maxBuy, sortBy = T.maxBuy(), T.dealSort()
-  local filterKey = table.concat({ notesVersion, kind or "", hidden and 1 or 0, T.flipPct(), T.minProfit(), maxBuy,
+  local filterKey = table.concat({ notesVersion, kind or "", hidden and 1 or 0, T.flipPct(), T.minProfit(), maxBuy, T.skipRisky() and 1 or 0,
     A.realmKey and A.realmKey() or "" }, ":")
   local key = filterKey .. ":" .. sortBy
   local version, t = A.version or 0, tonumber(GetTime and GetTime()) or 0
@@ -698,8 +945,9 @@ function T.setDealQty(id, mode)
     capCommodity(b, 1)
   elseif mode == "half" then
     capCommodity(b, math.max(1, math.floor(b.fullQty / 2)))
-  elseif mode == "afford" then
+  elseif mode == "afford" or mode == "budget" then
     local m, qty = (tonumber(try(GetMoney)) or 0), 0
+    if mode == "budget" then m = math.min(m, T.budgetLeft() or m) end
     for _, tr in ipairs(b.tiers or {}) do
       if tr.unit > 0 and m >= tr.unit then
         local take = math.min(tr.qty, math.floor(m / tr.unit))
@@ -965,9 +1213,53 @@ function T.cancel(row)
   if not pcall(C.CancelAuction, row.auction) then ns.say("The auction house didn't cancel it."); return "failed" end
   last.cancels = last.cancels + 1
   T.closePost(row.name, "cancel", row.id, row.qty, row.unit)
+  if row.id then T.notes().relist[row.id] = stamp() end
   ns.say("Cancelled " .. Q.plain(row.name) .. ": it comes back by mail. Relist it from Quick Sell once it's in your bags.")
   ns.after(1, T.queryOwned)
   return "cancelled"
+end
+
+-- The undercut auctions, the most valuable first.
+function T.undercutRows()
+  local out = {}
+  for _, row in ipairs(mine.list) do if T.ownedState(row) == "undercut" then out[#out + 1] = row end end
+  table.sort(out, function(a, b) return (a.unit or 0) * (a.qty or 1) > (b.unit or 0) * (b.qty or 1) end)
+  return out
+end
+
+-- Cancel undercut: one click per auction, the most valuable first. The first click arms it; while
+-- armed (5 s, renewed by every cancel for 15 s) each click cancels the next. Cancelled items come
+-- back by mail and Quick Sell tags them RELIST.
+local walker = { until_ = 0 }
+function T.cancelUndercutArmed() return now() < walker.until_ end
+function T.cancelNextUndercut()
+  local C = api()
+  local row = T.undercutRows()[1]
+  if not row or not row.auction or not has(C, "CancelAuction") then ns.say("None of your auctions is undercut."); return "none" end
+  if now() >= walker.until_ then
+    walker.until_ = now() + 5
+    local n = #T.undercutRows()
+    ns.say(n .. " of your auctions " .. (n == 1 and "is" or "are") .. " undercut. Each click of Cancel undercut cancels one, "
+      .. "the most valuable first (its deposit is lost). Click again within 5 s to start.")
+    T.refresh()
+    return "armed"
+  end
+  if not pcall(C.CancelAuction, row.auction) then ns.say("The auction house didn't cancel it."); return "failed" end
+  walker.until_ = now() + 15
+  last.cancels = last.cancels + 1
+  T.closePost(row.name, "cancel", row.id, row.qty, row.unit)
+  if row.id then T.notes().relist[row.id] = stamp() end
+  for i, r in ipairs(mine.list) do if r == row then table.remove(mine.list, i); break end end
+  local left = #T.undercutRows()
+  ns.say("Cancelled " .. row.qty .. " " .. Q.plain(row.name) .. ": it comes back by mail."
+    .. (left > 0 and (" " .. left .. " more undercut: click again.") or " That was the last undercut one."))
+  ns.after(1, T.queryOwned)
+  T.refresh()
+  return "cancelled"
+end
+function T.isRelist(id)
+  local t = id and tonumber(T.notes().relist[id])
+  return t and stamp() - t < 7 * 86400 or false
 end
 
 -- What a deal's search saw goes into the prices: a deal that is gone (none listed, or none cheap
@@ -1002,6 +1294,18 @@ end
 -- Search results: how many cost no more than the limit, and what they come to.
 local function readCommodity(id)
   local C, b = api(), buying[id]
+  if id and T.sellCheckWaiting() == id and not (has(C, "HasFullCommoditySearchResults")
+    and try(C.HasFullCommoditySearchResults, id) == false and (tonumber(try(C.GetNumCommoditySearchResults, id)) or 0) == 0) then
+    local tiers = {}
+    for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
+      local r = try(C.GetCommoditySearchResultInfo, id, i)
+      local unit = type(r) == "table" and tonumber(r.unitPrice)
+      local all = type(r) == "table" and tonumber(r.quantity) or 0
+      local own = type(r) == "table" and (r.containsAccountItem and all or tonumber(r.numOwnerItems) or (r.containsOwnerItem and all or 0)) or 0
+      if unit and unit > 0 then tiers[#tiers + 1] = { unit = unit, others = math.max(0, all - own), own = own } end
+    end
+    T.sellRead(id, tiers)
+  end
   if mine.waiting == id then
     local best
     for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
@@ -1067,6 +1371,19 @@ local function readItems(key)
   local id = type(key) == "table" and tonumber(key.itemID)
   if not id then return end
   local maxStack = tonumber((select(8, ns.itemInfo(id))))
+  if T.sellCheckWaiting() == id then
+    local tiers = {}
+    for i = 1, tonumber(try(C.GetNumItemSearchResults, key)) or 0 do
+      local r = try(C.GetItemSearchResultInfo, key, i)
+      local buyout = type(r) == "table" and tonumber(r.buyoutAmount)
+      local qty = buyout and buyout > 0 and itemLotQuantity(r, maxStack)
+      if qty then
+        local own = (r.containsOwnerItem or r.containsAccountItem) and qty or 0
+        tiers[#tiers + 1] = { unit = math.ceil(buyout / qty), others = qty - own, own = own }
+      end
+    end
+    T.sellRead(id, tiers)
+  end
   if id and mine.waiting == id then
     local best
     for i = 1, tonumber(try(C.GetNumItemSearchResults, key)) or 0 do
@@ -1136,6 +1453,7 @@ local function boughtFor(id, deal, qty, total, moreLeft)
   total = math.max(0, tonumber(total) or 0)
   last.buys = last.buys + 1
   last.spent = last.spent + total
+  visit.spent, visit.buys = visit.spent + total, visit.buys + 1
   last.buy = { name = deal.name, qty = qty, total = total }
   local e = T.logTrade("buy", id, deal.name, qty, math.floor(total / qty + 0.5))
   e.total, e.dealKind, e.vendor = total, deal.kind, deal.vendor
@@ -1292,6 +1610,20 @@ function T.buy(id)
         end
       end
       ns.say("Not enough money: " .. ns.money(b.total) .. " needed.")
+      return false
+    end
+    local budgetLeft = T.budgetLeft()
+    if budgetLeft and b.total > budgetLeft then
+      if b.commodity and b.qty > 1 then
+        local before = b.qty
+        T.setDealQty(id, "budget")
+        if b.total <= budgetLeft and b.qty >= 1 and b.qty < before then
+          ns.say("Cut to " .. b.qty .. " " .. Q.plain(b.deal.name) .. " (" .. ns.money(b.total) .. ") to stay in your budget. Click Buy again.")
+          return false
+        end
+      end
+      ns.say("That's over your budget for this visit: " .. ns.money(budgetLeft) .. " left of " .. ns.money(T.budget())
+        .. ". Raise it on the Deals page.")
       return false
     end
     if b.commodity then
@@ -1484,6 +1816,8 @@ function ns.startAuctionTrade()
       for k in pairs(buying) do buying[k] = nil end
       recheck.queue, recheck.active, recheck.done, recheck.total = {}, nil, 0, 0
       mine.list, mine.queue, mine.waiting, mine.checking = {}, {}, nil, nil
+      T.resetSellChecks()
+      visit.spent, visit.buys = 0, 0
       ns.after(0.5, T.queryOwned)
     elseif event == "AUCTION_HOUSE_CLOSED" then
       for _, x in pairs(buying) do
@@ -1492,6 +1826,7 @@ function ns.startAuctionTrade()
       for k in pairs(buying) do buying[k] = nil end
       recheck.queue, recheck.active, recheck.done, recheck.total = {}, nil, 0, 0
       mine.queue, mine.waiting, mine.checking = {}, nil, nil
+      T.resetSellChecks()
     elseif event == "BAG_UPDATE_DELAYED" then
       if readNoVendorItems() then dealCache.key = nil end
       if ns.auction.isOpen() then T.refresh() end

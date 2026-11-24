@@ -11401,6 +11401,7 @@ function S.auctionTrade()
   local card = _G.LevelingCodexAHPanel
   check(questText(card, "MONEY TO MAKE") and questText(card, "to sell, about"), "Overview sums up what there is to sell")
   click(AuctionHouseFrame, "Quick Sell")
+  MOCK.advance(8) -- the live price checks of the bag items
   check(card:IsShown() and questText(card, "20 x Linen Cloth"), "Selling lists what to sell")
   check(not questText(card, "Bound Ring"), "a bound item isn't offered")
   check(questText(card, "A vendor pays 50c each: sell it there"), "a price under the vendor's is blocked")
@@ -11419,9 +11420,9 @@ function S.auctionTrade()
   check(chatHas("Posted 20 Linen Cloth at 99c each %(deposit 1s 20c%)"), "the post is said in chat with the deposit")
   MOCK.advance(1)
   click(card, "Post Wool Cloth")
-  check(#MOCK.posted == 1 and chatHas("50%% under the usual 3s"), "a post far under the usual price asks for a second click")
+  check(#MOCK.posted == 1 and chatHas("54%% under the usual 3s"), "a post far under the usual price asks for a second click")
   click(card, "Post Wool Cloth")
-  check(#MOCK.posted == 2 and MOCK.posted[2].unit == 149, "the second click posts it")
+  check(#MOCK.posted == 2 and MOCK.posted[2].unit == 139, "the second click posts it under the live cheapest that isn't yours")
   MOCK.advance(1)
   click(card, "Post Rough Bracers")
   check(#MOCK.posted == 3 and MOCK.posted[3].kind == "item" and MOCK.posted[3].unit == 999, "an item posts one at a time")
@@ -11530,7 +11531,9 @@ function S.auctionTrade()
   -- a flip posted under what you paid asks twice
   MOCK.bagItems[#MOCK.bagItems + 1] = { name = "Light Leather", id = 2318, quality = 1, level = 1, sell = 0, count = 1, class = "Trade Goods", item = true }
   check(T.sellPrice(2318).loss == 40, "a post under what you paid is flagged")
+  for _ = 1, 2 do MOCK.auctions[#MOCK.auctions + 1] = { id = 2318, name = "Light Leather", count = 1, buyout = 41, item = true } end
   click(AuctionHouseFrame, "Quick Sell")
+  MOCK.advance(3)
   click(card, "Post Light Leather")
   check(#MOCK.posted == 3 and chatHas("you paid"), "posting it under what you paid asks for a second click")
   check(table.concat(MOCK.ns.auctionTradeDebugLines(), " "):find("3 posts, 3 buys", 1, true), "/codex debug counts posts and buys")
@@ -11538,6 +11541,8 @@ function S.auctionTrade()
   click(win(), "Gold")
   check(questText(win(), "SELLING AND DEALS") and questText(win(), "Deals worth at least"), "the Gold tab has the selling settings")
   click(win(), "5%")
+  check(T.sellPrice(2589).price == 99 and T.sellPrice(2589).matched, "after a post your own listing is matched, never undercut")
+  T.sellLive[2589] = nil
   check(T.sellPrice(2589).price == 95, "Undercut by 5% prices 5% under the lowest")
   -- the sniper (Watch list and Newest modes) + Recheck deals clearing stale deals
   click(AuctionHouseFrame, "Deals")
@@ -11709,6 +11714,137 @@ end
 -- The Market tab: movers from days and from readings, the chart, hot items, the ticker; the
 -- sniper following the Deals choices, checking a deal it finds and showing its potential profit;
 -- a flip bought, posted and sold (the game's chat line) in the trade record; each page's refresh.
+-- Quick Sell's live checks (own listings, lone listings, pricing modes, what you keep), Cancel
+-- undercut, and the Deals page's budget and flip confidence.
+function S.auctionQuickSell()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local function hist(low, n, before, vendor, days)
+    local d = {}
+    for k = 1, (days or 2) do d[day - k] = { low = before, med = before } end
+    d[day] = { low = low, med = low }
+    return { low = low, med = low, n = n, at = 1700000000, vendor = vendor, days = d }
+  end
+  LevelingCodexDB = LevelingCodexDB or {}
+  local items = { [2589] = hist(100, 30, 100), [2592] = hist(150, 4, 300), [2318] = hist(100, 20, 100, 5, 6),
+    [818] = hist(20, 1, 200, 1), [774] = hist(10, 12, 100, 1, 6) }
+  items[2589].name, items[2592].name, items[2318].name = "Linen Cloth", "Wool Cloth", "Light Leather"
+  items[818].name, items[774].name = "Tigerseye", "Malachite"
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = items } } }
+  MOCK.bagItems = {
+    { name = "Linen Cloth", id = 2589, quality = 1, level = 1, sell = 13, count = 20, class = "Trade Goods" },
+    { name = "Wool Cloth", id = 2592, quality = 1, level = 1, sell = 33, count = 5, class = "Trade Goods" },
+    { name = "Light Leather", id = 2318, quality = 1, level = 1, sell = 5, count = 10, class = "Trade Goods" },
+  }
+  MOCK.money = 100000
+  MOCK.auctions = {
+    -- Linen: a lone listing of 1 at 40c far under 30 at 100c
+    { id = 2589, name = "Linen Cloth", count = 1, buyout = 40 }, { id = 2589, name = "Linen Cloth", count = 30, buyout = 3000 },
+    -- Wool: yours is the cheapest
+    { id = 2592, name = "Wool Cloth", count = 5, buyout = 600, mine = true }, { id = 2592, name = "Wool Cloth", count = 4, buyout = 640 },
+    -- Light Leather: yours is undercut
+    { id = 2318, name = "Light Leather", count = 5, buyout = 500, mine = true }, { id = 2318, name = "Light Leather", count = 10, buyout = 900 },
+    -- deals: Tigerseye (one listing, a risky flip), Malachite (12 listed over 6 steady days, a safe flip)
+    { id = 818, name = "Tigerseye", count = 1, buyout = 20 }, { id = 774, name = "Malachite", count = 12, buyout = 120 },
+  }
+  S.login()
+  if MOCK.minimal then return end
+  local T = MOCK.ns.auctionTrade
+  MOCK.openAuction()
+  MOCK.advance(2)
+  click(AuctionHouseFrame, "Quick Sell")
+  local card = _G.LevelingCodexAHPanel
+  check(questText(card, "OLD") or questText(card, "QUEUED") or questText(card, "..."), "rows say their price isn't live yet")
+  MOCK.advance(10)
+  check(T.liveCheck(2589) and T.liveCheck(2592) and T.liveCheck(2318), "opening Quick Sell checks the bag items live")
+  local linen = T.sellPrice(2589)
+  check(linen.skipped and linen.skipped.price == 40 and linen.price == 99, "a lone cheap listing is passed over (" .. linen.price .. ")")
+  check(questText(card, "LONE") and questText(card, "LIVE"), "the row tags the live price and the lone listing")
+  local wool = T.sellPrice(2592)
+  check(wool.matched and wool.price == 120, "your own cheapest listing is matched, not undercut (" .. wool.price .. ")")
+  check(questText(card, "YOURS"), "the row says it matches your price")
+  check(T.sellPrice(2318).price == 89, "an undercut listing of yours doesn't hold the price up")
+  local net = T.sellNet({ id = 2589, count = 20, bag = 0, slot = 1 }, linen)
+  check(net.gross == 1980 and net.cut == 99 and net.deposit == 120 and net.net == 1761 and net.vendor == 260,
+    "what you keep is the price less the cut and deposit (" .. net.net .. ")")
+  check(questText(card, "keep " .. MOCK.ns.money(1761)) and questText(card, "YOU KEEP") and questText(card, "VS VENDOR"),
+    "rows and the summary show what you keep")
+  click(card, "Skip lone listings")
+  check(T.sellPrice(2589).price == 39, "Beat all undercuts the very cheapest")
+  click(card, "Skip lone listings")
+  -- pricing modes
+  check(T.sellPrice(2592).warn, "Wool at 1s 20c is far under its usual 3s")
+  click(card, "Pricing Smart")
+  check(T.sellPrice(2592).price == 240 and not T.sellPrice(2592).warn, "Smart keeps it at 80% of usual")
+  click(card, "Pricing Usual")
+  check(T.sellPrice(2592).price == 300, "Usual posts at the usual price")
+  click(card, "Pricing Undercut")
+  -- live check first, then post
+  MOCK.advance(700)
+  MOCK.ns.auctionPanel.refresh()
+  check(not T.liveCheck(2589), "a live check goes stale after 10 minutes")
+  MOCK.auctions[2].buyout = 2400 -- the market moved: 80c each now
+  T.stopSellChecks()
+  local posted = #MOCK.posted
+  local function row(id) for _, r in ipairs(T.sellable()) do if r.id == id then return r end end end
+  T.post(row(2589))
+  check(#MOCK.posted == posted and chatHas("Checking what"), "a post without a fresh price checks it first")
+  MOCK.advance(2)
+  local first = row(2589)
+  check(first.sell.live and first.sell.price == 79, "the check sees the new price (" .. first.sell.price .. ")")
+  click(card, "Post " .. first.name)
+  check(#MOCK.posted == posted + 1 and MOCK.posted[#MOCK.posted].unit == 79, "the next click posts at the live price")
+  -- live check off posts at once
+  click(card, "Live check")
+  check(not T.liveFirst(), "Live check can be turned off")
+  MOCK.advance(700)
+  posted = #MOCK.posted
+  click(card, "Post Light Leather")
+  check(#MOCK.posted == posted + 1, "with Live check off a post goes straight up")
+  click(card, "Live check")
+  -- Cancel undercut walks your undercut auctions
+  T.queryOwned()
+  MOCK.advance(1)
+  click(card, "Check undercuts")
+  MOCK.advance(4)
+  check(T.undercutCount() >= 1 and questText(card, "Cancel undercut ("), "Cancel undercut shows how many are undercut")
+  local cancelled = MOCK.cancelled or 0
+  click(card, "Cancel undercut")
+  check((MOCK.cancelled or 0) == cancelled and chatHas("Click again within 5 s"), "the first click arms it")
+  click(card, "Cancel undercut")
+  check((MOCK.cancelled or 0) == cancelled + 1, "the next click cancels the most valuable undercut auction")
+  check(T.isRelist(2318), "a cancelled auction is marked to relist")
+  MOCK.bagItems[#MOCK.bagItems + 1] = { name = "Light Leather", id = 2318, quality = 1, level = 1, sell = 5, count = 5, class = "Trade Goods" }
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.advance(3)
+  check(questText(card, "RELIST"), "it comes back tagged RELIST")
+  -- Deals: confidence and budget
+  click(AuctionHouseFrame, "Deals")
+  local deals = {}
+  for _, d in ipairs(T.deals()) do deals[d.id] = d end
+  check(deals[818] and deals[818].conf == "risky" and deals[774] and deals[774].conf == "safe",
+    "a lone listing with little history is risky, a busy steady one is safe")
+  check(questText(card, "RISKY") and questText(card, "SAFE"), "deal rows show the confidence")
+  click(card, "Skip risky flips")
+  check(not questText(card, "Tigerseye") and questText(card, "Malachite"), "risky flips can be hidden")
+  click(card, "Skip risky flips")
+  click(card, "Budget 1g")
+  check(T.budget() == 10000 and questText(card, "Spent nothing") == false and questText(card, "of " .. MOCK.ns.money(10000)),
+    "the budget shows what's left this visit")
+  MOCK.money = 100000
+  T.visit.spent = 9950
+  click(card, "Deal Malachite")
+  MOCK.advance(1)
+  click(card, "Deal Malachite")
+  check(#MOCK.purchases == 0 and chatHas("to stay in your budget"), "a commodity buy is cut to fit the budget")
+  click(card, "Deal Malachite")
+  MOCK.advance(1)
+  click(card, "Next deal")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 5, "it buys what the budget covers (" .. tostring(MOCK.purchases[1] and MOCK.purchases[1].qty) .. ")")
+  for _, pg in ipairs({ "Codex", "Market", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
+  check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+end
+
 function S.auctionMarket()
   local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
   local t = time()
@@ -11851,6 +11987,7 @@ function S.auctionMarket()
   MOCK.event("BAG_UPDATE_DELAYED")
   click(AuctionHouseFrame, "Quick Sell")
   check(findButton(panel, function(l) return l == "Reprice bags" end), "Quick Sell has Reprice bags")
+  MOCK.advance(3)
   click(panel, "Post Mageweave Cloth")
   check(#MOCK.posted == 1, "the flip is posted at its usual price once none remain listed")
   MOCK.event("CHAT_MSG_SYSTEM", "A buyer has been found for your auction of Mageweave Cloth.")
