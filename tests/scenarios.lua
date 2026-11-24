@@ -14059,6 +14059,17 @@ function S.mailTakeAll()
   check(questText(card, "Nothing to take."), "the card says the inbox is empty")
   MOCK.closeMail()
   check(not card:IsShown(), "closing the mailbox hides the card")
+  -- Forever's controller UI draws its own mail window: MailFrame stays hidden, the card still shows
+  MOCK.inbox = mailFixture()
+  MOCK.event("MAIL_SHOW")
+  MOCK.event("MAIL_INBOX_UPDATE")
+  MOCK.advance(1)
+  check(card:IsShown() and questText(card, "5 mails"), "the card shows without MailFrame")
+  slash("mail")
+  MOCK.advance(10)
+  check(#MOCK.inbox == 2, "/codex mail takes all")
+  MOCK.event("MAIL_CLOSED")
+  check(not card:IsShown(), "MAIL_CLOSED hides the card")
 end
 
 -- Full bags: the gold still comes, the items stay; the key binding runs it; closing stops it.

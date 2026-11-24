@@ -204,10 +204,12 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     db.minimapAngle = nil
     ns.updateMini()
     ns.say("banner, window and minimap button positions and sizes reset.")
+  elseif cmd == "mail" then
+    ns.mailbox.takeAll()
   elseif cmd == "debug" then
     for _, line in ipairs(ns.debugLines()) do ns.say(line) end
   else
-    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex test, /codex reset, /codex debug")
+    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex mail (take all at a mailbox), /codex test, /codex reset, /codex debug")
   end
 end
 

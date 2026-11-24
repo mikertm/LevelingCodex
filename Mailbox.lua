@@ -27,11 +27,17 @@ local run = nil      -- the Take all in progress
 local last = nil     -- what the last run did (debug)
 local stats = { runs = 0, took = 0, money = 0 }
 
-local function isOpen()
-  if not mailOpen then return false end
-  local f = MailFrame
-  if type(f) == "table" and type(f.IsShown) == "function" then return f:IsShown() and true or false end
-  return true
+-- Open from MAIL_SHOW until MAIL_CLOSED. Not MailFrame's visibility: Forever's controller UI draws
+-- its own mail window, and a hidden MailFrame kept the card away (2026-11-24).
+local function isOpen() return mailOpen end
+
+-- The mail window to sit beside: the first shown of the known frames, else nil (top of screen).
+local MAIL_ROOTS = { "MailFrame", "InboxFrame" }
+local function mailWindow()
+  for _, name in ipairs(MAIL_ROOTS) do
+    local f = _G[name]
+    if type(f) == "table" and type(f.IsShown) == "function" and f:IsShown() then return f end
+  end
 end
 
 local function canTake()
@@ -339,13 +345,9 @@ refreshCard = function()
   card.take:SetLabel(label)
   card.take.codexLabel = run and "Stop" or "Take all"
   card.take:SetShown(run ~= nil or s.mails > 0)
-  local root = MailFrame
-  if type(root) == "table" and type(root.IsShown) == "function" then
+  local root = mailWindow()
+  if root then
     ns.placeByWindow(card, root, place)
-    if not place.hooked and type(root.HookScript) == "function" then
-      place.hooked = true
-      pcall(root.HookScript, root, "OnHide", hideCard)
-    end
   else
     card:ClearAllPoints()
     card:SetPoint("TOP", UIParent, "TOP", 0, -100)
