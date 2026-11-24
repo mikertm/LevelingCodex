@@ -408,5 +408,20 @@ function ns.mailDebugLines()
       .. last.mails .. " mails in " .. last.actions .. " takes" .. (last.full and ", bags full" or "")
       .. (last.skipped > 0 and (", " .. last.skipped .. " passed over") or "")
   end
-  return { line }
+  local out = { line }
+  -- raw reads of the first mails, to see what this client's mail API returns
+  local shown, total = try(GetNumInboxItems)
+  out[#out + 1] = "mailbox api: GetNumInboxItems " .. tostring(shown) .. "/" .. tostring(total)
+    .. ", TakeInboxItem " .. type(TakeInboxItem) .. ", TakeInboxMoney " .. type(TakeInboxMoney)
+    .. ", GetInboxItem " .. type(GetInboxItem) .. ", MailFrame " .. tostring(type(MailFrame) == "table" and MailFrame:IsShown())
+  for i = 1, math.min(tonumber(shown) or 0, 3) do
+    local r = { pcall(GetInboxHeaderInfo, i) }
+    local parts = {}
+    for k = 2, math.min(#r, 14) do parts[#parts + 1] = (k - 1) .. "=" .. ns.plain(tostring(r[k])):sub(1, 24) end
+    local it = { pcall(GetInboxItem, i, 1) }
+    local ip = {}
+    for k = 2, math.min(#it, 7) do ip[#ip + 1] = ns.plain(tostring(it[k])):sub(1, 24) end
+    out[#out + 1] = "mail " .. i .. ": " .. table.concat(parts, " ") .. "; item 1: " .. table.concat(ip, ", ")
+  end
+  return out
 end
