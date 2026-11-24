@@ -1315,6 +1315,23 @@ local function dealTip(d)
   if not vendor and d.conf then
     lines[#lines + 1] = T().CONFIDENCE[d.conf][3] .. ": " .. table.concat(d.confWhy or {}, ", ")
   end
+  if b and b.resale and not vendor then
+    lines[#lines + 1] = "Resale: " .. (b.nextListing and ("next listing at " .. ns.money(b.nextListing) .. ", so you'd post at ")
+      or "nothing left under the usual, so you'd post at ") .. ns.money(b.resale) .. " (" .. ns.money(b.resaleNet) .. " after the cut)"
+    if (b.trimmed or 0) > 0 then
+      lines[#lines + 1] = "Left out " .. b.trimmed .. " priced too close to that listing to keep your profit."
+    end
+  elseif b and b.why == "no margin" then
+    lines[#lines + 1] = "No margin: the next listing (" .. ns.money(b.nextListing or 0) .. ") leaves no profit after the cut once you buy these."
+  end
+  if b and (b.stage == "ready" or b.stage == "confirm") then
+    local age = T().quoteAge(d.id)
+    if b.est then lines[#lines + 1] = "This click: est. " .. signed(b.est) .. (b.estAll and b.estAll ~= b.est and (" (all lots " .. signed(b.estAll) .. ")") or "") end
+    if age then
+      lines[#lines + 1] = T().quoteStale(d.id) and ("Quote is " .. math.floor(age) .. " s old: the next click checks it again.")
+        or ("Quoted " .. math.floor(age) .. " s ago.")
+    end
+  end
   if b and b.stage == "ready" then
     if b.commodity == false then
       local lots = b.lots and #b.lots or 1
@@ -1456,8 +1473,10 @@ function pages.deals(W, top, H)
       "Buy at most 25g of deals this visit.", "Buy at most 100g of deals this visit." })
   local left = T().budgetLeft()
   local spent = T().visit.spent
-  local budText = left and ("Spent " .. ns.money(spent) .. " of " .. ns.money(curBud) .. (left == 0 and ": budget used up" or ""))
-    or (spent > 0 and ("Spent " .. ns.money(spent) .. " this visit") or "Spent nothing this visit")
+  local est = T().visit.est or 0
+  local estText = spent > 0 and (", est. " .. signed(est)) or ""
+  local budText = left and ("Spent " .. ns.money(spent) .. " of " .. ns.money(curBud) .. estText .. (left == 0 and ": budget used up" or ""))
+    or (spent > 0 and ("Spent " .. ns.money(spent) .. " this visit" .. estText) or "Spent nothing this visit")
   text(budText, x + 324, y3 + 3, w - 324 - 150, "dim", left == 0 and RED or ns.C.light)
   local risky = T().skipRisky()
   proBtn(risky and "Risky flips hidden" or "Risky flips shown", x + w - 146, y3, 138, 19, "pill", function()
@@ -1489,6 +1508,7 @@ function pages.deals(W, top, H)
   end
 
   -- Right Zone: Rapid 1-click Trigger
+  local basket = T().basket(view.deals, view.hidden)
   local nextDeal, nextAct, nextB = T().nextDealAction(view.deals, view.hidden)
   local actionW = 186
   if A().scanning() then
@@ -1500,7 +1520,7 @@ function pages.deals(W, top, H)
     local itemName = Q.plain(nextDeal.name):sub(1, 22)
     local nextLabel = nextAct == "cancel" and ("Cancel quote\n" .. itemName)
       or nextAct == "confirm" and ("Confirm " .. ns.money(nextB.total) .. "\n" .. itemName)
-      or (nextAct == "buy" and ("Buy top: " .. nextB.qty .. " for " .. ns.money(nextB.total) .. "\n" .. itemName))
+      or (nextAct == "buy" and ((basket.n > 1 and ("Buy 1 of " .. basket.n .. ": ") or "Buy top: ") .. nextB.qty .. " for " .. ns.money(nextB.total) .. "\n" .. itemName))
       or ("Check top\n" .. itemName)
     proBtn(nextLabel, x + w - actionW - 8, y + 6, actionW, 46,
       (nextAct == "confirm" or nextAct == "buy") and "emerald" or "gold",
@@ -1530,7 +1550,13 @@ function pages.deals(W, top, H)
   local cx = x + 188
   local cw = w - 188 - actionW - 16
   local kindName = view.deals == "vendor" and "under-vendor" or (view.deals == "flip" and "flip" or "deal")
-  if sn.on then
+  if basket.n > 0 and not (sn.on and (T().sniperHaul()) > 0) then
+    text("Ready to buy: " .. basket.n .. (basket.n == 1 and " deal, " or " deals, ") .. ns.money(basket.cost) .. " for est. "
+      .. signed(basket.est) .. (basket.n > 1 and "  -  Next deal buys them in turn" or ""), cx, y + 5, cw, "small", MINT)
+    hit(cx, y + 3, cw, 16, "Ready to buy", "Each checked deal's next click: " .. ns.money(basket.cost) .. ", est. " .. signed(basket.est)
+      .. " after resale.\nEvery listing under the limits: " .. ns.money(basket.costAll) .. ", est. " .. signed(basket.estAll)
+      .. ".\nA quote older than " .. T().QUOTE_TTL .. " s is checked again before it buys.", nil, "Basket")
+  elseif sn.on then
     local liveN, liveTotal, liveBest = T().sniperHaul()
     if liveN > 0 then
       text(liveN .. (liveN == 1 and " live deal: +" or " live deals: +") .. ns.money(liveTotal) .. " potential profit"
@@ -1775,7 +1801,7 @@ function pages.selling(W, top, H)
   local rw = 250
   local lw = W - 48 - rw
   local x, rx = 16, 16 + lw + 16
-  local bottom = top + H - 28
+  local sellUsed
   local live = T().liveFirst()
   local clock = GetTime and GetTime() or now()
   if live and A().isOpen() and (view.sellChecked ~= shows or clock - (view.sellAutoAt or 0) > 5) then
@@ -1860,21 +1886,21 @@ function pages.selling(W, top, H)
   if #rows == 0 then
     text("Nothing priced to sell in your bags. Reprice bags, top right, prices what you carry.", x + 8, y + 8, lw - 16, "small", ns.C.dim, nil, true)
   else
-    list("selling", rows, x, y, lw, 46, bottom - y, function(row, ix, iy, iw)
+    sellUsed = list("selling", rows, x, y, lw, 40, top + H - 2 - y, function(row, ix, iy, iw)
       local s = row.sell
       local net = not s.blocked and T().sellNet(row, s) or nil
       local key, label, color, short = T().status(row.id, s)
       local accent = s.blocked and RED or (s.loss and ORANGE or color)
-      rect(ix, iy, 3, 43, accent, "ARTWORK")
-      framedIcon(row.id, row.icon or itemIcon(row.id), ix + 10, iy + 7, 28)
+      rect(ix, iy, 3, 37, accent, "ARTWORK")
+      framedIcon(row.id, row.icon or itemIcon(row.id), ix + 10, iy + 5, 28)
       local nameW = pcx - ix - 50
-      text(Q.plain(row.count .. " x " .. row.name), ix + 46, iy + 5, nameW, "body")
+      text(Q.plain(row.count .. " x " .. row.name), ix + 46, iy + 3, nameW, "body")
       hit(ix + 40, iy, nameW + 4, 22, row.name, sellTip(row, s, net) .. "\nClick to chart it.", function() chartItem(row.id) end, "Chart " .. row.name)
       local tx = ix + 46
       local function tag(t, tw, col, tipT, tipX)
         if tx + tw > pcx - 4 then return end
-        pill(t, tx, iy + 24, tw, col)
-        hit(tx, iy + 24, tw, 16, tipT, tipX)
+        pill(t, tx, iy + 21, tw, col)
+        hit(tx, iy + 21, tw, 16, tipT, tipX)
         tx = tx + tw + 4
       end
       tag(short or label, 70, color, label, "How the market looks for selling it now.")
@@ -1886,52 +1912,59 @@ function pages.selling(W, top, H)
       if s.skipped then tag("LONE", 38, ORANGE, "Lone listing passed over", sellTip(row, s, nil)) end
       -- price and what you keep
       if s.blocked then
-        text("A vendor pays " .. ns.money(s.vendor) .. " each: sell it there", pcx, iy + 6, 138, "small", RED, nil, true)
+        text("A vendor pays " .. ns.money(s.vendor) .. " each: sell it there", pcx, iy + 4, 128, "small", RED, nil, true)
       else
-        text(ns.money(s.price) .. " each" .. (s.custom and " (your price)" or ""), pcx, iy + 5, 138, "small", s.custom and ns.C.gold or ns.C.light)
+        text(ns.money(s.price) .. " each" .. (s.custom and " (your price)" or ""), pcx, iy + 3, 128, "small", s.custom and ns.C.gold or ns.C.light)
         local keepS = net and ("keep " .. ns.money(net.net)) or ""
         if net and net.vendor > 0 then keepS = keepS .. " (" .. signed(net.gain) .. ")" end
-        text(keepS, pcx, iy + 19, 138, "dim", net and net.gain < 0 and RED or (s.loss and ORANGE or MINT))
+        text(keepS, pcx, iy + 17, 128, "dim", net and net.gain < 0 and RED or (s.loss and ORANGE or MINT))
         if s.low and s.low > 0 then
-          bar(pcx, iy + 35, 130, 4, math.max(0.05, math.min(1, s.price / math.max(s.usual or s.low, s.low, s.price))), accent)
+          bar(pcx, iy + 31, 122, 4, math.max(0.05, math.min(1, s.price / math.max(s.usual or s.low, s.low, s.price))), accent)
         end
       end
       -- buttons
-      local bx = ix + iw - 142
+      local bx = ix + iw - 156
+      local checkingRow = T().sellChecking(row.id)
+      proBtn(checkingRow and "..." or "R", bx, iy + 8, 20, 24, "ghost", function() T().checkSellPrices({ row.id }, true) end,
+        { label = "Refresh " .. row.name, enabled = A().isOpen() and not checkingRow, tip = "Refresh its price",
+          tipText = "Searches what's listed for this item right now and reprices it." })
+      bx = bx + 22
       if s.custom then
-        proBtn("Auto", bx - 38, iy + 10, 34, 24, "ghost", function() T().nudge(row.id, nil) end,
+        proBtn("Auto", bx - 60, iy + 8, 34, 24, "ghost", function() T().nudge(row.id, nil) end,
           { label = "Reset " .. row.name, tip = "Auto price", tipText = "Back to the Quick Sell price." })
       end
-      proBtn("-", bx, iy + 10, 20, 24, "ghost", function() T().nudge(row.id, -1) end,
+      proBtn("-", bx, iy + 8, 20, 24, "ghost", function() T().nudge(row.id, -1) end,
         { label = "Lower " .. row.name, enabled = not s.blocked, tip = "Lower the price", tipText = "5% less each click. It never goes under the vendor floor: below it the post is blocked." })
-      proBtn("+", bx + 22, iy + 10, 20, 24, "ghost", function() T().nudge(row.id, 1) end,
+      proBtn("+", bx + 22, iy + 8, 20, 24, "ghost", function() T().nudge(row.id, 1) end,
         { label = "Raise " .. row.name, enabled = not s.blocked, tip = "Raise the price", tipText = "5% more each click." })
       local armed = T().armed("post:" .. row.id)
       local needs = T().needsCheck(row)
       local plabel = s.blocked and "Vendor it" or (needs and (T().sellChecking(row.id) and "..." or "Check") or (armed and "Sure?" or "Post"))
-      proBtn(plabel, bx + 44, iy + 10, 72, 24, s.blocked and "ghost" or (needs and "gold" or (armed and "danger" or "emerald")),
+      proBtn(plabel, bx + 44, iy + 8, 64, 24, s.blocked and "ghost" or (needs and "gold" or (armed and "danger" or "emerald")),
         function() T().post(row) end,
         { label = "Post " .. row.name, enabled = not s.blocked and T().available(), lit = armed,
           tip = needs and "Check, then post" or "Post", tipText = needs and "Searches what's listed now; click again to post at that price."
             or ("Posts " .. (row.count) .. " at " .. ns.money(s.price) .. " each" .. (net and (": you keep " .. ns.money(net.net)) or "") .. ".") })
       local hidden = T().isHidden(row.id)
-      proBtn(hidden and "+" or "x", bx + 118, iy + 10, 22, 24, "ghost", function() T().hide(row.id, not hidden) end,
+      proBtn(hidden and "+" or "x", bx + 110, iy + 8, 22, 24, "ghost", function() T().hide(row.id, not hidden) end,
         { label = (hidden and "Unhide " or "Hide ") .. row.name, tip = hidden and "Unhide" or "Hide", tipText = "Leave it out of Quick Sell and Deals." })
     end)
   end
+  -- the footer shares the pager's line (right side), else sits under the rows
+  local paged = #rows > 0 and (sellUsed or 0) % 40 ~= 0
+  local fy = #rows == 0 and (y + 30) or (paged and (y + sellUsed - 24) or (y + (sellUsed or 0) + 2))
   local n = T().hiddenCount()
   if n > 0 or view.hidden then
-    proBtn(view.hidden and "Hide hidden" or ("Show hidden (" .. n .. ")"), x, bottom + 2, 150, 21, "pill", function() view.hidden = not view.hidden end,
+    proBtn(view.hidden and "Hide hidden" or ("Show hidden (" .. n .. ")"), x + lw - 278, fy, 150, 21, "pill", function() view.hidden = not view.hidden end,
       { label = view.hidden and "Hide hidden" or "Show hidden", lit = view.hidden })
   end
   local unpriced = #T().sellable(true, false) - #T().sellable(false, false)
   if unpriced > 0 then
-    text(unpriced .. " more " .. (unpriced == 1 and "has" or "have") .. " no price yet", x + 158, bottom + 6, lw - 290, "dim", ns.C.dim)
-    proBtn("Scan my bags", x + lw - 120, bottom + 2, 120, 21, "gold", function()
+    proBtn("Scan my bags (" .. unpriced .. ")", x + lw - 120, fy, 120, 21, "gold", function()
       local k = T().checkBagPrices()
       if k == 0 then k = A().scanBags() end
       ns.say("Searching " .. k .. " items from your bags.")
-    end, { label = "Scan my bags" })
+    end, { label = "Scan my bags", tip = "Scan my bags", tipText = unpriced .. " more " .. (unpriced == 1 and "has" or "have") .. " no price yet: this searches them." })
   end
 
   -- 4. your auctions

@@ -1,5 +1,15 @@
 # Leveling Codex
 
+## v0.31.3
+- **Deals and the sniper: price guards you can trust:**
+  - **Resale check on flips:** once you buy everything under your limit, the cheapest listing left is what you'll compete with. The Codex now prices your resale just under that listing (never above the usual price), and leaves out the dear end of a stack when it sits too close to that listing to keep your profit. A flip with no profit left after that shows **No margin**. The tooltip says where the resale price comes from and how many it left out.
+  - **No buying on an old price:** a quote older than 45 seconds says **Recheck price**, and clicking it searches the listings again before any gold moves. A commodity price lock older than 30 seconds is let go and searched again instead of confirmed.
+  - **Vendor deals follow today's vendor price:** if what a vendor pays has dropped since the check, the buy is blocked when it would no longer make money.
+  - **What you were charged:** a commodity purchase records what actually left your purse, and says so in chat if it was more than the quote.
+- **Buying in batches:** the Deals console shows **Ready to buy: N deals, X for est. +Y** for every checked deal, and **Next deal** says **Buy 1 of N** as it steps through them, one click per purchase.
+- **Quick Sell:** every row has an **R** button that refreshes that item's live price on its own, and the rows are more compact, so six fit on a page (the Show hidden and Scan my bags buttons moved onto the page line).
+- **Honest profit figures:** every buy is said in chat with its estimated profit after resale, the trade record keeps that estimate, and the budget line shows this visit's spending with its estimated profit. The sniper's deal alert adds the estimate for the whole stack.
+
 ## v0.31.2
 - **Quick Sell, rebuilt for making gold:**
   - **Live price checks:** opening Quick Sell searches what's listed right now for the items in your bags (rows say LIVE, OLD or QUEUED). A post whose price is older than 10 minutes checks it first, and the next click posts at the live price. **Live check** turns this off.

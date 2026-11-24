@@ -544,9 +544,9 @@ function T.sellable(unpriced, hidden)
   return out
 end
 
-local last = { posts = 0, buys = 0, posted = 0, deposits = 0, spent = 0, cancels = 0, vendored = 0, vendorEarned = 0, vendorProfit = 0 }
+local last = { posts = 0, buys = 0, posted = 0, deposits = 0, spent = 0, cancels = 0, vendored = 0, vendorEarned = 0, vendorProfit = 0, est = 0 }
 -- This visit to the auction house: what the Codex spent (the budget counts it).
-local visit = { spent = 0, buys = 0 }
+local visit = { spent = 0, buys = 0, est = 0 }
 T.visit = visit
 -- The budget left for this visit, or nil without one.
 function T.budgetLeft()
@@ -839,7 +839,9 @@ local function announceSniperDeal(b, low, qty)
   alerted[id] = d.low
   snipe.found = (snipe.found or 0) + 1
   if not ns.db().noSnipeSound and type(PlaySound) == "function" then pcall(PlaySound, 18019, "SFX") end
-  ns.say("Deal: " .. Q.plain(d.name) .. " listed at " .. ns.money(d.low) .. ", +" .. ns.money(d.profit) .. " each.")
+  local est, n = b.estAll or b.est, b.allQty or b.qty
+  ns.say("Deal: " .. Q.plain(d.name) .. " listed at " .. ns.money(d.low) .. ", +" .. ns.money(d.profit) .. " each"
+    .. (est and n and n > 1 and est > 0 and (" (est. +" .. ns.money(est) .. " for " .. n .. ")") or "") .. ".")
 end
 
 -- What a deal could make: amount, qty, exact, lots. Once checked, every listing under the limit
@@ -852,6 +854,7 @@ function T.potential(d)
     local total = b.commodity == false and (b.allTotal or b.total) or b.total
     local lots = b.commodity == false and (b.lots and #b.lots or 1) or nil
     if qty and total and qty > 0 then
+      if b.resaleNet then net = b.resaleNet end
       return math.max(0, net * qty - total), qty, true, lots
     end
   end
@@ -879,6 +882,61 @@ function T.isLive(id) return T.live[id] and now() - T.live[id] < 120 or false en
 --                lots = { { auction, total, qty, unit } }, qty, total, auction, allQty, allTotal, limit, deal }
 local buying = {}
 T.buying = buying
+
+-- Price protection: a quote older than T.QUOTE_TTL seconds is searched again before Buy spends
+-- anything, and a server price lock older than T.LOCK_TTL is let go and searched again.
+T.QUOTE_TTL, T.LOCK_TTL = 45, 30
+function T.quoteAge(id)
+  local b = buying[id]
+  local at = b and (b.stage == "confirm" and b.lockedAt or b.quotedAt)
+  return at and math.max(0, now() - at) or nil
+end
+function T.quoteStale(id)
+  local b, age = buying[id], T.quoteAge(id)
+  if not (b and age) then return false end
+  if b.stage == "ready" then return age > T.QUOTE_TTL end
+  if b.stage == "confirm" then return age > T.LOCK_TTL end
+  return false
+end
+
+-- What one bought unit nets when sold on: a vendor's price, or for a flip the resale price after
+-- the 5% cut (b.resale: just under the next listing you aren't buying, at most the usual price).
+local function netEach(b)
+  local d = b.deal
+  if d.kind == "vendor" then return d.worth end
+  return b.resaleNet or math.floor(d.worth * (1 - T.CUT))
+end
+T.netEach = netEach
+-- The estimated profit of a checked quote: est (the next click's purchase), estAll (every listing
+-- under the limit; for item lots all of them).
+local function quoteEst(b)
+  if not b or not b.deal then return end
+  local each = netEach(b)
+  if b.qty and b.total then b.est = each * b.qty - b.total end
+  local q, t = b.allQty or b.qty, b.allTotal or b.total
+  if q and t then b.estAll = each * q - t end
+end
+T.quoteEst = quoteEst
+
+-- Resale guard for a flip: after you buy everything under the limit, the cheapest listing left is
+-- what you'll compete with. units = { { unit, qty }, ... } cheapest first (trimmed in place from the
+-- dear end while a unit wouldn't keep Worth at least once resold just under that listing).
+-- Returns resale (each, before the cut), its net after the cut, the next listing, units dropped.
+local function resaleFit(deal, units, above)
+  local minP = math.max(1, T.minProfit())
+  local nextAt, dropped = above, 0
+  while #units > 0 do
+    local resale = math.min(deal.worth, nextAt and (nextAt - 1) or deal.worth)
+    local net = math.floor(resale * (1 - T.CUT))
+    local last = units[#units]
+    if net - last.unit >= minP then return resale, net, nextAt, dropped end
+    nextAt = math.min(nextAt or last.unit, last.unit)
+    dropped = dropped + (last.qty or 1)
+    table.remove(units)
+  end
+  return nil, nil, nextAt, dropped
+end
+T.resaleFit = resaleFit
 
 local function purchasePending()
   for _, b in pairs(buying) do
@@ -931,6 +989,7 @@ local function capCommodity(b, wantQty)
   end
   if qty > 0 then
     b.qty, b.total, b.maxUnit = qty, total, maxUnit
+    quoteEst(b)
   end
 end
 
@@ -1288,6 +1347,7 @@ local function syncItemLots(b)
   b.stage = "ready"
   b.qty, b.total, b.auction, b.unit = first.qty, first.total, first.auction, first.unit
   b.allQty, b.allTotal = allQty, allTotal
+  quoteEst(b)
   return true
 end
 
@@ -1323,7 +1383,7 @@ local function readCommodity(id)
     return
   end
   local qty, total, cheapest, listed, maxUnit = 0, 0, nil, 0, 0
-  local tiers = {}
+  local tiers, above = {}, nil
   for i = 1, tonumber(try(C.GetNumCommoditySearchResults, id)) or 0 do
     local r = try(C.GetCommoditySearchResultInfo, id, i)
     local unit = type(r) == "table" and tonumber(r.unitPrice)
@@ -1335,17 +1395,29 @@ local function readCommodity(id)
       if not cheapest or unit < cheapest then cheapest = unit end
       if unit <= b.limit then
         tiers[#tiers + 1] = { unit = unit, qty = n }
-        qty, total = qty + n, total + unit * n
-        if unit > maxUnit then maxUnit = unit end
+      elseif not above or unit < above then
+        above = unit
       end
     end
   end
   table.sort(tiers, function(x, y) return x.unit < y.unit end)
+  local found = #tiers
+  if found > 0 and b.deal.kind ~= "vendor" then
+    b.resale, b.resaleNet, b.nextListing, b.trimmed = resaleFit(b.deal, tiers, above)
+  else
+    b.resale, b.resaleNet, b.nextListing, b.trimmed = nil, nil, above, 0
+  end
+  for _, tr in ipairs(tiers) do
+    qty, total = qty + tr.qty, total + tr.unit * tr.qty
+    if tr.unit > maxUnit then maxUnit = tr.unit end
+  end
   b.commodity, b.tiers, b.fullQty, b.fullTotal = true, tiers, qty, total
   if qty > 0 then
-    b.stage, b.qty, b.total, b.maxUnit = "ready", qty, total, maxUnit
+    b.stage, b.qty, b.total, b.maxUnit, b.quotedAt = "ready", qty, total, maxUnit, now()
+    b.allQty, b.allTotal = nil, nil
+    quoteEst(b)
   else
-    b.stage, b.why = "none", "gone"
+    b.stage, b.why = "none", found > 0 and "no margin" or "gone"
   end
   observed(id, b, cheapest, listed)
   finishCheck(id)
@@ -1416,7 +1488,7 @@ local function readItems(key)
       return
     end
   end
-  local lots, seen, cheapest, listed = {}, {}, nil, 0
+  local lots, seen, cheapest, listed, above = {}, {}, nil, 0, nil
   for i = 1, totalResults do
     local r = try(C.GetItemSearchResultInfo, searchKey, i)
     local buyout = type(r) == "table" and tonumber(r.buyoutAmount)
@@ -1430,6 +1502,8 @@ local function readItems(key)
       if not cheapest or unit < cheapest then cheapest = unit end
       if unit <= b.limit then
         lots[#lots + 1] = { auction = auctionID, total = buyout, qty = n, unit = unit }
+      elseif not above or unit < above then
+        above = unit
       end
     end
   end
@@ -1438,8 +1512,15 @@ local function readItems(key)
     if x.total ~= y.total then return x.total < y.total end
     return (tonumber(x.auction) or 0) < (tonumber(y.auction) or 0)
   end)
+  local found = #lots
+  if found > 0 and b.deal.kind ~= "vendor" then
+    b.resale, b.resaleNet, b.nextListing, b.trimmed = resaleFit(b.deal, lots, above)
+  else
+    b.resale, b.resaleNet, b.nextListing, b.trimmed = nil, nil, above, 0
+  end
   b.commodity, b.lots = false, lots
-  syncItemLots(b)
+  if syncItemLots(b) then b.quotedAt = now()
+  elseif found > 0 then b.why = "no margin" end
   observed(id, b, cheapest, listed)
   finishCheck(id)
   T.refresh()
@@ -1448,15 +1529,18 @@ end
 local function money() return tonumber(try(GetMoney)) or 0 end
 
 -- A purchase: the session ledger, and what you paid (a later post under it asks twice).
-local function boughtFor(id, deal, qty, total, moreLeft)
+local function boughtFor(id, deal, qty, total, moreLeft, each, note)
   qty = math.max(1, tonumber(qty) or 1)
   total = math.max(0, tonumber(total) or 0)
+  each = tonumber(each) or (deal.kind == "vendor" and deal.worth or math.floor(deal.worth * (1 - T.CUT)))
+  local net = each * qty - total
   last.buys = last.buys + 1
   last.spent = last.spent + total
-  visit.spent, visit.buys = visit.spent + total, visit.buys + 1
-  last.buy = { name = deal.name, qty = qty, total = total }
+  last.est = (last.est or 0) + net
+  visit.spent, visit.buys, visit.est = visit.spent + total, visit.buys + 1, (visit.est or 0) + net
+  last.buy = { name = deal.name, qty = qty, total = total, est = net }
   local e = T.logTrade("buy", id, deal.name, qty, math.floor(total / qty + 0.5))
-  e.total, e.dealKind, e.vendor = total, deal.kind, deal.vendor
+  e.total, e.dealKind, e.vendor, e.est = total, deal.kind, deal.vendor, net
   local notes = T.notes()
   local old = type(notes.paid[id]) == "table" and notes.paid[id]
   local sumQty, cost = qty, total
@@ -1472,10 +1556,9 @@ local function boughtFor(id, deal, qty, total, moreLeft)
     kind = (deal.kind == "vendor" or (old and old.kind == "vendor")) and "vendor" or deal.kind,
     vendor = deal.vendor or (old and old.vendor),
   }
-  local net = deal.kind == "vendor" and (deal.worth * qty - total) or (math.floor(deal.worth * (1 - T.CUT)) * qty - total)
   local gain = net > 0 and (" (+" .. ns.money(net) .. (deal.kind == "vendor" and " at vendor)" or " est. flip)")) or ""
   local tail = moreLeft and moreLeft > 0 and (" " .. moreLeft .. " more under the limit - click Buy again.") or ""
-  ns.say("Bought " .. qty .. " " .. Q.plain(deal.name) .. " for " .. ns.money(total) .. gain .. "." .. tail)
+  ns.say("Bought " .. qty .. " " .. Q.plain(deal.name) .. " for " .. ns.money(total) .. gain .. "." .. tail .. (note or ""))
 end
 
 -- Records a vendor sale of an item the Codex bought (either when sold at a merchant or marked from Holdings).
@@ -1562,7 +1645,7 @@ local function finishItemBuy(id, ok, why)
     end
   end
   local more = b.lots and #b.lots or 0
-  boughtFor(id, b.deal, p.qty, p.total, more)
+  boughtFor(id, b.deal, p.qty, p.total, more, netEach(b))
   if more > 0 then
     syncItemLots(b)
   else
@@ -1583,9 +1666,26 @@ function T.buy(id)
   local C, b = api(), buying[id]
   if not b or not C or purchasePending() or ns.auction.scanning() then return false end
   if b.stage ~= "ready" and b.stage ~= "confirm" then return false end
-  if not dealVendorPrice(id, b.deal) then
+  local liveVendor = dealVendorPrice(id, ns.auction.price(id) or b.deal)
+  if not liveVendor then
     T.cancelBuy(id)
     ns.say(Q.plain(b.deal.name) .. ": excluded from Deals without an eligible NPC sell price.")
+    return false
+  end
+  -- a vendor deal is only as good as what the vendor pays today
+  if b.deal.kind == "vendor" and liveVendor < b.deal.worth then
+    local d = {}
+    for k, v in pairs(b.deal) do d[k] = v end
+    d.worth, d.vendor, d.profit = liveVendor, liveVendor, liveVendor - d.low
+    b.deal = d
+    quoteEst(b)
+  end
+  -- an old quote or price lock: search again before any gold moves
+  if T.quoteStale(id) then
+    local age = math.floor(T.quoteAge(id) or 0)
+    if b.stage == "confirm" then try(C.CancelCommoditiesPurchase) end
+    ns.say(Q.plain(b.deal.name) .. ": that price is " .. age .. " s old, so the Codex is checking the listings again. Click Buy once it shows.")
+    T.check(b.deal)
     return false
   end
   local unit = math.ceil(b.total / math.max(1, b.qty))
@@ -1684,7 +1784,7 @@ function T.buy(id)
     end
     if not pcall(C.ConfirmCommoditiesPurchase, id, b.qty) then return false end
     if ns.stats then ns.stats.expect("buys", b.total) end
-    b.stage = "buying"
+    b.stage, b.purse = "buying", money()
     ns.after(6, function()
       local x = buying[id]
       if x == b and x.stage == "buying" then x.stage, x.why = "none", "timed out"; T.refresh() end
@@ -1718,7 +1818,8 @@ local function priced(unit, total)
         ns.say(Q.plain(b.deal.name) .. ": server quoted " .. ns.money(total or 0) .. " (was " .. ns.money(b.expect)
           .. "), so the Codex cancelled it to protect your gold.")
       else
-        b.stage, b.total = "confirm", total
+        b.stage, b.total, b.lockedAt = "confirm", total, now()
+        quoteEst(b)
       end
       T.refresh()
       return
@@ -1730,7 +1831,16 @@ local function bought(ok)
   for id, b in pairs(buying) do
     if b.stage == "buying" then
       if ok then
-        boughtFor(id, b.deal, b.qty, b.total)
+        -- what the purse actually lost, when it has moved by now (else the locked total)
+        local cost, note = b.total, nil
+        local drop = b.purse and (b.purse - money()) or 0
+        if drop > 0 and drop ~= b.total then
+          cost = drop
+          if drop > b.total then
+            note = " Charged " .. ns.money(drop - b.total) .. " more than the quote: check the mailbox."
+          end
+        end
+        boughtFor(id, b.deal, b.qty, cost, nil, netEach(b), note)
         buying[id] = nil
         -- recheck if any remain or clear stale count (keep pStore.low intact for history)
         local pStore = ns.auction.store().items[id]
@@ -1776,6 +1886,7 @@ function T.dealLabel(id)
   local b = buying[id]
   if not b then return "Check" end
   if b.stage == "search" then return "Looking..." end
+  if (b.stage == "ready" or b.stage == "confirm") and T.quoteStale(id) then return "Recheck price" end
   if b.stage == "ready" then
     if b.commodity == false and b.lots and #b.lots > 1 then
       return "Buy " .. b.qty .. " for " .. ns.money(b.total) .. " (1/" .. #b.lots .. ")"
@@ -1788,7 +1899,24 @@ function T.dealLabel(id)
   if b.why == "price went up" then return "Price rose" end
   if b.why == "no answer" then return "Retry check" end
   if b.why == "over limit" then return "Check again" end
+  if b.why == "no margin" then return "No margin" end
   return "Gone"
+end
+
+-- The basket: every checked deal on the list that is ready to buy (or locked to confirm):
+-- n, cost of the next click on each, estimated profit of those clicks, cost and profit of every
+-- listing under the limit.
+function T.basket(kind, hidden)
+  local n, cost, est, costAll, estAll = 0, 0, 0, 0, 0
+  for _, d in ipairs(T.deals(kind, hidden)) do
+    local b = buying[d.id]
+    if b and (b.stage == "ready" or b.stage == "confirm") and b.total and not T.quoteStale(d.id) then
+      n = n + 1
+      cost, est = cost + b.total, est + (b.est or 0)
+      costAll, estAll = costAll + (b.allTotal or b.total), estAll + (b.estAll or b.est or 0)
+    end
+  end
+  return { n = n, cost = cost, est = est, costAll = costAll, estAll = estAll }
 end
 
 -- Redraws the Codex tab (AuctionPanel.lua) when it shows.
@@ -1817,7 +1945,7 @@ function ns.startAuctionTrade()
       recheck.queue, recheck.active, recheck.done, recheck.total = {}, nil, 0, 0
       mine.list, mine.queue, mine.waiting, mine.checking = {}, {}, nil, nil
       T.resetSellChecks()
-      visit.spent, visit.buys = 0, 0
+      visit.spent, visit.buys, visit.est = 0, 0, 0
       ns.after(0.5, T.queryOwned)
     elseif event == "AUCTION_HOUSE_CLOSED" then
       for _, x in pairs(buying) do

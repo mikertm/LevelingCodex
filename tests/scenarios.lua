@@ -11716,6 +11716,89 @@ end
 -- a flip bought, posted and sold (the game's chat line) in the trade record; each page's refresh.
 -- Quick Sell's live checks (own listings, lone listings, pricing modes, what you keep), Cancel
 -- undercut, and the Deals page's budget and flip confidence.
+-- The deal buyer's price guards: resale against the next listing, stale quotes and locks, a vendor
+-- price that fell, the basket of ready deals and what this visit is estimated to make.
+function S.auctionSnipeGuard()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local function hist(low, n, before, vendor)
+    return { low = low, med = low, n = n, at = 1700000000, vendor = vendor,
+      days = { [day - 3] = { low = before, med = before }, [day - 2] = { low = before, med = before },
+        [day - 1] = { low = before, med = before }, [day] = { low = low, med = low } } }
+  end
+  LevelingCodexDB = LevelingCodexDB or {}
+  local items = { [3575] = hist(30, 18, 100, 1), [3576] = hist(66, 12, 100, 1), [3577] = hist(30, 4, 30, 50) }
+  items[3575].name, items[3576].name, items[3577].name = "Iron Bar", "Tin Bar", "Gold Bar"
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = items } } }
+  MOCK.money = 100000
+  MOCK.auctions = {
+    -- Iron Bar (usual 1s, buy limit 70c): 5 at 30c, 3 at 68c, then a wall of 10 at 72c
+    { id = 3575, name = "Iron Bar", count = 5, buyout = 150 }, { id = 3575, name = "Iron Bar", count = 3, buyout = 204 },
+    { id = 3575, name = "Iron Bar", count = 10, buyout = 720 },
+    -- Tin Bar: 2 at 66c under the limit, 10 at 71c right above it
+    { id = 3576, name = "Tin Bar", count = 2, buyout = 132 }, { id = 3576, name = "Tin Bar", count = 10, buyout = 710 },
+    -- Gold Bar: a vendor deal, 4 at 30c that a vendor buys for 50c
+    { id = 3577, name = "Gold Bar", count = 4, buyout = 120 },
+  }
+  S.login()
+  if MOCK.minimal then return end
+  MOCK.openAuction()
+  MOCK.advance(2)
+  click(AuctionHouseFrame, "Deals")
+  local card = _G.LevelingCodexAHPanel
+  local T = MOCK.ns.auctionTrade
+  click(card, "Deal Iron Bar")
+  MOCK.advance(1)
+  local b = T.buying[3575]
+  check(b and b.stage == "ready" and b.qty == 5 and b.total == 150 and b.trimmed == 3 and b.resale == 67 and b.nextListing == 68,
+    "resale: the 68c bars sit too close to the 72c wall, so only the 30c ones are bought (" .. T.dealLabel(3575) .. ")")
+  check(b and b.est == 165 and select(1, T.potential(b.deal)) == 165, "the estimate resells just under the next listing after the cut")
+  check(questText(card, "Ready to buy: 1 deal"), "the basket line counts the checked deal")
+  click(card, "Deal Tin Bar")
+  MOCK.advance(1)
+  check(T.dealLabel(3576) == "No margin" and T.buying[3576].why == "no margin",
+    "a flip the next listing leaves no profit on isn't offered (" .. T.dealLabel(3576) .. ")")
+  -- a stale quote is searched again before anything is spent
+  MOCK.advance(50)
+  MOCK.ns.auctionPanel.refresh()
+  check(T.dealLabel(3575) == "Recheck price" and not questText(card, "Ready to buy"), "a quote older than 45 s asks for a recheck")
+  local searched = MOCK.searched or 0
+  click(card, "Deal Iron Bar")
+  check(#MOCK.purchases == 0 and chatHas("s old, so the Codex is checking") and (MOCK.searched or 0) == searched + 1,
+    "Buy on a stale quote searches again instead of buying")
+  MOCK.advance(1)
+  check(T.dealLabel(3575) == "Buy 5 for 1s 50c", "the fresh quote is ready again (" .. T.dealLabel(3575) .. ")")
+  -- the basket of two ready deals, and the Next deal button names its place in it
+  click(card, "Deal Gold Bar")
+  MOCK.advance(1)
+  check(questText(card, "Ready to buy: 2 deals") and questText(card, "Buy 1 of 2"), "the basket counts both and Next deal steps through them")
+  -- a stale price lock is let go and searched again
+  click(card, "Deal Iron Bar")
+  MOCK.advance(1)
+  check(T.dealLabel(3575) == "Confirm 1s 50c", "the server's total is locked (" .. T.dealLabel(3575) .. ")")
+  MOCK.advance(35)
+  MOCK.cancelledPurchase = nil
+  click(card, "Deal Iron Bar")
+  check(MOCK.cancelledPurchase and #MOCK.purchases == 0, "an old lock is cancelled, not confirmed")
+  MOCK.advance(1)
+  click(card, "Deal Iron Bar")
+  MOCK.advance(1)
+  click(card, "Deal Iron Bar")
+  MOCK.advance(1)
+  check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 5 and MOCK.purchases[1].total == 150
+    and chatHas("Bought 5 Iron Bar for 1s 50c %(%+1s 65c est%. flip%)"), "the purchase is said with its resale estimate")
+  check(T.visit.est == 165 and questText(card, "est. +1s 65c"), "this visit's estimated profit is kept and shown")
+  check(T.notes().log[#T.notes().log].est == 165, "the trade record keeps the estimate")
+  -- the vendor pays less now: the quote's limit follows it
+  click(card, "Deal Gold Bar")
+  MOCK.advance(1)
+  check(T.dealLabel(3577) == "Confirm 1s 20c", "the vendor deal is locked (" .. T.dealLabel(3577) .. ")")
+  MOCK.ns.auction.store().items[3577].vendor = 25
+  MOCK.ns.auction.version = MOCK.ns.auction.version + 1
+  click(card, "Deal Gold Bar")
+  check(#MOCK.purchases == 1 and MOCK.cancelledPurchase and chatHas("above your current deal limit"), "a vendor price that fell blocks the buy")
+  check(MOCK.ns.auctionPanel.lastError == nil, "the Deals page draws without errors")
+end
+
 function S.auctionQuickSell()
   local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
   local function hist(low, n, before, vendor, days)
@@ -11762,6 +11845,17 @@ function S.auctionQuickSell()
   local wool = T.sellPrice(2592)
   check(wool.matched and wool.price == 120, "your own cheapest listing is matched, not undercut (" .. wool.price .. ")")
   check(questText(card, "YOURS"), "the row says it matches your price")
+  -- one item's price refreshed on its own
+  local before, at = MOCK.searched or 0, T.liveCheck(2589).at
+  MOCK.auctions[2].buyout = 2700
+  MOCK.advance(2)
+  click(card, "Refresh Linen Cloth")
+  MOCK.advance(2)
+  check((MOCK.searched or 0) == before + 1 and T.liveCheck(2589).at > at and T.sellPrice(2589).price == 89,
+    "R refreshes one row's live price (" .. T.sellPrice(2589).price .. ")")
+  MOCK.auctions[2].buyout = 3000
+  T.checkSellPrices({ 2589 }, true)
+  MOCK.advance(2)
   check(T.sellPrice(2318).price == 89, "an undercut listing of yours doesn't hold the price up")
   local net = T.sellNet({ id = 2589, count = 20, bag = 0, slot = 1 }, linen)
   check(net.gross == 1980 and net.cut == 99 and net.deposit == 120 and net.net == 1761 and net.vendor == 260,
