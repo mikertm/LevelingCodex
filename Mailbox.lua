@@ -411,9 +411,33 @@ function ns.mailDebugLines()
   local out = { line }
   -- raw reads of the first mails, to see what this client's mail API returns
   local shown, total = try(GetNumInboxItems)
-  out[#out + 1] = "mailbox api: GetNumInboxItems " .. tostring(shown) .. "/" .. tostring(total)
+  local okN, errN = pcall(function() return GetNumInboxItems() end)
+  out[#out + 1] = "mailbox api: GetNumInboxItems (" .. type(GetNumInboxItems) .. ") " .. tostring(shown) .. "/" .. tostring(total)
+    .. (okN and "" or (" error: " .. ns.plain(tostring(errN)):sub(1, 80)))
     .. ", TakeInboxItem " .. type(TakeInboxItem) .. ", TakeInboxMoney " .. type(TakeInboxMoney)
     .. ", GetInboxItem " .. type(GetInboxItem) .. ", MailFrame " .. tostring(type(MailFrame) == "table" and MailFrame:IsShown())
+  -- every global and C_ table whose name mentions mail or inbox (Forever may have moved the API)
+  local names = {}
+  for k, v in pairs(_G) do
+    if type(k) == "string" and (k:find("Inbox") or k:find("Mail")) and (type(v) == "function" or k:find("^C_")) then
+      names[#names + 1] = k
+    end
+  end
+  table.sort(names)
+  local chunk = {}
+  for _, k in ipairs(names) do
+    chunk[#chunk + 1] = k
+    if #chunk == 8 then out[#out + 1] = "mail globals: " .. table.concat(chunk, " "); chunk = {} end
+  end
+  if #chunk > 0 then out[#out + 1] = "mail globals: " .. table.concat(chunk, " ") end
+  for _, t in ipairs({ "C_Mail", "C_MailInfo", "C_Inbox" }) do
+    if type(_G[t]) == "table" then
+      local fns = {}
+      for k in pairs(_G[t]) do fns[#fns + 1] = tostring(k) end
+      table.sort(fns)
+      out[#out + 1] = t .. ": " .. table.concat(fns, " ")
+    end
+  end
   for i = 1, math.min(tonumber(shown) or 0, 3) do
     local r = { pcall(GetInboxHeaderInfo, i) }
     local parts = {}
