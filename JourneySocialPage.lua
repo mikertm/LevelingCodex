@@ -141,14 +141,15 @@ function S.personTop(R, p, y)
   local line = nextAt and ("Next: " .. S.BONDS[rank + 1][1]) or "As close as two adventurers get"
   y = y + U.T(line, 14, y, W - 28, "small", C.inkSoft or C.dim, "CENTER") + 6
   -- tags
-  local x = 14
-  local each = math.floor((W - 28) / #S.TAGS)
-  for _, tag in ipairs(S.TAGS) do
-    local cb = U.check(tag, x, y, S.tagged(n, tag), function() S.toggleTag(n, tag); ns.ui.refresh() end, S.TAG_TIPS[tag])
+  -- three to a row: five in one row overlapped ("Guildmate" ran into "Healer")
+  local each = math.floor((W - 28) / 3)
+  for i, tag in ipairs(S.TAGS) do
+    local x = 14 + ((i - 1) % 3) * each
+    local yy = y + math.floor((i - 1) / 3) * 26
+    local cb = U.check(tag, x, yy, S.tagged(n, tag), function() S.toggleTag(n, tag); ns.ui.refresh() end, S.TAG_TIPS[tag])
     if cb then cb.codexLabel = "Tag " .. tag end
-    x = x + each
   end
-  y = y + 28
+  y = y + math.ceil(#S.TAGS / 3) * 26 + 2
   return y
 end
 
