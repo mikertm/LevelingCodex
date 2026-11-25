@@ -468,12 +468,14 @@ end
 -- (item, price, deposit, cut, count) it has seen in the inbox: more in the box = new sales; fewer
 -- (taken out) lowers the count, so the next identical sale counts again.
 function M.readInbox()
-  if type(GetNumInboxItems) ~= "function" or type(GetInboxInvoiceInfo) ~= "function" then return 0 end
+  local count = ns.mailbox and ns.mailbox.countFn() -- Forever: GetInboxNumItems
+  if not count or type(GetInboxInvoiceInfo) ~= "function" then return 0 end
   local notes = T().notes()
   notes.mail = type(notes.mail) == "table" and notes.mail or {}
   local seen = notes.mail
   local inbox, sales = {}, {}
-  local n = tonumber((pcall(GetNumInboxItems) and (GetNumInboxItems()))) or 0
+  local okN, n = pcall(count)
+  n = okN and tonumber(n) or 0
   for i = 1, n do
     local ok, kind, item, _, bid, _, deposit, cut, _, _, _, count = pcall(GetInboxInvoiceInfo, i)
     if ok and kind == "seller" and type(item) == "string" and tonumber(bid) then

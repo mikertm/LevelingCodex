@@ -1758,7 +1758,8 @@ function GetRealmName() return "Mockrealm" end
 -- The mailbox: MOCK.inbox = { { sender, subject, money, daysLeft, invoice = { type, item, buyer, bid,
 -- buyout, deposit, cut, count } } } (an auction house invoice); gone in the minimal client.
 MOCK.inbox = {}
-function GetNumInboxItems() return #MOCK.inbox, #MOCK.inbox end
+-- WoW: Forever keeps the old name (GetNumInboxItems is nil there)
+function GetInboxNumItems() return #MOCK.inbox, #MOCK.inbox end
 function GetInboxHeaderInfo(i)
   local m = MOCK.inbox[i]
   if not m then return end
@@ -2140,7 +2141,7 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetQuestLink", "ChatFrameAddMessageEventFilter", "debugstack", "GetMerchantNumItems", "GetMerchantItemID", "GetMerchantItemLink", "GetMerchantItemInfo",
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
   "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop",
-  "GetNumInboxItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo", "GetInboxItem", "GetInboxItemLink", "TakeInboxMoney",
+  "GetInboxNumItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo", "GetInboxItem", "GetInboxItemLink", "TakeInboxMoney",
   "TakeInboxItem", "MailFrame" }
 
 function MOCK.setup(opts)

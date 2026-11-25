@@ -40,8 +40,16 @@ local function mailWindow()
   end
 end
 
+-- The inbox count: WoW: Forever keeps the old name GetInboxNumItems (GetNumInboxItems is nil
+-- there, 2026-11-24); retail has GetNumInboxItems.
+local function countFn()
+  if type(GetInboxNumItems) == "function" then return GetInboxNumItems end
+  if type(GetNumInboxItems) == "function" then return GetNumInboxItems end
+end
+M.countFn = countFn
+
 local function canTake()
-  return type(GetNumInboxItems) == "function" and type(GetInboxHeaderInfo) == "function"
+  return countFn() ~= nil and type(GetInboxHeaderInfo) == "function"
     and type(TakeInboxMoney) == "function" and type(TakeInboxItem) == "function"
 end
 
@@ -54,7 +62,7 @@ local function header(i)
 end
 
 local function inboxCount()
-  local shown, total = try(GetNumInboxItems)
+  local shown, total = try(countFn())
   shown = tonumber(shown) or 0
   return shown, tonumber(total) or shown
 end
@@ -410,34 +418,11 @@ function ns.mailDebugLines()
   end
   local out = { line }
   -- raw reads of the first mails, to see what this client's mail API returns
-  local shown, total = try(GetNumInboxItems)
-  local okN, errN = pcall(function() return GetNumInboxItems() end)
-  out[#out + 1] = "mailbox api: GetNumInboxItems (" .. type(GetNumInboxItems) .. ") " .. tostring(shown) .. "/" .. tostring(total)
-    .. (okN and "" or (" error: " .. ns.plain(tostring(errN)):sub(1, 80)))
+  local shown, total = try(countFn())
+  out[#out + 1] = "mailbox api: GetInboxNumItems " .. type(GetInboxNumItems) .. ", GetNumInboxItems " .. type(GetNumInboxItems)
+    .. ": " .. tostring(shown) .. "/" .. tostring(total)
     .. ", TakeInboxItem " .. type(TakeInboxItem) .. ", TakeInboxMoney " .. type(TakeInboxMoney)
     .. ", GetInboxItem " .. type(GetInboxItem) .. ", MailFrame " .. tostring(type(MailFrame) == "table" and MailFrame:IsShown())
-  -- every global and C_ table whose name mentions mail or inbox (Forever may have moved the API)
-  local names = {}
-  for k, v in pairs(_G) do
-    if type(k) == "string" and (k:find("Inbox") or k:find("Mail")) and (type(v) == "function" or k:find("^C_")) then
-      names[#names + 1] = k
-    end
-  end
-  table.sort(names)
-  local chunk = {}
-  for _, k in ipairs(names) do
-    chunk[#chunk + 1] = k
-    if #chunk == 8 then out[#out + 1] = "mail globals: " .. table.concat(chunk, " "); chunk = {} end
-  end
-  if #chunk > 0 then out[#out + 1] = "mail globals: " .. table.concat(chunk, " ") end
-  for _, t in ipairs({ "C_Mail", "C_MailInfo", "C_Inbox" }) do
-    if type(_G[t]) == "table" then
-      local fns = {}
-      for k in pairs(_G[t]) do fns[#fns + 1] = tostring(k) end
-      table.sort(fns)
-      out[#out + 1] = t .. ": " .. table.concat(fns, " ")
-    end
-  end
   for i = 1, math.min(tonumber(shown) or 0, 3) do
     local r = { pcall(GetInboxHeaderInfo, i) }
     local parts = {}
