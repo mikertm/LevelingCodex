@@ -476,13 +476,44 @@ local function ahClose()
   local firstBuy = v.buys > 0 and T.tally("bought") == 0
   bump("posted", v.posts)
   bump("bought", v.buys)
+  if not (firstPost or firstBuy) and T.foldVisit(v, spent) then return end
   local deeds = {}
   if v.posts > 0 then deeds[#deeds + 1] = "put " .. plural(v.posts, "lot") .. " up for sale" end
   if v.buys > 0 then deeds[#deeds + 1] = "bought " .. plural(v.buys, "lot") end
   local text = "Haggled at the auction house in " .. v.place .. ": " .. list(deeds)
   if firstPost then text = "Your first auction! At the auction house in " .. v.place .. " you " .. list(deeds)
   elseif firstBuy then text = "Your first auction house purchase, in " .. v.place .. ": you " .. list(deeds) end
-  J.add("auction", text, spent > 0 and (ns.money(spent) .. " spent") or "Auction house")
+  local e = J.add("auction", text, spent > 0 and (ns.money(spent) .. " spent") or "Auction house")
+  if e and not (firstPost or firstBuy) then
+    e.ah = { v = 1, p = v.posts, b = v.buys, sp = math.max(0, spent), at = now() }
+  end
+end
+
+-- A trader comes back to the auction house all day: visits to the same one within T.AH_FOLD (3 h)
+-- of the last, at the same level, join one moment that keeps the sums (e.ah = visits, posts, buys,
+-- spent, last visit) instead of writing a line each.
+T.AH_FOLD = 3 * 3600
+local AH_DAY = { "Spent the day trading at the auction house in %s", "A long session of haggling at the %s auction house",
+  "Worked the auction house in %s like a merchant prince", "Back and forth at the auction house in %s, deal after deal" }
+function T.foldVisit(v, spent)
+  local events = J.data().events
+  local lvl = J.level()
+  for i = #events, math.max(1, #events - 40), -1 do
+    local e = events[i]
+    if e.k == "auction" and type(e.ah) == "table" then
+      if tonumber(e.l) ~= lvl or now() - (tonumber(e.ah.at) or 0) > T.AH_FOLD or not e.s:find(v.place, 1, true) then return false end
+      local a = e.ah
+      a.v, a.p, a.b = (a.v or 1) + 1, (a.p or 0) + v.posts, (a.b or 0) + v.buys
+      a.sp, a.at = (a.sp or 0) + math.max(0, spent), now()
+      local deeds = {}
+      if a.b > 0 then deeds[#deeds + 1] = "bought " .. plural(a.b, "lot") end
+      if a.p > 0 then deeds[#deeds + 1] = "put " .. plural(a.p, "lot") .. " up for sale" end
+      local head = string.format(AH_DAY[(math.floor(tonumber(e.t) or 0) % #AH_DAY) + 1], v.place)
+      rewrite(e, head .. ": " .. a.v .. " visits, " .. list(deeds), a.sp > 0 and (ns.money(a.sp) .. " spent") or "Auction house")
+      return true
+    end
+  end
+  return false
 end
 
 local lastSale, lastExpired

@@ -309,15 +309,85 @@ function Lr.checkMarks()
   end
 end
 
--- The first time you sit on your own mount (once per journal).
+-- The first time you sit on your own mount (once per journal). The game says "mounted" on a flight
+-- path too, so a taxi (now or in the last 30 s) never counts, and the saddle has to hold for two
+-- readings at least 4 s apart: the first one only notes it.
+Lr.MOUNT_HOLD, Lr.TAXI_GRACE = 4, 30
+local function onTaxi()
+  local t = try(UnitOnTaxi, "player")
+  return t == true or t == 1
+end
 function Lr.checkMount()
   local j = journal()
   if j.mounted then return end
+  local t = J.now()
+  if onTaxi() then Lr.lastTaxi, Lr.mountSeen = t, nil; return end
   local up = try(IsMounted)
-  if up == true or up == 1 then
-    j.mounted = true
-    local zone = J.zoneName()
-    J.add("mount", fill(pick(MOUNT, zone), { zone = zone }))
+  if not (up == true or up == 1) or (J.inInstance and J.inInstance()) then Lr.mountSeen = nil; return end
+  if Lr.lastTaxi and t - Lr.lastTaxi < Lr.TAXI_GRACE then return end
+  if not Lr.mountSeen then
+    Lr.mountSeen = t
+    ns.after(Lr.MOUNT_HOLD + 0.5, function() pcall(Lr.checkMount) end)
+    return
+  end
+  if t - Lr.mountSeen < Lr.MOUNT_HOLD then return end
+  j.mounted = true
+  local zone = J.zoneName()
+  J.add("mount", fill(pick(MOUNT, zone), { zone = zone }))
+end
+
+-- Journals from before the taxi check may hold a flight written as the first ride: take it out once,
+-- and the next real ride writes it again.
+function Lr.fixMount(j)
+  if j.mountFix == 1 then return end
+  j.mountFix = 1
+  local kept = {}
+  for _, e in ipairs(j.events or {}) do if e.k ~= "mount" then kept[#kept + 1] = e end end
+  if #kept ~= #(j.events or {}) then
+    j.events = kept
+    J.version = (J.version or 0) + 1
+  end
+  j.mounted = nil
+end
+
+-- A card as a big moment goes into the book, so you watch the story being written: one at a time,
+-- Lr.CARD_GAP (20 s) apart; in combat the newest waits for the next tick out of it. The level-up
+-- banner and the profession cards already tell levels and caps. db.noJourneyCards turns it off.
+Lr.CARD_GAP = 20
+Lr.CARD_KINDS = { boss = "A boss falls", first = "A first", rare = "A rare foe", mount = "Your own mount", chain = "A story ends",
+  dungeon = "Into the deep", run = "A dungeon run", pvp = "Blood and honour", bg = "A battleground", zone = "A new land",
+  death = "A fall", close = "A close call", wipe = "A wipe", elite = "An elite falls", milestone = "A milestone", home = "A new home",
+  guild = "A guild", duel = "A duel", rez = "Saved", upgrade = "Better gear" }
+function Lr.announce(e)
+  if type(e) ~= "table" or not Lr.CARD_KINDS[e.k] or ns.db().noJourneyCards then return end
+  if e.k == "upgrade" and (tonumber(e.iq) or 0) < 3 then return end
+  if try(InCombatLockdown) or (try(UnitAffectingCombat, "player")) then Lr.pendingCard = e; return end
+  local t = J.now()
+  if Lr.lastCard and t - Lr.lastCard < Lr.CARD_GAP then Lr.pendingCard = e; return end
+  Lr.lastCard, Lr.pendingCard = t, nil
+  local text = e.s or ""
+  if #text > 64 then text = text:sub(1, 61) .. "..." end
+  local l = tonumber(e.l) or J.level()
+  ns.showCard("A NEW LINE IN YOUR JOURNEY", "Chapter " .. (J.roman and J.roman(l) or l) .. "  -  level " .. l,
+    { { J.ICON[e.k] or J.ICON.quest, Lr.CARD_KINDS[e.k], text } }, function()
+      if J.openChapter then J.openChapter(l) end
+      ns.openTab("journey")
+    end, { tab = "journey" })
+end
+function Lr.flushCard()
+  local e = Lr.pendingCard
+  if not e or try(InCombatLockdown) then return end
+  if Lr.lastCard and J.now() - Lr.lastCard < Lr.CARD_GAP then return end
+  Lr.pendingCard = nil
+  Lr.announce(e)
+end
+do
+  local add = J.add
+  J.add = function(...)
+    local e = add(...)
+    local ok, err = pcall(Lr.announce, e)
+    if not ok and not Lr.errored then Lr.errored = true; ns.say("journey error: " .. Q.plain(err)) end
+    return e
   end
 end
 
@@ -346,12 +416,14 @@ local EVENTS = {
     J.add("rest", fill(pick(REST, place .. t), { place = Q.plain(place) }))
   end,
   PLAYER_MOUNT_DISPLAY_CHANGED = function() Lr.checkMount() end,
+  PLAYER_CONTROL_LOST = function() if onTaxi() then Lr.lastTaxi, Lr.mountSeen = J.now(), nil end end,
 }
 
 local frame
 function ns.startJourneyLore()
   if frame then return end
   local j = journal()
+  Lr.fixMount(j)
   if j.home == nil then j.home = bindPlace() or false end -- the bind you log in with is not a new home
   frame = CreateFrame("Frame")
   for event in pairs(EVENTS) do pcall(frame.RegisterEvent, frame, event) end
@@ -360,7 +432,7 @@ function ns.startJourneyLore()
     if not ok and not Lr.errored then Lr.errored = true; ns.say("journey error: " .. Q.plain(err)) end
   end)
   ns.every(10, function()
-    local ok, err = pcall(function() Lr.checkMarks(); Lr.checkMount() end)
+    local ok, err = pcall(function() Lr.checkMarks(); Lr.checkMount(); Lr.flushCard() end)
     if not ok and not Lr.errored then Lr.errored = true; ns.say("journey error: " .. Q.plain(err)) end
   end)
 end

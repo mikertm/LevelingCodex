@@ -1,5 +1,15 @@
 # Leveling Codex
 
+## v0.32.0
+- **Journey: fixed your first mount being a flight path.** The game says you're mounted on a flight path too, so the Journey wrote a flight down as your first mount. A flight path no longer counts, and you have to stay in the saddle for a few seconds. The wrong moment is taken out of your book, and your next real ride is written in its place.
+- **Journey: a busy chapter stays readable.**
+    - Three or more of the same small moment on one day fold into a single line, for example "Traded at the auction house 14 times" with the gold spent in all. Click it to read each one, and click again to fold it away. This covers auction trips, sales, mailbox gold, flights, inns, campfires, gathering, fishing, crafting and trades. Quests fold only on a very busy day.
+    - Trips to the same auction house within three hours now go into one moment that keeps count ("3 visits, bought 40 lots").
+    - A long chapter runs over several pages with **Page 2 of 3 >** and **< Page 1** turns, filling both sides of the book instead of one endless column.
+    - Each chapter opens with its **HIGHLIGHTS**: up to three big moments (bosses, firsts, rares, dungeons, close calls, your first mount).
+- **Journey: a cleaner map.** Your trail is drawn as a line in your level's colour, with gaps where you hearthed or flew. Before, it was hundreds of dots that ran into blobs. Soft washes mark the places you kept coming back to. Nearby pins gather into one with a count, and small moments (gathering, gold, flights, inns) are small dots, so only the big ones wear an icon. The world map trail is a line too.
+- **Journey: watch the story being written.** A big moment (a boss, a first, a rare, a new land, a fall, a close call, a dungeon run) shows a small card as it goes into the book. Click the card to open that chapter. Turn it off with Journey > Map > Show a card when a big moment is written.
+
 ## v0.31.7
 - **The profit record now matches the gold you made:**
     - Old trades that drop off the trade log keep their money in the record. Before, a sale whose purchase had dropped off counted as pure profit, so NET PROFIT kept rising by itself.

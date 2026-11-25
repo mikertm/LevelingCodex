@@ -13546,8 +13546,22 @@ function S.journeyLore()
   MOCK.bind = "Sentinel Hill"
   MOCK.event("HEARTHSTONE_BOUND")
   check(journeyHas("home", "Sentinel Hill"), "a new home is a moment")
-  -- the first mount, once
+  -- a flight path says "mounted" too: it is no first ride
+  check(j.mountFix == 1, "an older journal's ride is checked again once")
+  MOCK.mounted, MOCK.onTaxi = true, true
+  MOCK.event("PLAYER_MOUNT_DISPLAY_CHANGED")
+  MOCK.advance(10.5)
+  MOCK.advance(10.5)
+  check(not journeyHas("mount"), "a flight path is not your own mount")
+  MOCK.onTaxi = false
+  MOCK.advance(10.5)
+  check(not journeyHas("mount"), "just after landing still isn't a ride")
+  MOCK.mounted = false
+  MOCK.advance(31)
+  -- a moment in the saddle is not enough; the first mount, once
   MOCK.mounted = true
+  MOCK.event("PLAYER_MOUNT_DISPLAY_CHANGED")
+  check(not journeyHas("mount"), "the first reading only notes the saddle")
   MOCK.advance(10.5)
   MOCK.advance(10.5)
   local mounts = 0
@@ -13873,7 +13887,10 @@ function S.journeyWilds()
   click(win(), "Story")
   click(win(), "Latest")
   click(win(), "Fortunes")
-  check(questText(win(), "Malachite"), "the Fortunes filter keeps gathering")
+  local veins = findButton(win(), function(l) return l:find("^Fold Worked the veins") ~= nil end)
+  check(veins, "a day of mining folds into one line")
+  veins:Click()
+  check(questText(win(), "Malachite"), "the Fortunes filter keeps gathering, and the fold opens")
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
@@ -14057,6 +14074,76 @@ function S.journeyThin()
   MOCK.questX = 30; MOCK.advance(2.1)
   check(journey.points <= 200, "the trail is thinned under the cap (" .. tostring(journey.points) .. ")")
   check(#journey.trail[1429] >= 4, "every run is kept")
+end
+
+-- The Story keeps a busy chapter readable: a day of auction trips folds into one line (a click opens
+-- it), the chapter runs over several pages with page turns, its highlights lead the left sheet, and a
+-- flight once written as the first ride is taken out of an older journal.
+function S.journeyStoryPages()
+  local base = 1700000000 - 20 * 86400
+  local events = { { t = base, k = "level", l = 7, s = "Level 7 at last" },
+    { t = base + 60, k = "mount", l = 7, s = "Your own mount, at last: the roads of Elwynn Forest flew by" },
+    { t = base + 120, k = "boss", l = 7, s = "Brought down Hogger at last", m = 1429, x = 40, y = 60 } }
+  for i = 1, 40 do
+    events[#events + 1] = { t = base + 200 + i * 60, k = "auction", l = 7, s = "Haggled at the auction house in Stormwind City: bought "
+      .. i .. " lots", d = "10s spent" }
+  end
+  for i = 1, 30 do
+    events[#events + 1] = { t = base + 86400 * (1 + math.floor(i / 3)) + i * 60, k = "quest", l = 7, s = "Saw quest number " .. i
+      .. " through", m = 1429, x = 30 + i, y = 40 }
+  end
+  LevelingCodexCharDB = { journey = { version = 1, started = base, zones = {}, order = {}, trail = {}, points = 0, walked = 0,
+    events = events, pals = {}, deaths = 0, mounted = true } }
+  local j = LevelingCodexCharDB.journey
+  MOCK.level = 7
+  S.login()
+  MOCK.advance(3)
+  check(j.mountFix == 1 and not j.mounted and not journeyHas("mount"), "a ride from an older journal is taken out to be written again")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Story")
+  click(win(), "Latest")
+  check(questText(win(), "HIGHLIGHTS") and questText(win(), "Brought down Hogger at last"), "the chapter's highlights lead it")
+  local fold = findButton(win(), function(l) return l == "Fold Traded at the auction house 40 times" end)
+  check(fold, "forty trips to the auction house fold into one line")
+  check(questText(win(), "4g spent in all"), "the fold sums what the trips spent")
+  check(not questText(win(), "bought 17 lots"), "the folded trips are not each written out")
+  fold:Click()
+  check(questText(win(), "bought 3 lots"), "a click opens the fold")
+  click(win(), "Fold Traded at the auction house 40 times")
+  check(not questText(win(), "bought 3 lots"), "and a second click folds it again")
+  local nextPage = findButton(win(), function(l) return l:find("^Page 2 of %d >$") ~= nil end)
+  check(nextPage, "a long chapter runs over more than one page")
+  nextPage:Click()
+  check(questText(win(), "CHAPTER VII, CONTINUED") and questText(win(), "PAGE 2"), "the second page of the chapter")
+  check(findButton(win(), function(l) return l == "< Page 1" end), "and a way back")
+  -- trips to the same auction house in an afternoon become one moment
+  j.events = {}
+  for _ = 1, 4 do
+    MOCK.openAuction()
+    MOCK.event("AUCTION_HOUSE_AUCTION_CREATED", 1)
+    MOCK.closeAuction()
+    MOCK.advance(60)
+  end
+  local trips = 0
+  for _, e in ipairs(j.events) do if e.k == "auction" then trips = trips + 1 end end
+  check(trips == 2, "the first auction is its own moment, the next trips share one (" .. trips .. ")")
+  check(journeyHas("auction", "3 visits"), "the shared moment counts the visits")
+  -- a big moment shows a card as it is written; small ones don't, and the setting turns it off
+  local J = MOCK.ns.journey
+  MOCK.advance(30)
+  J.add("rare", "Slew the dread Mor'Ladim in the dark")
+  local toast = _G.LevelingCodexToast
+  check(toast and toast:IsShown() and questText(toast, "A NEW LINE IN YOUR JOURNEY") and questText(toast, "Slew the dread Mor'Ladim"),
+    "a rare kill shows a card as it goes into the book")
+  MOCK.advance(30)
+  toast:Hide()
+  J.add("herb", "Picked some Peacebloom")
+  check(not toast:IsShown(), "a herb is no card")
+  LevelingCodexDB.noJourneyCards = true
+  J.add("boss", "Brought down Hogger again")
+  check(not toast:IsShown(), "the setting turns the cards off")
+  LevelingCodexDB.noJourneyCards = nil
 end
 
 -- Mailbox: Take all empties the inbox one take at a time (gold, then each attachment), leaves Cash
