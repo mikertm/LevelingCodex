@@ -61,11 +61,14 @@ function T.tally(key) return tonumber(journal().tally[key]) or 0 end
 -- Someone you met: a small record per name (trades, duels, resurrections, waves).
 local function person(name, field)
   if type(name) ~= "string" or name == "" then return nil end
+  name = name:match("^([^%-]+)") or name
+  if J.isForgotten and J.isForgotten(name) then return nil end
   local j = journal()
   local p = j.people[name]
   local first = type(p) ~= "table"
   if first then p = { met = now() }; j.people[name] = p end
   if field then p[field] = (tonumber(p[field]) or 0) + 1 end
+  p.last = now()
   return p, first
 end
 
@@ -269,12 +272,13 @@ local function revived(ghost)
   end
 end
 
-local tradeWith
+local tradeWith, tradeBoth
 local function tradeDone()
   local name = tradeWith
   tradeWith = nil
   if not name then return end
   local p, _ = person(name, "trades")
+  if not p then return end
   local n = bump("trades")
   local mine = tonumber(p.trades) or 1
   if mine == 1 then
@@ -306,7 +310,9 @@ local function dropStrayEmotes()
       if type(p) == "table" then
         p.waves = math.max(0, (tonumber(p.waves) or 1) - 1)
         if p.waves == 0 then p.waves = nil end
-        if not p.waves and not p.trades and not p.duels and not p.rez then j.people[e.who] = nil end
+        local other = false
+        for k in pairs(p) do if k ~= "met" and k ~= "last" then other = true end end
+        if not other then j.people[e.who] = nil end
       end
     end
   end
@@ -655,7 +661,16 @@ local HANDLERS = {
   UI_INFO_MESSAGE = function(_, text)
     if text == ERR_TRADE_COMPLETE or text == "Trade complete." then tradeDone() end
   end,
-  TRADE_SHOW = function() tradeWith = try(UnitName, "NPC") end,
+  TRADE_SHOW = function()
+    tradeWith, tradeBoth = try(UnitName, "NPC"), nil
+    if type(tradeWith) ~= "string" or tradeWith == "" then
+      local fs = _G.TradeFrameRecipientNameText
+      tradeWith = fs and fs.GetText and fs:GetText() or nil
+    end
+  end,
+  -- both sides accepted, then the window closed: the trade went through (when "Trade complete." isn't read)
+  TRADE_ACCEPT_UPDATE = function(mine, theirs) tradeBoth = (mine == 1 or mine == true) and (theirs == 1 or theirs == true) end,
+  TRADE_CLOSED = function() if tradeBoth then tradeBoth = nil; ns.after(0.5, tradeDone) end end,
   RESURRECT_REQUEST = function(name) if type(name) == "string" then rezBy = { name = name, t = now() } end end,
   PLAYER_DEAD = function() deadAt = now() end,
   PLAYER_ALIVE = function()
@@ -788,6 +803,8 @@ function T.people()
   for name, rec in pairs(journal().people) do
     if type(rec) == "table" then
       local score = (tonumber(rec.trades) or 0) + 2 * (tonumber(rec.rez) or 0) + (tonumber(rec.duels) or 0) + (tonumber(rec.waves) or 0)
+        + (tonumber(rec.whispers) or 0) + 2 * (tonumber(rec.saved) or 0) + (tonumber(rec.camp) or 0) + (tonumber(rec.toasts) or 0)
+        + (tonumber(rec.killedMe) or 0) + (tonumber(rec.witness) or 0)
       out[#out + 1] = { name = name, rec = rec, score = score }
     end
   end
@@ -802,6 +819,13 @@ local function deedsOf(rec)
   add(rec.trades, "trade")
   add(rec.duels, "duel")
   add(rec.waves, "kind word", "kind words")
+  add(rec.whispers, "whispered talk", "whispered talks")
+  add(rec.saved, "time they tried to save you", "times they tried to save you")
+  add(rec.witness, "fall they saw", "falls they saw")
+  add(rec.camp, "campfire shared", "campfires shared")
+  add(rec.toasts, "toast", "toasts")
+  add(rec.killedMe, "time they killed you", "times they killed you")
+  if #parts == 0 and rec.added then return "added by hand" end
   return #parts > 0 and table.concat(parts, ", ") or "crossed paths"
 end
 

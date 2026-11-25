@@ -1,6 +1,22 @@
 # Leveling Codex
 
-## v0.33.1
+## v0.34.0
+- **Journey: Companions grows into the social side of your story.**
+    - **People you pass are pencilled in.** Friendly players you see nearby (their nameplate, your target or your mouse) go into SEEN ON THE ROAD with where and how often you saw them. They fade after 30 days unless they come back into your story. Nobody new is pencilled in while you rest in a town or an inn.
+    - **Add someone by hand.** Right-click a player, a party frame or a name in chat and pick **Add to my journey**, or use **Add my target** / **Add by name** at the top of the page, **/codex add Name**, or a key (Key Bindings > AddOns > Add my target to my journey).
+    - **Tags and dated entries.** Mark someone Friend, Guildmate, Healer, Tank or Rival, and write short entries that keep the day, your level and where you were.
+    - **Remove someone from your journey.** **Remove from journey** (two clicks) takes out their page, notes, tags and the moments that name them, and the book stops recording them until you add them again.
+    - **More kinds of contact.** Whispered conversations (once you both spoke, so spam doesn't count), who saw you fall and who tried to heal you, players who killed you in the open world, campfire company, and battleground allies and foes.
+    - **Where you met, and when.** Each person's page has a heat map of where you spent time together and a timeline of the days you met.
+    - **Bonds that grow:** Stranger, Acquaintance, Ally, Companion, Sworn Friend, with a bar to the next one. A card and a moment mark each new bond from Ally up.
+    - **Reunions.** When someone from your book is nearby or joins your party after two days or more apart, a card says so and the moment is written.
+    - **Faces you miss.** Allies and closer you haven't seen in 10 days are listed at the top of the page, and Today's entry names one.
+    - **Anniversaries.** A month, a hundred days and a year after you met someone, the book marks it.
+    - **FRIENDS AND STRANGERS fills in:** it counts the new contacts, and a trade now counts when both sides accept it, even if the game's "Trade complete." line isn't read.
+- **Journey: a Fellowships page.** The same two or more people travelling with you for half an hour (or on two days) become a fellowship with its own name (rename it any time), a page, its record and what you did together. AWARDS hand out titles across your companions (road companion, guardian angel, shield wall, pen pal, nemesis and more). GROUP PORTRAITS frame everyone who was there when you gained a level or brought down a boss; Settings can also take a screenshot each time (off by default).
+- **Codex to Codex.** In a party, Codex players swap their journal titles: their page shows their journal's day, epithet and size, and what you are in their book. **Ask to sign** asks them to write a line in your journal (they type /codex sign), **Raise a toast** writes a toast into theirs, and a level gained in a party is cheered in your companions' journals. Settings > General > JOURNEY POP-UPS can turn the sharing and the social cards off.
+- **Journey pop-ups can be turned off in Settings.** Settings > General > JOURNEY POP-UPS has a switch for the "A new line in your journey" card and one for the "Last time on your journey..." recap. The moments are still written in the Journey.
+- **Flight paths no longer count as miles walked.** A flight (or a boat, or anything faster than a mount) leaves no trail, and the miles you have so far are worked out again without the flights. The miles you fly are kept apart: hover miles walked to see them.
 - **A smarter quest arrow.** The arrow used to decide by the map the game says you're on, so a subzone, a city or a neighbouring map could throw it ("Travel to Desolace" while you stood in Desolace). It now goes by where you stand in the world, the way other guide addons do:
     - Standing inside the step's zone, it points straight at the step with its distance, whatever map the game reports.
     - A zone's flight-hub flight is only offered when it can beat walking. It no longer sends you back across Westfall to fly to Darkshire for Sven's Camp, a short walk over the east bridge.
@@ -15,7 +31,6 @@
 - **Journey: quest lines that match the quest.** Every collect quest read as "Ran an errand" because Forever writes objectives as "0/7 Alterac Signet Ring". The journal now reads both forms and tells a bounty, a hunt for one foe, a cull, loot taken from foes ("Took seven Alterac Signet Rings off the Syndicate"), trophies brought back as proof, gathering, food for the kitchen, a lost thing found, shopping, an escort, scouting, a deed, a delivery and an errand apart. Each has its own set of lines, foe families add their own, and a line that opens like one of your last few quest moments gives way to another.
 - **Journey: the Overview's numbers, audited.**
     - **Miles walked** was always 0.0: the trail measured distance from map sizes it read the wrong way. It counts now, and your miles so far are worked out from the trail you already have.
-    - **Flight paths no longer count as miles walked.** A flight (or a boat, or anything faster than a mount) leaves no trail, and the miles you have so far are worked out again without the flights. The miles you fly are kept apart: hover miles walked to see them.
     - **Lands explored** and WHERE YOU ARE now count the same lands (one said 6, the other 7).
     - **Quests done**, **dungeons** and **deaths** take the larger of the journal's count and the Stats tab's, so neither undercounts when one started later.
     - **Today's entry** adds the experience earned, how much heavier or lighter your purse is, and flights taken. On a short day so far it also says what happened last time.

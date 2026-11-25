@@ -68,7 +68,8 @@ for _, event in ipairs({ "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED", "
   "AUCTION_CANCELED", "AUCTION_HOUSE_BROWSE_RESULTS_ADDED", "AUCTION_HOUSE_THROTTLED_SYSTEM_READY", "AUCTION_HOUSE_BROWSE_FAILURE", "UNIT_HEALTH",
   "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_COMBAT_HONOR_GAIN", "RESURRECT_REQUEST", "TRADE_SHOW",
   "UI_INFO_MESSAGE", "PLAYER_GUILD_UPDATE", "UPDATE_BATTLEFIELD_SCORE", "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE", "UI_ERROR_MESSAGE",
-  "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED" }) do
+  "AUCTION_HOUSE_PURCHASE_COMPLETED", "PLAYER_UPDATE_RESTING", "PLAYER_MOUNT_DISPLAY_CHANGED", "NAME_PLATE_UNIT_ADDED",
+  "UPDATE_MOUSEOVER_UNIT", "CHAT_MSG_WHISPER", "CHAT_MSG_WHISPER_INFORM", "TRADE_ACCEPT_UPDATE", "TRADE_CLOSED" }) do
   MOCK.knownEvents[event] = true
   table.insert(MOCK.optionalEvents, event)
 end
@@ -111,10 +112,11 @@ function UnitIsConnected(unit)
   return true
 end
 C_ChatInfo = {
-  RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefix = prefix; return true end,
-  SendAddonMessage = function(prefix, text, channel)
+  RegisterAddonMessagePrefix = function(prefix) MOCK.addonPrefixes = MOCK.addonPrefixes or {}; MOCK.addonPrefixes[prefix] = true; return true end,
+  SendAddonMessage = function(prefix, text, channel, target)
+    if #text > 255 then error("SendAddonMessage: over 255 bytes", 2) end
     MOCK.addonSent = MOCK.addonSent or {}
-    table.insert(MOCK.addonSent, { prefix = prefix, text = text, channel = channel })
+    table.insert(MOCK.addonSent, { prefix = prefix, text = text, channel = channel, target = target })
   end,
 }
 function SendChatMessage(text, channel)
@@ -961,12 +963,40 @@ end
 
 function GetTime() return MOCK.time end
 function time() return 1700000000 + math.floor(MOCK.time) end
+-- Other players around you (JourneySocial): MOCK.units[unit] = { name, friend, class, race, level, guild, hidden }
+-- for nameplateN / mouseover / target (a unit there wins over MOCK.target); UnitExists, UnitIsFriend, UnitIsVisible
+-- and UnitIsUnit read it. Party members count as visible unless .hidden.
+MOCK.units = {}
+function UnitExists(unit)
+  if MOCK.units[unit] then return true end
+  if MOCK.partyMember(unit) then return true end
+  if unit == "player" then return true end
+  if unit == "target" then return MOCK.target ~= nil end
+  return false
+end
+function UnitIsFriend(a, unit)
+  local u = MOCK.units[unit]
+  if u then return u.friend ~= false end
+  if MOCK.partyMember(unit) then return true end
+  if unit == "target" and MOCK.target then return not MOCK.target.hostile end
+  return false
+end
+function UnitIsVisible(unit)
+  local u = MOCK.units[unit] or MOCK.partyMember(unit)
+  if u then return not u.hidden end
+  return unit == "player"
+end
+function UnitIsUnit(a, b) return a == b end
 function UnitLevel(unit)
+  local u = MOCK.units[unit]
+  if u then return u.level end
   local m = MOCK.partyMember(unit)
   if m then return m.level end
   return MOCK.level
 end
 function UnitName(unit)
+  local u = MOCK.units[unit]
+  if u then return u.name, u.realm end
   local m = MOCK.partyMember(unit)
   if m then return m.name, m.realm end
   if unit == "target" and MOCK.target then return MOCK.target.name end
@@ -976,7 +1006,7 @@ end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
   PALADIN = "Paladin", SHAMAN = "Shaman", WARLOCK = "Warlock", DRUID = "Druid" }
 function UnitClass(unit)
-  local m = MOCK.partyMember(unit)
+  local m = MOCK.units[unit] or MOCK.partyMember(unit)
   if unit == "target" and MOCK.target and MOCK.target.class then m = { class = MOCK.target.class } end
   local class = m and m.class or MOCK.class
   return CLASS_NAMES[class] or class, class
@@ -1343,12 +1373,38 @@ function UnitIsDead(unit) return unit == "target" and MOCK.target and MOCK.targe
 function UnitClassification(unit) return unit == "target" and MOCK.target and MOCK.target.kind or "normal" end
 function UnitIsTapDenied(unit) return unit == "target" and MOCK.target and MOCK.target.tapDenied or false end
 -- MOCK.target.player / race / class: another player; MOCK.guild (GetGuildInfo), MOCK.bgWinner (0 Horde, 1 Alliance).
-function UnitIsPlayer(unit) return unit == "target" and MOCK.target and MOCK.target.player or false end
-function GetGuildInfo(unit) if unit == "player" then return MOCK.guild end end
+function UnitIsPlayer(unit)
+  if MOCK.units[unit] or MOCK.partyMember(unit) then return true end
+  return unit == "target" and MOCK.target and MOCK.target.player or false
+end
+function GetGuildInfo(unit)
+  if MOCK.units[unit] then return MOCK.units[unit].guild end
+  if unit == "player" then return MOCK.guild end
+end
+-- Battleground scores (MOCK.bgScores = { { name, faction (0 Horde / 1 Alliance), class } }) and screenshots.
+function GetNumBattlefieldScores() return MOCK.bgScores and #MOCK.bgScores or 0 end
+function GetBattlefieldScore(i)
+  local r = MOCK.bgScores and MOCK.bgScores[i]
+  if r then return r.name, 0, 0, 0, 0, r.faction, "Human", "Warrior", r.class end
+end
+function Screenshot() MOCK.screenshots = (MOCK.screenshots or 0) + 1 end
+-- The unit menus (Menu.ModifyMenu): MOCK.menus[tag] = the callback, MOCK.openMenu(tag, context) runs it on a
+-- fake root and returns the buttons made ({ text, fn }).
+MOCK.menus = {}
+Menu = { ModifyMenu = function(tag, fn) MOCK.menus[tag] = fn end }
+function MOCK.openMenu(tag, ctx)
+  local made = {}
+  local root = { CreateDivider = function() end, CreateTitle = function() end,
+    CreateButton = function(_, text, fn) made[#made + 1] = { text = text, fn = fn } end }
+  if MOCK.menus[tag] then MOCK.menus[tag](nil, root, ctx) end
+  return made
+end
 function GetBattlefieldWinner() return MOCK.bgWinner end
 function GetInventoryItemQuality(unit, slot) return MOCK.wornQuality and MOCK.wornQuality[slot] end
 function UnitFactionGroup() return MOCK.faction or "Alliance", MOCK.faction or "Alliance" end
 function UnitRace(unit)
+  local u = MOCK.units[unit] or MOCK.partyMember(unit)
+  if u and u.race then return u.race, u.race end
   if unit == "target" and MOCK.target and MOCK.target.race then return MOCK.target.race, MOCK.target.race end
   local r = MOCK.race or "Human"; return r, r
 end
@@ -2147,7 +2203,8 @@ local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin"
   "GetMerchantItemMaxStack", "BuyMerchantItem", "CanMerchantRepair", "GetRepairAllCost", "RepairAllItems", "MerchantFrame", "WorldMapFrame", "C_Item",
   "C_AuctionHouse", "AuctionHouseFrame", "GetRealmName", "ItemLocation", "debugprofilestop",
   "GetInboxNumItems", "GetInboxHeaderInfo", "GetInboxInvoiceInfo", "GetInboxItem", "GetInboxItemLink", "TakeInboxMoney",
-  "TakeInboxItem", "MailFrame" }
+  "TakeInboxItem", "MailFrame", "Menu", "UnitExists", "UnitIsFriend", "UnitIsVisible", "UnitIsUnit", "GetNumBattlefieldScores",
+  "GetBattlefieldScore", "Screenshot" }
 
 function MOCK.setup(opts)
   MOCK.class = opts.class
@@ -2188,6 +2245,7 @@ local ALLOWED_GLOBALS = {
   BINDING_HEADER_LEVELINGCODEX = true, BINDING_NAME_LEVELINGCODEX_TOGGLE = true, ["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = true,
   ["BINDING_NAME_CLICK LevelingCodexQuestTarget:LeftButton"] = true,
   ["BINDING_NAME_CLICK LevelingCodexMailTakeAll:LeftButton"] = true,
+  ["BINDING_NAME_CLICK LevelingCodexJourneyAdd:LeftButton"] = true,
   LevelingCodexQuests = true, LevelingCodexQuestViewer = true, LevelingCodexQuestArrow = true,
   -- made by the test scenarios, not the addon
   PlayerSpellsFrame = true, ClassTalentFrame = true, ToggleTalentFrame_Mock = true,

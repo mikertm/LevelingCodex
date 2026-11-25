@@ -24,7 +24,8 @@ Co.NOTE_MAX = 200
 local SHARED = { quest = "quests", chain = "quests", elite = "quests", boss = "bosses", dungeon = "dungeons", run = "runs",
   wipe = "wipes", death = "deaths", level = "levels", rare = "rares", close = "close", bg = "bgs", zone = false }
 -- moments that name the person themselves (e.who)
-local PERSONAL = { pal = true, rez = true, trade = true, duel = true, emote = true }
+local PERSONAL = { pal = true, rez = true, trade = true, duel = true, emote = true, whisper = true, reunion = true, bond = true,
+  signed = true, toast = true, cheer = true, anniversary = true, pvp = true, death = true }
 
 local function plain(s) return Q.plain(tostring(s or "")) end
 local function now() return J.now() end
@@ -72,7 +73,7 @@ local function party()
   for i = 1, math.min(4, n) do
     local unit = "party" .. i
     local name = try(UnitName, unit)
-    if type(name) == "string" and name ~= "" and name ~= "Unknown" then
+    if type(name) == "string" and name ~= "" and name ~= "Unknown" and not (J.isForgotten and J.isForgotten(name)) then
       out[#out + 1] = { name = name, level = num((try(UnitLevel, unit))) }
     end
   end
@@ -142,6 +143,11 @@ local function sharedWith(e, name)
   if type(e.with) == "string" then
     for n in e.with:gmatch("[^,]+") do if n == name then return true end end
   end
+  for _, list in ipairs({ e.saw, e.tried }) do
+    if type(list) == "string" then
+      for n in list:gmatch("[^,]+") do if n == name then return true end end
+    end
+  end
   return PERSONAL[e.k] and (e.who == name or e.who == plain(name)) or false
 end
 
@@ -197,6 +203,11 @@ function Co.list()
       end
     end
   end
+  if type(j.sighted) == "table" then
+    for name, rec in pairs(j.sighted) do
+      if type(rec) == "table" then entry(name).seen = rec end
+    end
+  end
   for _, p in ipairs(out) do p.f = type(j.fellows[p.name]) == "table" and j.fellows[p.name] or {} end
   table.sort(out, function(a, b)
     if a.secs ~= b.secs then return a.secs > b.secs end
@@ -238,6 +249,7 @@ end
 
 local function className(p)
   local token = p.pal and type(p.pal.class) == "string" and p.pal.class or nil
+  if not token and type(p.seen) == "table" and type(p.seen.c) == "string" then token = p.seen.c end
   return token and (token:sub(1, 1) .. token:sub(2):lower()) or nil, token
 end
 
@@ -367,6 +379,7 @@ local function row(V, p, most, x, y, w, lit)
   U.T(p.pal and (p.secs < 60 and "just met" or (J.draw.duration(p.secs) .. " together")) or "met on the road", x + 30, y + 1, w - 30,
     "small", C.light, "RIGHT")
   local bits = {}
+  if J.social then bits[#bits + 1] = select(2, J.social.bond(p.name)) end
   if cls then bits[#bits + 1] = cls end
   local lvl = p.f.theirLevel or (p.pal and p.pal.level)
   if p.pal and lvl then bits[#bits + 1] = "met at level " .. lvl end
@@ -414,6 +427,7 @@ local function personPage(R, p, best, y)
   if cls then sub[#sub + 1] = cls .. ((p.f.lastLevel and p.pal) and (", level " .. p.f.lastLevel .. " when last seen") or "") end
   if p.pal and Co.withYou(p.name) then sub[#sub + 1] = "with you now" end
   if #sub > 0 then y = y + U.T(table.concat(sub, "  -  "), 14, y, W - 28, "small", C.inkSoft, "CENTER") + 8 end
+  if J.social then y = J.social.personTop(R, p, y) end
   y = y + D.initialed(U, C, Co.prose(p), 14, y, W - 28, "body", C.ink) + 10
   if p.pal then
     local b = field(p, "bosses") > 0 and { tostring(field(p, "bosses")), field(p, "bosses") == 1 and "boss" or "bosses" }
@@ -476,7 +490,9 @@ local function personPage(R, p, best, y)
   if b then b.codexLabel = "Note " .. plain(name) end
   y = y + 32
   U.box(0, top, W, y - top, C.panel, C.edge)
-  return y + 12
+  y = y + 12
+  if J.social then y = J.social.personMore(R, p, y) end
+  return y
 end
 
 -- The Companions page (JourneyBook.lua calls it): ly, ry.
@@ -495,6 +511,7 @@ function Co.page(V, y)
   pick = pick or best or all[1]
   -- left: everyone who travelled with you
   local top, ly = y, y
+  if J.social then ly = J.social.leftTop(L, ly); top = ly end
   ly = J.draw.cardTitle(L, "FELLOW ADVENTURERS", 0, ly, W, #pals > 0 and plural(#pals, "companion") or nil)
   if total >= 60 then ly = ly + U.T(J.draw.duration(total) .. " in good company", 14, ly - 6, W - 28, "small", C.dim) + 4 end
   if #pals == 0 then
@@ -512,6 +529,7 @@ function Co.page(V, y)
   U.box(0, top, W, ly - top, C.panel, C.edge)
   ly = ly + 12
   if J.tales and J.tales.companions then ly = J.tales.companions(L, ly) + 12 end
+  if J.social then ly = J.social.leftMore(L, ly) end
   -- right: the chosen person's page
   local ry = y
   if pick then ry = personPage(R, pick, best, ry) end

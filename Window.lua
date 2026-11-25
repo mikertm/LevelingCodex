@@ -1216,6 +1216,24 @@ renderers.settings = function()
       "After a level-up, macros the Codex made switch to the right version for your new level. Your own macros are never touched.")
     y = y + 12
   end }
+  sections[#sections + 1] = { "JOURNEY POP-UPS", "General", function()
+    tick("Show a card when the journal writes a big moment", not db.noJourneyCards,
+      function() db.noJourneyCards = not db.noJourneyCards or nil end,
+      "The \"A new line in your journey\" card at the top of the screen. The moment is still written in the Journey.")
+    tick("Show \"Last time on your journey...\" when I log in", not db.noJourneyRecap,
+      function() db.noJourneyRecap = not db.noJourneyRecap or nil end,
+      "The recap card and chat line after a break.")
+    tick("Show a card when a friend is near, a bond grows or a fellowship forms", not db.noSocialCards,
+      function() db.noSocialCards = not db.noSocialCards or nil end,
+      "Reunions, bonds, fellowships, signatures, toasts and anniversaries. They are still written in the Journey.")
+    tick("Swap journal titles and signatures with other Codex players", not db.noJourneyShare,
+      function() db.noJourneyShare = not db.noJourneyShare or nil end,
+      "In a party, Codex players see each other's journal title and can sign each other's journals and raise toasts.")
+    tick("Take a screenshot for each group portrait", db.journeyScreenshots,
+      function() db.journeyScreenshots = not db.journeyScreenshots or nil end,
+      "When a level or a boss is framed with your party, the game saves a screenshot too (in your Screenshots folder).")
+    y = y + 8
+  end }
   sections[#sections + 1] = { "TALENT WINDOW GUIDE", "Helpers", function()
     tick("Trace my talent in the talent window", not db.noTalentGuide, function() db.noTalentGuide = not db.noTalentGuide end,
       "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")

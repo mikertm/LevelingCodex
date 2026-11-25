@@ -27,7 +27,8 @@ local FILTER_KINDS = {
     milestone = true },
   { first = true, upgrade = true, cap = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
     mount = true, mine = true, herb = true, skin = true, fish = true },
-  { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true },
+  { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true, whisper = true, reunion = true,
+    bond = true, fellowship = true, signed = true, toast = true, cheer = true, anniversary = true },
   { zone = true, flight = true, start = true, camp = true, mount = true, home = true, rest = true, milestone = true },
   { death = true, close = true, wipe = true, expired = true, abandon = true },
 }
@@ -316,7 +317,8 @@ local LAYERS = {
     kinds = { first = true, upgrade = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
       mine = true, herb = true, skin = true, fish = true }, tip = "Loot, gear, crafting, gathering, fishing and gold." },
   { key = "fellowship", label = "Fellowship", icon = ICON.pal, color = { 0.75, 0.55, 0.95 },
-    kinds = { pal = true, rez = true, trade = true, emote = true, guild = true }, tip = "Companions, rezzes, trades and kind words." },
+    kinds = { pal = true, rez = true, trade = true, emote = true, guild = true, whisper = true, reunion = true, bond = true, fellowship = true,
+      signed = true, toast = true, cheer = true, anniversary = true }, tip = "Companions, rezzes, trades and kind words." },
 }
 local function layerOf(e)
   for i = 2, #LAYERS do if LAYERS[i].kinds[e.k] then return LAYERS[i] end end
@@ -1992,6 +1994,6 @@ end
 -- Drawing helpers for the pages other files add (JourneyQuestLog.lua, JourneyTales.lua).
 J.draw = { page = page, cardTitle = cardTitle, dayOf = dayOf, plural = plural, duration = duration, roman = roman,
   listCard = listCard, itemIcon = itemIcon, DEATH_INK = DEATH_INK, flow = flow, initialed = initialed,
-  readable = readable, ornament = ornament }
+  readable = readable, ornament = ornament, mapArt = mapArt }
 
 ns.addTab("journey", "Journey", render, BOOK_W)

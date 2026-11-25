@@ -56,6 +56,7 @@ local function start()
   ns.startJourneyLore()
   ns.startJourneyWilds()
   ns.startJourneyCompanions()
+  ns.startJourneySocial()
   ns.startJourneyQuestLines()
 end
 
@@ -163,10 +164,12 @@ BINDING_NAME_LEVELINGCODEX_TOGGLE = "Open or close the Codex"
 _G["BINDING_NAME_CLICK LevelingCodexQuestItem:LeftButton"] = "Use the quest guide item"
 _G["BINDING_NAME_CLICK LevelingCodexQuestTarget:LeftButton"] = "Target the quest guide NPC"
 _G["BINDING_NAME_CLICK LevelingCodexMailTakeAll:LeftButton"] = "Take all mail"
+_G["BINDING_NAME_CLICK LevelingCodexJourneyAdd:LeftButton"] = "Add my target to my journey"
 function LevelingCodex_Toggle() ns.toggleWindow() end
 
 SLASH_LEVELINGCODEX1 = "/codex"
 SlashCmdList.LEVELINGCODEX = function(msg)
+  local rawRest = tostring(msg or ""):gsub("^%s+", ""):gsub("%s+$", ""):match("^%S*%s*(.-)$") or ""
   msg = string.lower((tostring(msg or ""):gsub("^%s+", ""):gsub("%s+$", "")))
   local cmd, rest = msg:match("^(%S*)%s*(.-)$")
   if not LevelingCodexDB then LevelingCodexDB = {} end
@@ -207,10 +210,20 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     ns.say("banner, window and minimap button positions and sizes reset.")
   elseif cmd == "mail" then
     ns.mailbox.takeAll()
+  elseif cmd == "add" then
+    local S = ns.journey.social
+    if rawRest ~= "" then
+      local ok, why = S.add(rawRest)
+      if not ok then ns.say(why) end
+    else
+      S.addTarget()
+    end
+  elseif cmd == "sign" then
+    ns.journey.social.openSign()
   elseif cmd == "debug" then
     for _, line in ipairs(ns.debugLines()) do ns.say(line) end
   else
-    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex mail (take all at a mailbox), /codex test, /codex reset, /codex debug")
+    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex mail (take all at a mailbox), /codex add [name] (add your target or a name to your journey), /codex sign, /codex test, /codex reset, /codex debug")
   end
 end
 
@@ -257,6 +270,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.journeyVoiceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyWildsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyCompanionsDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.journeySocialDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyQuestLinesDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questMapDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end

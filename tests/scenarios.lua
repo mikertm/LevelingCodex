@@ -2401,7 +2401,7 @@ function S.questParty()
   local frame = questViewer()
   MOCK.event("GROUP_ROSTER_UPDATE")
   local last = MOCK.addonSent and MOCK.addonSent[#MOCK.addonSent]
-  check(MOCK.addonPrefix == "LevCodex" and last and last.channel == "PARTY", "the Codex talks to the party by addon message")
+  check(MOCK.addonPrefixes and MOCK.addonPrefixes.LevCodex and last and last.channel == "PARTY", "the Codex talks to the party by addon message")
   local pos
   for _, m in ipairs(MOCK.addonSent) do pos = tonumber(m.text:match("^S;northshire;(%d+);Accept %- A Threat Within$")) or pos end
   check(pos, "the current step is told to the party")
@@ -10943,8 +10943,8 @@ function S.statsCounters()
   check(st.totals.hearths == 1, "a hearthstone use")
   check(not next(MOCK.events.UNIT_SPELLCAST_SUCCEEDED or {}),
     "spell casts are watched for you only, not every unit around you")
-  check(MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party1", "cast-2", 8690) == 0 and st.totals.hearths == 1,
-    "a party member's hearthstone doesn't reach the Codex")
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party1", "cast-2", 8690)
+  check(st.totals.hearths == 1, "a party member's hearthstone doesn't count as yours")
   MOCK.event("TIME_PLAYED_MSG", 3600, 600)
   check(st.played.total == 3600 and st.played.level == 600, "/played is remembered")
   local before = L().seconds
@@ -14177,6 +14177,220 @@ function S.journeyCompanions()
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]"), "moments are ASCII: " .. e.s) end
 end
 
+-- The social side of the Journey: sightings, adding and tagging, whispers, fellowships, bonds, portraits,
+-- Codex to Codex (titles, signatures, toasts, cheers), witnesses, campfires, battlegrounds, reunions,
+-- faces you miss, anniversaries, forgetting someone and the Fellowships page.
+function S.journeySocial()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local So = J.social
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  check(questText(win(), "ADD SOMEONE") and questText(win(), "SEEN ON THE ROAD"), "the Companions page has the social cards")
+  check(J.pageError == nil, "the Companions page draws without an error: " .. tostring(J.pageError))
+  click(win(), "Fellowships")
+  check(questText(win(), "FELLOWSHIPS") and questText(win(), "AWARDS") and questText(win(), "GROUP PORTRAITS"), "an empty Fellowships page draws")
+  check(J.pageError == nil, "the Fellowships page draws without an error: " .. tostring(J.pageError))
+  slash("add Eve")
+  local j = LevelingCodexCharDB.journey
+  check(j.people.Eve and j.people.Eve.added, "/codex add Name puts them in the book")
+  if MOCK.minimal then return end
+  -- sightings
+  MOCK.units.nameplate1 = { name = "Cara", class = "PRIEST", level = 8, guild = "Dawn" }
+  MOCK.units.nameplate2 = { name = "Zed", friend = false, class = "ROGUE" }
+  MOCK.event("NAME_PLATE_UNIT_ADDED", "nameplate1")
+  MOCK.event("NAME_PLATE_UNIT_ADDED", "nameplate2")
+  check(j.sighted.Cara and j.sighted.Cara.n == 1 and j.sighted.Cara.d == 1 and j.sighted.Cara.c == "PRIEST", "a friendly player nearby is pencilled in")
+  check(j.sighted.Zed == nil, "a hostile player is not pencilled in")
+  MOCK.resting = true
+  MOCK.units.nameplate3 = { name = "Dax" }
+  MOCK.event("NAME_PLATE_UNIT_ADDED", "nameplate3")
+  check(j.sighted.Dax == nil, "no new names while resting in a town")
+  MOCK.resting = nil
+  MOCK.units.nameplate3 = nil
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  check(questText(win(), "Cara") and questText(win(), "seen on 1 day"), "SEEN ON THE ROAD lists Cara")
+  click(win(), "Companion Cara")
+  check(J.companions.chosen() == "Cara" and questText(win(), "BOND: STRANGER"), "a pencilled name opens a page with its bond")
+  click(win(), "Tag Friend")
+  check(j.tags.Cara and j.tags.Cara.Friend and So.inBook("Cara"), "a tag puts them in the book")
+  click(win(), "Entry Cara")
+  local copy = _G.LevelingCodexCopy
+  copy.edit:SetText("Healed me through the Fargodeep mine")
+  click(copy, "Save entry")
+  check(j.diary.Cara and j.diary.Cara[1].s == "Healed me through the Fargodeep mine", "a dated entry is kept")
+  check(questText(win(), "Fargodeep mine"), "the entry shows on their page")
+  -- the unit menu
+  local made = MOCK.openMenu("MENU_UNIT_PLAYER", { name = "Fay" })
+  check(made[1] and made[1].text == "Add to my journey", "the unit menu offers Add to my journey")
+  made[1].fn()
+  check(j.people.Fay and j.people.Fay.added, "the menu adds them")
+  made = MOCK.openMenu("MENU_UNIT_PLAYER", { name = "Fay" })
+  check(made[1] and made[1].text == "Open in my journey", "a second time the menu opens their page")
+  -- whispers: spam gets no reply and counts for nothing
+  MOCK.event("CHAT_MSG_WHISPER", "cheap gold", "Spammer-Realm")
+  check(j.people.Spammer == nil, "a whisper you never answered is not a conversation")
+  MOCK.event("CHAT_MSG_WHISPER", "hi there", "Gil-Realm")
+  MOCK.event("CHAT_MSG_WHISPER_INFORM", "hello!", "Gil-Realm")
+  check(j.people.Gil and j.people.Gil.whispers == 1, "a whispered conversation counts")
+  local found
+  for _, e in ipairs(j.events) do if e.k == "whisper" and e.who == "Gil" then found = e end end
+  check(found, "the first conversation is a moment")
+  -- a party: the Codex says hello, a fellowship forms, the bond grows
+  MOCK.ns.db().journeyScreenshots = true
+  MOCK.party, MOCK.partyMembers = true, { { name = "Ann", level = 5, class = "MAGE" }, { name = "Bo", level = 4, class = "PRIEST" } }
+  MOCK.addonSent = {}
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.advance(6)
+  local hi
+  for _, m in ipairs(MOCK.addonSent) do if m.prefix == "LevCodexJ" and m.text:find("^HI;1;") then hi = m end end
+  check(hi and hi.channel == "PARTY" and hi.text:find("Ann=") and hi.text:find("Bo="), "joining a party says hello to their Codex")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "HI;1;the Wanderer;14;312;22;Tester=3:2", "PARTY", "Ann-Realm")
+  check(j.people.Ann and j.people.Ann.codex and j.people.Ann.codex.ep == "the Wanderer" and j.people.Ann.codex.bond == 3,
+    "their journal title and their bond with you are kept")
+  MOCK.advance(1800, 1)
+  local key = "Ann,Bo"
+  check(j.fellowships[key] and j.fellowships[key].formed, "the same party for half an hour becomes a fellowship")
+  local fe
+  for _, e in ipairs(j.events) do if e.k == "fellowship" then fe = e end end
+  check(fe and fe.with == key, "the fellowship's birth is a moment naming them")
+  MOCK.advance(1800, 1)
+  check(j.bonds.Ann == 3, "an hour together makes an ally (" .. tostring(j.bonds.Ann) .. ")")
+  local bond
+  for _, e in ipairs(j.events) do if e.k == "bond" and e.who == "Ann" then bond = e end end
+  check(bond, "the bond growing is a moment")
+  MOCK.event("QUEST_TURNED_IN", 176, 100, 0)
+  check(j.fellowships[key].quests == 1, "a quest done together counts for the fellowship")
+  -- a group portrait and a cheer for the party
+  MOCK.addonSent = {}
+  MOCK.level = 6
+  MOCK.event("PLAYER_LEVEL_UP", 6)
+  MOCK.advance(1)
+  check(#j.portraits >= 1 and #j.portraits[#j.portraits].who == 2, "a level gained in a party is a group portrait")
+  check((MOCK.screenshots or 0) >= 1, "the portrait takes a screenshot when that is on")
+  local lv
+  for _, m in ipairs(MOCK.addonSent) do if m.text == "LV;6" then lv = m end end
+  check(lv, "your level-up is told to the party's Codex")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "LV;7", "PARTY", "Ann")
+  local cheer
+  for _, e in ipairs(j.events) do if e.k == "cheer" and e.who == "Ann" then cheer = e end end
+  check(cheer and cheer.s:find("level 7"), "a companion's level-up is a cheer in your journal")
+  -- sign my journal
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  click(win(), "Companion Ann")
+  check(questText(win(), "keeps a Codex journal too") and questText(win(), "WHERE YOU MET"), "their page shows their journal and where you met")
+  MOCK.addonSent = {}
+  click(win(), "Sign Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "SQ;Ann", "Ask to sign sends the request")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SG;Tester;Best tank in Elwynn", "PARTY", "Bo")
+  check(j.signatures.Bo == nil, "a signature nobody asked for is ignored")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SG;Tester;Best mage in Elwynn; truly", "PARTY", "Ann")
+  check(j.signatures.Ann and j.signatures.Ann[1].s == "Best mage in Elwynn; truly", "the signature is kept")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SQ;Tester", "PARTY", "Bo")
+  MOCK.addonSent = {}
+  slash("sign")
+  check(copy:IsShown(), "/codex sign opens the signing box")
+  click(copy, "Sign it")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text:find("^SG;Bo;"), "signing sends your line")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
+  local toasts = 0
+  for _, e in ipairs(j.events) do if e.k == "toast" then toasts = toasts + 1 end end
+  check(toasts == 1 and j.people.Bo.toasts == 1, "a toast is written once an hour")
+  -- a death: who saw it, who tried to save you
+  MOCK.spells[2061] = "Flash Heal"
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party2", "cast", 2061)
+  MOCK.event("PLAYER_DEAD")
+  MOCK.advance(1)
+  local death
+  for _, e in ipairs(j.events) do if e.k == "death" then death = e end end
+  check(death and death.saw and death.saw:find("Ann") and death.saw:find("Cara"), "the death names who saw it (" .. tostring(death and death.saw) .. ")")
+  check(death and death.tried == "Bo" and j.people.Bo.saved == 1, "a healer in the party tried to save you")
+  check(death and death.d and death.d:find("tried to save you"), "the moment says so")
+  MOCK.dead = nil
+  -- a campfire and a battleground
+  local camp = J.add("camp", "Made camp", "Campfire")
+  check(camp.with and camp.with:find("Cara") and j.people.Cara and j.people.Cara.camp == 1, "campfire company is kept")
+  MOCK.bgScores = { { name = "Hal", faction = 1, class = "PALADIN" }, { name = "Ivo", faction = 0, class = "SHAMAN" } }
+  J.add("bg", "Won Warsong Gulch", "Battleground")
+  check(j.sighted.Hal and j.sighted.Hal.bgw == 1 and j.sighted.Ivo and j.sighted.Ivo.bgv == 1, "battleground allies and foes are pencilled in")
+  -- a trade read from both sides accepting
+  MOCK.tradeName = "Jo"
+  MOCK.event("TRADE_SHOW")
+  MOCK.event("TRADE_ACCEPT_UPDATE", 1, 1)
+  MOCK.event("TRADE_CLOSED")
+  MOCK.advance(1)
+  check(j.people.Jo and j.people.Jo.trades == 1, "a trade both sides accepted counts")
+  -- a reunion after days apart
+  MOCK.party, MOCK.partyMembers = nil, {}
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local old = J.now() - 3 * 86400
+  j.fellows.Ann.last, j.sighted.Ann.l, j.people.Ann.last, j.people.Ann.met, j.trace.Ann.last = old, old, old, old, old
+  MOCK.party, MOCK.partyMembers = true, { { name = "Ann", level = 9, class = "MAGE" } }
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local re
+  for _, e in ipairs(j.events) do if e.k == "reunion" and e.who == "Ann" then re = e end end
+  check(re and re.s:find("3 days"), "meeting again after days apart is a reunion")
+  -- faces you miss, anniversaries, awards
+  MOCK.party, MOCK.partyMembers = nil, {}
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  local long = J.now() - 12 * 86400
+  j.fellows.Ann.last, j.sighted.Ann.l, j.people.Ann.last, j.people.Ann.met, j.trace.Ann.last = long, long, long, long, long
+  check(So.missed()[1] and So.missed()[1].name == "Ann", "an ally unseen for 12 days is missed")
+  J.social.toggleTag("Eve", "Friend")
+  j.people.Eve.met = J.now() - 30 * 86400 - 3600
+  So.anniversaries()
+  local ann
+  for _, e in ipairs(j.events) do if e.k == "anniversary" and e.who == "Eve" then ann = e end end
+  check(ann and ann.s:find("a month"), "a month since you met is an anniversary")
+  local aw = So.awards()
+  check(aw[1] and aw[1].title == "Road companion", "the awards are given")
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  check(questText(win(), "FACES YOU MISS") and questText(win(), "haven't seen"), "the page lists the faces you miss")
+  click(win(), "Fellowships")
+  check(questText(win(), "ROAD COMPANION") and questText(win(), "WHAT YOU DID TOGETHER"), "the Fellowships page has awards and its record")
+  check(J.pageError == nil, "the Fellowships page draws without an error: " .. tostring(J.pageError))
+  click(win(), "Rename fellowship")
+  copy.edit:SetText("The Night Watch")
+  click(copy, "Save name")
+  check(j.fellowships[key].named == "The Night Watch" and questText(win(), "THE NIGHT WATCH"), "a fellowship can be renamed")
+  -- forget someone
+  click(win(), "Companions")
+  click(win(), "Companion Bo")
+  click(win(), "Forget Bo")
+  check(j.pals.Bo, "one click doesn't forget")
+  click(win(), "Forget Bo")
+  check(j.pals.Bo == nil and j.people.Bo == nil and j.fellowships[key] == nil, "two clicks forget them")
+  for _, e in ipairs(j.events) do
+    check(e.who ~= "Bo" and not (e.with and e.with:find("Bo")), "no moment names them: " .. e.s)
+  end
+  MOCK.party, MOCK.partyMembers = true, { { name = "Bo", level = 5, class = "PRIEST" } }
+  MOCK.advance(12)
+  check(j.pals.Bo == nil and j.fellows.Bo == nil, "a forgotten name is not recorded again")
+  slash("add Bo")
+  check(j.forgotten.Bo == nil and j.people.Bo, "adding them back remembers them")
+  -- pencilled names fade
+  j.sighted.Old = { f = J.now() - 40 * 86400, l = J.now() - 40 * 86400, n = 1, d = 1 }
+  j.sighted.Regular = { f = J.now() - 40 * 86400, l = J.now() - 40 * 86400, n = 6, d = 6 }
+  So.prune(true)
+  check(j.sighted.Old == nil and j.sighted.Regular, "a pencilled name fades after 30 days, a regular face stays")
+  click(win(), "Companions")
+  check(J.pageError == nil, "the Companions page draws without an error: " .. tostring(J.pageError))
+  for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]"), "moments are ASCII: " .. e.s) end
+end
+
 -- The window's height: Auto keeps the plain tabs at 620 and lets the Journey book fill the screen;
 -- Fit the screen and Short apply to every tab; Settings steps it.
 function S.windowHeight()
@@ -14296,10 +14510,17 @@ function S.journeyStoryPages()
   toast:Hide()
   J.add("herb", "Picked some Peacebloom")
   check(not toast:IsShown(), "a herb is no card")
-  LevelingCodexDB.noJourneyCards = true
+  if not win() or not win():IsShown() then slash("") end
+  click(win(), "Settings")
+  click(win(), "Show a card when the journal writes a big moment")
+  check(LevelingCodexDB.noJourneyCards, "Settings turns the journal cards off")
   J.add("boss", "Brought down Hogger again")
   check(not toast:IsShown(), "the setting turns the cards off")
-  LevelingCodexDB.noJourneyCards = nil
+  click(win(), "Show \"Last time on your journey...\" when I log in")
+  check(LevelingCodexDB.noJourneyRecap, "Settings turns the login recap off")
+  click(win(), "Show a card when the journal writes a big moment")
+  click(win(), "Show \"Last time on your journey...\" when I log in")
+  check(not LevelingCodexDB.noJourneyCards and not LevelingCodexDB.noJourneyRecap, "and back on")
 end
 
 -- "Last time on your journey...": the first login after a break recaps the last session (its lands,

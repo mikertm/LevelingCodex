@@ -88,7 +88,7 @@ def convert(lines):
             out.append("<h%d>%s</h%d>" % (level, inline(line.lstrip("#").strip()), level))
         elif bullet:
             flush_para()
-            want = len(bullet.group(1)) // 2 + 1
+            want = len(bullet.group(1)) // 4  # the changelog nests by four spaces + 1
             if want > depth:
                 while depth < want:
                     out.append("<ul>")
@@ -141,7 +141,7 @@ def markdown(lines):
             blocks.append(["#" * level + " " + line.lstrip("#").strip().replace("<", "&lt;")])
         elif bullet:
             flush_para()
-            want = len(bullet.group(1)) // 2
+            want = len(bullet.group(1)) // 4  # the changelog nests by four spaces
             depth = 0 if items is None else min(want, depth + 1)
             if items is None:
                 items = []

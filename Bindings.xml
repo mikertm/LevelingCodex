@@ -11,4 +11,6 @@
   <Binding name="CLICK LevelingCodexQuestTarget:LeftButton" category="ADDONS"/>
   <!-- Takes the gold and items from every mail while a mailbox is open (Take all on the mail card). -->
   <Binding name="CLICK LevelingCodexMailTakeAll:LeftButton" category="ADDONS"/>
+  <!-- Adds your target (another player) to the Journey's Companions. -->
+  <Binding name="CLICK LevelingCodexJourneyAdd:LeftButton" category="ADDONS"/>
 </Bindings>
