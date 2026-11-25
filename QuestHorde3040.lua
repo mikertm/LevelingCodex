@@ -548,6 +548,7 @@ do
   need(1435, "The Burning of Spirits", 33, 25, 1433)
   need(1436, "Alliance Relations", 33, 30, 1435)
   need(1365, "Khan Dez'hepah", 35, 30)
+  need(1366, "Centaur Bounty", 31, 30, 1365)
   need(1368, "Gelkis Alliance", 33, 30)
   need(93225, "Carved Centaur Totems", 40, nil, nil, true)
   need(94873, "Buying Friendship: Gelkis", 45, nil, 93225, true)
@@ -594,8 +595,11 @@ do
     accept(1368, gurda, "Gurda Wildmane wants you on friendly terms with the Gelkis centaur."),
     note(accept(93225, gurda, "She also wants carved totems from centaur of any clan."),
       "quest database has no giver for this Forever quest; Gurda takes it in."),
-    withItem(6436, objective(1435, thunderAxe, "Ride north back to Thunder Axe Fortress. Bring a Burning Blade cultist low, use the Burning Gem on it, then finish it.",
+    action("goto", azore, "Ride north-west across Desolace to Azore Aldamort's tower at Ethel Rethor."),
+    accept(5741, azore, "Azore wants the Sceptre of Light from Thunder Axe Fortress, where you are going next."),
+    withItem(6436, objective(1435, thunderAxe, "Ride east to Thunder Axe Fortress. Bring a Burning Blade cultist low, use the Burning Gem on it, then finish it.",
       "15 Infused Burning Gems")),
+    along(objective(5741, ds("Burning Blade Seer", 55.2, 30.1), "The Burning Blade Seer inside the fortress holds the Sceptre of Light.", "Sceptre of Light"), 1435),
     accept(5501, bibbly, "Ride south-east to Kormek's Hut. Bibbly F'utzbuckle wants kodo bones from the Kodo Graveyard."),
     action("goto", ds(nil, 75.1, 16.0), "Ride north-east to Sargeron, the satyr camp in the corner of the zone."),
     along(objective(1434, ds(nil, 75.1, 16.0), "Kill Hatefury Rogues, Felsworn, Betrayers and Hellcallers.", "7 Hatefury Rogues", "7 Hatefury Felsworn",
@@ -609,14 +613,17 @@ do
     finish(1434, takata),
     finish(1481, maurin), accept(1482, maurin, "Maurin now wants an Oracle Crystal from the Slitherblade naga on the north-west coast."),
     finish(1435, maurin), accept(1436, takata, "Keep Takata's answer for Keldran in Orgrimmar."),
-    finish(1365, felgur),
+    finish(1365, felgur), accept(1366, felgur, "Felgur now wants centaur ears. The Magram south-east of the Kodo Graveyard are the closest."),
     finish(93225, gurda), accept(94873, gurda, "Take the Totem Tote to Molkar in Gelkis Village."),
-    accept(5561, smeed, "Ride south-east to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
+    action("goto", ds(nil, 69.4, 73.4), "Ride south-east to the Magram centaur village."),
+    objective(1366, ds(nil, 69.4, 73.4), "Kill Magram centaurs for their ears. Every kill also raises your standing with the Gelkis.", "15 Centaur Ears"),
+    accept(5561, smeed, "Ride north-west to Smeed Scrabblescrew's camp beside the Kodo Graveyard."),
     action("goto", graveyard, "Ride west from Smeed's camp down into the Kodo Graveyard."),
     along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on Ancient or Dying Kodos in the graveyard and lead each back to Smeed. Wait for Smeed to acknowledge it, then talk to the tamed kodo for credit before collecting another.",
       "5 Kodos Tamed")), 5501),
     along(objective(5501, graveyard, "Pick up Kodo Bones from the ground in the graveyard.", "10 Kodo Bones"), 5561),
     finish(5561, smeed),
+    finish(1366, felgur, "Ride west past the graveyard to Ghost Walker Post and give Felgur the ears."),
     action("goto", molkar, "Ride south-west through Gelkis Village to Molkar at its southern end."),
     finish(94873, molkar, "Give Molkar the Totem Tote. You need at least Neutral standing with the Gelkis."),
     finish(1368, uthek, "Ride north through the village to Uthek the Wise once the Gelkis are Friendly."),
@@ -627,7 +634,7 @@ do
     action("goto", rackmore, "Ride north along the coast to the shipwreck below Ethel Rethor."),
     accept(6161, rackmore, "Read Rackmore's log at the shipwreck."),
     part(6161, 1, ds(nil, 33.5, 33.0), "Kill Drysnap crabs along the shore until one drops Rackmore's Silver Key.", "Rackmore's Silver Key"),
-    accept(5741, azore, "Climb to Azore Aldamort's tower at Ethel Rethor. He wants the Sceptre of Light from Thunder Axe Fortress."),
+    finish(5741, azore, "Climb to Azore Aldamort's tower at Ethel Rethor and give him the Sceptre of Light."), accept(6027, azore),
     action("goto", naga, "Walk north along the coast to the Slitherblade naga."),
     along(objective(6143, ds(nil, 34.2, 23.5), "Kill Slitherblade Naga, Sorceresses and Myrmidons up the coast.", "7 Slitherblade Myrmidons",
       "7 Slitherblade Naga", "5 Slitherblade Sorceresses"), 6142, 1482, 6161),
@@ -635,10 +642,9 @@ do
     objective(1482, ds("Slitherblade Oracle", 32.7, 12.9), "Slitherblade Oracles stand farther north. Kill one for its crystal.", "Oracle Crystal"),
     part(6161, 2, ds(nil, 32.4, 7.3), "One of the naga at the northern shore carries Rackmore's Golden Key.", "Rackmore's Golden Key"),
     finish(6161, ds("Rackmore's Chest", 30.0, 8.71), "Swim to the small isle off the coast and open Rackmore's Chest."),
-    action("goto", thunderAxe, "Ride east across the north of Desolace to Thunder Axe Fortress."),
-    objective(5741, ds("Burning Blade Seer", 55.2, 30.1), "The Burning Blade Seer inside the fortress holds the Sceptre of Light.", "Sceptre of Light"),
-    action("goto", azore, "Ride back west to Azore's tower."),
-    finish(5741, azore),
+    objective(6027, ds("Lord Kragaru", 28.2, 6.7), "Lord Kragaru leads the ogres on Ranazjar Isle, beside the chest. Kill him for the Book of the Ancients.",
+      "Book of the Ancients"),
+    finish(6027, azore, "Ride back south to Azore's tower."),
     action("goto", takata, "Ride south-east to Ghost Walker Post."),
     finish(1482, maurin), accept(1484, maurin), finish(1484, takata),
     finish(5501, bibbly, "Ride north-east to Kormek's Hut."),

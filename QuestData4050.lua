@@ -66,6 +66,7 @@ do
   q(1466, "Reagents for Reclaimers Inc.", 40, 30, 1459)
   q(1467, "Reagents for Reclaimers Inc.", 40, 30, 1466)
   q(6134, "Ghost-o-plasm Round Up", 39, 34)
+  q(6132, "Get Me Out of Here!", 39, 34)
   q(1106, "Martek the Exiled", 35, 26)
   q(1183, "Goblin Sponsorship", 37, 29, 1182)
   q(1186, "The Eighteenth Pilot", 37, 29, 1183)
@@ -85,6 +86,9 @@ do
     accept(1466, kreldig, "Kreldig's last reagent run sends you to the demons of Mannoroc Coven."),
     action("goto", hornizz, "Follow the road south past Kormek's Hut to the Kodo Graveyard."),
     accept(6134, hornizz, "Hornizz, the goblin on the hill west of the Kodo Graveyard, hands you a crate of ghost magnets."),
+    accept(6132, ds("Melizza Brimbuzzle", 34.0, 53.5), "Ride west into the Valley of Spears. Hornizz's sister Melizza is held in the middle of the Maraudine camp."),
+    objective(6132, ds("Melizza Brimbuzzle", 34.0, 53.5), "Escort Melizza out of the camp. Maraudine centaur ambush you on the way: keep her alive until she runs off.", "Melizza escorted"),
+    finish(6132, hornizz, "Ride back east to Hornizz."),
     objective(1466, ds(nil, 51.7, 83.9),
       "Go south to Mannoroc Coven. Kill felhounds, Nether Sisters and Doomwarders for the reagents. Pull the hounds away from the casters.",
       "10 Felhound Brain", "10 Nether Wing", "10 Doomwarder Blood"),

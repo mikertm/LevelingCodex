@@ -893,6 +893,7 @@ do
   q(1382, "Strange Alliance", 35, 30)
   q(5501, "Bone Collector", 39, 33)
   q(5561, "Kodo Roundup", 34, 30)
+  q(93224, "Carved Centaur Totems", 40, 30, nil, true)
   q(79229, "Highway Robbery", 40, nil, nil, true)
   q(79235, "On the Lam", 40, nil, 79229, true)
   q(79236, "Cherry for Your Thoughts?", 40, nil, 79235, true)
@@ -909,7 +910,8 @@ do
     action("sethearth", lyshaerya, "Bind at the Nijel's Point inn.", nijels),
     accept(261, anton, "Brother Anton stands just south of the inn."),
     finish(1453, kreldig, "Kreldig Ungor runs the Reclaimers' camp."), accept(1458, kreldig), accept(1454, kreldig),
-    accept(1437, vahlarriel), accept(97284, vahlarriel, "Vahlarriel also wants the Burning Blade at Thunder Axe Fortress punished."), accept(1387, melkins), accept(1382, pentigast),
+    accept(1437, vahlarriel), accept(1387, melkins), accept(1382, pentigast),
+    accept(93224, pentigast, "Pentigast also wants carved totems from centaur of any clan."),
     objective(1458, ds(nil, 72.5, 17.9), "Go east to the satyr grounds at Sargeron and loot claws and horns from the Hatefury satyrs.",
       "10 Hatefury Claws", "10 Hatefury Horns"),
     finish(1458, kreldig), accept(1459, kreldig),
@@ -922,6 +924,7 @@ do
     action("hearth", lyshaerya, "Hearth to Nijel's Point.", nijels),
     finish(1455, kreldig), accept(1456, kreldig),
     finish(1465, vahlarriel), accept(1438, vahlarriel),
+    accept(97284, vahlarriel, "Vahlarriel also wants the Burning Blade at Thunder Axe Fortress punished."),
     action("goto", thunderAxe, "Ride southwest to Thunder Axe Fortress."),
     along(objective(5741, ds("Burning Blade Seer", 55.2, 30.1), "Kill the Burning Blade Seer inside the fortress for the Sceptre of Light.", "Sceptre of Light"),
       97284, 1459),
@@ -933,7 +936,8 @@ do
     objective(1440, dalinda, "Escort Dalinda out of the fortress. Clear the way first and stay close to her.", "Dalinda escorted"),
     accept(5501, bibbly, "Bibbly F'utzbuckle waits at Kormek's Hut, east of the road south."),
     action("goto", ds(nil, 69.4, 73.4), "Ride south to the Magram centaur village in the southeast."),
-    along(objective(1387, ds(nil, 69.4, 73.4), "Kill Magram centaurs for their ears. Every kill also raises your standing with the Gelkis.", "15 Centaur Ears"), 1382),
+    along(objective(1387, ds(nil, 69.4, 73.4), "Kill Magram centaurs for their ears. Every kill also raises your standing with the Gelkis.", "15 Centaur Ears"), 1382, 93224),
+    along(objective(93224, ds(nil, 69.0, 69.2), "The same Magram drop the carved totems.", "5 Carved Centaur Totems"), 1387, 1382),
     objective(261, ds(nil, 64.0, 91.7), "Go south to the Scarlet camp at the edge of the Valley of Bones and kill Undead Ravagers.", "30 Undead Ravagers"),
     accept(5561, smeed, "Smeed Scrabblescrew camps beside the Kodo Graveyard."),
     along(withItem(13892, objective(5561, graveyard, "Use the Kodo Kombobulator on one Ancient or Dying Kodo, lead it to Smeed and wait for his acknowledgement. Talk to that Tamed Kodo to get credit before fetching the next; repeat five times.",
@@ -957,7 +961,7 @@ do
     action("hearth", lyshaerya, "Hearth to Nijel's Point.", nijels),
     finish(1456, kreldig), accept(1457, kreldig, "Keep the satchel for Roetten Stonehammer in Ironforge."),
     finish(1459, kreldig), finish(261, anton), accept(1052, anton, "Keep Anton's letter for Raleigh the Devout in Southshore."),
-    finish(1387, melkins), finish(1440, vahlarriel), finish(97284, vahlarriel),
+    finish(1387, melkins), finish(93224, pentigast), finish(1440, vahlarriel), finish(97284, vahlarriel),
     taxi("fly", B.at("Baldruc", 67.5, 51.3, 1445), "Theramore, Dustwallow Marsh", "Fly to Theramore."),
   }, { suggest = { "riverglades-farholde", "theramore-33" } })
 end
