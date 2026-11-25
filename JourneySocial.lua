@@ -34,6 +34,7 @@ S.CARD_GAP = 20
 S.FORM_SECS = 1800
 S.PORTRAITS_MAX = 60
 S.DIARY_MAX = 12
+S.DAYS_KEPT = 90
 S.SIGN_MAX = 120
 S.TRACE_DAYS = 120
 S.PREFIX = "LevCodexJ"
@@ -58,6 +59,7 @@ J.KEEP.bond, J.KEEP.fellowship, J.KEEP.signed, J.KEEP.anniversary = true, true, 
 
 local function plain(s) return Q.plain(tostring(s or "")) end
 local function now() return J.now() end
+function S.countKeys(t) local c = 0; for _ in pairs(type(t) == "table" and t or {}) do c = c + 1 end; return c end
 local function num(v)
   if type(issecretvalue) == "function" and issecretvalue(v) then return nil end
   return tonumber(v)
@@ -72,6 +74,7 @@ local function short(name)
 end
 S.short = short
 local function me() return short((try(UnitName, "player"))) or "" end
+local function isMe(name) return name == me() or J.isMe(name) end
 local function day(t) return math.floor((tonumber(t) or now()) / 86400) end
 local function zone() local _, land = J.here(); return plain(land or J.zoneName() or "the wilds") end
 local function fill(lines, seed, vars) return J.fill(J.pick(lines, seed), vars) end
@@ -93,16 +96,38 @@ local function journal()
 end
 S.journal = journal
 
+-- The first name of a name ("Silfer Strife" -> "silfer"): Forever names carry a surname, and the game
+-- gives some names with it and some without, so records are matched on the first name.
+local function firstName(name)
+  name = short(name)
+  if not name then return nil end
+  return (name:match("^([^%s%._|]+)") or name):lower()
+end
+S.firstName = firstName
+
+-- Is this name you (with or without your surname)?
+function J.isMe(name)
+  local f = firstName(name)
+  if not f then return false end
+  if f == firstName((try(UnitName, "player"))) then return true end
+  local mine = J.voice and J.voice.names and (J.voice.names())
+  return mine ~= nil and f == firstName(mine)
+end
+
 function J.isForgotten(name)
   local f = J.data().forgotten
   name = short(name)
-  return name ~= nil and type(f) == "table" and f[name] ~= nil
+  if name == nil or type(f) ~= "table" then return false end
+  if f[name] ~= nil then return true end
+  local first = firstName(name)
+  for k in pairs(f) do if firstName(k) == first then return true end end
+  return false
 end
 
 -- A person record (JourneyTales' journey.people), made when missing.
 local function person(name, field, n)
   name = short(name)
-  if not name or name == me() or J.isForgotten(name) then return nil end
+  if not name or isMe(name) or J.isForgotten(name) then return nil end
   local j = journal()
   local p = j.people[name]
   if type(p) ~= "table" then p = { met = now() }; j.people[name] = p end
@@ -284,7 +309,7 @@ local function unitInfo(unit)
   if try(UnitIsPlayer, unit) ~= true then return nil end
   if try(UnitIsUnit, unit, "player") == true then return nil end
   local name = short((try(UnitName, unit)))
-  if not name or name == me() then return nil end
+  if not name or isMe(name) then return nil end
   local function safe(v)
     if type(issecretvalue) == "function" and issecretvalue(v) then return nil end
     return type(v) == "string" and v ~= "" and v or nil
@@ -456,15 +481,21 @@ end
 local ADJ = { "Ashen", "Wandering", "Iron", "Silver", "Ember", "Patient", "Lucky", "Quiet", "Stormy", "Gilded", "Mossy", "Hollow",
   "Lantern", "Brave", "Long Road", "Copper" }
 local NOUN = { "Company", "Wayfarers", "Oath", "Pact", "Band", "Circle", "Hearth", "Lanterns", "Banner", "Shields", "Compass", "Kettle" }
+-- a pair (you and one other) gets a pair's name
+local PAIR = { "Pair", "Twin Blades", "Two Lanterns", "Duo", "Partners", "Two Roads", "Matched Swords", "Kindred", "Twin Stars",
+  "Shared Fire", "Two Shields", "Bookends" }
 function S.autoName(key)
   local h = 0
   for i = 1, #key do h = (h * 31 + key:byte(i)) % 1000003 end
-  return "The " .. ADJ[h % #ADJ + 1] .. " " .. NOUN[math.floor(h / #ADJ) % #NOUN + 1]
+  local pair = not key:find(",", 1, true)
+  local nouns = pair and PAIR or NOUN
+  return "The " .. ADJ[h % #ADJ + 1] .. " " .. nouns[math.floor(h / #ADJ) % #nouns + 1]
 end
+-- The fellowship's key: the sorted names of the party with you (one name for a pair).
 function S.groupKey(list)
   local names = {}
   for _, p in ipairs(list) do names[#names + 1] = type(p) == "table" and p.name or p end
-  if #names < 2 then return nil end
+  if #names < 1 then return nil end
   table.sort(names)
   return table.concat(names, ","), names
 end
@@ -500,9 +531,23 @@ local function groupTick(list)
   end
   g.secs, g.last = n0(g.secs) + 5, now()
   local d = day()
-  if g.ld ~= d then g.ld, g.days = d, n0(g.days) + 1 end
+  if g.ld ~= d then
+    g.ld, g.days = d, n0(g.days) + 1
+    -- the days you were together, for its calendar (the last S.DAYS_KEPT)
+    if type(g.dl) ~= "table" then g.dl = {} end
+    g.dl[#g.dl + 1] = d
+    while #g.dl > S.DAYS_KEPT do table.remove(g.dl, 1) end
+  end
+  -- the lands you walked together, by time
+  local _, land = J.here()
+  if land then
+    if type(g.zones) ~= "table" then g.zones = {} end
+    land = plain(land)
+    if g.zones[land] or S.countKeys(g.zones) < 24 then g.zones[land] = n0(g.zones[land]) + 5 end
+  end
   if not g.formed and (g.secs >= S.FORM_SECS or (n0(g.days) >= 2 and g.secs >= 600)) then
     g.formed = now()
+    g.fz, g.fl = zone(), J.level()
     g.auto = g.auto or S.autoName(key)
     local list2 = names(key)
     local e = J.add("fellowship", fill({ "%who% and you rode together long enough to earn a name: %name%",
@@ -576,7 +621,7 @@ local function battleground(e)
       for k = 7, #r do if type(r[k]) == "string" and r[k]:match("^%u+$") then class = r[k] end end
     end
     name = short(name)
-    if name and name ~= self and not J.isForgotten(name) and done < 40 then
+    if name and name ~= self and not isMe(name) and not J.isForgotten(name) and done < 40 then
       done = done + 1
       local s = j.sighted[name]
       if type(s) ~= "table" then s = { f = now(), n = 0, d = 0 }; j.sighted[name] = s end
@@ -699,7 +744,7 @@ local talk = {}
 function S.whisper(sender, incoming, flag)
   if flag == "GM" or flag == "DEV" then return end
   local name = short(sender)
-  if not name or name == me() or J.isForgotten(name) then return end
+  if not name or isMe(name) or J.isForgotten(name) then return end
   local t = now()
   local w = talk[name] or {}
   talk[name] = w
@@ -728,7 +773,7 @@ function S.add(name, unit)
   if not name or name == "" then return false, "Give a name, or target a player." end
   if not name:match("^[^%d%p%s][^%d%s]*$") or #name > 24 then return false, "\"" .. plain(name) .. "\" isn't a character name." end
   name = name:sub(1, 1):upper() .. name:sub(2)
-  if name == me() then return false, "That's you." end
+  if isMe(name) then return false, "That's you." end
   local j = journal()
   j.forgotten[name] = nil
   local p = person(name)
@@ -789,35 +834,52 @@ function S.removeEntry(name, i)
 end
 
 -- Take someone out of the journal: their records, notes, tags and the moments that name them.
-function S.forget(name)
-  name = short(name)
-  if not name then return end
-  local j = journal()
+-- Every record of a name (and of the same first name: a surname the game sometimes gives), so nothing
+-- the book shows still names them. Also used at login to clear what slipped in (you, or someone you removed).
+local function scrub(j, match, removeMoments)
   for _, k in ipairs({ "pals", "fellows", "people", "sighted", "trace", "tags", "diary", "bonds", "signatures", "notes" }) do
-    if type(j[k]) == "table" then j[k][name] = nil end
+    if type(j[k]) == "table" then
+      for n in pairs(j[k]) do if match(n) then j[k][n] = nil end end
+    end
   end
   for key in pairs(j.fellowships) do
-    for n in key:gmatch("[^,]+") do if n == name then j.fellowships[key] = nil; break end end
+    for n in key:gmatch("[^,]+") do if match(n) then j.fellowships[key] = nil; break end end
   end
-  for k in pairs(j.anniv) do if k:match("^(.-):") == name then j.anniv[k] = nil end end
-  local plainName = plain(name)
+  for k in pairs(j.anniv) do if match(k:match("^(.-):") or k) then j.anniv[k] = nil end end
   local function strip(list)
     if type(list) ~= "string" then return list end
     local keep = {}
-    for n in list:gmatch("[^,]+") do if n ~= name then keep[#keep + 1] = n end end
+    for n in list:gmatch("[^,]+") do if not match(n) then keep[#keep + 1] = n end end
     return #keep > 0 and table.concat(keep, ",") or nil
   end
   local events = j.events
   for i = #events, 1, -1 do
     local e = events[i]
     if type(e) == "table" then
-      if (e.who == name or e.who == plainName) and e.k ~= "death" and e.k ~= "pvp" then table.remove(events, i)
+      if removeMoments and type(e.who) == "string" and match(e.who) and e.k ~= "death" and e.k ~= "pvp" then table.remove(events, i)
       else e.with, e.saw, e.tried = strip(e.with), strip(e.saw), strip(e.tried) end
     end
   end
   for _, p in ipairs(j.portraits) do
-    for i = #(p.who or {}), 1, -1 do if p.who[i].n == name then table.remove(p.who, i) end end
+    for i = #(p.who or {}), 1, -1 do if match(p.who[i].n) then table.remove(p.who, i) end end
   end
+end
+S.scrub = scrub
+
+-- At login: you never appear as someone you met, and a removed name (any form of it) stays removed.
+function S.tidy()
+  local j = journal()
+  local gone = {}
+  for k in pairs(j.forgotten) do local f = firstName(k); if f then gone[f] = true end end
+  scrub(j, function(n) return J.isMe(n) or gone[firstName(n) or ""] == true end, false)
+end
+
+function S.forget(name)
+  name = short(name)
+  if not name then return end
+  local j = journal()
+  local first = firstName(name)
+  scrub(j, function(n) return firstName(n) == first end, true)
   j.forgotten[name] = now()
   J.version = (J.version or 0) + 1
   if J.companions and J.companions.chosen() == name then J.companions.select(nil) end
@@ -878,39 +940,63 @@ function S.missedLine(m) return "You haven't seen " .. Co_name(m.name) .. " in "
 -- Awards across your companions
 ----------------------------------------------------------------------------
 S.AWARDS = {
-  { "Road companion", "The most time together", "pal", function(j, n) return type(j.pals[n]) == "table" and n0(j.pals[n].seconds) or 0 end, "time" },
-  { "Guardian angel", "Raised you or tried to save you the most", "rez", function(j, n) local p = j.people[n] or {}; return n0(p.rez) + n0(p.saved) end },
-  { "Shield wall", "The most bosses brought down together", "boss", function(j, n) return n0((j.fellows[n] or {}).bosses) end },
-  { "Errand partner", "The most quests turned in together", "quest", function(j, n) return n0((j.fellows[n] or {}).quests) end },
-  { "Pen pal", "The most whispered conversations", "whisper", function(j, n) return n0((j.people[n] or {}).whispers) end },
-  { "Trusted trader", "The most trades", "trade", function(j, n) return n0((j.people[n] or {}).trades) end },
-  { "Sparring partner", "The most duels", "duel", function(j, n) return n0((j.people[n] or {}).duels) end },
-  { "Fellow sufferer", "Saw you fall or wipe the most", "death", function(j, n) local f = j.fellows[n] or {}; return n0(f.deaths) + n0(f.wipes) + n0((j.people[n] or {}).witness) end },
-  { "Familiar face", "Seen on the road on the most days", "reunion", function(j, n) return n0((j.sighted[n] or {}).d) end },
-  { "Globetrotter", "The most lands walked together", "zone", function(j, n) local c = 0; for _ in pairs((j.fellows[n] or {}).zones or {}) do c = c + 1 end; return c end },
-  { "Nemesis", "Killed you the most", "pvp", function(j, n) return n0((j.people[n] or {}).killedMe) end },
+  { "Road companion", "The most time together", "pal", function(j, n) return type(j.pals[n]) == "table" and n0(j.pals[n].seconds) or 0 end, "time",
+    flavour = "The one whose footsteps you know best." },
+  { "Guardian angel", "Raised you or tried to save you the most", "rez", function(j, n) local p = j.people[n] or {}; return n0(p.rez) + n0(p.saved) end,
+    unit = { "rescue", "rescues" }, flavour = "Somebody has to keep you breathing." },
+  { "Shield wall", "The most bosses brought down together", "boss", function(j, n) return n0((j.fellows[n] or {}).bosses) end,
+    unit = { "boss", "bosses" }, flavour = "Stood beside you when the big ones came." },
+  { "Errand partner", "The most quests turned in together", "quest", function(j, n) return n0((j.fellows[n] or {}).quests) end,
+    unit = { "quest", "quests" }, flavour = "Every notice board, every reward, split down the middle." },
+  { "Pen pal", "The most whispered conversations", "whisper", function(j, n) return n0((j.people[n] or {}).whispers) end,
+    unit = { "talk", "talks" }, flavour = "Words across the world, one whisper at a time." },
+  { "Trusted trader", "The most trades", "trade", function(j, n) return n0((j.people[n] or {}).trades) end,
+    unit = { "trade", "trades" }, flavour = "Fair deals, and the odd gift." },
+  { "Sparring partner", "The most duels", "duel", function(j, n) return n0((j.people[n] or {}).duels) end,
+    unit = { "duel", "duels" }, flavour = "Iron sharpens iron." },
+  { "Fellow sufferer", "Saw you fall or wipe the most", "death", function(j, n) local f = j.fellows[n] or {}; return n0(f.deaths) + n0(f.wipes) + n0((j.people[n] or {}).witness) end,
+    unit = { "bad moment", "bad moments" }, flavour = "Was there for the worst of it, and stayed." },
+  { "Familiar face", "Seen on the road on the most days", "reunion", function(j, n) return n0((j.sighted[n] or {}).d) end,
+    unit = { "day seen", "days seen" }, flavour = "Always somewhere on the same road." },
+  { "Globetrotter", "The most lands walked together", "zone", function(j, n) local c = 0; for _ in pairs((j.fellows[n] or {}).zones or {}) do c = c + 1 end; return c end,
+    unit = { "land together", "lands together" }, flavour = "Map after map, side by side." },
+  { "Campfire friend", "Shared the most campfires", "camp", function(j, n) return n0((j.people[n] or {}).camp) end,
+    unit = { "fire", "fires" }, flavour = "Good stories need a fire and someone to hear them." },
+  { "Nemesis", "Killed you the most", "pvp", function(j, n) return n0((j.people[n] or {}).killedMe) end,
+    unit = { "kill", "kills" }, flavour = "Every story needs a villain." },
 }
--- { { title, tip, icon, name, value, text } } for the awards someone has won.
-function S.awards()
+local function awardText(a, most)
+  if a[5] == "time" then return J.draw and J.draw.duration(most) or tostring(most) end
+  local u = a.unit or { "", "" }
+  return most .. " " .. (most == 1 and u[1] or u[2])
+end
+-- Every award: { title, tip, flavour, icon, name, value, text, won }, won ones first in S.AWARDS order.
+function S.awardCabinet()
   local j = journal()
   local everyone = {}
   for _, k in ipairs({ "pals", "people", "fellows", "sighted" }) do for name in pairs(j[k]) do everyone[name] = true end end
-  local out = {}
+  local won, open = {}, {}
   for _, a in ipairs(S.AWARDS) do
     local best, most = nil, 0
     for name in pairs(everyone) do
-      if not J.isForgotten(name) then
+      if not J.isForgotten(name) and not J.isMe(name) then
         local v = a[4](j, name)
         if v > most or (v == most and v > 0 and best and name < best) then best, most = name, v end
       end
     end
     local min = a[5] == "time" and 600 or 1
+    local r = { title = a[1], tip = a[2], flavour = a.flavour, icon = J.ICON[a[3]] or J.ICON.pal }
     if best and most >= min then
-      local text = a[5] == "time" and (J.draw and J.draw.duration(most) or tostring(most)) or tostring(most)
-      out[#out + 1] = { title = a[1], tip = a[2], icon = J.ICON[a[3]] or J.ICON.pal, name = best, value = most, text = text }
-    end
+      r.name, r.value, r.text, r.won = best, most, awardText(a, most), true
+      won[#won + 1] = r
+    else open[#open + 1] = r end
   end
-  return out
+  return won, open
+end
+-- { { title, tip, icon, name, value, text } } for the awards someone has won.
+function S.awards()
+  local won = S.awardCabinet()
+  return won
 end
 
 ----------------------------------------------------------------------------
@@ -1128,6 +1214,7 @@ local frame
 function ns.startJourneySocial()
   if frame then return end
   journal()
+  pcall(S.tidy)
   S.seedBonds()
   pcall(S.prune, true)
   if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then pcall(C_ChatInfo.RegisterAddonMessagePrefix, S.PREFIX) end

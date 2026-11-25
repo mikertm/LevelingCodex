@@ -63,6 +63,7 @@ local function person(name, field)
   if type(name) ~= "string" or name == "" then return nil end
   name = name:match("^([^%-]+)") or name
   if J.isForgotten and J.isForgotten(name) then return nil end
+  if J.isMe and J.isMe(name) then return nil end
   local j = journal()
   local p = j.people[name]
   local first = type(p) ~= "table"

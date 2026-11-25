@@ -14385,6 +14385,28 @@ function S.journeySocial()
   check(j.pals.Bo == nil and j.fellows.Bo == nil, "a forgotten name is not recorded again")
   slash("add Bo")
   check(j.forgotten.Bo == nil and j.people.Bo, "adding them back remembers them")
+  -- a pair (you and one friend) becomes a fellowship, with its days and lands
+  MOCK.partyMembers = { { name = "Cy", level = 5, class = "MAGE" } }
+  MOCK.advance(6)
+  check(j.fellowships.Cy, "a pair is counted as a fellowship in the making")
+  j.fellowships.Cy.secs = So.FORM_SECS - 5
+  MOCK.advance(6)
+  check(j.fellowships.Cy.formed and j.fellowships.Cy.auto and type(j.fellowships.Cy.dl) == "table", "a pair forms a fellowship")
+  click(win(), "Fellowships")
+  check(questText(win(), "YOUR BAND RIGHT NOW") and questText(win(), "DAYS TOGETHER") and questText(win(), "Not yet awarded"),
+    "the Fellowships page shows the band, its days and the awards cabinet")
+  check(J.pageError == nil, "the Fellowships page draws without an error: " .. tostring(J.pageError))
+  MOCK.party, MOCK.partyMembers = false, {}
+  -- a removed name stays removed in every form (Forever names may carry a surname)
+  j.sighted["Cy Ember"] = { f = J.now(), l = J.now(), n = 3, d = 3 }
+  So.forget("Cy")
+  check(j.sighted["Cy Ember"] == nil and j.fellowships.Cy == nil and J.isForgotten("Cy Ember"), "forgetting takes every form of the name")
+  for _, a in ipairs(So.awards()) do check(a.name ~= "Cy" and a.name ~= "Cy Ember", "no award names a forgotten person") end
+  -- you are never someone you met
+  local mine = UnitName("player")
+  j.people[mine .. " Strife"] = { met = J.now() }
+  So.tidy()
+  check(j.people[mine .. " Strife"] == nil, "your own name (with a surname) is cleared from the people you met")
   -- pencilled names fade
   j.sighted.Old = { f = J.now() - 40 * 86400, l = J.now() - 40 * 86400, n = 1, d = 1 }
   j.sighted.Regular = { f = J.now() - 40 * 86400, l = J.now() - 40 * 86400, n = 6, d = 6 }

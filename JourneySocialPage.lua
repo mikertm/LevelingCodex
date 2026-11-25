@@ -346,29 +346,242 @@ local function fellowshipRow(L, f, y, lit)
   return 46
 end
 
+-- The awards cabinet: every award, the won ones with their holder, the rest dim with how to win them.
 local function awardsCard(L, y)
   local U, C, W = L.U, L.C, L.W
-  local list = S.awards()
+  local won, rest = S.awardCabinet()
   local top = y
-  y = D().cardTitle(L, "AWARDS", 0, y, W, #list > 0 and tostring(#list) or nil)
-  if #list == 0 then
-    y = y + U.T("Travel, fight, trade and talk with people and the awards fill in: road companion, guardian angel, pen pal and more.",
-      14, y, W - 28, "small", C.dim) + 10
-  else
-    local cw = math.floor((W - 34) / 2)
-    for i, a in ipairs(list) do
-      local cx = 14 + ((i - 1) % 2) * (cw + 6)
-      local cy = y + math.floor((i - 1) / 2) * 50
-      U.box(cx, cy, cw, 44, C.panel)
-      U.icon(a.icon, cx + 6, cy + 10, 24, a.title, a.tip)
+  y = D().cardTitle(L, "AWARDS", 0, y, W, #won .. " of " .. (#won + #rest))
+  y = y + U.T("Titles your companions have earned in your story. Each goes to whoever holds the record.", 14, y, W - 28, "small", C.dim) + 8
+  local cw = math.floor((W - 34) / 2)
+  local all = {}
+  for _, a in ipairs(won) do all[#all + 1] = a end
+  for _, a in ipairs(rest) do all[#all + 1] = a end
+  for i, a in ipairs(all) do
+    local cx = 14 + ((i - 1) % 2) * (cw + 6)
+    local cy = y + math.floor((i - 1) / 2) * 50
+    U.box(cx, cy, cw, 44, C.panel)
+    local ic = U.icon(a.icon, cx + 6, cy + 10, 24, a.title, a.tip)
+    if a.won then
       U.T(a.title:upper(), cx + 36, cy + 5, cw - 40, "small", C.gold)
       U.T(name(a.name), cx + 36, cy + 18, cw - 40, "body", C.ink or C.light)
       U.T(a.text, cx + 36, cy + 30, cw - 40, "small", C.dim)
-      U.hit(cx, cy, cw, 44, a.title .. ": " .. name(a.name), a.tip .. " (" .. a.text .. ").\nClick to open their page.", function() open(a.name) end,
-        "Award " .. a.title)
+      U.hit(cx, cy, cw, 44, a.title .. ": " .. name(a.name), a.tip .. " (" .. a.text .. ").\n" .. (a.flavour or "") .. "\nClick to open their page.",
+        function() open(a.name) end, "Award " .. a.title)
+    else
+      if ic and ic.tex then ic.tex:SetDesaturated(true); ic.tex:SetAlpha(0.45) end
+      U.T(a.title:upper(), cx + 36, cy + 5, cw - 40, "small", C.inkSoft or C.dim)
+      U.T("Not yet awarded", cx + 36, cy + 18, cw - 40, "small", C.dim)
+      U.T(a.tip, cx + 36, cy + 30, cw - 40, "small", C.dim)
+      U.hit(cx, cy, cw, 44, a.title, a.tip .. ".\n" .. (a.flavour or ""), nil, "Award " .. a.title)
     end
-    y = y + math.ceil(#list / 2) * 50 + 4
   end
+  y = y + math.ceil(#all / 2) * 50 + 4
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  return y + 12
+end
+
+-- Who you're grouped with now: the fellowship you're becoming (or are).
+local function bandNow(L, y)
+  local U, C, W = L.U, L.C, L.W
+  local party = S.party()
+  if #party == 0 then return y end
+  local key = S.groupKey(party)
+  local g = key and S.journal().fellowships[key]
+  local top = y
+  y = D().cardTitle(L, "YOUR BAND RIGHT NOW", 0, y, W, #party == 1 and "a pair" or (#party + 1) .. " of you")
+  local each = math.min(70, math.floor((W - 28) / #party))
+  for i, p in ipairs(party) do
+    local cx = 14 + (i - 1) * each
+    U.icon(classIcon(p.class), cx + math.floor(each / 2) - 12, y, 24, name(p.name), p.level and ("Level " .. p.level) or nil)
+    U.T(name(p.name), cx, y + 27, each, "small", C.ink or C.light, "CENTER")
+  end
+  y = y + 46
+  local secs = g and n0(g.secs) or 0
+  if g and g.formed then
+    y = y + U.T("You ride as " .. S.fellowshipName(g, key) .. ": " .. D().duration(secs) .. " together so far.", 14, y, W - 28, "small", C.inkSoft or C.dim) + 4
+    U.hit(10, top, W - 20, y - top, S.fellowshipName(g, key), "Click to open its page.", function() S.selectFellowship(key); ns.ui.refresh() end,
+      "Band now")
+  else
+    local share = math.min(1, secs / S.FORM_SECS)
+    local left = math.max(0, S.FORM_SECS - secs)
+    U.rect(14, y, W - 28, 5, C.book and { 0, 0, 0, 0.12 } or { 0.05, 0.05, 0.08, 0.9 })
+    U.rect(14, y, math.max(2, (W - 28) * share), 5, C.gold)
+    y = y + 10
+    local line = secs < 60 and "Stay together and the book will give you a name."
+      or ("About " .. D().duration(left) .. " more together and the book gives you a name.")
+    y = y + U.T(line, 14, y, W - 28, "small", C.inkSoft or C.dim) + 4
+  end
+  y = y + 6
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  return y + 12
+end
+
+-- The fellowship's colours, from its key: { r, g, b }.
+local BANNERS = { { 0.55, 0.12, 0.12 }, { 0.14, 0.24, 0.5 }, { 0.15, 0.4, 0.22 }, { 0.38, 0.16, 0.45 }, { 0.12, 0.38, 0.4 },
+  { 0.55, 0.36, 0.1 }, { 0.28, 0.3, 0.34 }, { 0.45, 0.1, 0.25 } }
+local function hash(s)
+  local h = 0
+  for i = 1, #s do h = (h * 31 + s:byte(i)) % 1000003 end
+  return h
+end
+
+-- Moments with every member there, newest first.
+local function together(j, f)
+  local out = {}
+  for i = #j.events, 1, -1 do
+    local e = j.events[i]
+    if type(e) == "table" and type(e.with) == "string" then
+      local here = {}
+      for n in e.with:gmatch("[^,]+") do here[n] = true end
+      local all = true
+      for _, n in ipairs(f.names) do if not here[n] then all = false end end
+      if all then out[#out + 1] = e end
+    end
+  end
+  return out
+end
+
+local FINE = { boss = 10, run = 8, dungeon = 7, elite = 6, rare = 6, level = 5, chain = 4, bond = 3, quest = 1 }
+local DARK = { wipe = 10, death = 8, close = 5 }
+local function weightiest(list, w)
+  local best, bw = nil, 0
+  for _, e in ipairs(list) do
+    local v = w[e.k] or 0
+    if v > bw then best, bw = e, v end
+  end
+  return best
+end
+
+-- The fellowship's lands by time: { { land, secs } }, from its own record, else its moments.
+local function landsOf(g, moments)
+  local out = {}
+  if type(g.zones) == "table" then
+    for land, secs in pairs(g.zones) do out[#out + 1] = { land, n0(secs) } end
+  else
+    local c = {}
+    for _, e in ipairs(moments) do
+      local land = e.m and J.landOf and J.landOf(e.m)
+      if land then c[land] = (c[land] or 0) + 60 end
+    end
+    for land, secs in pairs(c) do out[#out + 1] = { land, secs } end
+  end
+  table.sort(out, function(a, b) if a[2] ~= b[2] then return a[2] > b[2] end return a[1] < b[1] end)
+  return out
+end
+
+-- A motto from what the fellowship has done.
+local function motto(g, key, lands)
+  local pair = #S.names(key) == 1
+  local pool
+  if n0(g.wipes) >= 3 then pool = { "We fall together, and we get up together.", "Wipe, laugh, run it back." }
+  elseif n0(g.bosses) >= 3 then pool = { "No boss too big, no dungeon too deep.", "Down they go, one after another." }
+  elseif n0(g.quests) >= 20 then pool = { "Every errand, every road, together.", "No notice board left unread." }
+  elseif #lands >= 4 then pool = { "Many roads, one company.", "The map is a little smaller with a friend." }
+  elseif n0(g.days) >= 3 then pool = { "Again tomorrow, as always.", "Same time, same road." }
+  elseif n0(g.deaths) == 0 and n0(g.secs) >= 3600 then pool = { "Not one of us left behind.", "Nobody falls on our watch." }
+  elseif pair then pool = { "Where one goes, the other follows.", "Two swords are better than one.", "Back to back, always.",
+    "Two paths, one road." }
+  else pool = { "Steel, salt and good company.", "Share the road, share the fire.", "Slow to anger, quick to help.",
+    "Into the dark, and out again.", "Strength in numbers, and in friends." } end
+  return pool[hash(key .. "motto") % #pool + 1]
+end
+
+-- The fellowship's story, in the narrator's voice.
+local SAGA = {
+  founded = {
+    chronicle = { "The %band% was founded on day %day%%where%, when %who% and %name% had shared the road long enough to be named.",
+      "On day %day%%where%, %who% and %name% became the %band%." },
+    fireside = { "Day %day%%where%: that's when you and %who% stopped being strangers and became the %band%.",
+      "It started on day %day%%where%. You, %who%, and a road that kept going." },
+    bard = { "On day %day%%where% a fellowship was born: %who% and you, the %band%.",
+      "Sing of day %day%%where%, when the %band% first rode out." } },
+  forming = {
+    chronicle = { "The %band% is not yet founded; %who% and %name% are still earning their name." },
+    fireside = { "You and %who% aren't a fellowship yet. Give it time." },
+    bard = { "Not yet a fellowship, but the song is tuning up." } },
+  work = {
+    chronicle = { "Together they completed %work%.", "The record shows %work% between them." },
+    fireside = { "Between you: %work%.", "You got through %work% together." },
+    bard = { "Together you won %work%.", "Hand in hand came %work%." } },
+  hard = {
+    chronicle = { "It was not without cost: %hard%.", "There were setbacks: %hard%." },
+    fireside = { "Not every pull went well: %hard%.", "There were bad nights too: %hard%." },
+    bard = { "Not all the verses are bright: %hard%." } },
+  clean = {
+    chronicle = { "None of them fell while together." },
+    fireside = { "And not one fall between you. Not bad." },
+    bard = { "No grave was dug while they rode together." } },
+  lands = {
+    chronicle = { "Their road ran through %lands%.", "They walked %lands% together." },
+    fireside = { "You covered %lands% together.", "The road took you through %lands%." },
+    bard = { "Through %lands% the company wandered." } },
+  days = {
+    chronicle = { "They met on %n% separate days.", "Their company spans %n% days." },
+    fireside = { "%N% days on the road together, and counting.", "You kept finding each other: %n% days so far." },
+    bard = { "%N% dawns found them on the same road." } },
+  last = {
+    chronicle = { "They were last together %when%." },
+    fireside = { "Last time together: %when%.", "You last rode together %when%." },
+    bard = { "The last verse was sung %when%." } },
+}
+
+local function voiced(lines, seed, vars)
+  if J.voice and J.voice.voiced then return J.voice.voiced(lines, seed, vars) end
+  return J.fill(J.pick(lines.fireside, seed), vars)
+end
+local function say(n) return J.lore and J.lore.say and J.lore.say(n) or tostring(n) end
+
+local function saga(j, f, lands)
+  local g, key = f.g, f.key
+  local vars = { band = S.fellowshipName(g, key):gsub("^The ", ""), who = S.listText(f.names), day = D().dayOf(j, g.formed or g.first) }
+  vars.where = g.fz and (" in " .. plain(g.fz)) or ""
+  local out = {}
+  out[#out + 1] = voiced(g.formed and SAGA.founded or SAGA.forming, key .. "f", vars)
+  local work = {}
+  if n0(g.quests) > 0 then work[#work + 1] = D().plural(n0(g.quests), "quest") end
+  if n0(g.bosses) > 0 then work[#work + 1] = n0(g.bosses) .. (n0(g.bosses) == 1 and " boss" or " bosses") end
+  if n0(g.runs) > 0 then work[#work + 1] = D().plural(n0(g.runs), "dungeon run") end
+  if n0(g.levels) > 0 then work[#work + 1] = D().plural(n0(g.levels), "level") end
+  if #work > 0 then
+    vars.work = #work == 1 and work[1] or (table.concat(work, ", ", 1, #work - 1) .. " and " .. work[#work])
+    out[#out + 1] = voiced(SAGA.work, key .. "w", vars)
+  end
+  if n0(g.wipes) + n0(g.deaths) > 0 then
+    local hard = {}
+    if n0(g.wipes) > 0 then hard[#hard + 1] = D().plural(n0(g.wipes), "wipe") end
+    if n0(g.deaths) > 0 then hard[#hard + 1] = D().plural(n0(g.deaths), "fall") end
+    vars.hard = table.concat(hard, " and ")
+    out[#out + 1] = voiced(SAGA.hard, key .. "h", vars)
+  elseif n0(g.secs) >= 1800 then out[#out + 1] = voiced(SAGA.clean, key .. "c", vars) end
+  if #lands >= 2 then
+    local l = {}
+    for i = 1, math.min(3, #lands) do l[i] = lands[i][1] end
+    vars.lands = #lands > 3 and (table.concat(l, ", ") .. " and " .. say(#lands - 3) .. " more")
+      or (#l == 2 and (l[1] .. " and " .. l[2]) or (l[1] .. ", " .. l[2] .. " and " .. l[3]))
+    out[#out + 1] = voiced(SAGA.lands, key .. "l", vars)
+  end
+  if n0(g.days) >= 2 then
+    vars.n, vars.N = say(n0(g.days)), (say(n0(g.days)):gsub("^%l", string.upper))
+    out[#out + 1] = voiced(SAGA.days, key .. "d", vars)
+  end
+  if g.last and now() - n0(g.last) > 3600 then
+    vars.when = ago(g.last)
+    out[#out + 1] = voiced(SAGA.last, key .. "t", vars)
+  end
+  return table.concat(out, " ")
+end
+
+local function hourCard(R, title, e, y, color)
+  local U, C, W = R.U, R.C, R.W
+  local j = S.journal()
+  local top = y
+  y = D().cardTitle(R, title, 0, y, W)
+  U.icon(J.ICON[e.k] or J.ICON.quest, 14, y, 28, e.s, e.d)
+  local h = U.T(e.s, 50, y + 1, W - 64, "body", color or C.ink or C.light)
+  local where = e.m and J.landOf and J.landOf(e.m)
+  U.T("Day " .. D().dayOf(j, e.t) .. ", level " .. (e.l or "?") .. (where and (", " .. where) or ""), 50, y + h + 3, W - 64, "small", C.dim)
+  y = y + math.max(34, h + 22) + 4
   U.box(0, top, W, y - top, C.panel, C.edge)
   return y + 12
 end
@@ -377,10 +590,28 @@ local function fellowshipPage(R, f, y)
   local U, C, W = R.U, R.C, R.W
   local g, key = f.g, f.key
   local j = S.journal()
+  local moments = together(j, f)
+  local lands = landsOf(g, moments)
   local top = y
   y = y + 12
+  -- the banner: its colours, its sign and the year it was founded
+  local col = BANNERS[hash(key) % #BANNERS + 1]
+  local bw, bh = 96, 84
+  local bx = math.floor((W - bw) / 2)
+  U.rect(bx - 2, y - 2, bw + 4, bh + 4, { C.gold[1], C.gold[2], C.gold[3], 0.9 })
+  U.rect(bx, y, bw, bh, { col[1], col[2], col[3], 1 })
+  U.rect(bx + 6, y + 6, bw - 12, 1, { 1, 0.85, 0.4, 0.5 })
+  U.rect(bx + 6, y + bh - 7, bw - 12, 1, { 1, 0.85, 0.4, 0.5 })
+  -- the swallowtail: two tails under the banner
+  U.rect(bx, y + bh + 2, math.floor(bw / 2) - 6, 10, { col[1] * 0.8, col[2] * 0.8, col[3] * 0.8, 1 })
+  U.rect(bx + math.floor(bw / 2) + 6, y + bh + 2, math.floor(bw / 2) - 6, 10, { col[1] * 0.8, col[2] * 0.8, col[3] * 0.8, 1 })
+  U.icon(J.ICON.fellowship, bx + math.floor(bw / 2) - 18, y + 12, 36, S.fellowshipName(g, key), motto(g, key, lands))
+  U.T(g.formed and ("EST. DAY " .. D().dayOf(j, g.formed)) or "FORMING", bx, y + 56, bw, "small", { 1, 0.9, 0.6 }, "CENTER")
+  y = y + bh + 20
   y = y + U.sectionTitle(S.fellowshipName(g, key):upper(), y)
-  local each = math.min(80, math.floor((W - 28) / (#f.names + 1)))
+  y = y + U.T('"' .. motto(g, key, lands) .. '"', 14, y, W - 28, "body", C.inkSoft or C.dim, "CENTER") + 10
+  -- the roster: you and them, with their bond and role
+  local each = math.min(90, math.floor((W - 28) / (#f.names + 1)))
   local x0 = math.floor((W - each * (#f.names + 1)) / 2)
   local _, mine = Q.try(UnitClass, "player")
   local folk = { { "You", mine } }
@@ -389,23 +620,30 @@ local function fellowshipPage(R, f, y)
     local cx = x0 + (i - 1) * each
     U.icon(classIcon(m[2]), cx + math.floor(each / 2) - 14, y, 28, m[1] == "You" and "You" or name(m[1]))
     U.T(m[1] == "You" and "You" or name(m[1]), cx, y + 32, each, "small", C.ink or C.light, "CENTER")
-    if m[1] ~= "You" then U.hit(cx, y, each, 46, name(m[1]), "Click to open their page.", function() open(m[1]) end, "Companion " .. plain(m[1])) end
+    local role
+    if m[1] == "You" then role = "the one writing this"
+    else
+      local _, bondName = S.bond(m[1])
+      local tag = S.tagged(m[1], "Healer") and "Healer" or S.tagged(m[1], "Tank") and "Tank" or nil
+      role = tag and (tag .. ", " .. bondName:lower()) or bondName
+    end
+    U.T(role, cx, y + 46, each, "small", C.dim, "CENTER")
+    if m[1] ~= "You" then U.hit(cx, y, each, 60, name(m[1]), "Click to open their page.", function() open(m[1]) end, "Companion " .. plain(m[1])) end
   end
-  y = y + 52
-  local s = {}
-  s[#s + 1] = "Formed on day " .. D().dayOf(j, g.formed or g.first) .. ", after " .. D().duration(n0(g.secs)) .. " on the road together"
-    .. (n0(g.days) > 1 and (" over " .. n0(g.days) .. " days") or "") .. "."
-  local work = {}
-  if n0(g.quests) > 0 then work[#work + 1] = D().plural(n0(g.quests), "quest") end
-  if n0(g.bosses) > 0 then work[#work + 1] = n0(g.bosses) .. (n0(g.bosses) == 1 and " boss" or " bosses") end
-  if n0(g.runs) > 0 then work[#work + 1] = D().plural(n0(g.runs), "dungeon run") end
-  if n0(g.levels) > 0 then work[#work + 1] = D().plural(n0(g.levels), "level") end
-  if #work > 0 then s[#s + 1] = "Between you: " .. table.concat(work, ", ") .. "." end
-  if n0(g.wipes) + n0(g.deaths) > 0 then
-    s[#s + 1] = "Not every pull went well: " .. D().plural(n0(g.wipes), "wipe") .. " and " .. D().plural(n0(g.deaths), "fall") .. "."
+  y = y + 66
+  y = y + D().initialed(U, C, saga(j, f, lands), 14, y, W - 28, "body", C.ink or C.light) + 10
+  -- four figures
+  local cells = { { D().duration(n0(g.secs)), "together" }, { tostring(n0(g.quests)), n0(g.quests) == 1 and "quest" or "quests" },
+    { tostring(n0(g.bosses)), n0(g.bosses) == 1 and "boss" or "bosses" },
+    { tostring(n0(g.wipes) + n0(g.deaths)), (n0(g.wipes) + n0(g.deaths)) == 1 and "setback" or "setbacks" } }
+  local cw = math.floor((W - 28 - 18) / 4)
+  for i, c in ipairs(cells) do
+    local cx = 14 + (i - 1) * (cw + 6)
+    U.box(cx, y, cw, 42, C.panel)
+    U.T(c[1], cx, y + 5, cw, "body", C.ink or C.light, "CENTER")
+    U.T(c[2], cx, y + 24, cw, "small", C.dim, "CENTER")
   end
-  if g.last then s[#s + 1] = "Last together " .. ago(g.last) .. "." end
-  y = y + D().initialed(U, C, table.concat(s, " "), 14, y, W - 28, "body", C.ink or C.light) + 10
+  y = y + 50
   local b = U.btn("Rename", math.floor(W / 2) - 60, y, 120, function()
     ns.showMacroCopy({ copyTitle = "Name your fellowship", body = g.named or g.auto or "", paste = true, acceptLabel = "Save name",
       help = "3 to 32 characters. Save it empty to go back to the name it was given.",
@@ -419,6 +657,51 @@ local function fellowshipPage(R, f, y)
   y = y + 32
   D().page(U, C, 0, top, W, y - top)
   y = y + 12
+  -- the finest and darkest hours
+  local fine = weightiest(moments, FINE)
+  if fine then y = hourCard(R, "FINEST HOUR", fine, y) end
+  local dark = weightiest(moments, DARK)
+  if dark then y = hourCard(R, "DARKEST HOUR", dark, y, D().DEATH_INK) end
+  -- the lands walked together
+  if #lands > 0 then
+    top = y
+    y = D().cardTitle(R, "THE ROAD YOU SHARED", 0, y, W, #lands == 1 and "1 land" or (#lands .. " lands"))
+    local most = lands[1][2]
+    for i = 1, math.min(6, #lands) do
+      local l = lands[i]
+      U.T(l[1], 14, y, W - 120, "small", C.ink or C.light)
+      if type(g.zones) == "table" then U.T(D().duration(l[2]), 14, y, W - 28, "small", C.dim, "RIGHT") end
+      U.rect(14, y + 15, W - 28, 4, C.book and { 0, 0, 0, 0.1 } or { 0.05, 0.05, 0.08, 0.9 })
+      U.rect(14, y + 15, math.max(2, (W - 28) * l[2] / math.max(1, most)), 4, { col[1] + 0.2, col[2] + 0.2, col[3] + 0.2, 0.9 })
+      y = y + 24
+    end
+    y = y + 4
+    U.box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+  end
+  -- the days together: the last four weeks as a calendar
+  if type(g.dl) == "table" and #g.dl > 0 then
+    top = y
+    y = D().cardTitle(R, "DAYS TOGETHER", 0, y, W, D().plural(n0(g.days), "day"))
+    local set = {}
+    for _, d in ipairs(g.dl) do set[d] = true end
+    local today = math.floor(now() / 86400)
+    local cell = math.floor((W - 28 - 13 * 3) / 14)
+    for i = 0, 27 do
+      local d = today - 27 + i
+      local cx = 14 + (i % 14) * (cell + 3)
+      local cy = y + math.floor(i / 14) * (cell + 3)
+      local lit = set[d]
+      U.rect(cx, cy, cell, cell, lit and { col[1] + 0.25, col[2] + 0.25, col[3] + 0.25, 1 } or (C.book and { 0, 0, 0, 0.08 } or { 0.1, 0.1, 0.12, 0.9 }))
+      if d == today then U.rect(cx, cy + cell - 2, cell, 2, C.gold) end
+    end
+    y = y + 2 * (cell + 3) + 2
+    U.T("four weeks ago", 14, y, W - 28, "small", C.dim)
+    U.T("today", 14, y, W - 28, "small", C.dim, "RIGHT")
+    y = y + 20
+    U.box(0, top, W, y - top, C.panel, C.edge)
+    y = y + 12
+  end
   -- its portraits
   local set = {}
   for _, n in ipairs(f.names) do set[n] = true end
@@ -434,25 +717,15 @@ local function fellowshipPage(R, f, y)
   end
   -- shared moments: every member there
   top = y
-  y = D().cardTitle(R, "WHAT YOU DID TOGETHER", 0, y, W)
-  local count = 0
-  for i = #j.events, 1, -1 do
-    local e = j.events[i]
-    if type(e) == "table" and type(e.with) == "string" then
-      local here = {}
-      for n in e.with:gmatch("[^,]+") do here[n] = true end
-      local all = true
-      for _, n in ipairs(f.names) do if not here[n] then all = false end end
-      if all and count < 8 then
-        count = count + 1
-        U.icon(J.ICON[e.k] or J.ICON.quest, 14, y, 22, e.s, e.d)
-        local h = U.T(e.s, 44, y + 1, W - 58, "small", C.ink or C.light)
-        U.T("Day " .. D().dayOf(j, e.t) .. ", level " .. (e.l or "?"), 44, y + h + 3, W - 58, "small", C.dim)
-        y = y + math.max(28, h + 22)
-      end
-    end
+  y = D().cardTitle(R, "WHAT YOU DID TOGETHER", 0, y, W, #moments > 0 and tostring(#moments) or nil)
+  for i = 1, math.min(8, #moments) do
+    local e = moments[i]
+    U.icon(J.ICON[e.k] or J.ICON.quest, 14, y, 22, e.s, e.d)
+    local h = U.T(e.s, 44, y + 1, W - 58, "small", C.ink or C.light)
+    U.T("Day " .. D().dayOf(j, e.t) .. ", level " .. (e.l or "?"), 44, y + h + 3, W - 58, "small", C.dim)
+    y = y + math.max(28, h + 22)
   end
-  if count == 0 then y = y + U.T("Nothing written with all of you there yet.", 14, y, W - 28, "small", C.dim) + 8 end
+  if #moments == 0 then y = y + U.T("Nothing written with all of you there yet.", 14, y, W - 28, "small", C.dim) + 8 end
   y = y + 4
   U.box(0, top, W, y - top, C.panel, C.edge)
   return y + 12
@@ -466,23 +739,31 @@ local function page(V, y)
   for _, f in ipairs(S.fellowships(true)) do if not f.g.formed then forming[#forming + 1] = f end end
   local pick
   for _, f in ipairs(formed) do if f.key == chosen then pick = f end end
+  for _, f in ipairs(forming) do if f.key == chosen then pick = f end end
   pick = pick or formed[1]
-  local top, ly = y, y
+  local ly = bandNow(L, y)
+  local top = ly
   ly = D().cardTitle(L, "FELLOWSHIPS", 0, ly, W, #formed > 0 and tostring(#formed) or nil)
   if #formed == 0 then
-    ly = ly + U.T("When the same two or more people travel with you for half an hour, or meet you again on another day, "
-      .. "you become a fellowship: it gets a name, a page and a record of everything you did together.", 14, ly, W - 28, "small", C.dim) + 8
+    ly = ly + U.T("Travel with the same friend, or the same party, for half an hour (or meet again on another day) and you "
+      .. "become a fellowship: a name, a banner, a motto and a record of everything you did together.", 14, ly, W - 28, "small", C.dim) + 8
   end
   for i, f in ipairs(formed) do
     if i > 12 then break end
     ly = ly + fellowshipRow(L, f, ly, f == pick)
   end
+  if #forming > 0 then
+    ly = ly + U.T("FORMING", 14, ly + 2, W - 28, "small", C.gold) + 6
+  end
   for i = 1, math.min(3, #forming) do
     local f = forming[i]
     local share = math.min(1, n0(f.g.secs) / S.FORM_SECS)
-    U.T(S.listText(f.names) .. ": forming", 14, ly, W - 28, "small", C.inkSoft or C.dim)
+    U.T(S.listText(f.names), 14, ly, W - 28, "small", C.inkSoft or C.dim)
+    U.T(math.floor(share * 100) .. "%", 14, ly, W - 28, "small", C.dim, "RIGHT")
     U.rect(14, ly + 16, W - 28, 4, C.book and { 0, 0, 0, 0.12 } or { 0.05, 0.05, 0.08, 0.9 })
     U.rect(14, ly + 16, math.max(2, (W - 28) * share), 4, C.gold)
+    U.hit(10, ly - 2, W - 20, 24, S.listText(f.names), "Forming: " .. D().duration(n0(f.g.secs)) .. " of " .. D().duration(S.FORM_SECS)
+      .. " together.\nClick to see it.", function() chosen = f.key; ns.ui.refresh() end, "Forming " .. S.listText(f.names))
     ly = ly + 28
   end
   ly = ly + 6
@@ -511,13 +792,13 @@ local function page(V, y)
     local rtop = ry
     ry = ry + 12
     ry = ry + RU.sectionTitle("THE COMPANY YOU KEEP", ry)
-    ry = ry + D().initialed(RU, RC, "No fellowship has formed yet. Group up with the same friends again and the book gives your band a "
-      .. "name, keeps its record, frames its portraits and remembers what you did together. You can rename it any time.", 14, ry, RW - 28,
-      "body", RC.ink or RC.light) + 12
+    ry = ry + D().initialed(RU, RC, "No fellowship has formed yet. Travel with the same friend, or the same party, and the book raises "
+      .. "your banner: a name, a motto, your finest and darkest hours, the lands you crossed and the days you met. You can rename it "
+      .. "any time.", 14, ry, RW - 28, "body", RC.ink or RC.light) + 12
     D().page(RU, RC, 0, rtop, RW, ry - rtop)
     ry = ry + 12
   end
   return ly, ry
 end
 
-J.addPage("Fellowships", "Your fellowships, the awards your companions have won and the group portraits.", page, "Companions")
+J.addPage("Fellowships", "Your fellowships, their banners and stories, the awards your companions have won and the group portraits.", page, "Companions")
