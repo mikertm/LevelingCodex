@@ -783,6 +783,7 @@ function J.drawWorld(force)
   if not force and key == wtrail.key then return end
   wtrail.key = key
   for _, d in ipairs(wtrail.dots) do d:Hide(); d.edge:Hide() end
+  for _, l in ipairs(wtrail.lines or {}) do l:Hide() end
   for _, p in ipairs(wtrail.pins) do p:Hide() end
   if ns.db().noJourneyMap then J.worldLine = "off (Journey > Show my trail on the world map)"; wtrail:Hide(); return end
   if not shown then J.worldLine = J.worldLine or "the map is closed"; return end
@@ -793,7 +794,45 @@ function J.drawWorld(force)
   wtrail:SetScale(1 / z)
   wtrail:SetSize(math.max(1, w * z), math.max(1, h * z))
   local used = 0
-  local runs, total = J.runs(map, WORLD_DOTS)
+  local runs, total = J.runs(map, WORLD_DOTS * 2)
+  -- a line where the client draws them (dots ran into blobs where you walked a lot): points 5 px
+  -- apart at least, no line across a jump, each stroke on a dark under-stroke
+  local lines = type(wtrail.CreateLine) == "function" and 0 or nil
+  if lines then
+    wtrail.lines = wtrail.lines or {}
+    local function stroke(x1, y1, x2, y2, c, a, thick, sub)
+      lines = lines + 1
+      local l = wtrail.lines[lines]
+      if not l then l = wtrail:CreateLine(nil, "ARTWORK"); wtrail.lines[lines] = l end
+      l:SetDrawLayer("ARTWORK", sub)
+      l:SetStartPoint("TOPLEFT", wtrail, x1, y1)
+      l:SetEndPoint("TOPLEFT", wtrail, x2, y2)
+      l:SetThickness(thick)
+      l:SetColorTexture(c[1], c[2], c[3], a)
+      l:Show()
+    end
+    local dark = { 0.1, 0.06, 0.02 }
+    for _, r in ipairs(runs) do
+      local c = J.bandColor(r.level)
+      local px, py
+      for _, pt in ipairs(r.pts) do
+        if lines >= WORLD_DOTS * 2 then break end
+        local x, y = pt[1] / 100 * w * z, -pt[2] / 100 * h * z
+        if not px then px, py = x, y
+        else
+          local d2 = (x - px) ^ 2 + (y - py) ^ 2
+          if d2 > (w * z * 0.12) ^ 2 then px, py = x, y
+          elseif d2 >= 25 then
+            stroke(px, py, x, y, dark, 0.5, 5, 1)
+            stroke(px, py, x, y, c, 0.95, 3, 2)
+            used = used + 1
+            px, py = x, y
+          end
+        end
+      end
+    end
+    runs = {}
+  end
   for _, r in ipairs(runs) do
     local c = J.bandColor(r.level)
     for _, pt in ipairs(r.pts) do
@@ -824,5 +863,5 @@ function J.drawWorld(force)
     end
   end
   wtrail:Show()
-  J.worldLine = used .. " dots of " .. total .. " points and " .. pins .. " pins on map " .. map
+  J.worldLine = used .. (lines and " strokes" or " dots") .. " of " .. total .. " points and " .. pins .. " pins on map " .. map
 end

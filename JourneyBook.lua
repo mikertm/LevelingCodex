@@ -37,6 +37,7 @@ local FILTER_TIPS = { "Every moment.", "Quests and the stories they finished, an
   "Companions, dungeon parties, resurrections, trades, duels, waves and campfires.",
   "New lands, flight paths, inns, new homes, campfires and the miles behind you.", "Every fall, wipe, near miss and lost cause." }
 local storyLevel, mapPick, highlight
+local storyLeaf, unfolded = 1, {} -- the page of the chapter you're reading; the folded runs you opened
 local confirmReset, confirmAt
 
 local function duration(seconds)
@@ -159,6 +160,8 @@ local function column(V, P, ox, w)
   X.segments = function(x, ...) return U.segments(x + ox, ...) end
   X.playerPortrait = function(x, ...) return U.playerPortrait(x + ox, ...) end
   X.picture = function(path, x, ...) return U.picture(path, x + ox, ...) end
+  X.fold = function(open, x, ...) return U.fold(open, x + ox, ...) end
+  X.line = function(x1, y1, x2, ...) return U.line(x1 + ox, y1, x2 + ox, ...) end
   X.box = function(x, y, bw, bh, fill, edge) panel(U, P, x + ox, y, bw, bh, fill, edge) end
   X.plate, X.surface = X.box, X.box
   -- a heading in the middle of the column with the flourish under it; returns the space it takes
@@ -308,6 +311,9 @@ local function toggleLayer(key)
   if type(db.journeyMapHide) ~= "table" then db.journeyMapHide = {} end
   db.journeyMapHide[key] = not db.journeyMapHide[key] or nil
 end
+-- small moments, drawn as dots on the map (they still gather into a pin's count)
+local MINOR = { mine = true, herb = true, skin = true, fish = true, gold = true, sold = true, expired = true, auction = true,
+  flight = true, rest = true, camp = true, emote = true, trade = true, craft = true, skill = true, milestone = true }
 -- how much a moment matters when pins share a spot (the top one shows)
 local WEIGHT = { falls = 6, battles = 5, levels = 4, fellowship = 3, quests = 2, fortunes = 2, travels = 1 }
 
@@ -337,16 +343,49 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
     end
     U.T(mapLabel(j, map), mx, my + mh / 2 - 10, mw, "head", { ink[1], ink[2], ink[3], 0.35 }, "CENTER")
   end
-  -- the trail: each dot a bright centre on a dark halo, so it reads on light and dark map art
+  -- the trail: a line in your level's colour on a dark under-stroke, points closer than 4 px merged
+  -- and a gap where you jumped (a hearth, a flight); where the trail runs thickest (the camps and
+  -- towns you kept coming back to) a soft wash marks the place, the six busiest at most
   local small = mw < 400
-  local hs, ds = small and 5 or 7, small and 3 or 4
-  for _, r in ipairs(layerOn("trail", all) and J.runs(map, small and 200 or 400, onlyLevel) or {}) do
+  local thick = small and 2 or 3
+  local busy, cell = {}, small and 0.05 or 0.04
+  local hasLine = U.line and true
+  for _, r in ipairs(layerOn("trail", all) and J.runs(map, small and 250 or 600, onlyLevel) or {}) do
     local c = J.bandColor(r.level)
+    local px, py
     for _, pt in ipairs(r.pts) do
       local cx, cy = mx + pt[1] / 100 * mw, my + pt[2] / 100 * mh
-      disc(U, cx - hs / 2, cy - hs / 2, hs, { 0.08, 0.05, 0.02, 0.55 }, 1, "journeyHalo")
-      disc(U, cx - ds / 2, cy - ds / 2, ds, { c[1], c[2], c[3], 1 }, 2, "journeyDot")
+      local key = math.floor(pt[1] / 100 / cell) .. ":" .. math.floor(pt[2] / 100 / cell)
+      local b = busy[key]
+      if not b then b = { n = 0, x = 0, y = 0, c = c }; busy[key] = b end
+      b.n, b.x, b.y, b.c = b.n + 1, b.x + cx, b.y + cy, c
+      if not px then
+        px, py = cx, cy
+      else
+        local dx, dy = cx - px, cy - py
+        local d2 = dx * dx + dy * dy
+        if d2 > (mw * 0.12) ^ 2 then
+          px, py = cx, cy -- a jump: no line across the map
+        elseif d2 >= 16 then
+          if hasLine then
+            U.line(px, py, cx, cy, { 0.08, 0.05, 0.02, 0.45 }, thick + 2, 1)
+            U.line(px, py, cx, cy, { c[1], c[2], c[3], 0.95 }, thick, 2)
+          else
+            disc(U, cx - 2, cy - 2, 4, { c[1], c[2], c[3], 1 }, 2, "journeyDot")
+          end
+          px, py = cx, cy
+        end
+      end
     end
+  end
+  local spots = {}
+  for _, b in pairs(busy) do if b.n >= 6 then spots[#spots + 1] = b end end
+  table.sort(spots, function(a, b) return a.n > b.n end)
+  for i = 1, math.min(6, #spots) do
+    local b = spots[i]
+    local size = math.min(small and 26 or 40, (small and 12 or 18) + b.n)
+    local cx, cy = b.x / b.n, b.y / b.n
+    disc(U, cx - size / 2, cy - size / 2, size, { b.c[1], b.c[2], b.c[3], 0.22 }, 0, "journeyHalo")
   end
   -- you, when this is the map you're on
   local hereMap, hx, hy = Q.position()
@@ -358,31 +397,37 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
     U.T("You", cx + 8, cy - 7, 40, "small", gold, nil, true)
     U.hit(cx - 8, cy - 8, 16, 16, "You are here", nil, nil, "You are here")
   end
-  -- the moments: one pin per spot (moments a pin apart share it, the weightiest on top, a count beside)
-  local cell = pinSize + 2
-  local spots, order = {}, {}
+  -- the moments: pins near each other gather into one (the weightiest on top, a count beside it);
+  -- small moments (gathering, gold, flights, inns) are dots, so only what matters wears an icon
+  local reach = pinSize * 1.6
+  local groups = {}
   for _, e in ipairs(J.pinsOn(map, onlyLevel)) do
     local lay = layerOf(e)
     if layerOn(lay.key, all) or highlight == e then
       local px, py = mx + e.x / 100 * mw, my + e.y / 100 * mh
-      local key = math.floor(px / cell) .. ":" .. math.floor(py / cell)
-      local sp = spots[key]
-      if not sp then sp = { x = px, y = py, list = {} }; spots[key] = sp; order[#order + 1] = sp end
-      sp.list[#sp.list + 1] = { e = e, lay = lay }
+      local into
+      for _, g in ipairs(groups) do
+        if math.abs(g.x - px) <= reach and math.abs(g.y - py) <= reach then into = g; break end
+      end
+      if not into then into = { x = px, y = py, list = {} }; groups[#groups + 1] = into end
+      into.list[#into.list + 1] = { e = e, lay = lay }
     end
   end
   local gold = ns.C.gold
-  for _, sp in ipairs(order) do
+  for _, sp in ipairs(groups) do
     table.sort(sp.list, function(a, b)
       if (a.e == highlight) ~= (b.e == highlight) then return a.e == highlight end
       local wa, wb = WEIGHT[a.lay.key] or 0, WEIGHT[b.lay.key] or 0
+      if MINOR[a.e.k] then wa = wa - 3 end
+      if MINOR[b.e.k] then wb = wb - 3 end
       if wa ~= wb then return wa > wb end
       return (a.e.t or 0) > (b.e.t or 0)
     end)
     local top = sp.list[1]
     local e, lay = top.e, top.lay
     local big = highlight and e == highlight
-    local size = big and pinSize + 8 or pinSize
+    local minor = MINOR[e.k] and not big
+    local size = big and pinSize + 8 or (minor and math.max(6, math.floor(pinSize * 0.55)) or pinSize)
     local px, py = sp.x - size / 2, sp.y - size / 2
     local tipText = "Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t) .. (e.d and ("  -  " .. e.d) or "")
     if #sp.list > 1 then
@@ -394,13 +439,18 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
     if big then disc(U, px - 4, py - 4, size + 8, { gold[1], gold[2], gold[3], 0.7 }, nil, "journeyRing", true) end
     local file = lay.pin and PIN[e.k]
     local function pick() highlight = (highlight ~= e) and e or nil; U.refresh() end
-    if file then
+    local c = lay.color or gold
+    if minor then
+      disc(U, px - 1, py - 1, size + 2, { 0.08, 0.05, 0.02, 0.75 }, 1, "journeyHalo", true)
+      disc(U, px, py, size, { c[1], c[2], c[3], 1 }, 2, "journeyDot", true)
+      U.hit(px - 2, py - 2, size + 4, size + 4, e.s, tipText, pick, "Pin " .. e.s)
+    elseif file then
       disc(U, px - 2, py - 2, size + 4, { 0.08, 0.05, 0.02, 0.6 }, 1, "journeyHalo", true)
       pinArt(U, ns.C, file, px, py, size)
       U.hit(px, py, size, size, e.s, tipText, pick, "Pin " .. e.s)
     else
-      local c = lay.color or gold
-      disc(U, px - 2, py - 2, size + 4, { c[1], c[2], c[3], 1 }, 1, "journeyHalo", true)
+      disc(U, px - 3, py - 3, size + 6, { 0.08, 0.05, 0.02, 0.55 }, 1, "journeyHalo", true)
+      disc(U, px - 1, py - 1, size + 2, { c[1], c[2], c[3], 1 }, 1, "journeyHalo", true)
       local f = U.icon(ICON[e.k] or lay.icon or ICON.quest, px, py, size, e.s, tipText)
       if f then
         if f.ring then f.ring:SetColorTexture(c[1], c[2], c[3], 1) end
@@ -409,9 +459,11 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
       end
     end
     if #sp.list > 1 then
-      local n = #sp.list > 9 and "9+" or tostring(#sp.list)
-      disc(U, px + size - 5, py + size - 7, 12, { 0.1, 0.06, 0.03, 0.9 }, 3, "journeyRing", true)
-      U.T(n, px + size - 7, py + size - 6, 16, "small", { 1, 0.9, 0.6 }, "CENTER", true)
+      local n = #sp.list > 99 and "99+" or tostring(#sp.list)
+      local bw = #n * 6 + 8
+      local bx, by = px + size - 4, py - 6
+      disc(U, bx, by, bw, { 0.1, 0.06, 0.03, 0.92 }, 3, "journeyRing", true)
+      U.T(n, bx, by + 1, bw, "small", { 1, 0.9, 0.6 }, "CENTER", true)
     end
   end
 end
@@ -924,7 +976,7 @@ local function overviewPage(V, y)
     ry = ry + 80
   end
   ry = ry + 8
-  R.U.btn("Read the story", 0, ry, 150, function() storyLevel = l; openPage(P_STORY, R.U) end, false,
+  R.U.btn("Read the story", 0, ry, 150, function() storyLevel, storyLeaf = l, 1; openPage(P_STORY, R.U) end, false,
     "Turn to your chapter; every level of your story is its own page.")
   if #chapters > 1 then R.U.T(plural(#chapters, "chapter") .. " so far", 160, ry + 6, R.W - 160, "small", R.C.dim) end
   ry = ry + 34
@@ -993,6 +1045,12 @@ local function mapPage(V, y)
     J.resetSample()
     U.refresh()
   end, "Keeps a breadcrumb every 35 yards you walk. The journal's moments are written either way.")
+  ly = ly + 28
+  U.check("Show a card when a big moment is written", 14, ly, not ns.db().noJourneyCards, function()
+    local db = LevelingCodexDB
+    if type(db) == "table" then db.noJourneyCards = not db.noJourneyCards or nil end
+    U.refresh()
+  end, "A boss, a first, a rare, a new land, a fall or a close call shows a small card as it goes into the book.")
   ly = ly + 30
   local armed = confirmReset and GetTime() - (confirmAt or 0) < 5
   U.btn(armed and "Click again to erase" or "Erase the journal", 14, ly, 180, function()
@@ -1132,12 +1190,12 @@ local function storyAt(list)
   return list[#list] or CONTENTS
 end
 function J.openChapter(l)
-  storyLevel = l
+  storyLevel, storyLeaf = l, 1
   openPage(P_STORY, ns.ui)
 end
 
 local function turnTo(U, l)
-  storyLevel = l
+  storyLevel, storyLeaf = l, 1
   U.refreshTop()
 end
 
@@ -1157,7 +1215,8 @@ local function storyFilters(V, y)
   U.btn("< Previous chapter", x + 104, y, 150, function() if prev then turnTo(U, prev) end end, false,
     prev and (prev == CONTENTS and "Back to the contents." or ("Turn back to " .. chapterLabel(prev) .. ", level " .. prev .. "."))
     or "This is the first page.")
-  local mid = at == CONTENTS and "THE CONTENTS" or ("CHAPTER " .. roman(at) .. "  -  " .. i .. " OF " .. #list)
+  local mid = at == CONTENTS and "THE CONTENTS" or ("CHAPTER " .. roman(at) .. "  -  " .. i .. " OF " .. #list
+    .. (storyLeaf > 1 and ("  -  PAGE " .. storyLeaf) or ""))
   U.T(mid, x + 262, y + 6, V.W - 2 * EDGE - 524, "label", V.C.gold, "CENTER")
   U.btn("Next chapter >", V.W - EDGE - 254, y, 150, function() if nxt then turnTo(U, nxt) end end, false,
     nxt and ("Turn to " .. chapterLabel(nxt) .. ", level " .. nxt .. ".") or "The page after this one is still blank.")
@@ -1166,14 +1225,83 @@ local function storyFilters(V, y)
   return y + 32
 end
 
--- The moments of a chapter in order, as a timeline with the days marked; returns the new y.
-local function momentRows(V, list, x, y, w, band)
+-- Moments that come in runs (a day of auction trips, a string of flights, an evening of fishing) fold
+-- into one line when three or more of a kind share a day: "Traded at the auction house 14 times".
+-- A click opens the run (its moments drawn under it, indented) and closes it again.
+local FOLD = { auction = "Traded at the auction house", sold = "Buyers found your wares", expired = "Auctions came back unsold",
+  gold = "Collected auction gold at the mailbox", flight = "Took to the skies", rest = "Rested at an inn", camp = "Warmed your hands at a campfire",
+  trade = "Traded with other players", emote = "Shared a wave or a smile", mine = "Worked the veins", herb = "Gathered herbs",
+  skin = "Skinned your kills", fish = "Cast a line", craft = "Worked at the bench", upgrade = "Found better gear",
+  abandon = "Gave up on quests", quest = "Finished quests" }
+local FOLD_MIN = { quest = 8 } -- quests are the story itself: they fold only on a very busy day
+local SAY_TIMES = { "once", "twice", "three times", "four times", "five times", "six times", "seven times", "eight times",
+  "nine times", "ten times", "eleven times", "twelve times" }
+-- copper in a "1g 2s 3c" text, or nil
+local function moneyIn(text)
+  if type(text) ~= "string" then return nil end
+  local g, sv, c = text:match("(%d+)g"), text:match("(%d+)s"), text:match("(%d+)c")
+  if not (g or sv or c) then return nil end
+  return (tonumber(g) or 0) * 10000 + (tonumber(sv) or 0) * 100 + (tonumber(c) or 0)
+end
+-- The chapter's moments (oldest first) as rows: { e = moment } or { fold = run } (then its moments as
+-- { e, sub = true } while it is open). key keeps the open runs apart per chapter.
+local function foldMoments(j, list, key)
+  local count = {}
+  local function runKey(e) return FOLD[e.k] and (dayOf(j, e.t) .. ":" .. e.k) or nil end
+  for _, e in ipairs(list) do
+    local k = runKey(e)
+    if k then count[k] = (count[k] or 0) + 1 end
+  end
+  local rows, runs = {}, {}
+  for _, e in ipairs(list) do
+    local k = runKey(e)
+    if k and count[k] >= (FOLD_MIN[e.k] or 3) then
+      local run = runs[k]
+      if not run then
+        run = { k = e.k, t = e.t, key = key .. ":" .. k, list = {} }
+        runs[k] = run
+        rows[#rows + 1] = { fold = run }
+      end
+      run.list[#run.list + 1] = e
+    else
+      rows[#rows + 1] = { e = e }
+    end
+  end
+  local out = {}
+  for _, r in ipairs(rows) do
+    out[#out + 1] = r
+    if r.fold and unfolded[r.fold.key] then
+      for _, e in ipairs(r.fold.list) do out[#out + 1] = { e = e, sub = true } end
+    end
+  end
+  return out
+end
+-- What a folded run says, and its detail line.
+local function foldText(run)
+  local n = #run.list
+  local text = FOLD[run.k] .. " " .. (SAY_TIMES[n] or (n .. " times"))
+  local spent, got, sums = 0, 0, 0
+  for _, e in ipairs(run.list) do
+    if type(e.ah) == "table" then spent = spent + (tonumber(e.ah.sp) or 0); sums = sums + 1
+    elseif run.k == "auction" and e.d and e.d:find("spent", 1, true) then spent = spent + (moneyIn(e.d) or 0); sums = sums + 1
+    elseif run.k == "gold" then got = got + (moneyIn(e.s) or 0); sums = sums + 1 end
+  end
+  local detail
+  if spent > 0 then detail = ns.money(spent) .. " spent in all"
+  elseif got > 0 then detail = ns.money(got) .. " collected in all" end
+  return text, detail
+end
+
+-- The moments of a chapter in order (rows from foldMoments, first..last), as a timeline with the days
+-- marked; returns the new y.
+local function momentRows(V, rows, x, y, w, band, first, last)
   local U, C, j = V.U, V.C, V.j
   local spineTop, spineEnd, lastDay
-  local textW = w - 34
-  for _, e in ipairs(list) do
+  for i = first or 1, math.min(last or #rows, #rows) do
+    local r = rows[i]
+    local e = r.e or r.fold
     local day = dayOf(j, e.t)
-    if day ~= lastDay then
+    if day ~= lastDay and not r.sub then
       if lastDay then y = y + 4 end
       U.T("Day " .. day, x, y, w, "small", C.gold)
       U.rect(x + 46, y + 7, w - 46, 1, { band[1], band[2], band[3], 0.3 }, "border", 3)
@@ -1182,17 +1310,39 @@ local function momentRows(V, list, x, y, w, band)
     lastDay = day
     spineTop = spineTop or (y + 10)
     spineEnd = y + 10
-    U.icon(ICON[e.k] or ICON.quest, x, y, 22, e.s, e.d)
-    local th = U.T(e.s, x + 30, y + 3, textW, "body", e.k == "death" and DEATH_INK or C.ink)
-    local rowH = math.max(24, th + 6)
-    if e.d then rowH = rowH + U.T(e.d, x + 30, y + th + 5, textW, "small", C.inkSoft) + 2 end
-    if e.m and e.x then
-      U.hit(x - 4, y - 2, w + 8, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
-        mapPick, highlight = e.m, e
-        openPage(P_MAP, U)
-      end, "Moment " .. e.s)
+    local ix = r.sub and (x + 26) or x
+    local textW = w - (ix - x) - 34
+    if r.fold then
+      local run = r.fold
+      local text, detail = foldText(run)
+      local open = unfolded[run.key]
+      U.icon(ICON[run.k] or ICON.quest, ix, y, 22, text, detail)
+      U.rect(ix + 12, y + 13, 16, 12, { 0.1, 0.06, 0.03, 0.85 }, "border", 5, nil, true)
+      U.T("x" .. #run.list, ix + 10, y + 13, 20, "small", { 1, 0.9, 0.6 }, "CENTER", true)
+      local th = U.T(text, ix + 30, y + 3, textW - 20, "body", C.ink)
+      local rowH = math.max(24, th + 6)
+      rowH = rowH + U.T((detail and (detail .. "  -  ") or "") .. (open and "click to fold them away" or "click to read each one"),
+        ix + 30, y + th + 5, textW, "small", C.inkSoft) + 2
+      U.fold(open, x + w - 16, y + 4)
+      U.hit(x - 4, y - 2, w + 8, rowH + 2, text, open and "Click to fold these moments into one line."
+        or "Click to read each of these moments.", function()
+        unfolded[run.key] = not open or nil
+        U.refresh()
+      end, "Fold " .. text)
+      y = y + rowH + 6
+    else
+      U.icon(ICON[e.k] or ICON.quest, ix, y, r.sub and 18 or 22, e.s, e.d)
+      local th = U.T(e.s, ix + 30, y + 3, textW, r.sub and "small" or "body", e.k == "death" and DEATH_INK or C.ink)
+      local rowH = math.max(r.sub and 20 or 24, th + 6)
+      if e.d then rowH = rowH + U.T(e.d, ix + 30, y + th + 5, textW, "small", C.inkSoft) + 2 end
+      if e.m and e.x then
+        U.hit(ix - 4, y - 2, w - (ix - x) + 8, rowH + 2, e.s, (e.d and (e.d .. "\n") or "") .. "Click to show where it happened.", function()
+          mapPick, highlight = e.m, e
+          openPage(P_MAP, U)
+        end, "Moment " .. e.s)
+      end
+      y = y + rowH + (r.sub and 2 or 6)
     end
-    y = y + rowH + 6
   end
   if spineTop and spineEnd > spineTop then
     U.rect(x + 10, spineTop, 2, spineEnd - spineTop, { band[1], band[2], band[3], 0.5 }, "border", 3)
@@ -1200,8 +1350,58 @@ local function momentRows(V, list, x, y, w, band)
   return y
 end
 
+-- A chapter's pages: the first spread holds the opening and the plate, so its right sheet takes
+-- LEAF_FIRST rows; every later spread takes LEAF_COL rows a sheet.
+local LEAF_FIRST, LEAF_FIRST_NO_PLATE, LEAF_COL = 9, 14, 14
+local function leafCount(nrows, plate)
+  local first = plate and LEAF_FIRST or LEAF_FIRST_NO_PLATE
+  if nrows <= first then return 1 end
+  return 1 + math.ceil((nrows - first) / (2 * LEAF_COL))
+end
+
+-- The weightiest moments of a chapter, for its highlights.
+local HIGHLIGHT = { boss = 10, mount = 9, first = 8, rare = 8, cap = 7, dungeon = 7, chain = 6, run = 6, pvp = 6, bg = 6, elite = 6,
+  death = 5, close = 5, wipe = 5, milestone = 4, duel = 4, home = 3, rez = 4, guild = 4 }
+local function highlights(list, n)
+  local pick = {}
+  for _, e in ipairs(list) do
+    local w = HIGHLIGHT[e.k]
+    if e.k == "upgrade" and (tonumber(e.iq) or 0) >= 3 then w = 6 end
+    if w then pick[#pick + 1] = { e = e, w = w } end
+  end
+  table.sort(pick, function(a, b)
+    if a.w ~= b.w then return a.w > b.w end
+    return (tonumber(a.e.t) or 0) > (tonumber(b.e.t) or 0)
+  end)
+  local out = {}
+  for i = 1, math.min(n, #pick) do out[i] = pick[i].e end
+  return out
+end
+local function highlightCards(CV, list, y)
+  local U, C, W = CV.U, CV.C, CV.W
+  local best = highlights(list, 3)
+  if #best == 0 then return y end
+  y = y + U.sectionTitle("HIGHLIGHTS", y)
+  for _, e in ipairs(best) do
+    local top = y
+    U.icon(ICON[e.k] or ICON.quest, 10, y + 8, 32, e.s, e.d)
+    local th = U.T(e.s, 52, y + 8, W - 64, "body", e.k == "death" and DEATH_INK or C.ink)
+    local h = math.max(48, th + 16)
+    if e.d then h = math.max(h, th + 14 + U.T(e.d, 52, y + th + 10, W - 64, "small", C.inkSoft) + 4) end
+    page(U, C, 0, top, W, h)
+    if e.m and e.x then
+      U.hit(0, top, W, h, e.s, "Click to show where it happened.", function()
+        mapPick, highlight = e.m, e
+        openPage(P_MAP, U)
+      end, "Highlight " .. e.s)
+    end
+    y = y + h + 6
+  end
+  return y + 6
+end
+
 -- One chapter across the spread.
-local function chapterSpread(V, y, l, events)
+local function chapterSpread(V, y, l, events, leaf)
   local L, R, j, lvl = V.L, V.R, V.j, V.lvl
   local LU, LC = L.U, L.C
   local list, opening = {}, nil
@@ -1279,6 +1479,7 @@ local function chapterSpread(V, y, l, events)
     ry = ry + ph + 4
     ry = ry + R.U.T(mapLabel(j, plateMap) .. ", as you walked it at level " .. l, 10, ry, pw, "small", R.C.inkSoft, "CENTER") + 14
   end
+  local rows = foldMoments(j, list, tostring(l))
   local sub = #list == 0 and nil or (plural(#list, "moment") .. (filter ~= 1 and ("  -  " .. FILTERS[filter]:lower()) or ""))
   ry = ry + R.U.sectionTitle("WHAT HAPPENED", ry, sub)
   if #list == 0 then
@@ -1286,8 +1487,15 @@ local function chapterSpread(V, y, l, events)
       or "A quiet chapter: nothing else written yet. The next moment will be the first line on this page."
     ry = ry + R.U.T(quiet, 10, ry, R.W - 20, "body", R.C.inkSoft) + 10
   else
-    ry = momentRows(R, list, 0, ry, R.W, band)
+    local first = plateMap and LEAF_FIRST or LEAF_FIRST_NO_PLATE
+    ry = momentRows(R, rows, 0, ry, R.W, band, 1, first)
+    local leaves = leafCount(#rows, plateMap)
+    if leaves > 1 then
+      ry = ry + R.U.T("The chapter goes on over the page (" .. plural(leaves - 1, "more page") .. ").", 0, ry + 2, R.W, "small",
+        R.C.inkSoft, "CENTER") + 8
+    end
   end
+  ly = highlightCards(L, list, ly + 6)
   return ly, ry
 end
 
@@ -1363,6 +1571,52 @@ local function contentsSpread(V, y, list, byLevel)
   return ly, ry
 end
 
+-- A chapter's moments without its opening (oldest first), its rows and how many spreads it takes.
+local function chapterRows(j, l, events)
+  local list, opening = {}, nil
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if (e.k == "level" or e.k == "start") and not opening then opening = e else list[#list + 1] = e end
+  end
+  local rows = foldMoments(j, list, tostring(l))
+  local plate = chapterMap(j, l, events)
+  return rows, leafCount(#rows, plate), plate
+end
+
+-- A later spread of a chapter: its moments on both sheets.
+local function chapterLeaf(V, y, l, events, leaf)
+  local L, R, j = V.L, V.R, V.j
+  local rows, leaves, plate = chapterRows(j, l, events)
+  local band = J.bandColor(l)
+  local from = (plate and LEAF_FIRST or LEAF_FIRST_NO_PLATE) + (leaf - 2) * 2 * LEAF_COL + 1
+  local ly, ry = y, y
+  L.U.rect(0, ly, L.W, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
+  ly = ly + 10
+  ly = ly + L.U.T("CHAPTER " .. roman(l) .. ", CONTINUED", 0, ly, L.W, "head", L.C.gold, "CENTER") + 4
+  ly = ly + L.U.T("Level " .. l .. "  -  page " .. leaf .. " of " .. leaves, 0, ly, L.W, "small", L.C.inkSoft, "CENTER") + 6
+  ly = ly + ornament(L.U, L.C, 0, ly, L.W) + 8
+  ly = momentRows(L, rows, 0, ly, L.W, band, from, from + LEAF_COL - 1)
+  R.U.rect(0, ry, R.W, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
+  ry = ry + 14
+  if rows[from + LEAF_COL] then
+    ry = momentRows(R, rows, 0, ry, R.W, band, from + LEAF_COL, from + 2 * LEAF_COL - 1)
+  else
+    ry = ry + R.U.T(l == V.lvl and "The rest of this page is still blank: your next moments will be written here."
+      or "The chapter ends here.", 10, ry + 10, R.W - 20, "body", R.C.inkSoft, "CENTER") + 20
+  end
+  return ly, ry
+end
+
+-- How many spreads come before chapter l (the contents take one).
+local function pagesBefore(j, list, byLevel, l)
+  local n = 1
+  for _, c in ipairs(list) do
+    if c == l then break end
+    n = n + select(2, chapterRows(j, c, byLevel[c] or {}))
+  end
+  return n
+end
+
 local function storyPage(V, y)
   local j = V.j
   local list = allChapters(j)
@@ -1372,16 +1626,31 @@ local function storyPage(V, y)
     V.pageNo = 2
     return contentsSpread(V, y, list, byLevel)
   end
-  V.pageNo = 2 + 2 * (chapterIndex(list, at) or 1)
-  local ly, ry = chapterSpread(V, y, at, byLevel[at] or {})
-  -- the page turns at the foot of each sheet
+  local events = byLevel[at] or {}
+  local leaves = select(2, chapterRows(j, at, events))
+  if storyLeaf > leaves then storyLeaf = leaves end
+  if storyLeaf < 1 then storyLeaf = 1 end
+  local leaf = storyLeaf
+  V.pageNo = 2 * (pagesBefore(j, list, byLevel, at) + leaf)
+  local ly, ry
+  if leaf == 1 then ly, ry = chapterSpread(V, y, at, events)
+  else ly, ry = chapterLeaf(V, y, at, events, leaf) end
+  -- the page turns at the foot of each sheet: through the chapter's pages, then to the next chapter
   local by = math.max(ly, ry) + 8
   local i = chapterIndex(list, at) or 1
   local prev = list[i - 1]
   local nxt = list[i + 1]
-  V.L.U.btn(prev and ("< " .. chapterLabel(prev)) or "< Contents", 0, by, 150, function() turnTo(V.L.U, prev or CONTENTS) end,
-    false, prev and ("Turn back to level " .. prev .. ".") or "Back to the preface and the contents.")
-  if nxt then
+  if leaf > 1 then
+    V.L.U.btn("< Page " .. (leaf - 1), 0, by, 150, function() storyLeaf = leaf - 1; V.L.U.refreshTop() end, false,
+      "Turn back a page in this chapter.")
+  else
+    V.L.U.btn(prev and ("< " .. chapterLabel(prev)) or "< Contents", 0, by, 150, function() turnTo(V.L.U, prev or CONTENTS) end,
+      false, prev and ("Turn back to level " .. prev .. ".") or "Back to the preface and the contents.")
+  end
+  if leaf < leaves then
+    V.R.U.btn("Page " .. (leaf + 1) .. " of " .. leaves .. " >", V.R.W - 150, by, 150, function() storyLeaf = leaf + 1; V.R.U.refreshTop() end,
+      false, "Turn the page: this chapter goes on.")
+  elseif nxt then
     V.R.U.btn(chapterLabel(nxt) .. " >", V.R.W - 150, by, 150, function() turnTo(V.R.U, nxt) end, false,
       "Turn the page to level " .. nxt .. ".")
   else

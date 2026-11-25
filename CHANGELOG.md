@@ -1,9 +1,19 @@
 # Leveling Codex
 
-## v0.31.8
+## v0.32.1
 - **Snipe pop-up:** while the deal sniper runs, a small card next to the auction house shows the best deal it found, with what it's listed at, what it's worth and the estimated profit. **Buy** buys it (a commodity asks you to click again to confirm the price) and **Skip** hides that deal until its price changes. Settings on the Scan tab can turn the pop-up off.
 - **Sniper session stats:** a SNIPER SESSION tile on the Deals tab counts how long the sniper has run, its searches, the deals it found, what you bought and the estimated profit per hour. Hover it for the details.
 - **Gear with random enchants ("of the Bear", "of the Eagle"...) gets its own prices:** each variant is priced apart, so a cheap "of the Monkey" no longer looks like a deal against the price of "of the Tiger". A flip on such gear needs two days of prices for that same variant, and the purchase checks the exact variant.
+
+## v0.32.0
+- **Journey: fixed your first mount being a flight path.** The game says you're mounted on a flight path too, so the Journey wrote a flight down as your first mount. A flight path no longer counts, and you have to stay in the saddle for a few seconds. The wrong moment is taken out of your book, and your next real ride is written in its place.
+- **Journey: a busy chapter stays readable.**
+    - Three or more of the same small moment on one day fold into a single line, for example "Traded at the auction house 14 times" with the gold spent in all. Click it to read each one, and click again to fold it away. This covers auction trips, sales, mailbox gold, flights, inns, campfires, gathering, fishing, crafting and trades. Quests fold only on a very busy day.
+    - Trips to the same auction house within three hours now go into one moment that keeps count ("3 visits, bought 40 lots").
+    - A long chapter runs over several pages with **Page 2 of 3 >** and **< Page 1** turns, filling both sides of the book instead of one endless column.
+    - Each chapter opens with its **HIGHLIGHTS**: up to three big moments (bosses, firsts, rares, dungeons, close calls, your first mount).
+- **Journey: a cleaner map.** Your trail is drawn as a line in your level's colour, with gaps where you hearthed or flew. Before, it was hundreds of dots that ran into blobs. Soft washes mark the places you kept coming back to. Nearby pins gather into one with a count, and small moments (gathering, gold, flights, inns) are small dots, so only the big ones wear an icon. The world map trail is a line too.
+- **Journey: watch the story being written.** A big moment (a boss, a first, a rare, a new land, a fall, a close call, a dungeon run) shows a small card as it goes into the book. Click the card to open that chapter. Turn it off with Journey > Map > Show a card when a big moment is written.
 
 ## v0.31.7
 - **The profit record now matches the gold you made:**

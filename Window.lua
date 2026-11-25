@@ -132,6 +132,26 @@ local function rect(x, y, w, h, color, layer, sub, kind, onTop)
   return t
 end
 
+-- A straight line from (x1, y1) to (x2, y2) on the overlay (the client's Line where it has one, else
+-- squares every 3 px); `sub` is its BORDER sublevel. Returns the line, or nil when drawn in squares.
+local function line(x1, y1, x2, y2, color, thick, sub)
+  thick = thick or 2
+  if overlay.CreateLine then
+    local l = take("line", function() return overlay:CreateLine(nil, "BORDER") end)
+    l:SetDrawLayer("BORDER", sub or 0)
+    l:SetStartPoint("TOPLEFT", content, x1, -y1)
+    l:SetEndPoint("TOPLEFT", content, x2, -y2)
+    l:SetThickness(thick)
+    l:SetColorTexture(rgba(color))
+    return l
+  end
+  local dx, dy = x2 - x1, y2 - y1
+  local steps = math.max(1, math.floor(math.sqrt(dx * dx + dy * dy) / 3))
+  for i = 0, steps do
+    rect(x1 + dx * i / steps - thick / 2, y1 + dy * i / steps - thick / 2, thick, thick, color, "border", sub)
+  end
+end
+
 -- Card frames with the game's tooltip border; parchment cards get the quest-log paper.
 local function newCard()
   local f = A.frame("Frame", nil, content)
@@ -1616,7 +1636,7 @@ local function interactivePoolKinds()
 end
 
 -- The drawing helpers for tabs that live in other files.
-ns.ui = { W = W, T = T, rect = rect, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
+ns.ui = { W = W, T = T, rect = rect, line = line, box = box, plate = plate, surface = surface, picture = picture, folio = folio, icon = icon, btn = btn, check = check, hit = hit,
   entry = entry, playerPortrait = playerPortrait,
   segments = segments, fold = fold, questButtonOptions = questButtonOptions,
   questSearch = questSearch, sectionTitle = sectionTitle, goldRuleAt = goldRuleAt, refresh = function() refresh() end,
