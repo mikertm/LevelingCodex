@@ -670,13 +670,16 @@ local function palTick()
   local j = J.data()
   for _, p in ipairs(partyNames()) do
     local rec = j.pals[p.name]
-    if type(rec) ~= "table" then
+    if J.isForgotten and J.isForgotten(p.name) then rec = false
+    elseif type(rec) ~= "table" then
       rec = { seconds = 0, first = now(), level = level() }
       j.pals[p.name] = rec
       J.add("pal", fill(pick(PAL, p.name), { name = Q.plain(p.name) }), nil, { who = p.name })
     end
-    rec.class = p.class or rec.class
-    rec.seconds = (tonumber(rec.seconds) or 0) + PAL_TICK
+    if rec then
+      rec.class = p.class or rec.class
+      rec.seconds = (tonumber(rec.seconds) or 0) + PAL_TICK
+    end
   end
 end
 

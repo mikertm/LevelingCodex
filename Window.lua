@@ -1223,6 +1223,15 @@ renderers.settings = function()
     tick("Show \"Last time on your journey...\" when I log in", not db.noJourneyRecap,
       function() db.noJourneyRecap = not db.noJourneyRecap or nil end,
       "The recap card and chat line after a break.")
+    tick("Show a card when a friend is near, a bond grows or a fellowship forms", not db.noSocialCards,
+      function() db.noSocialCards = not db.noSocialCards or nil end,
+      "Reunions, bonds, fellowships, signatures, toasts and anniversaries. They are still written in the Journey.")
+    tick("Swap journal titles and signatures with other Codex players", not db.noJourneyShare,
+      function() db.noJourneyShare = not db.noJourneyShare or nil end,
+      "In a party, Codex players see each other's journal title and can sign each other's journals and raise toasts.")
+    tick("Take a screenshot for each group portrait", db.journeyScreenshots,
+      function() db.journeyScreenshots = not db.journeyScreenshots or nil end,
+      "When a level or a boss is framed with your party, the game saves a screenshot too (in your Screenshots folder).")
     y = y + 8
   end }
   sections[#sections + 1] = { "TALENT WINDOW GUIDE", "Helpers", function()

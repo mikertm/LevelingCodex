@@ -96,6 +96,8 @@ JourneyLore.lua
 JourneyVoice.lua
 JourneyWilds.lua
 JourneyCompanions.lua
+JourneySocial.lua
+JourneySocialPage.lua
 JourneyQuestLines.lua
 Minimap.lua
 Tracking.lua
