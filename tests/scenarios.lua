@@ -13739,7 +13739,11 @@ function S.journeyLore()
   check(journeyHas("milestone", "10th time"), "the tenth fall is a milestone")
   -- the chapter's prose reads the chapter
   local prose = J.lore.chapterProse(MOCK.level, j.events, nil, true)
-  check(prose:find("Elwynn Forest", 1, true) and prose:find("still", 1, true), "the chapter prose names the land and the open page")
+  local openPage = false
+  for _, w in ipairs({ "still", "not yet", "not done", "More soon", "yours to write" }) do
+    if prose:find(w, 1, true) then openPage = true end
+  end
+  check(prose:find("Elwynn Forest", 1, true) and openPage, "the chapter prose names the land and the open page")
   check(not prose:find("%", 1, true), "the chapter prose fills every word")
   click(win(), "Story")
   click(win(), "Latest")

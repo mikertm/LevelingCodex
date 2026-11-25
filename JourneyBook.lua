@@ -599,6 +599,8 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
       if count[zn] > bestN then best, bestN = zn, count[zn] end
     end
   end
+  -- the land the level was reached in names the chapter, so the heading matches its epigraph
+  if opening and opening.m then best = J.landOf(opening.m) or best end
   local band = J.bandColor(l)
   local ix, iw = x + 14, w - 28
   U.rect(x, y, w, 3, { band[1], band[2], band[3], 0.85 }, "border", 3)
@@ -1512,6 +1514,8 @@ local function chapterSpread(V, y, l, events, leaf)
     local t = tonumber(e.t)
     if t then first = (not first or t < first) and t or first; latest = (not latest or t > latest) and t or latest end
   end
+  -- the land the level was reached in names the chapter, so the heading matches its epigraph
+  if opening and opening.m then best = J.landOf(opening.m) or best end
   local band = J.bandColor(l)
   -- left: the chapter's opening
   local ly = y
@@ -1542,8 +1546,12 @@ local function chapterSpread(V, y, l, events, leaf)
   local prose = J.lore and J.lore.chapterProse and J.lore.chapterProse(l, events, rec, l == lvl)
   if prose and prose ~= "" then ly = ly + initialed(LU, LC, prose, 0, ly, L.W, "body", LC.ink) + 12 end
   if rec then
-    local cells = { { duration(rec.seconds), "on the road" }, { tostring(tonumber(rec.quests) or 0), "quests" },
-      { tostring(tonumber(rec.kills) or 0), "foes" }, { tostring(tonumber(rec.deaths) or 0), "falls" } }
+    local function cell(n, one, many)
+      n = tonumber(n) or 0
+      return { tostring(n), n == 1 and one or many }
+    end
+    local cells = { { duration(rec.seconds), "on the road" }, cell(rec.quests, "quest", "quests"),
+      cell(rec.kills, "foe", "foes"), cell(rec.deaths, "fall", "falls") }
     local cw = math.floor((L.W - 18) / 4)
     for i, c in ipairs(cells) do
       local cx = (i - 1) * (cw + 6)

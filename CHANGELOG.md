@@ -13,6 +13,12 @@
     - **Faces you miss.** Allies and closer you haven't seen in 10 days are listed at the top of the page, and Today's entry names one.
     - **Anniversaries.** A month, a hundred days and a year after you met someone, the book marks it.
     - **FRIENDS AND STRANGERS fills in:** it counts the new contacts, and a trade now counts when both sides accept it, even if the game's "Trade complete." line isn't read.
+- **Journey: the storybook reads with much more variety.**
+    - Every kind of chapter sentence has more ways to be told, in each narrator's voice (Chronicler, Fireside, Bard), and chapters now read differently when they were quiet or very busy.
+    - New level-up lines, and special ones at levels 5, 15, 25, 35, 45, 55 and 59.
+    - Each land has four lines of lore (Riverglades, Shen'dralas and Mount Hyjal have their own now).
+    - Fixed "There were one quest", "1 quests" on the chapter tiles, and a chapter heading naming a different land than its opening line: the heading now names the land where you reached the level.
+    - A chapter with many companions names three and counts the rest.
 - **Journey: a Fellowships page.** The same two or more people travelling with you for half an hour (or on two days) become a fellowship with its own name (rename it any time), a page, its record and what you did together. AWARDS hand out titles across your companions (road companion, guardian angel, shield wall, pen pal, nemesis and more). GROUP PORTRAITS frame everyone who was there when you gained a level or brought down a boss; Settings can also take a screenshot each time (off by default).
 - **Codex to Codex.** In a party, Codex players swap their journal titles: their page shows their journal's day, epithet and size, and what you are in their book. **Ask to sign** asks them to write a line in your journal (they type /codex sign), **Raise a toast** writes a toast into theirs, and a level gained in a party is cheered in your companions' journals. Settings > General > JOURNEY POP-UPS can turn the sharing and the social cards off.
 - **Journey pop-ups can be turned off in Settings.** Settings > General > JOURNEY POP-UPS has a switch for the "A new line in your journey" card and one for the "Last time on your journey..." recap. The moments are still written in the Journey.

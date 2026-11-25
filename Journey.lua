@@ -380,13 +380,25 @@ function J.levelLine(lvl, zone)
     [30] = "Reached level 30 in " .. zone .. ": halfway up the mountain",
     [40] = "Reached level 40 in " .. zone .. ": old enough to ride, if the purse allows",
     [50] = "Reached level 50 in " .. zone .. ": the summit is in sight",
+    [5] = "Reached level 5 in " .. zone .. ": the first steps are behind you",
+    [15] = "Reached level 15 in " .. zone .. ": the world is getting bigger",
+    [25] = "Reached level 25 in " .. zone .. ": a name people are starting to know",
+    [35] = "Reached level 35 in " .. zone .. ": the hard lands are calling",
+    [45] = "Reached level 45 in " .. zone .. ": old dangers look smaller now",
+    [55] = "Reached level 55 in " .. zone .. ": the last stretch of the climb",
+    [59] = "Reached level 59 in " .. zone .. ": one more step to the top",
   }
   if special[lvl] then return special[lvl] end
   return fill(pick({ "Grew stronger: level %n% in %zone%", "Reached level %n% in %zone%",
     "Level %n%, earned the hard way in %zone%", "Level %n% in %zone%: a little taller, a little tougher",
     "Felt the light of level %n% in %zone%", "Level %n% came in %zone%, with a rush of new strength",
     "Level %n%: the trainers in town will want a word", "Climbed to level %n% somewhere in %zone%",
-    "Level %n%. %zone% will remember this one" }, lvl), { n = tostring(lvl), zone = zone })
+    "Level %n%. %zone% will remember this one", "Level %n% found you in %zone%, a little out of breath",
+    "Turned the page to level %n% in %zone%", "In %zone%, level %n%: one more rung on the ladder",
+    "Level %n% in %zone%, and the road ahead looked shorter", "New strength, same old boots: level %n% in %zone%",
+    "%zone% saw you reach level %n%", "Level %n% in %zone%, and not a moment too soon",
+    "Stood a little straighter in %zone%: level %n%", "Level %n%, won in %zone% one fight at a time",
+    "The golden light of level %n% fell on %zone%", "Level %n% in %zone%. Somewhere, a trainer smiled" }, lvl), { n = tostring(lvl), zone = zone })
 end
 
 ----------------------------------------------------------------------------

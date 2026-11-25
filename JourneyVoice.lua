@@ -232,127 +232,179 @@ end
 local L = {
   newLand = {
     chronicle = { "In this chapter %name% first came to %a%.", "The record shows %name% arriving in %a% for the first time.",
-      "%a% enters the history here, with %name% walking into it." },
+      "%a% enters the history here, with %name% walking into it.", "Here %name% set foot in %a%, a land not yet in these pages.",
+      "It was in this chapter that %a% first saw %name%.", "The chronicle turns to %a%, where %name% had never been." },
     fireside = { "Then came %a%, and you'd never set foot there before.", "First time in %a%. Remember the smell of it?",
-      "You wandered into %a% with no idea what was waiting." },
+      "You wandered into %a% with no idea what was waiting.", "%a%. New maps, new faces, and nobody knew your name yet.",
+      "You crossed into %a% for the first time, a little lost and loving it.",
+      "Fresh ground: %a%. You stopped at the border just to look." },
     bard = { "New ground under new skies: %a% opened its gates.", "%a% rose before you, strange and wide and waiting.",
-      "And the road unrolled into %a%, a land not yet sung." } },
+      "And the road unrolled into %a%, a land not yet sung.", "A new verse begins where %a% begins.",
+      "Past the last known road lay %a%, and you went.", "%a% had waited a long age for you, and now you came." } },
   backLand = {
-    chronicle = { "%name% returned to %a%, last seen in chapter %r%.", "Once more the record finds %name% in %a%, as in chapter %r%." },
-    fireside = { "Back to %a% again; you'd been there in chapter %r%.", "%a% one more time. Some places just keep pulling you back." },
-    bard = { "The road curled home to %a%, remembered from chapter %r%.", "%a% again, its old paths waiting where you left them." } },
+    chronicle = { "%name% returned to %a%, last seen in chapter %r%.", "Once more the record finds %name% in %a%, as in chapter %r%.",
+      "The chronicle returns to %a%, first visited in chapter %r%.", "%name% came back to %a%, a land known since chapter %r%." },
+    fireside = { "Back to %a% again; you'd been there in chapter %r%.", "%a% one more time. Some places just keep pulling you back.",
+      "You knew %a% already, from chapter %r%. It knew you too.", "Back in %a%. The paths looked shorter than you remembered.",
+      "%a% again. Funny how a place changes when you're stronger." },
+    bard = { "The road curled home to %a%, remembered from chapter %r%.", "%a% again, its old paths waiting where you left them.",
+      "Once more to %a%, an old tune in a new key.", "%a% called you back, as old lands do." } },
   oneLand = {
-    chronicle = { "The whole of this chapter took place in %a%.", "%name% did not leave %a% in this chapter." },
-    fireside = { "All of it happened in %a%.", "%a% kept you busy the whole time.", "You never left %a% this time round." },
-    bard = { "%a% held you, every hour of it.", "One land, one long song: %a%." } },
+    chronicle = { "The whole of this chapter took place in %a%.", "%name% did not leave %a% in this chapter.",
+      "%a% was the setting of every page of this chapter.", "Throughout this chapter %name% remained in %a%." },
+    fireside = { "All of it happened in %a%.", "%a% kept you busy the whole time.", "You never left %a% this time round.",
+      "%a%, start to finish. You got to know every hill.", "You dug into %a% and stayed there until the job was done." },
+    bard = { "%a% held you, every hour of it.", "One land, one long song: %a%.", "Every verse of this chapter is sung in %a%.",
+      "You and %a%, and nothing else beneath the sky." } },
   manyLands = {
-    chronicle = { "From %a% the road led on through %n% lands, as far as %b%.", "The chapter crosses %n% lands, %a% to %b%." },
-    fireside = { "The road ran long this time: %a%, and on all the way to %b%.", "You covered ground: %n% lands, %a% to %b%." },
-    bard = { "Over %n% lands the road went singing, from %a% to %b%.", "%a% behind, %b% ahead, and %n% lands between." } },
+    chronicle = { "From %a% the road led on through %n% lands, as far as %b%.", "The chapter crosses %n% lands, %a% to %b%.",
+      "%name% travelled widely: %n% lands, beginning in %a% and ending in %b%.",
+      "Few chapters cover so much ground: %n% lands between %a% and %b%." },
+    fireside = { "The road ran long this time: %a%, and on all the way to %b%.", "You covered ground: %n% lands, %a% to %b%.",
+      "%N% lands in one level. Your boots must have hated you.", "It started in %a% and somehow ended in %b%, by way of everywhere.",
+      "You wandered all over: %n% lands, from %a% to %b%." },
+    bard = { "Over %n% lands the road went singing, from %a% to %b%.", "%a% behind, %b% ahead, and %n% lands between.",
+      "Through %n% lands the wind followed you, from %a% to %b%.", "From %a% to %b% you went, and the world grew wide." } },
   work = {
-    chronicle = { "%Q% were completed and %f% defeated.", "%name% saw %q% through and defeated %f%." },
-    fireside = { "%Q% done and %f% knocked flat.", "It took %q% and %f% to earn the next step.", "There were %q% to see through and %f% to face." },
-    bard = { "%Q% kept and %f% laid low.", "Promises, %q% of them; foes, %f%; and the road went on." } },
+    chronicle = { "%Q% %qv% completed and %f% defeated.", "%name% saw %q% through and defeated %f%.",
+      "The tally stands at %q% and %f%.", "%name% finished %q% and put down %f% along the way." },
+    fireside = { "%Q% done and %f% knocked flat.", "It took %q% and %f% to earn the next step.",
+      "On the list: %q% to see through and %f% to face.", "You ticked off %q% and saw off %f%.",
+      "%Q% handed in, %f% sent to the dirt. A fair day's work." },
+    bard = { "%Q% kept and %f% laid low.", "Promises, %q% of them; foes, %f%; and the road went on.",
+      "%Q% fulfilled, %f% fallen, and the next step won.", "Sing of %q% and %f%, for both were earned." } },
+  workLight = {
+    chronicle = { "Little was asked of %name% here: %q% and %f%.", "A quiet chapter: %q%, %f%." },
+    fireside = { "Not much to tell on the work side: %q% and %f%.", "An easy stretch. %Q% and %f%, then on.",
+      "You took it slow: %q%, %f%, and plenty of looking around." },
+    bard = { "A short verse of work: %q%, %f%.", "Light was the load: %q% and %f%, no more." } },
+  workHeavy = {
+    chronicle = { "It was a chapter of great labour: %q% and %f%.", "%name% worked without rest: %q%, and %f% defeated." },
+    fireside = { "You did not stop. %Q% and %f%, one after another.", "A busy one: %q% and %f%. Your hands still ache.",
+      "%Q%, %f%. Somebody had to do it, and it was you." },
+    bard = { "Long was the list and longer the fight: %q% and %f%.", "%Q% and %f%: a heavy chapter, nobly borne." } },
   questsOnly = {
-    chronicle = { "%Q% were completed without much bloodshed." },
-    fireside = { "%Q% done, and hardly a sword drawn.", "%Q% finished, each one a promise kept." },
-    bard = { "%Q% kept like candles lit in the dark." } },
+    chronicle = { "%Q% %qv% completed without much bloodshed.", "%name% finished %q%, and drew steel rarely." },
+    fireside = { "%Q% done, and hardly a sword drawn.", "%Q% finished, each one a promise kept.",
+      "You talked and walked your way through %q%." },
+    bard = { "%Q% kept like candles lit in the dark.", "Not by the sword this time, but by the word: %q%." } },
   foesOnly = {
-    chronicle = { "%F% fell to %name% in this chapter." },
-    fireside = { "%F% went down. No time for errands." },
-    bard = { "%F% fell, and the grass grew over them." } },
+    chronicle = { "%F% fell to %name% in this chapter.", "No errands are recorded, only %f% defeated." },
+    fireside = { "%F% went down. No time for errands.", "Forget the notice board: %f%, and that was the chapter." },
+    bard = { "%F% fell, and the grass grew over them.", "No promises here, only %f% and the blade." } },
   clean = {
-    chronicle = { "Not once did %name% fall.", "The chapter records no falls." },
-    fireside = { "You never once saw the spirit healer.", "Nobody laid you low. Not once." },
-    bard = { "No grave held you, not even for a breath.", "Untouched by death, the whole way through." } },
+    chronicle = { "Not once did %name% fall.", "The chapter records no falls.", "%name% came through it without a single fall." },
+    fireside = { "You never once saw the spirit healer.", "Nobody laid you low. Not once.",
+      "Not a scratch you couldn't walk off.", "No deaths. You were careful, or lucky, or both." },
+    bard = { "No grave held you, not even for a breath.", "Untouched by death, the whole way through.",
+      "Death looked for you and found an empty road." } },
   cleanAfter = {
-    chronicle = { "After the falls of chapter %r%, a chapter without a single one." },
-    fireside = { "After the mess of chapter %r%, not a single fall. Lessons learned." },
-    bard = { "Where chapter %r% was all graves, this one was clean as snow." } },
+    chronicle = { "After the falls of chapter %r%, a chapter without a single one.",
+      "Chapter %r% had cost dearly; this one cost nothing." },
+    fireside = { "After the mess of chapter %r%, not a single fall. Lessons learned.",
+      "Chapter %r% hurt. This one didn't. You'd learned something." },
+    bard = { "Where chapter %r% was all graves, this one was clean as snow.",
+      "The graves of chapter %r% behind you, and none ahead." } },
   oneFall = {
-    chronicle = { "%name% fell once, and rose again." },
-    fireside = { "You fell once, and got back up.", "One fall, one long walk back." },
-    bard = { "Once you fell, and once you rose." } },
+    chronicle = { "%name% fell once, and rose again.", "One fall is recorded in this chapter." },
+    fireside = { "You fell once, and got back up.", "One fall, one long walk back.",
+      "One death. We don't talk about it.", "You died the once. The spirit healer barely looked up." },
+    bard = { "Once you fell, and once you rose.", "Once the dark came, and once it let you go." } },
   falls = {
-    chronicle = { "%name% fell %n% times, and each time returned." },
-    fireside = { "You went down %n% times, and each time you got back up.", "%N% falls. The spirit healer started saving you a seat." },
-    bard = { "%N% times the dark took you, %n% times you walked back into the light." } },
+    chronicle = { "%name% fell %n% times, and each time returned.", "%N% falls are recorded in this chapter." },
+    fireside = { "You went down %n% times, and each time you got back up.", "%N% falls. The spirit healer started saving you a seat.",
+      "%N% deaths. Some of them were even your fault.", "You died %n% times. The corpse run knows you by name." },
+    bard = { "%N% times the dark took you, %n% times you walked back into the light.",
+      "%N% times you fell, and the song would not let you stay down." } },
   worstFalls = {
-    chronicle = { "No chapter yet had cost so many falls." },
-    fireside = { "Your worst chapter for falls so far. It happens." },
-    bard = { "Never had the road been crueller." } },
+    chronicle = { "No chapter yet had cost so many falls.", "It was the costliest chapter yet." },
+    fireside = { "Your worst chapter for falls so far. It happens.", "No chapter had hurt this much. Not yet, anyway." },
+    bard = { "Never had the road been crueller.", "The cruellest verse yet." } },
   quick = {
     chronicle = { "It was the swiftest chapter yet.", "No level before had passed so quickly." },
-    fireside = { "Fastest level yet. You were flying.", "Blink and you'd have missed this one." },
-    bard = { "Swift as a hawk, the quickest chapter yet." } },
+    fireside = { "Fastest level yet. You were flying.", "Blink and you'd have missed this one.",
+      "Over before the tea was cold. Your quickest level yet." },
+    bard = { "Swift as a hawk, the quickest chapter yet.", "Like a thrown spear it went, the swiftest yet." } },
   long = {
-    chronicle = { "It was the longest chapter so far." },
-    fireside = { "The longest level so far. Some are like that.", "This one dragged on. The longest yet." },
-    bard = { "Long were these days, the longest of the road so far." } },
+    chronicle = { "It was the longest chapter so far.", "No chapter before had taken so long." },
+    fireside = { "The longest level so far. Some are like that.", "This one dragged on. The longest yet.",
+      "This one took its time. Longest level so far." },
+    bard = { "Long were these days, the longest of the road so far.", "Slow as a winter the chapter went." } },
   deep = {
-    chronicle = { "Below ground, %b% fell to %name% and companions%w%." },
-    fireside = { "Down in the dark, %b% went down%w%.", "You went below and %b% didn't come back up%w%." },
-    bard = { "In the deep places %b% fell%w%, and songs were owed." } },
+    chronicle = { "Below ground, %b% fell to %name% and companions%w%.", "In the depths, %name% saw %b% defeated%w%." },
+    fireside = { "Down in the dark, %b% went down%w%.", "You went below and %b% didn't come back up%w%.",
+      "There was a dungeon, and %b% at the bottom of it%w%." },
+    bard = { "In the deep places %b% fell%w%, and songs were owed.", "Under the stone, %b% fell%w%." } },
   dark = {
-    chronicle = { "%name% descended into the dark and returned." },
-    fireside = { "You went down into the dark, and came back out." },
+    chronicle = { "%name% descended into the dark and returned.", "%name% went below ground and came back." },
+    fireside = { "You went down into the dark, and came back out.", "There was a dungeon in there too." },
     bard = { "Into the dark you went, and out again into the day." } },
   elite = {
-    chronicle = { "%name% faced %e% and prevailed." },
-    fireside = { "You took on %e% and walked away.", "%E%, and you still standing at the end." },
-    bard = { "%E% stood in the way, and then did not." } },
+    chronicle = { "%name% faced %e% and prevailed.", "%E% was overcome." },
+    fireside = { "You took on %e% and walked away.", "%E%, and you still standing at the end.",
+      "%E% was supposed to be too much for you. It wasn't." },
+    bard = { "%E% stood in the way, and then did not.", "Great was %e%, and greater the one who stood against it." } },
   rare = {
-    chronicle = { "A rare beast was hunted down." },
-    fireside = { "A rare one crossed your path, and lost." },
+    chronicle = { "A rare beast was hunted down.", "A rarely seen creature was slain." },
+    fireside = { "A rare one crossed your path, and lost.", "You found something rare out there, and it didn't last." },
     bard = { "A creature of legend met its end on your blade." } },
   pvp = {
-    chronicle = { "Blood was spilled against the other faction." },
-    fireside = { "There was a scrap with the other faction." },
+    chronicle = { "Blood was spilled against the other faction.", "There was fighting with the other faction." },
+    fireside = { "There was a scrap with the other faction.", "The other side showed up. Words were exchanged. Mostly steel." },
     bard = { "Banners met, and steel answered steel." } },
   close = {
-    chronicle = { "At least once, %name% survived on a sliver of health." },
-    fireside = { "At least once it came down to a sliver of health.", "There was a fight you really shouldn't have walked away from." },
+    chronicle = { "At least once, %name% survived on a sliver of health.", "Once, %name% came within a breath of death." },
+    fireside = { "At least once it came down to a sliver of health.", "There was a fight you really shouldn't have walked away from.",
+      "You walked away from one fight on almost nothing. Don't do that again." },
     bard = { "Once, the thread of life was drawn thin as a hair, and held." } },
   pals = {
-    chronicle = { "%p% shared the road with %name%." },
-    fireside = { "%p% came along for part of it.", "%p% shared the road." },
-    bard = { "%p% walked beside you a while." } },
+    chronicle = { "%p% shared the road with %name%.", "%name% was joined for a time by %p%." },
+    fireside = { "%p% came along for part of it.", "%p% shared the road.", "You weren't alone: %p% were there for some of it.",
+      "Good company: %p%." },
+    bard = { "%p% walked beside you a while.", "Not alone: %p% marched at your side." } },
+  palsOne = {
+    chronicle = { "%p% shared the road with %name%.", "%name% was joined for a time by %p%." },
+    fireside = { "%p% came along for part of it.", "%p% shared the road.", "You weren't alone: %p% was there for some of it." },
+    bard = { "%p% walked beside you a while.", "Not alone: %p% marched at your side." } },
   rez = {
     chronicle = { "Another hand raised %name% from death." },
-    fireside = { "Somebody raised you when it mattered." },
+    fireside = { "Somebody raised you when it mattered.", "Someone stopped and brought you back. Remember that." },
     bard = { "A kind hand called you back from the grey." } },
   gather = {
-    chronicle = { "%name% gathered from the land: %g%." },
-    fireside = { "Your pack filled up on the way: %g%.", "In between, you worked the land: %g%." },
-    bard = { "The land gave freely: %g%." } },
+    chronicle = { "%name% gathered from the land: %g%.", "The land yielded %g% to %name%." },
+    fireside = { "Your pack filled up on the way: %g%.", "In between, you worked the land: %g%.",
+      "You kept stopping to pick things up: %g%." },
+    bard = { "The land gave freely: %g%.", "Root and stone and hide gave up their riches: %g%." } },
   fish = {
     chronicle = { "%name% fished the waters and landed %f%." },
     fireside = { "There was a line in the water too: %f%.", "You found time to fish, and landed %f%." },
     bard = { "From quiet water came %f%." } },
   craft = {
-    chronicle = { "Between battles, %name% laboured at the bench." },
-    fireside = { "Between the fights there was work at the bench." },
+    chronicle = { "Between battles, %name% laboured at the bench.", "%name% also practised a craft." },
+    fireside = { "Between the fights there was work at the bench.", "You spent some evenings making things." },
     bard = { "Between the battles, the hammer and the needle sang." } },
   auction = {
-    chronicle = { "Business was done at the auction house." },
-    fireside = { "The auction house saw you more than once." },
+    chronicle = { "Business was done at the auction house.", "%name% traded at the auction house." },
+    fireside = { "The auction house saw you more than once.", "You haggled at the auction house. Of course you did." },
     bard = { "Coin changed hands under the auctioneer's eye." } },
   camp = {
     chronicle = { "There was rest by a campfire." },
-    fireside = { "There was a fire, and a moment to rest by it." },
+    fireside = { "There was a fire, and a moment to rest by it.", "You sat by a fire once, and let the world wait." },
     bard = { "A fire, a quiet hour, the stars overhead." } },
   flight = {
     chronicle = { "New flight paths extended the reach of %name%." },
-    fireside = { "New wings carried you further." },
+    fireside = { "New wings carried you further.", "You found new flight paths. The map got smaller." },
     bard = { "Gryphon wings, wind wings: the sky grew larger." } },
   mount = {
     chronicle = { "This was the chapter in which %name% first rode." },
     fireside = { "And this was the chapter you finally got your own mount." },
     bard = { "Hooves on the road at last: the chapter of the first ride." } },
   open = {
-    chronicle = { "The chapter is still open.", "The record is still being written." },
-    fireside = { "The chapter's still being written.", "The ink here is still wet." },
-    bard = { "The song goes on; this verse is still unfinished.", "And the page is still not finished." } },
+    chronicle = { "The chapter is still open.", "The record is still being written.", "This account is not yet complete." },
+    fireside = { "The chapter's still being written.", "The ink here is still wet.", "And we're not done with this one yet.",
+      "That's where things stand. More soon." },
+    bard = { "The song goes on; this verse is still unfinished.", "And the page is still not finished.",
+      "The last line of this verse is yours to write." } },
 }
 
 local function chapterZones(events)
@@ -412,7 +464,7 @@ function Vo.chapterProse(l, events, rec, current)
   local main
   for _, z in ipairs(zones) do if not main or zcount[z] > zcount[main] then main = z end end
   if #zones > 2 then
-    add("manyLands", { a = zones[1], b = zones[#zones], n = say(#zones) })
+    add("manyLands", { a = zones[1], b = zones[#zones], n = say(#zones), N = capital(say(#zones)) })
   elseif main then
     local before = firstChapterOf(j, main, l)
     -- the chapter before this one (the nearest with moments): were you already here?
@@ -430,10 +482,13 @@ function Vo.chapterProse(l, events, rec, current)
     else add("oneLand", { a = main }) end
   end
   -- the work
+  local wv = { q = count(quests, "quest"), Q = capital(count(quests, "quest")), qv = quests == 1 and "was" or "were",
+    f = count(foes, "foe"), F = capital(count(foes, "foe")) }
   if quests > 0 and foes > 0 then
-    add("work", { q = count(quests, "quest"), Q = capital(count(quests, "quest")), f = count(foes, "foe") })
-  elseif quests > 0 then add("questsOnly", { Q = capital(count(quests, "quest")) })
-  elseif foes > 0 then add("foesOnly", { F = capital(count(foes, "foe")) }) end
+    local size = (quests >= 15 or foes >= 150) and "workHeavy" or (quests <= 3 and foes < 30) and "workLight" or "work"
+    add(size, wv)
+  elseif quests > 0 then add("questsOnly", wv)
+  elseif foes > 0 then add("foesOnly", wv) end
   -- the deeper roads
   if #bosses > 0 then
     add("deep", { b = names(bosses), w = n.wipe > 0 and ", though not at the first try" or "" })
@@ -470,8 +525,18 @@ function Vo.chapterProse(l, events, rec, current)
     if seen >= 2 and s < fastest then add("quick") elseif seen >= 2 and s > slowest then add("long") end
   end
   -- company and the rest of life
-  local p = names(pals)
-  if p then add("pals", { p = p }) end
+  -- people: up to three by name, the rest as "N others"
+  local seenPal, shown = {}, {}
+  for _, who in ipairs(pals) do
+    if not seenPal[who] then seenPal[who] = true; shown[#shown + 1] = who end
+  end
+  local extra = #shown - 3
+  if extra > 1 then
+    for i = #shown, 4, -1 do shown[i] = nil end
+    shown[4] = say(extra) .. " others"
+  end
+  local p = names(shown)
+  if p then add(#shown == 1 and "palsOne" or "pals", { p = p }) end
   if n.rez > 0 then add("rez") end
   if n.mount > 0 then add("mount") end
   local g = {}
