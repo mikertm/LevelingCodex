@@ -1785,6 +1785,8 @@ local function nextDistance(step)
     local _, yards = Q.vector(spot, map, x, y)
     return yards and (math.floor(yards + 0.5) .. " yd") or ""
   end
+  local near = Q.nearOtherMap(spot, map, x, y)
+  if near then return math.floor(near + 0.5) .. " yd" end
   local info = try(C_Map and C_Map.GetMapInfo, spot.map)
   return type(info) == "table" and type(info.name) == "string" and Q.plain(info.name) or ""
 end

@@ -3184,6 +3184,32 @@ function S.questFlightMorbent()
   check(arrowSays(" yd") and not arrowSays("Fly to"), "the arrow leads on foot to Sven: " .. arrowCaption())
 end
 
+-- Reported from the game: at the Scarlet camp by the Valley of Bones the arrow said "Travel to Desolace
+-- 271 yd". Forever reports that corner of Desolace as Shen'dralas (map 2652, whose rectangle covers it).
+-- A step on another map a short walk away is pointed at plainly, and UP NEXT gives yards.
+function S.questNearOtherMap()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 36, 1443, 62.0, 88.0
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest == 261 then break end
+        if step.quest and step.quest ~= 261 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 261, isComplete = false } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  MOCK.advance(0.3)
+  local frame = questViewer()
+  check(questText(frame, "Undead Ravager"), "the Scarlet camp step is current")
+  walkTo(2652, 35.5, 30.5) -- about 200 yd east of the camp, reported as Shen'dralas
+  check(questText(frame, "Undead Ravager"), "the step stays current on Shen'dralas")
+  check(arrowSays(" yd") and not arrowSays("Travel to") and not arrowSays("another zone") and not arrowSays("Follow"),
+    "a step a short walk away on another map gets a plain distance: " .. arrowCaption())
+end
+
 local function allText(root)
   local out = {}
   for _, child in ipairs({ root:GetRegions() }) do

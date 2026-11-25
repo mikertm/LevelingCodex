@@ -1089,7 +1089,7 @@ def main():
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "questBuyUsedUp", "questBuyNotSkipped", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questPreviewAhead", "questDanger", "questParty", "questPartySync", "questPartyGoal", "questPartyChat", "questPartyChatSteps", "questPartyHeartbeat", "questPartyTab", "questPartyShare", "questPartyCatchUp",
-                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent",
+                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent", "questNearOtherMap",
                              "questDarkshireStranglethornHandoff", "questDarkshirePantherSuggestion", "questDarkshireSouthshorePreview", "questDungeonChoice",
                              "questBossSteps", "questStockadeBossGuide", "questDungeonEncounterGuides",
                              "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",

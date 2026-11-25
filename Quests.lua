@@ -1811,8 +1811,25 @@ function Q.hubFlight(step, map)
   end
 end
 
+-- A step on another map that is still only a short walk away: a subzone or neighbouring map the
+-- client reports where the step's own map also lies (the Scarlet camp at the Valley of Bones reported
+-- "Travel to Desolace 271 yd" while the player stood in Desolace). Returns the yards, else nil.
+Q.NEAR_OTHER_MAP = 500
+function Q.nearOtherMap(spot, map, x, y)
+  if not (spot and spot.map and map and spot.map ~= map and x and Q.worldVector) then return end
+  if not (Q.sameContinent and Q.sameContinent(spot.map, map)) then return end
+  local _, yards = Q.worldVector(spot, map, x, y)
+  if yards and yards <= Q.NEAR_OTHER_MAP then return yards end
+end
+
 function Q.destination(step, map)
   if not (step and step.map and map) then return step end
+  if step.map ~= map then
+    local _, x, y = Q.position()
+    if Q.nearOtherMap(step, map, x, y) then
+      return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind, npc = step.npc }
+    end
+  end
   if step.map ~= map and step.type == "hearth" and boundTo(step.bind) and (Q.hearthCooldown() or 0) < 60 then
     return nil, "Hearth to " .. step.bind
   end
