@@ -31,6 +31,13 @@ local stats = { runs = 0, took = 0, money = 0 }
 -- its own mail window, and a hidden MailFrame kept the card away (2026-11-24).
 local function isOpen() return mailOpen end
 
+-- Walking away doesn't always send MAIL_CLOSED under Forever's controller UI (the card stayed
+-- on screen, 2026-11-25). While open, a 0.5 s watch closes it when the interaction manager says
+-- the mail window hid, a mail frame that showed is hidden again, or you're over M.RANGE yd from
+-- where it opened.
+M.RANGE = 12
+local openedAt, frameSeen, watching
+
 -- The mail window to sit beside: the first shown of the known frames, else nil (top of screen).
 local MAIL_ROOTS = { "MailFrame", "InboxFrame" }
 local function mailWindow()
@@ -332,6 +339,42 @@ local function hideCard()
   place.edgeRoot = nil
 end
 
+local function closeMail(why)
+  if not mailOpen then return end
+  mailOpen = false
+  M.closedBy = why
+  if run then sayDone("closed") end
+  hideCard()
+end
+
+local function anyMailFrameShown()
+  for _, name in ipairs(MAIL_ROOTS) do
+    local f = _G[name]
+    if type(f) == "table" and type(f.IsShown) == "function" and f:IsShown() then return true end
+  end
+  return false
+end
+
+local function watchMail()
+  if watching then return end
+  watching = true
+  local function tick()
+    if not mailOpen then watching = false; return end
+    local shown = anyMailFrameShown()
+    if shown then frameSeen = true
+    elseif frameSeen then closeMail("window hidden"); watching = false; return end
+    if openedAt then
+      local map, x, y = Q.position()
+      if x and Q.vector then
+        local _, d = Q.vector(openedAt, map, x, y)
+        if type(d) == "number" and d > M.RANGE then closeMail("walked away"); watching = false; return end
+      end
+    end
+    ns.after(0.5, tick)
+  end
+  ns.after(0.5, tick)
+end
+
 refreshCard = function()
   if ns.db().noMailCard or not isOpen() or not canTake() then hideCard(); return end
   local s = M.summary()
@@ -379,21 +422,28 @@ end
 function ns.startMailbox()
   if events then return end
   events = CreateFrame("Frame")
-  for _, ev in ipairs({ "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE", "BAG_UPDATE_DELAYED", "UI_ERROR_MESSAGE" }) do
+  for _, ev in ipairs({ "MAIL_SHOW", "MAIL_CLOSED", "MAIL_INBOX_UPDATE", "BAG_UPDATE_DELAYED", "UI_ERROR_MESSAGE",
+      "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, event, a1, a2)
     if event == "MAIL_SHOW" then
       mailOpen = true
+      M.closedBy = nil
+      frameSeen = anyMailFrameShown()
+      local map, x, y = Q.position()
+      openedAt = x and { map = map, x = x, y = y } or nil
+      watchMail()
       refreshSoon()
       ns.after(0.5, function()
         refreshCard()
         if ns.db().mailAutoTake and isOpen() and not run and M.summary().mails > 0 then M.takeAll() end
       end)
     elseif event == "MAIL_CLOSED" then
-      mailOpen = false
-      if run then sayDone("closed") end
-      hideCard()
+      closeMail("MAIL_CLOSED")
+    elseif event == "PLAYER_INTERACTION_MANAGER_FRAME_HIDE" then
+      local mailType = Enum and Enum.PlayerInteractionType and Enum.PlayerInteractionType.MailInfo or 17
+      if a1 == mailType then closeMail("interaction hidden") end
     elseif event == "UI_ERROR_MESSAGE" then
       -- "Inventory is full." while taking: no more items this run (the gold still comes)
       local msg = type(a2) == "string" and a2 or a1
@@ -408,7 +458,7 @@ end
 
 function ns.mailDebugLines()
   local s = M.summary()
-  local line = "mailbox: " .. (mailOpen and "open" or "closed") .. ", " .. s.mails .. " mails to take ("
+  local line = "mailbox: " .. (mailOpen and "open" or ("closed" .. (M.closedBy and (" (" .. M.closedBy .. ")") or ""))) .. ", " .. s.mails .. " mails to take ("
     .. s.items .. " items, " .. ns.money(s.money) .. "), free slots " .. tostring(M.freeSlots())
     .. "; this session " .. stats.runs .. " runs, " .. stats.took .. " items, " .. ns.money(stats.money)
   if last then

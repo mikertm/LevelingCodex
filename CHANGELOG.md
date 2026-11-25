@@ -14,6 +14,7 @@
     - Each chapter opens with its **HIGHLIGHTS**: up to three big moments (bosses, firsts, rares, dungeons, close calls, your first mount).
 - **Journey: a cleaner map.** Your trail is drawn as a line in your level's colour, with gaps where you hearthed or flew. Before, it was hundreds of dots that ran into blobs. Soft washes mark the places you kept coming back to. Nearby pins gather into one with a count, and small moments (gathering, gold, flights, inns) are small dots, so only the big ones wear an icon. The world map trail is a line too.
 - **Journey: watch the story being written.** A big moment (a boss, a first, a rare, a new land, a fall, a close call, a dungeon run) shows a small card as it goes into the book. Click the card to open that chapter. Turn it off with Journey > Map > Show a card when a big moment is written.
+- **Mailbox: the Take all card no longer sticks on screen** when you walk away from the mailbox without closing it. It now hides once you are a few steps from the mailbox, or when the mail window closes.
 
 ## v0.31.7
 - **The profit record now matches the gold you made:**

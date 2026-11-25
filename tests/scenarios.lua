@@ -14242,6 +14242,28 @@ function S.mailTakeAll()
   check(#MOCK.inbox == 2, "/codex mail takes all")
   MOCK.event("MAIL_CLOSED")
   check(not card:IsShown(), "MAIL_CLOSED hides the card")
+  -- walking away without MAIL_CLOSED (Forever's controller mail window, 2026-11-25)
+  MOCK.inbox = mailFixture()
+  MOCK.event("MAIL_SHOW")
+  MOCK.event("MAIL_INBOX_UPDATE")
+  MOCK.advance(1)
+  check(card:IsShown(), "the card shows again")
+  MOCK.questX = MOCK.questX + 0.2
+  MOCK.advance(1)
+  check(card:IsShown(), "a step aside keeps it")
+  MOCK.questX = MOCK.questX + 5
+  MOCK.advance(1)
+  check(not card:IsShown(), "walking away hides the card without MAIL_CLOSED")
+  -- a mail window that hid without MAIL_CLOSED
+  MOCK.inbox = mailFixture()
+  MailFrame:Show()
+  MOCK.event("MAIL_SHOW")
+  MOCK.event("MAIL_INBOX_UPDATE")
+  MOCK.advance(1)
+  check(card:IsShown(), "the card shows with MailFrame")
+  MailFrame:Hide()
+  MOCK.advance(1)
+  check(not card:IsShown(), "MailFrame hiding hides the card")
 end
 
 -- Full bags: the gold still comes, the items stay; the key binding runs it; closing stops it.
