@@ -134,6 +134,7 @@ end
 -- Incrementally updates only the items in A().dirtyIDs during live sniper sweeps instead of
 -- recomputing all 7,000+ realm items on every page!
 local cache = { key = nil, rows = nil, byID = nil, storeRef = nil, at = 0, version = nil }
+local askedQuality = {}
 function M.rows()
   local store = A().store()
   local items = store.items
@@ -176,7 +177,10 @@ function M.rows()
   local out, byID = {}, {}
   for id, it in pairs(items) do
     if type(it) == "table" and not notes.hidden[id] and (tonumber(it.n) or 0) > 0 and (tonumber(it.low) or 0) >= min then
-      if it.q == nil then
+      if it.q == nil and not askedQuality[id] then
+        -- once a session per item: an uncached item asks the server, and 30,000 asks per rebuild
+        -- flooded the client while the sniper ran
+        askedQuality[id] = true
         local _, _, q = ns.itemInfo(id)
         if q ~= nil then it.q = q end
       end
@@ -199,16 +203,50 @@ local function isVanitySpike(r)
   return (r.change or 0) > 1500 and (r.n or 0) <= 2 and (r.usual or 0) < 2500
 end
 
+-- Keeps the best `cap` entries { r, s } of a bucket, best first (score high, then item ID low), by
+-- insertion: picking the top few of 30,000 rows never builds and sorts a table per row (the sniper
+-- redraws the ticker while it runs, and that churn crashed the client once).
+local function better(a, b)
+  if a.s ~= b.s then return a.s > b.s end
+  return a.r.id < b.r.id
+end
+local function keep(bucket, r, s, cap)
+  local n = #bucket
+  if n >= cap then
+    local worst = bucket[n]
+    if not better({ r = r, s = s }, worst) then return end
+    bucket[n] = nil
+    n = n - 1
+  end
+  local e = { r = r, s = s }
+  local i = n
+  while i >= 1 and better(e, bucket[i]) do bucket[i + 1] = bucket[i]; i = i - 1 end
+  bucket[i + 1] = e
+end
+M.keepTop = keep
+
 local function top(filter, score, n)
-  local list = {}
-  for _, r in ipairs(M.rows()) do if filter(r) then list[#list + 1] = r end end
-  table.sort(list, function(a, b)
-    local sa, sb = score(a), score(b)
-    if sa ~= sb then return sa > sb end
-    return a.id < b.id
-  end)
+  local cap = tonumber(n)
+  if not cap then
+    local list = {}
+    for _, r in ipairs(M.rows()) do if filter(r) then list[#list + 1] = r end end
+    table.sort(list, function(a, b)
+      local sa, sb = score(a), score(b)
+      if sa ~= sb then return sa > sb end
+      return a.id < b.id
+    end)
+    return list
+  end
+  local best = {}
+  if cap < 1 then return best end
+  for _, r in ipairs(M.rows()) do
+    if filter(r) then
+      local s = score(r)
+      if s == s then keep(best, r, s, cap) end
+    end
+  end
   local out = {}
-  for i = 1, math.min(n or #list, #list) do out[i] = list[i] end
+  for i, e in ipairs(best) do out[i] = e.r end
   return out
 end
 
@@ -238,24 +276,17 @@ function M.ticker(n)
     local capped = math.min(absC, 400)
     local volWeight = math.max(1, math.log10((r.n or 1) + 1))
     if r.live then
-      tier1[#tier1 + 1] = { r = r, s = 1e9 + capped * 10 - age }
+      keep(tier1, r, 1e9 + capped * 10 - age, limit)
     elseif not isVanitySpike(r) then
       if age <= 180 and absC >= 1 then
-        tier2[#tier2 + 1] = { r = r, s = (180 - age) * 1000 + capped * volWeight }
+        keep(tier2, r, (180 - age) * 1000 + capped * volWeight, limit)
       elseif sniperOn and age <= 75 and not (T().dealVendorBlocked and T().dealVendorBlocked(r.id)) then
-        tier3[#tier3 + 1] = { r = r, s = (75 - age) * 1000 + (r.n or 0) }
+        keep(tier3, r, (75 - age) * 1000 + (r.n or 0), limit)
       elseif absC >= 1 then
-        tier4[#tier4 + 1] = { r = r, s = capped * volWeight - math.min(age, 7200) * 0.02 }
+        keep(tier4, r, capped * volWeight - math.min(age, 7200) * 0.02, limit)
       end
     end
   end
-  local function sortBucket(b)
-    table.sort(b, function(a, b2)
-      if a.s ~= b2.s then return a.s > b2.s end
-      return a.r.id < b2.r.id
-    end)
-  end
-  sortBucket(tier1); sortBucket(tier2); sortBucket(tier3); sortBucket(tier4)
   local out = {}
   local function takeFrom(b, maxTake)
     local taken = 0

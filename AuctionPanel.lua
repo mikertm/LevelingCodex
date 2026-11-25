@@ -853,7 +853,11 @@ local function makePanel()
     if not over and self.lastW and tnow - (self.lastCheck or 0) >= 1.5 then
       self.lastCheck = tnow
       local sniperOn = A().sniper and A().sniper.on
-      if not A().scanning() and ((A().version or 0) ~= self.seenVersion or (sniperOn and tnow - (self.lastRebuild or 0) >= 6)) then
+      -- while the sniper runs prices change every second: redraw at most every 6 s (each redraw
+      -- walks every priced item)
+      local since = tnow - (self.lastRebuild or 0)
+      if not A().scanning() and ((sniperOn and since >= 6)
+        or (not sniperOn and (A().version or 0) ~= self.seenVersion)) then
         self.lastRebuild = tnow
         pcall(drawTicker, 40, self.lastW)
       end

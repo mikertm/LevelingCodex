@@ -1,5 +1,8 @@
 # Leveling Codex
 
+## v0.31.6
+- **Fixed a game crash while the deal sniper ran for a long time:** the ticker across the auction tabs no longer sorts every priced item each time it redraws. It picks the top few directly, and redraws at most every 6 seconds while sniping. The market list asks the game about each unknown item only once a session.
+
 ## v0.31.5
 - **The Codex, Market and Scan tabs get the same look as Deals and Quick Sell:** dark trading-desk cards, the new buttons and switches, and item icons framed in their quality colour.
 - **Codex tab:** a scoreboard across the top shows your gold (and mount fund), this visit's posts and buys with their estimated profit, what your bags would sell for, the deals waiting with their potential profit, and your net profit with wins and losses. Click TO SELL, DEALS or NET PROFIT to open that page. YOUR TRADES now shows what you made and lost, a small profit line and your latest trades.
