@@ -11694,7 +11694,23 @@ function S.auctionTrade()
   check(auction.price(2589).low == 180, "non-deal listings scanned on sniper pages update their stored price history")
   check(T.isLive(99911) and T.dealLabel(99911) == "Buy 1 for 80c",
     "Pages mode discovers and verifies a sniping deal sitting on a later page (" .. T.dealLabel(99911) .. ")")
+  -- the snipe pop-up offers the live deal over the auction house, with its Buy button
+  local pop = _G.LevelingCodexSnipeAlert
+  check(pop and pop:IsShown() and questText(pop, "Deep Page Gem") and questText(pop, "Listed 80c"),
+    "the snipe pop-up shows the live deal with its Buy button")
+  local boughtBefore = #MOCK.purchases
+  click(pop, "Buy deal")
+  MOCK.advance(1)
+  click(pop, "Buy deal") -- a commodity: the second click confirms the server's price
+  MOCK.advance(3)
+  check(#MOCK.purchases == boughtBefore + 1, "the pop-up's Buy buys the deal")
   click(card, "Snipe deals")
+  local ss = MOCK.ns.auction.snipeSession()
+  check(ss.alerts >= 1 and ss.searches > 0 and ss.run > 0 and ss.checks >= 1 and ss.buys >= 1 and ss.est > 0,
+    "the sniper's session record counts its time, searches, alerts and checks (" .. ss.alerts .. " alerts, " .. ss.searches .. " searches, " .. ss.checks .. " checks, " .. ss.buys .. " buys, est " .. ss.est .. ", run " .. ss.run .. ")")
+  local runStopped = ss.run
+  MOCK.advance(30)
+  check(MOCK.ns.auction.snipeSession().run == runStopped, "a stopped sniper's time stops too")
   MOCK.browsePage = nil
   MOCK.closeAuction()
   -- The listing cost becomes a realized win when the purchased stack is sold to an NPC.
@@ -11730,6 +11746,30 @@ function S.auctionTrade()
   check(loot.wins == afterSale.wins + 1 and loot.net == afterSale.net + 30 and loot.income == afterSale.income,
     "vendoring 11 looted Tigerseye with the sniped one counts only the snipe (income " .. loot.income .. "/" .. afterSale.income .. " wins " .. loot.wins .. "/" .. afterSale.wins .. " net " .. loot.net .. " was " .. afterSale.net .. ")")
   MOCK.closeMerchant()
+  -- gear variants: a flip on random-enchant gear is judged against its own suffix's prices
+  do
+    local AU, TR = MOCK.ns.auction, MOCK.ns.auctionTrade
+    local d0 = math.floor(MOCK.time / 86400)
+    AU.store().items[99960] = { name = "Bandit Cloak", low = 500, n = 12, at = MOCK.time, vendor = 0,
+      days = { [d0 - 2] = { low = 5000, med = 5000 }, [d0 - 1] = { low = 5000, med = 5000 } } }
+    AU.recordVariant(99960, 11, 20, 600, 3)
+    check(AU.variantPrice(99960, 11) and AU.variantPrice(99960, 11).low == 600, "a variant's listing is kept apart by its suffix")
+    AU.store().items[99960].vars = {
+      [11] = { low = 600, n = 3, ilvl = 20, days = { [d0 - 2] = 600, [d0 - 1] = 620 } },
+      [22] = { low = 2000, n = 10, ilvl = 20, days = { [d0 - 2] = 5000, [d0 - 1] = 5100 } },
+    }
+    AU.version = (AU.version or 0) + 1
+    check(not TR.sniperCandidate(99960, "Bandit Cloak", 500, 10, { itemID = 99960, itemSuffix = 11, itemLevel = 20 }),
+      "a cheap 'of the Bear' isn't a flip against the item's mixed usual price")
+    check(not TR.sniperCandidate(99960, "Bandit Cloak", 500, 10),
+      "a listing without its suffix on gear with variants isn't valued as a flip")
+    local monkey = TR.sniperCandidate(99960, "Bandit Cloak", 2000, 10, { itemID = 99960, itemSuffix = 22, itemLevel = 20 })
+    check(monkey and monkey.kind == "flip" and monkey.worth == 5000 and monkey.suffix == 22 and monkey.exactKey.itemSuffix == 22,
+      "an underpriced variant is a flip at its own usual price, searched by its exact key")
+    local listed
+    for _, d in ipairs(TR.deals(nil, true, true)) do if d.id == 99960 then listed = d end end
+    check(listed and listed.suffix == 22 and listed.worth == 5000, "the Deals list values gear by variant (" .. tostring(listed and listed.suffix) .. ")")
+  end
 end
 
 -- The Market tab: movers from days and from readings, the chart, hot items, the ticker; the

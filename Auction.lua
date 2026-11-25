@@ -187,6 +187,48 @@ function A.markAllDirty()
   A.dirtyIDs, A.dealDirtyIDs = {}, {}
 end
 
+-- Gear variants ("of the Bear", "of the Monkey"): random-enchant items share one item ID, so their
+-- prices are kept apart by suffix: it.vars[suffix] = { low, n, at, ilvl, days = { [day] = lowest } }
+-- (A.VARIANT_DAYS days). A flip on a variant is valued by that variant's own usual price.
+A.VARIANT_DAYS = 14
+function A.recordVariant(id, suffix, ilvl, low, qty)
+  id, suffix, low = tonumber(id), tonumber(suffix) or 0, tonumber(low)
+  if not id or suffix == 0 or not low or low <= 0 then return end
+  local it = A.store().items[id]
+  if type(it) ~= "table" then return end
+  it.vars = type(it.vars) == "table" and it.vars or {}
+  local v = it.vars[suffix]
+  if type(v) ~= "table" then v = {}; it.vars[suffix] = v end
+  v.low, v.n, v.at = low, tonumber(qty) or v.n or 1, now()
+  if tonumber(ilvl) and tonumber(ilvl) > 0 then v.ilvl = tonumber(ilvl) end
+  v.days = type(v.days) == "table" and v.days or {}
+  local d = today()
+  v.days[d] = v.days[d] and math.min(v.days[d], low) or low
+  for day in pairs(v.days) do if day < d - A.VARIANT_DAYS then v.days[day] = nil end end
+end
+-- An item with gear variants on record (it.vars).
+function A.hasVariants(id)
+  local it = A.store().items[tonumber(id) or 0]
+  return type(it) == "table" and type(it.vars) == "table" and next(it.vars) ~= nil
+end
+-- One variant's price: { low, n, at, ilvl, usual (median of its days before today, else of all), days }.
+function A.variantPrice(id, suffix)
+  local it = A.store().items[tonumber(id) or 0]
+  local v = type(it) == "table" and type(it.vars) == "table" and it.vars[tonumber(suffix) or 0]
+  if type(v) ~= "table" then return nil end
+  local vals, d0 = {}, today()
+  for day, low in pairs(type(v.days) == "table" and v.days or {}) do
+    if tonumber(low) then vals[#vals + 1] = { day = day, low = tonumber(low) } end
+  end
+  local n = #vals
+  local list = {}
+  for _, e in ipairs(vals) do if e.day ~= d0 then list[#list + 1] = e.low end end
+  if #list == 0 then for _, e in ipairs(vals) do list[#list + 1] = e.low end end
+  table.sort(list)
+  local usual = #list > 0 and list[math.floor((#list + 1) / 2)] or nil
+  return { low = v.low, n = v.n, at = v.at, ilvl = v.ilvl, usual = usual, days = n, suffix = tonumber(suffix) }
+end
+
 function A.record(id, name, low, n, med, high)
   id = tonumber(id)
   if not id then return end
@@ -893,6 +935,31 @@ local snipe = {
 A.sniper = snipe
 local function clk() return GetTime and GetTime() or now() end
 
+-- This session's sniper record (not saved): time it ran, searches, live alerts, verified checks,
+-- and what its deals bought (AuctionTrade.lua's boughtFor files buys via A.snipeNote).
+local session = { run = 0, searches = 0, alerts = 0, checks = 0, buys = 0, spent = 0, est = 0, bestEst = 0 }
+local function setSnipeOn(on)
+  if on and not session.onAt then session.onAt = clk()
+  elseif not on and session.onAt then
+    session.run = session.run + math.max(0, clk() - session.onAt)
+    session.onAt = nil
+  end
+  snipe.on = on and true or false
+end
+function A.snipeNote(key, n, extra)
+  session[key] = (session[key] or 0) + (tonumber(n) or 1)
+  if key == "est" and extra and (tonumber(n) or 0) > session.bestEst then session.bestEst, session.bestName = tonumber(n), extra end
+end
+-- { run (seconds), searches, alerts, checks, buys, spent, est, perHour, hitRate (% of alerts bought), bestEst, bestName }
+function A.snipeSession()
+  local out = {}
+  for k, v in pairs(session) do out[k] = v end
+  out.run = session.run + (session.onAt and math.max(0, clk() - session.onAt) or 0)
+  out.perHour = out.run >= 60 and math.floor(out.est * 3600 / out.run) or nil
+  out.hitRate = out.alerts > 0 and math.floor(math.min(out.buys, out.alerts) * 100 / out.alerts + 0.5) or nil
+  return out
+end
+
 -- Smart Watch List builder: prioritizes (1) user-starred items, (2) active deals on the board,
 -- (3) proven past snipe/flip winners from your trade log, (4) items whose market price actually
 -- trades near vendor/flip range, and (5) high-volume items, while demoting 100g epics that never
@@ -982,7 +1049,8 @@ end
 function A.toggleSnipe(on)
   if on == nil then on = not snipe.on end
   if not on then
-    snipe.on, snipe.pending, snipe.moreMode, snipe.verify = false, nil, nil, {}
+    setSnipeOn(false)
+    snipe.pending, snipe.moreMode, snipe.verify = nil, nil, {}
     refreshCard()
     return false
   end
@@ -994,7 +1062,7 @@ function A.toggleSnipe(on)
     ns.say("Nothing to watch yet: Scan all first, or switch the sniper to Newest or Pages.")
     return false
   end
-  snipe.on = true
+  setSnipeOn(true)
   if mode == "sweep" then
     ns.say("Sniping deals (page scanner): walking auction house pages for deals and updating live prices.")
   elseif mode == "newest" then
@@ -1014,7 +1082,7 @@ function A.retarget(kind)
   if not snipe.on then return end
   snipe.list, snipe.i = A.snipeList(), 0
   if snipe.mode == "watch" and #snipe.list == 0 then
-    snipe.on = false
+    setSnipeOn(false)
     ns.say("Sniper stopped: nothing matches those choices yet.")
   end
   refreshCard()
@@ -1054,6 +1122,7 @@ local function stepSniperVerify()
     ns.after(0.15, A.pump)
     return
   end
+  session.checks = session.checks + 1
   local ok = T and T.check(c.deal, false, c.key, function(id, bAfter)
     snipe.verifiedAt = snipe.verifiedAt or {}
     if bAfter and bAfter.stage ~= "ready" then
@@ -1115,6 +1184,7 @@ function A.pump()
       if not sent then ns.after(A.SNIPE_NEWEST_GAP, A.pump); return end
       snipe.page, snipe.seenPage, snipe.moreMode, snipe.sortTag = 0, {}, nil, sortTag
       snipe.checked = snipe.checked + 1
+      session.searches = session.searches + 1
       snipe.current = sortTag .. " p.1"
       local j = { kind = "search", name = "", sweep = mode == "sweep", newest = mode == "newest", modern = true, at = now() }
       job = j
@@ -1132,7 +1202,7 @@ function A.pump()
       snipe.i = snipe.i % math.max(1, #snipe.list) + 1
       if snipe.i == 1 and snipe.checked > 0 then snipe.list, snipe.laps = A.snipeList(), snipe.laps + 1 end
       snipe.pending = snipe.list[snipe.i]
-      if not snipe.pending then snipe.on = false; refreshCard(); return end
+      if not snipe.pending then setSnipeOn(false); refreshCard(); return end
     end
     fromSniper = true
   end
@@ -1145,6 +1215,7 @@ function A.pump()
   if fromSniper then
     snipe.pending = nil
     snipe.checked, snipe.current = snipe.checked + 1, name
+    session.searches = session.searches + 1
   else
     table.remove(queue, 1)
   end
@@ -1212,7 +1283,7 @@ local function readBrowse(added)
   local T = ns.auctionTrade
   local wideSweep = j.newest or j.sweep
   local sniperSearch = j.snipe or wideSweep
-  local candidates, byItem = {}, {}
+  local candidates, byItem, variantRows = {}, {}, {}
   local needVendors = false
   local want = not wideSweep and type(j.name) == "string" and j.name:lower() or nil
   if wideSweep then
@@ -1241,6 +1312,8 @@ local function readBrowse(added)
       end
       local matches = want and type(name) == "string" and name:lower() == want
       if matches then exact = true end
+      local suffix = type(key) == "table" and tonumber(key.itemSuffix) or 0
+      if low and low > 0 and qty > 0 and suffix ~= 0 then variantRows[#variantRows + 1] = { id, suffix, key.itemLevel, low, qty } end
       if low and low > 0 and qty > 0 then
         local agg = byItem[id]
         if not agg then
@@ -1253,7 +1326,7 @@ local function readBrowse(added)
         end
         if sniperSearch then
           local inspect = snipe.on and T and (wideSweep or matches)
-          local deal = inspect and T.sniperCandidate(id, name, low, qty) or nil
+          local deal = inspect and T.sniperCandidate(id, name, low, qty, suffix ~= 0 and key or nil) or nil
           local seenFalse = snipe.seen and snipe.seen[id]
           if seenFalse and (nowClk - seenFalse.at) >= 45 then
             snipe.seen[id], seenFalse = nil, nil
@@ -1307,6 +1380,8 @@ local function readBrowse(added)
     end
   end
   if uncachedIDs then ns.after(0.4, function() A.fillVendors(0, uncachedIDs) end) end
+  -- each gear variant's own price, after the item is on record
+  for _, v in ipairs(variantRows) do A.recordVariant(v[1], v[2], v[3], v[4], v[5]) end
   if wideSweep and snipe.on then
     local hasMore = has(C, "HasFullBrowseResults") and try(C.HasFullBrowseResults) == false
     if j.sweep and hasMore then
@@ -1813,7 +1888,8 @@ end
 local function onClose()
   open = false
   job, queue = nil, {}
-  snipe.on, snipe.pending, snipe.moreMode, snipe.verify = false, nil, nil, {}
+  setSnipeOn(false)
+  snipe.pending, snipe.moreMode, snipe.verify = nil, nil, {}
   if ns.auctionPanel then ns.auctionPanel.onClose() end
 end
 

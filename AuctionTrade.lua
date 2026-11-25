@@ -744,18 +744,55 @@ local function dealAt(id, p, low, qty, vendor, kind, maxBuy)
     profit = profit, n = qty, source = p.source, at = p.at, pct = pct, conf = conf, confScore = score, confWhy = why }
 end
 
+-- An item's price seen through one gear variant (its own low and usual), or with the item's
+-- mixed usual taken out when it has variants but this listing names none: a flip on random-enchant
+-- gear is only judged against prices of the same suffix.
+local function variantView(id, p, suffix)
+  local A = ns.auction
+  if not (A.hasVariants and (suffix or A.hasVariants(id))) then return p end
+  local q = {}
+  for k, v in pairs(p) do q[k] = v end
+  local vp = suffix and A.variantPrice(id, suffix)
+  if vp and (vp.days or 0) >= 2 and vp.usual then
+    q.usual, q.days = vp.usual, vp.days
+  else
+    q.usual, q.days = nil, 0
+  end
+  q.variant = suffix and vp or nil
+  return q
+end
+local function variantKey(id, suffix, ilvl)
+  return { itemID = id, itemSuffix = suffix, itemLevel = tonumber(ilvl) or 0, battlePetSpeciesID = 0 }
+end
+
 local function buildDealForID(id, it, kind, hidden, maxBuy, notes)
   if type(it) ~= "table" or T.dealVendorBlocked(id) or (not hidden and notes.hidden[id]) then return end
   local n = tonumber(it.n) or 0
   local low = tonumber(it.low)
   if not low or low <= 0 or n <= 0 or (maxBuy > 0 and low > maxBuy) then return end
   local p = ns.auction.price(id)
-  local d = p and dealAt(id, p, p.low, p.n, p.vendor, kind, maxBuy)
+  if not p then return end
+  local base = variantView(id, p)
+  local d = dealAt(id, base, p.low, p.n, p.vendor, kind, maxBuy)
   if d then
     local vendor = dealVendorPrice(id, p)
-    if vendor ~= p.vendor then d = dealAt(id, p, p.low, p.n, vendor, kind, maxBuy) end
-    return d
+    if vendor ~= p.vendor then d = dealAt(id, base, p.low, p.n, vendor, kind, maxBuy) end
   end
+  -- gear variants: a flip per suffix against that suffix's own usual price, searched exactly
+  if base ~= p and (not kind or kind == "flip") then
+    local it2 = ns.auction.store().items[id]
+    for suffix in pairs(type(it2) == "table" and type(it2.vars) == "table" and it2.vars or {}) do
+      local vp = ns.auction.variantPrice(id, suffix)
+      if vp and vp.low and (vp.n or 0) > 0 then
+        local vd = dealAt(id, variantView(id, p, suffix), vp.low, vp.n, dealVendorPrice(id, p), "flip", maxBuy)
+        if vd and (not d or vd.profit > d.profit) then
+          vd.suffix, vd.exactKey = suffix, variantKey(id, suffix, vp.ilvl)
+          d = vd
+        end
+      end
+    end
+  end
+  return d
 end
 
 function T.deals(kind, hidden, fresh)
@@ -812,15 +849,19 @@ end
 local alerted = {}
 T.live = {}
 
-function T.sniperCandidate(id, name, low, qty)
+function T.sniperCandidate(id, name, low, qty, vkey)
   if T.isHidden(id) then return end
   local p = ns.auction.price(id) or { name = name }
   local vendor = dealVendorPrice(id, p)
   if not vendor then return end
   local kind, maxBuy = ns.auction.sniper.kind, T.maxBuy()
-  local d = dealAt(id, p, low, qty, vendor, kind, maxBuy)
+  local suffix = type(vkey) == "table" and tonumber(vkey.itemSuffix) or nil
+  if suffix == 0 then suffix = nil end
+  local pv = variantView(id, p, suffix)
+  local d = dealAt(id, pv, low, qty, vendor, kind, maxBuy)
+  if d and suffix then d.suffix, d.exactKey = suffix, vkey end
   -- Refresh previously confirmed deals even when the browse price has gone up.
-  return d or (T.live[id] and dealAt(id, p, p.low, p.n or 0, vendor, kind, maxBuy))
+  return d or (T.live[id] and dealAt(id, pv, p.low, p.n or 0, vendor, kind, maxBuy))
 end
 
 function T.clearLiveDeal(id)
@@ -836,7 +877,7 @@ local function announceSniperDeal(b, low, qty)
   local p = ns.auction.price(id)
   if not snipe.on then return end
   local vendor = p and dealVendorPrice(id, p)
-  local d = vendor and not T.isHidden(id) and dealAt(id, p, low, qty, vendor, snipe.kind, T.maxBuy())
+  local d = vendor and not T.isHidden(id) and dealAt(id, variantView(id, p, b.deal.suffix), low, qty, vendor, snipe.kind, T.maxBuy())
   if not d or b.stage ~= "ready" then
     T.clearLiveDeal(id)
     return
@@ -846,7 +887,10 @@ local function announceSniperDeal(b, low, qty)
   if alerted[id] == d.low then return end
   alerted[id] = d.low
   snipe.found = (snipe.found or 0) + 1
+  if ns.auction.snipeNote then ns.auction.snipeNote("alerts") end
   if not ns.db().noSnipeSound and type(PlaySound) == "function" then pcall(PlaySound, 18019, "SFX") end
+  T.popupSkipped[id] = nil
+  if T.refreshPopup then T.refreshPopup() end
   local est, n = b.estAll or b.est, b.allQty or b.qty
   ns.say("Deal: " .. Q.plain(d.name) .. " listed at " .. ns.money(d.low) .. ", +" .. ns.money(d.profit) .. " each"
     .. (est and n and n > 1 and est > 0 and (" (est. +" .. ns.money(est) .. " for " .. n .. ")") or "") .. ".")
@@ -1106,7 +1150,7 @@ function T.check(deal, fromBatch, browseKey, onDone)
     end
   end
   local previous = buying[deal.id]
-  local exactKey = browseKey or (previous and previous.exactKey)
+  local exactKey = browseKey or (previous and previous.exactKey) or deal.exactKey
   local key = exactKey or (has(C, "MakeItemKey") and try(C.MakeItemKey, deal.id)) or { itemID = deal.id }
   local b = { stage = "search", limit = limitFor(deal), deal = deal, key = key, exactKey = exactKey,
     at = now(), tries = 0, sniper = browseKey ~= nil, onDone = onDone }
@@ -1547,6 +1591,11 @@ local function boughtFor(id, deal, qty, total, moreLeft, each, note)
   last.est = (last.est or 0) + net
   visit.spent, visit.buys, visit.est = visit.spent + total, visit.buys + 1, (visit.est or 0) + net
   last.buy = { name = deal.name, qty = qty, total = total, est = net }
+  -- a buy of a deal the sniper found (live, or bought while it runs) counts in its session record
+  local A = ns.auction
+  if A.snipeNote and (T.live[id] or (buying[id] and buying[id].sniper) or (A.sniper and A.sniper.on)) then
+    A.snipeNote("buys"); A.snipeNote("spent", total); A.snipeNote("est", net, deal.name)
+  end
   local e = T.logTrade("buy", id, deal.name, qty, math.floor(total / qty + 0.5))
   e.total, e.dealKind, e.vendor, e.est = total, deal.kind, deal.vendor, net
   local notes = T.notes()
@@ -1972,8 +2021,124 @@ function T.basket(kind, hidden)
 end
 
 -- Redraws the Codex tab (AuctionPanel.lua) when it shows.
+----------------------------------------------------------------------------
+-- The snipe pop-up: a live deal the sniper found, with its Buy button, over the auction house
+-- whichever page is open (db.noSnipePopup). Buying stays a click: the button only runs T.buy /
+-- T.check from its own OnClick.
+----------------------------------------------------------------------------
+
+local popup, popupID
+T.popupSkipped = {} -- id -> the listed price skipped (shown again only below it)
+local popupPlace = {}
+
+local function popupEst(b)
+  return b and (b.est or b.estAll)
+end
+-- The live deals ready to buy, best estimate first.
+function T.popupDeals()
+  local out = {}
+  for id in pairs(T.live) do
+    local b = buying[id]
+    if T.isLive(id) and b and (b.stage == "ready" or b.stage == "confirm" or b.stage == "pricing" or b.stage == "buying"
+      or b.stage == "buyingItem") and not (T.popupSkipped[id] and (b.deal.low or 0) >= T.popupSkipped[id]) then
+      out[#out + 1] = id
+    end
+  end
+  table.sort(out, function(a, c)
+    local ea, ec = popupEst(buying[a]) or 0, popupEst(buying[c]) or 0
+    if ea ~= ec then return ea > ec end
+    return a < c
+  end)
+  return out
+end
+
+local function makePopup()
+  local A = ns.art
+  local h = A.frame("Frame", "LevelingCodexSnipeAlert", UIParent)
+  h:SetSize(270, 104)
+  h:SetFrameStrata("FULLSCREEN_DIALOG")
+  h:SetClampedToScreen(true)
+  h:EnableMouse(true)
+  h:Hide()
+  A.cardChrome(h)
+  h.label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  h.label:SetPoint("TOPLEFT", 12, -9)
+  h.icon = h:CreateTexture(nil, "ARTWORK")
+  h.icon:SetSize(28, 28)
+  h.icon:SetPoint("TOPLEFT", 12, -24)
+  h.name = h:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  h.name:SetPoint("TOPLEFT", 46, -24)
+  h.name:SetWidth(212)
+  h.name:SetJustifyH("LEFT")
+  h.name:SetWordWrap(false)
+  h.line = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  h.line:SetPoint("TOPLEFT", 46, -40)
+  h.line:SetWidth(212)
+  h.line:SetJustifyH("LEFT")
+  h.buy = A.button(h, 170, 24)
+  h.buy:SetPoint("BOTTOMLEFT", 12, 10)
+  h.buy:SetScript("OnClick", function()
+    local id = popupID
+    local b = id and buying[id]
+    if not b then return end
+    if b.stage == "ready" or b.stage == "confirm" then T.buy(id) elseif b.stage == "none" then T.check(b.deal) end
+    T.refresh()
+  end)
+  h.buy.tipTitle = "Buy this deal"
+  h.buy.tip = "Buys at the checked price (a commodity asks once more to confirm). The Codex checks the price again first when the quote is old."
+  h.skip = A.button(h, 70, 24)
+  h.skip:SetPoint("BOTTOMRIGHT", -12, 10)
+  h.skip:SetLabel("Skip")
+  h.skip.codexLabel = "Skip deal"
+  h.skip.tipTitle = "Skip this deal"
+  h.skip.tip = "Hides it here until it's listed cheaper. It stays on the Deals page."
+  h.skip:SetScript("OnClick", function()
+    local b = popupID and buying[popupID]
+    if b then T.popupSkipped[popupID] = b.deal.low or 0 end
+    T.refreshPopup()
+  end)
+  h.elapsed = 0
+  h:SetScript("OnUpdate", function(self, el)
+    self.elapsed = self.elapsed + (tonumber(el) or 0)
+    if self.elapsed >= 0.5 then self.elapsed = 0; T.refreshPopup() end
+  end)
+  return h
+end
+
+function T.refreshPopup()
+  local root = _G.AuctionHouseFrame
+  local list = (not ns.db().noSnipePopup and root and root.IsShown and root:IsShown()) and T.popupDeals() or {}
+  if #list == 0 then
+    popupID = nil
+    if popup then popup:Hide() end
+    return
+  end
+  local keep = false
+  for _, id in ipairs(list) do if id == popupID then keep = true end end
+  if not keep then popupID = list[1] end
+  local b = buying[popupID]
+  if not popup then popup = makePopup() end
+  ns.art.paintCard(popup)
+  local d = b.deal
+  local idx = 1
+  for i, id in ipairs(list) do if id == popupID then idx = i end end
+  popup.label:SetText("SNIPE DEAL" .. (#list > 1 and ("  (" .. idx .. " of " .. #list .. ")") or ""))
+  ns.setIcon(popup.icon, ns.auction.iconOf and ns.auction.iconOf(popupID) or nil)
+  popup.name:SetText(Q.plain(d.name or ("item " .. popupID)))
+  local est = popupEst(b)
+  popup.line:SetText("Listed " .. ns.money(d.low or 0) .. ", " .. (d.kind == "vendor" and "vendor pays " or "usual ")
+    .. ns.money(d.worth or 0) .. (est and ("\nEst. " .. (est >= 0 and "+" or "-") .. ns.money(math.abs(est)) .. " for " .. (b.qty or 1)) or ""))
+  local label = T.dealLabel(popupID)
+  popup.buy:SetLabel(label)
+  popup.buy.codexLabel = "Buy deal"
+  popup.buy:SetEnabled(b.stage == "ready" or b.stage == "confirm")
+  ns.placeByWindow(popup, root, popupPlace)
+  popup:Show()
+end
+
 function T.refresh()
   if ns.auctionPanel then ns.auctionPanel.refresh() end
+  if popup or next(T.live) then T.refreshPopup() end
 end
 
 ----------------------------------------------------------------------------
@@ -2000,6 +2165,8 @@ function ns.startAuctionTrade()
       visit.spent, visit.buys, visit.est = 0, 0, 0
       ns.after(0.5, T.queryOwned)
     elseif event == "AUCTION_HOUSE_CLOSED" then
+      if popup then popup:Hide() end
+      popupID = nil
       for _, x in pairs(buying) do
         if x.stage == "pricing" or x.stage == "confirm" then try(api().CancelCommoditiesPurchase) end
       end

@@ -1696,7 +1696,7 @@ function pages.deals(W, top, H)
   local closed = rec.wins + rec.losses
   local made = (rec.winAmount or 0) + (rec.income or 0)
   local lost = rec.lossAmount or rec.lost or 0
-  local mw = math.floor((cw - 8) / 3)
+  local mw = math.floor((cw - 12) / 4)
   local function miniStat(i, titleS, valS, col)
     local sx = cx + (i - 1) * (mw + 4)
     local sy = y + 23
@@ -1719,7 +1719,23 @@ function pages.deals(W, top, H)
     "Vendor sales of sniped items track automatically when you visit any merchant.",
     "Click to open full trade history & holdings.",
   }, "\n")
-  hit(cx, y + 23, cw, 29, "Sniper & Flip Record", scoreTip, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
+  hit(cx, y + 23, 3 * (mw + 4) - 4, 29, "Sniper & Flip Record", scoreTip, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
+  -- this session's sniper: what it bought and its estimated profit per hour
+  local ss = A().snipeSession()
+  local mins = math.floor(ss.run / 60)
+  local runText = mins >= 60 and (math.floor(mins / 60) .. " h " .. (mins % 60) .. " min") or (mins .. " min")
+  miniStat(4, "SNIPER SESSION", ss.buys > 0 and (signed(ss.est) .. (ss.perHour and (" (" .. signed(ss.perHour) .. "/h)") or ""))
+    or (ss.run > 0 and (runText .. ", " .. ss.alerts .. (ss.alerts == 1 and " alert" or " alerts")) or "not run yet"),
+    ss.buys > 0 and (ss.est >= 0 and GREEN or RED) or ns.C.light)
+  hit(cx + 3 * (mw + 4), y + 23, mw, 29, "Sniper session", table.concat({
+    "Running " .. runText .. " this session" .. (sn.on and " (on now)" or ""),
+    ns.thousands(ss.searches) .. " searches, " .. ss.alerts .. " live deals found, " .. ss.checks .. " listings checked",
+    "Bought " .. ss.buys .. (ss.buys == 1 and " deal" or " deals") .. " for " .. ns.money(ss.spent) .. ", est. " .. signed(ss.est) .. " after resale"
+      .. (ss.hitRate and (" (" .. ss.hitRate .. "% of alerts bought)") or ""),
+    ss.perHour and ("About " .. signed(ss.perHour) .. " per hour of sniping") or "Profit per hour shows after a minute of sniping",
+    ss.bestName and ("Best buy: " .. Q.plain(ss.bestName) .. " " .. signed(ss.bestEst)) or "No buy yet",
+    "Estimates assume you resell at the deal's price. Market > Your trades shows the real profit.",
+  }, "\n"), nil, "Sniper session")
 
   -- 3. Column Header Bar + Graphical Deal Cards
   y = top + 146
@@ -2285,6 +2301,8 @@ function pages.scan(W, top, H)
     function(i) db.auctionScanAll = i == 2 and "instant" or nil end, "Scan all uses ")
   sy = sy + 26
   sy = sy + check("Search my guide's items when I open it", lx + 10, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end)
+  sy = sy + check("Snipe pop-up with a Buy button", lx + 10, sy, not db.noSnipePopup, function() db.noSnipePopup = not db.noSnipePopup; T().refreshPopup() end,
+    "When the sniper finds a live deal, a small card over the auction house shows it with Buy and Skip, whichever page is open.")
   if A().count() > 0 then
     local armed = forgetAt and now() - forgetAt < 5
     -- in the card's title row: the settings fill the card's height below it

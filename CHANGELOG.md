@@ -1,5 +1,10 @@
 # Leveling Codex
 
+## v0.31.8
+- **Snipe pop-up:** while the deal sniper runs, a small card next to the auction house shows the best deal it found, with what it's listed at, what it's worth and the estimated profit. **Buy** buys it (a commodity asks you to click again to confirm the price) and **Skip** hides that deal until its price changes. Settings on the Scan tab can turn the pop-up off.
+- **Sniper session stats:** a SNIPER SESSION tile on the Deals tab counts how long the sniper has run, its searches, the deals it found, what you bought and the estimated profit per hour. Hover it for the details.
+- **Gear with random enchants ("of the Bear", "of the Eagle"...) gets its own prices:** each variant is priced apart, so a cheap "of the Monkey" no longer looks like a deal against the price of "of the Tiger". A flip on such gear needs two days of prices for that same variant, and the purchase checks the exact variant.
+
 ## v0.31.7
 - **The profit record now matches the gold you made:**
     - Old trades that drop off the trade log keep their money in the record. Before, a sale whose purchase had dropped off counted as pure profit, so NET PROFIT kept rising by itself.
