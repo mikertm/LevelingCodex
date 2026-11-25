@@ -271,7 +271,7 @@ local L = {
     fireside = { "%Q% done and %f% knocked flat.", "It took %q% and %f% to earn the next step.",
       "On the list: %q% to see through and %f% to face.", "You ticked off %q% and saw off %f%.",
       "%Q% handed in, %f% sent to the dirt. A fair day's work." },
-    bard = { "%Q% kept and %f% laid low.", "Promises, %q% of them; foes, %f%; and the road went on.",
+    bard = { "%Q% kept and %f% laid low.", "Promises kept, %q%; foes felled, %f%; and the road went on.",
       "%Q% fulfilled, %f% fallen, and the next step won.", "Sing of %q% and %f%, for both were earned." } },
   workLight = {
     chronicle = { "Little was asked of %name% here: %q% and %f%.", "A quiet chapter: %q%, %f%." },
@@ -437,12 +437,182 @@ local function names(list)
   return table.concat(list, ", ", 1, #list - 1) .. " and " .. list[#list]
 end
 
+-- More things a chapter can notice, each in the three voices.
+local M = {
+  -- a first sentence about the chapter's mood, which some chapters open with instead of the land
+  moodHard = {
+    chronicle = { "This was a hard chapter for %name%.", "Few chapters tested %name% as this one did." },
+    fireside = { "This one was rough. No point pretending otherwise.", "You'll remember this level, and not fondly.",
+      "Some levels are a stroll. This wasn't one of them." },
+    bard = { "Here the song turns dark.", "A grim verse, this one, sung low." } },
+  moodBusy = {
+    chronicle = { "This was a chapter of hard work.", "%name% laboured without pause through this chapter." },
+    fireside = { "Head down, sleeves up: this was a working level.", "You barely stopped to breathe this time.",
+      "This one was all business." },
+    bard = { "Hammer and blade kept time through this verse.", "A working song, this one, all sweat and steel." } },
+  moodWander = {
+    chronicle = { "This was a chapter of travel.", "%name% spent this chapter on the move." },
+    fireside = { "This level was mostly roads.", "You spent this one with the map open.", "Restless feet this time." },
+    bard = { "A walking song, this one.", "The road itself is the hero of this verse." } },
+  moodDeep = {
+    chronicle = { "This chapter went underground.", "Much of this chapter took place below." },
+    fireside = { "This was a dungeon level, mostly.", "Torches, stone and bad smells: this one went underground." },
+    bard = { "Down, down into the dark the verse descends." } },
+  moodCompany = {
+    chronicle = { "This chapter was not walked alone.", "Company marked this chapter." },
+    fireside = { "This was a friends level.", "You had company this time, and it showed." },
+    bard = { "A song for many voices, this one." } },
+  moodQuiet = {
+    chronicle = { "This was a quiet chapter.", "Little disturbed this chapter." },
+    fireside = { "A gentle one, this. Nothing much tried to kill you.", "A quiet level. Those are nice too." },
+    bard = { "A soft verse, sung by a quiet fire." } },
+  moodSwift = {
+    chronicle = { "This chapter passed quickly.", "It was a brief chapter." },
+    fireside = { "This one went by in a flash.", "Short and sweet, this level." },
+    bard = { "A short, bright verse." } },
+  -- named quests
+  titles = {
+    chronicle = { "Among the tasks recorded: %t%.", "The quest log of this chapter includes %t%." },
+    fireside = { "You'll remember %t%.", "There was %t%, for one.", "Remember %t%? That was this level.",
+      "%T% stands out." },
+    bard = { "Of all the tasks, sing %t%.", "%T%: those names are in this verse." } },
+  chainDone = {
+    chronicle = { "A long quest chain reached its end here: %t%." },
+    fireside = { "And a long one finally wrapped up: %t%.", "You saw %t% through to the very end." },
+    bard = { "A long tale ended here: %t%." } },
+  -- how the level was earned
+  byQuests = {
+    chronicle = { "Most of the experience came from completed quests.", "Quests, not combat, carried %name% through this level." },
+    fireside = { "Most of this level came from handing things in.", "The quest givers paid for most of this one." },
+    bard = { "The words of others, not the blade, raised you here." } },
+  byKills = {
+    chronicle = { "Most of the experience came from combat.", "%name% earned this level largely by the sword." },
+    fireside = { "Most of this level was earned the old way: hitting things.", "More fighting than errands this time." },
+    bard = { "This level was carved out with steel." } },
+  rested = {
+    chronicle = { "Rest earned earlier made the climb easier." },
+    fireside = { "A good night's rest did a lot of the work here.", "Rested XP carried you a long way this time." },
+    bard = { "Rest, well taken, bore you up the hill." } },
+  -- gold
+  richer = {
+    chronicle = { "%name% ended the chapter %m% richer.", "The purse grew by %m%." },
+    fireside = { "You came out of it %m% richer.", "The purse is %m% heavier for it.", "%M% better off, all told." },
+    bard = { "Coin came in: %m% to the good." } },
+  poorer = {
+    chronicle = { "The chapter cost %name% %m%.", "%name% spent %m% more than was earned." },
+    fireside = { "It cost you %m%, between trainers and repairs.", "You spent %m% more than you made. It happens." },
+    bard = { "The purse grew lighter by %m%." } },
+  -- falls with a name
+  killer = {
+    chronicle = { "%who% claimed %name% once in this chapter.", "%name% fell to %who%." },
+    fireside = { "%who% put you in the dirt.", "It was %who% that got you.", "%who% got the better of you. Remember the name." },
+    bard = { "%who% laid you low, and the song remembers it." } },
+  killers = {
+    chronicle = { "Among those who felled %name%: %who%." },
+    fireside = { "%who% all had a go at you, and won.", "Your killers this level: %who%." },
+    bard = { "By %who% you fell, and rose again." } },
+  closeWho = {
+    chronicle = { "%who% brought %name% down to %pct% health, and no further." },
+    fireside = { "%who% had you down to %pct% health. Too close.", "You walked away from %who% on %pct% health." },
+    bard = { "%who% drew you to the edge, %pct% from the grave." } },
+  rareWho = {
+    chronicle = { "The rare %who% was slain." },
+    fireside = { "You ran into %who%, a rare one, and it didn't end well for them." },
+    bard = { "%who%, rarely seen, was seen one last time." } },
+  -- the clock
+  night = {
+    chronicle = { "Much of this chapter was written late at night." },
+    fireside = { "Most of this happened well past midnight. Get some sleep.", "A night owl's level, this one." },
+    bard = { "Under the stars and the late lamp this verse was made." } },
+  morning = {
+    chronicle = { "Much of this chapter was written in the early morning." },
+    fireside = { "An early-riser's level: much of it before breakfast." },
+    bard = { "Dawn light runs through this verse." } },
+  oneSitting = {
+    chronicle = { "The whole chapter was written in a single day." },
+    fireside = { "All of it in one sitting.", "Start to finish in one day." },
+    bard = { "One day held the whole verse." } },
+  manyDays = {
+    chronicle = { "The chapter was written over %n% days." },
+    fireside = { "This one took %n% days of play.", "Spread over %n% days, this one." },
+    bard = { "%N% days it took to sing this verse." } },
+  -- pace against the chapter before
+  faster = {
+    chronicle = { "It took %d% less than the chapter before it." },
+    fireside = { "%D% quicker than the level before. You're getting better at this.", "Faster than last time, by %d%." },
+    bard = { "Swifter than the verse before, by %d%." } },
+  slower = {
+    chronicle = { "It took %d% longer than the chapter before it." },
+    fireside = { "%D% slower than the level before. No shame in that.", "This one took %d% longer than the last." },
+    bard = { "Slower than the verse before, by %d%." } },
+  -- things found and gained
+  firstFind = {
+    chronicle = { "%S%, the first of its kind in this record.", "%S%. It was a first." },
+    fireside = { "%S%. First one ever.", "%S%, which was a first.", "%S%. You'll always remember that one." },
+    bard = { "%S%, and the moment shone.", "%S%, a first, and a bright one." } },
+  upgrade = {
+    chronicle = { "%S%.", "%S%, to better effect." },
+    fireside = { "%S%, and looked the better for it.", "%S%. Small upgrades add up." },
+    bard = { "%S%, new steel for the road." } },
+  upgrades = {
+    chronicle = { "%name% replaced %n% pieces of equipment." },
+    fireside = { "%N% pieces of gear swapped for better ones.", "You changed out %n% pieces of kit." },
+    bard = { "%N% times the old gear gave way to new." } },
+  home = {
+    chronicle = { "%S%." },
+    fireside = { "%S%, and slept better for it.", "%S%. Every traveller needs somewhere to come back to." },
+    bard = { "%S%, and the hearth was warm." } },
+  milestone = {
+    chronicle = { "%S%, a milestone." },
+    fireside = { "%S%. A milestone, that.", "%S%. Worth a toast." },
+    bard = { "%S%, a mark upon the long road." } },
+  abandon = {
+    chronicle = { "%Q% %qv% abandoned." },
+    fireside = { "%Q% got left by the roadside.", "You gave up on %q%. Some aren't worth it." },
+    bard = { "%Q% left unsung, forgotten by the road." } },
+  duel = {
+    chronicle = { "%name% fought %n% duels." },
+    fireside = { "You found time for %n% duels.", "%N% duels. Somebody's competitive." },
+    bard = { "%N% times blades crossed in sport." } },
+  bond = {
+    chronicle = { "A bond grew with %who%." },
+    fireside = { "You and %who% got closer.", "%who% is more than a stranger now." },
+    bard = { "With %who% a bond was forged." } },
+  reunion = {
+    chronicle = { "%name% met %who% again." },
+    fireside = { "An old face turned up: %who%.", "You ran into %who% again." },
+    bard = { "Old friends met again: %who%." } },
+  flights = {
+    chronicle = { "%N% new flight paths were found." },
+    fireside = { "%N% new flight paths. The map shrinks." },
+    bard = { "%N% new roads through the sky." } },
+}
+
+local function hashOf(s)
+  local h = 0
+  s = (J.salt or "") .. tostring(s)
+  for i = 1, #s do h = (h * 31 + s:byte(i)) % 2147483647 end
+  return h
+end
+local function hourOf(t)
+  if type(date) ~= "function" or not tonumber(t) then return nil end
+  local ok, d = pcall(date, "*t", tonumber(t))
+  return ok and type(d) == "table" and tonumber(d.hour) or nil
+end
+local function money(c)
+  c = math.floor(math.abs(tonumber(c) or 0))
+  return ns.money and ns.money(c) or (math.floor(c / 10000) .. "g")
+end
+
 function Vo.chapterProse(l, events, rec, current)
   local j = J.data()
   local seed = "chapter" .. l
   local n = { quest = 0, death = 0, boss = 0, dungeon = 0, rez = 0, craft = 0, auction = 0, close = 0, flight = 0,
-    elite = 0, chain = 0, rare = 0, pvp = 0, camp = 0, wipe = 0, mount = 0 }
-  local pals, bosses, elites, fish = {}, {}, {}, 0
+    elite = 0, chain = 0, rare = 0, pvp = 0, camp = 0, wipe = 0, mount = 0, upgrade = 0, abandon = 0, duel = 0 }
+  local pals, bosses, elites, killers, titles, chains = {}, {}, {}, {}, {}, {}
+  local firstFind, upgrade, home, milestone, closeE, rareE, bondE, reunionE
+  local night, morning, timed = 0, 0, 0
+  local tFirst, tLast
   for _, e in ipairs(events) do
     local k = e.k
     if k == "chain" or k == "elite" then n.quest = n.quest + 1 end
@@ -453,21 +623,54 @@ function Vo.chapterProse(l, events, rec, current)
     end
     if k == "boss" and e.s then bosses[#bosses + 1] = e.who or e.s:match("^Defeated (.-) in") or e.s:match("^Brought down (.-) in") end
     if k == "elite" and e.who then elites[#elites + 1] = e.who end
+    if k == "death" and type(e.who) == "string" and e.who ~= "" then
+      local seen = false
+      for _, w in ipairs(killers) do if w == e.who then seen = true end end
+      if not seen then killers[#killers + 1] = e.who end
+    end
+    local title = type(e.d) == "string" and e.d:match("^Quest: (.+)$")
+    if title and (k == "quest" or k == "chain" or k == "elite") then
+      titles[#titles + 1] = title
+      if k == "chain" then chains[#chains + 1] = title end
+    end
+    if k == "first" and not firstFind then firstFind = e end
+    if k == "upgrade" and (not upgrade or (tonumber(e.iq) or 0) > (tonumber(upgrade.iq) or 0)) then upgrade = e end
+    if k == "home" then home = e end
+    if k == "milestone" then milestone = e end
+    if k == "close" and type(e.who) == "string" and (not closeE or (tonumber(e.pct) or 100) < (tonumber(closeE.pct) or 100)) then closeE = e end
+    if k == "rare" and type(e.who) == "string" then rareE = e end
+    if k == "bond" and type(e.who) == "string" then bondE = e end
+    if k == "reunion" and type(e.who) == "string" then reunionE = e end
+    local h = hourOf(e.t)
+    if h then
+      timed = timed + 1
+      if h >= 23 or h < 5 then night = night + 1 elseif h >= 5 and h < 9 then morning = morning + 1 end
+    end
+    local t = tonumber(e.t)
+    if t then tFirst = (not tFirst or t < tFirst) and t or tFirst; tLast = (not tLast or t > tLast) and t or tLast end
   end
   local quests = rec and tonumber(rec.quests) or n.quest
   local foes = rec and tonumber(rec.kills) or 0
   local deaths = rec and tonumber(rec.deaths) or n.death
-  local out = {}
-  local function add(slot, vars, s2) out[#out + 1] = voiced(L[slot], seed .. slot .. (s2 or ""), vars) end
+  -- every sentence the chapter could say, with how much it matters (higher first) and its place in the telling
+  local cands = {}
+  local function cand(pri, order, slot, vars, pool)
+    local text = voiced((pool or L)[slot], seed .. slot, vars or {})
+    if text and text ~= "" then
+      -- a little seeded jitter so neighbouring chapters don't pick the same sentences in the same order
+      cands[#cands + 1] = { pri = pri + (hashOf(seed .. slot) % 100) / 100, order = order, text = text, slot = slot }
+    end
+  end
+  local function M_(pri, order, slot, vars) cand(pri, order, slot, vars, M) end
   -- where, with what came before
   local zones, zcount = chapterZones(events)
   local main
   for _, z in ipairs(zones) do if not main or zcount[z] > zcount[main] then main = z end end
+  local place
   if #zones > 2 then
-    add("manyLands", { a = zones[1], b = zones[#zones], n = say(#zones), N = capital(say(#zones)) })
+    place = { "manyLands", { a = zones[1], b = zones[#zones], n = say(#zones), N = capital(say(#zones)) } }
   elseif main then
     local before = firstChapterOf(j, main, l)
-    -- the chapter before this one (the nearest with moments): were you already here?
     local prevL, stayed = nil, false
     for _, e in ipairs(j.events) do
       local el = tonumber(e.l) or 1
@@ -476,27 +679,53 @@ function Vo.chapterProse(l, events, rec, current)
     for _, e in ipairs(j.events) do
       if (tonumber(e.l) or 1) == prevL and e.m and J.landOf(e.m) == main then stayed = true; break end
     end
-    if stayed then add("oneLand", { a = main })
-    elseif before then add("backLand", { a = main, r = J.draw.roman(before) })
-    elseif not before and l > 1 then add("newLand", { a = main })
-    else add("oneLand", { a = main }) end
+    if stayed then place = { "oneLand", { a = main } }
+    elseif before then place = { "backLand", { a = main, r = J.draw.roman(before) } }
+    elseif l > 1 then place = { "newLand", { a = main } }
+    else place = { "oneLand", { a = main } } end
   end
+  -- the mood, which may open the chapter instead of the land
+  local mood
+  if deaths >= 3 or n.wipe >= 2 then mood = "moodHard"
+  elseif n.dungeon + #bosses >= 2 then mood = "moodDeep"
+  elseif #zones >= 4 then mood = "moodWander"
+  elseif #pals >= 2 then mood = "moodCompany"
+  elseif quests >= 15 or foes >= 150 then mood = "moodBusy"
+  elseif rec and tonumber(rec.seconds) and tonumber(rec.seconds) < 1800 and not current then mood = "moodSwift"
+  elseif quests + foes > 0 and quests + foes < 15 and deaths == 0 then mood = "moodQuiet" end
   -- the work
   local wv = { q = count(quests, "quest"), Q = capital(count(quests, "quest")), qv = quests == 1 and "was" or "were",
     f = count(foes, "foe"), F = capital(count(foes, "foe")) }
   if quests > 0 and foes > 0 then
-    local size = (quests >= 15 or foes >= 150) and "workHeavy" or (quests <= 3 and foes < 30) and "workLight" or "work"
-    add(size, wv)
-  elseif quests > 0 then add("questsOnly", wv)
-  elseif foes > 0 then add("foesOnly", wv) end
+    cand(8, 2, (quests >= 15 or foes >= 150) and "workHeavy" or (quests <= 3 and foes < 30) and "workLight" or "work", wv)
+  elseif quests > 0 then cand(8, 2, "questsOnly", wv)
+  elseif foes > 0 then cand(8, 2, "foesOnly", wv) end
+  -- named quests: a finished chain first, else two titles picked by the chapter
+  if #chains > 0 then
+    M_(7, 3, "chainDone", { t = chains[1] })
+  elseif #titles >= 2 then
+    local a = hashOf(seed .. "t") % #titles + 1
+    local b = (a % #titles) + 1
+    local t = titles[a] .. " and " .. titles[b]
+    M_(5, 3, "titles", { t = t, T = capital(t) })
+  elseif #titles == 1 then
+    M_(4, 3, "titles", { t = titles[1], T = capital(titles[1]) })
+  end
+  -- how the level was earned
+  if rec and not current then
+    local qx, kx, rx, all = tonumber(rec.questXP) or 0, tonumber(rec.killXP) or 0, tonumber(rec.rested) or 0, tonumber(rec.xp) or 0
+    if all > 0 and qx >= all * 0.6 then M_(4, 2, "byQuests")
+    elseif all > 0 and kx >= all * 0.6 then M_(4, 2, "byKills") end
+    if all > 0 and rx >= all * 0.3 then M_(4, 2, "rested") end
+  end
   -- the deeper roads
-  if #bosses > 0 then
-    add("deep", { b = names(bosses), w = n.wipe > 0 and ", though not at the first try" or "" })
-  elseif n.dungeon > 0 then add("dark") end
-  if #elites > 0 then add("elite", { e = elites[1], E = elites[1] })
-  elseif n.elite > 0 then add("elite", { e = "an elite", E = "An elite" }) end
-  if n.rare > 0 then add("rare") end
-  if n.pvp > 0 then add("pvp") end
+  if #bosses > 0 then cand(9, 4, "deep", { b = names(bosses), w = n.wipe > 0 and ", though not at the first try" or "" })
+  elseif n.dungeon > 0 then cand(6, 4, "dark") end
+  if #elites > 0 then cand(7, 4, "elite", { e = elites[1], E = elites[1] })
+  elseif n.elite > 0 then cand(6, 4, "elite", { e = "an elite", E = "An elite" }) end
+  if rareE then M_(7, 4, "rareWho", { who = rareE.who }) elseif n.rare > 0 then cand(5, 4, "rare") end
+  if n.pvp > 0 then cand(6, 4, "pvp") end
+  if n.duel > 0 then M_(4, 4, "duel", { n = say(n.duel), N = capital(say(n.duel)) }) end
   -- falls, against the chapters before
   local prev = recordOf(l - 1)
   local worst = 0
@@ -505,27 +734,50 @@ function Vo.chapterProse(l, events, rec, current)
     if r then worst = math.max(worst, tonumber(r.deaths) or 0) end
   end
   if deaths == 0 then
-    if prev and (tonumber(prev.deaths) or 0) >= 2 then add("cleanAfter", { r = J.draw.roman(l - 1) })
-    elseif (quests + foes) >= 10 then add("clean") end
-  elseif deaths == 1 then add("oneFall")
-  else
-    add("falls", { n = say(deaths), N = capital(say(deaths)) })
-    if deaths > worst and worst > 0 then add("worstFalls") end
-  end
-  if n.close > 0 then add("close") end
+    if prev and (tonumber(prev.deaths) or 0) >= 2 then cand(8, 5, "cleanAfter", { r = J.draw.roman(l - 1) })
+    elseif (quests + foes) >= 10 then cand(5, 5, "clean") end
+  elseif #killers == 1 and deaths == 1 then M_(8, 5, "killer", { who = killers[1] })
+  elseif #killers >= 2 then
+    cand(7, 5, "falls", { n = say(deaths), N = capital(say(deaths)) })
+    M_(7, 5, "killers", { who = names({ killers[1], killers[2], killers[3] }) })
+  elseif deaths == 1 then cand(6, 5, "oneFall")
+  else cand(7, 5, "falls", { n = say(deaths), N = capital(say(deaths)) }) end
+  if deaths > worst and worst > 0 and deaths >= 2 then cand(8, 5.5, "worstFalls") end
+  if closeE then M_(7, 5, "closeWho", { who = closeE.who, pct = (tonumber(closeE.pct) or 0) .. "%" })
+  elseif n.close > 0 then cand(5, 5, "close") end
   -- pace, against the chapters before (finished chapters only)
   if not current and rec and tonumber(rec.seconds) and l > 3 then
-    local fastest, slowest, seen = math.huge, 0, 0
+    local fastest, slowest, seenN = math.huge, 0, 0
     for x = 2, l - 1 do
       local r = recordOf(x)
       local s = r and tonumber(r.seconds)
-      if s and s > 60 and not r.fromPct then seen = seen + 1; fastest = math.min(fastest, s); slowest = math.max(slowest, s) end
+      if s and s > 60 and not r.fromPct then seenN = seenN + 1; fastest = math.min(fastest, s); slowest = math.max(slowest, s) end
     end
     local s = tonumber(rec.seconds)
-    if seen >= 2 and s < fastest then add("quick") elseif seen >= 2 and s > slowest then add("long") end
+    if seenN >= 2 and s < fastest then cand(7, 6, "quick") elseif seenN >= 2 and s > slowest then cand(7, 6, "long")
+    elseif prev and tonumber(prev.seconds) and not prev.fromPct then
+      local d = s - tonumber(prev.seconds)
+      if math.abs(d) >= 600 and math.abs(d) >= tonumber(prev.seconds) * 0.2 then
+        local dt = J.draw.duration(math.abs(d))
+        M_(4, 6, d < 0 and "faster" or "slower", { d = dt, D = capital(dt) })
+      end
+    end
+  end
+  -- the clock: when it was played, and over how many days
+  if timed >= 4 and night >= timed * 0.5 then M_(4, 6, "night")
+  elseif timed >= 4 and morning >= timed * 0.5 then M_(4, 6, "morning") end
+  if tFirst and tLast and not current then
+    local days = math.floor(tLast / 86400) - math.floor(tFirst / 86400) + 1
+    if days >= 3 then M_(3, 6, "manyDays", { n = say(days), N = capital(say(days)) })
+    elseif days == 1 and #events >= 6 then M_(2, 6, "oneSitting") end
+  end
+  -- gold
+  if rec and not current then
+    local net = (tonumber(rec.goldIn) or 0) - (tonumber(rec.goldOut) or 0)
+    if net >= 10000 then M_(4, 7, "richer", { m = money(net), M = capital(money(net)) })
+    elseif net <= -10000 then M_(4, 7, "poorer", { m = money(net) }) end
   end
   -- company and the rest of life
-  -- people: up to three by name, the rest as "N others"
   local seenPal, shown = {}, {}
   for _, who in ipairs(pals) do
     if not seenPal[who] then seenPal[who] = true; shown[#shown + 1] = who end
@@ -536,10 +788,20 @@ function Vo.chapterProse(l, events, rec, current)
     shown[4] = say(extra) .. " others"
   end
   local p = names(shown)
-  if p then add(#shown == 1 and "palsOne" or "pals", { p = p }) end
-  if n.rez > 0 then add("rez") end
-  if n.mount > 0 then add("mount") end
+  if p then cand(6, 7, #shown == 1 and "palsOne" or "pals", { p = p }) end
+  if bondE then M_(5, 7, "bond", { who = bondE.who }) end
+  if reunionE then M_(5, 7, "reunion", { who = reunionE.who }) end
+  if n.rez > 0 then cand(6, 7, "rez") end
+  if n.mount > 0 then cand(9, 7, "mount") end
+  local function bare(t) return capital((tostring(t or ""):gsub("[%.!]+$", ""))) end
+  if firstFind and firstFind.s then M_(6, 8, "firstFind", { S = bare(firstFind.s) }) end
+  if n.upgrade >= 3 then M_(4, 8, "upgrades", { n = say(n.upgrade), N = capital(say(n.upgrade)) })
+  elseif upgrade and upgrade.s then M_(4, 8, "upgrade", { S = bare(upgrade.s) }) end
+  if home and home.s then M_(5, 8, "home", { S = bare(home.s) }) end
+  if milestone and milestone.s then M_(4, 8, "milestone", { S = bare(milestone.s) }) end
+  if n.abandon > 0 then M_(3, 8, "abandon", { q = count(n.abandon, "quest"), Q = capital(count(n.abandon, "quest")), qv = n.abandon == 1 and "was" or "were" }) end
   local g = {}
+  local fish = 0
   local Wd = J.wilds
   if Wd then
     for _, w in ipairs({ { "mining", "vein" }, { "herbalism", "herb" }, { "skinning", "hide" } }) do
@@ -548,12 +810,27 @@ function Vo.chapterProse(l, events, rec, current)
     end
     fish = Wd.atLevel("fishing", l)
   end
-  if #g > 0 then add("gather", { g = names(g) }) end
-  if fish > 0 then add("fish", { f = count(fish, "fish", "fish") }) end
-  if n.craft > 0 then add("craft") end
-  if n.auction > 0 then add("auction") end
-  if n.camp > 0 then add("camp") end
-  if n.flight > 0 then add("flight") end
+  if #g > 0 then cand(4, 8, "gather", { g = names(g) }) end
+  if fish > 0 then cand(4, 8, "fish", { f = count(fish, "fish", "fish") }) end
+  if n.craft > 0 then cand(3, 8, "craft") end
+  if n.auction > 0 then cand(3, 8, "auction") end
+  if n.camp > 0 then cand(4, 8, "camp") end
+  if n.flight >= 2 then M_(3, 8, "flights", { N = capital(say(n.flight)) }) elseif n.flight > 0 then cand(3, 8, "flight") end
+  -- choose: the opening (the land, or the mood on some chapters), then the five that matter most, told in order
+  local out = {}
+  local openWithMood = mood and (hashOf(seed .. "mood") % 3 == 0 or not place)
+  if openWithMood then
+    out[#out + 1] = voiced(M[mood], seed .. mood, {})
+    if place then cand(9.5, 1, place[1], place[2]) end
+  elseif place then
+    out[#out + 1] = voiced(L[place[1]], seed .. place[1], place[2])
+    if mood and hashOf(seed .. "mood2") % 2 == 0 then M_(3, 9, mood) end
+  end
+  table.sort(cands, function(a, b) return a.pri > b.pri end)
+  local chosen = {}
+  for i = 1, math.min(5, #cands) do chosen[i] = cands[i] end
+  table.sort(chosen, function(a, b) if a.order ~= b.order then return a.order < b.order end return a.pri > b.pri end)
+  for _, c in ipairs(chosen) do out[#out + 1] = c.text end
   -- a word about who you are, when the chapter shows it
   local top = Vo.traits(j)[1]
   local shows = top and ((top[1] == "gatherer" and #g > 0) or (top[1] == "angler" and fish > 0) or (top[1] == "friend" and p)
@@ -561,14 +838,10 @@ function Vo.chapterProse(l, events, rec, current)
     or (top[1] == "unbroken" and deaths == 0) or (top[1] == "undaunted" and deaths > 0) or (top[1] == "wanderer" and #zones > 1)
     or (top[1] == "merchant" and n.auction > 0) or (top[1] == "warbound" and n.pvp > 0))
   local aside = shows and Vo.TRAITS[top[1]].aside
-  if aside and #aside > 0 then out[#out + 1] = pick(aside, seed .. "aside") end
-  if current then add("open") end
-  -- the first two (where, what), then the most telling, the aside and the open page
-  local keep = {}
-  for i, s in ipairs(out) do
-    if i <= 6 or i == #out then keep[#keep + 1] = s end
-  end
-  return table.concat(keep, " ")
+  -- the aside on about half the chapters, so it doesn't close every page the same way
+  if aside and #aside > 0 and hashOf(seed .. "aside") % 2 == 0 then out[#out + 1] = pick(aside, seed .. "aside") end
+  if current then out[#out + 1] = voiced(L.open, seed .. "open", {}) end
+  return table.concat(out, " ")
 end
 
 ----------------------------------------------------------------------------

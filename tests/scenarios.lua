@@ -14119,6 +14119,57 @@ function S.journeyVoice()
   for _, e in ipairs(j.events) do check(not e.s:find("[^\32-\126]") and not e.s:find("%%%a"), "moments are plain: " .. e.s) end
 end
 
+-- Journey: chapter prose reads the chapter (named quests, killers, close calls, gold, pace, the clock,
+-- finds) and neighbouring chapters don't read alike; every line is filled, plain and grammatical.
+function S.journeyProse()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(3)
+  local J = MOCK.ns.journey
+  local base = J.now() - 20 * 86400
+  local function ev(l, k, t, extra)
+    local e = { t = base + l * 86400 + t, k = k, l = l, m = 1429, x = 50, y = 50, s = "Did a thing in Elwynn Forest" }
+    for key, v in pairs(extra or {}) do e[key] = v end
+    return e
+  end
+  local chapters = {
+    [20] = { ev(20, "level", 0, { s = "Reached level 20 in Elwynn Forest" }), ev(20, "quest", 100, { d = "Quest: The Fargodeep Mine" }),
+      ev(20, "quest", 200, { d = "Quest: Wolves Across the Border" }), ev(20, "death", 300, { who = "Hogger" }),
+      ev(20, "upgrade", 400, { s = "Swapped an old belt for a Studded Belt", iq = 2 }) },
+    [21] = { ev(21, "level", 0, { s = "Level 21 in Elwynn Forest" }), ev(21, "chain", 100, { d = "Quest: The Collector" }),
+      ev(21, "close", 200, { who = "Princess", pct = 6 }), ev(21, "first", 300, { s = "Found your first blue: a Lucky Charm" }) },
+    [22] = { ev(22, "level", 0, { s = "Level 22 in Elwynn Forest" }), ev(22, "boss", 100, { who = "Van Cleef", s = "Defeated Van Cleef in the Deadmines" }),
+      ev(22, "dungeon", 50), ev(22, "pal", 60, { who = "Ann" }), ev(22, "pal", 61, { who = "Bo" }) },
+    [23] = { ev(23, "level", 0, { s = "Level 23 in Elwynn Forest" }), ev(23, "death", 100, { who = "Ogre" }), ev(23, "death", 200, { who = "Gnoll" }),
+      ev(23, "death", 300, { who = "Murloc" }), ev(23, "wipe", 400) },
+    [24] = { ev(24, "level", 0, { s = "Level 24 in Elwynn Forest" }), ev(24, "home", 100, { s = "Made Goldshire your home" }),
+      ev(24, "milestone", 200, { s = "Turned in your 100th quest" }), ev(24, "abandon", 300) },
+  }
+  local stats = LevelingCodexCharDB.stats
+  if type(stats) == "table" and type(stats.levels) == "table" then
+    stats.levels[20] = { seconds = 7200, xp = 1000, questXP = 800, killXP = 200, rested = 0, quests = 1, kills = 12, deaths = 1, goldIn = 50000, goldOut = 10000 }
+    stats.levels[21] = { seconds = 3600, xp = 1000, questXP = 100, killXP = 900, rested = 400, quests = 14, kills = 160, deaths = 0, goldIn = 0, goldOut = 30000 }
+    stats.levels[22] = { seconds = 9000, xp = 1000, questXP = 500, killXP = 500, rested = 0, quests = 5, kills = 40, deaths = 0 }
+    stats.levels[23] = { seconds = 5000, xp = 1000, questXP = 500, killXP = 500, rested = 0, quests = 3, kills = 20, deaths = 3 }
+  end
+  local seen, firsts = {}, {}
+  for l = 20, 24 do
+    local rec = MOCK.ns.stats.levelRecord(l)
+    local prose = J.lore.chapterProse(l, chapters[l], rec, l == 24)
+    check(prose ~= "" and not prose:find("%%%a") and not prose:find("[^\32-\126]"), "chapter " .. l .. " prose is filled and plain")
+    check(not prose:find(" were one ") and not prose:find("One quest were") and not prose:find("[^%d]1 quests"), "chapter " .. l .. " prose is grammatical")
+    check(not seen[prose], "chapter " .. l .. " reads differently from the others")
+    seen[prose] = true
+    firsts[prose:match("^[^.]+")] = true
+  end
+  local p20 = J.lore.chapterProse(20, chapters[20], MOCK.ns.stats.levelRecord(20), false)
+  check(p20:find("Hogger", 1, true), "a fall names its killer: " .. p20)
+  local p21 = J.lore.chapterProse(21, chapters[21], MOCK.ns.stats.levelRecord(21), false)
+  check(p21:find("The Collector", 1, true) and p21:find("Princess", 1, true), "a finished chain and a close call are named: " .. p21)
+  local p22 = J.lore.chapterProse(22, chapters[22], MOCK.ns.stats.levelRecord(22), false)
+  check(p22:find("Van Cleef", 1, true), "a boss is named: " .. p22)
+end
+
 -- Journey: companions remember what you did together (quests, foes, falls, lands, moments tagged with
 -- who was there), each has a page, and you can write a note on them.
 function S.journeyCompanions()
@@ -14311,6 +14362,10 @@ function S.journeySocial()
   for _, e in ipairs(j.events) do if e.k == "toast" then toasts = toasts + 1 end end
   check(toasts == 1 and j.people.Bo.toasts == 1, "a toast is written once an hour")
   -- a death: who saw it, who tried to save you
+  -- Forever hides other players' casts: a secret spell ID is passed over without an error
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party2", "cast", MOCK.SECRET)
+  check(not J.social.isHeal(MOCK.SECRET), "a secret spell is not a heal")
+  check(not J.social.errored, "a secret cast from a party member raises no error")
   MOCK.spells[2061] = "Flash Heal"
   MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party2", "cast", 2061)
   MOCK.event("PLAYER_DEAD")

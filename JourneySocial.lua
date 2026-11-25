@@ -678,16 +678,22 @@ end
 local heals = {} -- name -> GetTime of their last healing cast
 local HEAL_WORDS = { "heal", "renew", "rejuvenation", "regrowth", "holy light", "flash of light", "power word: shield", "lay on hands",
   "healing", "mending", "blessing of protection", "divine intervention", "swiftmend", "holy shock" }
+local function secret(v) return type(issecretvalue) == "function" and issecretvalue(v) end
+S.secret = secret
+-- Forever hides other players' casts from addons: a secret spell ID or name counts as no spell.
 function S.isHeal(spell)
+  if secret(spell) then return false end
   spell = type(spell) == "string" and spell:lower() or ""
   for _, w in ipairs(HEAL_WORDS) do if spell:find(w, 1, true) then return true end end
   return false
 end
 local function partyCast(unit, _, spellID)
   if type(unit) ~= "string" or not unit:match("^party%d$") then return end
+  if secret(spellID) then return end
   local name = short((try(UnitName, unit)))
   if not name then return end
   local spell = C_Spell and C_Spell.GetSpellName and try(C_Spell.GetSpellName, spellID)
+  if secret(spell) then return end
   if not spell and GetSpellInfo then spell = try(GetSpellInfo, spellID) end
   if S.isHeal(spell) then heals[name] = GetTime() end
 end
