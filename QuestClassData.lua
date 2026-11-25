@@ -1759,14 +1759,12 @@ do
   q(4490, "Summon Felsteed", 40, 40, nil, nil, warlock)
   B.breadcrumb(4487, 4490)
   B.breadcrumb(4488, 4490)
-  inline("badlands-41", "accept", 687, {
-    accept(4487, at("Briarthorn", 50.35, 5.66, m.ironforge),
-      "Warlocks: from level 40, Briarthorn, the warlock trainer in the same cavern, has your felsteed letter for Strahad in Ratchet."),
-  })
+  -- Briarthorn's letter (4487) is only a pointer: Strahad offers 4490 without it, and carrying it through the
+  -- Badlands put a warlock's log at 21 (tools/audits/2026-11-25-horde-36-40-alliance-41-45.md).
   inline("stv-41", nil, nil, {
     optional(finish(4488, strahad, "Give Demisette's letter to Strahad Farsan, uphill behind Ratchet.")),
-    finish(4487, strahad, "Warlocks: climb the hill behind Ratchet to Strahad Farsan."),
-    accept(4490, strahad),
+    optional(finish(4487, strahad, "If you carry Briarthorn's letter, give it to Strahad Farsan.")),
+    accept(4490, strahad, "Warlocks: from level 40, climb the hill behind Ratchet to Strahad Farsan. He teaches Summon Felsteed; no letter is needed."),
     finish(4490, strahad, "Speak with Strahad again to learn Summon Felsteed."),
   })
 

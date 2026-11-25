@@ -696,6 +696,7 @@ do
   need(600, "Venture Company Mining", 41, 30, 605)
   need(97453, "Weed Whacked", 38, nil, nil, true)
   need(575, "Supply and Demand", 31, 26)
+  need(577, "Some Assembly Required", 36, 31, 575)
 
   chapter("stv-35", "Stranglethorn: Grom'gol and Nesingwary", M.stv, 35, 37, {
     "https://www.wowhead.com/forever/zone=33/stranglethorn-vale",
@@ -795,6 +796,7 @@ do
     accept(600, crank, "Crank Fizzlebub now wants Singing Blue Crystals from the Venture Co. mine in the middle of the jungle. Keep it for your return at 40."),
     finish(1182, revilgaz),
     finish(575, drizzlik, "Bring Drizzlik his skins."),
+    accept(577, drizzlik, "Drizzlik now wants Snapjaw Crocolisk skins from Lake Nazferiti. Keep it: you pass the lake at 40."),
     finish(97048, st("Captain Aransas", 27.69, 76.66), "Captain Aransas waits by the docks."),
     action("hearth", P.gryshka, "Hearth to Orgrimmar.", P.org),
   }, P.orgTrainers))

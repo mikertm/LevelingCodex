@@ -134,6 +134,7 @@ do
   local skeleton = bl("Battered Dwarven Skeleton", 50.89, 62.4)
   local theldurin = bl("Theldurin the Lost", 51.39, 76.87)
   local lotwil = bl("Lotwil Veriatus", 25.95, 44.87)
+  local dorgaron = bl("Dorgaron", 54.62, 12.85)
   local thelsamar = { bind = "Thelsamar" }
 
   q(554, "Stormpike's Deciphering", 40, 28, 551)
@@ -155,6 +156,9 @@ do
   q(710, "Study of the Elements: Rock", 37, 35)
   q(711, "Study of the Elements: Rock", 39, 35, 710)
   q(712, "Study of the Elements: Rock", 42, 35, 711)
+  -- Forever quest (no quest database record; Zygor's Forever Badlands guide gives Dorgaron's spot and the three
+  -- objectives; the level is an estimate from the zone's other quests).
+  q(97617, "Safety Checks", 40, 35, nil, true)
 
   chapter("badlands-41", "Badlands: Ryedol's Camp and the Rock Elementals", M.badlands, 41, 42, {
     "https://bindonforever.com/zones/badlands",
@@ -171,9 +175,12 @@ do
     accept(2500, ghak, "Ghak Healtouch, beside the inn, wants reagents from the Badlands."),
     finish(707, ironband, "Ride east to Ironband's excavation by the dam."), accept(738, ironband),
     action("goto", bl(nil, 49.2, 7.8), "Take the road south out of Loch Modan into the Badlands."),
+    accept(97617, dorgaron, "Dorgaron of the Explorers' League stands a little east of the road where it enters the Badlands. He wants the league's lost dig gear and artifacts recovered."),
     along(objective(2500, bl(nil, 52.0, 30.0), "On the way south, loot buzzards, crag coyotes and rock elementals for Ghak whenever they are near.",
       "Buzzard Gizzard", "Crag Coyote Fang", "Rock Elemental Shard"), 720),
     accept(720, bl("Crumpled Map", 53.03, 33.94), "Pick up the crumpled map lying beside the road north of the dwarven camp."),
+    action("collect", bl("Explorers' League Supplies", 53.03, 34.65), "Search the Explorers' League supplies beside the map for Dorgaron's mining helmet.",
+      { item = 278403, name = "Explorers' League Mining Helmet", ifOnQuest = 97617 }),
     accept(719, ryedol, "Prospector Ryedol and Sigrun share the camp in the middle of the Badlands."),
     withGuide("dungeon-uldaman", accept(718, sigrun, "Ask Sigrun beside Ryedol about the missing supplies. If you plan to run Uldaman, the dig is in the cliffs north of the camp.")),
     finish(720, ryedol),
@@ -189,7 +196,9 @@ do
     finish(687, theldurin, "Theldurin camps at the south end of the Badlands."), accept(692, theldurin),
     along(objective(692, bl(nil, 49.6, 66.7), "Loot the three scroll fragments from troggs and rock elementals around Angor Fortress.",
       "Torn Scroll Fragment", "Crumpled Scroll Fragment", "Singed Scroll Fragment"), 1108),
-    along(objective(1108, bl(nil, 50.3, 69.1), "Kill Stonevault troggs until you have the indurium flakes.", "10 Indurium Flake"), 692),
+    along(objective(1108, bl(nil, 50.3, 69.1), "Kill Stonevault troggs until you have the indurium flakes.", "10 Indurium Flake"), 692, 97617),
+    along(objective(97617, bl("Pristine Mattock", 49.25, 68.22), "The same troggs carry Unstudied Artifacts for Dorgaron. His Pristine Mattock lies on the ground near the cave mouth.",
+      "8 Unstudied Artifact", "Pristine Mattock"), 1108),
     finish(692, theldurin),
     finish(1108, martek), accept(1137, martek, "Keep Martek's news for Fizzle. You pass the Shimmering Flats later."),
     accept(710, lotwil, "Lotwil Veriatus works at his circle at the west end of the Badlands."),
@@ -209,7 +218,9 @@ do
     taxi("getfp", on.searing("Lanie Reed", 37.9, 30.9), "Thorium Point, Searing Gorge",
       "Take the west road from the Badlands into the Searing Gorge and climb to Thorium Point for the flight path."),
     action("hearth", hearthstove, "Hearth back to Thelsamar.", thelsamar),
-    finish(2500, ghak), finish(739, ironband, "Ride east to Ironband with Murdaloc's death confirmed."),
+    finish(2500, ghak),
+    finish(97617, dorgaron, "Ride south down the road to the Badlands and give Dorgaron his gear."),
+    finish(739, ironband, "Ride north-east to Ironband's excavation by the dam with Murdaloc's death confirmed."),
     taxi("fly", B.at("Gryth Thurden", 55.5, 47.7, 1455), "Ironforge, Dun Morogh", "Fly to Ironforge."),
   })
 end

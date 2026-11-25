@@ -61,6 +61,7 @@ local P = {
   gringer = on.stv("Gringer", 26.9, 77.1),
   crank = on.stv("Crank Fizzlebub", 27.12, 77.21),
   seahorn = on.stv("Fleet Master Seahorn", 27.17, 77.01),
+  drizzlik = on.stv("Drizzlik", 28.3, 77.6),
   mackinley = on.stv("\"Sea Wolf\" MacKinley", 27.78, 77.07),
   dudd = on.stv("Dudd Fizzlescroll", 28.3, 76.3),
   bootyPier = on.stv(nil, 25.8, 73.1),
@@ -132,6 +133,8 @@ do
   -- Forever item-started quest (ItemSparse 213127 starts it); Skullsplitter Mystics drop the notes
   -- and Dudd Fizzlescroll in Booty Bay takes them (bindonforever.com/quest/95384, item/213127).
   need(95384, "Partial Mystical Notes", 40, 32, nil, true)
+  need(577, "Some Assembly Required", 36, 31, 575)
+  need(628, "Excelsior", 38, 31, 577)
   B.quest[95384].startItem = B.quest[95384].startItem or 213127
 
   H.chapter("stv-40", "Stranglethorn: Grom'gol and the Bloodscalp Heads", M.stv, 40, 41, {
@@ -180,6 +183,8 @@ do
     part(585, 1, st("Balia'mah Trophy Skulls", 46.1, 32.3), "The Balia'mah pile is in the ruins to the north.", "Balia'mah Trophy"),
     objective(193, st("Bhag'thera", 49.6, 24.0), "Bhag'thera prowls the hills north-east of the Balia'mah ruins. Kill her for her fang.",
       "Fang of Bhag'thera"),
+    objective(577, st(nil, 40.8, 24.3), "Ride west to Lake Nazferiti. Kill the Snapjaw Crocolisks along its shores for Drizzlik's skins.",
+      "5 Snapjaw Crocolisk Skin"),
     action("hearth", P.thulbek, "Hearth to Grom'gol.", gromgol),
     finish(572, P.mokthardin), finish(598, P.kinweelay), finish(95770, P.kinweelay),
     finish(585, P.cauldron),
@@ -275,6 +280,8 @@ do
     finish(669, P.seahorn, "Fleet Master Seahorn is at the top of the inn."),
     accept(1183, revilgaz, "Baron Revilgaz, near Seahorn, sponsors a racer in the Shimmering Flats."),
     finish(600, P.crank, "Crank Fizzlebub is in the inn too."),
+    finish(577, P.drizzlik, "Drizzlik's shop is a short walk east of the inn."),
+    accept(628, P.drizzlik, "Drizzlik's last order is the skin of an Elder Saltwater Crocolisk, an elite. Keep it for your return at 44."),
     accept(2872, P.mackinley, "\"Sea Wolf\" MacKinley wants a debt collected in Tanaris."),
     note(withItem(213127, accept(95384, P.dudd, "If a Skullsplitter Mystic dropped Partial Mystical Notes for you, read them next to Dudd Fizzlescroll.")),
       "Drop source and Dudd's spot from bindonforever (quest database-format data) and a published Forever guide; not in the cached quest database."),
@@ -684,6 +691,8 @@ do
     finish(576, dizzy), finish(348, fin),
     taxi("fly", B.at("Thysta", 32.5, 29.4, 1434), "Grom'gol, Stranglethorn", "Fly to Grom'gol."),
     finish(571, P.mokthardin), accept(573, P.mokthardin),
+    objective(628, st("Elder Saltwater Crocolisk", 33.4, 32.5), "An Elder Saltwater Crocolisk, an elite, lies in the river just south-east of Grom'gol; others haunt the shore near 29.6, 23.9. Kill one for its skin.",
+      "Elder Crocolisk Skin"),
     objective(208, st("King Bangalash", 38.2, 35.6), "King Bangalash, an elite tiger, and his panthers hold the hill south-east of Grom'gol. Kill the panthers first.",
       "Head of Bangalash"),
     objective(589, st(nil, 43.1, 47.8), "Kill Ironjaw Basilisks around the Crystalvein Mine to the south-east for Pulsing Blue Shards.",
@@ -708,6 +717,7 @@ do
     along(objective(617, st(nil, 26.3, 62.6), "The naga also carry akiris reeds.", "10 Bundle of Akiris Reed"), 573),
     action("goto", P.crank, "Ride back south to Booty Bay."),
     finish(8551, smotts), finish(609, P.mackinley), finish(617, bloads),
+    finish(628, P.drizzlik),
     note(withItem(217161, accept(95385, P.dudd, "If a Bloodsail Warlock or a Skullsplitter Mystic dropped a Torn Mystical Scroll for you, read it next to Dudd Fizzlescroll.")),
       "Drop sources and Dudd's spot from bindonforever (quest database-format data) and a published Forever guide; not in the cached quest database."),
     finish(95385, P.dudd, "Give Dudd the scroll."),
