@@ -490,7 +490,9 @@ do
   local bertrand = rg("Bertrand Ironbrow", 63.5, 80.6)
   local marla = rg("Marla Bell", 62.2, 86.0)
   local sleebo = rg("Sleebo Fizzlespout", 68.2, 48.6)
-  local mudfin = rg(nil, 49.2, 78.8)
+  local mudfin = rg(nil, 49.6, 78.8)
+  local eleanor = rg("Eleanor Holmsby", 43.4, 82.4)
+  local robbie = rg("Robbie Holmsby", 43.4, 82.7)
   local twilight = rg(nil, 45.5, 55.8)
   local farholdeFlight, portFlight = "Farholde Keep, Riverglades", "Powderfuse Port, Riverglades"
   local sources = {
@@ -522,7 +524,7 @@ do
   rq(94931, "Stolen Saws", 38, 36)
   rq(95330, "Love Thy Neighbor", 37, 36)
   rq(94613, "My Kingdom for a Horse", 38, 36)
-  rq(94614, "Freshwater Fiends", 38, 36, 94613)
+  rq(94614, "Freshwater Fiends", 38, 36)
   rq(94615, "Foal Play", 38, 36, 94613)
   rq(94617, "Coyote Huntin'", 38, 36, 94615)
   rq(94618, "Wheeler's Fleeing Steeds", 38, 36, 94615)
@@ -556,6 +558,12 @@ do
   rq(95561, "Apple of My Eye", 38, 36)
   rq(95913, "Fit for a Princess", 38, 36, 95561)
   rq(96063, "Gaseous Gold", 38, 36)
+  -- Added 2026-11-25 (tools/audits/2026-11-25-riverglades.md).
+  rq(94923, "Hats Off", 38, 36)
+  rq(95184, "The Sharpest of Blades", 38, 36, 95156)
+  rq(96009, "High Stakes", 38, 36, 95943)
+  -- Brother Lowley's chain starts with 20 Mageweave Cloth (Wound Dressings): optional, like the sharpening stones.
+  for _, id in ipairs({ 96081, 96082, 96083, 96084, 95184 }) do quest[id].optional = true end
   rq(96067, "Rock 'em and Sock 'em", 40, 36, 96063)
   B.elite(94679, "Snargl")
   B.elite(95986, "Ombassa")
@@ -567,16 +575,24 @@ do
     accept(95147, rg("Scout Bolain", 23.6, 67.8), "Scout Bolain hides near the pass, east of the gnoll hills."),
     finish(95147, dalton, "Follow the road east to Southern Watch and find Captain Dalton."),
     accept(94678, dalton), accept(94679, dalton),
-    accept(94999, rg("Eleanor Holmsby", 43.4, 82.4), "Ride southeast to the Meadowsbrook farm and talk to Eleanor Holmsby."),
-    finish(94999, rg("Watcher Fredericks", 36.4, 75.8), "Take her delivery back to Watcher Fredericks just west of Southern Watch."),
     accept(94857, rg("Curly", 46.0, 71.0), "Ride north-east and find Curly by the fallen trees."),
     finish(94857, rg("Hurley", 41.4, 64.4), "Hurley is at Turner's Logging Camp, to the north."), accept(94861, rg("Hurley", 41.4, 64.4)),
     finish(94861, halligan, "Walk with Hurley to Halligan Turner in the camp."),
-    accept(94842, halligan, "Halligan wants plant food: crawfish shells, fresh manure and murloc heads. You pass all three before the keep."),
+    accept(94842, halligan, "Halligan wants plant food: crawfish shells, fresh manure and murloc heads. All three are south of here."),
     accept(94931, halligan, "His stolen saws are in crates at the gnoll camps in the Bristle Hills."),
     B.objectivePart(94842, 1, rg(nil, 42.6, 66.4), "Kill Jumbo Crawfish along the stream south of the camp for their shells.",
       "Jumbo Crawfish Shells"),
-    action("goto", rg(nil, 20.0, 71.0), "Ride back west into the Bristle Hills, where the gnolls camp."),
+    accept(94614, benjy, "Ride east to Wheeler's Grange. Benjy Wheeler wants the Mudfin murlocs on the river thinned."),
+    B.objectivePart(94842, 2, rg(nil, 45.6, 80.7), "Ride south-west to the Meadowsbrook farm and pick up fresh manure around it.", "Fresh Manure"),
+    accept(94999, eleanor, "Eleanor Holmsby is inside the farmhouse."),
+    accept(94923, robbie, "Her son Robbie lost his hat in the river."),
+    action("goto", mudfin, "Ride east to the Mudfin murlocs along the river."),
+    along(objective(94923, rg("Hollow Clam Shell", 49.3, 78.7), "Robbie's hat is in a hollow clam shell on the riverbank.", "Robbie's Hat"), 94614, 94842),
+    along(B.objectivePart(94842, 3, mudfin, "Kill Mudfin murlocs for their heads.", "Mudfin Murloc Heads"), 94614, 94923),
+    along(objective(94614, mudfin, "Kill Mudfin Oracles and Warriors for Benjy.", "8 Mudfin Oracles", "8 Mudfin Warriors"), 94842, 94923),
+    finish(94923, robbie, "Ride back west to the farm and give Robbie his hat."),
+    finish(94999, rg("Watcher Fredericks", 36.4, 75.8), "Take Eleanor's delivery to Watcher Fredericks just west of Southern Watch."),
+    action("goto", rg(nil, 20.0, 71.0), "Ride west into the Bristle Hills, where the gnolls camp."),
     along(objective(94678, rg(nil, 17.4, 71.8), "Clear Redridge Brutes, Mystics and Trappers in the gnoll camps.",
       "8 Redridge Brutes", "8 Redridge Mystics", "8 Redridge Trappers"), 94931, 94679),
     along(objective(94931, rg("Crates", 18.6, 69.8), "Open the crates in the gnoll camps for Halligan's saws.", "Stolen Saws"), 94678),
@@ -584,14 +600,17 @@ do
       "Snargl's Snout"),
     finish(94678, dalton, "Ride back east to Captain Dalton at Southern Watch."), finish(94679, dalton),
     accept(95148, dalton, "Dalton's report on the gnolls goes to Demar Brant at Farholde Keep."),
-    B.objectivePart(94842, 2, rg(nil, 45.6, 80.7), "On the way east, pick up fresh manure by the Meadowsbrook farm.", "Fresh Manure"),
-    B.objectivePart(94842, 3, rg(nil, 50.4, 79.4), "Kill Mudfin murlocs along the river for their heads.", "Mudfin Murloc Heads"),
+    finish(94842, halligan, "Ride north to Turner's Logging Camp."), finish(94931, halligan), accept(94843, halligan),
+    objective(94843, rg("Loamy Soil", 39.7, 62.9), "Plant Halligan's saplings in the patches of loamy soil around the camp.", "5 Saplings Planted"),
+    finish(94843, halligan),
+    finish(94614, benjy, "Ride east to Wheeler's Grange and tell Benjy the murlocs are dealt with."),
     action("goto", brant, "Follow the road east to Farholde Keep."),
     finish(95148, brant, "Knight Commander Demar Brant holds the keep's hall."),
     B.optional(finish(94929, brant, "Hand in the shipment from the Swamp of Sorrows.")),
     accept(94613, brant),
     accept(95156, ember, "Ember Bladewhisper, in the courtyard, wants the harvest sentries at Wheeler's Grange stopped."),
-    accept(96081, lowley, "Brother Lowley nurses the wounded inside the keep."), finish(96081, lowley, "Give him the wound dressings."),
+    accept(96081, lowley, "Brother Lowley nurses the wounded inside the keep. If you have 20 Mageweave Cloth, take his quest: it opens three more."),
+    finish(96081, lowley, "Give him the cloth for wound dressings."),
     accept(96082, lowley),
     objective(96082, lowley, "Bandage the wounded soldiers lying around Brother Lowley.", "3 Wounded Soldiers Bandaged"),
     finish(96082, lowley), accept(96083, lowley),
@@ -610,19 +629,17 @@ do
     along(objective(95561, rg(nil, 62.6, 83.0), "Pick up the fresh apples lying around the chapel grounds.", "Fresh Apples"), 95615),
     finish(95615, rowland), finish(95561, tessa), accept(95913, tessa),
     finish(94613, benjy, "Ride west to Wheeler's Grange and find Benjy Wheeler."),
-    accept(94614, benjy), accept(94615, benjy),
+    accept(94615, benjy),
     along(objective(94615, rg(nil, 54.3, 77.9), "Search south of the Wheeler stables for signs of the missing horses.", "Evidence Found"), 95156),
     along(objective(95156, rg(nil, 55.0, 75.9), "Destroy the Harvest Sentries in the fields around the grange for Ember.", "Harvest Sentries"), 94615),
     finish(94615, benjy), accept(94617, benjy), accept(94618, benjy),
     along(objective(94617, rg("Sootfur", 53.8, 86.2), "Sootfur, a coyote, prowls south of the farm. Kill it and take its pelt.", "Sootfur's Pelt"), 95913),
     along(objective(95913, rg(nil, 55.0, 85.0), "The Plains Coyotes around Sootfur carry the pelts Tessa wants.", "Coyote Pelts"), 94617),
-    along(objective(94614, rg(nil, 50.4, 79.4), "Kill Mudfin Oracles and Warriors along the river west of the farm.", "8 Mudfin Oracles", "8 Mudfin Warriors"),
-      94618),
     finish(94618, rg("Lost Horse", 53.8, 66.4), "Find the lost horse north of the farm and give it Benjy's feed."),
     accept(94992, rg("Lost Horse", 53.8, 66.4)),
     note(objective(94992, rg("Lost Horse", 53.8, 66.4), "Lead the horse home. Coyote Prowlers come for it on the way: fight them off.", "Horse Rescued"),
       "Coyote Prowlers from a published guide's route; the objective wording needs an in-game check."),
-    finish(94614, benjy), finish(94617, benjy), finish(94992, benjy),
+    finish(94617, benjy), finish(94992, benjy),
     accept(94924, cornelius, "Ride north to Terral's Watch. Watcher Cornelius wants the Rog'mar poachers stopped."), accept(94925, cornelius),
     accept(95983, rg("Picked Carcass", 61.6, 58.9), "Look at the picked carcass just north of the watchtower."),
     objective(95983, rg(nil, 61.6, 58.9), "Kill the Low Plains Buzzards picking at the carcass.", "Low Plains Buzzards"),
@@ -669,11 +686,13 @@ do
     along(objective(95254, rg("Trapclaw", 80.5, 53.7), "On the way back, look for Trapclaw, a big crawler that walks the shore by the port.", "Trapclaw's Claw"), 95121),
     finish(95988, zizplink), finish(95254, fimbo), finish(95118, whizzbuzz), finish(95121, fimbo),
     taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly back to Farholde Keep."),
-    finish(95059, brant), finish(95066, brant), finish(95156, ember), finish(95943, bertrand), finish(95913, tessa), finish(96084, rowland),
+    finish(95059, brant), finish(95066, brant), finish(95156, ember),
+    accept(95184, ember, "If you have 8 Solid Sharpening Stones (Blacksmithing or the auction house), Ember has a quick quest for them."),
+    finish(95184, ember),
+    finish(95943, bertrand), accept(96009, bertrand, "Bertrand now wants wood bundles from Turner's Logging Camp."),
+    finish(95913, tessa), finish(96084, rowland),
     finish(95330, halligan, "Ride west to Turner's Logging Camp and give Halligan the farm goods."),
-    finish(94842, halligan), finish(94931, halligan), accept(94843, halligan),
-    objective(94843, rg("Loamy Soil", 39.7, 62.9), "Plant Halligan's saplings in the patches of loamy soil around the camp.", "5 Saplings Planted"),
-    finish(94843, halligan),
+    objective(96009, rg("Bundle of Wood", 39.2, 61.7), "Pick up the bundles of wood around the logging camp.", "10 Wood Bundles"),
   }, { alternate = true, suggest = { "riverglades-shroud", "dustwallow-40" } })
 
   rq(94829, "What We Lost", 40, 36)
@@ -731,6 +750,7 @@ do
 
   section("riverglades-shroud", "Riverglades: Sunnyglade and the Twilight's Shroud", M.riverglades, 40, 46, sources, {
     taxi("fly", B.at(nil, 60.6, 81.6, 2548), farholdeFlight, "Fly to Farholde Keep."),
+    B.optional(finish(96009, bertrand, "Give Bertrand Ironbrow the wood bundles from the logging camp.")),
     accept(94877, brant, "Knight Commander Demar Brant wants Sunnyglade freed from the Twilight's Hammer."),
     accept(94881, ashe), accept(94879, ashe, "Ashe Amberhall also wants the Twilight's pages from Sunnyglade."),
     accept(95912, rg("Wanted", 65.9, 81.1), "Read the wanted poster in the keep's courtyard."),
