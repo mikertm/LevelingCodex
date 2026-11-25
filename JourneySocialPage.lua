@@ -357,26 +357,44 @@ local function awardsCard(L, y)
   local all = {}
   for _, a in ipairs(won) do all[#all + 1] = a end
   for _, a in ipairs(rest) do all[#all + 1] = a end
-  for i, a in ipairs(all) do
-    local cx = 14 + ((i - 1) % 2) * (cw + 6)
-    local cy = y + math.floor((i - 1) / 2) * 50
-    U.box(cx, cy, cw, 44, C.panel)
-    local ic = U.icon(a.icon, cx + 6, cy + 10, 24, a.title, a.tip)
-    if a.won then
-      U.T(a.title:upper(), cx + 36, cy + 5, cw - 40, "small", C.gold)
-      U.T(name(a.name), cx + 36, cy + 18, cw - 40, "body", C.ink or C.light)
-      U.T(a.text, cx + 36, cy + 30, cw - 40, "small", C.dim)
-      U.hit(cx, cy, cw, 44, a.title .. ": " .. name(a.name), a.tip .. " (" .. a.text .. ").\n" .. (a.flavour or "") .. "\nClick to open their page.",
-        function() open(a.name) end, "Award " .. a.title)
-    else
-      if ic and ic.tex then ic.tex:SetDesaturated(true); ic.tex:SetAlpha(0.45) end
-      U.T(a.title:upper(), cx + 36, cy + 5, cw - 40, "small", C.inkSoft or C.dim)
-      U.T("Not yet awarded", cx + 36, cy + 18, cw - 40, "small", C.dim)
-      U.T(a.tip, cx + 36, cy + 30, cw - 40, "small", C.dim)
-      U.hit(cx, cy, cw, 44, a.title, a.tip .. ".\n" .. (a.flavour or ""), nil, "Award " .. a.title)
+  -- Row by row: a description that wraps makes its row taller, so it never
+  -- runs into the award below.
+  for r = 1, #all, 2 do
+    local rowH = 44
+    local drawn = {}
+    for k = 0, 1 do
+      local a = all[r + k]
+      if a then
+        local cx = 14 + k * (cw + 6)
+        local ic = U.icon(a.icon, cx + 6, y + 10, 24, a.title, a.tip)
+        local h
+        if a.won then
+          U.T(a.title:upper(), cx + 36, y + 5, cw - 40, "small", C.gold)
+          U.T(name(a.name), cx + 36, y + 18, cw - 40, "body", C.ink or C.light)
+          h = 30 + (U.T(a.text, cx + 36, y + 31, cw - 40, "small", C.dim) or 12) + 6
+        else
+          if ic and ic.tex then ic.tex:SetDesaturated(true); ic.tex:SetAlpha(0.45) end
+          U.T(a.title:upper(), cx + 36, y + 5, cw - 40, "small", C.inkSoft or C.dim)
+          U.T("Not yet awarded", cx + 36, y + 18, cw - 40, "small", C.dim)
+          h = 30 + (U.T(a.tip, cx + 36, y + 31, cw - 40, "small", C.dim) or 12) + 6
+        end
+        if h > rowH then rowH = h end
+        drawn[#drawn + 1] = { a = a, cx = cx }
+      end
     end
+    for _, d in ipairs(drawn) do
+      local a, cx = d.a, d.cx
+      U.box(cx, y, cw, rowH, C.panel)
+      if a.won then
+        U.hit(cx, y, cw, rowH, a.title .. ": " .. name(a.name), a.tip .. " (" .. a.text .. ").\n" .. (a.flavour or "") .. "\nClick to open their page.",
+          function() open(a.name) end, "Award " .. a.title)
+      else
+        U.hit(cx, y, cw, rowH, a.title, a.tip .. ".\n" .. (a.flavour or ""), nil, "Award " .. a.title)
+      end
+    end
+    y = y + rowH + 6
   end
-  y = y + math.ceil(#all / 2) * 50 + 4
+  y = y + 4
   U.box(0, top, W, y - top, C.panel, C.edge)
   return y + 12
 end
