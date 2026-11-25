@@ -391,6 +391,119 @@ do
   end
 end
 
+-- "Last time on your journey...": the first login after a break (Lr.RECAP_GAP since the journal last
+-- ticked) shows a card with the last session's biggest moments and says it in chat. j.seen = the last
+-- 10 s tick, j.sessionAt = when that session began; a journal without them recaps its last busy day.
+-- db.noJourneyRecap turns it off (Journey > Map > YOUR JOURNAL).
+Lr.RECAP_GAP, Lr.RECAP_DELAY = 900, 12
+local RECAP_WEIGHT = { mount = 10, boss = 9, chain = 8, dungeon = 8, run = 8, rare = 8, first = 7, elite = 7, bg = 7, pvp = 6,
+  level = 6, zone = 5, death = 5, close = 5, wipe = 5, milestone = 5, duel = 4, rez = 4, guild = 4, upgrade = 4, home = 3,
+  cap = 6, quest = 1 }
+local RECAP_LABEL = { level = "A new level", quest = "A quest", cap = "A craft mastered" }
+local RECAP_OPEN = { "Last time on your journey", "Previously, in your story", "When last we left you", "The story so far" }
+
+-- The moments of the last session: { events, from, to } or nil.
+function Lr.lastSession(j)
+  local list = j.events or {}
+  if #list == 0 then return nil end
+  local from, to = tonumber(j.sessionAt), tonumber(j.seen)
+  if not (from and to) then
+    to = tonumber(list[#list].t) or 0
+    from = to - 6 * 3600
+  end
+  local out = {}
+  for _, e in ipairs(list) do
+    local t = tonumber(e.t) or 0
+    if t >= from and t <= to + 60 then out[#out + 1] = e end
+  end
+  if #out == 0 then return nil end
+  return { events = out, from = from, to = to }
+end
+
+-- The recap: an opening, one sentence, and up to four rows { icon, label, text } in the order they happened.
+function Lr.recap(j)
+  local s = Lr.lastSession(j)
+  if not s then return nil end
+  local lands, landSeen, quests, deaths, lo, hi = {}, {}, 0, 0, nil, nil
+  for _, e in ipairs(s.events) do
+    local land = e.m and J.landOf and J.landOf(e.m)
+    if land and not landSeen[land] then landSeen[land] = true; lands[#lands + 1] = Q.plain(land) end
+    if e.k == "quest" or e.k == "chain" then quests = quests + 1 end
+    if e.k == "death" then deaths = deaths + 1 end
+    local l = tonumber(e.l)
+    if l then lo, hi = math.min(lo or l, l), math.max(hi or l, l) end
+  end
+  local bits = {}
+  if #lands > 0 then
+    local shown = {}
+    for i = 1, math.min(3, #lands) do shown[i] = lands[i] end
+    if #lands > 3 then shown[#shown + 1] = count(#lands - 3, "other land") end
+    bits[#bits + 1] = "you walked " .. joinNames(shown)
+  end
+  if lo and hi and hi > lo then bits[#bits + 1] = "rose from level " .. lo .. " to " .. hi end
+  if quests > 0 then bits[#bits + 1] = "finished " .. count(quests, "quest") end
+  if deaths > 0 then bits[#bits + 1] = "fell " .. (deaths == 1 and "once" or (deaths == 2 and "twice" or (say(deaths) .. " times"))) end
+  if #bits == 0 then bits[1] = "you wrote " .. count(#s.events, "line") .. " in the book" end
+  local opening = pick(RECAP_OPEN, "recap" .. s.to)
+  local sentence = capital(joinNames(bits)) .. "."
+  -- the weightiest moments, one per kind, then put back in order
+  local ranked = {}
+  for i, e in ipairs(s.events) do
+    local w = RECAP_WEIGHT[e.k]
+    if w then ranked[#ranked + 1] = { e = e, w = w, i = i } end
+  end
+  table.sort(ranked, function(a, b) if a.w ~= b.w then return a.w > b.w end return a.i > b.i end)
+  local rows, kinds = {}, {}
+  for _, r in ipairs(ranked) do
+    if #rows >= 4 then break end
+    if not kinds[r.e.k] or r.e.k == "boss" then
+      kinds[r.e.k] = true
+      rows[#rows + 1] = r
+    end
+  end
+  table.sort(rows, function(a, b) return a.i < b.i end)
+  local out = {}
+  for _, r in ipairs(rows) do
+    local text = Q.plain(r.e.s or "")
+    if #text > 64 then text = text:sub(1, 61) .. "..." end
+    out[#out + 1] = { J.ICON[r.e.k] or J.ICON.quest, Lr.CARD_KINDS[r.e.k] or RECAP_LABEL[r.e.k] or "A moment", text }
+  end
+  return { opening = opening, sentence = sentence, rows = out, level = hi, events = #s.events }
+end
+
+-- Show it (held in combat, after the other login cards); once a session.
+function Lr.showRecap()
+  local r = Lr.pendingRecap
+  if not r then return end
+  if try(InCombatLockdown) or (try(UnitAffectingCombat, "player")) then return end
+  Lr.pendingRecap = nil
+  Lr.lastRecap = r
+  if ns.db().noJourneyRecap then return end
+  ns.say(r.opening .. "... " .. r.sentence)
+  local l = r.level or J.level()
+  local rows = r.rows
+  if #rows == 0 then rows = { { J.ICON.quest, "Last time", r.sentence } } end
+  Lr.lastCard = J.now()
+  ns.showCard(r.opening:upper() .. "...", "Chapter " .. (J.roman and J.roman(l) or l) .. "  -  level " .. l, rows, function()
+    if J.openChapter then J.openChapter(l) end
+    ns.openTab("journey")
+  end, { tab = "journey" })
+end
+
+-- At login: a break since the last tick starts a new session (a /reload doesn't).
+function Lr.startSession(j)
+  local t = J.now()
+  local seen = tonumber(j.seen)
+  if seen and t - seen < Lr.RECAP_GAP then return false end
+  local ok, r = pcall(Lr.recap, j)
+  j.sessionAt, j.seen = t, t
+  if ok and r then
+    Lr.pendingRecap = r
+    ns.after(Lr.RECAP_DELAY, function() pcall(Lr.showRecap) end)
+  end
+  return true
+end
+
 local function bindPlace()
   local place = try(GetBindLocation)
   if type(place) == "string" and place ~= "" then return Q.plain(place) end
@@ -424,6 +537,7 @@ function ns.startJourneyLore()
   if frame then return end
   local j = journal()
   Lr.fixMount(j)
+  Lr.startSession(j)
   if j.home == nil then j.home = bindPlace() or false end -- the bind you log in with is not a new home
   frame = CreateFrame("Frame")
   for event in pairs(EVENTS) do pcall(frame.RegisterEvent, frame, event) end
@@ -432,16 +546,24 @@ function ns.startJourneyLore()
     if not ok and not Lr.errored then Lr.errored = true; ns.say("journey error: " .. Q.plain(err)) end
   end)
   ns.every(10, function()
-    local ok, err = pcall(function() Lr.checkMarks(); Lr.checkMount(); Lr.flushCard() end)
+    local ok, err = pcall(function()
+      journal().seen = J.now()
+      Lr.checkMarks(); Lr.checkMount(); Lr.flushCard(); Lr.showRecap()
+    end)
     if not ok and not Lr.errored then Lr.errored = true; ns.say("journey error: " .. Q.plain(err)) end
   end)
 end
+
+J.recap = Lr
 
 function ns.journeyLoreDebugLines()
   local j = journal()
   local marks = {}
   for k, v in pairs(type(j.marks) == "table" and j.marks or {}) do marks[#marks + 1] = k .. " " .. tostring(v) end
   table.sort(marks)
-  return { "journey lore: home " .. tostring(j.home) .. ", mounted " .. tostring(j.mounted == true) .. ", marks "
+  local r = Lr.lastRecap or Lr.pendingRecap
+  return { "journey recap: " .. (r and (r.events .. " moments, " .. #r.rows .. " rows: " .. r.sentence) or "none this session")
+    .. ", session from " .. tostring(j.sessionAt) .. ", last seen " .. tostring(j.seen),
+    "journey lore: home " .. tostring(j.home) .. ", mounted " .. tostring(j.mounted == true) .. ", marks "
     .. (#marks > 0 and table.concat(marks, ", ") or "not read yet") }
 end

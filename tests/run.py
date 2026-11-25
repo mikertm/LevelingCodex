@@ -1205,6 +1205,8 @@ def main():
         if not minimal:
             runs.append(("WARRIOR/full/journey-thin", "WARRIOR", False, ["journeyThin"]))
             runs.append(("WARRIOR/full/journey-story-pages", "WARRIOR", False, ["journeyStoryPages"]))
+            runs.append(("WARRIOR/full/journey-recap", "WARRIOR", False, ["journeyRecap"]))
+            runs.append(("WARRIOR/full/journey-quest-lines", "WARRIOR", False, ["journeyQuestLines"]))
         if not minimal:
             runs.append(("WARRIOR/full/stats-lost", "WARRIOR", False, LOST + ["statsTabLost"]))
         runs.append(("WARRIOR/%s/pace" % variant, "WARRIOR", minimal, ["paceCard"]))

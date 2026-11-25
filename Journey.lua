@@ -209,6 +209,7 @@ local FOES = {
   { "orc|grunt|warlord|blackrock|dragonmaw", { "Fought the orc war bands of %zone%" } },
   { "satyr|demon|imp|felguard|voidwalker|succubus", { "Banished the demons lurking in %zone%" } },
 }
+J.FOES = FOES
 local KILL = { "Answered %giver%'s call to arms against the %foe%s of %zone%", "Made %zone% a little safer from %foe%s",
   "Hunted %foe%s across %zone%", "Cleared the %foe%s out of %zone%", "Took the fight to the %foe%s of %zone% so %giver% could sleep at night",
   "Went looking for %foe%s in %zone%, and found plenty", "Thinned the %foe% numbers in %zone% at %giver%'s asking",
@@ -479,11 +480,7 @@ local function sample()
   local j = J.data()
   local lvl = level()
   local world = ns.questWorld and ns.questWorld[map]
-  local function yards(dx, dy)
-    if not (world and world.width and world.height) then return end
-    local ax, ay = dx / 100 * world.width, dy / 100 * world.height
-    return math.sqrt(ax * ax + ay * ay)
-  end
+  local function yards(dx, dy) return J.yards(world, dx, dy) end
   if last and last.map == map and last.level == lvl then
     local dx, dy = x - last.x, y - last.y
     local pct = math.sqrt(dx * dx + dy * dy)
@@ -505,6 +502,33 @@ local function sample()
   j.points = (tonumber(j.points) or 0) + 1
   last = { map = map, x = x, y = y, level = lvl, run = run }
   J.trailVersion = (J.trailVersion or 0) + 1
+end
+
+-- Yards for a step of (dx, dy) map percent on a map of ns.questWorld (positional rows:
+-- continent, north, west, height, width; named fields too). nil without the map's size.
+-- (Until v0.33 this read only the named fields, so the journal's miles stayed at 0.)
+function J.yards(world, dx, dy)
+  if type(world) ~= "table" then return end
+  local h, w = tonumber(world.height or world[4]), tonumber(world.width or world[5])
+  if not (h and w) then return end
+  local ax, ay = dx / 100 * w, dy / 100 * h
+  return math.sqrt(ax * ax + ay * ay)
+end
+
+-- The yards along every trail run (no jump counted), for a journal written before the fix.
+function J.recountWalked(j)
+  local total = 0
+  for map, runs in pairs(j.trail or {}) do
+    local world = ns.questWorld and ns.questWorld[map]
+    for _, r in ipairs(type(runs) == "table" and runs or {}) do
+      local pts = J.unpack(r.p or "")
+      for i = 2, #pts do
+        local dx, dy = pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]
+        if math.sqrt(dx * dx + dy * dy) < JUMP_PCT then total = total + (J.yards(world, dx, dy) or 0) end
+      end
+    end
+  end
+  return total
 end
 
 -- A zone you haven't been to (the first one starts the journal).
@@ -639,6 +663,11 @@ function ns.startJourney()
       if broad then j.zones[j.order[i]] = nil; table.remove(j.order, i) end
     end
   end)
+  if j.walkFix ~= 1 then
+    local ok, yd = pcall(J.recountWalked, j)
+    if ok and yd and yd > (tonumber(j.walked) or 0) then j.walked = yd end
+    j.walkFix = 1
+  end
   events = CreateFrame("Frame")
   for event in pairs(HANDLERS) do pcall(events.RegisterEvent, events, event) end
   events:SetScript("OnEvent", function(_, event, ...)

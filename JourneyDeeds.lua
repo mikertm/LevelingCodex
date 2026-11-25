@@ -435,13 +435,40 @@ function D.today()
   if J.tales and J.tales.todayLines then
     for _, l in ipairs(J.tales.todayLines(since)) do out[#out + 1] = (l:gsub("^%l", string.upper)) end
   end
+  -- experience, the purse and the skies, from Stats' session record
+  local xp = 0
+  for _, rec in pairs(type(session) == "table" and type(session.levels) == "table" and session.levels or {}) do
+    xp = xp + (tonumber(type(rec) == "table" and rec.xp) or 0)
+  end
+  local function sum(t)
+    local n = 0
+    for _, v in pairs(type(t) == "table" and t or {}) do n = n + (tonumber(v) or 0) end
+    return n
+  end
+  local net = sum(totals.goldIn) - sum(totals.goldOut)
+  local more = {}
+  if xp > 0 then more[#more + 1] = ns.thousands(xp) .. " experience earned" end
+  if net >= 100 then more[#more + 1] = "the purse " .. ns.money(net) .. " heavier"
+  elseif net <= -100 then more[#more + 1] = "the purse " .. ns.money(-net) .. " lighter" end
+  local flights = tonumber(totals.flights) or 0
+  if flights > 0 then more[#more + 1] = count(flights, "one flight taken", "flights taken") end
+  if #more > 0 then
+    local s = list(more)
+    out[#out + 1] = s:sub(1, 1):upper() .. s:sub(2) .. "."
+  end
   if c.close > 0 then out[#out + 1] = c.close == 1 and "One fight came far too close." or (c.close .. " fights came far too close.") end
   if c.death > 0 then
     out[#out + 1] = c.death == 1 and "You fell once, and got back up." or ("You fell " .. c.death .. " times, and got back up every time.")
   elseif secs >= 600 then
     out[#out + 1] = "Not a single fall."
   end
-  if #out == 1 and not high and quests == 0 then out[#out + 1] = "The page is still mostly blank: the day is young." end
+  -- a short day so far: what happened last time, so the page isn't bare
+  local recap = J.recap and (J.recap.lastRecap or J.recap.pendingRecap)
+  if #out <= 3 and quests == 0 and not high and recap and recap.sentence then
+    out[#out + 1] = "Last time: " .. recap.sentence:gsub("^%u", string.lower)
+  elseif #out == 1 and not high and quests == 0 then
+    out[#out + 1] = "The page is still mostly blank: the day is young."
+  end
   return table.concat(out, " ")
 end
 

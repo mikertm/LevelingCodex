@@ -1,5 +1,16 @@
 # Leveling Codex
 
+## v0.33.0
+- **Journey: a large map.** Journey > Map has **Small map | Large map**. Large opens the map across both pages of the book, more than twice as wide, with more of your trail, more of the busy places and bigger pins. The key sits under it, and your journal settings and the land's story sit on the pages below.
+- **Journey: pins are round tokens.** A moment's pin is now its icon cut round inside a ring of its layer's colour. Before, they showed as solid coloured squares.
+- **Journey: "Last time on your journey..."** The first time you log in after a break, a card and a chat line tell what happened last session: the lands you walked, the levels you gained, quests finished, falls, and up to four of its biggest moments. Click the card to open that chapter. A /reload doesn't count as a break. Turn it off with Journey > Map > Recap my last session when I log in.
+- **Journey: quest lines that match the quest.** Every collect quest read as "Ran an errand" because Forever writes objectives as "0/7 Alterac Signet Ring". The journal now reads both forms and tells a bounty, a hunt for one foe, a cull, loot taken from foes ("Took seven Alterac Signet Rings off the Syndicate"), trophies brought back as proof, gathering, food for the kitchen, a lost thing found, shopping, an escort, scouting, a deed, a delivery and an errand apart. Each has its own set of lines, foe families add their own, and a line that opens like one of your last few quest moments gives way to another.
+- **Journey: the Overview's numbers, audited.**
+    - **Miles walked** was always 0.0: the trail measured distance from map sizes it read the wrong way. It counts now, and your miles so far are worked out from the trail you already have.
+    - **Lands explored** and WHERE YOU ARE now count the same lands (one said 6, the other 7).
+    - **Quests done**, **dungeons** and **deaths** take the larger of the journal's count and the Stats tab's, so neither undercounts when one started later.
+    - **Today's entry** adds the experience earned, how much heavier or lighter your purse is, and flights taken. On a short day so far it also says what happened last time.
+
 ## v0.32.1
 - **Snipe pop-up:** while the deal sniper runs, a small card next to the auction house shows the best deal it found, with what it's listed at, what it's worth and the estimated profit. **Buy** buys it (a commodity asks you to click again to confirm the price) and **Skip** hides that deal until its price changes. Settings on the Scan tab can turn the pop-up off.
 - **Sniper session stats:** a SNIPER SESSION tile on the Deals tab counts how long the sniper has run, its searches, the deals it found, what you bought and the estimated profit per hour. Hover it for the details.

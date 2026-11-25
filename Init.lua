@@ -56,6 +56,7 @@ local function start()
   ns.startJourneyLore()
   ns.startJourneyWilds()
   ns.startJourneyCompanions()
+  ns.startJourneyQuestLines()
 end
 
 local events = CreateFrame("Frame")
@@ -256,6 +257,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.journeyVoiceDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyWildsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyCompanionsDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.journeyQuestLinesDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questMapDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.questSupportDebugLines()) do out[#out + 1] = line end

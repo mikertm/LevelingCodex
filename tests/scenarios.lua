@@ -13505,6 +13505,19 @@ function S.journeyTab()
   click(win(), "Layer Quests")
   check(not LevelingCodexDB.journeyMapHide.quests, "and shows them again")
   check(MOCK.ns.journey.pageError == nil, "the Map page draws without an error: " .. tostring(MOCK.ns.journey.pageError))
+  -- the map across the whole book, and back on the page
+  local plate = findButton(win(), function(l) return l == "Small map" end)
+  check(plate and plate.codexOn, "the map starts on the page")
+  click(win(), "Large map")
+  check(LevelingCodexDB.journeyMapLarge == true, "Large map is saved")
+  check(questText(win(), "THE MAP") and questText(win(), "YOUR JOURNAL") and questText(win(), "WHAT HAPPENED HERE"),
+    "the large map keeps the journal and the land beside it")
+  check(findButton(win(), function(l) return l == "Layer Quests" end), "the large map keeps its layer switches")
+  check(MOCK.ns.journey.pageError == nil, "the large map draws without an error: " .. tostring(MOCK.ns.journey.pageError))
+  local largeBtn = findButton(win(), function(l) return l == "Large map" end)
+  check(largeBtn and largeBtn.codexOn, "Large map is lit")
+  click(win(), "Small map")
+  check(not LevelingCodexDB.journeyMapLarge, "Small map puts it back on the page")
   click(win(), "Story")
   end
   check(not questText(win(), "THE ROAD TO 60"), "the Story page leaves the overview out")
@@ -14184,6 +14197,90 @@ function S.journeyStoryPages()
   J.add("boss", "Brought down Hogger again")
   check(not toast:IsShown(), "the setting turns the cards off")
   LevelingCodexDB.noJourneyCards = nil
+end
+
+-- "Last time on your journey...": the first login after a break recaps the last session (its lands,
+-- levels and biggest moments) in a card and a chat line; a /reload soon after doesn't, nor the setting.
+function S.journeyRecap()
+  local now = 1700000000
+  local from, to = now - 3 * 3600, now - 3600
+  local events = { { t = from - 86400, k = "quest", l = 30, s = "An old quest from the day before", m = 1416, x = 40, y = 40 },
+    { t = from + 60, k = "zone", l = 35, s = "Climbed into the Alterac Mountains", m = 1416, x = 50, y = 50 },
+    { t = from + 600, k = "quest", l = 35, s = "Took the Syndicate rings off their dead", m = 1416, x = 40, y = 30 },
+    { t = from + 900, k = "quest", l = 35, s = "Cleared the ogre mound", m = 1416, x = 42, y = 30 },
+    { t = from + 1200, k = "level", l = 36, s = "Level 36: the road climbs on", m = 1417, x = 30, y = 30 },
+    { t = from + 1500, k = "boss", l = 36, s = "Brought down Marez Cowl", m = 1417, x = 20, y = 20 },
+    { t = from + 1800, k = "death", l = 36, s = "Fell to a Boulderfist ogre", m = 1417, x = 22, y = 20 } }
+  LevelingCodexCharDB = { journey = { version = 1, started = from - 86400, zones = {}, order = {}, points = 2, walked = 0,
+    trail = { [1429] = { { l = 35, p = "400400500400" } } }, events = events, pals = {}, deaths = 1, sessionAt = from, seen = to } }
+  local j = LevelingCodexCharDB.journey
+  MOCK.mapInfo = MOCK.mapInfo or {}
+  MOCK.mapInfo[1416] = { name = "Alterac Mountains", mapType = 3 }
+  MOCK.mapInfo[1417] = { name = "Arathi Highlands", mapType = 3 }
+  MOCK.level = 36
+  S.login()
+  MOCK.advance(14)
+  local t = toast()
+  check(t and t:IsShown() and questText(t, "Brought down Marez Cowl") and questText(t, "Level 36"),
+    "the recap card shows the last session's biggest moments")
+  check(not questText(t, "An old quest"), "a moment from an earlier session is not in the recap")
+  check(chatHas("rose from level 35 to 36") and chatHas("finished two quests") and chatHas("fell once"),
+    "the chat line tells the last session")
+  check(chatHas("Alterac Mountains"), "and names the lands")
+  check(j.sessionAt and j.sessionAt >= now, "a new session begins")
+  check(j.walkFix == 1 and math.abs((j.walked or 0) - 347) < 2, "an older journal's miles are counted from its trail ("
+    .. tostring(j.walked) .. " yd)")
+  slash("")
+  click(win(), "Journey")
+  check(questText(win(), "Last time:"), "a short day's entry tells what happened last time")
+  -- the next login soon after (a /reload) is the same session: no recap
+  local lore = MOCK.ns.journey.recap
+  lore.pendingRecap = nil
+  MOCK.advance(20)
+  check(lore.startSession(j) == false, "a reload within the gap starts no new session")
+  -- after a long break with the setting off: nothing said
+  j.seen = j.seen - 3600
+  LevelingCodexDB.noJourneyRecap = true
+  MOCK.chat = {}
+  t:Hide()
+  check(lore.startSession(j) == true, "a break starts a new session")
+  MOCK.advance(14)
+  check(not chatHas("Last time") and not chatHas("Previously") and not t:IsShown(), "the setting keeps the recap quiet")
+  LevelingCodexDB.noJourneyRecap = nil
+end
+
+-- Quest lines match the quest: loot from foes (Forever writes "0/7 Name"), a hunt, a bounty, gathering,
+-- a delivery; and a line that opens like a recent one gives way to another.
+function S.journeyQuestLines()
+  S.login()
+  MOCK.advance(2)
+  local J = MOCK.ns.journey
+  MOCK.questLog = {
+    { questID = 512, title = "Noble Deaths", objectives = { { text = "0/7 Alterac Signet Ring", type = "item", numRequired = 7 } } },
+    { questID = 999301, title = "Ogre Trouble", objectives = { { text = "0/10 Boulderfist Ogre slain", type = "monster", numRequired = 10 } } },
+    { questID = 999302, title = "WANTED: Marez Cowl", objectives = { { text = "Marez Cowl slain: 0/1", type = "monster" } } },
+    { questID = 999303, title = "Healing Herbs", objectives = { { text = "Snapvine: 0/8", type = "item" } } },
+    { questID = 999304, title = "Escort the Merchant", objectives = { { text = "Escort Merchant Gil to safety", type = "event" } } },
+  }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(6)
+  local noble = J.questLine(512, "Noble Deaths", "Alterac Mountains")
+  check(J.questKind(512) == "loot", "a ring taken from the Syndicate is loot (" .. tostring(J.questKind(512)) .. ")")
+  check(not noble:find("errand") and (noble:find("Alterac Signet Ring") or noble:find("Syndicate")),
+    "Noble Deaths reads as taking the rings: " .. noble)
+  check(J.questKind(999301) == "kill" and J.questLine(999301, nil, "Arathi Highlands"):find("Boulderfist Ogre"), "a hunt names its foe: "
+    .. J.questLine(999301, nil, "Arathi Highlands"))
+  check(J.questKind(999302) == "wanted" and J.questLine(999302, nil, "Arathi Highlands"):find("Marez Cowl"), "a bounty names its outlaw: "
+    .. J.questLine(999302, nil, "Arathi Highlands"))
+  check(J.questKind(999303) == "gather" and J.questLine(999303, nil, "Elwynn Forest"):find("Snapvine"), "gathering names the goods")
+  check(J.questKind(999304) == "escort" and J.questLine(999304, nil, "Elwynn Forest"):find("Merchant Gil"), "an escort names the ward: "
+    .. J.questLine(999304, nil, "Elwynn Forest"))
+  -- the same opening twice in a row gives way to another line
+  local line = J.questLine(999301, nil, "Arathi Highlands")
+  J.add("quest", line)
+  local again = J.questLine(999301, nil, "Arathi Highlands")
+  local function open2(t) return (t:lower():match("^(%S+%s+%S+)")) end
+  check(open2(again) ~= open2(line), "a line that opens like the last quest moment gives way: " .. line .. " / " .. again)
 end
 
 -- Mailbox: Take all empties the inbox one take at a time (gold, then each attachment), leaves Cash
