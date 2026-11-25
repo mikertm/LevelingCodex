@@ -81,6 +81,7 @@ do
   road(M.stormwind, M.dustwallow, stormwindPier, "Take the Auberdine ship, then fly south to Theramore")
   -- Overland legs out of the Alliance towns.
   road(M.westfall, M.stv, on.westfall(nil, 68, 63), "Take the east bridge into Duskwood, then follow the south road to Stranglethorn")
+  road(M.westfall, M.duskwood, on.westfall(nil, 68, 63), "Take the east bridge into Duskwood")
   road(M.duskwood, M.stv, on.duskwood(nil, 44.7, 87.5), "Follow the road south into Stranglethorn")
   road(M.stv, M.duskwood, on.stv(nil, 40.6, 3.5), "Follow the road north into Duskwood")
   road(M.duskwood, M.deadwind, on.duskwood(nil, 87.7, 41.1), "Take the east road out of Darkshire into Deadwind Pass")

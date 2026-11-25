@@ -373,8 +373,8 @@ function S.questTravelArrow()
   MOCK.questMap, MOCK.questX, MOCK.questY = 1453, 77.2, 82.72
   MOCK.event("ZONE_CHANGED_NEW_AREA")
   check(questText(frame, "Redridge Brutes 4/10"), "travel keeps the same quest selected")
-  check(questText(arrow, "Leave Stormwind for Redridge") and not questText(arrow, "140 yd"),
-    "Stormwind points to a named exit and omits the old unlabeled distance")
+  check(questText(arrow, "Leave Stormwind for Redridge\n") and questText(arrow, " yd"),
+    "Stormwind points to a named exit with the distance to it under the label")
 
   MOCK.event("TAXIMAP_OPENED")
   check(questText(arrow, "Fly to Lakeshire"), "learned routes redirect the arrow to the flight master")
@@ -3143,9 +3143,11 @@ function S.questFlightBack()
   stepTool("Resume active quest")
   MOCK.advance(0.3)
   check(questText(questViewer(), "Sven"), "following the way to Sven's Camp")
-  -- Walked into Westfall: the hub flight still offers Darkshire (mountains can block a straight walk).
+  -- Walked into Westfall: Sven's Camp is a short walk over the east bridge, not a flight back to
+  -- Darkshire (the hub flight only when it can beat walking).
   walkTo(1436, 56.0, 50.0)
-  check(arrowSays("Fly to Darkshire"), "walking in, the zone hub's flight is offered: " .. arrowCaption())
+  check(not arrowSays("Fly to") and arrowSays("east bridge into Duskwood"),
+    "walking in, the arrow leads over the bridge: " .. arrowCaption())
   walkTo(1431, 77.4, 44.3)
   taxiMap(nodes)
   TakeTaxiNode(2)
@@ -3208,6 +3210,65 @@ function S.questNearOtherMap()
   check(questText(frame, "Undead Ravager"), "the step stays current on Shen'dralas")
   check(arrowSays(" yd") and not arrowSays("Travel to") and not arrowSays("another zone") and not arrowSays("Follow"),
     "a step a short walk away on another map gets a plain distance: " .. arrowCaption())
+end
+
+-- Standing inside the step's zone on the world grid (here Desolace's south, which the client may
+-- report as Shen'dralas) but past the short-walk range, the arrow still points straight at it.
+function S.questArrowInsideZone()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 36, 1443, 62.0, 88.0
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest == 261 then break end
+        if step.quest and step.quest ~= 261 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 261, isComplete = false } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  MOCK.advance(0.3)
+  local frame = questViewer()
+  check(questText(frame, "Undead Ravager"), "the Scarlet camp step is current")
+  walkTo(2652, 75, 10) -- Shen'dralas by the map ID, Desolace's south-east by the world grid, ~900 yd away
+  local yards = tonumber(arrowCaption():match("(%d+) yd"))
+  check(yards and yards > 500 and not arrowSays("Travel to") and not arrowSays("Fly to") and not arrowSays("another zone"),
+    "inside the step's zone the arrow points straight at it: " .. arrowCaption())
+  -- The arrow turns as you move between two ticks (aimed 20 times a second, not 4).
+  local art = { LevelingCodexQuestArrow:GetRegions() }
+  art = art[1]
+  MOCK.facing = 0
+  MOCK.advance(0.06)
+  local before = art._rot
+  MOCK.questX, MOCK.questY = 75, 30
+  MOCK.advance(0.06)
+  check(before and art._rot and math.abs(art._rot - before) > 0.01, "the arrow re-aims between ticks: "
+    .. tostring(before) .. " -> " .. tostring(art._rot))
+end
+
+-- A road leg reached once leads on to the step: at the Westfall bridge the arrow points into
+-- Duskwood instead of only naming the road until the client changes the map.
+function S.questRoadPassed()
+  MOCK.race, MOCK.level, MOCK.bind = "Human", 31, "Darkshire"
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1436, 56.55, 52.70
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "darkshire-30" then
+      for _, step in ipairs(section.steps) do
+        if step.quest == 215 then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  S.login()
+  check(arrowSays("bridge into Duskwood"), "the arrow leads to the Westfall bridge: " .. arrowCaption())
+  local road = LevelingCodexQuests.ALLIANCE.roadTo[1434][1436]
+  local wp = road and road.waypoint
+  check(wp and wp.map == 1436, "the bridge is a Westfall spot")
+  if not wp then return end
+  walkTo(1436, wp.x, wp.y)
+  walkTo(1436, wp.x - 0.5, wp.y)
+  check(not arrowSays("bridge into Duskwood") and arrowSays(" yd"), "past the bridge the arrow leads on: " .. arrowCaption())
 end
 
 local function allText(root)
@@ -4160,7 +4221,9 @@ function S.questIntegrationNearestNoScale()
   MOCK.advance(0.25)
   MOCK.chat = {}
   slash("debug")
-  check(chatHas("arrow: no map scale"), "debug says the map scale is missing")
+  -- Without the route's size for the map the client's own world table gives it (QuestFlightData.lua).
+  check(not chatHas("arrow: no map scale") and questText(LevelingCodexQuestArrow, "Kobold Vermin - 145 yd"),
+    "a map the route has no size for still gets one from the world table")
 end
 
 function S.questIntegrationNearestRoundTrip()

@@ -31,8 +31,23 @@ local function courseTint(off)
   return 1 + (c[1] - 1) * t, 1 + (c[2] - 1) * t, 1 + (c[3] - 1) * t
 end
 
+-- The spot the arrow points at, aimed again from your position 20 times a second (the step itself
+-- is chosen four times a second by the ticker), so the arrow turns smoothly as you strafe past.
+local aim, aimAt = nil, 0
+local AIM_EVERY = 0.05
+local function aimAgain()
+  local now = GetTime()
+  if not aim or now - aimAt < AIM_EVERY then return end
+  aimAt = now
+  local map, x, y = Q.position()
+  local bearing = Q.vector(aim, map, x, y)
+  if not bearing and aim.map ~= map then bearing = Q.worldVector(aim, map, x, y) end
+  if bearing and bearing ~= arrowBearing then arrowBearing, arrowFacing = bearing, false end
+end
+
 local function turnArrow()
   if not arrowBearing then return end
+  aimAgain()
   local facing = try(GetPlayerFacing)
   if facing == arrowFacing then return end
   arrowFacing = facing
@@ -623,7 +638,7 @@ end
 local arrivedKey
 local function arrive(key, step, caption)
   arrowText:SetText(caption)
-  arrowBearing = nil
+  arrowBearing, aim = nil, nil
   arrowArt:Hide()
   if arrivedKey == key then return end
   arrivedKey = key
@@ -663,6 +678,7 @@ local function paintCorpse(corpse)
   end
   leave()
   if bearing then
+    aim = corpse
     arrowBearing, arrowCaption, arrowFacing = bearing, "Your corpse - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
   else
@@ -684,7 +700,7 @@ local function paintArrow()
   end
   local row = Q.current()
   local goal = row and row.step
-  arrowBearing = nil
+  arrowBearing, aim = nil, nil
   local off = ns.db().noQuestArrow
   local corpse = Q.corpse()
   if corpse then
@@ -748,6 +764,7 @@ local function paintArrow()
     return
   end
   leave()
+  if bearing then aim = spawn or step end
   if spawn and bearing then
     arrowBearing, arrowCaption, arrowFacing = bearing, spawnName .. " - " .. math.floor(yards + 0.5) .. " yd", false
     turnArrow()
@@ -756,8 +773,9 @@ local function paintArrow()
   elseif bearing then
     arrowBearing, arrowFacing = bearing, false
     local distance = yards and (math.floor(yards + 0.5) .. " yd" .. eta(yards)) or ""
-    if travel and step.leg then
-      arrowCaption = travel .. "\n" .. distance
+    if travel then
+      -- every leg shows how far it is: a road's gate or a zone hub's flight master too
+      arrowCaption = travel .. (distance ~= "" and ("\n" .. distance) or "")
     else
       arrowCaption = travel or (distance .. which)
     end

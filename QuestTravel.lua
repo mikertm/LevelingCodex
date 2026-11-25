@@ -73,6 +73,27 @@ function Q.worldVector(spot, map, x, y)
   return math.atan2(east, north), math.sqrt(north * north + east * east)
 end
 
+-- Where you stand on another map of your continent, in that map's percent (the way HereBeDragons
+-- translates positions): x, y and true while that is inside the map's rectangle. The client can
+-- report a subzone, a city or the neighbouring zone while you stand on the step's map (the Scarlet
+-- camp in Desolace reads as Shen'dralas): the arrow then decides by where you are, not by the map ID.
+function Q.onMap(target, map, x, y)
+  if not (target and map and x and y) then return end
+  if target == map then return x, y, true end
+  local c, north, west = world(map, x, y)
+  local w = ns.questWorld and ns.questWorld[target]
+  if not c or not w or w[1] ~= c or w[6] then return end
+  local tx, ty = (w[3] - west) / w[5] * 100, (w[2] - north) / w[4] * 100
+  return tx, ty, tx >= 0 and tx <= 100 and ty >= 0 and ty <= 100
+end
+
+-- Yards between two spots on one continent (nil across continents or without world data).
+function Q.worldYards(a, b)
+  local ca, ax, ay = world(a and a.map, a and a.x, a and a.y)
+  local cb, bx, by = world(b and b.map, b and b.x, b and b.y)
+  if ca and ca == cb then return dist(ax, ay, bx, by) end
+end
+
 -- Your run speed, else walking speed. Forever sometimes hides it from addons (a secret value, e.g.
 -- in flight): any math on it is blocked, so check with issecretvalue first.
 local function walkSpeed()
@@ -121,11 +142,19 @@ local function complete(continent)
   return false
 end
 
+-- The last choice for a spot ("walk" or "origin>to"): a new reading only changes it by a clear
+-- margin (STICK), so walking along a threshold doesn't flip the arrow between walking and a flight
+-- master, or between two flight masters, every few steps.
+local STICK = 0.85
+local STICK_REACH = 300 -- yards: a choice holds while you move on from it (a hearth or a flight jumps farther)
+local lastChoice = {}
+
 local function plan(target, map, x, y)
   local c, px, py = world(map, x, y)
   local tc, tx, ty = world(target.map, target.x, target.y)
   if not c or c ~= tc then return end
   local direct = dist(px, py, tx, ty)
+  local spotKey = target.map .. ":" .. target.x .. ":" .. target.y
   if direct < MIN_TRIP then return end
   local speed = walkSpeed()
   local around = {}
@@ -133,18 +162,32 @@ local function plan(target, map, x, y)
     if n.continent == c then around[#around + 1] = { node = n, yards = dist(px, py, n.wx, n.wy) } end
   end
   table.sort(around, function(a, b) return a.yards < b.yards end)
-  local best, bestTime = nil, direct / speed * SAVE
+  local walkTime = direct / speed
+  local best, bestTime = nil, walkTime * SAVE
+  -- What the flight maps said changed (a new flight path, a flight map opened): choose afresh.
+  local version = Q.flightVersion()
+  if lastChoice.version ~= version then lastChoice = { version = version } end
+  -- Only a choice made close by holds: after a hearth, a flight or a long walk it is made afresh.
+  local last = lastChoice[spotKey]
+  local previous = last and dist(last.x, last.y, px, py) <= STICK_REACH and last.key or nil
+  local kept
   for i = 1, math.min(ORIGINS, #around) do
     local origin, walkTo = around[i].node, around[i].yards / speed
     for _, to in pairs(nodes) do
       if to.continent == c and to ~= origin and Q.knownFlight(to.name) then
         local total = walkTo + flightSeconds(origin, to) + dist(to.wx, to.wy, tx, ty) / speed
-        if total < bestTime and reachable(origin, to) then
-          best, bestTime = { origin = origin, to = to, seconds = total }, total
+        local key = origin.id .. ">" .. to.id
+        if (total < bestTime or (key == previous and total < walkTime)) and reachable(origin, to) then
+          local trip = { origin = origin, to = to, seconds = total, key = key }
+          if key == previous then kept = trip end
+          if total < bestTime then best, bestTime = trip, total end
         end
       end
     end
   end
+  if previous == "walk" and best and bestTime > walkTime * SAVE * STICK then best = nil end
+  if kept and best ~= kept and (not best or best.seconds > kept.seconds * STICK) then best = kept end
+  lastChoice[spotKey] = { key = best and best.key or "walk", x = px, y = py }
   return best
 end
 

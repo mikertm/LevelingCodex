@@ -82,6 +82,9 @@ function Q.vector(step, map, x, y)
   local width, height
   if size then width, height = size[1], size[2]
   else width, height = try(C_Map and C_Map.GetMapWorldSize, map) end
+  -- The client's own table (QuestFlightData.lua) when the route and the API don't know the map.
+  local w = not (type(width) == "number" and width > 0) and ns.questWorld and ns.questWorld[map]
+  if w then width, height = w[5], w[4] end
   if not (type(width) == "number" and width > 0 and type(height) == "number" and height > 0) then return end
   local east, north = (step.x - x) * width / 100, (y - step.y) * height / 100
   return math.atan2(east, north), math.sqrt(east * east + north * north)
@@ -1822,13 +1825,60 @@ function Q.nearOtherMap(spot, map, x, y)
   if yards and yards <= Q.NEAR_OTHER_MAP then return yards end
 end
 
+-- A road leg reached once leads on to the step (its waypoint is a gate, a bridge or a lift top:
+-- standing there the arrow used to say only the road's label until the client changed the map).
+-- Keyed by the step's spot and the road's waypoint, for the session.
+local roadsPassed = {}
+local function spotKey(s) return tostring(s.map) .. ":" .. tostring(s.x) .. ":" .. tostring(s.y) end
+
+local function roadLeg(step, map, x, y, direct)
+  local roads = route.roadTo and route.roadTo[step.map]
+  local road = roads and roads[map]
+  if not road then return end
+  local wp = road.waypoint
+  if not (wp and wp.map and Q.sameContinent and Q.sameContinent(wp.map, map) and Q.sameContinent(step.map, map)) then
+    return road -- a boat or a portal: the other continent is its own matter
+  end
+  local key = spotKey(step) .. ">" .. spotKey(wp)
+  if roadsPassed[key] then return end
+  local _, toRoad = Q.vector(wp, map, x, y)
+  if not toRoad and Q.worldVector then _, toRoad = Q.worldVector(wp, map, x, y) end
+  if toRoad and toRoad <= RADIUS then
+    roadsPassed[key] = true
+    return
+  end
+  -- A road behind you that is farther away than the step itself isn't the way there.
+  local onward = Q.worldYards and Q.worldYards(wp, step)
+  if toRoad and direct and onward and toRoad > direct and toRoad + onward > direct * 2 then return end
+  return road
+end
+
+-- A zone hub's flight is offered when it can beat walking: the walk to the hub, the flight
+-- (straight yards at 25 a second, plus 20 s on the ground) and the walk from the step's hub, against
+-- the straight walk times HUB_DETOUR (a straight line runs over the mountains a real walk goes
+-- around: Ironforge to Menethil Harbor). Without it the hub flight sent you back across your own
+-- zone to fly to a step just over the border.
+Q.HUB_DETOUR = 1.6
+local function hubPays(origin, step, map, x, y, direct)
+  if not (direct and Q.worldYards) then return true end
+  local target = flightHubs[step.map]
+  local here = { map = map, x = x, y = y }
+  local toHub, flown, fromHub = Q.worldYards(here, origin), target and Q.worldYards(origin, target),
+    target and Q.worldYards(target, step)
+  if not (toHub and flown and fromHub) then return true end
+  return toHub / 7 + flown / 25 + 20 + fromHub / 7 < direct / 7 * Q.HUB_DETOUR
+end
+
 function Q.destination(step, map)
   if not (step and step.map and map) then return step end
+  local _, x, y = Q.position()
+  local inside, direct
   if step.map ~= map then
-    local _, x, y = Q.position()
     if Q.nearOtherMap(step, map, x, y) then
       return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind, npc = step.npc }
     end
+    if Q.onMap then inside = select(3, Q.onMap(step.map, map, x, y)) end
+    if x and Q.worldVector then direct = select(2, Q.worldVector(step, map, x, y)) end
   end
   if step.map ~= map and step.type == "hearth" and boundTo(step.bind) and (Q.hearthCooldown() or 0) < 60 then
     return nil, "Hearth to " .. step.bind
@@ -1843,21 +1893,25 @@ function Q.destination(step, map)
     if leg then return leg, label end
   end
   if step.map == map then return step end
+  local road = roadLeg(step, map, x, y, direct)
+  -- A zone hub's flight only pays for a step well away, with the hub nearer than the step: by the
+  -- border of the step's zone it sent you back across your own zone to fly.
   local origin, flight = Q.hubFlight(step, map)
-  if origin then return origin, "Fly to " .. flight:match("^[^,]+") end
-  local roads = route.roadTo and route.roadTo[step.map]
-  local road = roads and roads[map]
+  if origin and hubPays(origin, step, map, x, y, direct) then return origin, "Fly to " .. flight:match("^[^,]+") end
   if road then return road.waypoint, road.label end
+  -- Standing inside the step's zone (the client reported a subzone or a neighbour) the arrow just
+  -- points at it with its distance, as on the step's own map. Only here: zone rectangles overlap
+  -- (Ironforge lies inside the Wetlands' one), so flights and roads above don't look at it.
+  if inside and direct then
+    return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind, npc = step.npc }
+  end
   local info = try(C_Map and C_Map.GetMapInfo, step.map)
   local name = type(info) == "table" and info.name or step.flight
   local label = name and ("Travel to " .. Q.plain(name)) or "Objective in another zone"
   -- On your continent with no flight or road to take, the arrow points across the border with its
   -- distance (Sentinel Hill to Sven's Camp) instead of only naming the zone.
-  if Q.sameContinent and Q.sameContinent(step.map, map) then
-    local _, x, y = Q.position()
-    if x and Q.worldVector(step, map, x, y) then
-      return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind }, label
-    end
+  if direct then
+    return { map = step.map, x = step.x, y = step.y, leg = true, type = step.type, bind = step.bind }, label
   end
   return step, label
 end

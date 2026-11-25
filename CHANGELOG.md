@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.33.1
+- **A smarter quest arrow.** The arrow used to decide by the map the game says you're on, so a subzone, a city or a neighbouring map could throw it ("Travel to Desolace" while you stood in Desolace). It now goes by where you stand in the world, the way other guide addons do:
+    - Standing inside the step's zone, it points straight at the step with its distance, whatever map the game reports.
+    - A zone's flight-hub flight is only offered when it can beat walking. It no longer sends you back across Westfall to fly to Darkshire for Sven's Camp, a short walk over the east bridge.
+    - A road leg moves on once you reach it (the bridge, the gate, the lift), instead of sitting on the road's name until the game changes the map. Roads and flight-hub legs now show their distance.
+    - A flight plan doesn't flip between walking and flying, or between two flight masters, every few steps: a new plan has to be clearly quicker. After a hearth or a flight it plans afresh.
+    - The arrow turns 20 times a second as you move, not 4, so it sweeps smoothly as you strafe past a spot.
+
 ## v0.33.0
 - **Journey: a large map.** Journey > Map has **Small map | Large map**. Large opens the map across both pages of the book, more than twice as wide, with more of your trail, more of the busy places and bigger pins. The key sits under it, and your journal settings and the land's story sit on the pages below.
 - **Journey: pins are round tokens.** A moment's pin is now its icon inside a round ring of its layer's colour. Before, they showed as solid coloured squares.
