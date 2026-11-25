@@ -14233,10 +14233,17 @@ function S.journeyStoryPages()
   toast:Hide()
   J.add("herb", "Picked some Peacebloom")
   check(not toast:IsShown(), "a herb is no card")
-  LevelingCodexDB.noJourneyCards = true
+  if not win() or not win():IsShown() then slash("") end
+  click(win(), "Settings")
+  click(win(), "Show a card when the journal writes a big moment")
+  check(LevelingCodexDB.noJourneyCards, "Settings turns the journal cards off")
   J.add("boss", "Brought down Hogger again")
   check(not toast:IsShown(), "the setting turns the cards off")
-  LevelingCodexDB.noJourneyCards = nil
+  click(win(), "Show \"Last time on your journey...\" when I log in")
+  check(LevelingCodexDB.noJourneyRecap, "Settings turns the login recap off")
+  click(win(), "Show a card when the journal writes a big moment")
+  click(win(), "Show \"Last time on your journey...\" when I log in")
+  check(not LevelingCodexDB.noJourneyCards and not LevelingCodexDB.noJourneyRecap, "and back on")
 end
 
 -- "Last time on your journey...": the first login after a break recaps the last session (its lands,

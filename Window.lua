@@ -1216,6 +1216,15 @@ renderers.settings = function()
       "After a level-up, macros the Codex made switch to the right version for your new level. Your own macros are never touched.")
     y = y + 12
   end }
+  sections[#sections + 1] = { "JOURNEY POP-UPS", "General", function()
+    tick("Show a card when the journal writes a big moment", not db.noJourneyCards,
+      function() db.noJourneyCards = not db.noJourneyCards or nil end,
+      "The \"A new line in your journey\" card at the top of the screen. The moment is still written in the Journey.")
+    tick("Show \"Last time on your journey...\" when I log in", not db.noJourneyRecap,
+      function() db.noJourneyRecap = not db.noJourneyRecap or nil end,
+      "The recap card and chat line after a break.")
+    y = y + 8
+  end }
   sections[#sections + 1] = { "TALENT WINDOW GUIDE", "Helpers", function()
     tick("Trace my talent in the talent window", not db.noTalentGuide, function() db.noTalentGuide = not db.noTalentGuide end,
       "When you have a talent point to spend and open your talent window, the Codex traces the talent to take and shows a card above the window.")
