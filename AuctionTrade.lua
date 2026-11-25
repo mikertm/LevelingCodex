@@ -64,8 +64,10 @@ function T.markNoVendor(id)
   dealCache.key, dealCache.filterKey = nil, nil
 end
 
+-- nil = blocked (a vendor won't take it, or it can't be traded); 0 = no known vendor price, which
+-- still allows a flip
 local function dealVendorPrice(id, p)
-  if not T.dealVendorBlocked(id) then return vendorPrice(id, p) end
+  if not T.dealVendorBlocked(id) then return vendorPrice(id, p) or 0 end
 end
 
 local function readNoVendorItems()
@@ -562,13 +564,18 @@ function T.ledger() return last end
 -- oldest first, at most T.LOG_SIZE. A post is open until a sale, an expiry or a cancel closes it
 -- (done = that kind).
 T.LOG_SIZE = 400
+T.VENDOR_RUN = 300 -- seconds: vendor sales of one item this close together are one sale
 local function stamp() return tonumber(time and time()) or 0 end
 T.logVersion = 0
 function T.logTrade(kind, id, name, qty, each, dep)
   local log = T.notes().log
   log[#log + 1] = { t = stamp(), k = kind, id = tonumber(id), name = type(name) == "string" and name or nil,
     qty = math.max(1, tonumber(qty) or 1), each = tonumber(each), dep = tonumber(dep) }
-  while #log > T.LOG_SIZE do table.remove(log, 1) end
+  while #log > T.LOG_SIZE do
+    -- the oldest entry leaves the log, but its money stays in the record (AuctionMarket.lua's carry)
+    local gone = table.remove(log, 1)
+    if ns.auctionMarket and ns.auctionMarket.fold then ns.auctionMarket.fold(gone) end
+  end
   T.logVersion = T.logVersion + 1
   return log[#log]
 end
@@ -719,9 +726,10 @@ function T.confidence(id, kind, days, listed, pct)
 end
 
 local function dealAt(id, p, low, qty, vendor, kind, maxBuy)
-  if not vendor or vendor <= 0 or not low or low <= 0 or qty <= 0 or (maxBuy > 0 and low > maxBuy) then return end
+  vendor = tonumber(vendor) or 0
+  if not low or low <= 0 or qty <= 0 or (maxBuy > 0 and low > maxBuy) then return end
   local dealKind, worth, profit
-  if vendor and vendor > low then
+  if vendor > low then
     dealKind, worth, profit = "vendor", vendor, vendor - low
   elseif p.usual and p.days >= 2 and low <= p.usual * (100 - T.flipPct()) / 100 then
     dealKind, worth = "flip", p.usual
@@ -1569,6 +1577,14 @@ function T.recordVendorSale(id, name, qty, eachCopper, quiet)
   eachCopper = ns.auction.vendorValue(id, tonumber(eachCopper) or (id and vendorPrice(id, p))) or 0
   if not id or eachCopper <= 0 then return nil end
   name = type(name) == "string" and name ~= "" and name or (p and p.name) or ns.auction.nameOf(id) or ("item " .. id)
+  -- only what the Codex bought counts: your own loot of the same item isn't sniping money
+  local market = ns.auctionMarket
+  local open = market and market.record and market.record().openByID[id]
+  local held = open and tonumber(open.qty) or 0
+  local paidNote = type(T.notes().paid[id]) == "table" and tonumber(T.notes().paid[id].qty) or 0
+  held = math.max(held, paidNote)
+  if held <= 0 then return nil end
+  qty = math.min(qty, held)
   local total = eachCopper * qty
   local notes = T.notes()
   local paid = type(notes.paid[id]) == "table" and notes.paid[id]
@@ -1583,8 +1599,18 @@ function T.recordVendorSale(id, name, qty, eachCopper, quiet)
   elseif ns.auctionMarket and ns.auctionMarket.openCost then
     costBasis = ns.auctionMarket.openCost(id, qty)
   end
-  local e = T.logTrade("vendor", id, name, qty, eachCopper)
-  e.total = total
+  -- one sale run: right-clicking a stack slot by slot is one sale (one win), not one per slot
+  local log = notes.log
+  local e = log[#log]
+  if e and e.k == "vendor" and e.id == id and e.each == eachCopper and stamp() - (tonumber(e.t) or 0) <= T.VENDOR_RUN then
+    e.qty = (tonumber(e.qty) or 0) + qty
+    e.total = (tonumber(e.total) or 0) + total
+    e.t = stamp()
+    T.logVersion = T.logVersion + 1
+  else
+    e = T.logTrade("vendor", id, name, qty, eachCopper)
+    e.total = total
+  end
   last.vendored = (last.vendored or 0) + qty
   last.vendorEarned = (last.vendorEarned or 0) + total
   if costBasis then
@@ -1625,6 +1651,19 @@ end
 
 -- Completes an in-flight single-auction item purchase once verified (by AUCTION_HOUSE_PURCHASE_COMPLETED,
 -- ERR_AUCTION_WON_S, or a money/auction fallback when an event is absent).
+-- Item buys the 2.5 s wait gave up on: auctionID -> { id, deal, qty, total, purse, at, each },
+-- watched for T.LATE_WATCH seconds for AUCTION_HOUSE_PURCHASE_COMPLETED or the purse dropping by
+-- the buyout.
+T.lateBuys = {}
+T.LATE_WATCH = 60
+local function lateBought(auction)
+  local l = T.lateBuys[auction]
+  T.lateBuys[auction] = nil
+  if not l or now() - l.at > T.LATE_WATCH then return end
+  boughtFor(l.id, l.deal, l.qty, l.total, nil, l.each, " (confirmed late)")
+  T.refresh()
+end
+
 local function finishItemBuy(id, ok, why)
   local b = buying[id]
   if not b or b.stage ~= "buyingItem" then return end
@@ -1667,7 +1706,7 @@ function T.buy(id)
   if not b or not C or purchasePending() or ns.auction.scanning() then return false end
   if b.stage ~= "ready" and b.stage ~= "confirm" then return false end
   local liveVendor = dealVendorPrice(id, ns.auction.price(id) or b.deal)
-  if not liveVendor then
+  if not liveVendor or (b.deal.kind == "vendor" and liveVendor <= 0) then
     T.cancelBuy(id)
     ns.say(Q.plain(b.deal.name) .. ": excluded from Deals without an eligible NPC sell price.")
     return false
@@ -1726,6 +1765,12 @@ function T.buy(id)
         .. ". Raise it on the Deals page.")
       return false
     end
+    -- full bags: the purchase would go to the mailbox (or fail) and the checks after it misread it
+    local free = ns.mailbox and ns.mailbox.freeSlots and ns.mailbox.freeSlots()
+    if free and free <= 0 then
+      ns.say("Your bags are full: make room before buying " .. Q.plain(b.deal.name) .. ".")
+      return false
+    end
     if b.commodity then
       if not pcall(C.StartCommoditiesPurchase, id, b.qty) then return false end
       b.stage, b.expect, b.expectUnit = "pricing", b.total, unit
@@ -1767,8 +1812,15 @@ function T.buy(id)
       ns.after(2.5, function()
         local cur = buying[id]
         if cur == b and cur.stage == "buyingItem" and cur.pendingLot and cur.pendingLot.auction == lotAuction then
+          local pl = cur.pendingLot
+          -- the purse fell by the buyout (other money moved too): it went through
+          if money() <= pl.purse - pl.total then finishItemBuy(id, true); return end
           if cur.lots and cur.lots[1] and cur.lots[1].auction == lotAuction then table.remove(cur.lots, 1) end
-          finishItemBuy(id, false, "purchase was not confirmed")
+          -- still watched for a while: a late completion is logged as the buy it was, so the item
+          -- never sells later as if it had cost nothing
+          T.lateBuys[lotAuction] = { id = id, deal = cur.deal, qty = pl.qty, total = pl.total, purse = pl.purse, at = now(),
+            each = netEach(cur) }
+          finishItemBuy(id, false, "not confirmed yet (it's logged if it comes through)")
         end
       end)
     end
@@ -1980,12 +2032,16 @@ function ns.startAuctionTrade()
           return
         end
       end
+      if auctionID and T.lateBuys[auctionID] then lateBought(auctionID) end
     elseif event == "PLAYER_MONEY" then
       for id, x in pairs(buying) do
         if x.stage == "buyingItem" and x.pendingLot and money() == x.pendingLot.purse - x.pendingLot.total then
           finishItemBuy(id, true)
           return
         end
+      end
+      for auction, l in pairs(T.lateBuys) do
+        if money() == l.purse - l.total then lateBought(auction); break end
       end
       T.refresh()
     elseif event == "REPLICATE_ITEM_LIST_UPDATE" then ns.after(2, T.refresh) -- the full scan has filed its prices by then

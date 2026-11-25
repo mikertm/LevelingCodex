@@ -1335,7 +1335,21 @@ function pages.market(W, top, H)
   end
   local y = top + 30
   local bottom = top + H
-  if mode == "trades" then return tradesView(W, y, bottom) end
+  if mode == "trades" then
+    local armed = view.resetArmed and (tonumber(GetTime and GetTime()) or 0) - view.resetArmed < 5
+    button(armed and "Click again to reset" or "Reset record", W - 16 - 170, top, 170, function()
+      local tnow = tonumber(GetTime and GetTime()) or 0
+      if view.resetArmed and tnow - view.resetArmed < 5 then
+        view.resetArmed = nil
+        M().resetRecord()
+        ns.say("Trade record reset: profit counts from now. Items you still hold from snipes keep what they cost.")
+      else
+        view.resetArmed = tnow
+      end
+    end, { label = "Reset record", tip = "Reset record",
+      tipText = "Start the wins, losses and profit over from zero (two clicks). Items you still hold from snipes keep what they cost." })
+    return tradesView(W, y, bottom)
+  end
   -- the market's pulse: how much is tracked, which way it moves, and how fresh it is
   local all = M().rows()
   local ups, downs = M().gainers(), M().losers()

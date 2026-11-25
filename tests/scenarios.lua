@@ -11713,6 +11713,23 @@ function S.auctionTrade()
   check(afterSale.wins == beforeSale.wins + 1 and afterSale.profit == beforeSale.profit + 60
       and not T.notes().paid[818], "vendoring the two bargains closes their holding for a 60c win")
   MOCK.closeMerchant()
+  -- your own loot of a sniped item isn't sniping money: of 12 Tigerseye sold, only the one still
+  -- held from a snipe counts
+  local held = T.logTrade("buy", 818, "Tigerseye", 1, 20)
+  held.total, held.dealKind, held.vendor = 20, "vendor", 50
+  afterSale = market.record()
+  MOCK.bagItems = {
+    { name = "Tigerseye", id = 818, quality = 1, level = 1, sell = 50, count = 12, class = "Trade Goods" },
+  }
+  MOCK.openMerchant({ items = {} })
+  MOCK.advance(0.5)
+  MOCK.bagItems = {}
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.advance(1)
+  local loot = market.record()
+  check(loot.wins == afterSale.wins + 1 and loot.net == afterSale.net + 30 and loot.income == afterSale.income,
+    "vendoring 11 looted Tigerseye with the sniped one counts only the snipe (income " .. loot.income .. "/" .. afterSale.income .. " wins " .. loot.wins .. "/" .. afterSale.wins .. " net " .. loot.net .. " was " .. afterSale.net .. ")")
+  MOCK.closeMerchant()
 end
 
 -- The Market tab: movers from days and from readings, the chart, hot items, the ticker; the
@@ -12148,6 +12165,34 @@ function S.auctionMarket()
     MOCK.event("MAIL_INBOX_UPDATE")
     MOCK.advance(1)
     check(M.record().income - before == 2850, "taking the mail changes nothing")
+    -- a half-loaded inbox when the mailbox opens never makes a sale still in the box count again
+    local sale = { sender = "Stormwind Auction House", subject = "Auction successful: Copper Ore", money = 475,
+      invoice = { type = "seller", item = "Copper Ore", buyer = "Di", bid = 500, buyout = 500, deposit = 10, cut = 25, count = 5 } }
+    MOCK.inbox = { sale }
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    local once = M.record().income
+    MOCK.event("MAIL_CLOSED")
+    MOCK.inbox = {}
+    MOCK.event("MAIL_SHOW")
+    MOCK.advance(1)
+    MOCK.inbox = { sale }
+    MOCK.event("MAIL_INBOX_UPDATE")
+    MOCK.advance(1)
+    check(M.record().income == once, "a sale left in the mailbox counts once across visits (" .. (M.record().income - once) .. ")")
+    MOCK.event("MAIL_CLOSED")
+    -- the log keeps its newest entries, but trimming them never changes the record
+    local r0 = M.record()
+    local net0, wins0, income0 = r0.net, r0.wins, r0.income
+    for i = 1, T.LOG_SIZE + 20 do T.logTrade("post", 2589, "Linen Cloth", 1, 100, 1) end
+    local r1 = M.record()
+    check(#T.notes().log == T.LOG_SIZE and r1.net == net0 and r1.wins == wins0 and r1.income == income0 and r1.carried > 0,
+      "trimmed log entries keep their money (net " .. r1.net .. " was " .. net0 .. ", wins " .. r1.wins .. ")")
+    click(AuctionHouseFrame, "Market")
+    click(panel, "Your trades")
+    click(panel, "Reset record")
+    click(panel, "Reset record")
+    check(M.record().net == 0 and M.record().wins == 0 and #T.notes().log == 0, "Reset record starts the record over")
   end
   -- Live DB + Ticker sync: sniper/search readings immediately update A.price(id).trend and A.history(id)
   -- even when today's full-scan median existed, filter grey trash, and rank fresh items ahead of stale +9900% spikes.

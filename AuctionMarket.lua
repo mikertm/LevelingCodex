@@ -326,80 +326,130 @@ end
 --   income, earned, spent, winAmount, lossAmount, lost, wins, losses, best, worst,
 --   holdings = { { id, name, qty, each, worth, pnl, via } }, openByID, bought, sales, vendorSales }
 local recordCache = {}
-function M.record()
-  local logVer, priceVer, tnow = T().logVersion or 0, A().version or 0, clock()
-  if recordCache.value and recordCache.logVer == logVer
-    and (recordCache.priceVer == priceVer or #recordCache.value.holdings == 0 or tnow - (recordCache.at or 0) < 3) then
-    return recordCache.value
-  end
-  local out = {
-    flips = {}, profit = 0, vendorProfit = 0, income = 0, earned = 0, spent = 0,
-    winAmount = 0, lossAmount = 0, lost = 0, wins = 0, losses = 0,
-    bought = 0, sales = 0, vendorSales = 0, holdings = {}, openByID = {},
-  }
-  local basis = {}
+local TOTALS = { "profit", "vendorProfit", "income", "earned", "spent", "winAmount", "lossAmount", "lost",
+  "wins", "losses", "bought", "sales", "vendorSales", "pending", "otherVendor" }
+
+-- One log entry into a running record { totals..., basis = { [id] = { qty, cost, name, kind, vendor } },
+-- flips (optional), best, worst }. M.record() runs every entry through it; entries the log trims
+-- go through it into notes.carry (M.fold), so trimming never changes the totals and a sale whose
+-- purchase was trimmed still knows what it cost.
+local function apply(st, e)
+  local basis = st.basis
   local cut = T().CUT or 0.05
-  local function closeBasis(e, id, qty, got, via)
+  local function add(k, v) st[k] = (st[k] or 0) + v end
+  local function closeBasis(id, qty, got, via)
     local b = id and basis[id]
     if b and b.qty > 0 then
       local q = math.min(qty, b.qty)
       local cost = math.floor(b.cost * q / b.qty + 0.5)
       local share = math.floor(got * q / qty)
       b.cost, b.qty = math.max(0, b.cost - cost), b.qty - q
+      if b.qty <= 0 then basis[id] = nil end
       local f = { t = e.t, id = id, name = e.name or b.name, qty = q, cost = cost, got = share, profit = share - cost, via = via }
-      table.insert(out.flips, 1, f)
-      out.profit = out.profit + f.profit
-      if via == "vendor" then out.vendorProfit = out.vendorProfit + f.profit end
+      if st.flips then table.insert(st.flips, 1, f) end
+      add("profit", f.profit)
+      if via == "vendor" then add("vendorProfit", f.profit) end
       if f.profit >= 0 then
-        out.wins = out.wins + 1
-        out.winAmount = out.winAmount + f.profit
+        add("wins", 1); add("winAmount", f.profit)
       else
-        out.losses = out.losses + 1
-        out.lossAmount = out.lossAmount + (-f.profit)
+        add("losses", 1); add("lossAmount", -f.profit)
       end
-      if not out.best or f.profit > out.best.profit then out.best = f end
-      if not out.worst or f.profit < out.worst.profit then out.worst = f end
-      out.income = out.income + (got - share)
-    else
-      out.income = out.income + got
+      if not st.best or f.profit > st.best.profit then st.best = { name = f.name, profit = f.profit, id = id } end
+      if not st.worst or f.profit < st.worst.profit then st.worst = { name = f.name, profit = f.profit, id = id } end
+      got = got - share
+    end
+    if got > 0 then
+      -- the rest: an auction sale of your own items is income; a vendor sale of loot that shares
+      -- an ID with a snipe isn't the auction house's money, so it stays out of the record
+      if via == "vendor" then add("otherVendor", got) else add("income", got) end
     end
   end
-  for _, e in ipairs(T().notes().log) do
-    local id, qty, each = e.id, math.max(1, tonumber(e.qty) or 1), tonumber(e.each)
-    if e.k == "buy" and id and (each or e.total) then
-      local totalCost = tonumber(e.total) or ((each or 0) * qty)
-      local b = basis[id] or { qty = 0, cost = 0, name = e.name }
-      b.qty, b.cost, b.name = b.qty + qty, b.cost + totalCost, e.name or b.name
-      if e.dealKind == "vendor" or not b.kind then b.kind = e.dealKind or b.kind end
-      if e.vendor and e.vendor > 0 then b.vendor = e.vendor end
-      basis[id] = b
-      out.bought, out.spent = out.bought + qty, out.spent + totalCost
-    elseif e.k == "vendor" and (each or e.total) then
-      local got = tonumber(e.total) or ((each or 0) * qty)
-      out.sales = out.sales + 1
-      out.vendorSales = out.vendorSales + 1
-      out.earned = out.earned + got
-      closeBasis(e, id, qty, got, "vendor")
-    elseif e.k == "sold" and not each then
-      -- a sale the chat reported for something not posted through the Codex: its price comes
-      -- with the mailbox's invoice (until then it counts as a sale but no money)
-      out.sales = out.sales + 1
-      out.pending = (out.pending or 0) + 1
-    elseif e.k == "sold" then
-      out.sales = out.sales + 1
-      local got = each and math.floor(each * qty * (1 - cut)) or 0
-      out.earned = out.earned + got
-      closeBasis(e, id, qty, got, "ah")
-    elseif e.k == "clear" and id and basis[id] and basis[id].qty > 0 then
-      local b = basis[id]
-      local q = math.min(qty, b.qty)
-      local cost = math.floor(b.cost * q / b.qty + 0.5)
-      b.cost, b.qty = math.max(0, b.cost - cost), b.qty - q
-    elseif (e.k == "expired" or e.k == "cancel") and e.dep then
-      out.lost = out.lost + e.dep
-      out.lossAmount = out.lossAmount + e.dep
+  local id, qty, each = e.id, math.max(1, tonumber(e.qty) or 1), tonumber(e.each)
+  if e.k == "buy" and id and (each or e.total) then
+    local totalCost = tonumber(e.total) or ((each or 0) * qty)
+    local b = basis[id] or { qty = 0, cost = 0, name = e.name }
+    b.qty, b.cost, b.name = b.qty + qty, b.cost + totalCost, e.name or b.name
+    if e.dealKind == "vendor" or not b.kind then b.kind = e.dealKind or b.kind end
+    if e.vendor and e.vendor > 0 then b.vendor = e.vendor end
+    basis[id] = b
+    add("bought", qty); add("spent", totalCost)
+  elseif e.k == "vendor" and (each or e.total) then
+    local got = tonumber(e.total) or ((each or 0) * qty)
+    add("sales", 1); add("vendorSales", 1); add("earned", got)
+    closeBasis(id, qty, got, "vendor")
+  elseif e.k == "sold" and not each then
+    -- a sale the chat reported for something not posted through the Codex: its price comes
+    -- with the mailbox's invoice (until then it counts as a sale but no money)
+    add("sales", 1)
+    if not st.folding then add("pending", 1) end
+  elseif e.k == "sold" then
+    add("sales", 1)
+    local got = math.floor(each * qty * (1 - cut))
+    add("earned", got)
+    closeBasis(id, qty, got, "ah")
+  elseif e.k == "clear" and id and basis[id] and basis[id].qty > 0 then
+    local b = basis[id]
+    local q = math.min(qty, b.qty)
+    local cost = math.floor(b.cost * q / b.qty + 0.5)
+    b.cost, b.qty = math.max(0, b.cost - cost), b.qty - q
+    if b.qty <= 0 then basis[id] = nil end
+  elseif (e.k == "expired" or e.k == "cancel") and e.dep then
+    add("lost", e.dep); add("lossAmount", e.dep)
+  end
+end
+
+-- The carried record: what the log has trimmed (notes.carry, kept with the trade notes).
+function M.carry()
+  local notes = T().notes()
+  local c = notes.carry
+  if type(c) ~= "table" then c = { basis = {} }; notes.carry = c end
+  if type(c.basis) ~= "table" then c.basis = {} end
+  return c
+end
+-- An entry leaving the log (AuctionTrade.lua's T.logTrade) goes into the carried record.
+function M.fold(e)
+  if type(e) ~= "table" then return end
+  local c = M.carry()
+  c.folding = true
+  apply(c, e)
+  c.folding = nil
+  c.n = (c.n or 0) + 1
+end
+
+-- Starts the record over: the log and the carried totals go; what you still hold from Codex
+-- purchases (notes.paid) stays as cost, so selling it later still counts against what it cost.
+function M.resetRecord()
+  local notes = T().notes()
+  local basis = {}
+  for id, pd in pairs(notes.paid or {}) do
+    id = tonumber(id)
+    local qty = type(pd) == "table" and tonumber(pd.qty) or 0
+    if id and qty > 0 then
+      basis[id] = { qty = qty, cost = tonumber(pd.cost) or qty * (tonumber(pd.each) or 0), name = pd.name, kind = pd.kind, vendor = pd.vendor }
     end
   end
+  notes.log, notes.carry = {}, { basis = basis }
+  T().logVersion = (T().logVersion or 0) + 1
+  recordCache.value = nil
+end
+
+function M.record()
+  local logVer, priceVer, tnow = T().logVersion or 0, A().version or 0, clock()
+  if recordCache.value and recordCache.logVer == logVer
+    and (recordCache.priceVer == priceVer or #recordCache.value.holdings == 0 or tnow - (recordCache.at or 0) < 3) then
+    return recordCache.value
+  end
+  local carry = M.carry()
+  local out = { flips = {}, holdings = {}, openByID = {}, basis = {}, carried = carry.n or 0 }
+  for _, k in ipairs(TOTALS) do out[k] = tonumber(carry[k]) or 0 end
+  out.best, out.worst = carry.best, carry.worst
+  for id, b in pairs(carry.basis) do
+    out.basis[id] = { qty = b.qty, cost = b.cost, name = b.name, kind = b.kind, vendor = b.vendor }
+  end
+  for _, e in ipairs(T().notes().log) do apply(out, e) end
+  if out.pending == 0 then out.pending = nil end
+  local basis = out.basis
+  local cut = T().CUT or 0.05
   for id, b in pairs(basis) do
     if b.qty > 0 then
       local p = A().price(id)
@@ -498,6 +548,7 @@ end
 -- A mail can't be told apart from an identical one, so the record keeps how many of each
 -- (item, price, deposit, cut, count) it has seen in the inbox: more in the box = new sales; fewer
 -- (taken out) lowers the count, so the next identical sale counts again.
+local prevInbox -- the last inbox read this visit (nil = none yet)
 function M.readInbox()
   local count = ns.mailbox and ns.mailbox.countFn() -- Forever: GetInboxNumItems
   if not count or type(GetInboxInvoiceInfo) ~= "function" then return 0 end
@@ -518,10 +569,16 @@ function M.readInbox()
       end
     end
   end
-  for key, had in pairs(seen) do
-    local now = inbox[key] or 0
-    if now < had then seen[key] = now > 0 and now or nil end
+  -- a taken mail lowers the count, but only once two reads in a row agree: the first read after
+  -- the mailbox opens can see a half-loaded inbox, and lowering on it counted every sale still in
+  -- the box again on the next read
+  if prevInbox then
+    for key, had in pairs(seen) do
+      local now = math.max(inbox[key] or 0, prevInbox[key] or 0)
+      if now < had then seen[key] = now > 0 and now or nil end
+    end
   end
+  prevInbox = inbox
   for key, c in pairs(inbox) do if c > (seen[key] or 0) then seen[key] = c end end
   for _, v in ipairs(sales) do M.mailSale(v) end
   if #sales > 0 and ns.auctionPanel then ns.auctionPanel.refresh() end
@@ -556,10 +613,14 @@ local events
 function ns.startAuctionMarket()
   if events then return end
   events = CreateFrame("Frame")
-  for _, ev in ipairs({ "CHAT_MSG_SYSTEM", "MAIL_SHOW", "MAIL_INBOX_UPDATE" }) do pcall(events.RegisterEvent, events, ev) end
+  for _, ev in ipairs({ "CHAT_MSG_SYSTEM", "MAIL_SHOW", "MAIL_INBOX_UPDATE", "MAIL_CLOSED" }) do pcall(events.RegisterEvent, events, ev) end
   events:SetScript("OnEvent", function(_, ev, text)
     if ev == "CHAT_MSG_SYSTEM" then M.onSystem(text)
-    else ns.after(0.2, M.readInbox) end
+    elseif ev == "MAIL_CLOSED" then prevInbox = nil
+    else
+      if ev == "MAIL_SHOW" then prevInbox = nil end
+      ns.after(0.2, M.readInbox)
+    end
   end)
 end
 

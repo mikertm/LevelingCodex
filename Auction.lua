@@ -927,7 +927,7 @@ function A.snipeList()
       else worth = math.max(vendor or 0, usual and math.floor(usual * 0.95) or 0) end
       if watched[id] and (vendor or (kind ~= "vendor" and usual)) then
         rows[#rows + 1] = { it.name, 2e12 + (active[id] or worth or usual or vendor or 1) }
-      elseif vendor and worth and worth > minProfit then
+      elseif (vendor or (kind ~= "vendor" and usual)) and worth and worth > minProfit then
         local low = tonumber(it.low)
         local vol = math.min(100, tonumber(it.n) or 0)
         local score

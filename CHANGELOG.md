@@ -1,5 +1,15 @@
 # Leveling Codex
 
+## v0.31.7
+- **The profit record now matches the gold you made:**
+    - Old trades that drop off the trade log keep their money in the record. Before, a sale whose purchase had dropped off counted as pure profit, so NET PROFIT kept rising by itself.
+    - Selling your own loot of an item you once sniped no longer counts as sniping profit. Only the quantity the Codex bought counts.
+    - Selling a sniped stack slot by slot is one sale and one win, not one per click.
+    - A sale mail left in the mailbox is never counted again when the inbox loads slowly.
+    - **Reset record** on Market > Your trades starts wins, losses and profit over (two clicks). Items you still hold from snipes keep what they cost.
+- **Buying:** an item buy the auction house confirms late is still logged with its cost, so it never sells later as free profit. The Codex won't buy with full bags.
+- **Flips without a vendor price:** the Deals list and the sniper now find flips on items a vendor won't buy (recipes, many trade goods), as long as they have two days of prices.
+
 ## v0.31.6
 - **Fixed a game crash while the deal sniper ran for a long time:** the ticker across the auction tabs no longer sorts every priced item each time it redraws. It picks the top few directly, and redraws at most every 6 seconds while sniping. The market list asks the game about each unknown item only once a session.
 
