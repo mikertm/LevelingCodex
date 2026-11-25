@@ -7,6 +7,7 @@
 - **Journey: quest lines that match the quest.** Every collect quest read as "Ran an errand" because Forever writes objectives as "0/7 Alterac Signet Ring". The journal now reads both forms and tells a bounty, a hunt for one foe, a cull, loot taken from foes ("Took seven Alterac Signet Rings off the Syndicate"), trophies brought back as proof, gathering, food for the kitchen, a lost thing found, shopping, an escort, scouting, a deed, a delivery and an errand apart. Each has its own set of lines, foe families add their own, and a line that opens like one of your last few quest moments gives way to another.
 - **Journey: the Overview's numbers, audited.**
     - **Miles walked** was always 0.0: the trail measured distance from map sizes it read the wrong way. It counts now, and your miles so far are worked out from the trail you already have.
+    - **Flight paths no longer count as miles walked.** A flight (or a boat, or anything faster than a mount) leaves no trail, and the miles you have so far are worked out again without the flights. The miles you fly are kept apart: hover miles walked to see them.
     - **Lands explored** and WHERE YOU ARE now count the same lands (one said 6, the other 7).
     - **Quests done**, **dungeons** and **deaths** take the larger of the journal's count and the Stats tab's, so neither undercounts when one started later.
     - **Today's entry** adds the experience earned, how much heavier or lighter your purse is, and flights taken. On a short day so far it also says what happened last time.

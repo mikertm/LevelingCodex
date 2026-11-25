@@ -19,6 +19,9 @@ J.MAX_POINTS = 20000 -- trail points kept (older trails are thinned, never cut)
 J.MAX_EVENTS = 2000
 local STEP_YD, STEP_PCT = 35, 0.8 -- a new trail point after this far (yards, else map percent)
 local JUMP_PCT = 12 -- a bigger jump between samples (a hearth, a portal) starts a new run
+J.FAST_YDS = 20 -- yards a second no mount reaches (epic: 14): a sample this fast is a flight
+J.FLY_STEP_YD = 58 -- the recount's longest step (a mount's 4 s sample is 56 yd, a flight's 2 s 60+)
+J.TAXI_GRACE = 6 -- seconds after a flight (or before UnitOnTaxi says so) without trail
 local SAMPLE = 2 -- seconds between trail samples
 local PAL_TICK = 5
 
@@ -470,9 +473,25 @@ local function thin(j)
   end
 end
 
-local last -- the last trail sample: { map, x, y, level, run }
+local last -- the last trail sample: { map, x, y, level, run, t }
+local air -- the last sample in flight: { map, x, y }
+-- Flown yards: the flight path's samples, apart from the walk.
+local function flownSample()
+  last = nil
+  J.taxiAt = GetTime()
+  local map, x, y = Q.position()
+  if not (map and x and y) then air = nil; return end
+  if air and air.map == map then
+    local yd = J.yards(ns.questWorld and ns.questWorld[map], x - air.x, y - air.y)
+    if yd and yd < 2000 then local j = J.data(); j.flown = (tonumber(j.flown) or 0) + yd end
+  end
+  air = { map = map, x = x, y = y }
+end
 local function sample()
-  if Q.inFlight() then last = nil; return end
+  if Q.inFlight() then flownSample(); return end
+  air = nil
+  -- just landed: no trail for a moment (the speed check below catches a flight UnitOnTaxi missed)
+  if J.taxiAt and GetTime() - J.taxiAt < J.TAXI_GRACE then last = nil; return end
   local dead = try(UnitIsDeadOrGhost, "player")
   if dead == true or dead == 1 or inInstance() then last = nil; return end
   local map, x, y = Q.position()
@@ -487,6 +506,13 @@ local function sample()
     if pct < JUMP_PCT then
       local yd = yards(dx, dy)
       if (yd and yd < STEP_YD) or (not yd and pct < STEP_PCT) then return end
+      local dt = GetTime() - (last.t or 0)
+      if yd and dt > 0 and yd / dt > J.FAST_YDS then
+        -- faster than any mount: a flight, boat or zeppelin the client didn't call a taxi
+        last = nil
+        return sample()
+      end
+      last.t = GetTime()
       last.run.p = last.run.p .. pack(x, y)
       last.x, last.y = x, y
       j.points = (tonumber(j.points) or 0) + 1
@@ -500,7 +526,8 @@ local function sample()
   local run = { l = lvl, p = pack(x, y) }
   table.insert(j.trail[map], run)
   j.points = (tonumber(j.points) or 0) + 1
-  last = { map = map, x = x, y = y, level = lvl, run = run }
+  last = { map = map, x = x, y = y, level = lvl, run = run, t = GetTime() }
+  if j.points > J.MAX_POINTS then thin(j) end
   J.trailVersion = (J.trailVersion or 0) + 1
 end
 
@@ -515,7 +542,8 @@ function J.yards(world, dx, dy)
   return math.sqrt(ax * ax + ay * ay)
 end
 
--- The yards along every trail run (no jump counted), for a journal written before the fix.
+-- The yards along every trail run (no jump counted, and no step longer than J.FLY_STEP_YD: a
+-- flight's 2 s samples, which journals before v0.33.1 could keep), for a journal written before the fix.
 function J.recountWalked(j)
   local total = 0
   for map, runs in pairs(j.trail or {}) do
@@ -524,7 +552,10 @@ function J.recountWalked(j)
       local pts = J.unpack(r.p or "")
       for i = 2, #pts do
         local dx, dy = pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]
-        if math.sqrt(dx * dx + dy * dy) < JUMP_PCT then total = total + (J.yards(world, dx, dy) or 0) end
+        if math.sqrt(dx * dx + dy * dy) < JUMP_PCT then
+          local yd = J.yards(world, dx, dy) or 0
+          if yd <= J.FLY_STEP_YD then total = total + yd end
+        end
       end
     end
   end
@@ -663,10 +694,16 @@ function ns.startJourney()
       if broad then j.zones[j.order[i]] = nil; table.remove(j.order, i) end
     end
   end)
-  if j.walkFix ~= 1 then
+  if (tonumber(j.walkFix) or 0) < 2 then
+    -- v0.33.0 rebuilt the miles from the trail, flights included: count again without them (a
+    -- thinned trail (over 12000 points) has longer steps, so it keeps the lower of the two)
     local ok, yd = pcall(J.recountWalked, j)
-    if ok and yd and yd > (tonumber(j.walked) or 0) then j.walked = yd end
-    j.walkFix = 1
+    if ok and yd then
+      local was = tonumber(j.walked) or 0
+      if j.walkFix ~= 1 and yd > was then j.walked = yd
+      elseif (tonumber(j.points) or 0) < 12000 and yd < was then j.walked = yd end
+    end
+    j.walkFix = 2
   end
   events = CreateFrame("Frame")
   for event in pairs(HANDLERS) do pcall(events.RegisterEvent, events, event) end

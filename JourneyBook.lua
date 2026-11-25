@@ -892,7 +892,8 @@ local function seals(V, y)
     { "Ability_Warrior_Rampage", ns.thousands(tonumber(totals.kills) or 0), "foes defeated", "Creatures that gave you experience." },
     { "INV_Misc_Map_01", tostring(J.landCount(j)), "lands explored", "Zones you have set foot in (cities count; continents don't)." },
     { "Ability_Tracking", string.format(miles < 10 and "%.1f" or "%.0f", miles), "miles walked",
-      "Measured along your trail, on foot and mounted (flights, hearths and portals don't count)." },
+      "Measured along your trail, on foot and mounted (flights, hearths and portals don't count)."
+        .. ((tonumber(j.flown) or 0) >= 176 and string.format(" You have also flown %.0f miles.", j.flown / 1760) or "") },
     { "INV_Misc_Key_03", ns.thousands(dungeons), "dungeons", "Dungeon runs: each time you went into one." },
     { "INV_Misc_Bone_HumanSkull_01", ns.thousands(deaths), "deaths", "Every fall, and every time you got back up." },
   }

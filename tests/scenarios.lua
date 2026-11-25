@@ -13434,8 +13434,22 @@ function S.journeyRecord()
   if not MOCK.minimal then
     check(j.zones[1429], "Elwynn Forest is a land you have explored")
     local before = j.points
-    for i = 1, 6 do MOCK.questX = 48 + i * 2; MOCK.advance(2.1) end
+    for i = 1, 6 do MOCK.questX = 48 + i * 1.1; MOCK.advance(2.1) end
     check(j.points > before and j.trail[1429] and #j.trail[1429] >= 1, "walking leaves a trail (" .. j.points .. ")")
+    local walked = tonumber(j.walked) or 0
+    check(walked > 150, "walking adds to the miles (" .. walked .. " yd)")
+    -- a flight path: nothing walked, the flown yards kept apart
+    MOCK.onTaxi = true
+    for i = 1, 5 do MOCK.questX = 55 + i * 3; MOCK.advance(2.1) end
+    MOCK.onTaxi = false
+    check(math.abs((tonumber(j.walked) or 0) - walked) < 1, "a flight path doesn't count as walked ("
+      .. tostring(j.walked) .. " yd)")
+    check((tonumber(j.flown) or 0) > 300, "the flight's yards are kept as flown (" .. tostring(j.flown) .. ")")
+    -- moving faster than any mount without the client calling it a taxi (a boat, a lagging UnitOnTaxi)
+    MOCK.advance(8)
+    for i = 1, 5 do MOCK.questX = 40 - i * 3; MOCK.advance(2.1) end
+    check(math.abs((tonumber(j.walked) or 0) - walked) < 1, "travel faster than a mount isn't walked ("
+      .. tostring(j.walked) .. " yd)")
     MOCK.questX = 48
   end
   MOCK.level = MOCK.level + 1
@@ -13475,7 +13489,7 @@ function S.journeyTab()
   MOCK.mapInfo = STATS_MAPS
   S.login()
   MOCK.advance(3)
-  for i = 1, 4 do MOCK.questX = 40 + i * 3; MOCK.advance(2.1) end
+  for i = 1, 4 do MOCK.questX = 40 + i * 3; MOCK.advance(6.3) end
   MOCK.event("PLAYER_DEAD")
   MOCK.level = MOCK.level + 1
   MOCK.event("PLAYER_LEVEL_UP", MOCK.level)
@@ -14212,7 +14226,8 @@ function S.journeyRecap()
     { t = from + 1500, k = "boss", l = 36, s = "Brought down Marez Cowl", m = 1417, x = 20, y = 20 },
     { t = from + 1800, k = "death", l = 36, s = "Fell to a Boulderfist ogre", m = 1417, x = 22, y = 20 } }
   LevelingCodexCharDB = { journey = { version = 1, started = from - 86400, zones = {}, order = {}, points = 2, walked = 0,
-    trail = { [1429] = { { l = 35, p = "400400500400" } } }, events = events, pals = {}, deaths = 1, sessionAt = from, seen = to } }
+    trail = { [1429] = { { l = 35, p = "400400410400420400430400440400450400460400470400480400490400500400" },
+      { l = 35, p = "400500420500440500460500" } } }, walkFix = 1, walked = 900, events = events, pals = {}, deaths = 1, sessionAt = from, seen = to } }
   local j = LevelingCodexCharDB.journey
   MOCK.mapInfo = MOCK.mapInfo or {}
   MOCK.mapInfo[1416] = { name = "Alterac Mountains", mapType = 3 }
@@ -14228,8 +14243,8 @@ function S.journeyRecap()
     "the chat line tells the last session")
   check(chatHas("Alterac Mountains"), "and names the lands")
   check(j.sessionAt and j.sessionAt >= now, "a new session begins")
-  check(j.walkFix == 1 and math.abs((j.walked or 0) - 347) < 2, "an older journal's miles are counted from its trail ("
-    .. tostring(j.walked) .. " yd)")
+  check(j.walkFix == 2 and math.abs((j.walked or 0) - 347) < 2, "an older journal's miles are counted again from its"
+    .. " trail, without the flight's long steps (" .. tostring(j.walked) .. " yd)")
   slash("")
   click(win(), "Journey")
   check(questText(win(), "Last time:"), "a short day's entry tells what happened last time")
