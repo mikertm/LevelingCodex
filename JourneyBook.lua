@@ -261,16 +261,16 @@ local function pinArt(U, C, file, x, y, size)
   return t
 end
 
--- An icon cut round (the circle as its mask where the client has masks; else trimmed square).
+-- A pin's icon inside its round ring: the square icon trimmed and kept to the circle's inner square.
+-- Never SetMask a pooled texture: the client then refuses SetTexCoord ("Cannot set tex coords when
+-- texture has mask"), which ns.setIcon and every later user of the pool call.
 local function roundIcon(U, name, x, y, size)
-  local t = U.rect(x, y, size, size, { 1, 1, 1, 1 }, nil, 3, "journeyPinIcon", true)
+  local s = math.floor(size * 0.74 + 0.5)
+  local o = (size - s) / 2
+  local t = U.rect(x + o, y + o, s, s, { 1, 1, 1, 1 }, nil, 3, "journeyPinIcon", true)
   ns.setIcon(t, name)
   t:SetVertexColor(1, 1, 1, 1)
-  local file = ns.art.hasFile(ns.art.FILES.circle) and ns.art.FILES.circle
-  if file and t.SetMask and not t.codexMasked then
-    if pcall(t.SetMask, t, file) then t.codexMasked = true end
-  end
-  if t.codexMasked then t:SetTexCoord(0.04, 0.96, 0.04, 0.96) else t:SetTexCoord(0.1, 0.9, 0.1, 0.9) end
+  t:SetTexCoord(0.1, 0.9, 0.1, 0.9)
   return t
 end
 

@@ -427,7 +427,12 @@ function Texture:SetAtlas(name)
   return true
 end
 function Texture:GetAtlas() return self._atlas end
-function Texture:SetTexCoord(...) self._coords = { ... } end
+function Texture:SetTexCoord(...)
+  -- like the client: a masked texture refuses texture coordinates
+  if self._masked then error("Texture:SetTexCoord(): Cannot set tex coords when texture has mask.", 2) end
+  self._coords = { ... }
+end
+function Texture:SetMask(file) self._masked = file and true or nil end
 function Texture:GetTexCoord()
   local c = self._coords or { 0, 1, 0, 1 }
   if #c == 4 then return c[1], c[3], c[1], c[4], c[2], c[3], c[2], c[4] end

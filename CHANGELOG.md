@@ -2,7 +2,7 @@
 
 ## v0.33.0
 - **Journey: a large map.** Journey > Map has **Small map | Large map**. Large opens the map across both pages of the book, more than twice as wide, with more of your trail, more of the busy places and bigger pins. The key sits under it, and your journal settings and the land's story sit on the pages below.
-- **Journey: pins are round tokens.** A moment's pin is now its icon cut round inside a ring of its layer's colour. Before, they showed as solid coloured squares.
+- **Journey: pins are round tokens.** A moment's pin is now its icon inside a round ring of its layer's colour. Before, they showed as solid coloured squares.
 - **Journey: "Last time on your journey..."** The first time you log in after a break, a card and a chat line tell what happened last session: the lands you walked, the levels you gained, quests finished, falls, and up to four of its biggest moments. Click the card to open that chapter. A /reload doesn't count as a break. Turn it off with Journey > Map > Recap my last session when I log in.
 - **Journey: quest lines that match the quest.** Every collect quest read as "Ran an errand" because Forever writes objectives as "0/7 Alterac Signet Ring". The journal now reads both forms and tells a bounty, a hunt for one foe, a cull, loot taken from foes ("Took seven Alterac Signet Rings off the Syndicate"), trophies brought back as proof, gathering, food for the kitchen, a lost thing found, shopping, an escort, scouting, a deed, a delivery and an errand apart. Each has its own set of lines, foe families add their own, and a line that opens like one of your last few quest moments gives way to another.
 - **Journey: the Overview's numbers, audited.**
