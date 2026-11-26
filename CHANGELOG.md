@@ -7,6 +7,13 @@
     - Their page counts what has passed between your journals: toasts, thanks and memories, both ways.
 - **Journey: toast the whole fellowship.** On the Fellowships page, **Toast the band** raises a toast to every member in your party, written in each of your journals under the name each of you gave the band.
 - **Journey: fellowship names travel.** Renaming a fellowship offers the name to the members in your party. They get a card, and **Use that name** takes it.
+- **Journey: the Fellowships page, built out.**
+    - **Disband** a fellowship (click twice). It leaves your journal (its name, banner, milestones and record) and won't form again with the same company. The moments you shared stay in the story. **Let them form again** under the list undoes that, starting from nothing.
+    - **Milestones:** a fellowship marks 1, 5, 10, 25, 50, 100 and 250 hours together, and 3, 7, 14, 30 and 60 days, each once, as a moment and a card.
+    - **Firsts together:** the first boss, dungeon, full run, level, rare, elite, wipe, fall, toast and campfire you shared, with the day and level.
+    - **Write a motto** of your own for under the banner (or let the book keep choosing one).
+    - **Pin to top** keeps a fellowship first in the list.
+    - The page says when you were last together, or that you're together right now.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:

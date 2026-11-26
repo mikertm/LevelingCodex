@@ -14755,6 +14755,49 @@ function S.journeySocial()
   local fn
   for _, m in ipairs(MOCK.addonSent) do if m.text:find("^FN;") then fn = m end end
   check(fn and fn.text == "FN;Ann,Bo;The Late Shift", "renaming shares the name with the band")
+  -- milestones: hours together, once each
+  MOCK.advance(6)
+  local fg = j.fellowships[key]
+  check(type(fg.marks) == "table", "a fellowship's milestones start from where it stands")
+  fg.secs = 5 * 3600 + 10
+  MOCK.advance(6)
+  local mile
+  for _, e in ipairs(j.events) do if e.k == "fellowship" and e.d == "Fellowship milestone" then mile = e end end
+  check(mile and mile.s:find("5 hours") and mile.with == key, "five hours together is a milestone (" .. tostring(mile and mile.s) .. ")")
+  MOCK.advance(6)
+  local miles = 0
+  for _, e in ipairs(j.events) do if e.k == "fellowship" and e.d == "Fellowship milestone" and e.s:find("5 hours") then miles = miles + 1 end end
+  local ms = {}
+  for _, e in ipairs(j.events) do if e.d == "Fellowship milestone" then ms[#ms + 1] = e.s end end
+  check(miles == 1, "a milestone is written once: " .. table.concat(ms, " / "))
+  -- the page: last together, firsts, motto, pin
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Fellowships")
+  check(questText(win(), "Together right now") and questText(win(), "FIRSTS TOGETHER") and questText(win(), "FIRST BOSS"),
+    "the page says when you were last together and the firsts you shared")
+  click(win(), "Motto fellowship")
+  copy.edit:SetText("Lanterns up, heads down")
+  click(copy, "Save motto")
+  check(fg.motto == "Lanterns up, heads down" and questText(win(), "Lanterns up, heads down"), "a motto of your own goes under the banner")
+  click(win(), "Pin fellowship")
+  check(fg.pinned and J.social.fellowships()[1].key == key, "a pinned fellowship comes first")
+  -- disband: two clicks, out of the book, and it won't form again
+  click(win(), "Disband fellowship")
+  check(j.fellowships[key], "one click only arms Disband")
+  click(win(), "Disband fellowship")
+  check(j.fellowships[key] == nil and j.disbanded[key], "two clicks disband it")
+  local left
+  for _, e in ipairs(j.events) do if e.k == "fellowship" and e.with == key then left = e end end
+  check(not left, "its milestones and founding leave the journal")
+  MOCK.advance(10)
+  check(j.fellowships[key] == nil, "the same company doesn't start it again")
+  check(questText(win(), "1 fellowship disbanded"), "the list says one was disbanded")
+  click(win(), "Undisband fellowships")
+  check(next(j.disbanded) == nil, "Let them form again clears it")
+  MOCK.advance(6)
+  check(j.fellowships[key] and not j.fellowships[key].formed, "it starts forming again from nothing")
   MOCK.party, MOCK.partyMembers = nil, {}
   MOCK.event("GROUP_ROSTER_UPDATE")
   -- forget someone
