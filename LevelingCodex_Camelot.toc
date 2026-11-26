@@ -1,5 +1,5 @@
 ## Interface: 16001
-## Title: Leveling Codex: Guide & Journal
+## Title: Leveling Codex: Forever Journal
 ## Notes: Alliance and Horde 1-60 quest guide, talents, macros and professions, a storybook Journey of your adventure, and auction house tools. /codex
 ## Author: The Leveling Codex
 ## Version: @project-version@
