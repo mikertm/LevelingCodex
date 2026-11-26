@@ -1221,6 +1221,10 @@ function Q.update(event, id, newLevel)
     end
   end
   if event == "QUEST_ACCEPTED" and id then removed[id] = nil end
+  -- A step you're looking at (Back, or picked in the route list) that the game now finishes
+  -- (Smeed hands you Kodo Roundup) moves the look on to the next thing to do in its guide.
+  local looking = review and steps[review]
+  local openLook = looking and looking.state ~= "done" and looking.key
   readLog()
   readCompleted()
   readStartItems()
@@ -1232,6 +1236,11 @@ function Q.update(event, id, newLevel)
     resumeLocal(event, previous)
   end
   if event == "QUEST_TURNED_IN" and review and steps[review].step.quest == id then review = nil end
+  if openLook and review and steps[review].key == openLook and steps[review].state == "done" then
+    local row, i = steps[review], review + 1
+    while steps[i] and steps[i].section == row.section and steps[i].state ~= "pending" do i = i + 1 end
+    review = steps[i] and steps[i].section == row.section and i ~= index and i or nil
+  end
   if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then Q.enteredDungeon() end
 end
 

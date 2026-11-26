@@ -15011,3 +15011,37 @@ function S.mailAutoTake()
   check(MOCK.inbox[1].items[1] and MOCK.inbox[1].items[1].id == 9798, "a refused item is passed over")
   check(chatHas("Took 4 items"), "the rest is taken")
 end
+
+-- In game the "Accept - Kodo Roundup" step stayed on screen after Smeed gave the quest (the item
+-- button already showed the Kombobulator from the log). The window was showing the pickup picked
+-- from the route list (an earlier step, the flight path, was still the route's), and the game
+-- finishing a step you look at didn't move the look on.
+function S.questKodoRoundupAccept()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 36, 1443, 60.8, 61.8
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.quest == 5561 then break end
+        if step.quest and step.quest ~= 5501 and step.quest ~= 1459 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 5501, isComplete = false }, { questID = 1459, isComplete = false } }
+  S.login()
+  MOCK.advance(0.3)
+  local frame = questViewer()
+  local Q = MOCK.ns.quests
+  local function at() local row = Q.current(); return row and row.key end
+  check(at() ~= "desolace-35:accept:5561:1", "an earlier step is the route's: " .. tostring(at()))
+  slash("quests")
+  local button = routeStep("Accept - Kodo Roundup")
+  check(button, "the route lists the Kodo Roundup pickup")
+  button:Click()
+  check(at() == "desolace-35:accept:5561:1" and questText(frame, "Accept - Kodo Roundup"), "the window shows the pickup")
+  table.insert(MOCK.questLog, { questID = 5561, isComplete = false })
+  MOCK.event("QUEST_ACCEPTED", 5561)
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(at() == "desolace-35:complete:5561:1" and not questText(frame, "Accept - Kodo Roundup"),
+    "accepting the quest moves the window on to its work: " .. tostring(at()))
+end
