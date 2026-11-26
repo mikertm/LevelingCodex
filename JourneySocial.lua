@@ -55,9 +55,12 @@ J.ICON.bond = "Spell_Holy_HolyBolt"
 J.ICON.fellowship = "INV_BannerPVP_02"
 J.ICON.signed = "INV_Scroll_03"
 J.ICON.toast = "INV_Drink_05"
+J.ICON.thanks = "INV_Misc_Bandage_15"
+J.ICON.memory = "INV_Misc_Book_09"
 J.ICON.cheer = "Ability_Warrior_BattleShout"
 J.ICON.anniversary = "INV_Misc_Gift_01"
 J.KEEP.bond, J.KEEP.fellowship, J.KEEP.signed, J.KEEP.anniversary = true, true, true, true
+J.KEEP.memory = true
 
 local function plain(s) return Q.plain(tostring(s or "")) end
 local function now() return J.now() end
@@ -90,7 +93,7 @@ end
 S.partySet = Co_party
 
 local TABLES = { "sighted", "trace", "tags", "diary", "forgotten", "bonds", "fellowships", "portraits", "signatures", "anniv",
-  "people", "pals", "fellows", "wrote" }
+  "people", "pals", "fellows", "wrote", "memories" }
 local function journal()
   local j = J.data()
   for _, k in ipairs(TABLES) do if type(j[k]) ~= "table" then j[k] = {} end end
@@ -580,7 +583,25 @@ function S.rename(key, text)
   if text == "" then g.named = nil; return true end
   if #text < 3 or #text > 32 then return false, "A name takes 3 to 32 characters (this one has " .. #text .. ")." end
   g.named = text
+  g.offered = nil
+  S.shareName(key, text)
   return true
+end
+
+-- The fellowship key as the other one sees it: their key, without them, with the sender.
+function S.keyFrom(theirKey, from)
+  local list = { from }
+  local mine = me()
+  for _, n in ipairs(names(theirKey)) do
+    if n ~= mine and firstName(n) ~= firstName(mine) then list[#list + 1] = n end
+  end
+  return (S.groupKey(list))
+end
+-- Members of this fellowship in your party right now.
+function S.bandHere(key)
+  local party, out = Co_party(), {}
+  for _, n in ipairs(names(key)) do if party[n] then out[#out + 1] = n end end
+  return out
 end
 
 -- Fellowships, the most time together first: { key, g, names }.
@@ -857,7 +878,7 @@ end
 -- Every record of a name (and of the same first name: a surname the game sometimes gives), so nothing
 -- the book shows still names them. Also used at login to clear what slipped in (you, or someone you removed).
 local function scrub(j, match, removeMoments)
-  for _, k in ipairs({ "pals", "fellows", "people", "sighted", "trace", "tags", "diary", "bonds", "signatures", "wrote", "notes" }) do
+  for _, k in ipairs({ "pals", "fellows", "people", "sighted", "trace", "tags", "diary", "bonds", "signatures", "wrote", "memories", "notes" }) do
     if type(j[k]) == "table" then
       for n in pairs(j[k]) do if match(n) then j[k][n] = nil end end
     end
@@ -1173,6 +1194,140 @@ function S.openSign(name)
     end })
 end
 
+----------------------------------------------------------------------------
+-- Thanks: for a rez, a heal that tried, a carry, or simply the company
+----------------------------------------------------------------------------
+local thanked, gotThanks = {}, {}
+-- Why you'd thank them, from what the book saw lately.
+function S.thanksReason(name)
+  local p = journal().people[name]
+  local t = now()
+  local events = J.data().events
+  for i = #events, math.max(1, #events - 60), -1 do
+    local e = events[i]
+    if type(e) == "table" and t - n0(e.t) < 3600 then
+      if e.k == "rez" and e.who == name then return "rez", "for the resurrection" end
+      if e.k == "death" and type(e.tried) == "string" and e.tried:find(name, 1, true) then return "save", "for trying to save you" end
+      if (e.k == "boss" or e.k == "run" or e.k == "dungeon") and type(e.with) == "string" and e.with:find(name, 1, true) then
+        return "carry", "for the run"
+      end
+    end
+  end
+  if type(p) == "table" and t - n0(p.lastTrade) < 1800 then return "trade", "for the trade" end
+  if Co_party()[name] then return "company", "for the company" end
+  return "help", "for the help"
+end
+local THANK_WORDS = { rez = "the resurrection", save = "trying to save you", carry = "the run", trade = "the trade",
+  company = "the company", help = "the help" }
+
+function S.thank(name)
+  if not S.reachable(name) then ns.say("Group up with " .. Co_name(name) .. " or target them to thank them."); return false end
+  if thanked[name] and GetTime() - thanked[name] < 300 then ns.say("You thanked " .. Co_name(name) .. " a moment ago."); return false end
+  local why = S.thanksReason(name)
+  if not send("TY;" .. name .. ";" .. why, name) then ns.say("Couldn't reach " .. Co_name(name) .. " right now."); return false end
+  thanked[name] = GetTime()
+  person(name, "thanksGiven")
+  local who = plain(name)
+  J.add("thanks", fill({ "Thanked %who% for %what% in %zone%", "Told %who% how much %what% meant, in %zone%",
+    "Found %who% in %zone% to say thank you for %what%" }, who .. now(), { who = who, what = THANK_WORDS[why], zone = zone() }),
+    "Thanks given", { who = name })
+  ns.say("You thanked " .. Co_name(name) .. " for " .. THANK_WORDS[why] .. "...")
+  expectAck("YA:" .. name, name, function()
+    ns.say("No answer from " .. Co_name(name) .. "'s journal: your thanks are in yours, but theirs may not have them.")
+  end)
+  S.checkBond(name)
+  return true
+end
+
+----------------------------------------------------------------------------
+-- Memories: a moment you shared, sent into their journal
+----------------------------------------------------------------------------
+S.MEMORY_MAX = 140
+local MEMORY_WEIGHT = { boss = 10, run = 9, dungeon = 8, rare = 7, elite = 7, close = 6, wipe = 6, level = 5, bond = 5,
+  fellowship = 5, rez = 5, death = 4, chain = 4, camp = 3, bg = 3, quest = 1 }
+local function memoryKey(e) return tostring(e.k) .. ":" .. tostring(e.t) end
+-- The moments you shared with them, best first, the ones you already sent left out.
+function S.memories(name)
+  local sent = journal().memories[name]
+  sent = type(sent) == "table" and type(sent.sent) == "table" and sent.sent or {}
+  local list = J.companions and J.companions.moments(name, 200) or {}
+  local out = {}
+  for _, e in ipairs(list) do
+    if MEMORY_WEIGHT[e.k] and type(e.s) == "string" and e.s ~= "" and not sent[memoryKey(e)] then out[#out + 1] = e end
+  end
+  table.sort(out, function(a, b)
+    local wa, wb = MEMORY_WEIGHT[a.k] or 0, MEMORY_WEIGHT[b.k] or 0
+    if wa ~= wb then return wa > wb end
+    return n0(a.t) > n0(b.t)
+  end)
+  return out
+end
+local function memoryRec(name)
+  local j = journal()
+  local r = j.memories[name]
+  if type(r) ~= "table" then r = {}; j.memories[name] = r end
+  if type(r.sent) ~= "table" then r.sent = {} end
+  if type(r.got) ~= "table" then r.got = {} end
+  return r
+end
+function S.receivedMemories(name)
+  local r = journal().memories[name]
+  return type(r) == "table" and type(r.got) == "table" and r.got or {}
+end
+
+function S.shareMemory(name, e)
+  if not S.reachable(name) then ns.say("Group up with " .. Co_name(name) .. " or target them to share a memory."); return false end
+  e = e or S.memories(name)[1]
+  if not e then ns.say("No shared moment left to send " .. Co_name(name) .. ": go make some more."); return false end
+  local text = plain(e.s):gsub("[%c;]", " "):sub(1, S.MEMORY_MAX)
+  local days = math.max(0, math.floor((now() - n0(e.t)) / 86400))
+  if not send("MM;" .. name .. ";" .. tostring(e.k) .. ";" .. n0(e.l) .. ";" .. days .. ";" .. text, name) then
+    ns.say("Couldn't reach " .. Co_name(name) .. " right now.")
+    return false
+  end
+  memoryRec(name).sent[memoryKey(e)] = now()
+  person(name, "memGiven")
+  ns.say("You sent " .. Co_name(name) .. " a memory: \"" .. text .. "\"")
+  expectAck("MA:" .. name, name, function()
+    ns.say("No answer from " .. Co_name(name) .. "'s journal: the memory may not have reached them.")
+  end)
+  return true
+end
+
+----------------------------------------------------------------------------
+-- The band: a toast to the whole fellowship, and its name shared
+----------------------------------------------------------------------------
+local bandToasted = {}
+function S.toastBand(key)
+  local g = journal().fellowships[key]
+  if type(g) ~= "table" then return false end
+  local here = S.bandHere(key)
+  if #here == 0 then ns.say("Group up with your fellowship to raise a toast to it."); return false end
+  if bandToasted[key] and GetTime() - bandToasted[key] < 600 then ns.say("You toasted the fellowship a moment ago."); return false end
+  local fname = S.fellowshipName(g, key)
+  if not send("TB;" .. key .. ";" .. fname) then ns.say("Couldn't reach your party right now."); return false end
+  bandToasted[key] = GetTime()
+  g.toasts = n0(g.toasts) + 1
+  local e = J.add("toast", fill({ "Raised a toast to %name% in %zone%: %who% drank with you", "Lifted a mug to %name%, with %who%, in %zone%" },
+    key .. now(), { name = fname, who = S.listText(here), zone = zone() }), "A toast to the fellowship", nil)
+  if type(e) == "table" then e.with = key end
+  ns.say("You raised a toast to " .. fname .. "...")
+  return true
+end
+
+function S.shareName(key, text)
+  if not sharing() or #S.bandHere(key) == 0 then return end
+  send("FN;" .. key .. ";" .. text)
+end
+-- Take the name a fellow gave the band.
+function S.useOfferedName(key)
+  local g = journal().fellowships[key]
+  if type(g) ~= "table" or not g.offered then return false end
+  g.named, g.offered, g.offeredBy = g.offered, nil, nil
+  ns.say("Your fellowship is now " .. g.named .. ".")
+  return true
+end
+
 local HANDLE = {}
 function HANDLE.HI(from, f)
   local p = person(from)
@@ -1262,6 +1417,85 @@ function HANDLE.LV(from, f)
   local who = plain(from)
   J.add("cheer", fill({ "%who% reached level %n% at your side in %zone%", "Cheered as %who% hit level %n% in %zone%" }, key,
     { who = who, n = lvl, zone = zone() }), "Level " .. lvl, { who = from })
+end
+
+function HANDLE.TY(from, f)
+  if f[2] ~= me() then return end
+  send("YA;" .. from, from)
+  if gotThanks[from] and GetTime() - gotThanks[from] < 300 then return end
+  gotThanks[from] = GetTime()
+  if not person(from, "thanksGot") then return end
+  local what = THANK_WORDS[f[3] or ""] or THANK_WORDS.help
+  local who = plain(from)
+  J.add("thanks", fill({ "%who% thanked you for %what% in %zone%", "In %zone%, %who% came to thank you for %what%",
+    "%who% sought you out in %zone% to say thanks for %what%" }, who .. now(), { who = who, what = what, zone = zone() }),
+    "Thanks", { who = from })
+  S.card("THANK YOU", Co_name(from) .. " thanked you for " .. what, { { J.ICON.thanks, "Where", zone() } }, from)
+  if ns.refreshTab then ns.refreshTab("journey") end
+  S.checkBond(from)
+end
+function HANDLE.YA(from, f)
+  if f[2] ~= me() or not gotAck("YA:" .. from) then return end
+  ns.say(Co_name(from) .. " got your thanks.")
+end
+function HANDLE.MM(from, f, raw)
+  if f[2] ~= me() then return end
+  send("MA;" .. from, from)
+  local text = plain(raw:match("^MM;[^;]*;[^;]*;[^;]*;[^;]*;(.*)$") or ""):sub(1, S.MEMORY_MAX)
+  if text == "" or not person(from, "memGot") then return end
+  local r = memoryRec(from)
+  for _, m in ipairs(r.got) do if m.s == text then return end end
+  local days = tonumber(f[5]) or 0
+  table.insert(r.got, 1, { t = now(), s = text, k = f[3], l = tonumber(f[4]), ago = days })
+  while #r.got > 8 do table.remove(r.got) end
+  local who = plain(from)
+  local when = days <= 0 and "today" or days == 1 and "yesterday" or (days .. " days ago")
+  J.add("memory", fill({ "%who% sent you a memory from their journal: \"%text%\"", "%who% remembered a day with you (%when%): \"%text%\"",
+    "From %who%'s journal, a page about you: \"%text%\"" }, who .. text, { who = who, text = text, when = when }),
+    "A memory", { who = from })
+  S.card("A MEMORY FROM " .. Co_name(from):upper(), "From their journal, " .. when, { { J.ICON.memory, "", text } }, from)
+  if ns.refreshTab then ns.refreshTab("journey") end
+end
+function HANDLE.MA(from, f)
+  if f[2] ~= me() or not gotAck("MA:" .. from) then return end
+  ns.say(Co_name(from) .. " keeps the memory in their journal now.")
+end
+function HANDLE.TB(from, f)
+  if not Co_party()[from] then return end
+  local key = S.keyFrom(f[2] or "", from)
+  local fname = plain(f[3] or ""):sub(1, 32)
+  send("BA;" .. from, from)
+  if gotToast["band:" .. from] and GetTime() - gotToast["band:" .. from] < 600 then return end
+  gotToast["band:" .. from] = GetTime()
+  person(from, "toasts")
+  local g = key and journal().fellowships[key]
+  local mine = type(g) == "table" and S.fellowshipName(g, key) or fname
+  if type(g) == "table" then g.toasts = n0(g.toasts) + 1 end
+  local who = plain(from)
+  local e = J.add("toast", fill({ "%who% raised a toast to %name%, and you drank with them in %zone%",
+    "In %zone%, %who% lifted a mug to the fellowship: %name%" }, who .. now(), { who = who, name = mine, zone = zone() }),
+    "A toast to the fellowship", { who = from })
+  if type(e) == "table" and type(g) == "table" then e.with = key end
+  S.card("TO THE FELLOWSHIP!", Co_name(from) .. " raised a toast to " .. mine, { { J.ICON.toast, "Where", zone() } }, from)
+  if ns.refreshTab then ns.refreshTab("journey") end
+end
+function HANDLE.BA(from, f)
+  if f[2] ~= me() then return end
+  ns.say(Co_name(from) .. " drank to the fellowship with you.")
+end
+function HANDLE.FN(from, f)
+  if not Co_party()[from] then return end
+  local key = S.keyFrom(f[2] or "", from)
+  local g = key and journal().fellowships[key]
+  local text = plain(f[3] or ""):gsub("^%s+", ""):gsub("%s+$", "")
+  if type(g) ~= "table" or #text < 3 or #text > 32 or g.named == text then return end
+  g.offered, g.offeredBy = text, from
+  if ns.refreshTab then ns.refreshTab("journey") end
+  S.card("A NAME FOR YOUR FELLOWSHIP", Co_name(from) .. " calls it " .. text, { { J.ICON.fellowship, "Click", "to use the name" } }, nil,
+    function()
+      S.useOfferedName(key)
+      if S.openFellowship then S.openFellowship(key) end
+    end, "Click to use this name  -  right-click to dismiss")
 end
 
 local function addonMessage(prefix, text, channel, sender)

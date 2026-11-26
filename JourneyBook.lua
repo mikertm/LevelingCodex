@@ -28,7 +28,7 @@ local FILTER_KINDS = {
   { first = true, upgrade = true, cap = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
     mount = true, mine = true, herb = true, skin = true, fish = true },
   { pal = true, rez = true, trade = true, duel = true, emote = true, guild = true, camp = true, run = true, whisper = true, reunion = true,
-    bond = true, fellowship = true, signed = true, toast = true, cheer = true, anniversary = true },
+    bond = true, fellowship = true, signed = true, toast = true, cheer = true, anniversary = true, thanks = true, memory = true },
   { zone = true, flight = true, start = true, camp = true, mount = true, home = true, rest = true, milestone = true },
   { death = true, close = true, wipe = true, expired = true, abandon = true },
 }
@@ -318,7 +318,7 @@ local LAYERS = {
       mine = true, herb = true, skin = true, fish = true }, tip = "Loot, gear, crafting, gathering, fishing and gold." },
   { key = "fellowship", label = "Fellowship", icon = ICON.pal, color = { 0.75, 0.55, 0.95 },
     kinds = { pal = true, rez = true, trade = true, emote = true, guild = true, whisper = true, reunion = true, bond = true, fellowship = true,
-      signed = true, toast = true, cheer = true, anniversary = true }, tip = "Companions, rezzes, trades and kind words." },
+      signed = true, toast = true, cheer = true, anniversary = true, thanks = true, memory = true }, tip = "Companions, rezzes, trades and kind words." },
 }
 local function layerOf(e)
   for i = 2, #LAYERS do if LAYERS[i].kinds[e.k] then return LAYERS[i] end end

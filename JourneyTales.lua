@@ -280,6 +280,7 @@ local function tradeDone()
   if not name then return end
   local p, _ = person(name, "trades")
   if not p then return end
+  p.lastTrade = time and time() or nil
   local n = bump("trades")
   local mine = tonumber(p.trades) or 1
   if mine == 1 then
@@ -825,6 +826,8 @@ local function deedsOf(rec)
   add(rec.witness, "fall they saw", "falls they saw")
   add(rec.camp, "campfire shared", "campfires shared")
   add(rec.toasts, "toast", "toasts")
+  add(rec.thanksGot, "thank you", "thank yous")
+  add(rec.memGot, "memory they sent", "memories they sent")
   add(rec.killedMe, "time they killed you", "times they killed you")
   if #parts == 0 and rec.added then return "added by hand" end
   return #parts > 0 and table.concat(parts, ", ") or "crossed paths"

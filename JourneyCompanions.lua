@@ -25,7 +25,7 @@ local SHARED = { quest = "quests", chain = "quests", elite = "quests", boss = "b
   wipe = "wipes", death = "deaths", level = "levels", rare = "rares", close = "close", bg = "bgs", zone = false }
 -- moments that name the person themselves (e.who)
 local PERSONAL = { pal = true, rez = true, trade = true, duel = true, emote = true, whisper = true, reunion = true, bond = true,
-  signed = true, toast = true, cheer = true, anniversary = true, pvp = true, death = true }
+  signed = true, toast = true, cheer = true, anniversary = true, thanks = true, memory = true, pvp = true, death = true }
 
 local function plain(s) return Q.plain(tostring(s or "")) end
 local function now() return J.now() end

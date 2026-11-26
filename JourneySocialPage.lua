@@ -210,7 +210,38 @@ local function journalCard(R, p, y)
   b = U.btn("Raise a toast", 22 + bw, y + 4, bw, function() S.toast(n); ns.ui.refresh() end, can,
     can and "A toast lands in both your journals." or "Group up with them or target them first.")
   if b then b.codexLabel = "Toast " .. plain(n) end
+  y = y + 30
+  local _, thanksWhy = S.thanksReason(n)
+  local left = S.memories(n)
+  b = U.btn("Thank them", 14, y + 4, bw, function() S.thank(n); ns.ui.refresh() end, can,
+    can and ("Say thank you " .. thanksWhy .. ": it lands in both journals.") or "Group up with them or target them first.")
+  if b then b.codexLabel = "Thank " .. plain(n) end
+  b = U.btn("Share a memory", 22 + bw, y + 4, bw, function() S.shareMemory(n); ns.ui.refresh() end, can and #left > 0,
+    #left > 0 and ('Sends them your telling of a moment you shared: "' .. plain(left[1].s):sub(1, 80) .. '"')
+      or "No shared moment left to send: go make some more.")
+  if b then b.codexLabel = "Memory " .. plain(n) end
   y = y + 34
+  local pr = p.person or {}
+  local bits = {}
+  local function bit(nv, one, many) nv = tonumber(nv) or 0; if nv > 0 then bits[#bits + 1] = nv .. " " .. (nv == 1 and one or many) end end
+  bit(pr.toastsGiven, "toast raised", "toasts raised")
+  bit(pr.thanksGiven, "thanks given", "thanks given")
+  bit(pr.thanksGot, "thanks received", "thanks received")
+  bit(pr.memGiven, "memory sent", "memories sent")
+  bit(pr.memGot, "memory received", "memories received")
+  if #bits > 0 then
+    y = y + U.T("Between your journals: " .. table.concat(bits, ", ") .. ".", 14, y, W - 28, "small", C.inkSoft or C.dim) + 6
+  end
+  local got = S.receivedMemories(n)
+  if #got > 0 then
+    y = y + U.T("THEIR MEMORIES OF YOU", 14, y + 2, W - 28, "label", C.gold) + 4
+    for i = #got, math.max(1, #got - 2), -1 do
+      local m = got[i]
+      y = y + U.T('"' .. plain(m.s) .. '"', 24, y, W - 48, "small", C.ink or C.light) + 2
+      y = y + U.T("- sent on day " .. D().dayOf(R.j or S.journal(), m.t) .. (m.l and m.l > 0 and (", of level " .. m.l) or ""),
+        24, y, W - 48, "small", C.inkSoft or C.dim, "RIGHT") + 6
+    end
+  end
   U.box(0, top, W, y - top, C.panel, C.edge)
   return y + 12
 end
@@ -324,6 +355,11 @@ end
 ----------------------------------------------------------------------------
 local chosen
 function S.selectFellowship(key) chosen = key end
+function S.openFellowship(key)
+  chosen = key
+  if J.openPage then J.openPage("Fellowships") end
+  ns.openTab("journey")
+end
 function S.chosenFellowship() return chosen end
 
 -- A group portrait: you and the party, framed, with the moment as its caption; returns its height.
@@ -682,7 +718,22 @@ local function fellowshipPage(R, f, y)
     U.T(c[2], cx, y + 24, cw, "small", C.dim, "CENTER")
   end
   y = y + 50
-  local b = U.btn("Rename", math.floor(W / 2) - 60, y, 120, function()
+  if g.offered then
+    y = y + U.T(name(g.offeredBy or "A fellow") .. " calls the band " .. plain(g.offered) .. ".", 14, y, W - 28, "small", C.gold, "CENTER") + 4
+    local ub = U.btn("Use that name", math.floor(W / 2) - 70, y, 140, function() S.useOfferedName(key); ns.ui.refresh() end, true,
+      "Take the name they gave the fellowship. You can rename it again any time.")
+    if ub then ub.codexLabel = "Use fellowship name" end
+    y = y + 30
+  end
+  local here = S.bandHere(key)
+  local tb = U.btn("Toast the band", math.floor(W / 2) + 4, y, 120, function() S.toastBand(key); ns.ui.refresh() end, #here > 0,
+    #here > 0 and ("Raise a toast to the fellowship: " .. S.listText(here) .. " drink with you, in every journal that keeps the Codex.")
+      or "Group up with the fellowship to raise a toast to it.")
+  if tb then tb.codexLabel = "Toast fellowship" end
+  if n0(g.toasts) > 0 then
+    U.T(n0(g.toasts) == 1 and "1 toast raised" or (n0(g.toasts) .. " toasts raised"), 14, y + 34, W - 28, "small", C.inkSoft or C.dim, "CENTER")
+  end
+  local b = U.btn("Rename", math.floor(W / 2) - 124, y, 120, function()
     ns.showMacroCopy({ copyTitle = "Name your fellowship", body = g.named or g.auto or "", paste = true, acceptLabel = "Save name",
       help = "3 to 32 characters. Save it empty to go back to the name it was given.",
       onAccept = function(text)
@@ -692,7 +743,7 @@ local function fellowshipPage(R, f, y)
       end })
   end, false, "Give the fellowship your own name.")
   if b then b.codexLabel = "Rename fellowship" end
-  y = y + 32
+  y = y + 32 + (n0(g.toasts) > 0 and 16 or 0)
   D().page(U, C, 0, top, W, y - top)
   y = y + 12
   -- the finest and darkest hours

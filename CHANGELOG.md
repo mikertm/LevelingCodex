@@ -7,6 +7,12 @@
     - Signatures and toasts now go into both journals. The signer keeps the line they wrote (their page shows "You wrote in theirs..."), and the toast you raise is a moment in yours too.
     - When a line or a toast arrives, the sender gets a card saying so ("Your line arrived", "Toast received"). If no answer comes, they hear that too.
     - Click a toast's card to raise one back.
+- **Journey: more ways to reach another Codex player.** On a companion's page, next to Ask to sign and Raise a toast:
+    - **Thank them.** The Codex picks the reason from what just happened (the resurrection, trying to save you, the run, the trade, or simply the company). It lands in both journals, and they get a "Thank you" card.
+    - **Share a memory.** Sends them your journal's telling of the best moment you shared (a boss, a run, a close call...). It's a page in their book under THEIR MEMORIES OF YOU, and each moment is sent only once.
+    - Their page counts what has passed between your journals: toasts, thanks and memories, both ways.
+- **Journey: toast the whole fellowship.** On the Fellowships page, **Toast the band** raises a toast to every member in your party, written in each of your journals under the name each of you gave the band.
+- **Journey: fellowship names travel.** Renaming a fellowship offers the name to the members in your party. They get a card, and **Use that name** takes it.
 - **Journey: award cards fit their text.** On the Fellowships page, an award whose description runs to two lines now gets a taller box instead of spilling into the one below.
 - **Loot: a score for (nearly) every piece of gear.** Most gear used to say "Score unavailable". Now it gets a rating, and the tooltip says what the rating leaves out.
     - Crit, hit, dodge, parry, block, spell penetration and Forever's "healing and damage done by up to" lines now count as stats. About 1,400 items had been left unscored because of them.

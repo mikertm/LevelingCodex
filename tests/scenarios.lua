@@ -14631,6 +14631,41 @@ function S.journeySocial()
   check(journeyHas("toast", "Ann"), "the toast you raise goes in your journal too")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TA;Tester", "PARTY", "Ann")
   check(J.social.acks["TA:Ann"] == nil, "Ann's answer confirms the toast arrived")
+  -- thanks: sent, answered, received
+  MOCK.addonSent = {}
+  click(win(), "Thank Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text:find("^TY;Ann;"), "Thank them sends the thanks (" .. tostring(MOCK.addonSent[1] and MOCK.addonSent[1].text) .. ")")
+  check(journeyHas("thanks", "Ann") and j.people.Ann.thanksGiven == 1, "your thanks go in your journal")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "YA;Tester", "PARTY", "Ann")
+  check(J.social.acks["YA:Ann"] == nil, "Ann's answer confirms the thanks arrived")
+  MOCK.addonSent = {}
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TY;Tester;rez", "PARTY", "Bo")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "YA;Bo", "thanks are answered")
+  check(journeyHas("thanks", "Bo thanked you for the resurrection") and j.people.Bo.thanksGot == 1, "thanks received are written")
+  -- memories: one you shared, sent into their book
+  local bossDown = J.add("boss", "Felled Hogger with friends", "Boss", { who = "Hogger" })
+  check(bossDown and bossDown.with and bossDown.with:find("Ann"), "a boss in the party is a shared moment")
+  slash("")
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Companions")
+  click(win(), "Companion Ann")
+  MOCK.addonSent = {}
+  click(win(), "Memory Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text:find("^MM;Ann;boss;%d+;%d+;Felled Hogger"), "Share a memory sends the best shared moment ("
+    .. tostring(MOCK.addonSent[1] and MOCK.addonSent[1].text) .. ")")
+  local again
+  for _, e in ipairs(J.social.memories("Ann")) do if e == bossDown then again = true end end
+  check(j.people.Ann.memGiven == 1 and not again, "a sent memory is not offered again")
+  MOCK.addonSent = {}
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "MM;Tester;run;5;2;Cleared the Deadmines; barely", "PARTY", "Ann")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "MM;Tester;run;5;2;Cleared the Deadmines; barely", "PARTY", "Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "MA;Ann", "a memory is answered")
+  local mems = 0
+  for _, e in ipairs(j.events) do if e.k == "memory" then mems = mems + 1 end end
+  check(mems == 1 and J.social.receivedMemories("Ann")[1].s == "Cleared the Deadmines; barely", "a memory is kept once, semicolons and all")
+  click(win(), "Companion Ann")
+  check(questText(win(), "THEIR MEMORIES OF YOU") and questText(win(), "Between your journals"), "their page shows the memories and the record")
   -- a death: who saw it, who tried to save you
   -- Forever hides other players' casts: a secret spell ID is passed over without an error
   MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party2", "cast", MOCK.SECRET)
@@ -14695,6 +14730,33 @@ function S.journeySocial()
   copy.edit:SetText("The Night Watch")
   click(copy, "Save name")
   check(j.fellowships[key].named == "The Night Watch" and questText(win(), "THE NIGHT WATCH"), "a fellowship can be renamed")
+  -- the band: a toast to the fellowship, and a name a fellow gives it
+  MOCK.party, MOCK.partyMembers = true, { { name = "Ann", level = 9, class = "MAGE" }, { name = "Bo", level = 9, class = "WARRIOR" } }
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.addonSent = {}
+  click(win(), "Toast fellowship")
+  local tb
+  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^TB;") then tb = m end end
+  check(tb and tb.text == "TB;Ann,Bo;The Night Watch", "Toast the band tells the party (" .. tostring(tb and tb.text) .. ")")
+  check(j.fellowships[key].toasts == 1 and journeyHas("toast", "The Night Watch"), "the band's toast is in your journal")
+  MOCK.addonSent = {}
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TB;Bo,Tester;The Lantern Lot", "PARTY", "Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "BA;Ann", "a band toast is answered")
+  check(j.fellowships[key].toasts == 2 and journeyHas("toast", "Ann raised a toast to The Night Watch")
+    or journeyHas("toast", "lifted a mug to the fellowship: The Night Watch"), "their toast reaches your fellowship under your name for it")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "FN;Bo,Tester;The Lantern Lot", "PARTY", "Ann")
+  check(j.fellowships[key].offered == "The Lantern Lot", "a name a fellow gives the band is offered")
+  click(win(), "Fellowships")
+  check(questText(win(), "calls the band The Lantern Lot"), "the page shows the offered name")
+  click(win(), "Use fellowship name")
+  check(j.fellowships[key].named == "The Lantern Lot" and not j.fellowships[key].offered, "Use that name takes it")
+  MOCK.addonSent = {}
+  J.social.rename(key, "The Late Shift")
+  local fn
+  for _, m in ipairs(MOCK.addonSent) do if m.text:find("^FN;") then fn = m end end
+  check(fn and fn.text == "FN;Ann,Bo;The Late Shift", "renaming shares the name with the band")
+  MOCK.party, MOCK.partyMembers = nil, {}
+  MOCK.event("GROUP_ROSTER_UPDATE")
   -- forget someone
   click(win(), "Companions")
   click(win(), "Companion Bo")
