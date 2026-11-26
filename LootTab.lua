@@ -1080,7 +1080,7 @@ local function comparisonResult(y,ctx)
     y=y+57
     if not score or r.future then y=text(r.future and ("Requires level "..r.future.level..": rated for when you get there.") or r.reason,y-2,"small",C.dim,inset,w-28)+3 end
     local notes=L.notesText and L.notesText((r.future and r.future.notes) or r.notes)
-    if notes then y=text(notes..".",y-2,"small",C.dim,inset,w-28)+3 end
+    if notes then y=text("Score "..notes..".",y-2,"small",C.dim,inset,w-28)+3 end
     if it.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
       y=text("Uses both hands and prevents a shield.",y,"small",C.gold,inset,w-28)
     end

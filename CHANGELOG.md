@@ -3,10 +3,12 @@
 ## v0.34.2
 - **Loot: a score for (nearly) every piece of gear.** Most gear used to say "Score unavailable". Now it gets a rating, and the tooltip says what the rating leaves out.
     - Crit, hit, dodge, parry, block, spell penetration and Forever's "healing and damage done by up to" lines now count as stats. About 1,400 items had been left unscored because of them.
-    - Gear with a Use effect, a Chance on hit effect, a set bonus, an enchant or an unknown random bonus is scored on its stats as an estimate ("about +6.2%"). A second line says what isn't counted and what it replaces ("vs Linked Chain Vest. Not counted: use effect").
+    - Gear with a Use effect, a Chance on hit effect, a set bonus, an enchant or an unknown random bonus is scored on its stats as an estimate ("about +6.2%"). A short second line says what it replaces and what the score skips ("vs Linked Chain Vest - skips use effect").
     - Gear above your level is rated for the level you can wear it: "At level 35: +8.2% gear score (upgrade)". The Loot tab sorts those results by that rating too.
     - A weapon you haven't trained says "Train Two-Handed Swords at a weapon master first" instead of "Cannot equip". One your class can never use says so ("Your class can't use Wands"). Plate and mail wait for level 40, as in the game.
     - A one-hander is rated against the two-hander it would replace. Gear with nothing your build uses says so instead of showing no score.
+    - The percentage is the change to your whole equipped set's score, so a new shield over a weak one reads "+3%", not "+250%".
+    - Hovering gear you're wearing shows where it stands ("Equipped | Rank #6 | 12% of your gear score") instead of comparing it with itself.
     - Tanks now value parry and block chance, and healers value spell crit.
 
 ## v0.34.1

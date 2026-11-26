@@ -13638,16 +13638,20 @@ function S.lootScoreDetails()
   end
   MOCK.lootItems[900020]={name="Charm Vest",stats={ITEM_MOD_STRENGTH_SHORT=40},effect="Use: Charms a squirrel."}
   local lines=tip("item:900020")
-  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2] and lines[2]:find("Not counted: use effect",1,true),
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2] and lines[2]:find("skips use effect",1,true),
     "an item with a Use effect is scored as an estimate: "..table.concat(lines," / "))
   lines=tip("item:900002:1900")
-  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2]:find("Not counted: enchant",1,true),
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2]:find("skips enchant",1,true),
     "an enchanted item is scored and the enchant named: "..table.concat(lines," / "))
   MOCK.lootItems[900021]={name="Later Vest",level=35,stats={ITEM_MOD_STRENGTH_SHORT=60}}
   lines=tip("item:900021")
   check(lines[1]:find("Codex: At level 35: +",1,true) and lines[1]:find("(upgrade)",1,true),
     "an item above your level is rated for the level you can wear it: "..table.concat(lines," / "))
   for _,l in ipairs(lines) do check(not l:find("Score unavailable",1,true),"no blank score") end
+  lines=tip("item:900001")
+  check(#lines==1 and lines[1]:find("Codex: Equipped",1,true) and not lines[1]:find("vs ",1,true),
+    "the item you wear shows its standing, not a comparison with itself: "..table.concat(lines," / "))
+  for _,l in ipairs(tip("item:900002:0:0:0:0:0:0:0:0:0:0:0:3:1:2")) do check(not l:find("gem",1,true),"Forever has no gems: "..l) end
   MOCK.lootItems[900022]={name="Wand of Nope",slot="INVTYPE_RANGEDRIGHT",classID=2,subclassID=19,stats={ITEM_MOD_INTELLECT_SHORT=3}}
   lines=tip("item:900022")
   check(lines[1]:find("Codex: Cannot equip: Your class can't use Wands",1,true),"a weapon the class can't use says so: "..lines[1])

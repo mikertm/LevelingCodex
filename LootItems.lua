@@ -115,7 +115,6 @@ function L.item(ref)
     end
   end
   if modified.enchant then item.notes[#item.notes+1]="Enchant not counted" end
-  if modified.gems or modified.bonus then item.notes[#item.notes+1]="Gems and bonuses not counted" end
   if item.random and not raw and not modified.suffix then item.complete.stats=false end
   if item.random and raw then item.complete.stats=true end
   local canRead=not ns.itemInfoAPI or ns.itemInfoAPI()~=nil

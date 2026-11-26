@@ -182,8 +182,21 @@ function L.compare(ref, ctx, baseline, weaponSlot)
   return r
 end
 
+-- The whole equipped set's score: a change is shown as a share of it, so a shield replacing a
+-- weak one reads "+3%" of your gear, not "+250%" of that one slot.
+local function gearTotal(slots, profile)
+  local total = 0
+  for _, n in ipairs(L.slotOrder or {}) do
+    local it = slots[n]
+    if it then local s = L.score(it, profile); total = total + (s.value or 0) end
+  end
+  return total
+end
+L.gearTotal = gearTotal
+
 function L.compareSlots(item, ctx, slots, locations, skipLevel)
   local best, uncertain, refusal
+  local total
   local twoHander = slots[16] and slots[16].slot == "INVTYPE_2HWEAPON"
   for _, slot in ipairs(locations) do
     local proposed, replaced = {}, {slot}
@@ -219,7 +232,7 @@ function L.compareSlots(item, ctx, slots, locations, skipLevel)
         if not s.value then complete=false else old=old+s.value end
         if not s.complete then complete=false end
         for _, line in ipairs(s.warnings) do r.warnings[#r.warnings+1]=line end
-        if before and #(s.notes or {})>0 then L.addNote(r.notes, "Your equipped item has effects the score leaves out") end
+        if before and #(s.notes or {})>0 then L.addNote(r.notes, "Equipped item's effects not counted") end
         if before then r.baseline[#r.baseline+1]=before end
         for key,value in pairs(before and before.stats or {}) do r.statDelta[key]=(r.statDelta[key] or 0)-value end
       end
@@ -231,7 +244,9 @@ function L.compareSlots(item, ctx, slots, locations, skipLevel)
         r.reason="No stats your build uses"
         if not best or r.delta>best.delta then best=r end
       elseif complete and r.delta then
-        r.percent=old>0 and r.delta/old*100 or nil
+        total = total or gearTotal(slots, ctx.profile)
+        r.slotPercent=old>0 and r.delta/old*100 or nil
+        r.percent=total>0 and r.delta/total*100 or nil
         r.verdict=r.delta>old*0.01 and "upgrade" or r.delta < -old*0.01 and "downgrade" or "sidegrade"
         r.reason=old==0 and "Fills an empty slot" or "Estimated gear score; review the stat tradeoffs"
         r.confidence="complete"
