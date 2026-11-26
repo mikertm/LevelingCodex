@@ -39,6 +39,11 @@
     - **Old foes**: a killer who got you before is told once, as a death and a grudge together; one that killed you and fell to you in the same chapter is a feud, not a settled score.
     - **Grammar**: one battleground win, one loss and one duel read in the singular; lists of dungeons, quests and killers agree with their verbs; joining words ("Later,", "Then") only come before things that happened, never before a tally or the clock, and never lower-case a name such as The Deadmines.
     - "Every fifth level" openers start at 15, and a few lines read better (the marshes of the Wetlands, a chapter that "cost no lives" instead of "cost nothing" while gold was spent).
+- **Journey: quest moments with far more variety.** Your quest log's story no longer leans on "Kept a promise to..." and "Let X go":
+    - **Every kind of quest has two to three times the ways to be told**: bounties, single foes, hunts, loot and trophies, gathering, cooking, finds, shopping, escorts, scouting, deliveries, deeds and errands.
+    - **New kinds read from the title** when a quest has no objectives: a search ("Search for Tyranis" goes looking for Tyranis), a report ("Report to Captain Grayson" reports to him), and legends, tales and secrets.
+    - **What was going on around the quest**: one that sat in your log for days, one carried from another land, one well above your level (fights only), one you'd long outgrown, one done in minutes, with your party, in the small hours, inside a dungeon, the first or middle part of a chain, your first deed in a new land, and your 10th, 25th, 50th... in one land. Chain ends and elite quests have more lines too.
+    - **Giving a quest up** now says what you walked away from (the foes, the outlaw, the goods, the letter, the search), that you'd outgrown it, that it sat in your log for days, or that you'd carried it from another land.
 - **Journey: more varied moments.** Deaths, dungeon entries, bosses, flight paths, companions, wipes, dungeon runs, battlegrounds, duels, resurrections, trades, guilds, honorable kills, campfires, abandoned quests, auction sales, mailbox gold, mounts, inns and hearthstones all have more ways to be written.
 - **Journey: the Fellowships page, built out.**
     - **Disband** a fellowship (click twice). It leaves your journal (its name, banner, milestones and record) and won't form again with the same company. The moments you shared stay in the story. **Let them form again** under the list undoes that, starting from nothing.
@@ -48,6 +53,11 @@
     - **Pin to top** keeps a fellowship first in the list.
     - The page says when you were last together, or that you're together right now.
 - **Journey: fellowship names, far more of them.** A new fellowship now gets its name from hundreds of combinations. Some are grand ("The Westfall Wardens", "Knights of the Shared Flask"), some come from who rides in it ("The Hammer and Spark", "Too Many Mages", "The No Healer Club") or what it has been through ("The Corpse Run Club", "The Wipe Society", "The Bossbreakers"), and plenty are just silly ("Murloc Appreciation Society", "Who Pulled That?", "Partners in Grime"). **New name** on its page rolls another until one fits, and tells the band. Mottos got the same treatment, funny ones included. Fellowships you already have keep their names.
+- **Price sharing, checked end to end.** An audit of the realm price channel:
+    - **It joins in every case.** A character whose class loaded late used to miss the join until the next loading screen. A join the game refuses (ten channels already, a password someone set) is tried again every minute, five times, and Settings > Helpers says when it gave up (your guild still carries prices then).
+    - **Only real prices get in.** Price messages count only from the price channel or your guild, never a whisper or party message. An item ID the game has no item for is never saved. A new item's price far off your own reading from the last three days now waits for a second player, like items with a price history already did.
+    - **A player with your name on a connected realm** is no longer taken for your own echo.
+    - **Chat stays clean.** Lines typed into the price channel and its owner and password notices stay out of your chat windows, on newer clients too.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:
