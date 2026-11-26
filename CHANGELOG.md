@@ -22,6 +22,13 @@
     - **The calendar**: evenings, afternoons, weekends, nights at the inn.
     - Hundreds more ways to say what it already noticed, and joining words so a chapter reads as a story, not a list.
     - **Neighbouring chapters never repeat a sentence**: each line turns with the level, and chapters run from five to seven sentences. Level-up lines turn the same way.
+- **Journey: the storybook, polished.** A read-through of hundreds of chapters in all three narrators:
+    - **No more pools stuck on one line.** A seven-line pool (the Bard's tally of quests and foes, among others) used to give every chapter the same sentence; every pool now turns through all its lines.
+    - **Breaks and times read as spoken**: "six days", "over a week", "an hour and a half", not "147 h 0 min".
+    - **Nothing said twice**: a weather opening no longer repeats the land in the next sentence; a dungeon's name replaces "you went into a dungeon"; a streak of clean chapters replaces "no deaths"; a first resurrection, dungeon or duel replaces the everyday line; a rare you paid back isn't told twice; a quest done twice is named once.
+    - **Old foes**: a killer who got you before is told once, as a death and a grudge together; one that killed you and fell to you in the same chapter is a feud, not a settled score.
+    - **Grammar**: one battleground win, one loss and one duel read in the singular; lists of dungeons, quests and killers agree with their verbs; joining words ("Later,", "Then") only come before things that happened, never before a tally or the clock, and never lower-case a name such as The Deadmines.
+    - "Every fifth level" openers start at 15, and a few lines read better (the marshes of the Wetlands, a chapter that "cost no lives" instead of "cost nothing" while gold was spent).
 - **Journey: more varied moments.** Deaths, dungeon entries, bosses, flight paths, companions, wipes, dungeon runs, battlegrounds, duels, resurrections, trades, guilds, honorable kills, campfires, abandoned quests, auction sales, mailbox gold, mounts, inns and hearthstones all have more ways to be written.
 - **Journey: the Fellowships page, built out.**
     - **Disband** a fellowship (click twice). It leaves your journal (its name, banner, milestones and record) and won't form again with the same company. The moments you shared stay in the story. **Let them form again** under the list undoes that, starting from nothing.

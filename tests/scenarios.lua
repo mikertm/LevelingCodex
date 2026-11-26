@@ -14436,6 +14436,33 @@ function S.journeyProse()
     end
   end
   check(finalStep, "a chapter can end on the quest that brought the next level")
+  -- a pool turns through every line (a step of 7 into a pool of 7 used to land on the same line each level)
+  Vo.setStyle("fireside")
+  local turned, nturned = {}, 0
+  for l = 1, 7 do
+    local t = Vo.tell({ fireside = { "a", "b", "c", "d", "e", "f", "g" } }, "pool", l)
+    if not turned[t] then turned[t] = true; nturned = nturned + 1 end
+  end
+  check(nturned == 7, "a pool of seven lines gives seven chapters seven lines (" .. nturned .. ")")
+  check(J.story.away(147 * 3600) == "six days" and J.story.away(9 * 86400) == "over a week", "a break reads in days and weeks: "
+    .. J.story.away(147 * 3600))
+  check(Vo.span(7200) == "two hours" and Vo.span(5400) == "an hour and a half" and Vo.span(2400) == "40 minutes",
+    "a stretch of time reads as spoken: " .. Vo.span(5400))
+  -- one battleground, one duel: singular every time
+  local one = { { t = base + 1, k = "level", l = 33, m = 1429, x = 50, y = 50, s = "Level 33" },
+    { t = base + 2, k = "bg", l = 33, m = 1429, x = 50, y = 50, s = "Won Warsong Gulch", d = "Victory", who = "Warsong Gulch" },
+    { t = base + 3, k = "quest", l = 33, m = 1429, x = 50, y = 50, s = "Did a thing", d = "Quest: Westfall Stew", q = 36 },
+    { t = base + 4, k = "quest", l = 33, m = 1429, x = 50, y = 50, s = "Did a thing", d = "Quest: Westfall Stew", q = 36 } }
+  for _, style in ipairs(Vo.STYLES) do
+    Vo.setStyle(style)
+    for l = 30, 36 do
+      for _, e in ipairs(one) do e.l = l end
+      local prose = J.lore.chapterProse(l, one, nil, false)
+      check(not prose:find("[Oo]ne battles") and not prose:find("[Oo]ne times") and not prose:find("[Oo]ne battleground wins")
+        and not prose:find("[Oo]ne battlegrounds"), style .. " one battleground is singular: " .. prose)
+      check(not prose:find("Westfall Stew and Westfall Stew", 1, true), style .. " a quest done twice is named once: " .. prose)
+    end
+  end
   check(wipeWin, "a boss that wiped the party and then fell is told")
   check(Vo.lastError == nil, "the storybook's noticers run without an error: " .. tostring(Vo.lastError))
   for _ = 1, #added do events[#events] = nil end

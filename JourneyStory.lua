@@ -24,11 +24,29 @@ local function words(n, one, many)
 end
 local ORD = { "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth" }
 local function ordinal(n) return ORD[n] or (tostring(n) .. "th") end
+-- A long time away, in words a storyteller would use ("six days", "over a week", "three weeks", "two months"),
+-- not a clock's "147 h 0 min".
+function St.away(sec)
+  local days = math.floor((tonumber(sec) or 0) / 86400 + 0.5)
+  if days < 1 then return Vo.span(sec) end
+  if days == 1 then return "a day" end
+  if days < 7 then return say(days) .. " days" end
+  if days == 7 then return "a week" end
+  if days < 14 then return "over a week" end
+  if days < 30 then
+    local w = math.floor(days / 7)
+    return (days % 7 >= 3 and "over " or "") .. say(w) .. " weeks"
+  end
+  local m = math.floor(days / 30)
+  if m == 1 then return days >= 45 and "over a month" or "a month" end
+  if m < 12 then return say(m) .. " months" end
+  return m < 24 and "over a year" or (say(math.floor(m / 12)) .. " years")
+end
 
 -- Level lines (Journey.lua) turn with the level too, so 35 and 36 never read alike.
 function J.rotate(list, key, n)
   if type(list) ~= "table" or #list == 0 then return nil end
-  return list[(hashOf(key) + math.floor(tonumber(n) or 0) * 7) % #list + 1]
+  return list[(hashOf(key) + math.floor(tonumber(n) or 0) * Vo.step(#list)) % #list + 1]
 end
 
 ----------------------------------------------------------------------------
@@ -72,7 +90,7 @@ local MORE_L = {
     fireside = { "%Q% done, %f% dealt with, and the kettle on.", "Work, work: %q% and %f%.",
       "You handed in %q% and fought through %f% to do it.", "%Q% and %f%. Not bad for one level.",
       "The usual: %q%, %f%, and a lot of walking in between." },
-    bard = { "%Q% done and %f% undone.", "Of tasks, %q%; of foes, %f%; of rest, but little.",
+    bard = { "%Q% done and %f% undone.", "%Q%, %f%, and of rest but little.",
       "%Q% answered, %f% fallen to the blade." } },
   workLight = {
     chronicle = { "A light chapter for labour: %q%, %f%.", "Little work is recorded: %q% and %f%." },
@@ -212,8 +230,8 @@ local MORE_M = {
     bard = { "Brief and bright as a spark." } },
   titles = {
     chronicle = { "The chapter's quests include %t%.", "Among the quests completed: %t%." },
-    fireside = { "There was %t%, which you won't forget.", "%T%: those were this level's." },
-    bard = { "%T%: tasks worth a line in the song." } },
+    fireside = { "There was %t%, which you won't forget.", "%T%: this level's work." },
+    bard = { "%T%: worth a line in the song." } },
   chainDone = {
     chronicle = { "The chain of quests named %t% was brought to its end." },
     fireside = { "Finally finished %t%. That one went on.", "%t%, all the way to the last page." },
@@ -244,7 +262,7 @@ local MORE_M = {
     bard = { "By %who% you fell, and the verse names them." } },
   killers = {
     chronicle = { "Those who slew %name%: %who%." },
-    fireside = { "%who% all took turns at you.", "Your list of grudges grew: %who%." },
+    fireside = { "%who% took turns at you.", "Your list of grudges grew: %who%." },
     bard = { "Their names are sung in anger: %who%." } },
   closeWho = {
     chronicle = { "%who% nearly ended %name%, at %pct% health." },
@@ -356,7 +374,7 @@ local NEW = {
     bard = { "Under the hammer of the sun lay %a%.", "The dunes of %a% shifted, and the heat sang.",
       "Gold and red the dust of %a% rose." } },
   climSwamp = {
-    chronicle = { "Mire and mist covered %a% in this chapter.", "The wet lands of %a% are the setting of this chapter." },
+    chronicle = { "Mire and mist covered %a% in this chapter.", "The marshes of %a% are the setting of this chapter." },
     fireside = { "%a%: damp, muddy, and full of things that bite.", "Fog over %a% every morning. Your boots never dried.",
       "%a% squelched. All of it.", "Mosquitoes the size of sparrows in %a%." },
     bard = { "Grey the waters of %a%, and grey the mist.", "In %a% the reeds whispered and the frogs sang." } },
@@ -422,15 +440,15 @@ local NEW = {
     fireside = { "Sixty. You did it. Go on, have a little dance.", "The top of the mountain. What a view." },
     bard = { "Upon the summit now, sing loud: the climb is done." } },
   markFive = {
-    chronicle = { "Chapter %r% marked another five levels behind %name%.", "Level %n% opened a new stretch of the road." },
+    chronicle = { "Chapter %r% put another five levels behind %name%.", "Level %n% opened a new stretch of the road." },
     fireside = { "Level %n%: another handful of levels in the bag.", "%n%. A nice round number to stop and stretch at." },
     bard = { "At %n% the singer turns a page." } },
   -- a return after a break (an opener)
   returnBreak = {
-    chronicle = { "After %d% away, %name% returned to the road.", "The record resumes after a silence of %d%." },
-    fireside = { "You'd been gone %d%. The world waited.", "Back after %d%. Took a minute to remember the keybinds.",
+    chronicle = { "%D% passed before %name% took up the road again.", "The record falls silent for %d%, then resumes." },
+    fireside = { "You'd been gone %d%. The world waited.", "Back, %d% later. Took a minute to remember the keybinds.",
       "%D% away, and then back as if you'd never left." },
-    bard = { "After %d% of silence, the song began again.", "%D% the lute lay quiet; now it plays once more." } },
+    bard = { "%D% of silence, and then the song began again.", "%D% the lute lay quiet; now it plays once more." } },
   pause = {
     chronicle = { "Partway through, the chapter paused for %d%." },
     fireside = { "Somewhere in the middle you took %d% off.", "There was a break of %d% in there." },
@@ -438,7 +456,7 @@ local NEW = {
   -- streaks and comebacks
   cleanStreak = {
     chronicle = { "It was the %o% chapter in a row without a fall.", "%O% chapter running, and no death recorded." },
-    fireside = { "That's %o% level in a row without dying. Don't jinx it.", "%O% clean level running. Somebody's careful." },
+    fireside = { "That's the %o% level in a row without dying. Don't jinx it.", "%O% clean level running. Somebody's careful." },
     bard = { "The %o% verse without a grave, and still the song goes on." } },
   fallStreak = {
     chronicle = { "It was the %o% chapter in a row with a fall in it." },
@@ -449,13 +467,18 @@ local NEW = {
     fireside = { "Chapter %r% knocked you about. This one, you knocked back.", "After chapter %r%, a proper comeback." },
     bard = { "From the ashes of chapter %r%, a brighter verse rose." } },
   grudge = {
-    chronicle = { "%who% had already slain %name% in chapter %r%.", "Not for the first time: %who% had felled %name% in chapter %r% as well." },
-    fireside = { "%who% again. They got you back in chapter %r% too.", "You and %who% go back. Chapter %r%, remember?" },
-    bard = { "%who%, old foe from chapter %r%, struck again." } },
+    chronicle = { "%who% slew %name% again, as in chapter %r%.", "Not for the first time, %who% felled %name%: it had done so in chapter %r% as well." },
+    fireside = { "%who% got you again. They did it back in chapter %r% too.", "%who% got you. Again. You two go back to chapter %r%.",
+      "Same old %who%, same old result. Chapter %r% all over again." },
+    bard = { "%who%, old foe from chapter %r%, laid you low once more.", "Again %who% struck you down, as in chapter %r%." } },
   revenge = {
     chronicle = { "%who%, who had slain %name% in chapter %r%, was defeated at last." },
     fireside = { "Payback: %who%, who got you in chapter %r%, went down.", "You settled the score with %who% from chapter %r%." },
     bard = { "Vengeance, sweet and sharp: %who% of chapter %r% fell." } },
+  feud = {
+    chronicle = { "%name% and %who% each claimed a victory over the other in this chapter." },
+    fireside = { "You and %who% traded wins this level. One each. For now.", "%who% got you, you got %who%. This isn't over." },
+    bard = { "%who% struck you down, and you struck back: the feud runs on." } },
   closeNoFall = {
     chronicle = { "Death came within a breath, and still the chapter records no fall." },
     fireside = { "You nearly died, and you didn't. That counts.", "Close calls, yes. Deaths, no." },
@@ -500,8 +523,8 @@ local NEW = {
   -- dungeons by name, and wipes that became victories
   dungeonNamed = {
     chronicle = { "%name% entered %d%.", "The record takes %name% into %d%." },
-    fireside = { "There was %d%, and you went in.", "You did %d%. Mostly in one piece.", "%d% was on the list, and you crossed it off." },
-    bard = { "Into %d% the verse descends.", "%d% opened its doors to you." } },
+    fireside = { "There was %d%, and you went in.", "You did %d%. Mostly in one piece.", "%d%: on the list, and ticked off." },
+    bard = { "Into %d% the verse descends.", "The doors of %d% opened to you." } },
   dungeonRuns = {
     chronicle = { "%name% ran %d% %n% times in this chapter." },
     fireside = { "%d%, %n% times. You could do it blindfolded now.", "%N% runs of %d%. Looking for something?" },
@@ -520,6 +543,16 @@ local NEW = {
     chronicle = { "%name% won %n% battles on the battlefield.", "%N% victories in battle are recorded." },
     fireside = { "%N% battleground wins. The other side is sick of you.", "You won %n% battlegrounds. Not bad at all." },
     bard = { "%N% times the field was won, and the banners sang." } },
+  bgWin = {
+    chronicle = { "%name% won a battle on the battlefield.", "A victory in battle is recorded.",
+      "%name% fought in a battleground and came away the victor." },
+    fireside = { "One battleground, one win. Tidy.", "You won a battleground. The other side is still sulking.",
+      "A battleground win to your name this level." },
+    bard = { "Once the field was won, and the banners sang.", "One battle, one victory, and a war cry carried home." } },
+  bgLoss = {
+    chronicle = { "%name% fought a battle and did not prevail." },
+    fireside = { "One battleground, one loss. There's always the next queue.", "You lost a battleground. It happens." },
+    bard = { "Once the field was lost, and you marched home singing anyway." } },
   bgLosses = {
     chronicle = { "%name% fought %n% battles and did not prevail." },
     fireside = { "%N% battlegrounds, %n% losses. Rough week on the front.", "You lost %n% battlegrounds. The queue giveth, the queue taketh." },
@@ -715,15 +748,26 @@ St.JOINS = {
   fireside = { "Then ", "After that, ", "Oh, and ", "Meanwhile, ", "Somewhere in there, ", "And ", "On top of that, " },
   bard = { "And ", "Then ", "And so ", "Meanwhile, ", "And then " },
 }
-local LOWER = { You = true, The = true, A = true, An = true, It = true, There = true, Your = true, Some = true, Most = true,
-  Much = true, Somebody = true, Someone = true, Another = true, Nobody = true, No = true,
+local LOWER = { You = true, The = true, A = true, An = true, There = true, Your = true, Some = true, Most = true,
+  Much = true, Somebody = true, Someone = true, Another = true, Nobody = true,
   Every = true, This = true, That = true, Few = true, Little = true }
-function Vo.joined(text, seed, i)
-  if type(text) ~= "string" or i < 2 or hashOf(seed .. "join" .. i) % 3 ~= 0 then return text end
+-- Only between things that happened (the deeper roads, company, finds: orders 4 and 7-8), never before a
+-- tally, a list of quests, the falls or the clock: "Later, the tally stands at..." and "Somewhere in there,
+-- no chapter had hurt this much" read wrong.
+local function joinable(order)
+  order = tonumber(order)
+  return not order or (order >= 4 and order < 5) or order >= 7
+end
+function Vo.joined(text, seed, i, order)
+  if type(text) ~= "string" or i < 2 or not joinable(order) or hashOf(seed .. "join" .. i) % 3 ~= 0 then return text end
   local first, rest = text:match("^(%a+)(.*)$")
   if not first or not LOWER[first] then return text end
+  -- "The Deadmines" and "A Mighty Foe" are names: their first word keeps its capital, so no join
+  if (first == "The" or first == "A" or first == "An") and rest:match("^ %u") then return text end
   local list = St.JOINS[Vo.style()] or St.JOINS.fireside
   local join = list[hashOf(seed .. "joinword" .. i) % #list + 1]
+  -- "Somewhere in there, there was..." says there twice
+  if first == "There" and join:lower():find("there", 1, true) then return text end
   return join .. first:lower() .. rest
 end
 
@@ -753,7 +797,7 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
   local marks = { [1] = "mark1", [10] = "mark10", [20] = "mark20", [30] = "mark30", [40] = "mark40", [50] = "mark50",
     [59] = "mark59", [60] = "mark60" }
   if marks[l] then c.opener(marks[l], {}, 3)
-  elseif l % 5 == 0 and l > 1 then c.opener("markFive", { n = tostring(l), r = roman(l) }, 2) end
+  elseif l % 5 == 0 and l >= 15 then c.opener("markFive", { n = tostring(l), r = roman(l) }, 2) end
 end
 
 -- A return after a break, and a break inside the chapter.
@@ -766,7 +810,7 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
   end
   local gap = before and (c.tFirst - before) or 0
   if gap >= 5 * 86400 then
-    local d = J.draw.duration(gap)
+    local d = St.away(gap)
     c.opener("returnBreak", { d = d, D = capital(d) }, 3)
   end
   local times = {}
@@ -780,11 +824,11 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
     if run > best then best = run end
   end
   if longest >= 4 * 86400 then
-    local d = J.draw.duration(longest)
+    local d = St.away(longest)
     c.add(5, 6, "pause", { d = d, D = capital(d) })
   end
   if not c.current and sittings >= 4 then c.add(3, 6, "sittings", { n = say(sittings), N = capital(say(sittings)) }) end
-  if best >= 3 * 3600 then c.add(4, 6, "marathon", { d = J.draw.duration(best) }) end
+  if best >= 3 * 3600 then c.add(4, 6, "marathon", { d = Vo.span(best) }) end
 end
 
 -- Streaks and comebacks, from the level records.
@@ -807,7 +851,10 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
     if d == nil or d == 0 then break end
     fell = fell + 1
   end
-  if clean >= 3 then c.add(6.5, 5.2, "cleanStreak", { o = ordinal(clean), O = capital(ordinal(clean)) }) end
+  if clean >= 3 then
+    c.add(6.5, 5.2, "cleanStreak", { o = ordinal(clean), O = capital(ordinal(clean)) })
+    c.drop("clean") -- the streak says it
+  end
   if fell >= 3 then c.add(6, 5.2, "fallStreak", { o = ordinal(fell), O = capital(ordinal(fell)), n = say(fell) }) end
   local prev = c.prev
   local wonBig = #c.bosses > 0 or #c.elites > 0 or (c.n.rare or 0) > 0
@@ -826,12 +873,29 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
       if not earlier[e.who] or el < earlier[e.who] then earlier[e.who] = el end
     end
   end
-  for _, who in ipairs(c.killers) do
-    if earlier[who] then c.add(7.2, 5, "grudge", { who = who, r = roman(earlier[who]) }); break end
-  end
+  local avenged
+  local killedNow = {}
+  for _, who in ipairs(c.killers) do killedNow[who] = true end
   for _, e in ipairs(c.events) do
     if (e.k == "rare" or e.k == "elite" or e.k == "boss" or e.k == "duel") and type(e.who) == "string" and earlier[e.who] then
-      c.add(8.5, 4.5, "revenge", { who = e.who, r = roman(earlier[e.who]) })
+      avenged = e.who
+      if killedNow[e.who] then
+        -- it killed you and you killed it, both in this chapter: a feud, not a settled score
+        c.add(8.5, 4.5, "feud", { who = e.who })
+        c.drop("killer")
+      else
+        c.add(8.5, 4.5, "revenge", { who = e.who, r = roman(earlier[e.who]) })
+      end
+      if e.k == "rare" then c.drop("rareWho") elseif e.k == "elite" then c.drop("elite")
+      elseif e.k == "duel" then c.drop("duelWon"); c.drop("duelLost") end
+      break
+    end
+  end
+  -- (a foe you paid back in the same chapter isn't told as a grudge too: the order of the two is unknown)
+  for _, who in ipairs(c.killers) do
+    if earlier[who] and who ~= avenged then
+      c.add(7.2, 5, "grudge", { who = who, r = roman(earlier[who]) })
+      c.drop("killer") -- the grudge line tells the death and the history
       break
     end
   end
@@ -852,7 +916,11 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
   if here.boss and not before.boss then here.dungeon = nil end
   for k in pairs(here) do
     -- the very first chapter's death is nothing special to say twice
-    if not before[k] and not (k == "death" and c.l <= 2) then c.add(FIRST_PRI[k], 3.5, FIRSTS[k]) end
+    if not before[k] and not (k == "death" and c.l <= 2) then
+      c.add(FIRST_PRI[k], 3.5, FIRSTS[k])
+      -- the first time says it better than the everyday line
+      if k == "rez" then c.drop("rez") elseif k == "dungeon" then c.drop("dark") elseif k == "duel" then c.drop("duel") end
+    end
   end
 end
 
@@ -869,7 +937,10 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
     local times = math.max(runs[name].dungeon, runs[name].run)
     if times >= 3 then c.add(6.5, 4.1, "dungeonRuns", { d = name, n = say(times), N = capital(say(times)) }); break end
   end
-  if #order > 0 and #c.bosses == 0 then c.add(6.8, 4.1, "dungeonNamed", { d = Vo.names_(order) }) end
+  if #order > 0 and #c.bosses == 0 then
+    c.add(6.8, 4.1, "dungeonNamed", { d = Vo.names_(order) })
+    c.drop("dark") -- "you went into a dungeon" and then its name says it twice
+  end
   local wiped, beaten = {}, {}
   for _, e in ipairs(c.events) do
     if e.k == "wipe" and type(e.who) == "string" then wiped[#wiped + 1] = e.who end
@@ -894,8 +965,10 @@ Vo.noticers[#Vo.noticers + 1] = function(c)
     if e.k == "duel" and type(e.who) == "string" then duels[#duels + 1] = e end
   end
   if won > 0 and lost > 0 then c.add(6.5, 4.3, "bgMixed", { w = say(won), x = say(lost) })
-  elseif won > 0 then c.add(6.5, 4.3, "bgWins", { n = say(won), N = capital(say(won)) })
-  elseif lost > 0 then c.add(6, 4.3, "bgLosses", { n = say(lost), N = capital(say(lost)) }) end
+  elseif won == 1 then c.add(6.5, 4.3, "bgWin")
+  elseif won > 1 then c.add(6.5, 4.3, "bgWins", { n = say(won), N = capital(say(won)) })
+  elseif lost == 1 then c.add(6, 4.3, "bgLoss")
+  elseif lost > 1 then c.add(6, 4.3, "bgLosses", { n = say(lost), N = capital(say(lost)) }) end
   if #duels == 1 then
     local e = duels[1]
     c.add(4.5, 4.4, e.d == "Duel lost" and "duelLost" or "duelWon", { who = e.who })

@@ -24,6 +24,17 @@ J.voice = Vo
 local function pick(list, seed) return J.pick(list, seed) end
 local function fill(text, vars) return J.fill(text, vars) end
 local function say(n) return J.lore.say(n) end
+-- A stretch of time as a storyteller says it: "40 minutes", "an hour and a half", "three hours".
+function Vo.span(seconds)
+  local minutes = math.floor((tonumber(seconds) or 0) / 60 + 0.5)
+  if minutes < 1 then return "a moment" end
+  if minutes == 1 then return "a minute" end
+  if minutes < 55 then return (minutes <= 12 and say(minutes) or tostring(minutes)) .. " minutes" end
+  local halves = math.floor(minutes / 30 + 0.5)
+  local h, half = math.floor(halves / 2), halves % 2 == 1
+  if h == 1 then return half and "an hour and a half" or "an hour" end
+  return say(h) .. (half and " and a half" or "") .. " hours"
+end
 local function count(n, one, many)
   n = tonumber(n) or 0
   return say(n) .. " " .. (n == 1 and one or (many or (one .. "s")))
@@ -271,7 +282,7 @@ local L = {
     fireside = { "%Q% done and %f% knocked flat.", "It took %q% and %f% to earn the next step.",
       "On the list: %q% to see through and %f% to face.", "You ticked off %q% and saw off %f%.",
       "%Q% handed in, %f% sent to the dirt. A fair day's work." },
-    bard = { "%Q% kept and %f% laid low.", "Promises kept, %q%; foes felled, %f%; and the road went on.",
+    bard = { "%Q% kept and %f% laid low.", "Promises kept, %q%; the fallen, %f%; and the road went on.",
       "%Q% fulfilled, %f% fallen, and the next step won.", "Sing of %q% and %f%, for both were earned." } },
   workLight = {
     chronicle = { "Little was asked of %name% here: %q% and %f%.", "A quiet chapter: %q%, %f%." },
@@ -300,7 +311,7 @@ local L = {
       "Death looked for you and found an empty road." } },
   cleanAfter = {
     chronicle = { "After the falls of chapter %r%, a chapter without a single one.",
-      "Chapter %r% had cost dearly; this one cost nothing." },
+      "Chapter %r% had cost dearly; this one cost no lives." },
     fireside = { "After the mess of chapter %r%, not a single fall. Lessons learned.",
       "Chapter %r% hurt. This one didn't. You'd learned something." },
     bard = { "Where chapter %r% was all graves, this one was clean as snow.",
@@ -474,8 +485,8 @@ local M = {
   titles = {
     chronicle = { "Among the tasks recorded: %t%.", "The quest log of this chapter includes %t%." },
     fireside = { "You'll remember %t%.", "There was %t%, for one.", "Remember %t%? That was this level.",
-      "%T% stands out." },
-    bard = { "Of all the tasks, sing %t%.", "%T%: those names are in this verse." } },
+      "%T% stayed with you." },
+    bard = { "Of all the tasks, sing %t%.", "%T%: the verse remembers." } },
   chainDone = {
     chronicle = { "A long quest chain reached its end here: %t%." },
     fireside = { "And a long one finally wrapped up: %t%.", "You saw %t% through to the very end." },
@@ -509,7 +520,7 @@ local M = {
     bard = { "%who% laid you low, and the song remembers it." } },
   killers = {
     chronicle = { "Among those who felled %name%: %who%." },
-    fireside = { "%who% all had a go at you, and won.", "Your killers this level: %who%." },
+    fireside = { "%who% each had a go at you, and won.", "Your killers this level: %who%." },
     bard = { "By %who% you fell, and rose again." } },
   closeWho = {
     chronicle = { "%who% brought %name% down to %pct% health, and no further." },
@@ -607,13 +618,23 @@ Vo.L, Vo.M, Vo.hashOf, Vo.hourOf, Vo.money, Vo.names_ = L, M, hashOf, hourOf, mo
 
 -- A chapter's line from a pool: the pool turns one line per level, so neighbouring chapters (35 and 36)
 -- never tell the same thing in the same words, and a pool is used up before any line comes back.
+-- How far a pool turns from one level to the next: a step that shares no factor with the pool's size, so
+-- neighbouring chapters never land on the same line and every line gets its turn (7 into a pool of 7 or 14
+-- would come back to the same one or two lines).
+local function gcd(a, b) while b ~= 0 do a, b = b, a % b end return a end
+function Vo.step(size)
+  for _, s in ipairs({ 7, 5, 3 }) do
+    if s < size and gcd(s, size) == 1 then return s end
+  end
+  return 1
+end
 local function tell(lines, key, l, vars)
   if type(lines) ~= "table" then return nil end
   local list = lines[Vo.style()] or lines.fireside
   if type(list) ~= "table" or #list == 0 then return nil end
   vars = vars or {}
   vars.name = vars.name or (Vo.names())
-  local i = (hashOf(key) + math.floor(tonumber(l) or 0) * 7) % #list + 1
+  local i = (hashOf(key) + math.floor(tonumber(l) or 0) * Vo.step(#list)) % #list + 1
   return fill(list[i], vars)
 end
 Vo.tell = tell
@@ -646,7 +667,9 @@ function Vo.chapterProse(l, events, rec, current)
     end
     local title = type(e.d) == "string" and e.d:match("^Quest: (.+)$")
     if title and (k == "quest" or k == "chain" or k == "elite") then
-      titles[#titles + 1] = title
+      local dup = false
+      for _, t in ipairs(titles) do if t == title then dup = true end end
+      if not dup then titles[#titles + 1] = title end
       if k == "chain" then chains[#chains + 1] = title end
     end
     if k == "first" and not firstFind then firstFind = e end
@@ -741,7 +764,7 @@ function Vo.chapterProse(l, events, rec, current)
   elseif n.elite > 0 then cand(6, 4, "elite", { e = "an elite", E = "An elite" }) end
   if rareE then M_(7, 4, "rareWho", { who = rareE.who }) elseif n.rare > 0 then cand(5, 4, "rare") end
   if n.pvp > 0 then cand(6, 4, "pvp") end
-  if n.duel > 0 then M_(4, 4, "duel", { n = say(n.duel), N = capital(say(n.duel)) }) end
+  if n.duel >= 2 then M_(4, 4, "duel", { n = say(n.duel), N = capital(say(n.duel)) }) end
   -- falls, against the chapters before
   local prev = recordOf(l - 1)
   local worst = 0
@@ -774,7 +797,7 @@ function Vo.chapterProse(l, events, rec, current)
     elseif prev and tonumber(prev.seconds) and not prev.fromPct then
       local d = s - tonumber(prev.seconds)
       if math.abs(d) >= 600 and math.abs(d) >= tonumber(prev.seconds) * 0.2 then
-        local dt = J.draw.duration(math.abs(d))
+        local dt = Vo.span(math.abs(d))
         M_(4, 6, d < 0 and "faster" or "slower", { d = dt, D = capital(dt) })
       end
     end
@@ -874,7 +897,9 @@ function Vo.chapterProse(l, events, rec, current)
     local text = tell(open.pool[open.slot], open.slot, l, open.vars)
     if text and text ~= "" then out[#out + 1] = text end
     -- the land still gets told when something else opened
-    if place and not open.place then cand(9.5, 1, place[1], place[2]) end
+    -- (a weather opening already names a land you stayed in)
+    local named = open.vars and open.vars.a and place and place[1] == "oneLand" and place[2].a == open.vars.a
+    if place and not open.place and not named then cand(9.5, 1, place[1], place[2]) end
     if mood and not open.mood and hashOf(seed .. "mood2") % 2 == 0 then M_(3, 9, mood) end
   end
   table.sort(cands, function(a, b) return a.pri > b.pri end)
@@ -886,7 +911,7 @@ function Vo.chapterProse(l, events, rec, current)
     if not usedSlot[c.slot] and not dropped[c.slot] then usedSlot[c.slot] = true; chosen[#chosen + 1] = c end
   end
   table.sort(chosen, function(a, b) if a.order ~= b.order then return a.order < b.order end return a.pri > b.pri end)
-  for i, c in ipairs(chosen) do out[#out + 1] = Vo.joined and Vo.joined(c.text, seed, i) or c.text end
+  for i, c in ipairs(chosen) do out[#out + 1] = Vo.joined and Vo.joined(c.text, seed, i, c.order) or c.text end
   -- a word about who you are, when the chapter shows it
   local top = Vo.traits(j)[1]
   local shows = top and ((top[1] == "gatherer" and #g > 0) or (top[1] == "angler" and fish > 0) or (top[1] == "friend" and p)
@@ -896,7 +921,7 @@ function Vo.chapterProse(l, events, rec, current)
   local aside = shows and Vo.TRAITS[top[1]].aside
   -- the aside on about half the chapters, so it doesn't close every page the same way
   if aside and #aside > 0 and hashOf(seed .. "aside") % 2 == 0 then
-    out[#out + 1] = aside[(hashOf("aside" .. top[1]) + l * 7) % #aside + 1]
+    out[#out + 1] = aside[(hashOf("aside" .. top[1]) + l * Vo.step(#aside)) % #aside + 1]
   end
   -- how the chapter ended (the next level's moment), on most finished chapters
   if not current and #closers > 0 and hashOf(seed .. "close") % 4 ~= 0 then
@@ -938,7 +963,7 @@ local PREFACE = {
   clean = {
     chronicle = { "Not a single fall is recorded." },
     fireside = { "Not one fall yet. Touch wood." },
-    bard = { "And death has not yet learned the way." } },
+    bard = { "Death has not yet learned the way to this door." } },
   falls = {
     chronicle = { "There have been %d%, and after each %first% rose." },
     fireside = { "There have been %d%. Every time, back up again." },
