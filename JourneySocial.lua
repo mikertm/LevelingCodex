@@ -495,18 +495,167 @@ end
 ----------------------------------------------------------------------------
 -- Fellowships (the same 2+ party members with you)
 ----------------------------------------------------------------------------
+-- Names: many styles, picked by a hash of the band's key (and its re-roll count), so a band keeps
+-- its name and two bands rarely share one. What the band did (deaths, wipes, bosses, quests), where
+-- it formed and its classes give some styles their words; about a third are meant to be silly.
 local ADJ = { "Ashen", "Wandering", "Iron", "Silver", "Ember", "Patient", "Lucky", "Quiet", "Stormy", "Gilded", "Mossy", "Hollow",
-  "Lantern", "Brave", "Long Road", "Copper" }
-local NOUN = { "Company", "Wayfarers", "Oath", "Pact", "Band", "Circle", "Hearth", "Lanterns", "Banner", "Shields", "Compass", "Kettle" }
+  "Lantern", "Brave", "Long Road", "Copper", "Crimson", "Golden", "Restless", "Weathered", "Howling", "Unbroken", "Starlit",
+  "Thorned", "Northern", "Sworn", "Last Light", "Ironbound", "Dawnward", "Grey", "Salted", "Wild", "Bright", "Dusty", "Merry",
+  "Valiant", "Distant", "Burning", "Midnight", "Green", "Oaken", "Rusted", "Stubborn", "Kindled", "Faithful", "Errant" }
+local NOUN = { "Company", "Wayfarers", "Oath", "Pact", "Band", "Circle", "Hearth", "Lanterns", "Banner", "Shields", "Compass",
+  "Kettle", "Vanguard", "Wardens", "Riders", "Brotherhood", "Order", "Fellowship", "Watch", "Host", "Covenant", "Rangers",
+  "Blades", "Wolves", "Ravens", "Hounds", "Guard", "Accord", "League", "Crew", "Society", "Lodge", "Caravan", "Expedition" }
 -- a pair (you and one other) gets a pair's name
-local PAIR = { "Pair", "Twin Blades", "Two Lanterns", "Duo", "Partners", "Two Roads", "Matched Swords", "Kindred", "Twin Stars",
-  "Shared Fire", "Two Shields", "Bookends" }
-function S.autoName(key)
+local PAIR = { "Pair", "Twin Blades", "Duo", "Partners", "Matched Swords", "Kindred", "Twin Stars", "Shared Fire", "Bookends",
+  "Odd Couple", "Twin Flames", "Twins", "Companions", "Shadows", "Sworn Pair", "Riders", "Lanterns" }
+local OF = { "Order", "Brotherhood", "Keepers", "Knights", "Guild", "Circle", "Sons and Daughters", "Society", "Wardens", "Friends",
+  "League", "Company" }
+local OF_THING = { "Rusty Kettle", "Lost Boot", "Broken Lance", "Last Candle", "Open Road", "Silver Spoon", "Leaky Tent",
+  "Second Breakfast", "Burnt Toast", "Long Night", "Wandering Star", "Empty Purse", "Crooked Signpost", "Muddy Cloak",
+  "Cold Campfire", "Bent Sword", "Lucky Coin", "Shared Flask", "Torn Map", "Howling Wind", "Quiet Dawn" }
+-- one word for each class, for names built from who is in the band
+local CLASS_WORD = { WARRIOR = "Shield", PALADIN = "Hammer", HUNTER = "Arrow", ROGUE = "Dagger", PRIEST = "Candle",
+  SHAMAN = "Totem", MAGE = "Spark", WARLOCK = "Shadow", DRUID = "Antler", DEATHKNIGHT = "Rune", MONK = "Fist" }
+local CLASS_MANY = { WARRIOR = { "Too Many Warriors", "The Shield Wall", "The Charge Brigade" },
+  PALADIN = { "The Bubble Brigade", "Hammers All Round", "The Shining Company" },
+  HUNTER = { "The Pet Parade", "Arrows for Days", "The Hunters' Lodge" },
+  ROGUE = { "Nobody Saw Us", "The Shady Bunch", "The Stab Club" },
+  PRIEST = { "The Candle Choir", "Too Many Healers", "The Holy Huddle" },
+  SHAMAN = { "The Totem Pole", "The Storm Callers", "Totems Everywhere" },
+  MAGE = { "The Water Delivery Service", "Too Many Mages", "The Sheep Herders" },
+  WARLOCK = { "The Shadow Book Club", "The Summoning Circle", "Soul Shard Hoarders" },
+  DRUID = { "The Shapeshifters", "The Antler Assembly", "The Moonkin Union" } }
+local HEALERS = { PRIEST = true, PALADIN = true, SHAMAN = true, DRUID = true, MONK = true }
+-- silly names, any band
+local FUNNY = { "The Accidental Pull Club", "Murloc Appreciation Society", "The Fashionably Late", "Pull Now, Ask Later",
+  "The Lost and Found", "Ninjas of the Need Roll", "The Wrong Way Wayfarers", "Left Our Pets at Home",
+  "The Mostly Harmless", "Snacks Before Bosses", "The Unpaid Interns", "Brave, Not Bright", "The Afk Auxiliary",
+  "The Bag Space Problem", "We Brought Snacks", "Dinner Is In Five", "The Quest Log Is Full", "Loot Goblins Anonymous",
+  "The Repair Bill Society", "Who Pulled That?", "Mount Up Eventually", "The Grey Item Hoarders", "Ask Me About Kobolds",
+  "The Kodo Whisperers", "Professional Wanderers", "The Questionable Choices", "Lost Again, Thanks", "The Bread Givers",
+  "One More Quest", "The Detour Society", "Run Back Regulars", "The Loot Rollers", "Ten Rats Later", "The Wrong Boar",
+  "Bring Your Own Bandages", "The Slow Clap Society", "Fearless and Lost", "The Gnoll Hunting Club",
+  "Kobold Candle Thieves", "The Ogre Fan Club", "Spiders, Why Spiders", "The Bear Necessities", "Please Stop Pulling",
+  "The Last Minute Heroes", "Mostly Alive", "The Shiny Rock Brigade" }
+local PAIR_FUNNY = { "Partners in Grime", "Two Heads, No Map", "The Two of Us", "Loot Council of Two", "Me and This One",
+  "Double Trouble", "Two Mounts, One Road", "The Buddy System", "Two Left Boots", "Twice the Trouble", "Odd Couple Inc",
+  "The Tag Team", "Two Bad Ideas", "Tank and Spank", "Better Together, Mostly" }
+local DEATHS = { "The Floor Inspectors", "The Corpse Run Club", "Spirit Healer Regulars", "The Graveyard Shift",
+  "The Ghost Walkers", "Mostly Dead Company", "Frequent Fallers", "The Soul Shard Donors", "Lie Down Lodge",
+  "The Run Back Society" }
+local WIPES = { "The Wipe Society", "Repair Bill Brigade", "Run It Back Club", "The Floor Tank Union", "One More Try",
+  "The Wipe Recovery Crew", "Again, But Better", "Ready Check Failed" }
+local BOSSES = { "The Bossbreakers", "The Crown Takers", "Doom of Dungeons", "The Final Pull", "The Last Boss Standing",
+  "The Throne Knockers", "Lords of the Loot" }
+local QUESTS = { "The Errand Runners", "The Notice Board Guild", "Ten Wolf Pelts Later", "The Courier Company",
+  "Every Quest, Always", "The Exclamation Points", "Turn-in Troupe" }
+local CLEAN = { "The Untouched", "Not a Scratch", "The Unfallen", "Nobody Died Today" }
+
+local function nameHash(s)
   local h = 0
-  for i = 1, #key do h = (h * 31 + key:byte(i)) % 1000003 end
+  for i = 1, #s do h = (h * 31 + s:byte(i)) % 1000003 end
+  return h
+end
+-- the band's classes, yours included: { TOKEN = count }, number of classes, number of people
+local function bandClasses(key)
+  local j = journal()
+  local out, kinds, people = {}, 0, 0
+  local function add(c)
+    if type(c) ~= "string" or c == "" then return end
+    c = c:upper():gsub("%s", "")
+    if not out[c] then kinds = kinds + 1 end
+    out[c] = (out[c] or 0) + 1
+    people = people + 1
+  end
+  local _, mine = try(UnitClass, "player")
+  add(mine)
+  for _, n in ipairs(S.names(key)) do
+    local pal, s, f = j.pals[n], j.sighted[n], j.fellows[n]
+    add((type(pal) == "table" and pal.class) or (type(s) == "table" and s.c) or (type(f) == "table" and f.class) or nil)
+  end
+  return out, kinds, people
+end
+-- the first word of a land, kept short ("Elwynn Forest" = Elwynn), for "The Elwynn Wolves"
+local function landWord(z)
+  z = plain(z or "")
+  if z == "" then return nil end
+  local w = z:match("^The (%S+)") or z:match("^(%S+)")
+  if not w or #w < 4 or #w > 12 then return nil end
+  if w == "Stormwind" or w == "Orgrimmar" or #z <= 12 then w = z end
+  if #w > 14 then return nil end
+  return w
+end
+function S.autoName(key, g, roll)
+  key = key or ""
+  g = type(g) == "table" and g or (journal().fellowships[key])
+  g = type(g) == "table" and g or {}
+  roll = roll or n0(g.roll)
+  local seed = key .. "#" .. roll
+  local function pick(list, salt) return list[nameHash(seed .. salt) % #list + 1] end
   local pair = not key:find(",", 1, true)
-  local nouns = pair and PAIR or NOUN
-  return "The " .. ADJ[h % #ADJ + 1] .. " " .. nouns[math.floor(h / #ADJ) % #nouns + 1]
+  local classes, kinds, people = bandClasses(key)
+  local styles = {}
+  local function style(weight, fn) for _ = 1, weight do styles[#styles + 1] = fn end end
+  -- the plain heraldic styles
+  style(4, function() return "The " .. pick(ADJ, "a") .. " " .. pick(pair and PAIR or NOUN, "n") end)
+  style(2, function() return pick(OF, "o") .. " of the " .. pick(OF_THING, "t") end)
+  -- where it formed: "The Westfall Wayfarers", the noun starting with the land's letter when one does
+  local land = landWord(g.fz or zone())
+  if land then
+    style(2, function()
+      local first, same = land:sub(1, 1), {}
+      for _, n in ipairs(NOUN) do if n:sub(1, 1) == first then same[#same + 1] = n end end
+      return "The " .. land .. " " .. pick(#same > 0 and same or NOUN, "z")
+    end)
+  end
+  -- who is in it
+  local tokens = {}
+  for c in pairs(classes) do if CLASS_WORD[c] then tokens[#tokens + 1] = c end end
+  table.sort(tokens)
+  if #tokens >= 2 then
+    style(2, function()
+      local i = nameHash(seed .. "c1") % #tokens
+      local a, b = tokens[i + 1], tokens[(i + 1 + nameHash(seed .. "c2") % (#tokens - 1)) % #tokens + 1]
+      return "The " .. CLASS_WORD[a] .. " and " .. CLASS_WORD[b]
+    end)
+  end
+  if #tokens == 1 and people >= 2 and CLASS_MANY[tokens[1]] then
+    style(4, function() return pick(CLASS_MANY[tokens[1]], "m") end)
+  end
+  local healer = false
+  for c in pairs(classes) do if HEALERS[c] then healer = true end end
+  if people >= 3 and #tokens == kinds and not healer then
+    style(3, function() return pick({ "The No Healer Club", "Bandages Required", "Who Needs Healers?", "The Potion Drinkers" }, "h") end)
+  end
+  -- what it did
+  if n0(g.deaths) >= 3 then style(4, function() return pick(DEATHS, "d") end) end
+  if n0(g.wipes) >= 2 then style(4, function() return pick(WIPES, "w") end) end
+  if n0(g.bosses) >= 2 then style(3, function() return pick(BOSSES, "b") end) end
+  if n0(g.quests) >= 15 then style(2, function() return pick(QUESTS, "q") end) end
+  if n0(g.deaths) == 0 and n0(g.secs) >= 3600 then style(1, function() return pick(CLEAN, "u") end) end
+  -- and the silly ones
+  style(4, function() return pick(pair and PAIR_FUNNY or FUNNY, "f") end)
+  if pair then style(1, function() return pick(FUNNY, "f2") end) end
+  for try2 = 0, 4 do
+    local fn = styles[nameHash(seed .. "s" .. try2) % #styles + 1]
+    local ok, name = pcall(fn)
+    name = ok and type(name) == "string" and plain(name) or nil
+    if name and #name >= 3 and #name <= 32 then return name end
+  end
+  return "The " .. pick(ADJ, "a") .. " " .. pick(pair and PAIR or NOUN, "n")
+end
+-- A new name for a band (Roll a new name): the next roll, kept as its name.
+function S.rerollName(key)
+  local g = journal().fellowships[key]
+  if type(g) ~= "table" then return false, "That fellowship is gone." end
+  local old = S.fellowshipName(g, key)
+  local name
+  for _ = 1, 6 do
+    g.roll = n0(g.roll) + 1
+    name = S.autoName(key, g, g.roll)
+    if name ~= old then break end
+  end
+  return S.rename(key, name)
 end
 -- The fellowship's key: the sorted names of the party with you (one name for a pair).
 function S.groupKey(list)
@@ -566,7 +715,7 @@ local function groupTick(list)
   if not g.formed and (g.secs >= S.FORM_SECS or (n0(g.days) >= 2 and g.secs >= 600)) then
     g.formed = now()
     g.fz, g.fl = zone(), J.level()
-    g.auto = g.auto or S.autoName(key)
+    g.auto = g.auto or S.autoName(key, g)
     local list2 = names(key)
     local e = J.add("fellowship", fill({ "%who% and you rode together long enough to earn a name: %name%",
       "A fellowship was born in %zone%: %who% and you, now %name%" }, key, { who = S.listText(list2), name = g.auto, zone = zone() }),

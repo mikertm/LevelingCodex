@@ -37,6 +37,7 @@
     - **Write a motto** of your own for under the banner (or let the book keep choosing one).
     - **Pin to top** keeps a fellowship first in the list.
     - The page says when you were last together, or that you're together right now.
+- **Journey: fellowship names, far more of them.** A new fellowship now gets its name from hundreds of combinations. Some are grand ("The Westfall Wardens", "Knights of the Shared Flask"), some come from who rides in it ("The Hammer and Spark", "Too Many Mages", "The No Healer Club") or what it has been through ("The Corpse Run Club", "The Wipe Society", "The Bossbreakers"), and plenty are just silly ("Murloc Appreciation Society", "Who Pulled That?", "Partners in Grime"). **New name** on its page rolls another until one fits, and tells the band. Mottos got the same treatment, funny ones included. Fellowships you already have keep their names.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:
