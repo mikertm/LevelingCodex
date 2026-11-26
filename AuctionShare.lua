@@ -38,6 +38,9 @@ Sh.STRIKES = 5
 Sh.stats = { sentMsgs = 0, sentItems = 0, got = 0, filed = 0, older = 0, doubted = 0, bad = 0, refused = 0, peers = 0 }
 local peers = {}
 local gap, lastSend, joinedAt, channelID = Sh.GAP, 0, nil, nil
+-- joining: tries so far, when the last one was, whether the world has loaded (no join before it)
+Sh.JOIN_RETRY, Sh.JOIN_TRIES = 60, 5
+local joinTries, joinTriedAt, ready = 0, nil, false
 
 local function A() return ns.auction end
 local function now() return tonumber(time and time()) or 0 end
@@ -66,8 +69,22 @@ local function short(name) return type(name) == "string" and (name:match("^([^%-
 -- What this client sent lately: the channel hands every message back to its sender, and Forever
 -- doesn't always name you the way UnitName does (a surname, a realm), so the text itself says it's yours
 local sentLately, sentOrder = {}, {}
+-- Your own name as the channel gives it: "Name" or "Name-Realm" (your realm). Another player
+-- with your first name on a connected realm is not you.
+local function squash(s) return (tostring(s or ""):gsub("[%s%-']", ""):lower()) end
+local function isMyName(sender)
+  local me = myName()
+  if me == "" or type(sender) ~= "string" then return false end
+  local n, realm = sender:match("^([^%-]+)%-(.+)$")
+  if not n then return sender == me end
+  if n ~= me then return false end
+  local mine = try(GetNormalizedRealmName) or try(GetRealmName)
+  if type(mine) ~= "string" or mine == "" then return true end
+  return squash(realm) == squash(mine)
+end
+Sh.isMyName = isMyName
 local function isMine(sender, text)
-  return sentLately[text] == true or short(sender) == short(myName())
+  return sentLately[text] == true or isMyName(sender)
 end
 
 ----------------------------------------------------------------------------
@@ -81,11 +98,16 @@ local function channel()
 end
 Sh.channel = channel
 
+-- out of every chat window: the old global, else the window's own method (newer clients)
 local function hideChannel()
-  if type(ChatFrame_RemoveChannel) ~= "function" then return end
+  local util = type(ChatFrameUtil) == "table" and ChatFrameUtil.RemoveChannel
   for i = 1, tonumber(NUM_CHAT_WINDOWS) or 10 do
     local f = _G["ChatFrame" .. i]
-    if f then pcall(ChatFrame_RemoveChannel, f, Sh.CHANNEL) end
+    if f then
+      if type(ChatFrame_RemoveChannel) == "function" then pcall(ChatFrame_RemoveChannel, f, Sh.CHANNEL)
+      elseif type(util) == "function" then pcall(util, f, Sh.CHANNEL)
+      elseif type(f.RemoveChannel) == "function" then pcall(f.RemoveChannel, f, Sh.CHANNEL) end
+    end
   end
 end
 
@@ -97,15 +119,30 @@ local function noticeFilter(_, _, ...)
   end
   return false
 end
+-- a line someone typed into our channel (by its base name, the 9th argument; never the text)
+local function chatFilter(_, _, _, _, _, _, _, _, _, _, base)
+  return type(base) == "string" and base:lower() == Sh.CHANNEL:lower()
+end
 
 function Sh.join()
   if not Sh.on() then return end
+  ready = true
   if not channel() then
+    joinTries, joinTriedAt = joinTries + 1, now()
     try(JoinTemporaryChannel, Sh.CHANNEL)
     joinedAt = now()
   end
-  ns.after(1, function() channel(); hideChannel() end)
+  ns.after(1, function() if channel() then joinTries = 0 end hideChannel() end)
 end
+
+-- A join the server refused (ten channels already, a password someone set, a full queue at
+-- login) is tried again every Sh.JOIN_RETRY s, Sh.JOIN_TRIES times; meanwhile the guild carries it.
+local function retryJoin()
+  if not ready or channelID or joinTries >= Sh.JOIN_TRIES then return end
+  if joinTriedAt and now() - joinTriedAt < Sh.JOIN_RETRY then return end
+  Sh.join()
+end
+function Sh.joinFailed() return ready and not channelID and joinTries >= Sh.JOIN_TRIES end
 
 function Sh.leave()
   if channel() then try(LeaveChannelByName, Sh.CHANNEL) end
@@ -114,7 +151,7 @@ end
 
 function Sh.setOn(on)
   ns.db().auctionNoShare = (not on) or nil
-  if on then Sh.join() else Sh.leave(); pending, order = {}, {} end
+  if on then joinTries = 0; Sh.join() else Sh.leave(); pending, order = {}, {} end
 end
 
 ----------------------------------------------------------------------------
@@ -218,7 +255,10 @@ function Sh.tick()
   if not Sh.on() then return end
   local t = GetTime and GetTime() or now()
   if t - lastSend < gap then return end
-  if not channel() and not try(IsInGuild) then return end
+  if not channel() then
+    retryJoin()
+    if not try(IsInGuild) then return end
+  end
   local msg, ids = Sh.build()
   if not msg then return end
   lastSend = t
@@ -243,11 +283,29 @@ local function allowSender(name, t)
   return s.n <= Sh.SENDER_MAX
 end
 
--- Is a price far off what this item usually costs?
+-- Is a price far off what this item usually costs? Against its usual price once it has two days,
+-- else against your own reading of the last three days (one player's word alone moved new items).
 local function doubtful(id, low)
   local p = A().price(id)
-  if not p or (p.days or 0) < 2 or not p.usual or p.usual <= 0 then return false end
-  return low < p.usual / 4 or low > p.usual * 4
+  local ref
+  if p and (p.days or 0) >= 2 and p.usual and p.usual > 0 then
+    ref = p.usual
+  else
+    local it = A().store().items[id]
+    local at = type(it) == "table" and tonumber(it.at)
+    if at and it.shAt ~= at and not it.ator and (tonumber(it.n) or 0) > 0 and now() - at < 3 * 86400 then ref = tonumber(it.low) end
+  end
+  if not ref or ref <= 0 then return false end
+  return low < ref / 4 or low > ref * 4
+end
+
+-- An ID the game has no item for never enters the store (a broken or made-up message would
+-- otherwise fill your saved prices with nameless entries). Without the API it is let through.
+local function realItem(id)
+  local f = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+  if type(f) ~= "function" then return true end
+  local ok, r = pcall(f, id)
+  return not ok or r ~= nil
 end
 
 -- Two different players within 15% of each other on the same day: the price joins the history.
@@ -279,6 +337,10 @@ function Sh.take(id, low, n, at, sender)
   local t = now()
   heard[id] = { low = low, t = t }
   local it = A().store().items[id]
+  if type(it) ~= "table" and not realItem(id) then
+    Sh.stats.bad = Sh.stats.bad + 1
+    return false
+  end
   local mine = type(it) == "table" and tonumber(it.at)
   -- passed over when your reading is newer, or as new and your own (a shared one as new may be confirmed)
   if mine and (mine > at or (mine == at and it.shAt ~= mine)) then
@@ -303,7 +365,7 @@ function Sh.take(id, low, n, at, sender)
 end
 
 function Sh.receive(text, sender)
-  if not Sh.on() or type(text) ~= "string" or type(sender) ~= "string" then return end
+  if not Sh.on() or type(text) ~= "string" or type(sender) ~= "string" or sender == "" then return end
   if isMine(sender, text) then Sh.stats.echo = (Sh.stats.echo or 0) + 1; return end
   local body = text:match("^P1;(.+)$")
   if not body then return end
@@ -359,6 +421,9 @@ function Sh.fieldLines()
   local s = Sh.stats
   if not Sh.on() then return { "Price sharing is off." } end
   local where = channel() and "the realm channel" or (try(IsInGuild) and "your guild" or "nobody yet: it joins the channel shortly after you log in")
+  if not channel() and Sh.joinFailed() then
+    where = (try(IsInGuild) and "your guild only" or "nobody") .. ": the game wouldn't let it join the price channel (you may be in ten channels already)"
+  end
   local lines = { "Sharing with " .. where .. "." }
   lines[#lines + 1] = "This session: sent " .. ns.thousands(s.sentItems) .. " prices, got " .. ns.thousands(s.filed) .. " updates from "
     .. s.peers .. (s.peers == 1 and " player." or " players.")
@@ -385,7 +450,8 @@ function ns.auctionShareDebugLines()
     .. ", sent " .. s.sentMsgs .. " messages / " .. s.sentItems .. " prices, " .. s.refused .. " refused, gap " .. gap .. " s, queued "
     .. (q + #order) .. "; heard " .. s.got .. " from " .. s.peers .. " players: filed " .. s.filed .. ", older " .. s.older
     .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
-    .. (Sh.lastPeer and (", last new player " .. ns.plain(Sh.lastPeer)) or "") }
+    .. (Sh.lastPeer and (", last new player " .. ns.plain(Sh.lastPeer)) or "")
+    .. "; join tries " .. joinTries .. (Sh.joinFailed() and " (gave up)" or "") .. ", other channel types skipped " .. (s.otherDist or 0) }
 end
 
 local frame
@@ -393,23 +459,38 @@ function ns.startAuctionShare()
   if frame then return end
   local register = C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix or RegisterAddonMessagePrefix
   if type(register) == "function" then pcall(register, Sh.PREFIX) end
-  if type(ChatFrameAddMessageEventFilter) == "function" then
-    pcall(ChatFrameAddMessageEventFilter, "CHAT_MSG_CHANNEL_NOTICE", noticeFilter)
-  elseif type(ChatFrame_AddMessageEventFilter) == "function" then
-    pcall(ChatFrame_AddMessageEventFilter, "CHAT_MSG_CHANNEL_NOTICE", noticeFilter)
+  local addFilter = (type(ChatFrame_AddMessageEventFilter) == "function" and ChatFrame_AddMessageEventFilter)
+    or (type(ChatFrameAddMessageEventFilter) == "function" and ChatFrameAddMessageEventFilter)
+    or (type(ChatFrameUtil) == "table" and type(ChatFrameUtil.AddMessageEventFilter) == "function" and ChatFrameUtil.AddMessageEventFilter)
+  if addFilter then
+    -- joined / left, and the owner and password notices the first player in it gets
+    pcall(addFilter, "CHAT_MSG_CHANNEL_NOTICE", noticeFilter)
+    pcall(addFilter, "CHAT_MSG_CHANNEL_NOTICE_USER", noticeFilter)
+    pcall(addFilter, "CHAT_MSG_CHANNEL", chatFilter)
   end
   frame = CreateFrame("Frame")
   for _, ev in ipairs({ "CHAT_MSG_ADDON", "PLAYER_ENTERING_WORLD" }) do pcall(frame.RegisterEvent, frame, ev) end
   local entered = false
-  frame:SetScript("OnEvent", function(_, event, prefix, text, _, sender)
+  frame:SetScript("OnEvent", function(_, event, prefix, text, dist, sender)
     if event == "CHAT_MSG_ADDON" then
-      if prefix == Sh.PREFIX then pcall(Sh.receive, text, sender) end
+      if prefix ~= Sh.PREFIX then return end
+      -- only the price channel and the guild carry prices (a whisper or party message is anyone's)
+      if dist ~= nil and dist ~= "CHANNEL" and dist ~= "GUILD" then
+        Sh.stats.otherDist = (Sh.stats.otherDist or 0) + 1
+        return
+      end
+      pcall(Sh.receive, text, sender)
     elseif not entered then
       entered = true
       ns.after(Sh.JOIN_DELAY, function() pcall(Sh.join) end)
     else
       ns.after(2, function() if Sh.on() then channel(); hideChannel() end end)
     end
+  end)
+  -- started during PLAYER_ENTERING_WORLD (the class wasn't known at login): that event has
+  -- already gone by, so the join comes from here instead
+  ns.after(Sh.JOIN_DELAY + 30, function()
+    if not entered then entered = true; pcall(Sh.join) end
   end)
   ns.every(1, function() pcall(Sh.tick) end)
 end

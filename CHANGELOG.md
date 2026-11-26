@@ -38,6 +38,11 @@
     - **Pin to top** keeps a fellowship first in the list.
     - The page says when you were last together, or that you're together right now.
 - **Journey: fellowship names, far more of them.** A new fellowship now gets its name from hundreds of combinations. Some are grand ("The Westfall Wardens", "Knights of the Shared Flask"), some come from who rides in it ("The Hammer and Spark", "Too Many Mages", "The No Healer Club") or what it has been through ("The Corpse Run Club", "The Wipe Society", "The Bossbreakers"), and plenty are just silly ("Murloc Appreciation Society", "Who Pulled That?", "Partners in Grime"). **New name** on its page rolls another until one fits, and tells the band. Mottos got the same treatment, funny ones included. Fellowships you already have keep their names.
+- **Price sharing, checked end to end.** An audit of the realm price channel:
+    - **It joins in every case.** A character whose class loaded late used to miss the join until the next loading screen. A join the game refuses (ten channels already, a password someone set) is tried again every minute, five times, and Settings > Helpers says when it gave up (your guild still carries prices then).
+    - **Only real prices get in.** Price messages count only from the price channel or your guild, never a whisper or party message. An item ID the game has no item for is never saved. A new item's price far off your own reading from the last three days now waits for a second player, like items with a price history already did.
+    - **A player with your name on a connected realm** is no longer taken for your own echo.
+    - **Chat stays clean.** Lines typed into the price channel and its owner and password notices stay out of your chat windows, on newer clients too.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:

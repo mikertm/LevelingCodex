@@ -12189,7 +12189,48 @@ function S.auctionShare()
   from("Tester", "P1;" .. b(4339) .. ",5,1,0")
   check(not A.store().items[4339], "your own echo is ignored")
   check(Sh.stats.bad >= 2, "broken entries are counted, not filed")
+  -- audit (2026-11-26): a new item's odd price is weighed against your own reading of it
+  A.record(4400, "Heavy Stone", 1000, 5)
+  MOCK.advance(61)
+  from("Ann-Mockrealm", "P1;" .. b(4400) .. "," .. b(10) .. ",3,0")
+  check(A.store().items[4400].low == 1000, "a price far under your own recent reading waits for a second player")
   if not MOCK.minimal then
+    -- a player with your name on a connected realm is someone else
+    from("Tester-Otherrealm", "P1;" .. b(4401) .. "," .. b(300) .. ",2,0")
+    check(A.store().items[4401] and A.store().items[4401].low == 300, "a same-named player from another realm is not you")
+    -- prices come only over the channel or the guild
+    MOCK.event("CHAT_MSG_ADDON", "LevCodexP", "P1;" .. b(4402) .. "," .. b(300) .. ",2,0", "WHISPER", "Eve")
+    check(not A.store().items[4402], "a whispered price message is ignored")
+    -- an ID the game has no item for never enters the store
+    local had = C_Item.GetItemInfoInstant
+    C_Item.GetItemInfoInstant = function(id) if id == 1999999 then return nil end return id end
+    from("Ann-Mockrealm", "P1;" .. b(1999999) .. "," .. b(300) .. ",2,0")
+    C_Item.GetItemInfoInstant = had
+    check(not A.store().items[1999999], "a made-up item ID is not filed")
+    -- lines typed into the price channel stay out of chat, others don't
+    local f = MOCK.chatFilters and MOCK.chatFilters.CHAT_MSG_CHANNEL
+    check(f and f(nil, "CHAT_MSG_CHANNEL", "hi", "Bo", "", "6. LevCodexPrices", "", "", 0, 6, "LevCodexPrices") == true
+      and not f(nil, "CHAT_MSG_CHANNEL", "LevCodexPrices", "Bo", "", "1. General", "", "", 0, 1, "General"),
+      "chat typed into the price channel is hidden, General isn't")
+    check(MOCK.chatFilters.CHAT_MSG_CHANNEL_NOTICE_USER, "the channel's owner notices are filtered too")
+    -- a refused join is tried again, and Settings says when it gave up
+    Sh.setOn(false)
+    MOCK.channelRefused = true
+    Sh.setOn(true)
+    MOCK.advance(62)
+    check(not MOCK.channels.LevCodexPrices and not Sh.joinFailed(), "a refused join waits to try again")
+    MOCK.channelRefused = nil
+    MOCK.advance(62)
+    check(MOCK.channels.LevCodexPrices, "the join is tried again a minute later")
+    Sh.setOn(false)
+    MOCK.channelRefused = true
+    Sh.setOn(true)
+    MOCK.advance(62 * 6)
+    local lines = table.concat(Sh.fieldLines(), " ")
+    check(Sh.joinFailed() and lines:find("wouldn't let it join", 1, true), "after five refusals it says why (" .. lines .. ")")
+    MOCK.channelRefused = nil
+    Sh.setOn(true)
+    check(MOCK.channels.LevCodexPrices and not Sh.joinFailed(), "turning it on again joins")
     MOCK.auctions = {}
     MOCK.openAuction()
     MOCK.advance(2)
