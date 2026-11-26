@@ -69,7 +69,8 @@ local STAT_NAMES={str="Strength",agi="Agility",sta="Stamina",int="Intellect",spi
   spellHit="Spell hit %",spellCrit="Spell crit %",spellPen="Spell penetration",blockValue="Block value",
   feralAp="Feral attack power",hp5="Health per 5 sec",weaponDmg="Weapon damage",health="Health",mana="Mana",
   spFire="Fire spell power",spFrost="Frost spell power",spShadow="Shadow spell power",spNature="Nature spell power",
-  spArcane="Arcane spell power",spHoly="Holy spell power"}
+  spArcane="Arcane spell power",spHoly="Holy spell power",resHoly="Holy resistance",resFire="Fire resistance",
+  resNature="Nature resistance",resFrost="Frost resistance",resShadow="Shadow resistance",resArcane="Arcane resistance"}
 
 local function refresh(top)
   if top then U.refreshTop() elseif ns.refreshLootTab then ns.refreshLootTab() end

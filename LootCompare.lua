@@ -23,6 +23,9 @@ local CLASS_WEAPONS = {
   WARLOCK=weaponSet{7,10,15,19}, DRUID=weaponSet{4,5,10,13,15},
 }
 local CLASS_SHIELD = {WARRIOR=true,PALADIN=true,SHAMAN=true}
+-- Relics: librams, idols and totems (armor subclasses 7-9), one class each.
+local RELIC_CLASS = {[7]="PALADIN",[8]="DRUID",[9]="SHAMAN"}
+local RELIC_NAMES = {[7]="librams",[8]="idols",[9]="totems"}
 local CLASS_DUAL = {WARRIOR=20,HUNTER=20,ROGUE=1}
 L.WEAPON_NAMES = {[0]="One-Handed Axes",[1]="Two-Handed Axes",[2]="Bows",[3]="Guns",[4]="One-Handed Maces",
   [5]="Two-Handed Maces",[6]="Polearms",[7]="One-Handed Swords",[8]="Two-Handed Swords",[10]="Staves",
@@ -76,6 +79,9 @@ function L.eligible(item, ctx, proposed, insertedSlot, skipLevel)
       if not wear then return {state="no",reasons={"Armor proficiency required"}} end
       if not skipLevel then unknown[#unknown+1]="Train "..names[item.subclassID].." at your class trainer first" end
     elseif not known and not wear then unknown[#unknown+1]="Armor proficiency not known" end
+  end
+  if item.slot == "INVTYPE_RELIC" and RELIC_CLASS[item.subclassID] and CLASS[ctx.class] and RELIC_CLASS[item.subclassID] ~= ctx.class then
+    return {state="no",reasons={"Your class can't use "..RELIC_NAMES[item.subclassID]}}
   end
   if item.classID == 2 and item.subclassID ~= nil then
     local can = L.classWeapon(ctx.class, item.subclassID)
@@ -136,10 +142,15 @@ function L.score(item, profile)
     else return {complete=false,warnings={"Item stats are not fully known"},notes=notes} end
   end
   local weights = profile.weights or {}
-  for key, n in pairs(item.stats or {}) do value = value + n * (weights[key] or 0) end
+  local stats = item.stats or {}
+  for key, n in pairs(stats) do value = value + n * (weights[key] or 0) end
+  -- An older "damage and healing done by magical spells" line is healing too; Forever's own
+  -- healing gear lists healing on its own (Data: heal), so only spell power without it counts.
+  if stats.sp and not stats.heal and not item.spDamageOnly then value = value + stats.sp * (weights.heal or 0) end
   local w = profile.weapon or {}
   local ranged = item.slot == "INVTYPE_RANGED" or item.slot == "INVTYPE_RANGEDRIGHT" or item.slot == "INVTYPE_THROWN"
-  local weaponWeight = ranged and (w.ranged or 0) or (w.melee or 0)
+  local wand = item.classID == 2 and item.subclassID == 19
+  local weaponWeight = wand and math.max(w.wand or 0, w.ranged or 0) or ranged and (w.ranged or 0) or (w.melee or 0)
   if item.classID==2 and not w.feral then
     if weaponWeight>0 and type(item.damage)~="number" then warnings[#warnings+1]="Weapon damage is not fully known" end
     if (w.speed or 0)>0 and type(item.speed)~="number" then warnings[#warnings+1]="Weapon speed is not fully known" end
@@ -153,6 +164,30 @@ function L.score(item, profile)
   if item.restrictions and item.restrictions.set then addNote(notes, "Set bonus not counted") end
   for _, line in ipairs(item.notes or {}) do addNote(notes, line) end
   return {value=value,complete=#warnings==0,warnings=warnings,notes=notes}
+end
+
+-- Why an item scores nothing: its effects only, resistances only, no stats listed, or stats
+-- this build doesn't use (a caster looking at a strength belt).
+local RESISTS = {resHoly=true,resFire=true,resNature=true,resFrost=true,resShadow=true,resArcane=true}
+function L.noValueReason(item, score)
+  local effects = {}
+  for _, n in ipairs(score and score.notes or {}) do
+    local what = n:match("^(.-) not counted$")
+    if what and not n:find("^Random") and not n:find("^Enchant") then effects[#effects+1] = what:lower() end
+  end
+  local any, resist = false, false
+  for key, n in pairs(item.stats or {}) do
+    if n ~= 0 and key ~= "armor" then any = true; if RESISTS[key] then resist = true end end
+  end
+  if #effects > 0 and not any then return "Only its "..table.concat(effects, ", ")..": not scored" end
+  if resist then
+    local other = false
+    for key, n in pairs(item.stats or {}) do if n ~= 0 and key ~= "armor" and not RESISTS[key] then other = true end end
+    if not other then return "Resistances only: not part of the score" end
+  end
+  if not any and item.random then return "Its random bonus (\"of the ...\") sets its stats" end
+  if not any and item.classID ~= 2 and (item.stats or {}).armor == nil then return "No stats listed: read the tooltip" end
+  return "No stats your build uses"
 end
 
 function L.compare(ref, ctx, baseline, weaponSlot)
@@ -174,7 +209,7 @@ function L.compare(ref, ctx, baseline, weaponSlot)
     local f = L.compareSlots(item, ctx, slots, locations, true)
     if f.verdict == "cannotEquip" then r.reason = f.reason end
     if f.confidence == "complete" then
-      r.future = {level=item.requiredLevel,verdict=f.verdict,percent=f.percent,delta=f.delta,estimate=f.estimate,noValue=f.noValue,
+      r.future = {level=item.requiredLevel,verdict=f.verdict,percent=f.percent,delta=f.delta,estimate=f.estimate,noValue=f.noValue,reason=f.reason,
         notes=f.notes,score=f.score,baselineScore=f.baselineScore}
       r.score, r.baselineScore, r.statDelta, r.baseline, r.replacedSlots = f.score, f.baselineScore, f.statDelta, f.baseline, f.replacedSlots
     end
@@ -232,7 +267,10 @@ function L.compareSlots(item, ctx, slots, locations, skipLevel)
         if not s.value then complete=false else old=old+s.value end
         if not s.complete then complete=false end
         for _, line in ipairs(s.warnings) do r.warnings[#r.warnings+1]=line end
-        if before and #(s.notes or {})>0 then L.addNote(r.notes, "Equipped item's effects not counted") end
+        for _, line in ipairs(before and s.notes or {}) do
+          L.addNote(r.notes, line == "Enchant not counted" and "You'd lose the enchant on "..(before.name or "your item")
+            or "Equipped item's effects not counted")
+        end
         if before then r.baseline[#r.baseline+1]=before end
         for key,value in pairs(before and before.stats or {}) do r.statDelta[key]=(r.statDelta[key] or 0)-value end
       end
@@ -241,7 +279,7 @@ function L.compareSlots(item, ctx, slots, locations, skipLevel)
       if complete and r.delta and old==0 and score.value==0 then
         -- Nothing on it your build values (a caster's look at a strength belt).
         r.verdict="sidegrade"; r.confidence="complete"; r.noValue=true
-        r.reason="No stats your build uses"
+        r.reason=L.noValueReason(item, score)
         if not best or r.delta>best.delta then best=r end
       elseif complete and r.delta then
         total = total or gearTotal(slots, ctx.profile)

@@ -10,6 +10,12 @@
     - The percentage is the change to your whole equipped set's score, so a new shield over a weak one reads "+3%", not "+250%".
     - Hovering gear you're wearing shows where it stands ("Equipped | Rank #6 | 12% of your gear score") instead of comparing it with itself.
     - Tanks now value parry and block chance, and healers value spell crit.
+    - Wands count their damage for casters (half as much for healers), so a 20 DPS wand beats an 11 DPS one with the same stats.
+    - Librams, idols and totems say which class uses them ("Your class can't use librams").
+    - Healers count the older "damage and healing done by magical spells" lines as healing too.
+    - Gear that scores nothing says why: "Only its use effect: not scored", "Resistances only: not part of the score", "No stats listed: read the tooltip", or that its random bonus sets its stats.
+    - Resistances on gear are read and shown in the Loot tab's stat comparison (they aren't part of the score).
+    - Replacing an enchanted item says so: "You'd lose the enchant on Ironforge Breastplate".
 
 ## v0.34.1
 - **Auction house: shared prices across the realm.** The Codex now shares the prices you see with other Codex users on your realm, and theirs keep your tooltips, deals and market view fresh without a scan of your own.

@@ -7,7 +7,9 @@ local aliases={STRENGTH="str",AGILITY="agi",STAMINA="sta",INTELLECT="int",SPIRIT
   HEALTH="health",MANA="mana",ATTACK_POWER="ap",RANGED_ATTACK_POWER="rap",FERAL_ATTACK_POWER="feralAp",
   SPELL_POWER="sp",SPELLPOWER="sp",SPELL_DAMAGE_DONE="sp",SPELL_HEALING_DONE="heal",HEALING_DONE="heal",MANA_REGENERATION="mp5",
   HIT_RATING="hit",CRIT_RATING="crit",SPELL_HIT_RATING="spellHit",SPELL_CRIT_RATING="spellCrit",
-  DEFENSE_SKILL_RATING="defense",DODGE_RATING="dodge",BLOCK_RATING="block",BLOCK_VALUE="blockValue"}
+  DEFENSE_SKILL_RATING="defense",DODGE_RATING="dodge",BLOCK_RATING="block",BLOCK_VALUE="blockValue",
+  RESISTANCE1_NAME="resHoly",RESISTANCE2_NAME="resFire",RESISTANCE3_NAME="resNature",RESISTANCE4_NAME="resFrost",
+  RESISTANCE5_NAME="resShadow",RESISTANCE6_NAME="resArcane"}
 function L.itemKey(ref)
   if type(ref)=="number" then return "item:"..math.floor(ref) end
   if type(ref)~="string" or #ref>2048 then return end
@@ -110,6 +112,8 @@ function L.item(ref)
         item.restrictions.classes={}
         for c in classes:gmatch("[^,]+") do item.restrictions.classes[#item.restrictions.classes+1]=(c:gsub("^%s+",""):gsub("%s+$",""):upper()) end
       end
+      -- Spell damage that doesn't heal (L.score counts other spell power as healing too).
+      if text:find("damage done by magical spells",1,true) and not text:find("ealing",1,true) then item.spDamageOnly=true end
       item.damage=tonumber(text:match("([%d%.]+) damage per second")) or item.damage
       item.speed=tonumber(text:match("Speed%s+([%d%.]+)")) or item.speed
     end

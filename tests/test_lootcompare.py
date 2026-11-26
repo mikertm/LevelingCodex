@@ -40,6 +40,36 @@ class LootCompareTests(unittest.TestCase):
           c.snapshot.slots[5]=item(1,0); r=L.compare(item(10,0),c); assert(r.verdict=="sidegrade" and r.noValue, "nothing the build uses says so")
         ''')
 
+    def test_second_audit_gaps(self):
+        self.lua.execute('''
+          -- A wand's DPS counts for a caster; two wands with the same stats differ by damage.
+          local caster={weights={int=1,sp=1.8},weapon={melee=0,ranged=0,wand=1}}
+          local function wand(dps) local w=item(20,0,"INVTYPE_RANGEDRIGHT"); w.classID=2; w.subclassID=19; w.stats={}; w.damage=dps; w.speed=1.5; return w end
+          assert(L.score(wand(20),caster).value==20 and L.score(wand(11),caster).value==11, "wand DPS counts")
+          -- Librams, idols and totems are one class each.
+          local relic=item(21,0,"INVTYPE_RELIC"); relic.subclassID=7; relic.stats={}
+          local c=ctx(); local r=L.compare(relic,c)
+          assert(r.verdict=="cannotEquip" and r.reason=="Your class can't use librams", tostring(r.reason))
+          -- An older "damage and healing" line heals too; Forever's split healing gear doesn't double.
+          local healer={weights={heal=1.4,sp=0.4},weapon={}}
+          local a=item(22,0); a.stats={sp=10}; local b=item(23,0); b.stats={sp=10,heal=30}
+          assert(math.abs(L.score(a,healer).value-18)<1e-6 and math.abs(L.score(b,healer).value-46)<1e-6)
+          a.spDamageOnly=true; assert(math.abs(L.score(a,healer).value-4)<1e-6, "spell damage alone doesn't heal")
+          -- Why nothing counts.
+          local t=item(24,0,"INVTYPE_TRINKET"); t.stats={}; t.warnings={"Use: Increases armor by 520 for 20 sec."}
+          c=ctx(); c.snapshot.slots[13]=false; c.snapshot.slots[14]=false
+          r=L.compare(t,c); assert(r.noValue and r.reason=="Only its use effect: not scored", tostring(r.reason))
+          local n=item(25,0,"INVTYPE_NECK"); n.stats={resFire=10}; c.snapshot.slots[2]=false
+          r=L.compare(n,c); assert(r.noValue and r.reason=="Resistances only: not part of the score", tostring(r.reason))
+          n.stats={}; r=L.compare(n,c); assert(r.reason=="No stats listed: read the tooltip", tostring(r.reason))
+          n.random=true; n.complete.stats=false; r=L.compare(n,c); assert(r.reason:find("random bonus",1,true), tostring(r.reason))
+          -- Replacing an enchanted item says the enchant goes.
+          c=ctx(); c.snapshot.slots[5].notes={"Enchant not counted"}; c.snapshot.slots[5].name="Old Vest"
+          r=L.compare(item(10,150),c)
+          local found=false; for _,x in ipairs(r.notes) do if x=="You'd lose the enchant on Old Vest" then found=true end end
+          assert(found, "the enchant note names the worn item")
+        ''')
+
     def test_paired_slots_unique_and_hands(self):
         self.lua.execute('''
           local c=ctx(); local r=L.compare(item(9,60,"INVTYPE_FINGER"),c)

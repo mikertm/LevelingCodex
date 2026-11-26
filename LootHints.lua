@@ -27,7 +27,7 @@ function L.notesText(notes)
 end
 -- One line for the tooltip: the verdict and how much, or what's missing. Returns text, colour key.
 local function scoreLine(item,ctx,r)
-  if r.noValue then return "No stats your build uses",r.verdict end
+  if r.noValue then return r.reason or "No stats your build uses",r.verdict end
   if r.confidence=="complete" then
     local label=L.labels[r.verdict] or r.verdict
     local score=(r.estimate and "about " or "")..(r.percent and pct(r.percent).." gear score" or
@@ -37,7 +37,7 @@ local function scoreLine(item,ctx,r)
   end
   if r.verdict=="cannotEquip" then
     local f=r.future
-    if f and f.noValue then return string.format("At level %d: no stats your build uses",f.level),"future" end
+    if f and f.noValue then return string.format("At level %d: %s",f.level,((f.reason or "No stats your build uses"):gsub("^%u",string.lower))),"future" end
     if f then
       local score=f.percent and pct(f.percent) or (f.baselineScore==0 and "fills a slot" or pct(nil,f.delta))
       return string.format("At level %d: %s%s (%s)",f.level,f.estimate and "about " or "",score,(L.labels[f.verdict] or f.verdict):lower()),"future"

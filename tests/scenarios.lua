@@ -13655,6 +13655,12 @@ function S.lootScoreDetails()
   MOCK.lootItems[900022]={name="Wand of Nope",slot="INVTYPE_RANGEDRIGHT",classID=2,subclassID=19,stats={ITEM_MOD_INTELLECT_SHORT=3}}
   lines=tip("item:900022")
   check(lines[1]:find("Codex: Cannot equip: Your class can't use Wands",1,true),"a weapon the class can't use says so: "..lines[1])
+  MOCK.lootItems[900023]={name="Libram of Nope",slot="INVTYPE_RELIC",classID=4,subclassID=7,stats={}}
+  lines=tip("item:900023")
+  check(lines[1]:find("Codex: Cannot equip: Your class can't use librams",1,true),"a relic of another class says so: "..lines[1])
+  MOCK.lootItems[900024]={name="Trinket of Use",slot="INVTYPE_TRINKET",stats={},effect="Use: Increases armor by 520 for 20 sec."}
+  lines=tip("item:900024")
+  check(lines[1]:find("Codex: Only its use effect: not scored",1,true),"an effects-only trinket says so: "..table.concat(lines," / "))
 end
 function S.lootTooltipStaysOpen()
   lootSetup()
