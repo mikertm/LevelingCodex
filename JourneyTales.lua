@@ -688,7 +688,8 @@ local function questRemoved(id)
     j.taken[id] = nil
     if Q.log(id) or doneQuest(id) then return end
     bump("abandoned")
-    J.add("abandon", J.fill(J.pick(GIVE_UP, id), { title = plain(title or "a quest"), zone = zone() }),
+    local line = J.abandonLine and J.abandonLine(id, plain(title or "a quest"), zone(), taken)
+    J.add("abandon", line or J.fill(J.pick(GIVE_UP, id), { title = plain(title or "a quest"), zone = zone() }),
       title and ("Quest: " .. plain(title)) or nil, { q = id, l = taken and taken.l or nil })
   end)
 end

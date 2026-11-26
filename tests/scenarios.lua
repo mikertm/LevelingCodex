@@ -15156,6 +15156,24 @@ function S.journeyQuestLines()
   local again = J.questLine(999301, nil, "Arathi Highlands")
   local function open2(t) return (t:lower():match("^(%S+%s+%S+)")) end
   check(open2(again) ~= open2(line), "a line that opens like the last quest moment gives way: " .. line .. " / " .. again)
+  -- quests without objectives read from their titles: a search, a report, a legend
+  check(J.questKind(999311, "Search for Tyranis") == "seek" and J.questLine(999311, "Search for Tyranis", "Desolace"):find("Tyranis", 1, true),
+    "a search names who it seeks: " .. J.questLine(999311, "Search for Tyranis", "Desolace"))
+  check(J.questKind(999312, "Report to Captain Grayson") == "report", "a report is a report")
+  check(J.questKind(999313, "The Legend of Stalvan") == "lore", "a legend is lore")
+  -- a quest taken in another land and finished here can say so; giving one up has its own words
+  local j = J.data()
+  local carried = 0
+  for i = 1, 12 do
+    local id = 999400 + i
+    j.taken[id] = { t = J.now() - 3 * 86400, l = 1, m = 1436 }
+    local text = J.questLine(id, "Gnoll Paws " .. i, "Elwynn Forest")
+    if J.questLines.lastSituation == "carried" or J.questLines.lastSituation == "overdue" then carried = carried + 1 end
+    check(not text:find("%%%a") and not text:find("[^\32-\126]"), "a situation line is filled and plain: " .. text)
+  end
+  check(carried >= 4, "quests held long or carried from another land often say so (" .. carried .. " of 12)")
+  local gave = J.abandonLine(999302, "WANTED: Marez Cowl", "Arathi Highlands")
+  check(gave and gave:find("Marez Cowl", 1, true), "giving up a bounty names the outlaw: " .. tostring(gave))
 end
 
 -- Mailbox: Take all empties the inbox one take at a time (gold, then each attachment), leaves Cash
