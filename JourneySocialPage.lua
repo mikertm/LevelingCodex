@@ -545,22 +545,44 @@ local function landsOf(g, moments)
   return out
 end
 
--- A motto from what the fellowship has done.
+-- A motto from what the fellowship has done: every pool that fits it, plus the silly ones, picked
+-- by its key (and its name's re-roll, so New name brings a new motto too).
+local MOTTOS = {
+  wipes = { "We fall together, and we get up together.", "Wipe, laugh, run it back.", "Our repair bills tell the story.",
+    "Practice makes slightly less dead.", "One more try. Then one more." },
+  deaths = { "Death is only a short run back.", "The spirit healer knows us by name.", "We have seen many floors up close.",
+    "Down, but never out for long." },
+  bosses = { "No boss too big, no dungeon too deep.", "Down they go, one after another.", "Big things fall hardest.",
+    "Every throne has a last day." },
+  quests = { "Every errand, every road, together.", "No notice board left unread.", "Ten pelts? We bring twelve.",
+    "If it has an exclamation mark, it is ours." },
+  lands = { "Many roads, one company.", "The map is a little smaller with a friend.", "We have not been lost. Mostly.",
+    "Any road, as long as it is together." },
+  days = { "Again tomorrow, as always.", "Same time, same road.", "We keep finding each other.", "Tomorrow, the usual spot." },
+  clean = { "Not one of us left behind.", "Nobody falls on our watch.", "Not a scratch. Yet." },
+  pair = { "Where one goes, the other follows.", "Two swords are better than one.", "Back to back, always.",
+    "Two paths, one road.", "You pull, I follow.", "Two of us, and that is plenty.", "Who needs a third?" },
+  band = { "Steel, salt and good company.", "Share the road, share the fire.", "Slow to anger, quick to help.",
+    "Into the dark, and out again.", "Strength in numbers, and in friends.", "Stand together, loot together." },
+  funny = { "We were told there would be snacks.", "Pull first, plan later.", "It was like that when we got here.",
+    "Need is a strong word.", "Not lost, just exploring.", "Who has the bandages?", "Death before dishonour. Mostly death.",
+    "We have a plan. It is a bad plan.", "Fortune favours the slightly confused.", "Brave enough, bright enough.",
+    "Someone has to fight the murlocs.", "Ask us about our repair bill.", "No kobold is safe.", "Wait, where is the healer?" } }
 local function motto(g, key, lands)
   if type(g.motto) == "string" and g.motto ~= "" then return plain(g.motto) end
   local pair = #S.names(key) == 1
-  local pool
-  if n0(g.wipes) >= 3 then pool = { "We fall together, and we get up together.", "Wipe, laugh, run it back." }
-  elseif n0(g.bosses) >= 3 then pool = { "No boss too big, no dungeon too deep.", "Down they go, one after another." }
-  elseif n0(g.quests) >= 20 then pool = { "Every errand, every road, together.", "No notice board left unread." }
-  elseif #lands >= 4 then pool = { "Many roads, one company.", "The map is a little smaller with a friend." }
-  elseif n0(g.days) >= 3 then pool = { "Again tomorrow, as always.", "Same time, same road." }
-  elseif n0(g.deaths) == 0 and n0(g.secs) >= 3600 then pool = { "Not one of us left behind.", "Nobody falls on our watch." }
-  elseif pair then pool = { "Where one goes, the other follows.", "Two swords are better than one.", "Back to back, always.",
-    "Two paths, one road." }
-  else pool = { "Steel, salt and good company.", "Share the road, share the fire.", "Slow to anger, quick to help.",
-    "Into the dark, and out again.", "Strength in numbers, and in friends." } end
-  return pool[hash(key .. "motto") % #pool + 1]
+  local pool = {}
+  local function add(list, times) for _ = 1, times or 1 do for _, line in ipairs(list) do pool[#pool + 1] = line end end end
+  if n0(g.wipes) >= 3 then add(MOTTOS.wipes, 2) end
+  if n0(g.deaths) >= 3 then add(MOTTOS.deaths, 2) end
+  if n0(g.bosses) >= 3 then add(MOTTOS.bosses, 2) end
+  if n0(g.quests) >= 20 then add(MOTTOS.quests) end
+  if #lands >= 4 then add(MOTTOS.lands) end
+  if n0(g.days) >= 3 then add(MOTTOS.days) end
+  if n0(g.deaths) == 0 and n0(g.secs) >= 3600 then add(MOTTOS.clean) end
+  add(pair and MOTTOS.pair or MOTTOS.band)
+  add(MOTTOS.funny)
+  return pool[hash(key .. "motto" .. n0(g.roll)) % #pool + 1]
 end
 
 -- The fellowship's story, in the narrator's voice.
@@ -766,14 +788,15 @@ local function fellowshipPage(R, f, y)
     y = y + 30
   end
   local here = S.bandHere(key)
-  local tb = U.btn("Toast the band", math.floor(W / 2) + 4, y, 120, function() S.toastBand(key); ns.ui.refresh() end, #here > 0,
+  local w3 = math.floor((W - 28 - 12) / 3)
+  local tb = U.btn("Toast the band", 26 + 2 * w3, y, w3, function() S.toastBand(key); ns.ui.refresh() end, #here > 0,
     #here > 0 and ("Raise a toast to the fellowship: " .. S.listText(here) .. " drink with you, in every journal that keeps the Codex.")
       or "Group up with the fellowship to raise a toast to it.")
   if tb then tb.codexLabel = "Toast fellowship" end
   if n0(g.toasts) > 0 then
     U.T(n0(g.toasts) == 1 and "1 toast raised" or (n0(g.toasts) .. " toasts raised"), 14, y + 34, W - 28, "small", C.inkSoft or C.dim, "CENTER")
   end
-  local b = U.btn("Rename", math.floor(W / 2) - 124, y, 120, function()
+  local b = U.btn("Rename", 14, y, w3, function()
     ns.showMacroCopy({ copyTitle = "Name your fellowship", body = g.named or g.auto or "", paste = true, acceptLabel = "Save name",
       help = "3 to 32 characters. Save it empty to go back to the name it was given.",
       onAccept = function(text)
@@ -783,9 +806,12 @@ local function fellowshipPage(R, f, y)
       end })
   end, false, "Give the fellowship your own name.")
   if b then b.codexLabel = "Rename fellowship" end
+  b = U.btn("New name", 20 + w3, y, w3, function() S.rerollName(key); ns.ui.refresh() end, false,
+    "Let the book name the fellowship again: from where it formed, who rides in it and what it has been through. "
+      .. "Some names are grand, some are silly. Click until one fits; the band hears it too.")
+  if b then b.codexLabel = "Reroll fellowship" end
   y = y + 32 + (n0(g.toasts) > 0 and 16 or 0)
   -- the second row: a motto of your own, pin it to the top, disband it
-  local w3 = math.floor((W - 28 - 12) / 3)
   b = U.btn(g.motto and "Edit motto" or "Write a motto", 14, y, w3, function()
     ns.showMacroCopy({ copyTitle = "The fellowship's motto", body = g.motto or motto(g, key, lands), paste = true, acceptLabel = "Save motto",
       help = "3 to 60 characters, shown under its banner. Save it empty to let the book choose one again.",

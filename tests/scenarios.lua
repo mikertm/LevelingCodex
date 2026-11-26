@@ -14819,6 +14819,31 @@ function S.journeySocial()
   click(win(), "Fellowships")
   check(questText(win(), "Together right now") and questText(win(), "FIRSTS TOGETHER") and questText(win(), "FIRST BOSS"),
     "the page says when you were last together and the firsts you shared")
+  -- names: many styles, stable for a band, a new one on New name
+  local Sx = J.social
+  check(Sx.autoName(key, fg) == Sx.autoName(key, fg), "a band's name comes out the same every time")
+  local before, sent0 = Sx.fellowshipName(fg, key), #MOCK.addonSent
+  click(win(), "Reroll fellowship")
+  check(fg.roll and fg.roll >= 1 and fg.named and fg.named ~= before and questText(win(), fg.named),
+    "New name gives the band another name (" .. tostring(before) .. " -> " .. tostring(fg.named) .. ")")
+  local shared
+  for i = sent0 + 1, #MOCK.addonSent do if tostring(MOCK.addonSent[i].text):find("^FN;") then shared = true end end
+  check(shared, "the new name is shared with the band")
+  local seen, count, bad = {}, 0, nil
+  local deedy = { ["The Floor Inspectors"] = 1, ["The Corpse Run Club"] = 1, ["Spirit Healer Regulars"] = 1, ["The Graveyard Shift"] = 1,
+    ["The Ghost Walkers"] = 1, ["Mostly Dead Company"] = 1, ["Frequent Fallers"] = 1, ["The Soul Shard Donors"] = 1,
+    ["Lie Down Lodge"] = 1, ["The Run Back Society"] = 1 }
+  local deeds = 0
+  for i = 1, 120 do
+    local k = (i % 3 == 0) and ("Zed" .. i) or ("Ann" .. i .. ",Bo" .. i)
+    local nm = Sx.autoName(k, { fz = "Westfall", deaths = (i % 2 == 0) and 6 or 0 })
+    if not seen[nm] then seen[nm] = true; count = count + 1 end
+    if #nm < 3 or #nm > 32 or nm:find("[^%w%s%p]") then bad = nm end
+    if deedy[nm] then deeds = deeds + 1 end
+  end
+  check(not bad, "every name is 3 to 32 plain characters (" .. tostring(bad) .. ")")
+  check(count >= 80, "120 bands get many different names (" .. count .. ")")
+  check(deeds >= 3, "a band that keeps dying earns names for it (" .. deeds .. ")")
   click(win(), "Motto fellowship")
   copy.edit:SetText("Lanterns up, heads down")
   click(copy, "Save motto")
