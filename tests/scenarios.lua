@@ -2409,7 +2409,10 @@ function S.questParty()
   check(questText(frame, "Ann: Turn in - Bounty on Garrick Padfoot " .. partySteps(40) .. " ahead"),
     "a party member's step shows with how far ahead they are")
   MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;westfall;3;Accept - Westfall Stew", "PARTY", "Bo")
-  check(questText(frame, "Bo: Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
+  check(questText(frame, "Bo: Accept - Westfall Stew") and questText(frame, " ahead in Westfall"),
+    "a member in a later leveling guide of your route counts the steps between you")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodex", "S;dungeon-deadmines;1;Enter - The Deadmines", "PARTY", "Bo")
+  check(questText(frame, "Bo: Enter - The Deadmines The Deadmines"), "a member in a side guide shows that guide")
   MOCK.questLog = { { questID = 783 } }
   MOCK.event("QUEST_ACCEPTED", 1, 783)
   MOCK.advance(0.6)
@@ -2487,7 +2490,8 @@ function S.questPartySync()
   check(now and now > pos, "your new step goes out after Next")
   check(questText(frame, "Bo (4): Accept - A Threat Within " .. partySteps(pos) .. " behind"), "a member behind you")
   fromParty("Bo-Elsewhere", "S;westfall;3;Accept - Westfall Stew")
-  check(questText(frame, "Bo (4): Accept - Westfall Stew Westfall"), "a member in another guide shows that guide")
+  check(questText(frame, "Bo (4): Accept - Westfall Stew") and questText(frame, " ahead in Westfall"),
+    "a member in a later leveling guide counts across the guides between you")
   MOCK.partyMembers = { MOCK.partyMembers[1] }
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(questText(frame, "Ann (5)") and not questText(frame, "Bo (4)"), "a member who left the party is gone")
@@ -2946,6 +2950,86 @@ function S.questPartyCatchUp()
   MOCK.advance(21)
   to("Bo", here)
   check(pings(880) == 2, "the next ping uses it")
+end
+
+-- Playing together: on your step, who you're waiting for once your quest is ready and who hasn't
+-- got its quest; the heading once every one of you is ready to turn in; a member in the next zone
+-- counted in steps; Show <name>'s step and Call the party to my step (a card for the others); the
+-- party leader; names with accents keep their letters and still match share requests; the elite
+-- step says when you're in a party.
+function S.questPartyTogether()
+  MOCK.party = true
+  MOCK.playerName = "M\195\175a"
+  MOCK.partyMembers = { { name = "Ann", level = 19, leader = true }, { name = "Zo\195\171", realm = "Far", level = 18 } }
+  redridgeBrutes()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.advance(6)
+  local Q = MOCK.ns.quests
+  local zoe = "Zo\195\171"
+  local function to(name, pos, goal, quests, section)
+    fromParty(name, "S;" .. (section or Q.routeRow().section.id) .. ";" .. pos .. ";Somewhere")
+    fromParty(name, "G;" .. (goal or ""))
+    if quests then fromParty(name, "L;" .. quests) end
+  end
+  -- your own messages echo back under your name: never a member
+  fromParty("M\195\175a-Realm", "S;lakeshire;1;Me")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Codex members seen: 0"), "your own echoed message isn't a party member")
+  local here = Q.routeRow().pos
+  to("Ann", here, "Redridge Brutes 2/10", "124")
+  to(zoe .. "-Far", here, "", "")
+  check(questText(frame, zoe .. " (18): Somewhere same step"), "a name with an accent keeps its letters")
+  check(questText(frame, zoe .. " doesn't have A Baying of Gnolls yet"), "a member on your step without its quest is named")
+  check(not questText(frame, "Waiting on Ann"), "nobody is waited on while your own quest is open")
+  -- your quest is ready: who you're waiting for
+  MOCK.questLog[1].objectives[1] = { text = "Redridge Brutes 10/10", finished = true }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(2.5)
+  here = Q.routeRow().pos
+  to("Ann", here, "Redridge Brutes 7/10", "124")
+  to(zoe .. "-Far", here, "ready to turn in", "124")
+  check(questText(frame, "Waiting on Ann: Redridge Brutes 7/10."), "once your quest is ready, who you're waiting for")
+  check(not questText(frame, "Waiting on " .. zoe), "not a member who is ready too")
+  to("Ann", here, "ready to turn in", "124")
+  check(questText(frame, "PARTY - ALL READY TO TURN IN"), "the heading when every one of you is ready")
+  -- share requests reach a name with an accent
+  fromParty("Ann", "R;124;M\195\175a")
+  check(MOCK.pushed == 124, "a share request for a name with an accent")
+  -- a member in the next zone is counted in steps
+  to(zoe .. "-Far", 1, "", nil, "duskwood")
+  check(questText(frame, " ahead in Duskwood"), "a member in your next zone, counted in steps")
+  -- the Party board: leader, tally, Show <name>'s step, Call the party to my step
+  slash("quests")
+  click(win(), "Party")
+  check(questText(win(), "Ann  (leader)") and questText(win(), "1 of 2 on your step"), "the board names the leader and counts who is on your step")
+  click(win(), "Call the party to my step")
+  check(addonCount("^C;lakeshire;" .. here .. ";") == 1, "calling sends your step to the party")
+  click(win(), "Call the party to my step")
+  check(addonCount("^C;") == 1, "once every 10 s")
+  click(win(), "Party member: " .. zoe)
+  check(questText(win(), zoe .. " (18)"), "the member page keeps the accent")
+  local mine = Q.routeRow()
+  click(win(), "Show " .. zoe .. "'s step")
+  check(Q.current() ~= mine and Q.current().section.id == "duskwood" and Q.routeRow() == mine,
+    "Show <name>'s step shows their step and keeps your place")
+  Q.leaveReview()
+  -- a member calls the party: a chat line and a card that shows their step
+  MOCK.chat = {}
+  fromParty("Ann", "C;duskwood;1;Accept - Something in Duskwood")
+  check(chatHas("Ann calls the party to their step: Accept %- Something in Duskwood"), "a call is said in chat")
+  local toast = MOCK.ns.getToast and MOCK.ns.getToast()
+  check(toast and toast:IsShown() and questText(toast, "ANN CALLS THE PARTY"), "and shown on a card")
+  toast:GetScript("OnMouseUp")(toast, "LeftButton")
+  check(Q.current().section.id == "duskwood", "clicking the card shows their step")
+  -- the elite step says when you're in a party
+  check(Q.eliteText({ name = "X", elite = "Y" }):find("party of 3", 1, true), "the elite step mentions your party")
+  for i = #MOCK.problems, 1, -1 do
+    if MOCK.problems[i]:find("non-ascii", 1, true) and (MOCK.problems[i]:find(zoe, 1, true) or MOCK.problems[i]:find("M\195\175a", 1, true)) then
+      table.remove(MOCK.problems, i)
+    end
+  end
 end
 
 local function arrowCaption()

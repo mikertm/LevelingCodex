@@ -2139,6 +2139,14 @@ function Q.planText(step)
 end
 
 -- The elite quest step: what the quest needs and what each choice does.
+-- In a party, the elite step says so: the best time to take one.
+local function partyLine()
+  if not (ns.partyInParty and ns.partyInParty()) then return "" end
+  local n = tonumber(try(GetNumSubgroupMembers)) or 0
+  if n < 1 then return "\nYou're in a party: a good time to take it." end
+  return "\nYou're in a party of " .. (n + 1) .. ": a good time to take it."
+end
+
 function Q.eliteText(step)
   local name = step.name or "This quest"
   local after = 0
@@ -2152,6 +2160,7 @@ function Q.eliteText(step)
   end
   return name .. " means fighting " .. (step.elite and (step.elite .. " (elite)") or "an elite")
     .. ": bring a group or a strong partner."
+    .. partyLine()
     .. "\nTake it: the quest stays on your route."
     .. "\nSkip it: the guide passes it" .. (after > 0 and " and the quests that need it" or "") .. ". Back asks again."
 end

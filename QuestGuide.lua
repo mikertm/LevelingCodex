@@ -1557,8 +1557,8 @@ local function addTracking(out)
   -- note names anyone 3 or more steps behind you
   local party = ns.partyRows()
   if #party > 0 then
-    out[#out + 1] = { kind = "heading", text = ns.partyTogether(party) and "Party - all on this step" or "Party" }
-    for _, line in ipairs(ns.partyWaitLines(party)) do out[#out + 1] = { kind = "note", tone = "warn", text = line } end
+    out[#out + 1] = { kind = "heading", text = ns.partyHeading(party) }
+    for _, line in ipairs(ns.partyWaitLines(party)) do out[#out + 1] = { kind = "note", tone = "warn", text = line, raw = true } end
     for _, r in ipairs(party) do out[#out + 1] = { kind = "party", text = r.text, where = r.where, status = r.status } end
   end
 end
@@ -1689,13 +1689,14 @@ local function releaseAll()
   end
 end
 
-local function putText(text, tone, template, indent, spacing)
+-- `raw`: the text is already plain apart from player names, which keep their letters (an accented name).
+local function putText(text, tone, template, indent, spacing, raw)
   indent = indent or 0
   local fs = take("text", template or "GameFontHighlightSmall")
   fs:SetWidth(WIDTH - indent)
   fs:SetPoint("TOPLEFT", LEFT + indent, -cursor)
   try(fs.SetSpacing, fs, spacing or 0)
-  fs:SetText(Q.plain(text))
+  fs:SetText(raw and tostring(text or "") or Q.plain(text))
   fs:SetTextColor(ink(tone))
   cursor = cursor + (tonumber(fs:GetStringHeight()) or 12) + 3
 end
@@ -1846,7 +1847,7 @@ local function putParty(b)
   r.where:SetTextColor(cr, cg, cb)
   local whereWidth = math.ceil(tonumber(try(r.where.GetStringWidth, r.where)) or 60) + 8
   r.name:SetWidth(WIDTH - 14 - whereWidth)
-  r.name:SetText(Q.plain(b.text))
+  r.name:SetText(b.text or "") -- plain already, apart from the member's name (QuestParty.lua)
   r.name:SetTextColor(ink((b.status == "other" or b.status == "none" or b.status == "offline") and "dim" or "text"))
   local height = math.max(12, tonumber(r.name:GetStringHeight()) or 12)
   r:SetHeight(height)
@@ -1863,7 +1864,7 @@ local function draw(blocks)
     elseif b.kind == "heading" then putHeading(b.text)
     elseif b.kind == "quest" then putText(b.text, "text", "GameFontHighlightSmall", 0)
     elseif b.kind == "text" then putText(b.text, "text", nil, 0, 2)
-    elseif b.kind == "note" then putText(b.text, b.tone)
+    elseif b.kind == "note" then putText(b.text, b.tone, nil, nil, nil, b.raw)
     elseif b.kind == "danger" then cursor = cursor + 3; putText(b.text, "danger")
     elseif b.kind == "upnext" then putNext(b)
     elseif b.kind == "party" then putParty(b)
@@ -2063,7 +2064,7 @@ function ns.questRefresh()
       nextRows = {}
       -- compact: the party in one line ("Party: all on this step", "Party: Ann same step, Bo 4 behind")
       local partyLine = ns.partySummary()
-      if partyLine then putText(partyLine, "dim") end
+      if partyLine then putText(partyLine, "dim", nil, nil, nil, true) end
     end
     seenCounts = newCounts
     nextButton:SetShown(row ~= nil)

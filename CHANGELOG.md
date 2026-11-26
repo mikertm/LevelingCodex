@@ -1,6 +1,16 @@
 # Leveling Codex
 
 ## v0.34.3
+- **Party play: the guide in a group, polished.**
+    - **Steps counted across zones.** A party member in the next zone of your route (or the one before) shows as "12 ahead in Duskwood" instead of just the zone's name, and the catch-up note names them when they fall 3 or more steps behind. Dungeons, class and special guides still show by name.
+    - **Who you're waiting for.** On a shared step, once your quest is ready the step window says "Waiting on Bo: Kobold Vermin slain: 3/10." When every one of you is ready, the heading reads "Party - all ready to turn in".
+    - **Missing quests.** A member on your step who doesn't have its quest is named ("Bo doesn't have A Threat Within yet"), so you can share it from Quests > Party.
+    - **Show their step.** A member's page in Quests > Party has Show <name>'s step: your step window shows what they are on, and your own place in the route stays put.
+    - **Call the party to my step.** A button on the Party board sends your step to everyone with the Codex. They get a card, and a click shows that step in their step window.
+    - **Party leader and tally.** The board marks the leader and says how many of you are on your step ("2 of 3 on your step").
+    - **Elite quests in a party.** The Elite quest ahead step says when you're grouped, the best time to take one.
+    - **Fixed: names with accents.** A name like Zoë lost its letters, Ask to share never reached a player with one, and that player's own messages could count them as a party member. Names now keep their letters and match.
+    - **Share lists** leave out quests the game won't let you share.
 - **Journey: more ways to reach another Codex player.** On a companion's page, next to Ask to sign and Raise a toast:
     - **Thank them.** The Codex picks the reason from what just happened (the resurrection, trying to save you, the run, the trade, or simply the company). It lands in both journals, and they get a "Thank you" card.
     - **Share a memory.** Sends them your journal's telling of the best moment you shared (a boss, a run, a close call...). It's a page in their book under THEIR MEMORIES OF YOU, and each moment is sent only once.

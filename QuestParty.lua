@@ -37,7 +37,21 @@ local function number(v)
   return tonumber(v)
 end
 
-local function me() return try(UnitName, "player") end
+-- Names as the game gives them, without a realm ("Name-Realm" -> "Name"): the key for every member
+-- table and every name sent in a message. Q.plain would drop the accented letters of a name (and two members into
+-- one), so a name is only made plain when it is all ASCII; the game font draws player names.
+local function shortName(name)
+  if type(name) ~= "string" then return nil end
+  return name:match("^[^-]+") or name
+end
+local function me() return shortName(try(UnitName, "player")) end
+
+function ns.partyName(name)
+  name = tostring(name or "")
+  if name:find("[\128-\255]") then return name end
+  return Q.plain(name)
+end
+local display = ns.partyName
 
 local function questTitle(id, entry)
   return (entry and entry.title) or (id and Q.questName(id)) or "a quest"
@@ -117,12 +131,14 @@ local function roster()
   local count = number(try(GetNumSubgroupMembers)) or 0
   for i = 1, math.min(count, 4) do
     local unit = "party" .. i
-    local name = try(UnitName, unit)
+    local name = shortName(try(UnitName, unit))
     if type(name) == "string" and name ~= "" then
       local level = number(try(UnitLevel, unit))
       local className = try(UnitClass, unit)
-      out[#out + 1] = { name = Q.plain(name), level = level and level > 0 and level or nil,
+      local leader = try(UnitIsGroupLeader, unit)
+      out[#out + 1] = { name = name, level = level and level > 0 and level or nil,
         className = type(className) == "string" and Q.plain(className) or nil,
+        leader = leader == true or leader == 1,
         offline = try(UnitIsConnected, unit) == false, dead = try(UnitIsDeadOrGhost, unit) == true }
     end
   end
@@ -159,7 +175,7 @@ local function shareRequest(id, asker)
   asked[id] = now
   local entry = Q.log(id)
   if entry and pushQuest(id, entry.index) then
-    ns.say(asker .. " asked for " .. Q.plain(questTitle(id, entry)) .. ": offered it to your party.")
+    ns.say(display(asker) .. " asked for " .. Q.plain(questTitle(id, entry)) .. ": offered it to your party.")
   else
     send("N;" .. id .. ";" .. asker)
   end
@@ -168,7 +184,7 @@ end
 local function receive(prefix, text, channel, sender)
   if prefix ~= PREFIX or channel ~= "PARTY" or type(text) ~= "string" or type(sender) ~= "string" then return end
   local myName = me()
-  local name = Q.plain(sender:match("^[^-]+") or sender)
+  local name = shortName(sender)
   if name == myName then return end
   local now = GetTime()
   if text == "HELLO" then broadcast(true); return end
@@ -192,9 +208,15 @@ local function receive(prefix, text, channel, sender)
   local kind, quest, target = text:match("^([RN]);(%d+);(.+)$")
   if kind then
     quest = tonumber(quest)
-    if Q.plain(target:match("^[^-]+") or target) ~= myName then return end
+    if shortName(target) ~= myName then return end
     if kind == "R" then shareRequest(quest, name)
-    else ns.say(name .. " can't share " .. Q.plain(questTitle(quest)) .. ": the game won't let it be shared, or it isn't in their log.") end
+    else ns.say(display(name) .. " can't share " .. Q.plain(questTitle(quest)) .. ": the game won't let it be shared, or it isn't in their log.") end
+    return
+  end
+  -- "C;section;position;label": a member calls the party to their step (Quests > Party)
+  local cSection, cPos, cLabel = text:match("^C;([^;]*);(%d+);(.*)$")
+  if cSection then
+    ns.partyCalled(name, cSection, tonumber(cPos), cLabel)
     return
   end
   local section, pos, label = text:match("^S;([^;]*);([^;]*);(.*)$")
@@ -212,20 +234,54 @@ end
 
 -- How many steps a member is ahead (+) or behind (-) you, counted in your own route: the rows you
 -- see (not filtered, grey or cut) between your step and the first of yours at or past their place
--- in the guide's data. Their step may be one your route doesn't have (another class's quest).
+-- in the guide's data. Their step may be one your route doesn't have (another class's quest). A
+-- member in another leveling guide of your route (the next zone, the one before) counts the same
+-- way across the guides between you; side guides (dungeons, class and special quests) and
+-- alternates have no place in that order, so a member there is in "another guide".
 local function shown(row) return row.state ~= "filtered" and not row.grey and not row.cut end
+local function inOrder(section) return section and not section.side and not section.alternate end
 
-local function distance(mine, at, pos)
-  if pos == mine.pos then return 0 end
+-- The index in your route of a member's place: the first row of that guide at or past their
+-- position (after the guide's last row when they are past all of yours); nil when your route
+-- doesn't have that guide.
+local function placeOf(steps, sectionId, pos)
+  local last
+  for i, row in ipairs(steps) do
+    if row.section.id == sectionId then
+      if row.pos >= pos then return i end
+      last = i
+    end
+  end
+  return last and last + 1
+end
+
+local function distance(mine, at, sectionId, pos)
+  if sectionId == mine.section.id and pos == mine.pos then return 0 end
   local steps = Q.rows()
-  local ahead = pos > mine.pos
-  local n, i = 0, ahead and at or at - 1
-  while steps[i] and steps[i].section == mine.section and (ahead and steps[i].pos < pos or not ahead and steps[i].pos >= pos) do
-    if shown(steps[i]) then n = n + 1 end
-    i = ahead and i + 1 or i - 1
+  local theirs = Q.section(sectionId)
+  if sectionId ~= mine.section.id and not (inOrder(mine.section) and inOrder(theirs)) then return nil end
+  local i = placeOf(steps, sectionId, pos)
+  if not i then return nil end
+  local from, to = math.min(at, i), math.max(at, i) - 1
+  local n = 0
+  for k = from, to do
+    local row = steps[k]
+    if row and shown(row) and (row.section == mine.section or row.section.id == sectionId or inOrder(row.section)) then
+      n = n + 1
+    end
   end
   n = math.max(1, n)
-  return ahead and n or -n
+  return i > at and n or -n
+end
+
+-- A member's place as a row of your route (for Show <name>'s step), or nil.
+local function memberRow(name)
+  local m = members[name]
+  if not (m and m.section and m.pos) then return nil end
+  local steps = Q.rows()
+  local i = placeOf(steps, m.section, m.pos)
+  local row = i and steps[i]
+  if row and row.section.id == m.section then return row end
 end
 
 -- One row per party member (the roster decides who; without one, every Codex member heard from
@@ -247,23 +303,22 @@ function ns.partyRows(all)
   for _, who in ipairs(list) do
     local m = members[who.name]
     if not fresh(m, now) then m = nil end
-    local head = who.name .. (who.level and (" (" .. who.level .. ")") or "")
+    local head = display(who.name) .. (who.level and (" (" .. who.level .. ")") or "")
     local r = { name = who.name, level = who.level, className = who.className, offline = who.offline,
-      dead = who.dead, text = head, status = "none", where = "no step shared", codex = m ~= nil }
+      dead = who.dead, leader = who.leader, text = head, status = "none", where = "no step shared", codex = m ~= nil }
     if m then
       local other = Q.section(m.section)
-      r.label, r.goal, r.heard, r.live = m.label, m.goal or "", now - m.at, m.live
-      r.section, r.guide = other, other and other.title or "another guide"
-      r.text = head .. ": " .. m.label
-      if mine and mine.section.id == m.section and m.pos and mine.pos then
-        r.steps = distance(mine, at, m.pos)
-        if r.steps == 0 then
-          r.status, r.where = "same", "same step"
-          if r.goal ~= "" then r.text = head .. ": " .. r.goal end
-        else
-          r.status = r.steps > 0 and "ahead" or "behind"
-          r.where = math.abs(r.steps) .. (r.steps > 0 and " ahead" or " behind")
-        end
+      r.label, r.goal, r.heard, r.live = Q.plain(m.label), Q.plain(m.goal or ""), now - m.at, m.live
+      r.section, r.guide = other, other and Q.plain(other.title) or "another guide"
+      r.text = head .. ": " .. r.label
+      r.steps = mine and m.pos and mine.pos and distance(mine, at, m.section, m.pos) or nil
+      if r.steps == 0 then
+        r.status, r.where = "same", "same step"
+        if r.goal ~= "" then r.text = head .. ": " .. r.goal end
+      elseif r.steps then
+        r.status = r.steps > 0 and "ahead" or "behind"
+        r.where = math.abs(r.steps) .. (r.steps > 0 and " ahead" or " behind")
+        if other ~= mine.section then r.where = r.where .. " in " .. r.guide:match("^[^:]+") end
       else
         r.status, r.where = "other", r.guide
       end
@@ -273,7 +328,6 @@ function ns.partyRows(all)
     elseif who.dead then
       r.where = r.where .. " (dead)"
     end
-    r.text, r.where = Q.plain(r.text), Q.plain(r.where)
     rows[#rows + 1] = r
   end
   table.sort(rows, function(a, b) return a.name < b.name end)
@@ -293,13 +347,45 @@ local function together(rows)
 end
 ns.partyTogether = together
 
+-- Everyone online on your step is ready to turn in its quest, and so are you.
+local function allReady(rows)
+  local row = myRow()
+  if not together(rows) or myGoal(row) ~= "ready to turn in" then return false end
+  for _, r in ipairs(rows) do
+    if r.status == "same" and r.live and r.goal ~= "ready to turn in" then return false end
+  end
+  return true
+end
+
+-- The step window's party heading: "Party", "Party - all on this step" or, when every one of you
+-- has the step's quest ready, "Party - all ready to turn in".
+function ns.partyHeading(rows)
+  rows = rows or ns.partyRows()
+  if allReady(rows) then return "Party - all ready to turn in" end
+  return together(rows) and "Party - all on this step" or "Party"
+end
+
 -- Catch-up cues for the step window: "Bo is 4 steps behind you." for each member 3 or more steps
--- behind you in your guide.
+-- behind you in your route; on your step, who you're waiting for once your quest is ready
+-- ("Waiting on Bo: Kobold Vermin slain: 3/10."), and who hasn't got the step's quest at all
+-- (their Codex sends its quest log: "Bo doesn't have A Threat Within yet: share it.").
 function ns.partyWaitLines(rows)
   local lines = {}
+  local row = myRow()
+  local step = row and row.step
+  local mineReady = myGoal(row) == "ready to turn in"
   for _, r in ipairs(rows or ns.partyRows()) do
+    local name = display(r.name)
     if r.status == "behind" and -r.steps >= 3 then
-      lines[#lines + 1] = r.name .. " is " .. -r.steps .. " steps behind you."
+      lines[#lines + 1] = name .. " is " .. -r.steps .. " steps behind you."
+    elseif r.status == "same" and step and step.quest and step.type ~= "accept" then
+      local log = logs[r.name]
+      if log and not log[step.quest] then
+        lines[#lines + 1] = name .. " doesn't have " .. Q.plain(questTitle(step.quest, Q.log(step.quest)))
+          .. " yet: share it (Quests > Party)."
+      elseif mineReady and r.live and r.goal ~= "" and r.goal ~= "ready to turn in" then
+        lines[#lines + 1] = "Waiting on " .. name .. ": " .. r.goal .. "."
+      end
     end
   end
   return lines
@@ -309,10 +395,26 @@ end
 function ns.partySummary()
   local rows = ns.partyRows()
   if #rows == 0 then return nil end
+  if allReady(rows) then return "Party: all ready to turn in" end
   if together(rows) then return "Party: all on this step" end
   local bits = {}
-  for _, r in ipairs(rows) do bits[#bits + 1] = r.name .. " " .. r.where end
-  return Q.plain("Party: " .. table.concat(bits, ", "))
+  for _, r in ipairs(rows) do bits[#bits + 1] = display(r.name) .. " " .. r.where end
+  return "Party: " .. table.concat(bits, ", ")
+end
+
+-- "2 of 3 on your step" for Quests > Party (online members; nil out of a party).
+function ns.partyTally(rows)
+  rows = rows or ns.partyRows(true)
+  local online, same = 0, 0
+  for _, r in ipairs(rows) do
+    if r.status ~= "offline" then
+      online = online + 1
+      if r.status == "same" then same = same + 1 end
+    end
+  end
+  if online == 0 then return nil end
+  if same == online then return online == 1 and "On your step" or ("All " .. online .. " on your step") end
+  return same .. " of " .. online .. " on your step"
 end
 
 -- The quests a member has that you don't (quests of your route you haven't turned in), and the
@@ -327,8 +429,12 @@ function ns.partyQuestDiff(name)
       have[#have + 1] = { id = id, title = Q.plain(Q.questName(id)) }
     end
   end
+  local pushable = C_QuestLog and C_QuestLog.IsPushableQuest
   for id, entry in pairs(log) do
-    if not theirs[id] then lack[#lack + 1] = { id = id, title = Q.plain(questTitle(id, entry)) } end
+    -- a quest the game won't share (most class quests) isn't worth a Share button
+    if not theirs[id] and not (pushable and try(pushable, id) == false) then
+      lack[#lack + 1] = { id = id, title = Q.plain(questTitle(id, entry)) }
+    end
   end
   local function byTitle(a, b) return a.title < b.title end
   table.sort(have, byTitle)
@@ -339,7 +445,7 @@ end
 -- Quests > Party's buttons.
 function ns.partyAskShare(name, id)
   send("R;" .. id .. ";" .. name)
-  ns.say("asked " .. name .. " to share " .. Q.plain(questTitle(id)) .. ".")
+  ns.say("asked " .. display(name) .. " to share " .. Q.plain(questTitle(id)) .. ".")
 end
 
 function ns.partyShare(id)
@@ -361,6 +467,66 @@ function ns.partyFollow(name)
     ns.showQuestViewer()
   else
     ns.followSuggestedQuestSection(section)
+  end
+  ns.questRefresh()
+end
+
+-- Whether Show <name>'s step can show their step: it is a step of your route other than yours.
+function ns.partyCanShow(name)
+  local row = memberRow(name)
+  return row ~= nil and row ~= myRow()
+end
+
+-- Show <name>'s step: your step window shows the step a member is on (as Back does: your own place
+-- in the route doesn't move, and the window comes back to it once that step is done or you press
+-- Next). A side guide they are in opens as that guide.
+function ns.partyShowStep(name)
+  local row = memberRow(name)
+  if not row then
+    ns.say(display(name) .. "'s step isn't in your route.")
+    return false
+  end
+  if row.section.side then Q.jump(row.section) else Q.jump(row.section, row) end
+  ns.showQuestViewer()
+  ns.questRefresh()
+  return true
+end
+
+-- Call the party to my step (Quests > Party): every Codex in the party gets a card with your step;
+-- clicking it shows that step in their step window. Once every 10 s.
+local calledAt = -60
+function ns.partyCall()
+  if not inParty() then return false, "You're not in a party." end
+  local row = myRow()
+  if not row then return false, "You have no step to call them to." end
+  local now = GetTime()
+  if now - calledAt < 10 then return false, "You called them a moment ago." end
+  calledAt = now
+  send(("C;" .. row.section.id .. ";" .. tostring(row.pos) .. ";" .. clean(Q.plain(Q.label(row.step)), 200)):sub(1, 250))
+  ns.say("called your party to your step: " .. Q.plain(Q.label(row.step)) .. ".")
+  return true
+end
+
+-- A member called the party to their step: a card (and a chat line) that shows their step.
+local callHeard = {}
+function ns.partyCalled(name, sectionId, pos, label)
+  local now = GetTime()
+  if callHeard[name] and now - callHeard[name] < 10 then return end
+  callHeard[name] = now
+  local m = members[name]
+  if m then m.section, m.pos, m.at = sectionId, pos, now
+  else members[name] = { section = sectionId, pos = pos, label = label, at = now } end
+  if label ~= "" then members[name].label = label end
+  local who = display(name)
+  local text = Q.plain(label ~= "" and label or "their step")
+  local row = memberRow(name)
+  local mine = myRow()
+  local onIt = row and mine and row == mine
+  ns.say(who .. " calls the party to their step: " .. text .. (onIt and " (you're on it)." or "."))
+  if not onIt and ns.showCard then
+    ns.showCard(who:upper() .. " CALLS THE PARTY", text,
+      { { "INV_Misc_GroupLooking", "Their step", row and "Click to show it in your step window" or "Not a step of your route" } },
+      function() ns.partyShowStep(name) end, nil, "Click to show their step  -  right-click to dismiss")
   end
   ns.questRefresh()
 end

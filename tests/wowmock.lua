@@ -96,7 +96,7 @@ C_QuestLog = {
 }
 -- Parties: MOCK.party = in a party (MOCK.raid = a raid); addon messages go to MOCK.addonSent, chat to MOCK.said,
 -- QuestLogPushQuest shares MOCK.selectedQuest (MOCK.pushed). MOCK.partyMembers = { { name, realm, level,
--- class, offline, dead } } are party1..N (UnitName/UnitLevel/UnitClass/UnitIsConnected/UnitIsDeadOrGhost,
+-- class, offline, dead, leader } } are party1..N (UnitName/UnitLevel/UnitClass/UnitIsConnected/UnitIsDeadOrGhost,
 -- GetNumSubgroupMembers).
 function IsInGroup() return MOCK.party or false end
 function IsInRaid() return MOCK.party and MOCK.raid or false end
@@ -106,6 +106,12 @@ local function partyMember(unit)
 end
 MOCK.partyMember = partyMember
 function GetNumSubgroupMembers() return MOCK.party and MOCK.partyMembers and #MOCK.partyMembers or 0 end
+-- MOCK.partyMembers[n].leader = that member leads the party (MOCK.leader = you do).
+function UnitIsGroupLeader(unit)
+  local m = partyMember(unit)
+  if m then return m.leader == true end
+  return unit == "player" and MOCK.leader == true
+end
 function UnitIsConnected(unit)
   local m = partyMember(unit)
   if m then return not m.offline end
