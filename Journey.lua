@@ -256,9 +256,15 @@ J.FAMOUS_BOSSES = {
 local BOSS = { "Defeated %boss% in %dungeon%", "Brought down %boss% deep in %dungeon%", "Bested %boss% in %dungeon%",
   "Stood over the fallen %boss% in the heart of %dungeon%", "%boss% fell in %dungeon%, and the party breathed again",
   "Ended %boss%'s reign in %dungeon%", "Fought %boss% to the last in %dungeon%, and won", "Left %boss% where they fell, deep in %dungeon%" }
+for _, s in ipairs({ "Left %dungeon% with %boss% finally beaten",
+  "%boss% made a last stand in %dungeon%, and lost",
+  "Put an end to %boss% in %dungeon%" }) do BOSS[#BOSS + 1] = s end
 local DUNGEON = { "Ventured into %dungeon%", "Gathered your courage and stepped into %dungeon%", "Delved into %dungeon%",
   "Lit a torch and went down into %dungeon%", "Took a deep breath at the door of %dungeon% and walked in",
   "Followed the party down into %dungeon%", "Stepped into the dark of %dungeon%, weapons ready" }
+for _, s in ipairs({ "Pushed open the doors of %dungeon%",
+  "Went down into %dungeon% with torches and good intentions",
+  "Checked the bandages one last time and entered %dungeon%" }) do DUNGEON[#DUNGEON + 1] = s end
 local ZONE = { "Set foot in %zone% for the first time", "The road led on to %zone%", "Arrived in %zone%, a new land to explore",
   "First steps into %zone%", "Crossed into %zone%, map in hand", "Left the familiar behind and walked into %zone%",
   "Came over the rise and saw %zone% for the first time", "%zone%: new ground, new faces, new trouble", "Wandered into %zone% and stayed a while",
@@ -267,15 +273,33 @@ local DEATH = { "Fell to %killer% in %zone%, then got back up", "Was bested by %
   "%killer% got the better of you in %zone%. The spirit healer sends regards", "Lost a fight to %killer% in %zone%. Pride hurts most",
   "Went down to %killer% in %zone%. Back on your feet, eventually", "%killer% won the day in %zone%. Not the war, though",
   "Underestimated %killer% in %zone%, and paid for it" }
+for _, s in ipairs({ "%killer% had the last word in %zone%, for now",
+  "Fell to %killer% in %zone% and saw the grey sky again",
+  "%killer% ended a good day early in %zone%",
+  "Lost the fight with %killer% in %zone%. The graveyard knows you well",
+  "Was laid low by %killer% in %zone%. Pride bruised, gear battered" }) do DEATH[#DEATH + 1] = s end
 local PVP_DEATH = { "Ambushed by %killer% in %zone%. Not every enemy in Azeroth is a monster",
   "Cut down by %killer% in %zone%: the war is real", "Fell to %killer% in %zone%, and swore to remember the name" }
+for _, s in ipairs({ "%killer% caught you off guard in %zone%. The war has long arms",
+  "Slain by %killer% in %zone%. They'll be on your list now" }) do PVP_DEATH[#PVP_DEATH + 1] = s end
 local DEATH_PLAIN = { "Met an untimely end in %zone%, but the story goes on", "Took a spill in %zone% and walked back from the graveyard",
   "Died in %zone%. It happens to the best of us", "The world went grey in %zone%, for a while" }
+for _, s in ipairs({ "Something got you in %zone%. The ghost walk was long",
+  "Fell in %zone%, and the world turned to mist",
+  "Died in %zone%, and nobody saw it coming, least of all you" }) do DEATH_PLAIN[#DEATH_PLAIN + 1] = s end
 local FLIGHT = { "Made friends with the flight master at %place%", "Found a new flight path at %place%",
   "Learned the skies over %place%", "Shook the flight master's hand at %place%: one more road through the air",
   "Added %place% to the map of the skies", "Met the gryphons of %place%, or whatever flies there" }
+for _, s in ipairs({ "Learned the way through the air from %place%",
+  "Paid the flight master at %place% a visit: one more path",
+  "Marked %place% on the map of the skies",
+  "Gave the gryphons at %place% a scratch and learned their road" }) do FLIGHT[#FLIGHT + 1] = s end
 local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled together", "Shared a road and a few fights with %name%",
   "Fell in with %name% for a stretch of the road", "Found a friend in %name%, or at least a second sword", "Teamed up with %name%; the road felt shorter" }
+for _, s in ipairs({ "Grouped up with %name% and the work went faster",
+  "Fought side by side with %name%",
+  "Made a new friend on the road: %name%",
+  "Found %name% heading the same way, and went together" }) do PAL[#PAL + 1] = s end
 
 -- What a quest was about, read from its objectives while it sat in your log.
 local questFacts = {} -- [id] = { title, kind = "kill"/"gather"/"errand", target }
@@ -389,7 +413,7 @@ function J.levelLine(lvl, zone)
     [59] = "Reached level 59 in " .. zone .. ": one more step to the top",
   }
   if special[lvl] then return special[lvl] end
-  return fill(pick({ "Grew stronger: level %n% in %zone%", "Reached level %n% in %zone%",
+  local list = { "Grew stronger: level %n% in %zone%", "Reached level %n% in %zone%",
     "Level %n%, earned the hard way in %zone%", "Level %n% in %zone%: a little taller, a little tougher",
     "Felt the light of level %n% in %zone%", "Level %n% came in %zone%, with a rush of new strength",
     "Level %n%: the trainers in town will want a word", "Climbed to level %n% somewhere in %zone%",
@@ -398,7 +422,14 @@ function J.levelLine(lvl, zone)
     "Level %n% in %zone%, and the road ahead looked shorter", "New strength, same old boots: level %n% in %zone%",
     "%zone% saw you reach level %n%", "Level %n% in %zone%, and not a moment too soon",
     "Stood a little straighter in %zone%: level %n%", "Level %n%, won in %zone% one fight at a time",
-    "The golden light of level %n% fell on %zone%", "Level %n% in %zone%. Somewhere, a trainer smiled" }, lvl), { n = tostring(lvl), zone = zone })
+    "The golden light of level %n% fell on %zone%", "Level %n% in %zone%. Somewhere, a trainer smiled",
+    "Level %n% arrived in %zone% like an old friend", "Another notch on the belt: level %n%, in %zone%",
+    "Level %n% in %zone%: the new spells won't learn themselves", "Pushed through to level %n% in %zone%",
+    "Level %n%. %zone% looked a little less dangerous after that", "The ladder grew a rung: level %n% in %zone%",
+    "Level %n% in %zone%, and a quick look at the talent tree", "A flash of light in %zone%: level %n%",
+    "Level %n%: the road to sixty got one step shorter", "Earned level %n% the long way round, in %zone%",
+    "Level %n% caught up with you in %zone%", "Level %n% in %zone%, won with sweat and stubbornness" }
+  return fill(J.rotate and J.rotate(list, "level", lvl) or pick(list, lvl), { n = tostring(lvl), zone = zone })
 end
 
 ----------------------------------------------------------------------------
@@ -612,7 +643,7 @@ local function enteredWorld()
   dungeonHere, bossSeen = name, {}
   local party = partyText()
   local text = fill(pick(DUNGEON, name .. now()), { dungeon = Q.plain(name) })
-  J.add("dungeon", party and (text .. " with " .. party) or text)
+  J.add("dungeon", party and (text .. " with " .. party) or text, nil, { who = Q.plain(name) })
 end
 
 local function bossDown(name)

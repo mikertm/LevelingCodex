@@ -95,6 +95,7 @@ JourneyTales.lua
 JourneyQuestLog.lua
 JourneyLore.lua
 JourneyVoice.lua
+JourneyStory.lua
 JourneyWilds.lua
 JourneyCompanions.lua
 JourneySocial.lua

@@ -319,13 +319,21 @@ local MOUNT = { "Saddled up for the first time and rode out of %zone%: the world
   "Rode out of %zone% on your own mount at last. Walking is for other people now",
   "Your own mount, at last: the roads of %zone% flew by", "Climbed into the saddle in %zone% and felt the wind for the first time",
   "No more walking: you rode out of %zone% on four legs that were not your own" }
+for _, s in ipairs({ "Saddled up in %zone% and never looked back",
+  "The first gallop out of %zone%: wind, speed, joy" }) do MOUNT[#MOUNT + 1] = s end
 local HOME = { "Made %place% your home: the hearthstone knows the way back now", "Settled on %place% as home, for now",
   "Bound your hearthstone to %place%", "Hung up your cloak at %place%: home, for a while", "Told the innkeeper at %place% to keep a bed ready",
   "Home is wherever the hearthstone says. Today it says %place%" }
+for _, s in ipairs({ "Called %place% home and meant it",
+  "Left the hearthstone set at %place%, where the beds are soft" }) do HOME[#HOME + 1] = s end
 local REST = { "Warmed your hands by the fire at %place% after a long road", "Rested your feet at %place%",
   "Took a seat by the hearth at %place% and listened to the talk", "Ordered something warm at %place% and let the road wait",
   "Heard a bard murder a good song at %place%, and enjoyed it anyway", "Slept under a real roof at %place% for once",
   "Traded rumours over a mug at %place%" }
+for _, s in ipairs({ "Shook the dust off at %place% and slept like a stone",
+  "Put your feet up at %place% and let the world turn",
+  "Listened to the rain on the roof at %place%",
+  "Shared a table and a story at %place%" }) do REST[#REST + 1] = s end
 local REST_GAP = 7200 -- seconds between two inn moments
 
 -- Milestones: { key, thresholds, line(n) }

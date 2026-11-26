@@ -14129,7 +14129,7 @@ function S.journeyTales()
   MOCK.instanceName, MOCK.instanceType, MOCK.bgWinner = nil, nil, nil
   MOCK.event("PLAYER_ENTERING_WORLD", false, false)
   MOCK.event("CHAT_MSG_COMBAT_HONOR_GAIN", "Grukk dies, honorable kill Rank: Scout (Estimated Honor Points: 20)")
-  check(journeyHas("pvp", "first honorable kill: Grukk"), "a first honorable kill")
+  check(journeyHas("pvp", "Grukk") and j.tally.honor == 1, "a first honorable kill")
   MOCK.event("CHAT_MSG_SYSTEM", "Tester has defeated Bo in a duel")
   check(journeyHas("duel", "Bo") and j.tally.duelsWon == 1, "a duel won")
   -- killed by another player, then raised by a friend
@@ -14182,7 +14182,7 @@ function S.journeyTales()
   MOCK.event("MAIL_SHOW")
   MOCK.setMoney(19800)
   MOCK.event("MAIL_CLOSED")
-  check(journeyHas("gold", "Collected 50s"), "the mailbox gold from sales")
+  check(journeyHas("gold", "50s"), "the mailbox gold from sales")
   MOCK.event("CHAT_MSG_SYSTEM", "Your auction of Copper Bar has expired.")
   check(journeyHas("expired", "Copper Bar"), "an expired auction")
   -- a quest given up
@@ -14204,7 +14204,7 @@ function S.journeyTales()
   click(win(), "Fortunes")
   check(questText(win(), "Buyers snapped up") and not questText(win(), "Bested Bo"), "the Fortunes filter")
   click(win(), "Fellowship")
-  check(questText(win(), "Joined the guild"), "the Fellowship filter")
+  check(questText(win(), "Dawn Watch"), "the Fellowship filter")
   click(win(), "Overview")
   check(questText(win(), "Someone brought you back from the dead"), "today's entry tells the MMO moments")
   for _, e in ipairs(j.events) do
@@ -14399,6 +14399,48 @@ function S.journeyProse()
   check(p21:find("The Collector", 1, true) and p21:find("Princess", 1, true), "a finished chain and a close call are named: " .. p21)
   local p22 = J.lore.chapterProse(22, chapters[22], MOCK.ns.stats.levelRecord(22), false)
   check(p22:find("Van Cleef", 1, true), "a boss is named: " .. p22)
+  -- neighbouring chapters that look alike still read differently, in every voice, and the wider noticing works
+  local Vo = J.voice
+  local before = J.data().voice
+  local look = {}
+  for l = 40, 47 do
+    local t = base + l * 3600
+    look[l] = { { t = t, k = "level", l = l, m = 1429, x = 50, y = 50, s = "Level " .. l },
+      { t = t + 100, k = "quest", l = l, m = 1429, x = 50, y = 50, s = "Did a thing", d = "Quest: Wolves Across the Border", q = 33 },
+      { t = t + 200, k = "quest", l = l, m = 1429, x = 50, y = 50, s = "Did a thing", d = "Quest: The Fargodeep Mine", q = 62 },
+      { t = t + 300, k = "dungeon", l = l, m = 1429, x = 50, y = 50, s = "Ventured into the Deadmines", who = "The Deadmines" },
+      { t = t + 400, k = "wipe", l = l, m = 1429, x = 50, y = 50, s = "Wiped", who = "Rhahk'Zor" },
+      { t = t + 500, k = "boss", l = l, m = 1429, x = 50, y = 50, s = "Defeated Rhahk'Zor", who = "Rhahk'Zor" } }
+  end
+  local events = J.data().events
+  local added = {}
+  for l = 40, 48 do
+    local t = base + l * 3600
+    local e1 = { t = t, k = "level", l = l, m = 1429, x = 50, y = 50, s = "Level " .. l }
+    local e2 = { t = t + 1, k = "quest", l = l - 1, m = 1429, x = 50, y = 50, s = "Done", d = "Quest: The Final Step", q = 99 }
+    events[#events + 1] = e1; events[#events + 1] = e2
+    added[#added + 1] = e1; added[#added + 1] = e2
+  end
+  local finalStep, wipeWin = false, false
+  for _, style in ipairs(Vo.STYLES) do
+    Vo.setStyle(style)
+    local prevFirst
+    for l = 40, 47 do
+      local prose = J.lore.chapterProse(l, look[l], nil, false)
+      check(prose ~= "" and not prose:find("%%%a") and not prose:find("[^\32-\126]"), style .. " chapter " .. l .. " is filled and plain: " .. prose)
+      local first = prose:match("^[^.!]+")
+      check(first ~= prevFirst, style .. " chapters " .. (l - 1) .. " and " .. l .. " open differently: " .. tostring(first))
+      prevFirst = first
+      if prose:find("The Final Step", 1, true) then finalStep = true end
+      if prose:find("Rhahk'Zor", 1, true) then wipeWin = true end
+    end
+  end
+  check(finalStep, "a chapter can end on the quest that brought the next level")
+  check(wipeWin, "a boss that wiped the party and then fell is told")
+  check(Vo.lastError == nil, "the storybook's noticers run without an error: " .. tostring(Vo.lastError))
+  for _ = 1, #added do events[#events] = nil end
+  J.data().voice = before
+  check(MOCK.ns.journeyStoryDebugLines and MOCK.ns.journeyStoryDebugLines()[1]:find("noticers", 1, true), "the story debug line")
 end
 
 -- Journey: companions remember what you did together (quests, foes, falls, lands, moments tagged with

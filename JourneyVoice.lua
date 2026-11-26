@@ -603,6 +603,22 @@ local function money(c)
   c = math.floor(math.abs(tonumber(c) or 0))
   return ns.money and ns.money(c) or (math.floor(c / 10000) .. "g")
 end
+Vo.L, Vo.M, Vo.hashOf, Vo.hourOf, Vo.money, Vo.names_ = L, M, hashOf, hourOf, money, names
+
+-- A chapter's line from a pool: the pool turns one line per level, so neighbouring chapters (35 and 36)
+-- never tell the same thing in the same words, and a pool is used up before any line comes back.
+local function tell(lines, key, l, vars)
+  if type(lines) ~= "table" then return nil end
+  local list = lines[Vo.style()] or lines.fireside
+  if type(list) ~= "table" or #list == 0 then return nil end
+  vars = vars or {}
+  vars.name = vars.name or (Vo.names())
+  local i = (hashOf(key) + math.floor(tonumber(l) or 0) * 7) % #list + 1
+  return fill(list[i], vars)
+end
+Vo.tell = tell
+-- What JourneyStory.lua (and others) add: functions(ctx) that notice more in a chapter.
+Vo.noticers = Vo.noticers or {}
 
 function Vo.chapterProse(l, events, rec, current)
   local j = J.data()
@@ -655,7 +671,7 @@ function Vo.chapterProse(l, events, rec, current)
   -- every sentence the chapter could say, with how much it matters (higher first) and its place in the telling
   local cands = {}
   local function cand(pri, order, slot, vars, pool)
-    local text = voiced((pool or L)[slot], seed .. slot, vars or {})
+    local text = tell((pool or L)[slot], slot, l, vars or {})
     if text and text ~= "" then
       -- a little seeded jitter so neighbouring chapters don't pick the same sentences in the same order
       cands[#cands + 1] = { pri = pri + (hashOf(seed .. slot) % 100) / 100, order = order, text = text, slot = slot }
@@ -816,21 +832,61 @@ function Vo.chapterProse(l, events, rec, current)
   if n.auction > 0 then cand(3, 8, "auction") end
   if n.camp > 0 then cand(4, 8, "camp") end
   if n.flight >= 2 then M_(3, 8, "flights", { N = capital(say(n.flight)) }) elseif n.flight > 0 then cand(3, 8, "flight") end
-  -- choose: the opening (the land, or the mood on some chapters), then the five that matter most, told in order
+  -- everything else other files notice (JourneyStory.lua): more candidates, openings and closings
+  local openers, closers = {}, {}
+  local ctx = { l = l, events = events, rec = rec, current = current, j = j, n = n, zones = zones, zcount = zcount,
+    main = main, deaths = deaths, quests = quests, foes = foes, bosses = bosses, elites = elites, killers = killers,
+    titles = titles, pals = shown, seed = seed, tFirst = tFirst, tLast = tLast, night = night, morning = morning,
+    timed = timed, mood = mood, place = place, prev = prev, fish = fish, gathered = g }
+  function ctx.add(pri, order, slot, vars) M_(pri, order, slot, vars) end
+  function ctx.opener(slot, vars, weight) openers[#openers + 1] = { slot = slot, vars = vars or {}, weight = weight or 1 } end
+  function ctx.closer(slot, vars) closers[#closers + 1] = { slot = slot, vars = vars or {} } end
+  function ctx.tell(slot, vars) return tell(M[slot], slot, l, vars or {}) end
+  local dropped = {}
+  function ctx.drop(slot) dropped[slot] = true end
+  for _, fn in ipairs(Vo.noticers) do
+    local ok, err = pcall(fn, ctx)
+    if not ok then Vo.lastError = tostring(err) end
+  end
+  -- choose the opening: the land, the mood, or something a noticer offers (a milestone level, the weather,
+  -- a return after a long break). A strong opener (weight 3) always wins; otherwise the chapter's hash picks.
   local out = {}
-  local openWithMood = mood and (hashOf(seed .. "mood") % 3 == 0 or not place)
-  if openWithMood then
-    out[#out + 1] = voiced(M[mood], seed .. mood, {})
-    if place then cand(9.5, 1, place[1], place[2]) end
-  elseif place then
-    out[#out + 1] = voiced(L[place[1]], seed .. place[1], place[2])
-    if mood and hashOf(seed .. "mood2") % 2 == 0 then M_(3, 9, mood) end
+  local opts = {}
+  if place then opts[#opts + 1] = { pool = L, slot = place[1], vars = place[2], weight = 2, place = true } end
+  if mood then opts[#opts + 1] = { pool = M, slot = mood, vars = {}, weight = 1, mood = true } end
+  local strong
+  for _, o in ipairs(openers) do
+    o.pool = M
+    if o.weight >= 3 and (not strong or o.weight > strong.weight) then strong = o end
+    opts[#opts + 1] = o
+  end
+  local open = strong
+  if not open and #opts > 0 then
+    local total = 0
+    for _, o in ipairs(opts) do total = total + o.weight end
+    local r = hashOf(seed .. "open") % total
+    for _, o in ipairs(opts) do
+      if r < o.weight then open = o; break end
+      r = r - o.weight
+    end
+  end
+  if open then
+    local text = tell(open.pool[open.slot], open.slot, l, open.vars)
+    if text and text ~= "" then out[#out + 1] = text end
+    -- the land still gets told when something else opened
+    if place and not open.place then cand(9.5, 1, place[1], place[2]) end
+    if mood and not open.mood and hashOf(seed .. "mood2") % 2 == 0 then M_(3, 9, mood) end
   end
   table.sort(cands, function(a, b) return a.pri > b.pri end)
-  local chosen = {}
-  for i = 1, math.min(5, #cands) do chosen[i] = cands[i] end
+  -- four to six sentences after the opening, so chapters don't all have the same length
+  local want = 4 + hashOf(seed .. "len") % 3
+  local chosen, usedSlot = {}, {}
+  for _, c in ipairs(cands) do
+    if #chosen >= want then break end
+    if not usedSlot[c.slot] and not dropped[c.slot] then usedSlot[c.slot] = true; chosen[#chosen + 1] = c end
+  end
   table.sort(chosen, function(a, b) if a.order ~= b.order then return a.order < b.order end return a.pri > b.pri end)
-  for _, c in ipairs(chosen) do out[#out + 1] = c.text end
+  for i, c in ipairs(chosen) do out[#out + 1] = Vo.joined and Vo.joined(c.text, seed, i) or c.text end
   -- a word about who you are, when the chapter shows it
   local top = Vo.traits(j)[1]
   local shows = top and ((top[1] == "gatherer" and #g > 0) or (top[1] == "angler" and fish > 0) or (top[1] == "friend" and p)
@@ -839,8 +895,16 @@ function Vo.chapterProse(l, events, rec, current)
     or (top[1] == "merchant" and n.auction > 0) or (top[1] == "warbound" and n.pvp > 0))
   local aside = shows and Vo.TRAITS[top[1]].aside
   -- the aside on about half the chapters, so it doesn't close every page the same way
-  if aside and #aside > 0 and hashOf(seed .. "aside") % 2 == 0 then out[#out + 1] = pick(aside, seed .. "aside") end
-  if current then out[#out + 1] = voiced(L.open, seed .. "open", {}) end
+  if aside and #aside > 0 and hashOf(seed .. "aside") % 2 == 0 then
+    out[#out + 1] = aside[(hashOf("aside" .. top[1]) + l * 7) % #aside + 1]
+  end
+  -- how the chapter ended (the next level's moment), on most finished chapters
+  if not current and #closers > 0 and hashOf(seed .. "close") % 4 ~= 0 then
+    local c = closers[hashOf(seed .. "closer") % #closers + 1]
+    local text = tell(M[c.slot], c.slot, l, c.vars)
+    if text and text ~= "" then out[#out + 1] = text end
+  end
+  if current then out[#out + 1] = tell(L.open, "open", l, {}) end
   return table.concat(out, " ")
 end
 
@@ -885,6 +949,8 @@ local PREFACE = {
     bard = { "Turn the leaves: each level is a verse of its own." } },
 }
 
+Vo.PREFACE = PREFACE
+
 function Vo.preface(j, V)
   if type(j) ~= "table" or #j.events == 0 then return nil end
   local first, last = Vo.names()
@@ -919,9 +985,12 @@ end
 ----------------------------------------------------------------------------
 local AGAIN_DEATH = { "%killer% again, in %zone%. This is becoming a habit", "Fell to %killer% for the %nth% time. A grudge is forming",
   "%killer% wins another round in %zone%. Not the last word, though", "Beaten by %killer% once more, in %zone%. Next time",
-  "%killer%, again. Some lessons take a while" }
+  "%killer%, again. Some lessons take a while", "The %nth% time %killer% has sent you to the graveyard. Personal now",
+  "%killer% again, in %zone%. You're going to need a better plan", "Down to %killer% once more. You know their face by heart now" }
 local REGULAR = { "Back to %giver% once more: the %nth% favour done in %zone%", "%giver% had another job, and you saw it through: number %n%",
-  "By now %giver% greets you by name: favour number %n%, in %zone%", "Another errand for %giver%, the %nth%. They keep a cup ready for you now" }
+  "By now %giver% greets you by name: favour number %n%, in %zone%", "Another errand for %giver%, the %nth%. They keep a cup ready for you now",
+  "%giver% again. The %nth% job, and they still haven't learned to do it themselves", "Favour number %n% for %giver%. You're practically staff",
+  "%giver% waved you over for the %nth% time in %zone%" }
 
 local function ordinal(n)
   local words = { "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth" }

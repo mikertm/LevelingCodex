@@ -270,6 +270,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.journeyTalesDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyLoreDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyVoiceDebugLines()) do out[#out + 1] = line end
+  if ns.journeyStoryDebugLines then for _, line in ipairs(ns.journeyStoryDebugLines()) do out[#out + 1] = line end end
   for _, line in ipairs(ns.journeyWildsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeyCompanionsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.journeySocialDebugLines()) do out[#out + 1] = line end

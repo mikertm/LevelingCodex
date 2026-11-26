@@ -7,6 +7,22 @@
     - Their page counts what has passed between your journals: toasts, thanks and memories, both ways.
 - **Journey: toast the whole fellowship.** On the Fellowships page, **Toast the band** raises a toast to every member in your party, written in each of your journals under the name each of you gave the band.
 - **Journey: fellowship names travel.** Renaming a fellowship offers the name to the members in your party. They get a card, and **Use that name** takes it.
+- **Journey: a much wider storybook.** Every chapter now notices far more, in all three narrators (Chronicler, Fireside, Bard):
+    - **The weather and feel of the land**: snow in Dun Morogh, heat in Tanaris, fog in the Wetlands, ash in the Burning Steppes, blight in the Plaguelands, city streets, and more.
+    - **Milestone levels** (1, 10, 20, 30, 40, 50, 59, 60 and every fifth level) open their chapters in their own words.
+    - **How a level ended**: the hour and place of the next level (dawn, midday, dusk or night), or the quest whose turn-in brought it.
+    - **Returns and breaks**: coming back after days away, a long pause inside a chapter, sittings and marathon sessions.
+    - **Streaks and comebacks**: several chapters in a row without a fall (or with one), a strong chapter after a hard one, a close call with no death.
+    - **Old foes**: a killer who got you in an earlier chapter, and paying one back.
+    - **Firsts of the whole journal**: first dungeon, boss, battleground, honorable kill, death, resurrection, trade, duel and craft.
+    - **Dungeons by name**, repeat runs of the same one, and a boss that wiped the party before it fell.
+    - **Battlegrounds won and lost**, a duel and who it was with, trades, greetings, joining a guild, thanks, toasts, signatures and fellowships.
+    - **Professions and gold**: a skill reached, a new rank, a busy day at the bench, purse milestones, auction sales and unsold lots.
+    - **What the quests were**: a chapter of hunts, of gathering, of errands, or with an escort.
+    - **The calendar**: evenings, afternoons, weekends, nights at the inn.
+    - Hundreds more ways to say what it already noticed, and joining words so a chapter reads as a story, not a list.
+    - **Neighbouring chapters never repeat a sentence**: each line turns with the level, and chapters run from five to seven sentences. Level-up lines turn the same way.
+- **Journey: more varied moments.** Deaths, dungeon entries, bosses, flight paths, companions, wipes, dungeon runs, battlegrounds, duels, resurrections, trades, guilds, honorable kills, campfires, abandoned quests, auction sales, mailbox gold, mounts, inns and hearthstones all have more ways to be written.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:

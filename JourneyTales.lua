@@ -141,6 +141,33 @@ local RUN_FAIL = { "Left %dungeon% after %time%%with% without a single boss down
 local BG_IN = { "Answered the call to arms at %bg%", "Marched into %bg% with banners raised" }
 local BG_WON = { "Victory at %bg%! The %side% carried the day", "Won the field at %bg% for the %side%" }
 local BG_LOST = { "Defeat at %bg%. The %foe% held the field this time", "Fell back from %bg%: the %foe% won the day" }
+for _, s in ipairs({ "Everyone down before %boss% in %dungeon%. A long run back from the graveyard",
+  "%boss% wiped the floor with the party in %dungeon%. Regroup, rebuff, again",
+  "The pull on %boss% in %dungeon% went wrong, and then very wrong",
+  "Wiped on %boss% in %dungeon%. Somebody stood in the bad stuff",
+  "Down went the whole party before %boss% in %dungeon%. Nobody blamed the healer. Out loud" }) do WIPE[#WIPE + 1] = s end
+for _, s in ipairs({ "Cleared a path through %dungeon%%with% in %time%: %bosses%",
+  "%time% in %dungeon%%with%, and %bosses%",
+  "Fought through %dungeon%%with% for %time%: %bosses%",
+  "Back in the daylight after %time% in %dungeon%%with%: %bosses%",
+  "%dungeon%%with%, %time% from door to door: %bosses%" }) do RUN[#RUN + 1] = s end
+for _, s in ipairs({ "%dungeon% fought back%with%: %time%, %wipes%, and in the end %bosses%",
+  "It took %time% and %wipes% in %dungeon%%with%, but %bosses%",
+  "Bruised but proud after %dungeon%%with%: %time%, %wipes%, %bosses%" }) do RUN_HARD[#RUN_HARD + 1] = s end
+for _, s in ipairs({ "Turned back from %dungeon% after %time%%with%. The bosses keep their treasure, for now",
+  "%time% in %dungeon%%with% and nothing to show but repair bills" }) do RUN_FAIL[#RUN_FAIL + 1] = s end
+for _, s in ipairs({ "Heard the war horns and joined the fight at %bg%",
+  "Took up the banner at %bg%",
+  "Queued, waited, and charged into %bg%",
+  "Stepped onto the field at %bg%, weapons drawn" }) do BG_IN[#BG_IN + 1] = s end
+for _, s in ipairs({ "The %foe% broke at %bg%, and the %side% cheered",
+  "%bg% won for the %side%: a good day on the field",
+  "Held %bg% against the %foe% and carried the day",
+  "Victory at %bg%. The %foe% will be talking about that one" }) do BG_WON[#BG_WON + 1] = s end
+for _, s in ipairs({ "The %foe% took %bg% this time. Next time",
+  "Outnumbered and outplayed at %bg%. The %foe% won",
+  "Lost the field at %bg%, but not the will to go back",
+  "%bg% went to the %foe%. Lick the wounds, queue again" }) do BG_LOST[#BG_LOST + 1] = s end
 
 local run, bg
 local function minutes(sec)
@@ -161,7 +188,7 @@ local function finishRun()
   local lines = r.bosses == 0 and RUN_FAIL or (r.wipes >= 3 and RUN_HARD or RUN)
   bump("runs")
   J.add("run", J.fill(J.pick(lines, r.name .. r.start), vars),
-    vars.time .. ", " .. vars.bosses .. (r.wipes > 0 and (", " .. vars.wipes) or ""))
+    vars.time .. ", " .. vars.bosses .. (r.wipes > 0 and (", " .. vars.wipes) or ""), { who = r.name, n = r.bosses })
 end
 
 local function finishBG()
@@ -230,14 +257,21 @@ local function honorGain(text)
   local n = bump("honor")
   victim = plain(victim)
   if n == 1 then
-    J.add("pvp", "Your first honorable kill: " .. victim .. " fell in " .. zone(), "Honorable kill 1", { who = victim, pvp = true })
+    J.add("pvp", J.fill(J.pick({ "Your first honorable kill: %who% fell in %zone%", "First blood in the war: %who%, in %zone%",
+      "%who% fell to you in %zone%: your first honorable kill" }, victim), { who = victim, zone = zone() }), "Honorable kill 1", { who = victim, pvp = true })
   elseif HONOR_MARKS[n] then
-    J.add("pvp", n .. " honorable kills now. " .. victim .. " was number " .. n, "Honorable kill " .. n, { who = victim, pvp = true })
+    J.add("pvp", J.fill(J.pick({ "%n% honorable kills now. %who% was number %n%", "Honorable kill number %n%: %who%, in %zone%",
+      "%who% made it %n% honorable kills. The other side knows your name" }, victim .. n), { n = tostring(n), who = victim, zone = zone() }),
+      "Honorable kill " .. n, { who = victim, pvp = true })
   end
 end
 
-local DUEL_WON = { "Bested %name% in a duel in %zone%", "Won a duel against %name% in %zone%. Bragging rights earned" }
-local DUEL_LOST = { "Lost a duel to %name% in %zone%. Next time", "%name% got the better of you in a duel in %zone%" }
+local DUEL_WON = { "Bested %name% in a duel in %zone%", "Won a duel against %name% in %zone%. Bragging rights earned",
+  "Knocked %name% flat in a friendly duel in %zone%", "Crossed blades with %name% in %zone% and came out on top",
+  "%name% asked for a duel in %zone% and got a lesson", "Won a duel against %name% in %zone%, then shook hands" }
+local DUEL_LOST = { "Lost a duel to %name% in %zone%. Next time", "%name% got the better of you in a duel in %zone%",
+  "%name% put you on your back in a duel in %zone%. Good fight", "A duel with %name% in %zone% went their way",
+  "Lost to %name% in a duel in %zone%, and took notes" }
 local function duel(winner, loser, fled)
   local self = me()
   if not self or (winner ~= self and loser ~= self) then return end
@@ -257,7 +291,9 @@ end
 
 local rezBy, deadAt
 local REZ = { "%name% brought you back from the dead in %zone%", "Brought back to life by %name% in %zone%. You owe them one",
-  "%name% pulled you back from the spirit world in %zone%" }
+  "%name% pulled you back from the spirit world in %zone%", "%name% spoke a word over your body in %zone%, and you rose",
+  "Saved from the corpse run by %name% in %zone%", "%name% raised you in %zone%. Owe them a drink",
+  "Back among the living in %zone%, thanks to %name%", "The grey lifted in %zone%: %name% had called you back" }
 local function revived(ghost)
   if not deadAt then return end
   local by = rezBy and (now() - rezBy.t) <= 180 and rezBy.name or nil
@@ -269,7 +305,9 @@ local function revived(ghost)
     bump("rezzed")
     J.add("rez", J.fill(J.pick(REZ, by .. now()), vars), "Resurrected", { who = vars.name })
   else
-    J.add("rez", J.fill("Rose again in %zone% without the long walk from the graveyard", vars), "Back on your feet")
+    J.add("rez", J.fill(J.pick({ "Rose again in %zone% without the long walk from the graveyard",
+      "Got back up in %zone% where you fell, spared the corpse run", "Came back to life right there in %zone%",
+      "Stood up again in %zone%, dusted off, carried on" }, now()), vars), "Back on your feet")
   end
 end
 
@@ -284,9 +322,13 @@ local function tradeDone()
   local n = bump("trades")
   local mine = tonumber(p.trades) or 1
   if mine == 1 then
-    J.add("trade", "Traded with " .. plain(name) .. " in " .. zone() .. " for the first time", "Trade", { who = plain(name) })
+    J.add("trade", J.fill(J.pick({ "Traded with %name% in %zone% for the first time", "Did business with %name% in %zone%: a first trade",
+      "Struck a deal with %name% in %zone%", "Swapped goods with %name% in %zone% for the first time" }, name), { name = plain(name), zone = zone() }),
+      "Trade", { who = plain(name) })
   elseif mine % 10 == 0 then
-    J.add("trade", mine .. " trades with " .. plain(name) .. " now: a trusted partner", "Trade", { who = plain(name) })
+    J.add("trade", J.fill(J.pick({ "%n% trades with %name% now: a trusted partner", "%name% and you, %n% trades and counting",
+      "Trade number %n% with %name%. A proper business arrangement" }, name .. mine), { n = tostring(mine), name = plain(name) }),
+      "Trade", { who = plain(name) })
   elseif n == 1 then
     J.add("trade", "Your first trade, with " .. plain(name) .. " in " .. zone(), "Trade", { who = plain(name) })
   end
@@ -342,7 +384,9 @@ local function guildCheck(seed)
   local had = j.guild
   j.guild = name
   if seed and not had then return end -- the guild you were in when the journal began
-  J.add("guild", "Joined the guild <" .. plain(name) .. "> in " .. zone() .. ". New friends, new stories", "Guild")
+  J.add("guild", J.fill(J.pick({ "Joined the guild %g% in %zone%. New friends, new stories", "Pulled on the tabard of %g% in %zone%",
+    "%g% took you in, in %zone%. A family of sorts", "Signed the charter of %g% in %zone%: one of them now" }, name),
+    { g = "<" .. plain(name) .. ">", zone = zone() }), "Guild")
 end
 
 ----------------------------------------------------------------------------
@@ -350,9 +394,12 @@ end
 ----------------------------------------------------------------------------
 
 local lastCamp = -1e9
-local CAMP_LIT = { "Made camp in %zone%: struck flint and lit a campfire", "Built a campfire in %zone% and settled in for a while" }
+local CAMP_LIT = { "Made camp in %zone%: struck flint and lit a campfire", "Built a campfire in %zone% and settled in for a while",
+  "Gathered sticks and lit a fire in %zone%, and the night felt smaller", "Set a fire crackling in %zone% and put your boots up",
+  "Struck a spark in %zone% and made a little home for the night" }
 local CAMP_SAT = { "Sat by the campfire in %zone%%with%, warming your hands", "Rested at a campfire in %zone%%with%, trading tales",
-  "Shared the warmth of a campfire in %zone%%with%" }
+  "Shared the warmth of a campfire in %zone%%with%", "Watched the sparks rise from a campfire in %zone%%with%",
+  "Sat a while by the fire in %zone%%with%, saying nothing much", "Toasted bread over a campfire in %zone%%with%" }
 local function spellName(id)
   local name = C_Spell and try(C_Spell.GetSpellName, id)
   if not name then name = try(GetSpellInfo, id) end
@@ -547,8 +594,10 @@ local function soldOrExpired(text)
       #prev.items .. (kind == "sold" and " sold" or " expired"))
     return
   end
-  local e = J.add(kind, kind == "sold" and ("A buyer snapped up your " .. name .. " at the auction house")
-    or ("Nobody wanted your " .. name .. ": the auction came back unsold"), kind == "sold" and "1 sold" or "1 expired")
+  local e = J.add(kind, J.fill(J.pick(kind == "sold" and { "A buyer snapped up your %item% at the auction house",
+      "Your %item% sold at the auction house. Coin on its way", "Somebody out there wanted your %item%, and paid for it" }
+    or { "Nobody wanted your %item%: the auction came back unsold", "Your %item% came home from the auction house unsold",
+      "The %item% sat on the auction house, and nobody bit" }, name .. now()), { item = name }), kind == "sold" and "1 sold" or "1 expired")
   local rec = { e = e, t = now(), items = { name } }
   if kind == "sold" then lastSale = rec else lastExpired = rec end
 end
@@ -564,8 +613,9 @@ local function mailClose()
   local sales = T.unpaid
   T.unpaid = 0
   bump("ahGold", gained)
-  J.add("gold", "Collected " .. ns.money(gained) .. " from the auction house at the mailbox in " .. zone()
-    .. ". The trade pays", plural(sales, "sale"))
+  J.add("gold", J.fill(J.pick({ "Collected %m% from the auction house at the mailbox in %zone%. The trade pays",
+    "Opened the mail in %zone% to %m% from the auction house", "The mailbox in %zone% held %m% in sales. A merchant's smile",
+    "%m% in auction money waited at the mailbox in %zone%" }, now()), { m = ns.money(gained), zone = zone() }), plural(sales, "sale"))
 end
 
 local PURSE = { { 10000, "Your first gold coin. The road ahead looks a little brighter" },
@@ -624,7 +674,9 @@ local function doneQuest(id)
 end
 
 local GIVE_UP = { "Gave up on %title% in %zone%. Some battles aren't worth fighting",
-  "Tore %title% out of the quest log. Not every story gets an ending", "Let %title% go. Maybe another hero will finish it" }
+  "Tore %title% out of the quest log. Not every story gets an ending", "Let %title% go. Maybe another hero will finish it",
+  "Crossed %title% off the list unfinished, in %zone%", "Shrugged and dropped %title%. Life is short and the log is full",
+  "Decided %title% was someone else's problem" }
 local function questRemoved(id)
   id = num(id)
   if not id then return end
