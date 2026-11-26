@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.34.1
+- **Auction house: shared prices across the realm.** The Codex now shares the prices you see with other Codex users on your realm, and theirs keep your tooltips, deals and market view fresh without a scan of your own.
+    - Your scans, searches and the sniper send their newest lowest prices over a hidden chat channel, the most valuable items first, about one message every 2 seconds, so it never lags the game.
+    - Prices from others are marked **(shared)** in the tooltip. Your own scans always win over them.
+    - A price far from an item's usual one waits until a second player reports about the same. Shared prices only count toward the usual price once two players agree, and a player whose prices keep being held back is ignored.
+    - Nothing is ever bought on a shared price alone: the sniper and Deals still check the live listing first.
+    - Turn it off on the Scan tab under SETTINGS (**Share prices with other Codex users on the realm**). The line under it counts what you sent and received this session.
+
 ## v0.34.0
 - **Journey: Companions grows into the social side of your story.**
     - **People you pass are pencilled in.** Friendly players you see nearby (their nameplate, your target or your mouse) go into SEEN ON THE ROAD with where and how often you saw them. They fade after 30 days unless they come back into your story. Nobody new is pencilled in while you rest in a town or an inn.

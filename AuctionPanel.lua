@@ -2303,6 +2303,15 @@ function pages.scan(W, top, H)
   sy = sy + check("Search my guide's items when I open it", lx + 10, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end)
   sy = sy + check("Snipe pop-up with a Buy button", lx + 10, sy, not db.noSnipePopup, function() db.noSnipePopup = not db.noSnipePopup; T().refreshPopup() end,
     "When the sniper finds a live deal, a small card over the auction house shows it with Buy and Skip, whichever page is open.")
+  do
+    local Sh = ns.auctionShare
+    if Sh then
+      sy = sy + check("Share prices with other Codex users on the realm", lx + 10, sy, Sh.on(), function() Sh.setOn(not Sh.on()) end,
+        "Your scans and searches go out to other Codex users over a hidden channel, and theirs keep your tooltips and deals fresh. Your own scans always win, odd prices wait for a second player, and every buy is still checked live.")
+      text(Sh.summary(), lx + 30, sy, lw - 44, "dim", ns.C.dim)
+      sy = sy + 16
+    end
+  end
   if A().count() > 0 then
     local armed = forgetAt and now() - forgetAt < 5
     -- in the card's title row: the settings fill the card's height below it

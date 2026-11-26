@@ -251,7 +251,7 @@ function A.record(id, name, low, n, med, high)
     if indexFor == s then nameIndex[name:lower()] = id end
   end
   local oldLow, oldAt, oldN = tonumber(it.low), tonumber(it.at), tonumber(it.n)
-  it.n, it.at, it.ator = tonumber(n) or 0, now(), nil
+  it.n, it.at, it.ator = tonumber(n) or 0, A.recordAt or now(), nil
   -- the vendor price and quality, kept for the deal finder and market filters;
   -- a full scan or wide page sweep leaves uncached items for later (A.recordFast)
   if not A.recordFast then
@@ -262,6 +262,8 @@ function A.record(id, name, low, n, med, high)
     it.vendor = A.vendorValue(id, it.vendor)
   end
   local d = today()
+  -- a price from another Codex user (AuctionShare.lua) joins the daily history only once two players agree
+  local intoDays = not A.recordShared or A.recordDays
   if low then
     -- an item priced before the readings were kept: its last price is the first reading
     if type(it.tk) ~= "table" and oldLow and oldAt and oldAt < now() then
@@ -269,6 +271,8 @@ function A.record(id, name, low, n, med, high)
     end
     tick(it, low, tonumber(n) or 0)
     it.low, it.med, it.high = low, med or it.med, high or it.high
+  end
+  if low and intoDays then
     local rec = it.days[d]
     if type(rec) ~= "table" then rec = {}; it.days[d] = rec end
     if rec.ator then rec.low, rec.med, rec.ator = nil, nil, nil end -- the Codex's own reading wins the day
@@ -279,6 +283,7 @@ function A.record(id, name, low, n, med, high)
   for k in pairs(it.days) do
     if type(k) ~= "number" or k <= d - A.DAYS then it.days[k] = nil end
   end
+  if low and not A.recordShared and ns.auctionShare then ns.auctionShare.queue(id) end
 end
 
 -- Auctionator's prices in the history: once a session per item, its last scanned price is filed
@@ -355,7 +360,8 @@ function A.price(id)
   local current = ((tonumber(it.n) or 0) > 0 and tonumber(it.low)) or last
   local trend = base and base > 0 and current and math.floor((current - base) * 100 / base + 0.5) or nil
   return { name = it.name, low = it.low, med = it.med, high = it.high, n = tonumber(it.n) or 0, at = it.at,
-    usual = usual, trend = trend, days = #all, vendor = A.vendorValue(id, it.vendor), source = it.ator and "Auctionator" or nil }
+    usual = usual, trend = trend, days = #all, vendor = A.vendorValue(id, it.vendor), source = it.ator and "Auctionator" or nil,
+    shared = it.shAt ~= nil and it.shAt == it.at or nil }
 end
 
 function A.age(t)
@@ -1801,7 +1807,7 @@ function A.tooltipLines(id, shift)
   local function add(l, r, lc, rc) out[#out + 1] = { l, r, lc or INK, rc or INK } end
   if p then
     add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", A.age(p.at)
-      .. (fromAtor and " (Auctionator)" or ""), GOLD, SOFT)
+      .. (fromAtor and " (Auctionator)" or (p.shared and " (shared)" or "")), GOLD, SOFT)
     if fromAtor then -- Auctionator shows it
     elseif p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
     if p.usual and p.usual ~= p.low then add("  Usual" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual)) end

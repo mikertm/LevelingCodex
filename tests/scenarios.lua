@@ -12089,6 +12089,97 @@ function S.auctionQuickSell()
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
 end
 
+-- Realm-wide price sharing (AuctionShare.lua): your readings go out over the hidden channel, others'
+-- come in and fill the store, odd prices wait for a second player, liars are muted, the history
+-- only takes prices two players agree on.
+function S.auctionShare()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local t = time()
+  LevelingCodexDB = LevelingCodexDB or {}
+  local hist = { [day - 3] = { low = 100, med = 100 }, [day - 2] = { low = 100, med = 100 }, [day - 1] = { low = 100, med = 100 } }
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = {
+    [2589] = { name = "Linen Cloth", low = 100, n = 20, at = t - 7200, days = hist } } } } }
+  S.login()
+  local A, Sh = MOCK.ns.auction, MOCK.ns.auctionShare
+  local b = Sh.b36
+  A.store().items[2589] = A.store().items[2589] or { name = "Linen Cloth", low = 100, n = 20, at = t - 7200 }
+  A.store().items[2589].days = hist
+  -- the minimal client has no CHAT_MSG_ADDON: its reading is fed straight in
+  local function from(who, text)
+    if MOCK.minimal then Sh.receive(text, who) else MOCK.event("CHAT_MSG_ADDON", "LevCodexP", text, "CHANNEL", who) end
+  end
+  local function sentWith(code)
+    for _, m in ipairs(MOCK.addonSent or {}) do
+      if m.prefix == "LevCodexP" and m.text:find(code, 1, true) then return m end
+    end
+  end
+  check(MOCK.minimal or (MOCK.addonPrefixes and MOCK.addonPrefixes.LevCodexP), "the sharing prefix is registered")
+  MOCK.advance(16)
+  if not MOCK.minimal then
+    check(MOCK.channels.LevCodexPrices, "the price channel is joined after the world loads")
+  end
+  A.record(2589, "Linen Cloth", 90, 20)
+  MOCK.advance(3)
+  local m = sentWith(b(2589) .. "," .. b(90) .. ",")
+  if MOCK.minimal then
+    check(not m, "without a channel or a guild nothing is sent")
+  else
+    check(m and m.channel == "CHANNEL" and m.target == MOCK.channels.LevCodexPrices and m.text:sub(1, 3) == "P1;",
+      "your own reading goes out on the price channel (" .. tostring(m and m.text) .. ")")
+  end
+  -- a price from another player fills the store, marked as shared, outside the history
+  MOCK.advance(60)
+  from("Ann-Mockrealm", "P1;" .. b(4306) .. "," .. b(1200) .. ",5,0")
+  local it = A.store().items[4306]
+  check(it and it.low == 1200 and it.n == 5 and A.price(4306).shared, "a shared price is filed and marked shared (" .. MOCK.ns.auctionShareDebugLines()[1] .. ")")
+  check(next(it.days) == nil, "one player's price doesn't join the history")
+  local tip = A.tooltipLines(4306)
+  check(tip[1] and tostring(tip[1][2]):find("(shared)", 1, true), "the tooltip says the price is shared (" .. tostring(tip[1] and tip[1][2]) .. ")")
+  from("Bo", "P1;" .. b(4306) .. "," .. b(1250) .. ",4,0")
+  check(next(A.store().items[4306].days) ~= nil, "a second player agreeing puts it in the history")
+  -- a shared price is never sent on again
+  local before = #(MOCK.addonSent or {})
+  MOCK.advance(5)
+  check(not sentWith(b(4306) .. ","), "a price from someone else isn't passed on")
+  -- an older price than your own is passed over
+  from("Ann-Mockrealm", "P1;" .. b(2589) .. "," .. b(50) .. ",3," .. b(10))
+  check(A.store().items[2589].low == 90, "a price older than your own reading is passed over")
+  -- an outlier waits for a second player
+  MOCK.advance(60)
+  from("Ann-Mockrealm", "P1;" .. b(2589) .. "," .. b(5) .. ",9,0")
+  check(A.store().items[2589].low == 90, "a price far under the usual waits for a second player (" .. tostring(A.store().items[2589].low) .. ", days "
+    .. tostring(A.price(2589).days) .. ", usual " .. tostring(A.price(2589).usual) .. ")")
+  from("Bo", "P1;" .. b(2589) .. "," .. b(5) .. ",9,0")
+  check(A.store().items[2589].low == 5, "a second player confirms it")
+  -- a player whose prices keep being held back is muted
+  A.record(2589, "Linen Cloth", 100, 20)
+  for i = 1, 6 do MOCK.advance(61); from("Cy", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
+  check(Sh.muted["Cy"], "a sender held back five times is muted")
+  MOCK.advance(61)
+  from("Cy", "P1;" .. b(4338) .. "," .. b(700) .. ",2,0")
+  check(not A.store().items[4338], "a muted sender's prices are ignored")
+  -- broken or own messages do nothing
+  from("Dee", "P1;zz,!!/1,2")
+  from("Dee", "nonsense")
+  from("Tester", "P1;" .. b(4339) .. ",5,1,0")
+  check(not A.store().items[4339], "your own echo is ignored")
+  check(Sh.stats.bad >= 2, "broken entries are counted, not filed")
+  if not MOCK.minimal then
+    MOCK.auctions = {}
+    MOCK.openAuction()
+    MOCK.advance(2)
+    click(AuctionHouseFrame, "Scan")
+    local panel = _G.LevelingCodexAHPanel
+    check(questText(panel, "Share prices with other Codex users on the realm") and questText(panel, "Sharing with the realm channel")
+      and not MOCK.ns.auctionPanel.lastError, "the Scan page has the sharing switch and its count (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
+    click(panel, "Share prices with other Codex users on the realm")
+    check(not Sh.on() and not MOCK.channels.LevCodexPrices, "turning it off leaves the channel")
+    MOCK.closeAuction()
+  end
+  local dbg = table.concat(MOCK.ns.auctionShareDebugLines(), "\n")
+  check(dbg:find("price sharing:", 1, true), "the debug line")
+end
+
 function S.auctionMarket()
   local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
   local t = time()

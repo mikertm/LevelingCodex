@@ -119,6 +119,19 @@ C_ChatInfo = {
     table.insert(MOCK.addonSent, { prefix = prefix, text = text, channel = channel, target = target })
   end,
 }
+-- Custom chat channels: MOCK.channels[name] = number once joined (JoinTemporaryChannel), MOCK.channelRefused stops joins.
+MOCK.channels = {}
+function JoinTemporaryChannel(name)
+  if MOCK.channelRefused then return end
+  if not MOCK.channels[name] then
+    local n = 4
+    for _, v in pairs(MOCK.channels) do n = math.max(n, v) end
+    MOCK.channels[name] = n + 1
+  end
+  return 1, name
+end
+function GetChannelName(name) local id = MOCK.channels[name]; if id then return id, name end return 0 end
+function LeaveChannelByName(name) MOCK.channels[name] = nil end
 function SendChatMessage(text, channel)
   if #text > 255 then error("SendChatMessage: over 255 bytes", 2) end
   MOCK.said = MOCK.said or {}
@@ -2185,7 +2198,7 @@ function MOCK.drag(f, dx, dy)
 end
 
 -- Remove the APIs a careful addon must not rely on.
-local OPTIONAL = { "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
+local OPTIONAL = { "JoinTemporaryChannel", "GetChannelName", "LeaveChannelByName", "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "GetPhysicalScreenSize",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",

@@ -86,6 +86,7 @@ Gold.lua
 Auction.lua
 AuctionTrade.lua
 AuctionMarket.lua
+AuctionShare.lua
 AuctionPanel.lua
 Journey.lua
 JourneyBook.lua

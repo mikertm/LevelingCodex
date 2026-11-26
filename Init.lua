@@ -50,6 +50,7 @@ local function start()
   ns.startAuction()
   ns.startAuctionTrade()
   if ns.startAuctionMarket then ns.startAuctionMarket() end
+  if ns.startAuctionShare then ns.startAuctionShare() end
   ns.startJourney()
   ns.startJourneyDeeds()
   ns.startJourneyTales()
@@ -259,6 +260,7 @@ function ns.debugLines()
   for _, line in ipairs(ns.auctionDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.auctionTradeDebugLines()) do out[#out + 1] = line end
   if ns.auctionMarketDebugLines then for _, line in ipairs(ns.auctionMarketDebugLines()) do out[#out + 1] = line end end
+  if ns.auctionShareDebugLines then for _, line in ipairs(ns.auctionShareDebugLines()) do out[#out + 1] = line end end
   for _, line in ipairs(ns.auctionPanelDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.vendorDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.mailDebugLines()) do out[#out + 1] = line end
