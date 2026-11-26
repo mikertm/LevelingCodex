@@ -935,7 +935,7 @@ end
 -- never step on your search or purchase.
 A.SNIPE_GAP, A.SNIPE_NEWEST_GAP, A.SNIPE_PAGE_GAP, A.SNIPE_SIZE, A.NEWEST_PAGES = 0.55, 1.8, 0.35, 250, 4
 local snipe = {
-  on = false, mode = "watch", list = {}, i = 0, checked = 0, laps = 0, kind = nil,
+  on = false, mode = "watch", list = {}, i = 0, checked = 0, laps = 0, kind = "vendor",
   page = 0, priced = 0, verify = {}, seen = {}, seenPage = {},
 }
 A.sniper = snipe
@@ -1083,7 +1083,10 @@ end
 
 -- A choice on the Deals page changed (kind, Worth at least, Flip at, hiding): a running sniper
 -- watches the new list from its start.
+-- Under vendor or Flips only: "All deals" let new players buy flips by accident (Michael, 2026-11-26),
+-- so anything else is Under vendor.
 function A.retarget(kind)
+  kind = kind == "flip" and "flip" or "vendor"
   snipe.kind, snipe.pending, snipe.seen, snipe.verifiedAt = kind, nil, {}, {}
   if not snipe.on then return end
   snipe.list, snipe.i = A.snipeList(), 0

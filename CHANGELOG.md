@@ -12,6 +12,8 @@
 - **Trade records are per character.** Wins, losses, net profit, holdings and what you paid now belong to the character that made the trades, so an alt no longer shows your main's record. Hidden items and nudged prices stay shared by the realm.
     - The record from before this update isn't tied to a character yet: on the character that made those trades, open **Market > Your trades** and click **Claim for <name>** twice.
     - The Deals scoreboard's tiles are shorter (gold rounded to its two largest coins), so they no longer cut off.
+- **See price sharing anywhere.** Settings > Helpers > PRICE SHARING has the switch and what it did this session: prices sent, updates received and from how many players, when the last one came in and from whom, and how many prices in your database now come from other players.
+- **Deals and the sniper start on Under vendor.** The **All deals** choice is gone: it showed flips by default, and a flip only pays when it sells again. Pick **Flips** to see and snipe them.
 - **Scan tab fits the auction house again.** SETTINGS ran under the auction house's tabs: the switches now sit two to a row, **Scan all uses** moved into the FULL SCAN card, and the instant scan's hitch warning is its button's tooltip.
 
 ## v0.34.0

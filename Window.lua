@@ -1285,6 +1285,16 @@ renderers.settings = function()
       "Empties your inbox by itself every time you open a mailbox (Cash on Delivery mail is left alone). Click Stop on the card to stop it.")
     y = y + 12
   end }
+  sections[#sections + 1] = { "PRICE SHARING", "Helpers", function()
+    local Sh = ns.auctionShare
+    if not Sh then return end
+    tick("Share auction prices with other Codex users", Sh.on(), function() Sh.setOn(not Sh.on()) end,
+      "Your auction house scans and searches go out over a hidden channel, and other Codex users' prices keep your tooltips and deals fresh. Your own scans always win, odd prices wait for a second player, and every buy is still checked live.")
+    for _, line in ipairs(Sh.fieldLines()) do
+      y = y + T(line, 24, y, W - 24, "small", C.dim) + 2
+    end
+    y = y + 12
+  end }
   sections[#sections + 1] = { "QUEST GUIDE", "Questing", function()
     tick("Plan every dungeon run", db.questDungeons, function() db.questDungeons = not db.questDungeons; ns.updateQuestSettings() end,
       "Every dungeon's quest pickups join your route (such as the Deadmines run in Westfall). Quests > Guides > Dungeons plans runs one by one, which overrides this.")

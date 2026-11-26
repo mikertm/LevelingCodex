@@ -272,6 +272,7 @@ local function file(id, low, n, at, sender, intoDays)
   local it = a.store().items[id]
   if type(it) == "table" then it.shAt, it.shBy = it.at, short(sender) end
   Sh.stats.filed = Sh.stats.filed + 1
+  Sh.lastAt, Sh.lastBy = now(), short(sender)
 end
 
 function Sh.take(id, low, n, at, sender)
@@ -335,6 +336,45 @@ function Sh.summary()
   local where = channel() and "the realm channel" or (try(IsInGuild) and "your guild" or "nobody yet")
   return "Sharing with " .. where .. ": sent " .. ns.thousands(s.sentItems) .. " prices, got " .. ns.thousands(s.filed)
     .. " from " .. s.peers .. (s.peers == 1 and " player" or " players") .. " this session."
+end
+
+-- For Settings > Helpers > PRICE SHARING (Michael, 2026-11-26: see what sharing did away from
+-- the auction house): this session's traffic, the last update and how many prices in your
+-- database came from other players (counted at most once a minute).
+local storeCount = { at = 0, n = 0 }
+function Sh.sharedInStore()
+  local t = now()
+  if t - storeCount.at < 60 then return storeCount.n end
+  local n = 0
+  local ok, store = pcall(A().store)
+  if ok and type(store) == "table" and type(store.items) == "table" then
+    for _, it in pairs(store.items) do
+      if type(it) == "table" and it.shAt and it.shAt == it.at then n = n + 1 end
+    end
+  end
+  storeCount = { at = t, n = n }
+  return n
+end
+function Sh.fieldLines()
+  local s = Sh.stats
+  if not Sh.on() then return { "Price sharing is off." } end
+  local where = channel() and "the realm channel" or (try(IsInGuild) and "your guild" or "nobody yet: it joins the channel shortly after you log in")
+  local lines = { "Sharing with " .. where .. "." }
+  lines[#lines + 1] = "This session: sent " .. ns.thousands(s.sentItems) .. " prices, got " .. ns.thousands(s.filed) .. " updates from "
+    .. s.peers .. (s.peers == 1 and " player." or " players.")
+  if Sh.lastAt then
+    local by = ns.plain(Sh.lastBy or "")
+    lines[#lines + 1] = "Last update " .. A().age(Sh.lastAt) .. (by ~= "" and (", from " .. by) or "") .. "."
+  else
+    lines[#lines + 1] = "No updates from other players yet this session."
+  end
+  local n = Sh.sharedInStore()
+  lines[#lines + 1] = n > 0 and (ns.thousands(n) .. (n == 1 and " price" or " prices") .. " in your database now come from other players.")
+    or "No price in your database comes from other players yet."
+  if (s.doubted or 0) > 0 or (s.muted or 0) > 0 then
+    lines[#lines + 1] = ns.thousands(s.doubted or 0) .. " odd prices held for a second player, " .. (s.muted or 0) .. " players ignored."
+  end
+  return lines
 end
 
 function ns.auctionShareDebugLines()

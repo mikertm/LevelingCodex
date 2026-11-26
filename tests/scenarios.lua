@@ -11534,8 +11534,11 @@ function S.auctionTrade()
   check(MOCK.cancelled == 1 and chatHas("comes back by mail") and questText(card, "nothing listed"), "the second click cancels it")
   -- deals
   click(AuctionHouseFrame, "Deals")
-  check(questText(card, "Light Leather") and questText(card, "Vendor") and questText(card, "50c") and questText(card, "+30c"),
-    "Deals lists flips and listings under vendor price with side-by-side comparison")
+  check(questText(card, "Tigerseye") and questText(card, "Vendor") and questText(card, "50c") and questText(card, "+30c")
+    and not questText(card, "Light Leather"), "Deals opens on listings under vendor price with side-by-side comparison")
+  click(card, "Flips")
+  check(questText(card, "Light Leather") and not questText(card, "Tigerseye"), "Flips lists the flips")
+  click(card, "Under vendor")
   click(card, "Deal Tigerseye")
   MOCK.advance(1)
   check(T.dealLabel(818) == "Buy 2 for 40c", "the search shows how many are under the limit and the total")
@@ -11564,10 +11567,12 @@ function S.auctionTrade()
   MOCK.advance(1)
   check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 2 and chatHas("Bought 2 Tigerseye for 40c"), "Confirm buys them")
   check(T.notes().paid[818].each == 20, "what you paid is kept")
+  click(card, "Flips")
   click(card, "Deal Light Leather")
   MOCK.advance(1)
   click(card, "Deal Light Leather")
   check(#MOCK.purchases == 2 and MOCK.purchases[2].id == 2318, "an item listing is bought with one click after the search")
+  click(card, "Under vendor")
   -- strict 1-copper price safeguard: even a 1c rise over the shown price cancels the purchase
   MOCK.priceBump = 1
   MOCK.ns.auctionPanel.refresh()
@@ -11849,6 +11854,7 @@ function S.auctionTrade()
       [22] = { low = 2000, n = 10, ilvl = 20, days = { [d0 - 2] = 5000, [d0 - 1] = 5100 } },
     }
     AU.version = (AU.version or 0) + 1
+    AU.retarget("flip")
     check(not TR.sniperCandidate(99960, "Bandit Cloak", 500, 10, { itemID = 99960, itemSuffix = 11, itemLevel = 20 }),
       "a cheap 'of the Bear' isn't a flip against the item's mixed usual price")
     check(not TR.sniperCandidate(99960, "Bandit Cloak", 500, 10),
@@ -11895,6 +11901,7 @@ function S.auctionSnipeGuard()
   MOCK.openAuction()
   MOCK.advance(2)
   click(AuctionHouseFrame, "Deals")
+  click(_G.LevelingCodexAHPanel, "Flips") -- Deals opens on Under vendor
   local card = _G.LevelingCodexAHPanel
   local T = MOCK.ns.auctionTrade
   click(card, "Deal Iron Bar")
@@ -11919,9 +11926,11 @@ function S.auctionSnipeGuard()
   MOCK.advance(1)
   check(T.dealLabel(3575) == "Buy 5 for 1s 50c", "the fresh quote is ready again (" .. T.dealLabel(3575) .. ")")
   -- the basket of two ready deals, and the Next deal button names its place in it
+  click(card, "Under vendor")
   click(card, "Deal Gold Bar")
   MOCK.advance(1)
-  check(questText(card, "Ready to buy: 2 deals") and questText(card, "Buy 1 of 2"), "the basket counts both and Next deal steps through them")
+  check(questText(card, "Ready to buy: 1 deal") and T.basket(nil).n == 2, "the basket counts the deals of the kind shown")
+  click(card, "Flips")
   -- a stale price lock is let go and searched again
   click(card, "Deal Iron Bar")
   MOCK.advance(1)
@@ -11940,6 +11949,7 @@ function S.auctionSnipeGuard()
   check(T.visit.est == 165 and questText(card, "est. +1s 65c"), "this visit's estimated profit is kept and shown")
   check(T.notes().log[#T.notes().log].est == 165, "the trade record keeps the estimate")
   -- the vendor pays less now: the quote's limit follows it
+  click(card, "Under vendor")
   click(card, "Deal Gold Bar")
   MOCK.advance(1)
   check(T.dealLabel(3577) == "Confirm 1s 20c", "the vendor deal is locked (" .. T.dealLabel(3577) .. ")")
@@ -12064,6 +12074,7 @@ function S.auctionQuickSell()
   check(questText(card, "RELIST"), "it comes back tagged RELIST")
   -- Deals: confidence and budget
   click(AuctionHouseFrame, "Deals")
+  click(_G.LevelingCodexAHPanel, "Flips") -- Deals opens on Under vendor
   local deals = {}
   for _, d in ipairs(T.deals()) do deals[d.id] = d end
   check(deals[818] and deals[818].conf == "risky" and deals[774] and deals[774].conf == "safe",
@@ -12143,6 +12154,14 @@ function S.auctionShare()
   check(tip[1] and tostring(tip[1][2]):find("(shared)", 1, true), "the tooltip says the price is shared (" .. tostring(tip[1] and tip[1][2]) .. ")")
   from("Bo", "P1;" .. b(4306) .. "," .. b(1250) .. ",4,0")
   check(next(A.store().items[4306].days) ~= nil, "a second player agreeing puts it in the history")
+  -- Settings > Helpers shows what sharing did, away from the auction house
+  if not (win() and win():IsShown()) then slash("") end
+  click(win(), "Settings")
+  click(win(), "Helpers")
+  check(questText(win(), "PRICE SHARING") and questText(win(), "got 2 updates from 2 players")
+    and questText(win(), "Last update just now, from Bo") and questText(win(), "in your database now come from other players"),
+    "Settings > Helpers shows the shared prices this session, the last update and the database count")
+  win():Hide()
   -- a shared price is never sent on again
   local before = #(MOCK.addonSent or {})
   MOCK.advance(5)
@@ -12382,10 +12401,10 @@ function S.auctionMarket()
   local A = MOCK.ns.auction
   A.record(4338, "Mageweave Cloth", 200, 3)
   local T = MOCK.ns.auctionTrade
-  A.retarget(nil)
+  A.retarget("flip")
   T.setMinProfit(10)
   check(("," .. table.concat(A.snipeList(), ",") .. ","):find(",Mageweave Cloth,", 1, true),
-    "All deals watches a profitable flip even if the vendor value is below the profit threshold")
+    "Flips watches a profitable flip even if the vendor value is below the profit threshold")
   T.setMinProfit(0)
   A.retarget("flip")
   A.store().items[99901] = hist("Blinding Powder", 900, 1, 1, 500) -- stale vendor value
@@ -12401,7 +12420,10 @@ function S.auctionMarket()
   click(panel, "Under vendor")
   check(sn.kind == "vendor", "a new choice changes what the sniper watches")
   if sn.on then click(panel, "Snipe deals") end
-  click(panel, "All deals")
+  check(not findButton(panel, function(l) return l == "All deals" end), "there is no All deals choice any more")
+  click(panel, "Flips")
+  A.retarget(nil)
+  check(sn.kind == "vendor", "a sniper with no choice watches under-vendor deals")
   check(findButton(panel, function(l) return l == "Recheck deals" end) and findButton(panel, function(l) return l == "Scan all" end),
     "the Deals page has its own refresh next to Scan all")
   -- buy, post and sell a flip

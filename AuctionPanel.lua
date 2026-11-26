@@ -27,7 +27,7 @@ local tabs, ours = {}, {}
 local placedAfter, shows = nil, 0 -- tabs[i] = the button for P.PAGES[i]; ours[button] = true
 local hooked = {}
 local offsets, wheelKey = {}, nil
-local view = { deals = nil, hidden = false, lookup = nil, market = nil, marketMode = "movers" }
+local view = { deals = "vendor", hidden = false, lookup = nil, market = nil, marketMode = "movers" }
 local ticker
 local forgetAt
 local GREEN, RED, ORANGE = { 0.3, 0.9, 0.35 }, { 1, 0.38, 0.32 }, { 1, 0.6, 0.2 }
@@ -986,7 +986,7 @@ function pages.overview(W, top, H)
   local lx, rx = 16, 16 + lw + 16
   local L = T().ledger()
   local rec = M().record()
-  local deals = T().deals()
+  local deals = T().deals("vendor")
   local sells = T().sellable()
   local worth = 0
   for _, r in ipairs(sells) do if not r.sell.blocked then worth = worth + r.sell.price * r.count end end
@@ -1013,8 +1013,8 @@ function pages.overview(W, top, H)
     { "TO SELL", #sells > 0 and ns.money(worth) or "--", #sells .. (#sells == 1 and " item in your bags" or " items in your bags"), MINT,
       "Your sellable bag items at their Quick Sell prices. Click for Quick Sell.", function() P.open("selling") end },
     { "DEALS", #deals > 0 and (#deals .. (#deals == 1 and " deal" or " deals")) or "none yet", #deals > 0 and ("+" .. ns.money(haul) .. " potential") or "Scan all to find some",
-      #deals > 0 and GREEN or ns.C.dim, "Under-vendor and flip deals in your prices. Click for Deals.", function() P.open("deals") end },
-    { "NET PROFIT", signed(rec.net), closed > 0 and (rec.wins .. "W - " .. rec.losses .. "L (" .. rec.winRate .. "%)") or "no trade closed yet",
+      #deals > 0 and GREEN or ns.C.dim, "Items listed under what a vendor pays for them. Click for Deals (flips are there too).", function() P.open("deals") end },
+    { "NET PROFIT", shortSigned(rec.net), closed > 0 and (rec.wins .. " - " .. rec.losses .. " (" .. rec.winRate .. "%)") or "no trade closed yet",
       rec.net >= 0 and GREEN or RED, "Made +" .. ns.money(made) .. ", lost -" .. ns.money(lost) .. ". Click for your trades.",
       function() view.marketMode = "trades"; P.open("market") end },
   })
@@ -1432,7 +1432,8 @@ end
 -- Deals
 ----------------------------------------------------------------------------
 
-local KINDS = { { "All deals", nil, 68 }, { "Under vendor", "vendor", 100 }, { "Flips", "flip", 58 } }
+-- no "All deals": it showed flips by default and new players lost money on them (Michael, 2026-11-26)
+local KINDS = { { "Under vendor", "vendor", 100 }, { "Flips", "flip", 58 } }
 local SNIPE_MODES = {
   { "Watch", "watch", "Watch list", "Smart Watch List: checks your pinned (*) items first, then active deals, proven past winners, and items trading near vendor/flip floor." },
   { "Newest", "newest", "Newest", "Multi-page fresh sweep: walks pages 1-4 of newest and lowest-priced server listings to catch 12h, 24h and 48h snipes fast." },
