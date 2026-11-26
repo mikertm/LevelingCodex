@@ -37,7 +37,7 @@ class LootCompareTests(unittest.TestCase):
           end
           local c=ctx(); c.snapshot.slots[5]=false
           local r=L.compare(item(10,1),c); assert(r.verdict=="upgrade" and r.percent==nil)
-          c.snapshot.slots[5]=item(1,0); assert(L.compare(item(10,0),c).verdict=="needsReview")
+          c.snapshot.slots[5]=item(1,0); r=L.compare(item(10,0),c); assert(r.verdict=="sidegrade" and r.noValue, "nothing the build uses says so")
         ''')
 
     def test_paired_slots_unique_and_hands(self):
@@ -50,17 +50,23 @@ class LootCompareTests(unittest.TestCase):
           r=L.compare(item(10,70,"INVTYPE_2HWEAPON"),ctx())
           assert(r.verdict=="downgrade" and #r.replacedSlots==2)
           c=ctx(); c.snapshot.slots[16]=item(8,90,"INVTYPE_2HWEAPON"); c.snapshot.slots[17]=false
-          assert(L.compare(item(10,60,"INVTYPE_WEAPON"),c).verdict=="needsReview")
+          r=L.compare(item(10,60,"INVTYPE_WEAPON"),c)
+          assert(r.verdict=="downgrade" and r.estimate and r.replacedSlots[1]==16, "a one-hander is rated against the two-hander")
+          r=L.compare(item(11,60,"INVTYPE_SHIELD"),c)
+          assert(r.verdict=="needsReview" and r.reason:find("one-hand weapon",1,true), "an off-hand behind a two-hander says why")
         ''')
 
     def test_restrictions_and_unknowns(self):
         self.lua.execute('''
           local i=item(9,110); i.requiredLevel=61
-          assert(L.compare(i,ctx()).verdict=="cannotEquip")
+          local r=L.compare(i,ctx())
+          assert(r.verdict=="cannotEquip" and r.future and r.future.level==61 and r.future.verdict=="upgrade", "a future item is rated for its level")
           i.requiredLevel=1; i.restrictions.classes={"MAGE"}
-          assert(L.compare(i,ctx()).verdict=="cannotEquip")
-          i.restrictions={}; i.complete.effects=false
-          assert(L.compare(i,ctx()).verdict=="needsReview")
+          r=L.compare(i,ctx())
+          assert(r.verdict=="cannotEquip" and not r.future)
+          i.restrictions={}; i.complete.effects=false; i.warnings={"Use: Does a thing."}
+          r=L.compare(i,ctx())
+          assert(r.verdict=="upgrade" and r.estimate and r.notes[1]=="Use effect not counted", "an effect makes an estimate, not a blank")
           i.complete.effects=true; i.complete.stats=false
           assert(L.compare(i,ctx()).verdict=="needsReview")
           i.complete.stats=true; local c=ctx(); c.snapshot.slots[5]=nil
@@ -73,14 +79,24 @@ class LootCompareTests(unittest.TestCase):
           local i=item(9,100); i.damage=10000
           assert(L.compare(i,c).verdict=="sidegrade")
           i.restrictions.set=1
-          assert(L.compare(i,c).verdict=="needsReview")
+          local r=L.compare(i,c)
+          assert(r.verdict=="sidegrade" and r.estimate and r.notes[1]=="Set bonus not counted")
         ''')
 
     def test_unknown_proficiency_is_not_a_known_rejection(self):
         self.lua.execute('''
           local c=ctx();c.proficiencies={armor=1,armorKnown=false,weapons={},weaponKnown=false}
-          local i=item(9,100);i.subclassID=4
-          assert(L.compare(i,c).verdict=="needsReview")
+          local i=item(9,110);i.subclassID=4
+          assert(L.compare(i,c).verdict=="upgrade", "a level 60 warrior wears plate")
+          c.level=30; local r=L.compare(i,c)
+          assert(r.verdict=="cannotEquip" and r.reason=="Armor proficiency required")
+          c.class="MAGE"; c.level=60; assert(L.compare(i,c).verdict=="cannotEquip")
+          c.class="UNKNOWN"; r=L.compare(i,c); assert(r.verdict=="upgrade" and r.estimate)
+          c=ctx(); c.level=30; i.requiredLevel=40
+          r=L.compare(i,c); assert(r.verdict=="cannotEquip" and r.future and r.future.verdict=="upgrade", "plate is rated for level 40")
+          local w=item(12,110,"INVTYPE_WEAPONMAINHAND"); w.classID=2; w.subclassID=1; w.damage=10
+          r=L.compare(w,ctx()); assert(r.verdict=="upgrade" and r.estimate and r.notes[1]:find("rain",1,true), "an untrained weapon says to train it")
+          w.subclassID=19; assert(L.compare(w,ctx()).verdict=="cannotEquip", "a warrior can't use a wand")
         ''')
 
     def test_unread_equipment_snapshot_never_uses_stale_gear_conclusively(self):

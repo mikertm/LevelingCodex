@@ -3,10 +3,10 @@ local _, ns = ...
 local L=ns.loot
 local ROLES={
   ["Melee damage"]={str=1,agi=1.2,sta=0.4,ap=0.5,feralAp=0.5,hit=8,crit=7,armor=0.002},
-  ["Ranged damage"]={agi=2,str=0.1,sta=0.4,int=0.5,rap=0.5,ap=0.2,hit=8,crit=7},
-  ["Caster damage"]={int=1,sta=0.4,spi=0.5,sp=1.8,mp5=0.8,spellHit=8,spellCrit=6},
-  Healer={int=1.3,sta=0.3,spi=0.8,sp=0.4,heal=1.4,mp5=1.5},
-  Tank={sta=1.3,armor=0.02,str=0.4,agi=0.6,defense=2,dodge=7,block=1,blockValue=0.4,ap=0.1},
+  ["Ranged damage"]={agi=2,str=0.1,sta=0.4,int=0.5,rap=0.5,ap=0.2,hit=8,crit=7,armor=0.003},
+  ["Caster damage"]={int=1,sta=0.4,spi=0.5,sp=1.8,mp5=0.8,spellHit=8,spellCrit=6,spellPen=0.4,armor=0.003},
+  Healer={int=1.3,sta=0.3,spi=0.8,sp=0.4,heal=1.4,mp5=1.5,spellCrit=5,armor=0.003},
+  Tank={sta=1.3,armor=0.02,str=0.4,agi=0.6,defense=2,dodge=7,parry=6,block=4,blockValue=0.4,ap=0.1,hit=4,crit=2},
 }
 local allowed={health=true,mana=true,hp5=true,mp5=true,spFire=true,spFrost=true,spShadow=true,spNature=true,
   spArcane=true,spHoly=true,haste=true,spellHaste=true,resist=true}

@@ -48,7 +48,7 @@ class LootHintTests(unittest.TestCase):
         lua.globals().load_module(p.read_text())
         lua.execute('''
           ns.loot.annotate(tip,"item:1"); ns.loot.annotate(tip,"item:1")
-          assert(#tip.lines==1 and tip.lines[1]:find("Codex: +5.0% gear score",1,true))
+          assert(#tip.lines==1 and tip.lines[1]:find("Codex: Upgrade: +5.0% gear score",1,true))
           local r=ns.loot.rewardAdvice(); assert(r.state=="pending" and not r.bestChoice)
           function GetQuestItemLink(_,i) return "item:"..i end
           r=ns.loot.rewardAdvice(); assert(r.state=="complete" and r.bestChoice==1)

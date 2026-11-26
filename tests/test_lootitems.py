@@ -97,17 +97,23 @@ class LootItemTests(unittest.TestCase):
           assert(not s.bagsKnown and s.bagLinks["item:1"]==1)
         ''')
 
-    def test_modified_link_effects_do_not_inherit_base_completeness(self):
+    def test_an_enchant_is_noted_not_a_blank_score(self):
         self.lua.execute('''
           ns.lootData.items[1]={id=1,name="Plain",slot="INVTYPE_CHEST",stats={str=10},
             complete={stats=true,effects=true,restrictions=true}}
           stats["item:1:123:0:0:0:0:0:0:0:0"]={ITEM_MOD_STRENGTH_SHORT=10}
           local i=ns.loot.item("item:1:123:0:0:0:0:0:0:0:0")
-          assert(i.complete.stats and not i.complete.effects)
+          assert(i.complete.stats and i.notes[1]=="Enchant not counted")
           C_TooltipInfo={GetHyperlink=function() return {lines={{leftText="Fiery Weapon"}}} end}
           ns.loot.refresh("tooltip available")
-          assert(not ns.loot.item("item:1:123:0:0:0:0:0:0:0:0").complete.effects)
-          assert(ns.loot.item("item:1:0:0:0:0:0:0:0:0:0").complete.effects)
+          assert(ns.loot.item("item:1:123:0:0:0:0:0:0:0:0").notes[1]=="Enchant not counted")
+          assert(#ns.loot.item("item:1:0:0:0:0:0:0:0:0:0").notes==0)
+          ns.lootData.items[2]={id=2,name="Of the Bear",slot="INVTYPE_CHEST",stats={armor=10},random=true,
+            complete={stats=false,effects=true,restrictions=true}}
+          assert(not ns.loot.item(2).complete.stats, "a random item's bonus is unknown without its link")
+          stats["item:2:0:0:0:0:0:1200:0:0:0"]={ITEM_MOD_STRENGTH_SHORT=7,RESISTANCE0_NAME=10}
+          i=ns.loot.item("item:2:0:0:0:0:0:1200:0:0:0")
+          assert(i.complete.stats and i.stats.str==7 and i.stats.armor==10, "the client gives the suffix's stats")
         ''')
 
 

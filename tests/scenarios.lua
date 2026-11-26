@@ -13603,7 +13603,10 @@ end
 function S.lootTooltips()
   lootSetup()
   GameTooltip:SetHyperlink("item:900002")
-  check(#(GameTooltip._lines or {})==1,"Codex adds one compact score line with no extra advice")
+  local lines=GameTooltip._lines or {}
+  local itemAPI=type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo)
+  check(not itemAPI and #lines==1 or #lines==2 and lines[1]:find("Codex: Upgrade:",1,true) and lines[2]:find("vs Old Vest",1,true),
+    "Codex adds a score line and one detail line (what it replaces): "..table.concat(lines," / "))
   local count=0
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"one annotation even with setter and item callbacks ("..count..")")
@@ -13612,16 +13615,42 @@ function S.lootTooltips()
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"reused tooltip has one current annotation")
   GameTooltip:SetHyperlink("item:2572")
-  check(#(GameTooltip._lines or {})==1 and GameTooltip._lines[1]:find("Rank #",1,true),
+  check(GameTooltip._lines[1]:find("Rank #",1,true) and GameTooltip._lines[1]:find("gear score",1,true),
     "a verified catalog comparison has rank and score on one line")
+  local plain=#GameTooltip._lines
   click(win(),"Scoring settings")
   click(win(),"Show other profile ranks")
   GameTooltip:SetHyperlink("item:2572")
-  check(#GameTooltip._lines>1 and GameTooltip._lines[2]:find("Arms:",1,true),"other profile ranks are opt-in")
+  check(#GameTooltip._lines>plain and GameTooltip._lines[plain+1]:find("Arms:",1,true),"other profile ranks are opt-in")
   click(win(),"Show other profile ranks")
   GameTooltip:SetHyperlink("item:2572")
-  check(#GameTooltip._lines==1,"the tooltip returns to one line when other profiles are disabled")
+  check(#GameTooltip._lines==plain,"the tooltip drops the other profiles when they are disabled")
   check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
+end
+-- Gear with an effect, an enchant, a level above yours or an untrained weapon still gets a
+-- score (an estimate that says what it leaves out), never "Score unavailable".
+function S.lootScoreDetails()
+  lootSetup()
+  if not (type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo)) then return end
+  local function tip(ref)
+    GameTooltip:SetHyperlink(ref)
+    return GameTooltip._lines or {}
+  end
+  MOCK.lootItems[900020]={name="Charm Vest",stats={ITEM_MOD_STRENGTH_SHORT=40},effect="Use: Charms a squirrel."}
+  local lines=tip("item:900020")
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2] and lines[2]:find("Not counted: use effect",1,true),
+    "an item with a Use effect is scored as an estimate: "..table.concat(lines," / "))
+  lines=tip("item:900002:1900")
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2]:find("Not counted: enchant",1,true),
+    "an enchanted item is scored and the enchant named: "..table.concat(lines," / "))
+  MOCK.lootItems[900021]={name="Later Vest",level=35,stats={ITEM_MOD_STRENGTH_SHORT=60}}
+  lines=tip("item:900021")
+  check(lines[1]:find("Codex: At level 35: +",1,true) and lines[1]:find("(upgrade)",1,true),
+    "an item above your level is rated for the level you can wear it: "..table.concat(lines," / "))
+  for _,l in ipairs(lines) do check(not l:find("Score unavailable",1,true),"no blank score") end
+  MOCK.lootItems[900022]={name="Wand of Nope",slot="INVTYPE_RANGEDRIGHT",classID=2,subclassID=19,stats={ITEM_MOD_INTELLECT_SHORT=3}}
+  lines=tip("item:900022")
+  check(lines[1]:find("Codex: Cannot equip: Your class can't use Wands",1,true),"a weapon the class can't use says so: "..lines[1])
 end
 function S.lootTooltipStaysOpen()
   lootSetup()
