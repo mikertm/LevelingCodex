@@ -386,10 +386,10 @@ end
 -- Any other card in the banner's look, shown right away (profession skill-ups): rows of
 -- { icon, label, text }; left-click runs onClick (default: open the Codex). target { tab, key }: what
 -- opening the Codex within a minute opens (ns.lastBanner, read by ns.toggleWindow).
-function ns.showCard(title, sub, rows, onClick, target)
+function ns.showCard(title, sub, rows, onClick, target, hint)
   if not toast then makeToast() end
   if toast.unlocked or toast.testing then return end
-  present(title, sub, rows, false, onClick, "Click for the guide  -  right-click to dismiss")
+  present(title, sub, rows, false, onClick, hint or "Click for the guide  -  right-click to dismiss")
   if target then ns.lastBanner = { tab = target.tab, key = target.key, at = GetTime() } end
 end
 

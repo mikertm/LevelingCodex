@@ -14581,17 +14581,56 @@ function S.journeySocial()
   check(j.signatures.Bo == nil, "a signature nobody asked for is ignored")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SG;Tester;Best mage in Elwynn; truly", "PARTY", "Ann")
   check(j.signatures.Ann and j.signatures.Ann[1].s == "Best mage in Elwynn; truly", "the signature is kept")
-  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SQ;Tester", "PARTY", "Bo")
+  -- the asker hears whether the request arrived
   MOCK.addonSent = {}
-  slash("sign")
-  check(copy:IsShown(), "/codex sign opens the signing box")
+  click(win(), "Sign Ann")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "QA;Tester", "PARTY", "Ann")
+  check(J.social.signState("Ann") == "seen" and questText(win(), "has your request"), "Ann's Codex says it has the request")
+  MOCK.addonSent = {}
+  click(win(), "Sign Ann")
+  MOCK.advance(7)
+  check(J.social.signState("Ann") == "waiting", "asking again waits for an answer")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SG;Tester;Second line", "PARTY", "Ann")
+  check(MOCK.addonSent[#MOCK.addonSent].text == "GA;Ann", "a signature is answered so the signer knows it arrived")
+  -- a request: the card opens the box with a line ready
+  local toastCard = _G.LevelingCodexToast
+  MOCK.addonSent = {}
+  MOCK.advance(25)
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "SQ;Tester", "PARTY", "Bo")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "QA;Bo", "a request is answered at once")
+  MOCK.advance(4)
+  check(toastCard and toastCard:IsShown() and questText(toastCard, "ASKS FOR A LINE") and questText(toastCard, "Click to write your line"),
+    "the request card says what clicking does")
+  copy:Hide()
+  toastCard:GetScript("OnMouseUp")(toastCard, "LeftButton")
+  check(copy:IsShown() and questText(copy, "Sign it") and questText(copy, "asked you to write"), "clicking the card opens the signing box")
+  copy:Hide()
+  click(win(), "Companion Bo")
+  check(questText(win(), "asked you to sign their journal"), "their page shows the request")
+  MOCK.addonSent = {}
+  click(win(), "Write in Bo's journal")
+  check(copy:IsShown(), "Write your line opens the box")
   click(copy, "Sign it")
   check(MOCK.addonSent[1] and MOCK.addonSent[1].text:find("^SG;Bo;"), "signing sends your line")
+  check(journeyHas("signed", "Signed Bo's journal"), "the signer's journal keeps the line")
+  check(j.wrote.Bo and j.wrote.Bo[1], "and remembers what you wrote")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "GA;Tester", "PARTY", "Bo")
+  check(J.social.acks["GA:Bo"] == nil, "Bo's answer confirms the line arrived")
+  MOCK.addonSent = {}
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "TA;Bo", "a toast is answered")
   local toasts = 0
   for _, e in ipairs(j.events) do if e.k == "toast" then toasts = toasts + 1 end end
   check(toasts == 1 and j.people.Bo.toasts == 1, "a toast is written once an hour")
+  -- raising one: both journals keep it, and the answer confirms it
+  MOCK.addonSent = {}
+  click(win(), "Companion Ann")
+  click(win(), "Toast Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "TS;Ann", "Raise a toast sends it")
+  check(journeyHas("toast", "Ann"), "the toast you raise goes in your journal too")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TA;Tester", "PARTY", "Ann")
+  check(J.social.acks["TA:Ann"] == nil, "Ann's answer confirms the toast arrived")
   -- a death: who saw it, who tried to save you
   -- Forever hides other players' casts: a secret spell ID is passed over without an error
   MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "party2", "cast", MOCK.SECRET)

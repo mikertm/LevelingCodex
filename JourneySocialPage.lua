@@ -182,13 +182,33 @@ local function journalCard(R, p, y)
     y = y + U.T("- " .. name(n) .. ", day " .. D().dayOf(R.j or S.journal(), s.t) .. (s.z and (", " .. plain(s.z)) or ""), 24, y, W - 48,
       "small", C.inkSoft or C.dim, "CENTER") + 6
   end
+  local wrote = S.wrote(n)
+  if #wrote > 0 then
+    local w = wrote[1]
+    y = y + U.T("You wrote in theirs on day " .. D().dayOf(R.j or S.journal(), w.t) .. ': "' .. plain(w.s) .. '"', 14, y + 2, W - 28,
+      "small", C.inkSoft or C.dim) + 6
+  end
+  -- Someone waiting on you: their request comes first, in gold.
+  if S.pendingRequest(n) then
+    y = y + U.T(name(n) .. " asked you to sign their journal.", 14, y + 4, W - 28, "small", C.gold) + 6
+    local wb = U.btn("Write your line", 14, y, W - 28, function() S.openSign(n) end, true,
+      "Opens the box with a line ready: change it if you like, then Sign it.")
+    if wb then wb.codexLabel = "Write in " .. plain(n) .. "'s journal" end
+    y = y + 30
+  end
+  local state = S.signState(n)
+  if state == "waiting" then
+    y = y + U.T("Asking " .. name(n) .. "'s journal...", 14, y + 4, W - 28, "small", C.dim) + 6
+  elseif state == "seen" then
+    y = y + U.T(name(n) .. " has your request: their line will appear here once they write it.", 14, y + 4, W - 28, "small", C.dim) + 6
+  end
   local can = S.reachable(n)
   local bw = math.floor((W - 36) / 2)
-  local b = U.btn("Ask to sign", 14, y + 4, bw, function() S.askSign(n); ns.ui.refresh() end, can,
-    can and "Ask them to write a line in your journal." or "Group up with them or target them first.")
+  local b = U.btn(state and "Ask again" or "Ask to sign", 14, y + 4, bw, function() S.askSign(n); ns.ui.refresh() end, can,
+    can and "Ask them to write a line in your journal. They need the Leveling Codex too." or "Group up with them or target them first.")
   if b then b.codexLabel = "Sign " .. plain(n) end
-  b = U.btn("Raise a toast", 22 + bw, y + 4, bw, function() S.toast(n) end, can,
-    can and "A toast lands in their journal." or "Group up with them or target them first.")
+  b = U.btn("Raise a toast", 22 + bw, y + 4, bw, function() S.toast(n); ns.ui.refresh() end, can,
+    can and "A toast lands in both your journals." or "Group up with them or target them first.")
   if b then b.codexLabel = "Toast " .. plain(n) end
   y = y + 34
   U.box(0, top, W, y - top, C.panel, C.edge)

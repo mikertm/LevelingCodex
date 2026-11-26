@@ -1,6 +1,13 @@
 # Leveling Codex
 
 ## v0.34.2
+- **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:
+    - When you ask someone to sign, you hear whether their journal got the request. If it didn't, you hear why (they need the Leveling Codex with journal sharing on, and to be in your party or targeted). Their page shows "Asking..." until they answer, then "has your request".
+    - A request waiting on you shows on their page in gold, with a **Write your line** button. It stays open for 30 minutes.
+    - Signatures and toasts now go into both journals. The signer keeps the line they wrote (their page shows "You wrote in theirs..."), and the toast you raise is a moment in yours too.
+    - When a line or a toast arrives, the sender gets a card saying so ("Your line arrived", "Toast received"). If no answer comes, they hear that too.
+    - Click a toast's card to raise one back.
+- **Journey: award cards fit their text.** On the Fellowships page, an award whose description runs to two lines now gets a taller box instead of spilling into the one below.
 - **Loot: a score for (nearly) every piece of gear.** Most gear used to say "Score unavailable". Now it gets a rating, and the tooltip says what the rating leaves out.
     - Crit, hit, dodge, parry, block, spell penetration and Forever's "healing and damage done by up to" lines now count as stats. About 1,400 items had been left unscored because of them.
     - Gear with a Use effect, a Chance on hit effect, a set bonus, an enchant or an unknown random bonus is scored on its stats as an estimate ("about +6.2%"). A short second line says what it replaces and what the score skips ("vs Linked Chain Vest - skips use effect").

@@ -36,6 +36,8 @@ S.PORTRAITS_MAX = 60
 S.DIARY_MAX = 12
 S.DAYS_KEPT = 90
 S.SIGN_MAX = 120
+S.SIGN_WINDOW = 1800   -- a request stays open this long (seconds)
+S.ACK_WAIT = 6         -- the other journal's "got it" should come within this
 S.TRACE_DAYS = 120
 S.PREFIX = "LevCodexJ"
 S.TAGS = { "Friend", "Guildmate", "Healer", "Tank", "Rival" }
@@ -88,7 +90,7 @@ end
 S.partySet = Co_party
 
 local TABLES = { "sighted", "trace", "tags", "diary", "forgotten", "bonds", "fellowships", "portraits", "signatures", "anniv",
-  "people", "pals", "fellows" }
+  "people", "pals", "fellows", "wrote" }
 local function journal()
   local j = J.data()
   for _, k in ipairs(TABLES) do if type(j[k]) ~= "table" then j[k] = {} end end
@@ -151,6 +153,11 @@ end
 
 function S.signatures(name)
   local s = journal().signatures[name]
+  return type(s) == "table" and s or {}
+end
+-- The lines you wrote in their journal (newest first, 5 kept).
+function S.wrote(name)
+  local s = journal().wrote[name]
   return type(s) == "table" and s or {}
 end
 
@@ -241,17 +248,24 @@ function S.flushCards()
   end
   local c = table.remove(cards, 1)
   lastCard = t
-  ns.showCard(c[1], c[2], c[3], c[4], { tab = "journey" })
+  ns.showCard(c[1], c[2], c[3], c[4], { tab = "journey" }, c[5])
   if #cards > 0 then S.flushCards() end
 end
-function S.card(title, sub, rows, name)
+-- onClick replaces the default (their page in your journal); hint is the card's foot line; urgent puts
+-- it at the front of the queue (someone is waiting on you).
+function S.card(title, sub, rows, name, onClick, hint, urgent)
   if ns.db().noSocialCards then return end
-  cards[#cards + 1] = { title, sub, rows, function()
+  local open = function()
     if name and J.companions then J.companions.select(name) end
     if J.openPage then J.openPage("Companions") end
     ns.openTab("journey")
-  end }
-  if #cards > 4 then table.remove(cards, 1) end
+  end
+  local c = { title, sub, rows, onClick or open, hint or "Click to open their page  -  right-click to dismiss" }
+  if urgent then table.insert(cards, 1, c) else cards[#cards + 1] = c end
+  if #cards > 4 then table.remove(cards) end
+  -- someone is waiting: at most a few seconds after the card on screen, never the full gap
+  if urgent then lastCard = math.min(lastCard, GetTime() - S.CARD_GAP + 3) end
+  if urgent then ns.after(3.1, S.flushCards) end
   S.flushCards()
 end
 S.cardQueue = cards
@@ -843,7 +857,7 @@ end
 -- Every record of a name (and of the same first name: a surname the game sometimes gives), so nothing
 -- the book shows still names them. Also used at login to clear what slipped in (you, or someone you removed).
 local function scrub(j, match, removeMoments)
-  for _, k in ipairs({ "pals", "fellows", "people", "sighted", "trace", "tags", "diary", "bonds", "signatures", "notes" }) do
+  for _, k in ipairs({ "pals", "fellows", "people", "sighted", "trace", "tags", "diary", "bonds", "signatures", "wrote", "notes" }) do
     if type(j[k]) == "table" then
       for n in pairs(j[k]) do if match(n) then j[k][n] = nil end end
     end
@@ -1050,20 +1064,65 @@ function S.sayHi()
   send(table.concat({ "HI", "1", plain(ep or ""):gsub(";", ""), days, #j.events, J.level() or 0, table.concat(pairs_, ",") }, ";"))
 end
 
+-- Every request waits for the other Codex to say it arrived (QA / GA / TA): without that answer in
+-- S.ACK_WAIT seconds you hear why it may not have landed.
+local acks = {}
+S.acks = acks
+local function expectAck(key, name, onMissing)
+  acks[key] = GetTime()
+  ns.after(S.ACK_WAIT, function()
+    if acks[key] then
+      acks[key] = nil
+      onMissing()
+      if ns.ui and ns.ui.refresh then pcall(ns.ui.refresh) end
+    end
+  end)
+end
+local function gotAck(key)
+  if not acks[key] then return false end
+  acks[key] = nil
+  return true
+end
+
+-- Where a request stands, for their page: "waiting", "seen" (their Codex has it), nil.
+function S.signState(name)
+  local a = asked[name]
+  if not a or GetTime() - a.at > S.SIGN_WINDOW then return nil end
+  return a.seen and "seen" or "waiting", a
+end
+function S.pendingRequest(name)
+  local r = requests[name]
+  return r and GetTime() - r < S.SIGN_WINDOW
+end
+
 function S.askSign(name)
   if not S.reachable(name) then ns.say("Group up with " .. Co_name(name) .. " or target them to ask."); return false end
-  asked[name] = GetTime()
-  send("SQ;" .. name, name)
-  ns.say("Asked " .. Co_name(name) .. " to sign your journal. If they run the Codex, their line lands on this page.")
+  local a = asked[name]
+  if a and not a.seen and GetTime() - a.at < S.ACK_WAIT then return false end
+  if not send("SQ;" .. name, name) then ns.say("Couldn't reach " .. Co_name(name) .. " right now."); return false end
+  asked[name] = { at = GetTime() }
+  ns.say("Asked " .. Co_name(name) .. " to sign your journal...")
+  expectAck("QA:" .. name, name, function()
+    if asked[name] and not asked[name].seen then
+      ns.say(Co_name(name) .. "'s journal didn't answer: they need the Leveling Codex with journal sharing on, and to be in your party or targeted.")
+    end
+  end)
   return true
 end
 
 function S.toast(name)
   if not S.reachable(name) then ns.say("Group up with " .. Co_name(name) .. " or target them to raise a toast."); return false end
   if toasted[name] and GetTime() - toasted[name] < 600 then ns.say("You raised a toast to " .. Co_name(name) .. " a moment ago."); return false end
+  if not send("TS;" .. name, name) then ns.say("Couldn't reach " .. Co_name(name) .. " right now."); return false end
   toasted[name] = GetTime()
-  send("TS;" .. name, name)
-  ns.say("You raised a toast to " .. Co_name(name) .. ".")
+  local who = plain(name)
+  person(name, "toastsGiven")
+  J.add("toast", fill({ "Raised a toast to %who% in %zone%", "Lifted a mug to %who% in %zone%", "Drank to %who%'s health in %zone%" },
+    who .. now(), { who = who, zone = zone() }), "A toast given", { who = name })
+  ns.say("You raised a toast to " .. Co_name(name) .. "...")
+  expectAck("TA:" .. name, name, function()
+    ns.say("No answer from " .. Co_name(name) .. "'s journal: the toast is in yours, but theirs may not have it (they need the Leveling Codex).")
+  end)
   return true
 end
 
@@ -1082,17 +1141,34 @@ end
 function S.openSign(name)
   name = name or S.lastRequest
   if not name or not requests[name] then ns.say("Nobody has asked you to sign their journal lately."); return end
+  if GetTime() - requests[name] > S.SIGN_WINDOW then
+    requests[name] = nil
+    ns.say(Co_name(name) .. " asked a while ago: ask them to send the request again.")
+    return
+  end
   ns.showMacroCopy({ copyTitle = "Sign " .. Co_name(name) .. "'s journal", body = S.suggestLine(name), paste = true, acceptLabel = "Sign it",
-    help = "Write a line for " .. Co_name(name) .. "'s journal, up to " .. S.SIGN_MAX .. " characters. Click Sign it to send it.",
+    help = Co_name(name) .. " asked you to write in their journal. Change the line below if you like (up to " .. S.SIGN_MAX
+      .. " characters), then click Sign it.",
     onAccept = function(text)
       text = plain(text):gsub("[%c]", " "):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
       if text == "" then return false, "Write a line first." end
       if #text > S.SIGN_MAX then return false, "A signature holds up to " .. S.SIGN_MAX .. " characters (this one has " .. #text .. ")." end
       if not send("SG;" .. name .. ";" .. text, name) then return false, "Couldn't reach " .. Co_name(name) .. " right now." end
       requests[name] = nil
+      local j = journal()
+      person(name, "signedFor")
+      local list = j.wrote[name]
+      if type(list) ~= "table" then list = {}; j.wrote[name] = list end
+      table.insert(list, 1, { t = now(), s = text, z = zone() })
+      while #list > 5 do table.remove(list) end
       local who = plain(name)
-      J.add("signed", "Signed " .. who .. "'s journal in " .. zone(), "Signature", { who = name })
-      ns.say("You signed " .. Co_name(name) .. "'s journal.")
+      J.add("signed", "Signed " .. who .. "'s journal in " .. zone() .. ": \"" .. text .. "\"", "Signature given", { who = name })
+      ns.say("You signed " .. Co_name(name) .. "'s journal...")
+      expectAck("GA:" .. name, name, function()
+        ns.say("No answer from " .. Co_name(name) .. "'s journal yet: your line may not have reached them.")
+      end)
+      S.checkBond(name)
+      if ns.ui and ns.ui.refresh then pcall(ns.ui.refresh) end
       return true
     end })
 end
@@ -1112,15 +1188,40 @@ function HANDLE.HI(from, f)
 end
 function HANDLE.SQ(from, f)
   if f[2] ~= me() then return end
+  send("QA;" .. from, from)
+  local again = requests[from] and GetTime() - requests[from] < 60
   requests[from] = GetTime()
   S.lastRequest = from
-  ns.say(Co_name(from) .. " asks you to sign their journal: /codex sign to write a line.")
-  S.card("SIGN MY JOURNAL", Co_name(from) .. " asks you to write a line", { { J.ICON.signed, "Type", "/codex sign" } }, from)
+  if again then return end
+  ns.say(Co_name(from) .. " asks you to sign their journal: click the card, or type /codex sign.")
+  S.card(Co_name(from):upper() .. " ASKS FOR A LINE", "Sign their journal: they'll keep what you write", {
+    { J.ICON.signed, "Suggested", S.suggestLine(from) },
+    { J.ICON.pal, "Or later", "/codex sign" },
+  }, from, function() S.openSign(from) end, "Click to write your line  -  right-click to dismiss", true)
+  if ns.ui and ns.ui.refresh then pcall(ns.ui.refresh) end
+end
+-- The other Codex has the request / your line / your toast.
+function HANDLE.QA(from, f)
+  if f[2] ~= me() or not gotAck("QA:" .. from) then return end
+  if asked[from] then asked[from].seen = true end
+  ns.say(Co_name(from) .. " got your request: their line lands here once they write it.")
+  if ns.ui and ns.ui.refresh then pcall(ns.ui.refresh) end
+end
+function HANDLE.GA(from, f)
+  if f[2] ~= me() or not gotAck("GA:" .. from) then return end
+  ns.say(Co_name(from) .. " has your line in their journal.")
+  S.card("YOUR LINE ARRIVED", Co_name(from) .. " keeps it in their journal", { { J.ICON.signed, "Signed", "Day " .. (J.draw and J.draw.dayOf(journal(), now()) or 1) } }, from)
+end
+function HANDLE.TA(from, f)
+  if f[2] ~= me() or not gotAck("TA:" .. from) then return end
+  ns.say(Co_name(from) .. " got your toast.")
+  S.card("TOAST RECEIVED", Co_name(from) .. " drank to that", { { J.ICON.toast, "Where", zone() } }, from)
 end
 function HANDLE.SG(from, f, raw)
   if f[2] ~= me() then return end
-  if not asked[from] or GetTime() - asked[from] > 1800 then return end
+  if not asked[from] or GetTime() - asked[from].at > S.SIGN_WINDOW then return end
   asked[from] = nil
+  send("GA;" .. from, from)
   local text = plain(raw:match("^SG;[^;]*;(.*)$") or ""):sub(1, S.SIGN_MAX)
   if text == "" then return end
   local j = journal()
@@ -1136,13 +1237,21 @@ function HANDLE.SG(from, f, raw)
 end
 function HANDLE.TS(from, f)
   if f[2] ~= me() then return end
+  send("TA;" .. from, from)
   if gotToast[from] and GetTime() - gotToast[from] < 3600 then return end
   gotToast[from] = GetTime()
   if not person(from, "toasts") then return end
   local who = plain(from)
-  J.add("toast", fill({ "%who% raised a toast to you in %zone%", "In %zone%, %who% lifted a mug in your name" }, who .. now(),
-    { who = who, zone = zone() }), "A toast", { who = from })
-  S.card("A TOAST", Co_name(from) .. " raised a toast to you", { { J.ICON.toast, "Where", zone() } }, from)
+  J.add("toast", fill({ "%who% raised a toast to you in %zone%", "In %zone%, %who% lifted a mug in your name",
+    "%who% drank to your health in %zone%" }, who .. now(), { who = who, zone = zone() }), "A toast", { who = from })
+  local back = toasted[from] and GetTime() - toasted[from] < 600
+  S.card("A TOAST", Co_name(from) .. " raised a toast to you", { { J.ICON.toast, "Where", zone() } }, from,
+    not back and function() if not S.toast(from) then
+      if J.companions then J.companions.select(from) end
+      if J.openPage then J.openPage("Companions") end
+      ns.openTab("journey")
+    end end or nil,
+    not back and "Click to toast them back  -  right-click to dismiss" or nil)
 end
 function HANDLE.LV(from, f)
   local lvl = tonumber(f[2])
