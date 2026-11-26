@@ -124,21 +124,41 @@ end
 function Sh.queue(id)
   if not Sh.on() or A().recordShared then return end
   id = tonumber(id)
-  if id then pending[id] = true end
+  -- keeps the time it first waited, so a cheap item isn't pushed back by every new dear one
+  if id and not pending[id] then pending[id] = now() end
 end
 
 local function value(it) return (tonumber(it.low) or 0) * math.min(20, math.max(1, tonumber(it.n) or 1)) end
 
+-- The next batch: half the most valuable items, the other half those waiting longest, so every
+-- item gets its turn however many dear ones keep arriving (Michael, 2026-11-25: a sniper running
+-- for an hour should cover every item, not only the top of the list).
 local function refill()
   local s, list = A().store(), {}
-  for id in pairs(pending) do
+  for id, since in pairs(pending) do
     local it = s.items[id]
-    if type(it) == "table" and it.low then list[#list + 1] = { id, value(it) } end
+    if type(it) == "table" and it.low then
+      list[#list + 1] = { id, value(it), type(since) == "number" and since or 0 }
+    else
+      pending[id] = nil
+    end
   end
-  table.sort(list, function(a, b) return a[2] > b[2] end)
   order = {}
-  for i = 1, math.min(#list, Sh.ORDER_SIZE) do order[i] = list[i][1]; pending[list[i][1]] = nil end
-  if #list <= Sh.ORDER_SIZE then pending = {} end
+  if #list <= Sh.ORDER_SIZE then
+    table.sort(list, function(a, b) return a[2] > b[2] end)
+    for i, e in ipairs(list) do order[i] = e[1] end
+    pending = {}
+    return
+  end
+  local taken, half = {}, math.floor(Sh.ORDER_SIZE / 2)
+  table.sort(list, function(a, b) return a[2] > b[2] end)
+  for i = 1, half do taken[list[i][1]] = true; order[#order + 1] = list[i][1] end
+  table.sort(list, function(a, b) if a[3] ~= b[3] then return a[3] < b[3] end return a[2] > b[2] end)
+  for _, e in ipairs(list) do
+    if #order >= Sh.ORDER_SIZE then break end
+    if not taken[e[1]] then taken[e[1]] = true; order[#order + 1] = e[1] end
+  end
+  for id in pairs(taken) do pending[id] = nil end
 end
 
 -- The entry for one item, or nil when it shouldn't go out.
@@ -209,7 +229,7 @@ function Sh.tick()
   else
     gap = math.min(Sh.MAX_GAP, gap * 2)
     Sh.stats.refused = Sh.stats.refused + 1
-    for _, id in ipairs(ids) do pending[id] = true end
+    for _, id in ipairs(ids) do pending[id] = pending[id] or 0 end
   end
 end
 

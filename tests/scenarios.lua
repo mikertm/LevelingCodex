@@ -12185,8 +12185,78 @@ function S.auctionShare()
     check(not Sh.on() and not MOCK.channels.LevCodexPrices, "turning it off leaves the channel")
     MOCK.closeAuction()
   end
+  -- every item gets its turn: 400 cheap readings wait while dear ones keep arriving
+  if Sh.on() == false then Sh.setOn(true) end
+  for _ = 1, 30 do if not Sh.build() then break end end
+  for i = 1, 400 do A.record(60000 + i, "Cheap " .. i, 1, 1) end
+  local sentCheap = {}
+  for round = 1, 12 do
+    MOCK.advance(2)
+    for i = 1, 600 do A.record(70000 + i, "Dear " .. i, 100000 + round, 20) end
+    for _ = 1, 12 do
+      local msg, ids = Sh.build()
+      if not msg then break end
+      for _, id in ipairs(ids) do if id > 60000 and id <= 60400 then sentCheap[id] = true end end
+    end
+  end
+  -- the 1 s tick sends some of them while the clock moves on
+  for _, m in ipairs(MOCK.addonSent or {}) do
+    if m.prefix == "LevCodexP" then
+      for part in m.text:gmatch("([0-9a-z]+),[0-9a-z]+,[0-9a-z]+,[0-9a-z]+") do
+        local id = tonumber(part, 36)
+        if id and id > 60000 and id <= 60400 then sentCheap[id] = true end
+      end
+    end
+  end
+  local cheap = 0
+  for _ in pairs(sentCheap) do cheap = cheap + 1 end
+  check(cheap == 400, "cheap items still go out while the sniper keeps finding dear ones (" .. cheap .. " of 400)")
   local dbg = table.concat(MOCK.ns.auctionShareDebugLines(), "\n")
   check(dbg:find("price sharing:", 1, true), "the debug line")
+end
+
+-- The trade record is kept per character (Michael, 2026-11-25: his paladin showed his warrior's
+-- wins); the realm-wide record from before waits until a character claims it.
+function S.auctionPerChar()
+  local t = time()
+  S.login()
+  -- an older Codex kept one record for the realm (seeded after login: the minimal client has no realm name)
+  local store = MOCK.ns.auction.store()
+  store.items[2589] = { name = "Linen Cloth", low = 150, n = 30, at = t, days = {} }
+  store.trade = { hidden = { [4306] = true }, log = {
+    { t = t - 600, k = "buy", id = 2589, name = "Linen Cloth", qty = 10, each = 50 },
+    { t = t - 300, k = "sold", id = 2589, name = "Linen Cloth", qty = 10, each = 200 },
+  }, paid = { [2589] = { each = 50, qty = 5 } } }
+  local T, M = MOCK.ns.auctionTrade, MOCK.ns.auctionMarket
+  check(M.record().wins == 0 and #T.notes().log == 0, "an older shared record isn't this character's")
+  check(T.isHidden(4306), "hidden items stay shared by the realm")
+  check(T.legacyRecord() and T.legacyRecord().trades == 2, "the older record waits to be claimed")
+  if not MOCK.minimal then
+    MOCK.openAuction()
+    MOCK.advance(2)
+    click(AuctionHouseFrame, "Market")
+    local panel = _G.LevelingCodexAHPanel
+    click(panel, "Your trades")
+    check(questText(panel, "kept per character"), "Your trades offers the older record")
+    click(panel, "Claim record")
+    check(not T.legacyRecord() == false, "one click doesn't claim it yet")
+    click(panel, "Claim record")
+    MOCK.closeAuction()
+  else
+    T.claimLegacy()
+  end
+  check(not T.legacyRecord() and M.record().wins == 1 and T.notes().paid[2589], "the claimed record is this character's ("
+    .. tostring(M.record().wins) .. " wins)")
+  -- another character starts its own
+  MOCK.playerName = "Alt"
+  T.logVersion = T.logVersion + 1
+  check(M.record().wins == 0 and not T.notes().paid[2589] and T.isHidden(4306), "another character has its own record ("
+    .. M.record().wins .. " wins, paid " .. tostring(T.notes().paid[2589]) .. ", hidden " .. tostring(T.isHidden(4306)) .. ")")
+  T.logTrade("buy", 2589, "Linen Cloth", 1, 60)
+  MOCK.playerName = nil
+  T.logVersion = T.logVersion + 1
+  check(M.record().wins == 1 and #T.notes().log == 2, "and doesn't touch the first one's")
+  MOCK.playerName = nil
 end
 
 function S.auctionMarket()
@@ -14830,7 +14900,8 @@ function S.mailTakeAll()
   check(chatHas("Left 1 Cash on Delivery mail for you to pay"), "and the COD mail it left")
   check(chatHas("1 item came back from the auction house: Quick Sell marks them RELIST"), "returned items are noted")
   local store = LevelingCodexDB.auction and LevelingCodexDB.auction.realms and LevelingCodexDB.auction.realms.Mockrealm
-  check(store and store.trade and store.trade.relist and store.trade.relist[7281], "the expired auction's item is tagged RELIST")
+  local mine = store and store.trade and store.trade.chars and store.trade.chars.Tester
+  check(mine and mine.relist and mine.relist[7281], "the expired auction's item is tagged RELIST (for this character)")
   check(questText(card, "Nothing to take."), "the card says the inbox is empty")
   MOCK.closeMail()
   check(not card:IsShown(), "closing the mailbox hides the card")

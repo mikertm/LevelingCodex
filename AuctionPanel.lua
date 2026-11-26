@@ -912,6 +912,19 @@ local function signed(c)
   c = math.floor(tonumber(c) or 0)
   return (c < 0 and "-" or "+") .. ns.money(math.abs(c))
 end
+-- Money for a small tile: the two largest coins only ("2g 5s", "15s 3c"), so it fits.
+local function shortMoney(c)
+  c = math.floor(math.abs(tonumber(c) or 0))
+  local g, sv, cp = math.floor(c / 10000), math.floor(c / 100) % 100, c % 100
+  if g >= 100 then return ns.thousands(g) .. "g" end
+  if g > 0 then return g .. "g" .. (sv > 0 and (" " .. sv .. "s") or "") end
+  if sv > 0 then return sv .. "s" .. (cp > 0 and (" " .. cp .. "c") or "") end
+  return cp .. "c"
+end
+local function shortSigned(c)
+  c = math.floor(tonumber(c) or 0)
+  return (c < 0 and "-" or "+") .. shortMoney(c)
+end
 
 -- Opens the Market page with an item charted.
 local function chartItem(id, mode)
@@ -1236,8 +1249,27 @@ end
 
 
 local function tradesView(W, y, bottom)
-  local rec = M().record()
   local x, w = 16, W - 32
+  -- the record from before it was kept per character: one character claims it
+  local legacy = T().legacyRecord and T().legacyRecord()
+  if legacy then
+    local who = Q.plain(T().charKey())
+    rect(x, y, w, 30, { 0.02, 0.03, 0.05, 0.88 }, "BORDER")
+    text("Your record is now kept per character. " .. legacy.trades .. (legacy.trades == 1 and " older trade isn't" or " older trades aren't")
+      .. " tied to one: claim them on the character that made them.", x + 10, y + 8, w - 210, "small", ns.C.light)
+    local armed = view.claimArmed and now() - view.claimArmed < 5
+    button(armed and "Click again to claim" or ("Claim for " .. who), x + w - 190, y + 4, 182, function()
+      if view.claimArmed and now() - view.claimArmed < 5 then
+        view.claimArmed = nil
+        if T().claimLegacy() then ns.say("The earlier trade record now belongs to " .. who .. ".") end
+      else
+        view.claimArmed = now()
+      end
+    end, { label = "Claim record", tip = "Claim record",
+      tipText = "Moves the trades, holdings and totals recorded before the record was per character onto " .. who .. " (two clicks). Claim them on the character that made them." })
+    y = y + 38
+  end
+  local rec = M().record()
   local tw = math.floor((w - 24) / 4)
   local closed = rec.wins + rec.losses
   local made = (rec.winAmount or 0) + (rec.income or 0)
@@ -1705,11 +1737,12 @@ function pages.deals(W, top, H)
     text(titleS, sx + 6, sy + 2, mw - 8, "dim", ns.C.dim)
     text(valS, sx + 6, sy + 14, mw - 8, "small", col)
   end
-  miniStat(1, "WINS / LOSSES", closed > 0 and (rec.wins .. "W - " .. rec.losses .. "L (" .. rec.winRate .. "%)") or "0W - 0L",
+  -- short figures: the tiles are a quarter of the console wide (the full ones are in the tooltip)
+  miniStat(1, closed > 0 and ("WON " .. rec.winRate .. "%") or "WON / LOST", rec.wins .. " - " .. rec.losses,
     closed > 0 and (rec.wins >= rec.losses and GREEN or RED) or ns.C.light)
-  miniStat(2, "MADE / LOST", "+" .. ns.money(made) .. " / -" .. ns.money(lost), made >= lost and MINT or ORANGE)
+  miniStat(2, "MADE / LOST", "+" .. shortMoney(made) .. " / -" .. shortMoney(lost), made >= lost and MINT or ORANGE)
   miniStat(3, closed > 0 and "NET PROFIT" or (#rec.holdings > 0 and "HOLDING EST." or "NET PROFIT"),
-    (closed == 0 and #rec.holdings > 0 and rec.net == 0) and signed(rec.unrealized) or signed(rec.net),
+    (closed == 0 and #rec.holdings > 0 and rec.net == 0) and shortSigned(rec.unrealized) or shortSigned(rec.net),
     ((closed == 0 and #rec.holdings > 0 and rec.net == 0) and rec.unrealized or rec.net) >= 0 and GREEN or RED)
   local scoreTip = table.concat({
     "Closed flips & vendor snipes: " .. rec.wins .. " won, " .. rec.losses .. " lost" .. (rec.winRate and (" (" .. rec.winRate .. "%)") or ""),
@@ -1724,7 +1757,7 @@ function pages.deals(W, top, H)
   local ss = A().snipeSession()
   local mins = math.floor(ss.run / 60)
   local runText = mins >= 60 and (math.floor(mins / 60) .. " h " .. (mins % 60) .. " min") or (mins .. " min")
-  miniStat(4, "SNIPER SESSION", ss.buys > 0 and (signed(ss.est) .. (ss.perHour and (" (" .. signed(ss.perHour) .. "/h)") or ""))
+  miniStat(4, "THIS SESSION", ss.buys > 0 and (shortSigned(ss.est) .. (ss.perHour and (" " .. shortSigned(ss.perHour) .. "/h") or ""))
     or (ss.run > 0 and (runText .. ", " .. ss.alerts .. (ss.alerts == 1 and " alert" or " alerts")) or "not run yet"),
     ss.buys > 0 and (ss.est >= 0 and GREEN or RED) or ns.C.light)
   hit(cx + 3 * (mw + 4), y + 23, mw, 29, "Sniper session", table.concat({

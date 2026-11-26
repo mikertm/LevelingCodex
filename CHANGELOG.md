@@ -8,6 +8,10 @@
     - Nothing is ever bought on a shared price alone: the sniper and Deals still check the live listing first.
     - Turn it off on the Scan tab under SETTINGS (**Share prices**). The line under it counts what you sent and received this session.
     - Your own messages coming back over the channel no longer count as another player's prices.
+    - Every item gets its turn: half of each batch is the most valuable items, the other half the ones that have waited longest, so a long sniper run or a big scan never keeps cheap items back for good.
+- **Trade records are per character.** Wins, losses, net profit, holdings and what you paid now belong to the character that made the trades, so an alt no longer shows your main's record. Hidden items and nudged prices stay shared by the realm.
+    - The record from before this update isn't tied to a character yet: on the character that made those trades, open **Market > Your trades** and click **Claim for <name>** twice.
+    - The Deals scoreboard's tiles are shorter (gold rounded to its two largest coins), so they no longer cut off.
 - **Scan tab fits the auction house again.** SETTINGS ran under the auction house's tabs: the switches now sit two to a row, **Scan all uses** moved into the FULL SCAN card, and the instant scan's hitch warning is its button's tooltip.
 
 ## v0.34.0

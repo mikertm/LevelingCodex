@@ -1014,7 +1014,7 @@ function UnitName(unit)
   if m then return m.name, m.realm end
   if unit == "target" and MOCK.target then return MOCK.target.name end
   if unit == "NPC" and MOCK.tradeName then return MOCK.tradeName end
-  return "Tester"
+  return MOCK.playerName or "Tester"
 end
 local CLASS_NAMES = { WARRIOR = "Warrior", MAGE = "Mage", HUNTER = "Hunter", ROGUE = "Rogue", PRIEST = "Priest",
   PALADIN = "Paladin", SHAMAN = "Shaman", WARLOCK = "Warlock", DRUID = "Druid" }

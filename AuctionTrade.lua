@@ -309,15 +309,110 @@ end
 
 -- This realm's trading notes, kept with its prices: hidden[id] (left out of Selling and Deals),
 -- watch[id] (pinned onto the Sniper's Watch list), noVendor[id] (merchants refuse to buy it),
--- set[id] (a price you nudged, copper each), paid[id] = { each, qty } (what the Codex bought it for).
-function T.notes()
+-- set[id] (a price you nudged, copper each) are the realm's, shared by your characters.
+-- What one character did is its own (Michael, 2026-11-25: the paladin showed the warrior's wins):
+-- paid[id] = { each, qty } (what the Codex bought it for), log and carry (the trade record),
+-- mail (invoices counted), owned (auctions seen) and relist live in trade.chars[<name>].
+-- T.notes() returns one table that reads and writes both, so callers never tell them apart.
+T.CHAR_KEYS = { paid = true, log = true, carry = true, mail = true, owned = true, relist = true }
+local REALM_KEYS = { "hidden", "watch", "noVendor", "set" }
+local CHAR_TABLES = { "paid", "log", "relist" }
+local proxies = setmetatable({}, { __mode = "k" })
+function T.charKey()
+  local _, n = ns.try(UnitName, "player")
+  return type(n) == "string" and n ~= "" and n or "?"
+end
+function T.realmNotes()
   local s = ns.auction.store()
   if type(s.trade) ~= "table" then s.trade = {} end
   local t = s.trade
-  for _, k in ipairs({ "hidden", "watch", "noVendor", "set", "paid", "log", "relist" }) do
-    if type(t[k]) ~= "table" then t[k] = {} end
-  end
+  for _, k in ipairs(REALM_KEYS) do if type(t[k]) ~= "table" then t[k] = {} end end
+  if type(t.chars) ~= "table" then t.chars = {} end
   return t
+end
+function T.charNotes()
+  local t = T.realmNotes()
+  local key = T.charKey()
+  local c = t.chars[key]
+  if type(c) ~= "table" then c = {}; t.chars[key] = c end
+  for _, k in ipairs(CHAR_TABLES) do if type(c[k]) ~= "table" then c[k] = {} end end
+  return c
+end
+function T.notes()
+  local t = T.realmNotes()
+  local c = T.charNotes()
+  local byChar = proxies[t]
+  if not byChar then byChar = {}; proxies[t] = byChar end
+  local p = byChar[c]
+  if not p then
+    p = setmetatable({}, {
+      __index = function(_, k) if T.CHAR_KEYS[k] then return c[k] end return t[k] end,
+      __newindex = function(_, k, v) if T.CHAR_KEYS[k] then c[k] = v else t[k] = v end end,
+    })
+    byChar[c] = p
+  end
+  return p
+end
+
+-- The record from before it was kept per character (v0.34.1 and older): it sits on the realm's
+-- notes until a character claims it (Market > Your trades).
+local function nonEmpty(v) return type(v) == "table" and next(v) ~= nil end
+function T.legacyRecord()
+  local t = T.realmNotes()
+  if not (nonEmpty(t.log) or nonEmpty(t.paid) or (type(t.carry) == "table" and (tonumber(t.carry.n) or 0) > 0)) then return end
+  return { trades = type(t.log) == "table" and #t.log or 0, carried = type(t.carry) == "table" and tonumber(t.carry.n) or 0 }
+end
+function T.claimLegacy()
+  local t = T.realmNotes()
+  if not T.legacyRecord() then return false end
+  local c = T.charNotes()
+  -- the log: both, in time order; what runs over the size goes into the carried totals
+  local log = {}
+  for _, e in ipairs(type(t.log) == "table" and t.log or {}) do log[#log + 1] = e end
+  for _, e in ipairs(c.log) do log[#log + 1] = e end
+  table.sort(log, function(a, b) return (tonumber(a.t) or 0) < (tonumber(b.t) or 0) end)
+  -- the carried record: take the old one, adding this character's own when it has one
+  local old = type(t.carry) == "table" and t.carry or nil
+  if old then
+    local mine = c.carry
+    if type(mine) == "table" then
+      for k, v in pairs(mine) do
+        if type(v) == "number" and k ~= "best" and k ~= "worst" then old[k] = (tonumber(old[k]) or 0) + v end
+      end
+      old.basis = type(old.basis) == "table" and old.basis or {}
+      for id, b in pairs(type(mine.basis) == "table" and mine.basis or {}) do
+        local o = old.basis[id]
+        if o then o.qty = (o.qty or 0) + (b.qty or 0); o.cost = (o.cost or 0) + (b.cost or 0) else old.basis[id] = b end
+      end
+    end
+    c.carry = old
+  end
+  c.log = {}
+  for i = math.max(1, #log - T.LOG_SIZE + 1), #log do c.log[#c.log + 1] = log[i] end
+  if #log > T.LOG_SIZE and ns.auctionMarket and ns.auctionMarket.fold then
+    for i = 1, #log - T.LOG_SIZE do ns.auctionMarket.fold(log[i]) end
+  end
+  for id, pd in pairs(type(t.paid) == "table" and t.paid or {}) do
+    local o = c.paid[id]
+    if type(o) == "table" and type(pd) == "table" then
+      local q1, q2 = tonumber(o.qty) or 0, tonumber(pd.qty) or 0
+      local cost = q1 * (tonumber(o.each) or 0) + q2 * (tonumber(pd.each) or 0)
+      o.qty = q1 + q2
+      o.each = o.qty > 0 and math.floor(cost / o.qty + 0.5) or o.each
+      if o.cost or pd.cost then o.cost = (tonumber(o.cost) or 0) + (tonumber(pd.cost) or 0) end
+    else
+      c.paid[id] = pd
+    end
+  end
+  for _, k in ipairs({ "relist", "owned", "mail" }) do
+    if type(t[k]) == "table" then
+      c[k] = type(c[k]) == "table" and c[k] or {}
+      for key, v in pairs(t[k]) do if c[k][key] == nil then c[k][key] = v end end
+    end
+  end
+  for k in pairs(T.CHAR_KEYS) do t[k] = nil end
+  T.logVersion = (T.logVersion or 0) + 1
+  return true
 end
 function T.isHidden(id) return T.notes().hidden[id] and true or false end
 function T.hide(id, on) T.notes().hidden[id] = on and true or nil; notesVersion = notesVersion + 1; T.refresh() end
