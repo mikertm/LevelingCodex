@@ -454,10 +454,19 @@ local function chooseSection()
       if s.type == "accept" and turnedIn[s.quest] then progressed[row.section] = true end
     end
   end
+  -- Forever reports a corner of one zone as another map (the Valley of Bones' south as
+  -- Shen'dralas, a 40-46 alternate): inside a chapter's zone with its quests in your log,
+  -- that map's alternate doesn't take over.
+  local _, x, y = Q.position()
+  local inside
+  for section in pairs(active) do
+    if not section.side and not section.alternate and section.zone ~= map and x and Q.onMap
+        and select(3, Q.onMap(section.zone, map, x, y)) then inside = true end
+  end
   local best
   for _, section in ipairs(sections) do
     if not section.side and levelFits(section) and
-        (not section.alternate or active[section] or (not section.manual and section.zone == map)) then
+        (not section.alternate or active[section] or (not section.manual and section.zone == map and not inside)) then
       local score = (section.zone == map and 4 or 0) + (active[section] and 2 or 0)
         + (progressed[section] and 1 or 0)
       if not best or score > best then
@@ -1071,11 +1080,40 @@ local function hasSectionWork(section, map)
   end
 end
 
+-- A leveling chapter (not an alternate) whose zone you stand inside although the client
+-- names another map, with work left (see chooseSection): one with quests in your log first,
+-- then one that fits your level.
+local function containingSection(map, x, y)
+  if not (Q.onMap and x) then return end
+  local inLog = {}
+  for _, row in ipairs(steps) do
+    if row.step.quest and log[row.step.quest] and row.state ~= "done" then inLog[row.section] = true end
+  end
+  local best, bestScore
+  for _, section in ipairs(sections) do
+    if not section.side and not section.alternate and not section.manual and section.zone ~= map
+        and (inLog[section] or (level >= section.levels[1] - 1 and level <= section.levels[2]))
+        and select(3, Q.onMap(section.zone, map, x, y)) and hasSectionWork(section) then
+      local score = (inLog[section] and 2 or 0) + (levelFits(section) and 1 or 0)
+      if not bestScore or score > bestScore then best, bestScore = section, score end
+    end
+  end
+  return best
+end
+
+local function alternateMap(map)
+  for _, section in ipairs(sections) do
+    if section.alternate and not section.side and section.zone == map then return true end
+  end
+end
+
 local function localSection(map)
   local early
+  local _, x, y = Q.position()
   for _, section in ipairs(sections) do
     if not section.side and not section.manual and section.zone == map and level <= section.levels[2]
-        and hasSectionWork(section, map) then
+        and hasSectionWork(section, map)
+        and not (section.alternate and containingSection(map, x, y)) then
       if levelFits(section) then return section end
       -- The first pickups can open before the section's recommended level, but only a level
       -- ahead: a zone visited twice (Duskwood at 24 and 30, Hillsbrad at 23 and 30) must not
@@ -1103,7 +1141,7 @@ function Q.startGuidedFlight()
 end
 
 local function resumeLocal(event, previous)
-  local map, x = Q.position()
+  local map, x, y = Q.position()
   if not (map and x) or Q.inFlight() then return end
   local changed = map ~= lastZone
   lastZone = map
@@ -1119,7 +1157,26 @@ local function resumeLocal(event, previous)
     checkLocalOnLog = false
     return
   end
+  -- Still inside the chapter's own zone (Forever reports the Valley of Bones' south as Shen'dralas,
+  -- a 40-46 chapter): a map change there doesn't move you out of a chapter with work left.
+  local home = selected and not selected.side and selected.zone ~= map and Q.onMap
+    and select(3, Q.onMap(selected.zone, map, x, y)) and hasSectionWork(selected)
   local best = next(log) and activeStep(nil, map)
+  if home and (not best or steps[best].section ~= selected) then
+    checkLocalOnLog = false
+    return
+  end
+  -- Logging in there: the log arrives after the first pick, so move to the chapter you stand in
+  -- (only on an alternate's map, where Forever's new areas overlap an older zone).
+  if not best and next(log) and not home then
+    local inside = alternateMap(map) and containingSection(map, x, y)
+    if inside and inside ~= selected then
+      checkLocalOnLog = false
+      local i = activeStep(inside)
+      if i then followFrom(i) else followSection(inside) end
+      return
+    end
+  end
   if best then
     checkLocalOnLog = false
     if best ~= index then followFrom(best) end

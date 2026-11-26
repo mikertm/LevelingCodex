@@ -15442,6 +15442,51 @@ function S.mailAutoTake()
   check(chatHas("Took 4 items"), "the rest is taken")
 end
 
+-- In game, walking to the Scarlet camp at the Valley of Bones (which Forever reports as Shen'dralas)
+-- switched the guide to the level 40-46 Shen'dralas chapter: players took it for part of Desolace.
+-- Standing inside Desolace with Desolace work left, the guide stays on Desolace.
+function S.questStayInDesolace()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 39, 1443, 62.0, 88.0
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest == 261 then break end
+        if step.quest and step.quest ~= 261 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 261, isComplete = false } }
+  S.login()
+  slash("quests")
+  stepTool("Resume active quest")
+  MOCK.advance(0.3)
+  local Q = MOCK.ns.quests
+  local function sectionId() local row = Q.current(); return row and row.section.id end
+  check(sectionId() == "desolace-35", "the Desolace chapter is current: " .. tostring(sectionId()))
+  walkTo(2652, 35.5, 30.5) -- the camp's corner of Desolace, reported as Shen'dralas
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(1)
+  check(sectionId() == "desolace-35", "the guide stays on Desolace at the Valley of Bones: " .. tostring(sectionId()))
+end
+
+-- The same spot after a /reload or a login there: the Desolace work in the log keeps the guide on Desolace.
+function S.questStayInDesolaceLogin()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 39, 2652, 35.5, 30.5
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "complete" and step.quest == 261 then break end
+        if step.quest and step.quest ~= 261 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 261, isComplete = false } }
+  S.login()
+  MOCK.advance(1)
+  local row = MOCK.ns.quests.current()
+  check(row and row.section.id == "desolace-35", "logging in at the Valley of Bones keeps Desolace: " .. tostring(row and row.section.id))
+end
+
 -- In game the "Accept - Kodo Roundup" step stayed on screen after Smeed gave the quest (the item
 -- button already showed the Kombobulator from the log). The window was showing the pickup picked
 -- from the route list (an earlier step, the flight path, was still the route's), and the game
