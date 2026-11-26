@@ -92,7 +92,7 @@ local function Co_party()
 end
 S.partySet = Co_party
 
-local TABLES = { "sighted", "trace", "tags", "diary", "forgotten", "bonds", "fellowships", "portraits", "signatures", "anniv",
+local TABLES = { "sighted", "trace", "tags", "diary", "forgotten", "bonds", "fellowships", "disbanded", "portraits", "signatures", "anniv",
   "people", "pals", "fellows", "wrote", "memories" }
 local function journal()
   local j = J.data()
@@ -535,6 +535,7 @@ local function groupTick(list)
   local key = S.groupKey(list)
   if not key then return end
   local j = journal()
+  if j.disbanded[key] then return end
   local g = j.fellowships[key]
   if type(g) ~= "table" then
     g = { first = now(), secs = 0, days = 0 }
@@ -574,6 +575,83 @@ local function groupTick(list)
     S.card("A FELLOWSHIP IS BORN", g.auto, { { J.ICON.fellowship, "With", S.listText(list2) },
       { J.ICON.pal, "Together", J.draw and J.draw.duration(g.secs) or "" } })
   end
+  if g.formed then S.bandMilestone(key, g) end
+end
+
+-- Milestones: hours and days together, once each, as moments of the fellowship.
+S.BAND_HOURS = { 1, 5, 10, 25, 50, 100, 250 }
+S.BAND_DAYS = { 3, 7, 14, 30, 60 }
+local function passed(list, v)
+  local best
+  for _, m in ipairs(list) do if v >= m then best = m end end
+  return best
+end
+function S.bandMilestone(key, g)
+  local h = passed(S.BAND_HOURS, n0(g.secs) / 3600)
+  local d = passed(S.BAND_DAYS, n0(g.days))
+  if type(g.marks) ~= "table" then
+    -- an older fellowship starts from where it stands, without a flood of moments
+    g.marks = { h = h, d = d }
+    return
+  end
+  local fname = S.fellowshipName(g, key)
+  local who = S.listText(names(key))
+  local said
+  if h and h ~= g.marks.h and h > n0(g.marks.h) then
+    g.marks.h = h
+    local hours = h == 1 and "an hour" or (h .. " hours")
+    local e = J.add("fellowship", fill({ "%name% has spent %hours% on the road together", "%hours% together now: %name%, with %who%",
+      "%name% marked %hours% side by side in %zone%" }, key .. "h" .. h, { name = fname, hours = hours, who = who, zone = zone() }),
+      "Fellowship milestone", nil)
+    if type(e) == "table" then e.with = key end
+    said = { "A FELLOWSHIP MILESTONE", fname .. ": " .. hours .. " together" }
+  end
+  if d and d ~= g.marks.d and d > n0(g.marks.d) then
+    g.marks.d = d
+    local e = J.add("fellowship", fill({ "%name% met on %days% different days now", "Day after day: %name% has ridden out on %days% days",
+      "%days% days of %name%, and counting" }, key .. "d" .. d, { name = fname, days = d }), "Fellowship milestone", nil)
+    if type(e) == "table" then e.with = key end
+    said = said or { "A FELLOWSHIP MILESTONE", fname .. ": " .. d .. " days together" }
+  end
+  if said then S.card(said[1], said[2], { { J.ICON.fellowship, "With", who } }) end
+end
+
+-- Disband: the fellowship leaves the book and won't form again from the same company.
+function S.disband(key)
+  local j = journal()
+  local g = j.fellowships[key]
+  if type(g) ~= "table" then return false end
+  local fname = S.fellowshipName(g, key)
+  j.fellowships[key] = nil
+  j.disbanded[key] = now()
+  for i = #j.events, 1, -1 do
+    local e = j.events[i]
+    if type(e) == "table" and e.k == "fellowship" and e.with == key then table.remove(j.events, i) end
+  end
+  ns.say(fname .. " is disbanded: it is out of your journal and won't form again with the same company.")
+  return true
+end
+function S.disbandedCount() return S.countKeys(journal().disbanded) end
+-- Let disbanded fellowships form again (from nothing).
+function S.undisbandAll()
+  local j = journal()
+  for k in pairs(j.disbanded) do j.disbanded[k] = nil end
+end
+
+function S.setMotto(key, text)
+  local g = journal().fellowships[key]
+  if type(g) ~= "table" then return false, "That fellowship is gone." end
+  text = plain(text):gsub("[%c;]", " "):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
+  if text == "" then g.motto = nil; return true end
+  if #text < 3 or #text > 60 then return false, "A motto takes 3 to 60 characters (this one has " .. #text .. ")." end
+  g.motto = text
+  return true
+end
+function S.togglePin(key)
+  local g = journal().fellowships[key]
+  if type(g) ~= "table" then return false end
+  g.pinned = (not g.pinned) and now() or nil
+  return true
 end
 
 function S.rename(key, text)
@@ -610,7 +688,9 @@ function S.fellowships(all)
   for key, g in pairs(journal().fellowships) do
     if type(g) == "table" and (all or g.formed) then out[#out + 1] = { key = key, g = g, names = names(key) } end
   end
-  table.sort(out, function(a, b) if n0(a.g.secs) ~= n0(b.g.secs) then return n0(a.g.secs) > n0(b.g.secs) end return a.key < b.key end)
+  table.sort(out, function(a, b)
+    if (a.g.pinned and 1 or 0) ~= (b.g.pinned and 1 or 0) then return a.g.pinned ~= nil end
+    if n0(a.g.secs) ~= n0(b.g.secs) then return n0(a.g.secs) > n0(b.g.secs) end return a.key < b.key end)
   return out
 end
 
@@ -883,8 +963,12 @@ local function scrub(j, match, removeMoments)
       for n in pairs(j[k]) do if match(n) then j[k][n] = nil end end
     end
   end
-  for key in pairs(j.fellowships) do
-    for n in key:gmatch("[^,]+") do if match(n) then j.fellowships[key] = nil; break end end
+  for _, t in ipairs({ "fellowships", "disbanded" }) do
+    if type(j[t]) == "table" then
+      for key in pairs(j[t]) do
+        for n in key:gmatch("[^,]+") do if match(n) then j[t][key] = nil; break end end
+      end
+    end
   end
   for k in pairs(j.anniv) do if match(k:match("^(.-):") or k) then j.anniv[k] = nil end end
   local function strip(list)

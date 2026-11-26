@@ -23,6 +23,13 @@
     - Hundreds more ways to say what it already noticed, and joining words so a chapter reads as a story, not a list.
     - **Neighbouring chapters never repeat a sentence**: each line turns with the level, and chapters run from five to seven sentences. Level-up lines turn the same way.
 - **Journey: more varied moments.** Deaths, dungeon entries, bosses, flight paths, companions, wipes, dungeon runs, battlegrounds, duels, resurrections, trades, guilds, honorable kills, campfires, abandoned quests, auction sales, mailbox gold, mounts, inns and hearthstones all have more ways to be written.
+- **Journey: the Fellowships page, built out.**
+    - **Disband** a fellowship (click twice). It leaves your journal (its name, banner, milestones and record) and won't form again with the same company. The moments you shared stay in the story. **Let them form again** under the list undoes that, starting from nothing.
+    - **Milestones:** a fellowship marks 1, 5, 10, 25, 50, 100 and 250 hours together, and 3, 7, 14, 30 and 60 days, each once, as a moment and a card.
+    - **Firsts together:** the first boss, dungeon, full run, level, rare, elite, wipe, fall, toast and campfire you shared, with the day and level.
+    - **Write a motto** of your own for under the banner (or let the book keep choosing one).
+    - **Pin to top** keeps a fellowship first in the list.
+    - The page says when you were last together, or that you're together right now.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:

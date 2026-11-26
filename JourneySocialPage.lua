@@ -396,6 +396,7 @@ local function fellowshipRow(L, f, y, lit)
   local bits = { S.listText(f.names) }
   if n0(g.quests) > 0 then bits[#bits + 1] = D().plural(n0(g.quests), "quest") end
   if n0(g.bosses) > 0 then bits[#bits + 1] = n0(g.bosses) .. (n0(g.bosses) == 1 and " boss" or " bosses") end
+  if g.pinned then bits[#bits + 1] = "pinned" end
   U.T(table.concat(bits, "  -  "), 44, y + 17, W - 58, "small", C.dim)
   U.hit(10, y - 3, W - 20, 42, S.fellowshipName(g, f.key), "Click to open its page.", function() chosen = f.key; ns.ui.refresh() end,
     "Fellowship " .. S.fellowshipName(g, f.key))
@@ -546,6 +547,7 @@ end
 
 -- A motto from what the fellowship has done.
 local function motto(g, key, lands)
+  if type(g.motto) == "string" and g.motto ~= "" then return plain(g.motto) end
   local pair = #S.names(key) == 1
   local pool
   if n0(g.wipes) >= 3 then pool = { "We fall together, and we get up together.", "Wipe, laugh, run it back." }
@@ -646,6 +648,38 @@ local function saga(j, f, lands)
   return table.concat(out, " ")
 end
 
+-- The firsts the fellowship shared, oldest of each kind: { label, moment }.
+local FIRSTS = { { "boss", "First boss" }, { "dungeon", "First dungeon" }, { "run", "First full run" }, { "level", "First level together" },
+  { "rare", "First rare" }, { "elite", "First elite" }, { "wipe", "First wipe" }, { "death", "First fall" }, { "toast", "First toast" },
+  { "camp", "First campfire" } }
+function S.bandFirsts(moments)
+  local oldest = {}
+  for _, e in ipairs(moments) do oldest[e.k] = e end -- moments run newest first: the last seen is the oldest
+  local out = {}
+  for _, f in ipairs(FIRSTS) do if oldest[f[1]] then out[#out + 1] = { f[2], oldest[f[1]] } end end
+  return out
+end
+local function firstsCard(R, moments, y, col)
+  local list = S.bandFirsts(moments)
+  if #list == 0 then return y end
+  local U, C, W = R.U, R.C, R.W
+  local j = S.journal()
+  local top = y
+  y = D().cardTitle(R, "FIRSTS TOGETHER", 0, y, W, tostring(#list))
+  for i = 1, math.min(6, #list) do
+    local label, e = list[i][1], list[i][2]
+    U.rect(14, y + 3, 3, 26, { col[1] + 0.25, col[2] + 0.25, col[3] + 0.25, 1 })
+    U.T(label:upper() .. "  -  day " .. D().dayOf(j, e.t) .. ", level " .. (e.l or "?"), 24, y, W - 38, "small", C.gold)
+    local h = U.T(e.s, 24, y + 14, W - 38, "small", C.ink or C.light)
+    U.hit(10, y - 2, W - 20, h + 18, label, e.s .. (e.d and ("\n" .. e.d) or ""), nil, "First " .. label)
+    y = y + math.max(32, h + 20)
+  end
+  y = y + 4
+  U.box(0, top, W, y - top, C.panel, C.edge)
+  return y + 12
+end
+
+local confirmDisband, disbandAt
 local function hourCard(R, title, e, y, color)
   local U, C, W = R.U, R.C, R.W
   local j = S.journal()
@@ -718,6 +752,12 @@ local function fellowshipPage(R, f, y)
     U.T(c[2], cx, y + 24, cw, "small", C.dim, "CENTER")
   end
   y = y + 50
+  if g.last then
+    local here0 = #S.bandHere(key) == #f.names
+    y = y + U.T(here0 and "Together right now." or ("Last together " .. ago(g.last) .. (g.marks and g.marks.h and
+      ("  -  " .. g.marks.h .. (g.marks.h == 1 and " hour" or " hours") .. " passed") or "") .. "."), 14, y, W - 28, "small",
+      C.inkSoft or C.dim, "CENTER") + 6
+  end
   if g.offered then
     y = y + U.T(name(g.offeredBy or "A fellow") .. " calls the band " .. plain(g.offered) .. ".", 14, y, W - 28, "small", C.gold, "CENTER") + 4
     local ub = U.btn("Use that name", math.floor(W / 2) - 70, y, 140, function() S.useOfferedName(key); ns.ui.refresh() end, true,
@@ -744,6 +784,35 @@ local function fellowshipPage(R, f, y)
   end, false, "Give the fellowship your own name.")
   if b then b.codexLabel = "Rename fellowship" end
   y = y + 32 + (n0(g.toasts) > 0 and 16 or 0)
+  -- the second row: a motto of your own, pin it to the top, disband it
+  local w3 = math.floor((W - 28 - 12) / 3)
+  b = U.btn(g.motto and "Edit motto" or "Write a motto", 14, y, w3, function()
+    ns.showMacroCopy({ copyTitle = "The fellowship's motto", body = g.motto or motto(g, key, lands), paste = true, acceptLabel = "Save motto",
+      help = "3 to 60 characters, shown under its banner. Save it empty to let the book choose one again.",
+      onAccept = function(text)
+        local ok, why = S.setMotto(key, text)
+        if ok then ns.ui.refresh() end
+        return ok, why
+      end })
+  end, false, "Write the line under the banner yourself.")
+  if b then b.codexLabel = "Motto fellowship" end
+  b = U.btn(g.pinned and "Unpin" or "Pin to top", 20 + w3, y, w3, function() S.togglePin(key); ns.ui.refresh() end, g.pinned ~= nil,
+    "Keep this fellowship at the top of the list.")
+  if b then b.codexLabel = "Pin fellowship" end
+  local armed = confirmDisband == key and disbandAt and GetTime() - disbandAt < 5
+  b = U.btn(armed and "Click again" or "Disband", 26 + 2 * w3, y, w3, function()
+    if armed then
+      confirmDisband = nil
+      if S.disband(key) then chosen = nil end
+    else
+      confirmDisband, disbandAt = key, GetTime()
+      ns.after(5.1, function() if ns.ui and ns.ui.refresh then ns.ui.refresh() end end)
+    end
+    ns.ui.refresh()
+  end, armed, "Takes the fellowship out of your journal (its name, banner, milestones and record) and stops it forming again "
+    .. "with the same company. The moments you shared stay. Click twice.")
+  if b then b.codexLabel = "Disband fellowship" end
+  y = y + 32
   D().page(U, C, 0, top, W, y - top)
   y = y + 12
   -- the finest and darkest hours
@@ -751,6 +820,7 @@ local function fellowshipPage(R, f, y)
   if fine then y = hourCard(R, "FINEST HOUR", fine, y) end
   local dark = weightiest(moments, DARK)
   if dark then y = hourCard(R, "DARKEST HOUR", dark, y, D().DEATH_INK) end
+  y = firstsCard(R, moments, y, col)
   -- the lands walked together
   if #lands > 0 then
     top = y
@@ -854,6 +924,15 @@ local function page(V, y)
     U.hit(10, ly - 2, W - 20, 24, S.listText(f.names), "Forming: " .. D().duration(n0(f.g.secs)) .. " of " .. D().duration(S.FORM_SECS)
       .. " together.\nClick to see it.", function() chosen = f.key; ns.ui.refresh() end, "Forming " .. S.listText(f.names))
     ly = ly + 28
+  end
+  local gone = S.disbandedCount()
+  if gone > 0 then
+    ly = ly + U.T(gone == 1 and "1 fellowship disbanded: it won't form again." or (gone .. " fellowships disbanded: they won't form again."),
+      14, ly + 2, W - 28, "small", C.dim) + 6
+    local ub = U.btn("Let them form again", 14, ly, 160, function() S.undisbandAll(); ns.ui.refresh() end, false,
+      "The same company can earn a fellowship again, starting from nothing.")
+    if ub then ub.codexLabel = "Undisband fellowships" end
+    ly = ly + 30
   end
   ly = ly + 6
   U.box(0, top, W, ly - top, C.panel, C.edge)
