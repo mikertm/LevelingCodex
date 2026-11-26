@@ -54,9 +54,19 @@ function QL.objective(o)
   name = name:gsub("%s*%(%a+%)%s*$", ""):gsub("^%s+", ""):gsub("%s+$", "")
   local kind = type(o.type) == "string" and o.type or nil
   local low = name:lower()
+  -- standing with a faction: "Friendly / Friendly Gelkis Clan Centaur"
+  local rank, faction = name:match("^(%a+)%s*/%s*%a+%s+(.+)$")
+  if kind == "reputation" or rank then
+    faction = faction or name:gsub("^.-/%s*%a+%s+", "")
+    return { name = Q.plain(faction), rank = rank and rank:lower() or nil, kind = "reputation", raw = Q.plain(text) }
+  end
   if low:find(" slain$") or low:find(" killed$") or low:find(" defeated$") then
     name = name:gsub("%s+%a+$", "")
     kind = "monster"
+  elseif kind ~= "item" then
+    -- "Kodos Tamed", "Prisoners Freed": a count of things done, not foes to kill
+    local things, done = name:match("^(.-)%s+(%u%l+ed)$")
+    if things and things ~= "" then return { name = Q.plain(things), done = done:lower(), need = need, kind = "tally", raw = Q.plain(text) } end
   end
   return { name = Q.plain(name), need = need, kind = kind, raw = Q.plain(text) }
 end
@@ -121,8 +131,11 @@ function QL.classify(id, title)
   local npcs = ns.questNPCs and ns.questNPCs[id]
   local vars = { title = title }
   local kills, items, objects, events, total = {}, {}, {}, {}, 0
+  local tallies, standing = {}, nil
   for _, o in ipairs(objectives) do
-    if o.kind == "monster" then kills[#kills + 1] = o
+    if o.kind == "reputation" then standing = standing or o
+    elseif o.kind == "tally" then tallies[#tallies + 1] = o
+    elseif o.kind == "monster" then kills[#kills + 1] = o
     elseif o.kind == "item" then items[#items + 1] = o
     elseif o.kind == "object" then objects[#objects + 1] = o
     elseif o.kind == "event" or o.kind == "log" then events[#events + 1] = o
@@ -142,6 +155,16 @@ function QL.classify(id, title)
     vars.target = target or (kills[1] and kills[1].name) or (mobs and mobs[1]) or vars.foe or "the outlaw"
     if items[1] then vars.item = items[1].name end
     return "wanted", vars
+  end
+  if standing and #kills == 0 and #items == 0 then
+    vars.faction, vars.rank = standing.name, standing.rank or "friendly"
+    return "standing", vars
+  end
+  if #tallies > 0 and #kills == 0 then
+    local t = tallies[1]
+    vars.things, vars.done = t.name, t.done
+    vars.tally = ((t.need or 1) > 1 and (say(t.need) .. " ") or "") .. t.name .. " " .. t.done
+    return "tally", vars
   end
   if #kills > 0 then
     local n = 0
@@ -275,6 +298,14 @@ QL.LINES = {
     "Followed every lead in %zone% to %quarry%", "Picked up the trail of %quarry% in %zone%",
     "Asked around %zone% until someone knew where %quarry% was", "Found %quarry%, or what %giver% needed to know about them",
     "Turned over every stone in %zone% in search of %quarry%", "The search for %quarry% led you across %zone%" },
+  tally = { "Left %zone% with %tally% to show for it", "Saw to it in %zone%: %tally%", "%giver% asked, and %zone% ended up with %tally%",
+    "Counted them off one by one in %zone%: %tally%", "By the end of it, %tally%. %giver% was pleased",
+    "Kept at it in %zone% until there were %tally%", "Took care of %title% in %zone%: %tally%, every one",
+    "Worked through %zone% with a rope, a plan and patience: %tally%" },
+  standing = { "Won the trust of the %faction% in %zone%", "Became %rank% with the %faction%, and %giver% took notice",
+    "Earned a place among the friends of the %faction%", "The %faction% decided you were worth knowing",
+    "Made friends with the %faction% in %zone%, the hard way", "Proved yourself to the %faction% in %zone%",
+    "Talked, fought and bargained your way into the good graces of the %faction%" },
   report = { "Reported to %who% in %zone%", "Brought your news to %who%", "Made your report to %who%, who listened closely",
     "Stood before %who% and told them everything", "Found %who% in %zone% and passed on the word",
     "Took the road to %who%, with orders in your pack" },
@@ -529,6 +560,8 @@ QL.GIVE_UP = {
   loot = { "Stopped fighting the %foes% for %items%: %title%, dropped", "The %foes% kept their %items%. You kept your time" },
   deliver = { "Never delivered %title%. Somebody's still waiting for that letter", "Let the message in %title% go unsent" },
   escort = { "Left %ward% to find their own way. %title%, abandoned" },
+  tally = { "Left %title% half done in %zone%", "Gave up on %title%: the %things% will have to wait" },
+  standing = { "Gave up on winning over the %faction%", "Let the %faction% think what they like: %title%, dropped" },
   seek = { "Gave up the search for %quarry%", "Stopped looking for %quarry%. Some things stay lost" },
   outgrown = { "Outgrew %title%: %zone%'s troubles are small fry now", "Dropped %title%; there are bigger fights waiting",
     "Let go of %title%, an old job you'd long outgrown", "Cleared %title% from the log. It was beneath you by now",

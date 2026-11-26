@@ -108,6 +108,27 @@ local function fill(text, vars)
   return (text:gsub("%%(%w+)%%", function(k) return vars[k] or "" end))
 end
 J.pick, J.fill, J.now, J.level = pick, fill, now, level
+-- Pick a line like J.pick, but pass over one that opens (its first word) like one of the last six moments of
+-- that kind, so a day with five new companions doesn't read "Met X on the road..." five times.
+function J.fresh(list, seed, kind, vars)
+  if type(list) ~= "table" or #list == 0 then return nil end
+  local function opening(t) return (tostring(t or ""):lower():match("^(%S+)") or "") end
+  local recent, n = {}, 0
+  local events = J.data().events
+  for i = #events, 1, -1 do
+    local e = events[i]
+    if e.k == kind then recent[opening(e.s)] = true; n = n + 1; if n >= 6 then break end end
+  end
+  local start = 1
+  for i, l in ipairs(list) do if l == pick(list, seed) then start = i; break end end
+  local first
+  for k = 0, #list - 1 do
+    local text = fill(list[(start - 1 + k) % #list + 1], vars or {})
+    first = first or text
+    if not recent[opening(text)] then return text end
+  end
+  return first
+end
 
 -- Zone maps: up through parents while the map is smaller than a zone.
 local zoneCache = {}
@@ -299,7 +320,20 @@ local PAL = { "Joined forces with %name%", "Met %name% on the road and travelled
 for _, s in ipairs({ "Grouped up with %name% and the work went faster",
   "Fought side by side with %name%",
   "Made a new friend on the road: %name%",
-  "Found %name% heading the same way, and went together" }) do PAL[#PAL + 1] = s end
+  "Found %name% heading the same way, and went together",
+  "Shared a campfire and a quest log with %name% in %zone%",
+  "%name% asked if you wanted to group. You did",
+  "Two blades are better than one: met %name% in %zone%",
+  "Ran into %name% at the same quest giver, and stuck together",
+  "Fell into step with %name% somewhere in %zone%",
+  "Watched %name%'s back in %zone%, and they watched yours",
+  "Picked up a travelling companion in %zone%: %name%",
+  "Joined %name% against whatever %zone% had to offer",
+  "Said hello to %name%. Several hours later, still grouped",
+  "Met %name% over the same quest mob, and decided to share",
+  "%name% came along for the ride through %zone%",
+  "A stranger in %zone% became a companion: %name%",
+  "Trusted %name% with your back, and they earned it" }) do PAL[#PAL + 1] = s end
 
 -- What a quest was about, read from its objectives while it sat in your log.
 local questFacts = {} -- [id] = { title, kind = "kill"/"gather"/"errand", target }
@@ -451,7 +485,7 @@ function J.add(kind, text, detail, extra)
   if extra and extra.at then map, x, y = extra.at[1], extra.at[2], extra.at[3] end
   if extra and extra.q then e.q = extra.q end
   if extra and extra.l then e.l = extra.l end
-  for _, f in ipairs({ "who", "i", "iq", "fk", "pct", "n", "pvp", "c" }) do
+  for _, f in ipairs({ "who", "i", "iq", "fk", "pct", "n", "pvp", "c", "told" }) do
     if extra and extra[f] ~= nil then e[f] = type(extra[f]) == "string" and Q.plain(extra[f]) or extra[f] end
   end
   if map and x and y and not inInstance() then
@@ -717,7 +751,7 @@ local function palTick()
     elseif type(rec) ~= "table" then
       rec = { seconds = 0, first = now(), level = level() }
       j.pals[p.name] = rec
-      J.add("pal", fill(pick(PAL, p.name), { name = Q.plain(p.name) }), nil, { who = p.name })
+      J.add("pal", J.fresh(PAL, p.name, "pal", { name = Q.plain(p.name), zone = zoneName() }), nil, { who = p.name })
     end
     if rec then
       rec.class = p.class or rec.class

@@ -1018,7 +1018,7 @@ end
 local KIND_GROUP = { wanted = "kindHunt", slay = "kindHunt", kill = "kindHunt", proof = "kindHunt",
   loot = "kindGather", gather = "kindGather", find = "kindGather", cook = "kindGather", buy = "kindGather",
   deliver = "kindErrand", errand = "kindErrand", scout = "kindErrand", seek = "kindErrand", report = "kindErrand",
-  lore = "kindErrand", escort = "kindEscort" }
+  lore = "kindErrand", tally = "kindErrand", standing = "kindErrand", escort = "kindEscort" }
 Vo.noticers[#Vo.noticers + 1] = function(c)
   if not J.questKind then return end
   local counts, total, escort = {}, 0, false
@@ -1095,4 +1095,117 @@ function ns.journeyStoryDebugLines()
   end
   return { "journey story: " .. pools .. " pools, " .. lines .. " lines, " .. #Vo.noticers .. " noticers"
     .. (Vo.lastError and (", last error " .. Vo.lastError) or "") }
+end
+
+----------------------------------------------------------------------------
+-- Situations around a fall and a level-up: who it was (a weakling, an elite), when (just after a ding,
+-- the third time today, in the small hours), where (a dungeon, a city, your first hour in a land) and
+-- with whom. JourneyVoice's J.retell (a killer met before, a regular quest giver) still goes first.
+----------------------------------------------------------------------------
+St.DEATH_SIT = {
+  weakling = { "Fell to %killer% in %zone%. Yes, that one. Let's not talk about it", "%killer% got you in %zone%, and it was half your level",
+    "Killed by %killer% in %zone%. The journal will be discreet about the details", "Somehow lost to %killer% in %zone%. Somehow",
+    "%killer% in %zone%: not the toughest foe, and yet here we are" },
+  elite = { "%killer% was too much in %zone%. Elites usually are", "Took on %killer% in %zone%, and it took you down",
+    "Learned what the gold dragon around %killer%'s portrait means, the hard way", "Fell to %killer%, an elite of %zone%. Worth trying",
+    "Crushed by %killer% in %zone%. Bring friends next time" },
+  freshLevel = { "Barely enjoyed level %lvl% before %killer% ended it in %zone%", "Level %lvl% lasted a moment; then %killer% happened",
+    "New level, same old graveyard: %killer% in %zone%", "Dinged, felt invincible, met %killer% in %zone%" },
+  badDay = { "Fell to %killer% in %zone%: the %nth% death today. Some days are like that",
+    "%killer% added to a rough day in %zone%: fall number %n% since morning", "Down again, to %killer%. Today is not your day",
+    "The %nth% trip to the spirit healer today, courtesy of %killer%" },
+  dungeon = { "Fell to %killer% deep in %zone%, with the party fighting on", "%killer% caught you in the dark of %zone%",
+    "Went down to %killer% in %zone%; the healer is still apologising", "Died in %zone% to %killer%. The run went on without you, briefly" },
+  party = { "Fell to %killer% in %zone% while the party watched", "%killer% singled you out from the group in %zone%",
+    "Took one for the team against %killer% in %zone%", "Went down first against %killer% in %zone%. Someone had to" },
+  night = { "Fell to %killer% in %zone% in the small hours. Should have gone to bed", "%killer% got you in %zone% long past midnight" },
+}
+St.LEVEL_SIT = {
+  dungeon = { "Reached level %lvl% deep inside %zone%, mid-run", "Level %lvl% came in the dark of %zone%, between pulls",
+    "Dinged %lvl% in %zone% to cheers from the party", "Level %lvl%, earned underground in %zone%" },
+  party = { "Reached level %lvl% in %zone% with friends around you", "Level %lvl% in %zone%, and the party cheered",
+    "Dinged %lvl% in %zone%; somebody typed grats", "Level %lvl% came in good company, in %zone%" },
+  city = { "Reached level %lvl% in the streets of %zone%", "Level %lvl% caught up with you in %zone%, of all places",
+    "Dinged %lvl% in %zone% to the sound of the city" },
+  newLand = { "Barely arrived in %zone%, and level %lvl% was already waiting", "Level %lvl%: %zone% welcomed you properly",
+    "First hour in %zone%, and already level %lvl%" },
+  night = { "Level %lvl% in %zone%, long after midnight", "Dinged %lvl% in %zone% while the rest of the world slept",
+    "Reached level %lvl% in %zone% by candlelight" },
+  rested = { "Level %lvl% in %zone%, carried on a good night's rest", "Rested and ready: level %lvl% in %zone%" },
+  quick = { "Level %lvl% in %zone%, hot on the heels of the last one", "Level %lvl% came fast in %zone%; the last one had barely settled",
+    "Two levels in quick succession: %lvl% in %zone%" },
+}
+local function try(f, ...)
+  if type(f) ~= "function" then return nil end
+  local ok, a = pcall(f, ...)
+  if ok then return a end
+end
+local function lastOf(kind)
+  local events = J.data().events
+  for i = #events, 1, -1 do if events[i].k == kind then return events[i] end end
+end
+function St.deathSituation(killer, zone)
+  local sits = {}
+  local vars = { killer = killer, zone = zone }
+  local mine = tonumber(J.level())
+  local theirs = tonumber(try(UnitLevel, "target"))
+  local class = try(UnitClassification, "target")
+  local hostile = try(UnitCanAttack, "player", "target")
+  local targetIsKiller = (hostile == true or hostile == 1) and ns.quests.plain(tostring(try(UnitName, "target") or "")) == killer
+  if targetIsKiller and (class == "elite" or class == "rareelite" or class == "worldboss") then sits[#sits + 1] = "elite"
+  elseif targetIsKiller and theirs and mine and theirs > 0 and theirs <= mine - 5 then sits[#sits + 1] = "weakling" end
+  if #sits > 0 then return sits[1], vars end
+  local now = J.now()
+  local lv = lastOf("level")
+  if lv and tonumber(lv.t) and now - tonumber(lv.t) <= 120 then vars.lvl = tostring(lv.l or J.level()); return "freshLevel", vars end
+  local today, day = 0, math.floor(now / 86400)
+  for _, e in ipairs(J.data().events) do
+    if e.k == "death" and tonumber(e.t) and math.floor(tonumber(e.t) / 86400) == day then today = today + 1 end
+  end
+  if today >= 2 then
+    vars.n, vars.nth = tostring(today + 1), ordinal(today + 1)
+    if hashOf("bad" .. today .. killer) % 2 == 0 then return "badDay", vars end
+  end
+  local soft = {}
+  if J.inInstance() then soft[#soft + 1] = "dungeon" end
+  if (tonumber(try(GetNumSubgroupMembers)) or 0) > 0 then soft[#soft + 1] = "party" end
+  local h = Vo.hourOf(now)
+  if h and h < 4 then soft[#soft + 1] = "night" end
+  if #soft > 0 and hashOf("deathsit" .. killer .. now) % 2 == 0 then return soft[hashOf(killer .. "soft") % #soft + 1], vars end
+end
+function St.levelSituation(lvl, zone)
+  if lvl % 10 == 0 or lvl <= 2 then return nil end -- milestone levels keep their own lines
+  local soft, vars = {}, { lvl = tostring(lvl), zone = zone }
+  if J.inInstance() then soft[#soft + 1] = "dungeon" end
+  if (tonumber(try(GetNumSubgroupMembers)) or 0) > 0 then soft[#soft + 1] = "party" end
+  if St.CLIMATE[zone] == "City" then soft[#soft + 1] = "city" end
+  local j = J.data()
+  local now = J.now()
+  for _, z in pairs(type(j.zones) == "table" and j.zones or {}) do
+    if type(z) == "table" and z.name == zone and tonumber(z.first) and now - tonumber(z.first) <= 3600 and z.level ~= lvl then
+      soft[#soft + 1] = "newLand"
+    end
+  end
+  local prev
+  for _, e in ipairs(j.events) do if e.k == "level" and tonumber(e.l) == lvl - 1 then prev = e end end
+  if prev and tonumber(prev.t) and now - tonumber(prev.t) <= 1200 then soft[#soft + 1] = "quick" end
+  local h = Vo.hourOf(now)
+  if h and h < 4 then soft[#soft + 1] = "night" end
+  local rested = tonumber(try(GetXPExhaustion))
+  if rested and rested > 0 then soft[#soft + 1] = "rested" end
+  if #soft == 0 or hashOf("levelsit" .. lvl .. zone) % 2 ~= 0 then return nil end
+  return soft[hashOf("levelpick" .. lvl) % #soft + 1], vars
+end
+local baseRetell = J.retell
+function J.retell(kind, text, extra)
+  local told = baseRetell and baseRetell(kind, text, extra)
+  if told then return told end
+  if kind == "death" and extra and type(extra.who) == "string" and extra.who ~= "" and not extra.pvp then
+    local who = ns.quests.plain(extra.who)
+    local sit, vars = St.deathSituation(who, J.zoneName())
+    if sit then St.lastSituation = sit; return J.fresh(St.DEATH_SIT[sit], who .. sit, "death", vars) end
+  elseif kind == "level" and extra and tonumber(extra.l) then
+    local sit, vars = St.levelSituation(tonumber(extra.l), J.zoneName())
+    if sit then St.lastSituation = sit; return J.fresh(St.LEVEL_SIT[sit], tostring(extra.l) .. sit, "level", vars) end
+  end
 end

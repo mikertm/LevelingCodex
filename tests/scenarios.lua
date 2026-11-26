@@ -14008,7 +14008,9 @@ function S.journeyLore()
   MOCK.event("PLAYER_DEAD")
   MOCK.event("PLAYER_ALIVE")
   MOCK.advance(10.5)
-  check(journeyHas("milestone", "10th time"), "the tenth fall is a milestone")
+  local tenth = false
+  for _, e in ipairs(j.events) do if e.k == "milestone" and e.n == "deaths:10" then tenth = true end end
+  check(tenth, "the tenth fall is a milestone")
   -- the chapter's prose reads the chapter
   local prose = J.lore.chapterProse(MOCK.level, j.events, nil, true)
   local openPage = false
@@ -15213,6 +15215,21 @@ function S.journeyQuestLines()
     check(not text:find("%%%a") and not text:find("[^\32-\126]"), "a situation line is filled and plain: " .. text)
   end
   check(carried >= 4, "quests held long or carried from another land often say so (" .. carried .. " of 12)")
+  -- objectives that aren't foes or goods: a count of things done, standing with a faction
+  MOCK.questLog = {
+    { questID = 999501, title = "Kodo Roundup", objectives = { { text = "Kodos Tamed: 0/5", type = "monster", numRequired = 5 } } },
+    { questID = 999502, title = "Strange Alliance", objectives = { { text = "Friendly / Friendly Gelkis Clan Centaur", type = "reputation" } } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(6)
+  local kodo = J.questLine(999501, nil, "Desolace")
+  check(J.questKind(999501) == "tally" and not kodo:find("Tameds", 1, true), "Kodos Tamed is a tally, not a foe: " .. kodo)
+  local centaur = J.questLine(999502, nil, "Desolace")
+  check(J.questKind(999502) == "standing" and not centaur:find("/", 1, true) and not centaur:find("Friendly Friendly", 1, true),
+    "a faction objective reads as standing: " .. centaur)
+  -- an emote is told in the journal's words, in the past
+  local licked = J.tales.emoteLine("The Mufasaprime licks you.", "Mufasaprime", "Desolace")
+  check(licked:find("licked you", 1, true) and not licked:find("The Mufasaprime", 1, true), "an emote reads as a moment: " .. licked)
+  check(J.tales.emoteLine("Gus laughs at you.", "Gus", "Desolace"):find("laughed at you", 1, true), "the emote keeps its words")
   local gave = J.abandonLine(999302, "WANTED: Marez Cowl", "Arathi Highlands")
   check(gave and gave:find("Marez Cowl", 1, true), "giving up a bounty names the outlaw: " .. tostring(gave))
 end

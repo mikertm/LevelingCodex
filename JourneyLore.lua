@@ -338,10 +338,22 @@ local REST_GAP = 7200 -- seconds between two inn moments
 
 -- Milestones: { key, thresholds, line(n) }
 local MARKS = {
-  { "quests", { 50, 100, 250, 500, 750, 1000 }, "The %n%th quest of your journey, done. The notice boards know you now" },
-  { "kills", { 100, 500, 1000, 2500, 5000, 10000 }, "%n% foes defeated on the road so far, and counting" },
-  { "miles", { 5, 10, 25, 50, 100 }, "%n% miles walked since the journal began. The boots are holding up" },
-  { "deaths", { 10, 25, 50, 100 }, "Fell for the %n%th time. Still standing, in the end" },
+  { "quests", { 50, 100, 250, 500, 750, 1000 }, { "The %n%th quest of your journey, done. The notice boards know you now",
+    "%n% quests handed in. Somewhere a quest giver is running out of problems",
+    "Quest number %n%, done. The yellow exclamation marks have started to look friendly",
+    "%n% promises kept since the journal began", "The %n%th quest: your quest log has seen things",
+    "%n% quests behind you, and the road still full of them" } },
+  { "kills", { 100, 500, 1000, 2500, 5000, 10000 }, { "%n% foes defeated on the road so far, and counting",
+    "%n% fallen foes. The wilds have started to whisper your name", "Foe number %n% went down. You've stopped keeping score. The journal hasn't",
+    "%n% foes overcome since the first page", "%n% fights won. The blade needs a whetstone, and maybe a rest",
+    "%n% enemies behind you. Not one of them got a second chance" } },
+  { "miles", { 5, 10, 25, 50, 100 }, { "%n% miles walked since the journal began. The boots are holding up",
+    "%n% miles on foot. The cobbler would be proud", "Another milestone on the road: %n% miles, one step at a time",
+    "%n% miles walked. The soles are thinner, the legs are stronger", "%n% miles of road behind you, and the map keeps getting bigger",
+    "Somewhere around mile %n%, the road started to feel like home", "%n% miles. A blister for every one of them, near enough" } },
+  { "deaths", { 10, 25, 50, 100 }, { "Fell for the %n%th time. Still standing, in the end",
+    "Death number %n%. The spirit healer has started saving you a seat", "%n% deaths, and %n% returns. The stubborn kind of hero",
+    "The %n%th trip to the graveyard. You know the way by heart", "%n% times fallen, %n% times back up" } },
 }
 
 local function journal() return J.data() end
@@ -368,7 +380,9 @@ function Lr.checkMarks()
       j.marks[key] = passed
     elseif passed > (tonumber(j.marks[key]) or 0) then
       j.marks[key] = passed
-      J.add("milestone", fill(m[3], { n = ns.thousands(passed) }), nil, { n = key .. ":" .. passed })
+      local lines = type(m[3]) == "table" and m[3] or { m[3] }
+      J.add("milestone", fill(J.rotate and J.rotate(lines, key, passed) or lines[1], { n = ns.thousands(passed) }), nil,
+        { n = key .. ":" .. passed })
     end
   end
 end

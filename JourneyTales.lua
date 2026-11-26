@@ -348,7 +348,11 @@ local function dropStrayEmotes()
   local events = j.events
   for i = #events, 1, -1 do
     local e = events[i]
-    if type(e) == "table" and e.k == "emote" and not T.aimedAtYou(e.s) then
+    if type(e) == "table" and e.k == "emote" and not e.told and T.aimedAtYou(e.s) and type(e.who) == "string" then
+      -- an older build wrote the chat line itself ("The X licks you in Desolace"): tell it in the journal's words
+      local said, where = tostring(e.s):match("^(.-) in ([^,]+)$")
+      if said and T.emoteLine then e.s = T.emoteLine(said, e.who, where); e.told = true end
+    elseif type(e) == "table" and e.k == "emote" and not e.told and not T.aimedAtYou(e.s) then
       table.remove(events, i)
       local p = type(e.who) == "string" and j.people[e.who]
       if type(p) == "table" then
@@ -372,8 +376,64 @@ local function textEmote(text, sender)
   if emoted[short] or emotesToday >= 6 then return end
   emoted[short], emotesToday = true, emotesToday + 1
   person(short, "waves")
-  local line = plain(text):gsub("%.%s*$", "")
-  J.add("emote", line .. " in " .. zone(), nil, { who = plain(short) })
+  J.add("emote", T.emoteLine(plain(text), plain(short), zone()), nil, { who = plain(short), told = true })
+end
+
+-- What someone's emote at you reads like in the journal: by the verb (hug, wave, lick, slap...), never
+-- the raw chat line ("The X licks you").
+local EMOTE_KIND = { hug = "warm", cuddle = "warm", kiss = "warm", love = "warm", embrace = "warm", pat = "warm", snuggle = "warm",
+  wave = "greet", greet = "greet", hello = "greet", bow = "greet", salute = "greet", nod = "greet", welcome = "greet", hail = "greet",
+  cheer = "cheer", applaud = "cheer", clap = "cheer", congratulate = "cheer", praise = "cheer", thank = "cheer", highfive = "cheer",
+  dance = "silly", lick = "silly", poke = "silly", tickle = "silly", wink = "silly", flirt = "silly", giggle = "silly", flex = "silly",
+  sniff = "silly", nuzzle = "silly", purr = "silly", moo = "silly", chicken = "silly", bonk = "silly", boop = "silly",
+  slap = "rude", rude = "rude", spit = "rude", laugh = "rude", mock = "rude", taunt = "rude", glare = "rude", growl = "rude",
+  threaten = "rude", insult = "rude", shoo = "rude", fart = "rude", point = "rude" }
+local EMOTE_LINES = {
+  warm = { "%who% gave you a hug in %zone%. You'll take it", "A warm moment in %zone%: %who% %act%",
+    "%who% %act% in %zone%, out of nowhere. The road is kinder than it looks",
+    "Got a little kindness from %who% in %zone%", "%who% %act% in %zone%, and the day got better" },
+  greet = { "%who% %act% in %zone%. You waved back", "A stranger's greeting in %zone%: %who% %act%",
+    "%who% stopped to say hello in %zone%", "Traded a nod with %who% on the road through %zone%",
+    "%who% %act% in passing, somewhere in %zone%" },
+  cheer = { "%who% %act% in %zone%. Somebody noticed", "A bit of applause from %who% in %zone%",
+    "%who% %act% in %zone%, and you stood a little taller", "Earned a cheer from %who% in %zone%" },
+  silly = { "%who% %act% in %zone%. Adventurers are strange folk", "In %zone%, %who% %act%. No explanation was offered",
+    "%who% %act% in %zone%, then wandered off as if nothing happened", "%who% %act% in %zone%. Make of that what you will",
+    "%who% %act% in %zone%. You've had worse days" },
+  rude = { "%who% %act% in %zone%. Charming", "Rudeness on the road: %who% %act% in %zone%",
+    "%who% %act% in %zone%. You've made a note of the name", "Not everyone in %zone% is friendly: %who% %act%",
+    "%who% %act% in %zone%, and you rose above it. Mostly" },
+  other = { "%who% %act% in %zone%", "A passing moment in %zone%: %who% %act%",
+    "%who% singled you out in %zone%: %act%, of all things" },
+}
+local IRREGULAR = { spit = "spat", sing = "sang", bite = "bit", shake = "shook", throw = "threw", give = "gave", tell = "told",
+  eat = "ate", sit = "sat", fight = "fought", run = "ran", hold = "held", stand = "stood", make = "made", blow = "blew" }
+function T.past(word)
+  local low = tostring(word or ""):lower()
+  local base = low:gsub("ies$", "y"):gsub("([sxz])es$", "%1"):gsub("([cs]h)es$", "%1"):gsub("oes$", "o")
+  if base == low then base = low:gsub("s$", "") end
+  if IRREGULAR[base] then return IRREGULAR[base] end
+  if base:find("e$") then return base .. "d" end
+  if base:find("[^aeiou]y$") then return base:sub(1, -2) .. "ied" end
+  if #base <= 4 and base:find("[^aeiou][aeiou][pgtbnmd]$") then return base .. base:sub(-1) .. "ed" end
+  return base .. "ed"
+end
+function T.emoteLine(text, who, where)
+  local low = (text or ""):lower()
+  local name = (who or ""):lower()
+  local after = low:find(name, 1, true) and low:sub((low:find(name, 1, true)) + #name) or low
+  local word = after:match("^%s*(%a+)") or ""
+  local verb = word:gsub("ies$", "y"):gsub("([sxz])es$", "%1"):gsub("([cs]h)es$", "%1"):gsub("s$", "")
+  local kind = EMOTE_KIND[verb] or "other"
+  if word == "" then kind, word = "greet", "greets" end
+  -- what they did, in the client's own words after the name: "licks you", "laughs at you", "looks at you strangely"
+  local act = (text or ""):sub(#((text or ""):match("^.-" .. (who or ""):gsub("%p", "%%%0")) or "") + 1)
+  act = act:gsub("^%s+", ""):gsub("[%.!%s]+$", "")
+  if act == "" or not T.aimedAtYou(act) then act = word .. " you" end
+  -- the journal speaks in the past: "licks you" -> "licked you"
+  act = act:gsub("^(%a+)", function(w) return T.past(w) end, 1)
+  local vars = { who = who, zone = where, verb = word, act = act }
+  return J.fresh and J.fresh(EMOTE_LINES[kind], who .. verb, "emote", vars) or J.fill(EMOTE_LINES[kind][1], vars)
 end
 
 local function guildCheck(seed)
