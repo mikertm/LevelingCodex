@@ -29,7 +29,7 @@ end
 local function findButton(root, pred)
   for _, b in ipairs(MOCK.buttons(root)) do
     local l = labelOf(b)
-    if l and pred(l) then return b end
+    if l and pred(l, b) then return b end
   end
 end
 
@@ -11176,7 +11176,8 @@ function S.auctionTools()
   click(AuctionHouseFrame, "Scan")
   check(questText(panel, "FULL SCAN") and questText(panel, "LOOK UP AN ITEM"), "the Scan page")
   check(findButton(panel, function(l) return l == "Paged scan" end) and findButton(panel, function(l) return l == "Instant scan" end)
-    and questText(panel, "can make the game hitch"), "the Scan page offers both scans and says the instant one may hitch")
+    and findButton(panel, function(l, b) return l == "Instant scan" and tostring(b.tipText):find("hitch", 1, true) end),
+    "the Scan page offers both scans and says the instant one may hitch")
   click(panel, "Scan speed Fast")
   check(LevelingCodexDB.auctionScanSpeed == 16, "Scan speed sets how much of a frame a scan may use")
   check(select(2, MOCK.ns.auction.canScanAll()) == "paged", "Scan all uses the paged scan by default")
@@ -12126,6 +12127,11 @@ function S.auctionShare()
   else
     check(m and m.channel == "CHANNEL" and m.target == MOCK.channels.LevCodexPrices and m.text:sub(1, 3) == "P1;",
       "your own reading goes out on the price channel (" .. tostring(m and m.text) .. ")")
+    -- the channel hands it back under a name UnitName doesn't give (a surname, the realm): still yours
+    local peersBefore = Sh.stats.peers
+    from("Tester Strife-Mockrealm", m.text)
+    check(Sh.stats.peers == peersBefore and (Sh.stats.echo or 0) >= 1, "your own message coming back is not another player ("
+      .. Sh.stats.peers .. " players)")
   end
   -- a price from another player fills the store, marked as shared, outside the history
   MOCK.advance(60)
@@ -12170,9 +12176,12 @@ function S.auctionShare()
     MOCK.advance(2)
     click(AuctionHouseFrame, "Scan")
     local panel = _G.LevelingCodexAHPanel
-    check(questText(panel, "Share prices with other Codex users on the realm") and questText(panel, "Sharing with the realm channel")
-      and not MOCK.ns.auctionPanel.lastError, "the Scan page has the sharing switch and its count (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
-    click(panel, "Share prices with other Codex users on the realm")
+    local AP = MOCK.ns.auctionPanel
+    check(questText(panel, "Share prices") and questText(panel, "Sharing with the realm channel")
+      and not AP.lastError, "the Scan page has the sharing switch and its count (" .. tostring(AP.lastError) .. ")")
+    check(AP.scanBottom and AP.scanBottom + 8 <= AP.scanLimit, "the Scan page's settings fit inside the auction house ("
+      .. tostring(AP.scanBottom) .. " of " .. tostring(AP.scanLimit) .. ")")
+    click(panel, "Share prices")
     check(not Sh.on() and not MOCK.channels.LevCodexPrices, "turning it off leaves the channel")
     MOCK.closeAuction()
   end

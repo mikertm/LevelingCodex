@@ -6,7 +6,9 @@
     - Prices from others are marked **(shared)** in the tooltip. Your own scans always win over them.
     - A price far from an item's usual one waits until a second player reports about the same. Shared prices only count toward the usual price once two players agree, and a player whose prices keep being held back is ignored.
     - Nothing is ever bought on a shared price alone: the sniper and Deals still check the live listing first.
-    - Turn it off on the Scan tab under SETTINGS (**Share prices with other Codex users on the realm**). The line under it counts what you sent and received this session.
+    - Turn it off on the Scan tab under SETTINGS (**Share prices**). The line under it counts what you sent and received this session.
+    - Your own messages coming back over the channel no longer count as another player's prices.
+- **Scan tab fits the auction house again.** SETTINGS ran under the auction house's tabs: the switches now sit two to a row, **Scan all uses** moved into the FULL SCAN card, and the instant scan's hitch warning is its button's tooltip.
 
 ## v0.34.0
 - **Journey: Companions grows into the social side of your story.**

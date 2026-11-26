@@ -2235,7 +2235,9 @@ function pages.scan(W, top, H)
   top = top + 42
   H = H - 42
   -- full scan
-  card(lx, top, lw, 128, "FULL SCAN", age)
+  -- the left column has to fit the auction house's height: FULL SCAN 132, QUICK SEARCHES 84 and
+  -- SETTINGS with two switches a row (Michael's screenshot, 2026-11-25: the old one ran under the tabs)
+  card(lx, top, lw, 132, "FULL SCAN", age)
   text("Paged: smooth, any time. Instant: every listing at once, every 15 min.", lx + 14, top + 34, lw - 28, "dim", ns.C.dim)
   local done, total, phase, pages = A().fullProgress()
   local rate, eta = scanRate(done, total, phase)
@@ -2273,12 +2275,14 @@ function pages.scan(W, top, H)
       { label = "Instant scan", enabled = okF, tip = "Instant scan",
         tipText = "Asks the server for every listing at once (once every 15 minutes). The game then loads each item it lists, so it can hitch or pause for a while. Nothing is wrong: it settles once the data is in." })
   end
-  text("An instant scan can make the game hitch while it loads the data. That's normal.",
-    lx + 14, top + 106, lw - 28, "dim", ns.C.dim)
+  -- which scan the Scan all buttons start (the hitch warning is the Instant scan's tooltip)
+  text("Scan all uses", lx + 14, top + 106, 100, "dim", ns.C.dim)
+  segments(lx + 114, top + 102, lw - 128, { "Paged scan", "Instant scan" }, A().scanAllKind() == "instant" and 2 or 1,
+    function(i) db.auctionScanAll = i == 2 and "instant" or nil end, "Scan all uses ")
   -- quick searches
-  local y = top + 136
+  local y = top + 140
   local waiting, running = A().queued()
-  card(lx, y, lw, 104, "QUICK SEARCHES")
+  card(lx, y, lw, 84, "QUICK SEARCHES", A().auctionator() and "only when you click (Auctionator)" or nil)
   text(running and ("Searching " .. Q.plain(running) .. ", " .. waiting .. " waiting") or (waiting > 0 and (waiting .. " waiting") or "Nothing waiting."),
     lx + 14, y + 34, lw - 28, "small", (running or waiting > 0) and ns.C.light or ns.C.dim)
   local half = math.floor((lw - 36) / 2)
@@ -2287,31 +2291,29 @@ function pages.scan(W, top, H)
   button("Scan guide items", lx + 22 + half, y + 54, half, function() ns.say("Searching " .. A().scanNeeds() .. " items your guide needs.") end,
     { tip = "Scan guide items", tipText = "What your route and professions still need." })
   if waiting > 0 then button("Stop", lx + lw - 92, y + 4, 80, function() A().stopSearches() end, { label = "Stop searches" }) end
-  if A().auctionator() then
-    text("Auctionator is loaded: the Codex doesn't search by itself, only when you click.", lx + 14, y + 82, lw - 28, "dim", ns.C.dim)
-  end
-  -- settings
-  y = y + 112
+  -- settings: two switches a row, short labels, the details in their tooltips
+  y = y + 92
   card(lx, y, lw, H - (y - top), "SETTINGS")
   local sy = y + 32
-  sy = sy + check("Price block on item tooltips", lx + 10, sy, not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
-    "Lowest now, usual, trend, vendor price and a verdict. Hold Shift for more.")
-  text("Scan all uses", lx + 14, sy + 4, 100, "dim", ns.C.dim)
-  segments(lx + 114, sy, lw - 128, { "Paged scan", "Instant scan" }, A().scanAllKind() == "instant" and 2 or 1,
-    function(i) db.auctionScanAll = i == 2 and "instant" or nil end, "Scan all uses ")
-  sy = sy + 26
-  sy = sy + check("Search my guide's items when I open it", lx + 10, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end)
-  sy = sy + check("Snipe pop-up with a Buy button", lx + 10, sy, not db.noSnipePopup, function() db.noSnipePopup = not db.noSnipePopup; T().refreshPopup() end,
+  local cw = math.floor((lw - 20) / 2)
+  check("Price tooltips", lx + 10, sy, not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
+    "A price block on item tooltips: lowest now, usual, trend, vendor price and a verdict. Hold Shift for more.")
+  sy = sy + check("Search guide items", lx + 10 + cw, sy, not db.noAuctionSearch, function() db.noAuctionSearch = not db.noAuctionSearch end,
+    "Search what your guide needs when you open the auction house.")
+  check("Snipe pop-up", lx + 10, sy, not db.noSnipePopup, function() db.noSnipePopup = not db.noSnipePopup; T().refreshPopup() end,
     "When the sniper finds a live deal, a small card over the auction house shows it with Buy and Skip, whichever page is open.")
-  do
-    local Sh = ns.auctionShare
-    if Sh then
-      sy = sy + check("Share prices with other Codex users on the realm", lx + 10, sy, Sh.on(), function() Sh.setOn(not Sh.on()) end,
-        "Your scans and searches go out to other Codex users over a hidden channel, and theirs keep your tooltips and deals fresh. Your own scans always win, odd prices wait for a second player, and every buy is still checked live.")
-      text(Sh.summary(), lx + 30, sy, lw - 44, "dim", ns.C.dim)
-      sy = sy + 16
-    end
+  local Sh = ns.auctionShare
+  if Sh then
+    check("Share prices", lx + 10 + cw, sy, Sh.on(), function() Sh.setOn(not Sh.on()) end,
+      "Share prices with other Codex users on the realm. Your scans and searches go out over a hidden channel, and theirs keep your tooltips and deals fresh. Your own scans always win, odd prices wait for a second player, and every buy is still checked live.")
   end
+  sy = sy + 26
+  if Sh then
+    text(Sh.summary(), lx + 14, sy + 2, lw - 28, "dim", ns.C.dim)
+    sy = sy + 18
+  end
+  -- the scenarios check the column ends inside the page
+  P.scanBottom, P.scanLimit = sy, top + H
   if A().count() > 0 then
     local armed = forgetAt and now() - forgetAt < 5
     -- in the card's title row: the settings fill the card's height below it

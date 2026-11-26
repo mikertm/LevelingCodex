@@ -63,6 +63,12 @@ local function myName()
   return type(n) == "string" and n or ""
 end
 local function short(name) return type(name) == "string" and (name:match("^([^%-]+)") or name) or "" end
+-- What this client sent lately: the channel hands every message back to its sender, and Forever
+-- doesn't always name you the way UnitName does (a surname, a realm), so the text itself says it's yours
+local sentLately, sentOrder = {}, {}
+local function isMine(sender, text)
+  return sentLately[text] == true or short(sender) == short(myName())
+end
 
 ----------------------------------------------------------------------------
 -- The channel
@@ -176,6 +182,11 @@ local function sendRaw(msg)
   if type(send) ~= "function" then return false end
   local id = channel()
   local ok, r
+  if not sentLately[msg] then
+    sentLately[msg] = true
+    sentOrder[#sentOrder + 1] = msg
+    if #sentOrder > 60 then sentLately[table.remove(sentOrder, 1)] = nil end
+  end
   if id then ok, r = pcall(send, Sh.PREFIX, msg, "CHANNEL", id)
   elseif try(IsInGuild) then ok, r = pcall(send, Sh.PREFIX, msg, "GUILD")
   else return false end
@@ -272,12 +283,12 @@ end
 
 function Sh.receive(text, sender)
   if not Sh.on() or type(text) ~= "string" or type(sender) ~= "string" then return end
-  if short(sender) == myName() then return end
+  if isMine(sender, text) then Sh.stats.echo = (Sh.stats.echo or 0) + 1; return end
   local body = text:match("^P1;(.+)$")
   if not body then return end
   local t = now()
   if muted[sender] or not allowSender(sender, t) then return end
-  if not peers[sender] then peers[sender] = true; Sh.stats.peers = Sh.stats.peers + 1 end
+  if not peers[sender] then peers[sender] = true; Sh.stats.peers = Sh.stats.peers + 1; Sh.lastPeer = sender end
   Sh.lastHeard = t
   local filed, count = 0, 0
   for part in body:gmatch("[^/]+") do
@@ -313,7 +324,8 @@ function ns.auctionShareDebugLines()
   return { "price sharing: " .. (Sh.on() and "on" or "off") .. ", channel " .. tostring(channelID or "none")
     .. ", sent " .. s.sentMsgs .. " messages / " .. s.sentItems .. " prices, " .. s.refused .. " refused, gap " .. gap .. " s, queued "
     .. (q + #order) .. "; heard " .. s.got .. " from " .. s.peers .. " players: filed " .. s.filed .. ", older " .. s.older
-    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", muted " .. (s.muted or 0) .. " players" }
+    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
+    .. (Sh.lastPeer and (", last new player " .. ns.plain(Sh.lastPeer)) or "") }
 end
 
 local frame
