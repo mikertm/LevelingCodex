@@ -508,7 +508,9 @@ end
 local function memberCard(r, y)
   local top = y
   y = y + 10
-  local head = r.name .. (r.level and (" (" .. r.level .. ")") or "") .. (r.className and (" " .. r.className) or "")
+  local name = ns.partyName(r.name)
+  local head = name .. (r.level and (" (" .. r.level .. ")") or "") .. (r.className and (" " .. r.className) or "")
+    .. (r.leader and ", party leader" or "")
   local color = STATUS_INK[r.status] or (r.status == "ahead" and C.accent) or C.inkSoft
   local h = U.T(head, 16, y, W - 200, "head", C.ink)
   U.T(r.where, W - 196, y + 2, 180, "small", color, "RIGHT")
@@ -518,22 +520,29 @@ local function memberCard(r, y)
     local note = (r.goal ~= "" and (Q.plain(r.goal) .. "  -  ") or "") .. heardText(r.heard)
     y = y + U.T(note, 16, y, W - 32, "small", C.inkSoft) + 8
     local mine = Q.routeRow()
-    if r.section and not (mine and mine.section == r.section) then
-      U.btn("Follow " .. r.name .. "'s guide", 16, y, W - 32, function() ns.partyFollow(r.name) end, false,
-        "Switch your guide to " .. r.guide .. ", where " .. r.name .. " is. Your own progress comes from your quest log.")
-      y = y + 32
+    local follow = r.section and not (mine and mine.section == r.section)
+    local show = r.status ~= "same" and ns.partyCanShow(r.name)
+    local half = (W - 40) / 2
+    if show then
+      U.btn("Show " .. name .. "'s step", 16, y, follow and half or W - 32, function() ns.partyShowStep(r.name) end, false,
+        "Your step window shows the step " .. name .. " is on, as Back does: your own place in the route stays where it is.")
     end
+    if follow then
+      U.btn("Follow " .. name .. "'s guide", show and (24 + half) or 16, y, show and half or W - 32, function() ns.partyFollow(r.name) end, false,
+        "Switch your guide to " .. r.guide .. ", where " .. name .. " is. Your own progress comes from your quest log.")
+    end
+    if show or follow then y = y + 32 end
     local have, lack = ns.partyQuestDiff(r.name)
-    y = questLines(y, r.name .. " has, you don't", have, "Ask to share",
-      "Asks " .. r.name .. "'s Codex to offer you this quest. The game asks you to accept it.",
-      function(q) return "Ask " .. r.name .. " to share " .. q.title end,
+    y = questLines(y, name .. " has, you don't", have, "Ask to share",
+      "Asks " .. name .. "'s Codex to offer you this quest. The game asks you to accept it.",
+      function(q) return "Ask " .. name .. " to share " .. q.title end,
       function(id) ns.partyAskShare(r.name, id) end)
-    y = questLines(y, "You have, " .. r.name .. " doesn't", lack, "Share",
-      "Offers this quest to your party. If " .. r.name .. " has done it already, the game says so.",
+    y = questLines(y, "You have, " .. name .. " doesn't", lack, "Share",
+      "Offers this quest to your party. If " .. name .. " has done it already, the game says so.",
       function(q) return "Share " .. q.title end, ns.partyShare)
   else
-    y = y + U.T(r.offline and (r.name .. " is offline.")
-      or (r.name .. " needs the Leveling Codex to share a step, with Settings > Show my party's steps on."),
+    y = y + U.T(r.offline and (name .. " is offline.")
+      or (name .. " needs the Leveling Codex to share a step, with Settings > Show my party's steps on."),
       16, y, W - 32, "small", C.inkSoft) + 8
   end
   U.box(0, top, W, y - top + 4, C.parch, C.edge)
@@ -1239,6 +1248,8 @@ local function partyBoard()
   U.T("ADVENTURE TOGETHER", 0, 0, W, "label", C.gold)
   U.T("Your party", 0, 18, W, "head", C.light)
   local rows = ns.partyInParty() and ns.partyRows(true) or {}
+  local tally = #rows > 0 and ns.partyTally(rows)
+  if tally then U.T(tally, 0, 22, W, "small", C.gold, "RIGHT") end
   local y = 56
   if board.member then
     U.btn("Back to party", 0, y, W, function() board.member = nil; U.refreshTop() end)
@@ -1255,14 +1266,19 @@ local function partyBoard()
     for i, r in ipairs(rows) do
       local x, top = ((i - 1) % 2) * (each + 12), y + math.floor((i - 1) / 2) * 154
       U.box(x, top, each, 142, C.panel, r.status == "same" and C.accent or C.edgeSoft)
-      U.T(excerpt(r.name, 32), x + 12, top + 12, each - 24, "head", C.light)
+      U.T(excerpt(ns.partyName(r.name), 32) .. (r.leader and "  (leader)" or ""), x + 12, top + 12, each - 24, "head", C.light)
       lineText(r.where, x + 12, top + 38, each - 24, "small", C.gold)
       U.T(excerpt(r.codex and (r.guide .. ": " .. (r.label or "")) or r.offline and "Offline" or "Waiting for Codex progress", 72),
         x + 12, top + 63, each - 24, "small", C.light)
       lineText(r.goal or "", x + 12, top + 115, each - 24, "small", C.dim)
-      U.hit(x, top, each, 142, r.name, "Open this party member's guide and shared quests.", function() board.member = r.name; U.refreshTop() end, "Party member: " .. r.name)
+      U.hit(x, top, each, 142, ns.partyName(r.name), "Open this party member's guide and shared quests.", function() board.member = r.name; U.refreshTop() end, "Party member: " .. ns.partyName(r.name))
     end
     y = y + math.ceil(#rows / 2) * 154
+    U.btn("Call the party to my step", 0, y, W, function()
+      local ok, why = ns.partyCall()
+      if not ok and why then ns.say(why) end
+    end, false, "Every party member with the Codex gets a card with your step; a click shows it in their step window.")
+    y = y + 32
   end
   U.btn("Party settings", 0, y, W, function() sub, board.option = "options", "party"; U.refreshTop() end)
   U.btn("Preview quest announcements", 0, y + 32, W, ns.previewQuestAnnouncements, false, "Preview privately; no party message is sent.")
