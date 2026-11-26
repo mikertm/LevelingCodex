@@ -1,4 +1,4 @@
-# Leveling Codex
+# Leveling Codex: Guide & Journal
 
 **Your leveling guide, inside the game.** A step-by-step quest route for **Alliance and Horde, levels 1-60**, with a waypoint arrow, the route on your map and minimap, dungeon guides boss by boss, attunements and class quests. Open your talents and the Codex traces the one to take: on the Codex build, a recommended path for any spec, or one you make yourself. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard. All **12 professions** have a guide from 1 to 300.
 
