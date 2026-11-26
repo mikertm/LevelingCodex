@@ -1,8 +1,8 @@
-# Leveling Codex
+# Leveling Codex: Forever Journal
 
 **Your leveling guide, inside the game.** A step-by-step quest route for **Alliance and Horde, levels 1-60**, with a waypoint arrow, the route on your map and minimap, dungeon guides boss by boss, attunements and class quests. Open your talents and the Codex traces the one to take: on the Codex build, a recommended path for any spec, or one you make yourself. Level up and a card shows exactly what you unlocked. One click sets up smart macros for your level, for controller or keyboard. All **12 professions** have a guide from 1 to 300.
 
-And it remembers your adventure: the **Journey** is a storybook that writes itself as you play, told chapter by chapter in a narrator's voice, with your trail on the map, your trophies and the people you met. At the auction house, the **Codex tabs** bring a stock-market view, a deal sniper, quick selling and a record of every trade, and the **Gold** page counts down to your mount.
+And it remembers your adventure. The **Journey** is a storybook that writes itself as you play: a chapter for every level, told by your own narrator, with your trail on the map, your trophies, and pages for the friends you made and the fellowships you formed. At the auction house, the **Codex tabs** turn gold-making into a trading desk: live market movers and charts, a deal sniper, one-click Quick Sell with safety checks, prices shared with other Codex users on your realm, and a win/loss record of every trade.
 
 Built from **The Leveling Codex** guides — one researched leveling spec per class plus a talent path for every other spec, checked against the WoW: Forever client and hotfixes.
 
@@ -10,30 +10,36 @@ Built from **The Leveling Codex** guides — one researched leveling spec per cl
 
 ## Features
 
-### New: the Journey, a storybook of your adventure
-A book that writes itself as you play. Every level is a chapter, every moment a line of the story: quests turned in, new lands, dungeon runs and the bosses you beat, wipes, deaths (and who did it), close calls under 15% health, rares, your first green, blue and epic, gear upgrades, your first mount, a new home, nights at an inn, campfires, resurrections, duels, battlegrounds, trades, guilds, crafting sessions late into the night, gathering and fishing, and the gold you made, lost and spent at the auction house.
-- **An open book** that fills your screen: a leather cover with your name (first and last), portrait, epithet and chapter, ribbons for each page, and two parchment sheets with page numbers, flourishes and large initial letters.
-- **Six pages:** Overview (today's entry, your journey in numbers, the road to 60), Story, Quest Log, Map, Trophies and Companions.
-- **Story:** one chapter per spread with page turns and a table of contents. Each chapter opens with its own prose, a line about the land where you first reached it and a map of where you walked; the right page tells everything that happened, day by day. Filters for Quests, Battles, Fortunes, Fellowship, Travels and Deaths.
-- **A narrator of your own:** Chronicler, Fireside or Bard. The journal works out who you are from what you do (the Wanderer, the Unbroken, the Delver, the Merchant, the Angler...) and chapters build on each other: back to a land you left, a clean chapter after a bad one, a grudge against the foe that killed you twice.
-- **Map:** your breadcrumb trail on every zone, coloured by your level then, with stars where you levelled up, skulls where you fell and pins for quests, battles, travels, fortunes and fellowship. Layer switches turn each on and off, and *What happened here* lists that map's moments. Your trail can show on the world map too.
-- **Trophies:** your firsts, nemeses, bosses and rares, close calls, gear upgrades, craft milestones, milestones (your 100th quest, 1,000 foes, 25 miles walked), the ledger, dungeon runs, battlefields and the wilds.
-- **Companions:** a page for everyone you grouped with: how you met, the time and lands you shared, the bosses, dungeons, falls and resurrections you went through together, and every shared moment. Write a note on anyone.
-- **Quest Log:** your quest log as a page of the journal, under the game's own zone headings, with goals, rewards and the line the journal will write when you finish.
+### The Journey: a storybook of your adventure
+A book that writes itself as you play. Every level is a chapter and every moment a line of the story: quests by name and finished chains, new lands, dungeon runs and bosses, wipes, deaths and who did it, close calls, rares, your first green, blue and epic, gear upgrades, your first mount, a new home, nights at an inn, campfires, resurrections, duels, battlegrounds, trades, crafting late into the night, gathering and fishing, and the gold you made and spent at the auction house.
+- **An open book** that fills your screen: a leather cover with your first and last name, portrait, epithet and chapter, ribbons for each page, parchment sheets with page numbers, flourishes and large initial letters.
+- **Pages:** Overview (today's entry, your journey in numbers, the road to 60), Story, Quest Log, Map, Trophies, Companions and Fellowships.
+- **Story:** one chapter per spread, with page turns, a table of contents and HIGHLIGHTS. Each chapter opens with its own prose: where you were, what you did and who with, the foes that killed you or nearly did, whether quests or fighting earned the level, and how it compares with the chapter before. Some open with their mood (hard, busy, wandering, quiet, swift), and busy days fold into one line you can open.
+- **Your narrator:** Chronicler, Fireside or Bard, each with its own voice and many ways of telling every kind of moment, with special lines at many levels and four lines of lore for every land. The journal works out who you are from what you do (the Wanderer, the Unbroken, the Delver, the Merchant, the Angler...) and chapters build on each other: back to a land you left, a clean chapter after a bad one, a grudge against the foe that killed you twice.
+- **Map:** your trail as a line in your level's colour, with stars where you levelled up, skulls where you fell and round pins for quests, battles, travels, fortunes and fellowship. Layer switches, *What happened here*, a large two-page map, and your trail on the world map. Miles walked and miles flown are counted apart.
+- **Trophies:** your firsts, nemeses, bosses and rares, close calls, gear upgrades, craft milestones, milestones (your 100th quest, 1,000 foes, 25 miles walked), dungeon runs, battlefields and the wilds.
+- **Companions:** a page for everyone you met: how you met, the lands and days you shared (with a heat map and a timeline), the bosses, falls and resurrections you went through together, and every shared moment. Bonds grow from Stranger to Sworn Friend, reunions and anniversaries are marked, and friends you haven't seen in a while are listed. Players you pass are pencilled in; tag people (Friend, Guildmate, Healer, Tank, Rival), write dated notes, add someone by right-click, `/codex add Name` or a key, and remove anyone with **Remove from journey**.
+- **Fellowships:** people who travel with you become a fellowship with a banner, a motto and a name of their own, its roster, story, finest and darkest hour and a calendar of the days you met. An awards cabinet hands out titles (guardian angel, shield wall, pen pal, nemesis...), and group portraits frame everyone who was there when you levelled up or downed a boss.
+- **Codex to Codex:** in a party, Codex players see each other's journal titles, can ask each other to sign their journal (`/codex sign`) and raise a toast.
+- **Quest Log:** your quest log as a page of the journal, with goals, rewards and the line the journal will write when you finish.
+- **Your choice of pop-ups:** a small card when a big moment is written and a "Last time on your journey..." recap when you come back; both can be turned off in Settings > General.
 
-### New: auction house tools
+### Auction house tools
 Five **Codex tabs** sit next to Buy, Sell and Auctions (with Auctionator, on a framed rail down the auction house's right edge): **Codex**, **Market**, **Deals**, **Quick Sell** and **Scan**. Every post, purchase and cancel is one click on a Codex button: nothing happens by itself.
-- **Market, like a stock market:** top gainers and losers, hot items with BUY and SELL signals, and a price chart for any item with Auto / 1m / 5m / 15m / 1h / 12h / 1d intervals and the usual price dashed across.
-- **A scrolling ticker** across every Codex tab with the biggest moves, and a LIVE light while prices are fresh.
-- **Your trades, wins and losses:** every buy, post, sale and expiry is kept, including sales of auctions you posted through Blizzard's Sell tab or Auctionator and sales made while you were offline (read from the mailbox's invoices). Flip profit after the 5% cut, win rate, holdings and what they're worth now.
-- **Deals and a deal sniper:** listings a vendor pays more for and flips far under their usual price, with the profit per item. **Snipe deals** keeps searching the items worth watching, chimes when a deal appears and shows its potential profit. Buying stays a click, and the total is shown first.
-- **Quick Sell:** your bag items with a suggested price and a tag (SELL NOW, FAIR, FALLING, VENDOR IT...), - / + nudges, Post, and **Post next** for the most valuable item. It never posts below what a vendor pays, and asks twice before a price far under usual or under what you paid. **Check undercuts** marks your auctions UNDERCUT or CHEAPEST.
-- **Scans:** a paged scan any time (smooth, spread over frames) or the instant scan every 15 minutes, a quick refresh with a progress bar in every tab's header, Scan my bags and Look up an item with its two-week chart.
-- **Prices for your guide:** the materials your route and professions still need, with today's prices.
+- **Codex:** a scoreboard of your gold, this visit's posts and buys, what your bags would sell for, the deals waiting and your net profit.
+- **Market, like a stock market:** top gainers and losers, hot items with BUY and SELL signals, a pulse strip, and a price chart for any item with Auto / 1m / 5m / 15m / 1h / 12h / 1d intervals. A **ticker** scrolls the biggest moves across every tab.
+- **Deals and the deal sniper:** listings a vendor pays more for, and flips far under their usual price, each rated SAFE, FAIR or RISKY with its profit after the 5% cut and your resale. **Snipe deals** keeps searching (Watch, Newest or Pages mode), chimes when a deal appears and pops up a card with **Buy** and **Skip**. Set a minimum profit, a max price and a spending budget per visit. Prices are checked live before any gold moves, a commodity is cancelled if the server's price goes up even 1 copper, and session stats show what the sniper found and earned.
+- **Quick Sell:** your bag items with live prices and a suggested price (Undercut, Smart or Usual), what you keep after the cut and deposit, and **Post next** for the most valuable item. It never undercuts yourself or posts below what a vendor pays, and asks twice before a price far under usual or under what you paid. Check undercuts and cancel undercut auctions in one click each.
+- **Your trades, wins and losses:** every buy, post and sale, including auctions posted through Blizzard's Sell tab or Auctionator and sales made while you were offline (read from the mailbox's invoices). Flip profit, win rate, holdings and what they're worth now, kept per character.
+- **Shared prices on your realm:** Codex users share the prices they see, so your tooltips, deals and market stay fresh without a scan of your own. Shared prices are marked, your own scans always win, and an odd price has to be confirmed by a second player before it counts. You can turn sharing off.
+- **Scans:** a smooth paged scan any time or the instant scan every 15 minutes, a quick refresh with a progress bar in every tab, and Look up an item with its chart. Gear with random enchants ("of the Bear") is priced per variant.
 - **Price tooltips:** lowest now, usual, the trend with a small bar chart, the vendor price and a verdict ("Above usual: a good time to sell").
-- **Works with Auctionator:** the Codex files Auctionator's prices into its own history, leaves the automatic searching to it, and **Search in Auctionator** puts your guide's items into its search.
+- **Works with Auctionator:** the Codex files Auctionator's prices into its own history and **Search in Auctionator** puts your guide's items into its search.
 
-### New: the Gold page
+### Mailbox
+A small card beside the mail window counts your items and gold, with one **Take all** button (also a key binding). It never pays for Cash on Delivery mail, and items back from expired auctions are tagged RELIST for Quick Sell.
+
+### The Gold page
 - **Mount fund:** how much of your riding goal you have, what's left and about how long it takes at this session's net gold per hour. Set the goal and level yourself.
 - **Gold by zone:** Stats > Zones switches between time and money: gold earned and spent in each zone, net gold and net per hour.
 
@@ -84,8 +90,9 @@ A small step window tells you exactly what to do next — accept, kill, loot, tu
 
 ### The arrow and your maps
 - **The arrow** shows the distance and about how long until you get there. It turns green when you're on course, gold when the step is off to your side, and red when it's behind you. Drag it, resize it or lock it.
-- **It knows the way:** across zones by flight path, boat, zeppelin and road, and through tunnels and caves such as the Deadmines and Wailing Caverns. In the air it shows a flight timer. As a ghost it leads back to your corpse.
-- **Flight master trips.** For a long trip the arrow leads to a flight master when flying is quicker ("Fly to Lakeshire from Sentinel Hill"), and the flight map lights up the flight to take. A flight path you don't have close to the way is picked up on the way, and Quests > **Nearest flight master** points at the closest one.
+- **It knows where you are.** The arrow goes by where you stand in the world, not by the map the game names, so subzones, cities and zone borders don't throw it off. It turns smoothly as you move.
+- **It knows the way:** across zones by flight path, boat, zeppelin and road (each leg moves on as you reach it, with its distance), and through tunnels and caves such as the Deadmines and Wailing Caverns. In the air it shows a flight timer. As a ghost it leads back to your corpse.
+- **Flight master trips, only when they're quicker.** For a long trip the arrow leads to a flight master when flying beats walking ("Fly to Lakeshire from Sentinel Hill"), and the flight map lights up the flight to take. A plan doesn't flip back and forth, a flight path near the way is picked up on the way, and Quests > **Nearest flight master** points at the closest one.
 - **The route on your minimap and world map.** Pins for the current and next steps, a dotted line from you to the step, and the game's own map waypoint on the current step. A waypoint you place yourself is never replaced.
 - **Works with quest tracker.** quest tracker's auto-accept and hold-back key take precedence, and the step window sits beside external quest tracker. With quest database installed, the arrow leads to the nearest mob or object you still need once you reach a camp.
 
@@ -214,6 +221,9 @@ Or build your own custom path for any class.
 | `/codex` | Open or close the Codex window |
 | `/codex quests` | Open the Quests tab and show the step window |
 | `/codex loot` | Open the Loot tab |
+| `/codex add Name` | Add a player to your Journey (or your target, with no name) |
+| `/codex sign` | Sign a party member's journal when they ask |
+| `/codex mail` | Take all mail at an open mailbox |
 | `/codex macros` | Create or update your macros for your level |
 | `/codex test` | Test level-up (`/codex test 30` for any level) |
 | `/codex minimap` | Show or hide the minimap button |

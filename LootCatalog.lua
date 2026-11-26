@@ -246,7 +246,9 @@ function L.candidates(filters,ctx,offset,limit)
     if f.sort=="acquisition" and a.acquisition~=b.acquisition then return a.acquisition>b.acquisition end
     local x,y=order[a.result.verdict] or 9,order[b.result.verdict] or 9
     if x~=y then return x<y end
-    if (a.result.delta or -math.huge)~=(b.result.delta or -math.huge) then return (a.result.delta or -math.huge)>(b.result.delta or -math.huge) end
+    local da=a.result.delta or (a.result.future and a.result.future.delta) or -math.huge
+    local db=b.result.delta or (b.result.future and b.result.future.delta) or -math.huge
+    if da~=db then return da>db end
     if a.item.name~=b.item.name then return a.item.name<b.item.name end
     return a.item.id<b.item.id
   end)

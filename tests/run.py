@@ -1041,7 +1041,7 @@ def main():
 
     runs = []
     for minimal in (False, True):
-        for scenario in ("lootTab", "lootGraphics", "lootCardViews", "lootDetailCards", "lootBrowse", "lootWeaponRoutes", "lootLevelAvailability", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootTooltipStaysOpen", "lootPad", "lootCacheLate"):
+        for scenario in ("lootTab", "lootGraphics", "lootCardViews", "lootDetailCards", "lootBrowse", "lootWeaponRoutes", "lootLevelAvailability", "lootCompareVerdicts", "lootInputBounds", "lootTracker", "lootTooltips", "lootScoreDetails", "lootTooltipStaysOpen", "lootPad", "lootCacheLate"):
             runs.append(("WARRIOR/%s/%s" % ("minimal" if minimal else "full", scenario), "WARRIOR", minimal, [scenario]))
         for loot_class in CLASSES:
             if loot_class != "WARRIOR":
@@ -1089,7 +1089,7 @@ def main():
                              "questCarriedTurninNotTaken", "questCarriedTurninCarried",
                              "questStepTypes", "questBuyItems", "questBuyUsedUp", "questBuyNotSkipped", "questUiHidden", "questFreshProgress", "arrowMove", "arrowArrival", "arrowColor", "minimapPins", "minimapRoute", "minimapPath", "guideRowsLong", "guideRowsFade", "worldMapPins", "worldMapLine", "guideRewards", "questDuskwoodFlanks", "stepProgress", "stepPolish", "questTabViews", "questWaypoints", "questWindowExtras",
                              "questArrowTimes", "questTracker", "questSetup", "questPreviewAhead", "questDanger", "questParty", "questPartySync", "questPartyGoal", "questPartyChat", "questPartyChatSteps", "questPartyHeartbeat", "questPartyTab", "questPartyShare", "questPartyCatchUp",
-                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent", "questNearOtherMap", "questArrowInsideZone", "questRoadPassed",
+                             "questFlightPlan", "questFlightLearn", "questFlightHub", "questFlightBack", "questFlightMorbent", "questNearOtherMap", "questKodoRoundupAccept", "questArrowInsideZone", "questRoadPassed",
                              "questDarkshireStranglethornHandoff", "questDarkshirePantherSuggestion", "questDarkshireSouthshorePreview", "questDungeonChoice",
                              "questBossSteps", "questStockadeBossGuide", "questDungeonEncounterGuides",
                              "questEntrancePath", "questEliteAsk", "questEliteInLog", "questEliteModes",

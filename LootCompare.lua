@@ -11,6 +11,30 @@ local SLOT = {
 }
 L.slotsFor = function(slot) return SLOT[slot] or {} end
 local CLASS = {WARRIOR=1,PALADIN=2,HUNTER=3,ROGUE=4,PRIEST=5,SHAMAN=7,MAGE=8,WARLOCK=9,DRUID=11}
+-- What a class can wear or learn, for when the client's skill list can't be read (and to tell
+-- an untrained weapon from one the class can never use). Classic rules: plate and mail at 40.
+local CLASS_ARMOR = {WARRIOR={3,4},PALADIN={3,4},HUNTER={2,3},SHAMAN={2,3},ROGUE={2,2},DRUID={2,2},
+  PRIEST={1,1},MAGE={1,1},WARLOCK={1,1}}
+local function weaponSet(list) local t={}; for _,n in ipairs(list) do t[n]=true end; return t end
+local CLASS_WEAPONS = {
+  WARRIOR=weaponSet{0,1,2,3,4,5,6,7,8,10,13,15,16,18}, PALADIN=weaponSet{0,1,4,5,6,7,8},
+  HUNTER=weaponSet{0,1,2,3,6,7,8,10,13,15,16,18}, ROGUE=weaponSet{2,3,4,7,13,15,16,18},
+  PRIEST=weaponSet{4,10,15,19}, SHAMAN=weaponSet{0,1,4,5,10,13,15}, MAGE=weaponSet{7,10,15,19},
+  WARLOCK=weaponSet{7,10,15,19}, DRUID=weaponSet{4,5,10,13,15},
+}
+local CLASS_SHIELD = {WARRIOR=true,PALADIN=true,SHAMAN=true}
+-- Relics: librams, idols and totems (armor subclasses 7-9), one class each.
+local RELIC_CLASS = {[7]="PALADIN",[8]="DRUID",[9]="SHAMAN"}
+local RELIC_NAMES = {[7]="librams",[8]="idols",[9]="totems"}
+local CLASS_DUAL = {WARRIOR=20,HUNTER=20,ROGUE=1}
+L.WEAPON_NAMES = {[0]="One-Handed Axes",[1]="Two-Handed Axes",[2]="Bows",[3]="Guns",[4]="One-Handed Maces",
+  [5]="Two-Handed Maces",[6]="Polearms",[7]="One-Handed Swords",[8]="Two-Handed Swords",[10]="Staves",
+  [13]="Fist Weapons",[15]="Daggers",[16]="Thrown",[18]="Crossbows",[19]="Wands"}
+function L.classArmor(class, level)
+  local a=CLASS_ARMOR[class]; if not a then return end
+  return (level or 1)>=40 and a[2] or a[1]
+end
+function L.classWeapon(class, sub) local w=CLASS_WEAPONS[class]; if w then return w[sub]==true end end
 local function has(list, x)
   for _, v in ipairs(list or {}) do if v == x then return true end end
   return false
@@ -20,38 +44,67 @@ local function result(verdict, reason, item)
   return {verdict=verdict,reason=reason,candidate=item,warnings={},replacedSlots={},baseline={},statDelta={}}
 end
 
-function L.eligible(item, ctx, proposed, insertedSlot)
+-- state "yes", "no" or "unknown"; an "unknown" with notes can still be scored as an estimate.
+-- skipLevel scores an item you can't wear yet as if you were its level (proficiency too).
+function L.eligible(item, ctx, proposed, insertedSlot, skipLevel)
   local r, p = item.restrictions or {}, ctx.proficiencies
-  if (item.requiredLevel or 0) > ctx.level then return {state="no",reasons={"Requires level "..item.requiredLevel}} end
+  local level = ctx.level or 1
+  if (item.requiredLevel or 0) > level then
+    if not skipLevel then return {state="no",reasons={"Requires level "..item.requiredLevel}} end
+    level = item.requiredLevel
+  end
   if r.classes and not has(r.classes, ctx.class) then return {state="no",reasons={"Restricted to another class"}} end
   if r.classMask and CLASS[ctx.class] and not maskHas(r.classMask, CLASS[ctx.class]) then
     return {state="no",reasons={"Restricted to another class"}}
   end
   if r.races and not has(r.races, ctx.race) then return {state="no",reasons={"Restricted to another race"}} end
   if r.faction and r.faction ~= "All" and r.faction ~= ctx.faction then return {state="no",reasons={"Wrong faction"}} end
-  if not (item.complete and item.complete.restrictions) then return {state="unknown",reasons={"Item requirements are not fully known"}} end
-  if r.text then return {state="unknown",reasons={r.text}} end
+  local unknown = {}
+  if not (item.complete and item.complete.restrictions) then unknown[#unknown+1]="Check the item's requirements" end
+  if r.text then unknown[#unknown+1]=r.text end
   if r.skill then
-    if not ctx.professions then return {state="unknown",reasons={"Profession requirement not checked"}} end
-    if (ctx.professions[r.skill] or 0) < (r.skillRank or 1) then return {state="no",reasons={"Profession skill is too low"}} end
+    if not ctx.professions then unknown[#unknown+1]="Needs a profession skill"
+    elseif (ctx.professions[r.skill] or 0) < (r.skillRank or 1) then return {state="no",reasons={"Profession skill is too low"}} end
   end
   if r.reputation then
-    if not ctx.reputation then return {state="unknown",reasons={"Reputation requirement not checked"}} end
-    if (ctx.reputation[r.reputation] or 0) < (r.standing or 0) then return {state="no",reasons={"Reputation is too low"}} end
+    if not ctx.reputation then unknown[#unknown+1]="Needs reputation"
+    elseif (ctx.reputation[r.reputation] or 0) < (r.standing or 0) then return {state="no",reasons={"Reputation is too low"}} end
   end
   if item.classID == 4 and (item.subclassID or 0) >= 1 and item.subclassID <= 4 then
-    if not p or not p.armor then return {state="unknown",reasons={"Armor proficiency not known"}} end
-    if item.subclassID > p.armor then return {state=p.armorKnown==false and "unknown" or "no",reasons={"Armor proficiency required"}} end
+    local wear = L.classArmor(ctx.class, level)
+    local known = p and p.armorKnown ~= false and p.armor or nil
+    local names = {"Cloth","Leather","Mail","Plate Mail"}
+    if wear and item.subclassID > wear then return {state="no",reasons={"Armor proficiency required"}}
+    elseif known and item.subclassID > known then
+      if not wear then return {state="no",reasons={"Armor proficiency required"}} end
+      if not skipLevel then unknown[#unknown+1]="Train "..names[item.subclassID].." at your class trainer first" end
+    elseif not known and not wear then unknown[#unknown+1]="Armor proficiency not known" end
   end
-  if item.classID == 2 then
-    if not p or not p.weapons then return {state="unknown",reasons={"Weapon proficiency not known"}} end
-    if not p.weapons[item.subclassID] then return {state=p.weaponKnown==false and "unknown" or "no",reasons={"Weapon proficiency required"}} end
+  if item.slot == "INVTYPE_RELIC" and RELIC_CLASS[item.subclassID] and CLASS[ctx.class] and RELIC_CLASS[item.subclassID] ~= ctx.class then
+    return {state="no",reasons={"Your class can't use "..RELIC_NAMES[item.subclassID]}}
   end
-  if item.slot == "INVTYPE_SHIELD" and (not p or p.shield == nil) then return {state="unknown",reasons={"Shield proficiency not known"}} end
-  if item.slot == "INVTYPE_SHIELD" and not p.shield then return {state="no",reasons={"Shield proficiency required"}} end
+  if item.classID == 2 and item.subclassID ~= nil then
+    local can = L.classWeapon(ctx.class, item.subclassID)
+    local trained = p and p.weapons and p.weapons[item.subclassID]
+    if not trained then
+      if can == false then return {state="no",reasons={"Your class can't use "..(L.WEAPON_NAMES[item.subclassID] or "this weapon")}} end
+      if can then
+        if p and p.weaponKnown then unknown[#unknown+1]="Train "..(L.WEAPON_NAMES[item.subclassID] or "this weapon").." at a weapon master first"
+        elseif not skipLevel then unknown[#unknown+1]="Check you have trained "..(L.WEAPON_NAMES[item.subclassID] or "this weapon") end
+      else unknown[#unknown+1]="Weapon proficiency not known" end
+    end
+  end
+  if item.slot == "INVTYPE_SHIELD" then
+    local shield = p and p.shield
+    if shield == nil and CLASS_ARMOR[ctx.class] then shield = CLASS_SHIELD[ctx.class] == true end
+    if shield == false then return {state="no",reasons={"Shield proficiency required"}} end
+    if shield == nil then unknown[#unknown+1]="Shield proficiency not known" end
+  end
   if proposed[17] == item and item.classID == 2 and item.slot ~= "INVTYPE_2HWEAPON" then
-    if not p or p.dualWield == nil then return {state="unknown",reasons={"Dual wield not known"}} end
-    if not p.dualWield then return {state="no",reasons={"Dual wield required"}} end
+    local dual = p and p.dualWield
+    if not dual and CLASS_ARMOR[ctx.class] then dual = CLASS_DUAL[ctx.class] ~= nil and level >= CLASS_DUAL[ctx.class] end
+    if dual == false then return {state="no",reasons={"Dual wield required"}} end
+    if dual == nil then unknown[#unknown+1]="Dual wield not known" end
   end
   if r.unique then
     for slot, other in pairs(proposed) do
@@ -60,30 +113,81 @@ function L.eligible(item, ctx, proposed, insertedSlot)
       end
     end
   end
+  if #unknown > 0 then return {state="unknown",reasons=unknown} end
   return {state="yes",reasons={}}
 end
 
+-- A short reason for each effect line the score leaves out.
+local function effectNote(line)
+  if line:find("^Use:") then return "Use effect not counted" end
+  if line:find("^Chance on hit:") then return "Chance on hit not counted" end
+  if line:find("Set:") or line:find("^%(") then return "Set bonus not counted" end
+  return "Equip effect not counted"
+end
+local function addNote(notes, text)
+  for _, n in ipairs(notes) do if n == text then return end end
+  notes[#notes+1] = text
+end
+L.addNote = addNote
+
+-- value plus: complete = the stats are known well enough to compare; notes = what the
+-- score leaves out (effects, set bonuses, enchants, an unrolled random bonus).
 function L.score(item, profile)
-  if item == false then return {value=0,complete=true,warnings={}} end
-  if not item or not item.complete or not item.complete.stats then return {complete=false,warnings={"Item stats are not fully known"}} end
-  if not profile then return {complete=false,warnings={"Select a loot profile"}} end
-  local value, warnings = 0, {}
-  for key, n in pairs(item.stats or {}) do value = value + n * ((profile.weights or {})[key] or 0) end
+  if item == false then return {value=0,complete=true,warnings={},notes={}} end
+  if not item then return {complete=false,warnings={"Item stats are not fully known"},notes={}} end
+  if not profile then return {complete=false,warnings={"Select a loot profile"},notes={}} end
+  local value, warnings, notes = 0, {}, {}
+  if not item.complete or not item.complete.stats then
+    if item.random then addNote(notes, "Random bonus not counted (\"of the ...\")")
+    else return {complete=false,warnings={"Item stats are not fully known"},notes=notes} end
+  end
+  local weights = profile.weights or {}
+  local stats = item.stats or {}
+  for key, n in pairs(stats) do value = value + n * (weights[key] or 0) end
+  -- An older "damage and healing done by magical spells" line is healing too; Forever's own
+  -- healing gear lists healing on its own (Data: heal), so only spell power without it counts.
+  if stats.sp and not stats.heal and not item.spDamageOnly then value = value + stats.sp * (weights.heal or 0) end
   local w = profile.weapon or {}
   local ranged = item.slot == "INVTYPE_RANGED" or item.slot == "INVTYPE_RANGEDRIGHT" or item.slot == "INVTYPE_THROWN"
+  local wand = item.classID == 2 and item.subclassID == 19
+  local weaponWeight = wand and math.max(w.wand or 0, w.ranged or 0) or ranged and (w.ranged or 0) or (w.melee or 0)
   if item.classID==2 and not w.feral then
-    local weight=ranged and (w.ranged or 0) or (w.melee or 0)
-    if weight>0 and type(item.damage)~="number" then warnings[#warnings+1]="Weapon damage is not fully known" end
+    if weaponWeight>0 and type(item.damage)~="number" then warnings[#warnings+1]="Weapon damage is not fully known" end
     if (w.speed or 0)>0 and type(item.speed)~="number" then warnings[#warnings+1]="Weapon speed is not fully known" end
   end
-  if item.damage and not w.feral then
-    value = value + item.damage * (ranged and (w.ranged or 0) or (w.melee or 0))
-  end
+  if item.damage and not w.feral then value = value + item.damage * weaponWeight end
+  local bonus = (item.stats or {}).weaponDmg
+  if bonus and type(item.speed)=="number" and item.speed>0 and not w.feral then value = value + bonus / item.speed * weaponWeight end
   if item.speed and w.speed then value = value + item.speed * w.speed end
-  if not item.complete.effects then warnings[#warnings+1] = "Some item effects are not scored" end
-  if item.restrictions and item.restrictions.set then warnings[#warnings+1] = "Review the set bonus before replacing this item" end
-  for _, line in ipairs(item.warnings or {}) do warnings[#warnings+1] = line end
-  return {value=value,complete=#warnings==0,warnings=warnings}
+  for _, line in ipairs(item.warnings or {}) do addNote(notes, effectNote(line)) end
+  if item.complete and not item.complete.effects and #notes == 0 then addNote(notes, "Some effects not counted") end
+  if item.restrictions and item.restrictions.set then addNote(notes, "Set bonus not counted") end
+  for _, line in ipairs(item.notes or {}) do addNote(notes, line) end
+  return {value=value,complete=#warnings==0,warnings=warnings,notes=notes}
+end
+
+-- Why an item scores nothing: its effects only, resistances only, no stats listed, or stats
+-- this build doesn't use (a caster looking at a strength belt).
+local RESISTS = {resHoly=true,resFire=true,resNature=true,resFrost=true,resShadow=true,resArcane=true}
+function L.noValueReason(item, score)
+  local effects = {}
+  for _, n in ipairs(score and score.notes or {}) do
+    local what = n:match("^(.-) not counted$")
+    if what and not n:find("^Random") and not n:find("^Enchant") then effects[#effects+1] = what:lower() end
+  end
+  local any, resist = false, false
+  for key, n in pairs(item.stats or {}) do
+    if n ~= 0 and key ~= "armor" then any = true; if RESISTS[key] then resist = true end end
+  end
+  if #effects > 0 and not any then return "Only its "..table.concat(effects, ", ")..": not scored" end
+  if resist then
+    local other = false
+    for key, n in pairs(item.stats or {}) do if n ~= 0 and key ~= "armor" and not RESISTS[key] then other = true end end
+    if not other then return "Resistances only: not part of the score" end
+  end
+  if not any and item.random then return "Its random bonus (\"of the ...\") sets its stats" end
+  if not any and item.classID ~= 2 and (item.stats or {}).armor == nil then return "No stats listed: read the tooltip" end
+  return "No stats your build uses"
 end
 
 function L.compare(ref, ctx, baseline, weaponSlot)
@@ -99,54 +203,102 @@ function L.compare(ref, ctx, baseline, weaponSlot)
   local locations = L.slotsFor(item.slot)
   if item.slot=="INVTYPE_WEAPON" and (weaponSlot==16 or weaponSlot==17) then locations={weaponSlot} end
   if #locations == 0 then return result(item.slot and "cannotEquip" or "needsReview",item.slot and "This is not a supported equipment slot" or "Equipment slot information is unavailable",item) end
+  local r = L.compareSlots(item, ctx, slots, locations)
+  if r.verdict == "cannotEquip" and (item.requiredLevel or 0) > (ctx.level or 1) and r.reason == "Requires level "..item.requiredLevel then
+    -- Rate it for the level you can wear it: the same gear, the same profile.
+    local f = L.compareSlots(item, ctx, slots, locations, true)
+    if f.verdict == "cannotEquip" then r.reason = f.reason end
+    if f.confidence == "complete" then
+      r.future = {level=item.requiredLevel,verdict=f.verdict,percent=f.percent,delta=f.delta,estimate=f.estimate,noValue=f.noValue,reason=f.reason,
+        notes=f.notes,score=f.score,baselineScore=f.baselineScore}
+      r.score, r.baselineScore, r.statDelta, r.baseline, r.replacedSlots = f.score, f.baselineScore, f.statDelta, f.baseline, f.replacedSlots
+    end
+  end
+  return r
+end
+
+-- The whole equipped set's score: a change is shown as a share of it, so a shield replacing a
+-- weak one reads "+3%" of your gear, not "+250%" of that one slot.
+local function gearTotal(slots, profile)
+  local total = 0
+  for _, n in ipairs(L.slotOrder or {}) do
+    local it = slots[n]
+    if it then local s = L.score(it, profile); total = total + (s.value or 0) end
+  end
+  return total
+end
+L.gearTotal = gearTotal
+
+function L.compareSlots(item, ctx, slots, locations, skipLevel)
   local best, uncertain, refusal
+  local total
+  local twoHander = slots[16] and slots[16].slot == "INVTYPE_2HWEAPON"
   for _, slot in ipairs(locations) do
     local proposed, replaced = {}, {slot}
     for k,v in pairs(slots) do proposed[k]=v end
     proposed[slot] = item
     if item.slot == "INVTYPE_2HWEAPON" then proposed[17]=false; replaced={16,17} end
-    local partnerMissing = slots[16] and slots[16].slot == "INVTYPE_2HWEAPON" and item.slot ~= "INVTYPE_2HWEAPON" and (slot==16 or slot==17)
-    local eligible = L.eligible(item,ctx,proposed,slot)
+    -- A one-hander in the main hand replaces a two-hander; the off hand is then empty.
+    local swapTwoHand = twoHander and item.slot ~= "INVTYPE_2HWEAPON" and slot == 16
+    if swapTwoHand then proposed[17]=false; replaced={16,17} end
+    local partnerMissing = twoHander and item.slot ~= "INVTYPE_2HWEAPON" and slot == 17
+    local eligible = L.eligible(item,ctx,proposed,slot,skipLevel)
     if eligible.state == "no" then
-      refusal = result("cannotEquip",eligible.reasons[1],item)
+      refusal = refusal or result("cannotEquip",eligible.reasons[1],item)
     else
       local r = result("needsReview",eligible.reasons[1] or "Comparison needs more information",item)
-      r.eligibility=eligible.state; r.replacedSlots=replaced
+      r.eligibility=eligible.state; r.replacedSlots=replaced; r.notes={}
       local weapon=slots[slot]
       if weapon and weapon.classID==2 and item.classID==2 and type(weapon.damage)=="number" and type(item.damage)=="number" then
         r.weaponDpsDelta=item.damage-weapon.damage
       end
       local score = L.score(item,ctx.profile)
-      local old, complete = 0, score.complete and eligible.state=="yes" and not partnerMissing
+      local old, complete = 0, score.complete and not partnerMissing
       r.warnings=score.warnings
-      if partnerMissing then r.warnings[#r.warnings+1]="Supply a legal partner for the one-hand setup" end
+      for _, line in ipairs(score.notes or {}) do L.addNote(r.notes, line) end
+      if eligible.state == "unknown" then for _, line in ipairs(eligible.reasons) do L.addNote(r.notes, line) end end
+      if partnerMissing then r.warnings[#r.warnings+1]="Pair it with a one-hand weapon in place of your two-hander" end
+      if swapTwoHand then L.addNote(r.notes, item.slot=="INVTYPE_WEAPON" and "Compared with your two-hander; an off-hand adds to it" or "Compared with your two-hander") end
       for _, n in ipairs(replaced) do
         local before=slots[n]
         -- An off-hand is confirmed empty when an equipped two-hander occupies both hands.
-        if n==17 and slots[16] and slots[16].slot=="INVTYPE_2HWEAPON" then before=false end
+        if n==17 and twoHander then before=false end
         local s=L.score(before,ctx.profile)
         if not s.value then complete=false else old=old+s.value end
         if not s.complete then complete=false end
         for _, line in ipairs(s.warnings) do r.warnings[#r.warnings+1]=line end
+        for _, line in ipairs(before and s.notes or {}) do
+          L.addNote(r.notes, line == "Enchant not counted" and "You'd lose the enchant on "..(before.name or "your item")
+            or "Equipped item's effects not counted")
+        end
         if before then r.baseline[#r.baseline+1]=before end
         for key,value in pairs(before and before.stats or {}) do r.statDelta[key]=(r.statDelta[key] or 0)-value end
       end
       for key,value in pairs(item.stats or {}) do r.statDelta[key]=(r.statDelta[key] or 0)+value end
       if score.value then r.score=score.value; r.baselineScore=old; r.delta=score.value-old end
-      if complete and r.delta and not (old==0 and score.value==0) then
-        r.percent=old>0 and r.delta/old*100 or nil
+      if complete and r.delta and old==0 and score.value==0 then
+        -- Nothing on it your build values (a caster's look at a strength belt).
+        r.verdict="sidegrade"; r.confidence="complete"; r.noValue=true
+        r.reason=L.noValueReason(item, score)
+        if not best or r.delta>best.delta then best=r end
+      elseif complete and r.delta then
+        total = total or gearTotal(slots, ctx.profile)
+        r.slotPercent=old>0 and r.delta/old*100 or nil
+        r.percent=total>0 and r.delta/total*100 or nil
         r.verdict=r.delta>old*0.01 and "upgrade" or r.delta < -old*0.01 and "downgrade" or "sidegrade"
         r.reason=old==0 and "Fills an empty slot" or "Estimated gear score; review the stat tradeoffs"
         r.confidence="complete"
+        r.estimate=#r.notes>0 or nil
+        if r.estimate then r.reason=r.notes[1] end
         if not best or r.delta>best.delta then best=r end
       else
         r.confidence="provisional"
-        if eligible.state=="yes" and #r.warnings>0 then r.reason=r.warnings[1] end
+        if #r.warnings>0 then r.reason=r.warnings[1] end
         if not uncertain or (r.delta or -math.huge)>(uncertain.delta or -math.huge) then uncertain=r end
       end
     end
   end
-  if best and uncertain then
+  if best and uncertain and not (uncertain.warnings[1] or ""):find("one-hand weapon in place",1,true) then
     best.verdict="needsReview";best.confidence="provisional"
     best.reason="Another eligible replacement slot is not fully known; review both slots"
     return best

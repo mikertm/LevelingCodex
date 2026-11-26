@@ -13625,7 +13625,10 @@ end
 function S.lootTooltips()
   lootSetup()
   GameTooltip:SetHyperlink("item:900002")
-  check(#(GameTooltip._lines or {})==1,"Codex adds one compact score line with no extra advice")
+  local lines=GameTooltip._lines or {}
+  local itemAPI=type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo)
+  check(not itemAPI and #lines==1 or #lines==2 and lines[1]:find("Codex: Upgrade:",1,true) and lines[2]:find("vs Old Vest",1,true),
+    "Codex adds a score line and one detail line (what it replaces): "..table.concat(lines," / "))
   local count=0
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"one annotation even with setter and item callbacks ("..count..")")
@@ -13634,16 +13637,52 @@ function S.lootTooltips()
   for _,line in ipairs(GameTooltip._lines or {}) do if line:find("Codex:",1,true) then count=count+1 end end
   check(count==1,"reused tooltip has one current annotation")
   GameTooltip:SetHyperlink("item:2572")
-  check(#(GameTooltip._lines or {})==1 and GameTooltip._lines[1]:find("Rank #",1,true),
+  check(GameTooltip._lines[1]:find("Rank #",1,true) and GameTooltip._lines[1]:find("gear score",1,true),
     "a verified catalog comparison has rank and score on one line")
+  local plain=#GameTooltip._lines
   click(win(),"Scoring settings")
   click(win(),"Show other profile ranks")
   GameTooltip:SetHyperlink("item:2572")
-  check(#GameTooltip._lines>1 and GameTooltip._lines[2]:find("Arms:",1,true),"other profile ranks are opt-in")
+  check(#GameTooltip._lines>plain and GameTooltip._lines[plain+1]:find("Arms:",1,true),"other profile ranks are opt-in")
   click(win(),"Show other profile ranks")
   GameTooltip:SetHyperlink("item:2572")
-  check(#GameTooltip._lines==1,"the tooltip returns to one line when other profiles are disabled")
+  check(#GameTooltip._lines==plain,"the tooltip drops the other profiles when they are disabled")
   check(not MOCK.questRewarded and #(MOCK.sold or {})==0,"tooltip guidance is read-only")
+end
+-- Gear with an effect, an enchant, a level above yours or an untrained weapon still gets a
+-- score (an estimate that says what it leaves out), never "Score unavailable".
+function S.lootScoreDetails()
+  lootSetup()
+  if not (type(GetItemInfo)=="function" or (C_Item and C_Item.GetItemInfo)) then return end
+  local function tip(ref)
+    GameTooltip:SetHyperlink(ref)
+    return GameTooltip._lines or {}
+  end
+  MOCK.lootItems[900020]={name="Charm Vest",stats={ITEM_MOD_STRENGTH_SHORT=40},effect="Use: Charms a squirrel."}
+  local lines=tip("item:900020")
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2] and lines[2]:find("skips use effect",1,true),
+    "an item with a Use effect is scored as an estimate: "..table.concat(lines," / "))
+  lines=tip("item:900002:1900")
+  check(lines[1]:find("Codex: Upgrade: about +",1,true) and lines[2]:find("skips enchant",1,true),
+    "an enchanted item is scored and the enchant named: "..table.concat(lines," / "))
+  MOCK.lootItems[900021]={name="Later Vest",level=35,stats={ITEM_MOD_STRENGTH_SHORT=60}}
+  lines=tip("item:900021")
+  check(lines[1]:find("Codex: At level 35: +",1,true) and lines[1]:find("(upgrade)",1,true),
+    "an item above your level is rated for the level you can wear it: "..table.concat(lines," / "))
+  for _,l in ipairs(lines) do check(not l:find("Score unavailable",1,true),"no blank score") end
+  lines=tip("item:900001")
+  check(#lines==1 and lines[1]:find("Codex: Equipped",1,true) and not lines[1]:find("vs ",1,true),
+    "the item you wear shows its standing, not a comparison with itself: "..table.concat(lines," / "))
+  for _,l in ipairs(tip("item:900002:0:0:0:0:0:0:0:0:0:0:0:3:1:2")) do check(not l:find("gem",1,true),"Forever has no gems: "..l) end
+  MOCK.lootItems[900022]={name="Wand of Nope",slot="INVTYPE_RANGEDRIGHT",classID=2,subclassID=19,stats={ITEM_MOD_INTELLECT_SHORT=3}}
+  lines=tip("item:900022")
+  check(lines[1]:find("Codex: Cannot equip: Your class can't use Wands",1,true),"a weapon the class can't use says so: "..lines[1])
+  MOCK.lootItems[900023]={name="Libram of Nope",slot="INVTYPE_RELIC",classID=4,subclassID=7,stats={}}
+  lines=tip("item:900023")
+  check(lines[1]:find("Codex: Cannot equip: Your class can't use librams",1,true),"a relic of another class says so: "..lines[1])
+  MOCK.lootItems[900024]={name="Trinket of Use",slot="INVTYPE_TRINKET",stats={},effect="Use: Increases armor by 520 for 20 sec."}
+  lines=tip("item:900024")
+  check(lines[1]:find("Codex: Only its use effect: not scored",1,true),"an effects-only trinket says so: "..table.concat(lines," / "))
 end
 function S.lootTooltipStaysOpen()
   lootSetup()
@@ -15003,4 +15042,38 @@ function S.mailAutoTake()
   check(MOCK.money == 12445, "the inbox is emptied by itself (" .. tostring(MOCK.money) .. ")")
   check(MOCK.inbox[1].items[1] and MOCK.inbox[1].items[1].id == 9798, "a refused item is passed over")
   check(chatHas("Took 4 items"), "the rest is taken")
+end
+
+-- In game the "Accept - Kodo Roundup" step stayed on screen after Smeed gave the quest (the item
+-- button already showed the Kombobulator from the log). The window was showing the pickup picked
+-- from the route list (an earlier step, the flight path, was still the route's), and the game
+-- finishing a step you look at didn't move the look on.
+function S.questKodoRoundupAccept()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 36, 1443, 60.8, 61.8
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "desolace-35" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.quest == 5561 then break end
+        if step.quest and step.quest ~= 5501 and step.quest ~= 1459 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questLog = { { questID = 5501, isComplete = false }, { questID = 1459, isComplete = false } }
+  S.login()
+  MOCK.advance(0.3)
+  local frame = questViewer()
+  local Q = MOCK.ns.quests
+  local function at() local row = Q.current(); return row and row.key end
+  check(at() ~= "desolace-35:accept:5561:1", "an earlier step is the route's: " .. tostring(at()))
+  slash("quests")
+  local button = routeStep("Accept - Kodo Roundup")
+  check(button, "the route lists the Kodo Roundup pickup")
+  button:Click()
+  check(at() == "desolace-35:accept:5561:1" and questText(frame, "Accept - Kodo Roundup"), "the window shows the pickup")
+  table.insert(MOCK.questLog, { questID = 5561, isComplete = false })
+  MOCK.event("QUEST_ACCEPTED", 5561)
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(at() == "desolace-35:complete:5561:1" and not questText(frame, "Accept - Kodo Roundup"),
+    "accepting the quest moves the window on to its work: " .. tostring(at()))
 end

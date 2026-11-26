@@ -227,7 +227,7 @@ def atomic_write(path, text):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', nargs='?', choices=['fetch', 'build', 'audit', 'coverage'])
+    p.add_argument('command', nargs='?', choices=['fetch', 'build', 'audit', 'coverage', 'resolve'])
     p.add_argument('--check', action='store_true')
     p.add_argument('--build')
     p.add_argument('--cache', type=Path)
@@ -238,6 +238,11 @@ def main():
     if not REF.exists():
         p.error('missing committed loot reference; run build from pinned cached inputs')
     ref = json.loads(REF.read_text(encoding='utf-8'))
+    if args.command == 'resolve':
+        n = resolve_reference(ref)
+        atomic_write(REF, json.dumps(ref, sort_keys=True, separators=(',', ':')) + '\n')
+        atomic_write(OUT, render(ref))
+        print('resolved', n, 'effect lines')
     errors = validate(ref)
     if args.check:
         errors += [] if OUT.exists() and OUT.read_text(encoding='utf-8') == render(ref) else ['LootData.lua is stale']
@@ -361,6 +366,69 @@ def add_access_levels(ref, routes):
 STAT_NAMES = {'Strength': 'str', 'Agility': 'agi', 'Stamina': 'sta', 'Intellect': 'int',
               'Spirit': 'spi', 'Armor': 'armor', 'Attack Power': 'ap', 'Health': 'health', 'Mana': 'mana'}
 
+NUM = r'(\d+(?:\.\d+)?)'
+# Equip lines that are plain stats. Forever writes percentages with a decimal ("1.0%") and
+# spell power as "healing done by up to X and damage done by up to Y".
+EQUIP_PATTERNS = [
+    (r'Increases healing done by up to (\d+) and damage done by up to (\d+)', ('heal', 'sp')),
+    (r'Increases damage and healing done by magical spells and effects by up to (\d+)', ('sp',)),
+    (r'Increases healing done by (?:magical )?spells and effects by up to (\d+)', ('heal',)),
+    (r'Increases damage done by magical spells and effects by up to (\d+)', ('sp',)),
+    (r'Increases your spell damage by up to (\d+)', ('sp',)),
+    (r'\+\s*(\d+) Ranged Attack Power', ('rap',)),
+    (r'\+\s*(\d+) Attack Power', ('ap',)),
+    (r'Increases attack power by (\d+)', ('ap',)),
+    (r'Increases ranged attack power by (\d+)', ('rap',)),
+    (r'Restores (\d+) mana per 5 sec', ('mp5',)),
+    (r'Restores (\d+) health per 5 sec', ('hp5',)),
+    (r'Improves your chance to hit with spells by ' + NUM + '%', ('spellHit',)),
+    (r'Improves your chance to get a critical strike with spells by ' + NUM + '%', ('spellCrit',)),
+    (r'Improves your chance to hit with ranged weapons by ' + NUM + '%', ('hit',)),
+    (r'Improves your chance to hit by ' + NUM + '%', ('hit',)),
+    (r'Improves your chance to get a critical strike by ' + NUM + '%', ('crit',)),
+    (r'Reduces chance to be Dodged or Parried by ' + NUM + '%', ('hit',)),
+    (r'Increases your chance to Dodge an attack by ' + NUM + '%', ('dodge',)),
+    (r'Increases your chance to Parry an attack by ' + NUM + '%', ('parry',)),
+    (r'Increases your chance to Block attacks with a shield by ' + NUM + '%', ('block',)),
+    (r'Increases the block value of your shield by (\d+)', ('blockValue',)),
+    (r'Increased Defense \+(\d+)', ('defense',)),
+    (r'Your spells pierce (\d+) Magical Resistance', ('spellPen',)),
+    (r'\+(\d+) Weapon Damage', ('weaponDmg',)),
+]
+SCHOOL = r'Increases damage done by (Arcane|Fire|Frost|Nature|Shadow|Holy) spells and effects by up to (\d+)'
+
+
+def resolve_equip(line, stats):
+    """Add an Equip line's stats; False when it is an effect the scores don't model."""
+    for pat, keys in EQUIP_PATTERNS:
+        m = re.search(pat, line, flags=re.I)
+        if m:
+            for key, value in zip(keys, m.groups()):
+                n = float(value)
+                stats[key] = round(stats.get(key, 0) + (int(n) if n.is_integer() else n), 2)
+            return True
+    school = re.search(SCHOOL, line)
+    if school:
+        stats['sp' + school[1]] = stats.get('sp' + school[1], 0) + int(school[2])
+        return True
+    return False
+
+
+def resolve_reference(ref):
+    """Re-read the unresolved effect lines already in the reference (offline)."""
+    changed = 0
+    for item in ref['items'].values():
+        left = []
+        for line in item.get('warnings', []):
+            if line.startswith('Equip:') and resolve_equip(line, item.setdefault('stats', {})):
+                changed += 1
+            else:
+                left.append(line)
+        item['warnings'] = left
+        if not left and item.get('complete', {}).get('stats'):
+            item['complete']['effects'] = True
+    return changed
+
 
 def parse_tooltip(id_, tip, base):
     item = dict(base)
@@ -370,19 +438,6 @@ def parse_tooltip(id_, tip, base):
     text = html.unescape(re.sub('<[^>]*>', '', re.sub(r'<br\s*/?>|</tr>|</td>', '\n', raw, flags=re.I)))
     lines = [re.sub(r'\s+', ' ', s).strip() for s in text.splitlines() if s.strip()]
     stats, unresolved = {}, []
-    patterns = [
-        (r'Increases damage and healing done by magical spells and effects by up to (\d+)', 'sp'),
-        (r'Increases healing done by spells and effects by up to (\d+)', 'heal'),
-        (r'Increases your spell damage by up to (\d+)', 'sp'),
-        (r'\+\s*(\d+) (?:Ranged )?Attack Power', 'ap'),
-        (r'Increases attack power by (\d+)', 'ap'),
-        (r'Restores (\d+) mana per 5 sec', 'mp5'),
-        (r'Improves your chance to hit with spells by (\d+)%', 'spellHit'),
-        (r'Improves your chance to get a critical strike with spells by (\d+)%', 'spellCrit'),
-        (r'Improves your chance to hit by (\d+)%', 'hit'),
-        (r'Improves your chance to get a critical strike by (\d+)%', 'crit'),
-        (r'Increased Defense \+(\d+)', 'defense'),
-    ]
     for line in lines:
         if line.startswith(('Chance on hit:', 'Use:', 'Set:', '(')) and ('Set:' in line or line.startswith(('Chance on hit:', 'Use:'))):
             unresolved.append(line)
@@ -391,20 +446,8 @@ def parse_tooltip(id_, tip, base):
             m = re.fullmatch(r'\+?\s*(\d+) '+label, line)
             if m:
                 stats[key] = stats.get(key, 0) + int(m[1])
-        if line.startswith('Equip:'):
-            found = False
-            for pat, key in patterns:
-                m = re.search(pat, line, flags=re.I)
-                if m:
-                    stats[key] = stats.get(key, 0) + int(m[1])
-                    found = True
-                    break
-            if not found:
-                school = re.search(r'Increases damage done by (Arcane|Fire|Frost|Nature|Shadow|Holy) spells and effects by up to (\d+)', line)
-                if school:
-                    stats['sp'+school[1]] = int(school[2]); found = True
-            if not found:
-                unresolved.append(line)
+        if line.startswith('Equip:') and not resolve_equip(line, stats):
+            unresolved.append(line)
     item['stats'] = stats
     item['complete'] = {'stats': bool(raw), 'restrictions': bool(raw), 'effects': not unresolved and bool(raw)}
     item['warnings'] = [ascii_text(s) for s in unresolved]

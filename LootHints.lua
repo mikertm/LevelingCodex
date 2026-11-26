@@ -6,16 +6,72 @@ local SCORE_ICON="|TInterface\\Icons\\inv_chest_plate04:12:12:0:0|t "
 local SCORE_COLORS={
   upgrade={0.67,0.90,0.50}, downgrade={1.00,0.62,0.55},
   cannotEquip={1.00,0.62,0.55}, sidegrade={0.88,0.86,0.70},
+  future={0.55,0.78,1.00},
 }
-local function scoreLine(item,ctx,r)
-  if r.confidence=="complete" then
-    local score=r.percent and string.format("%+.1f%% gear score",r.percent) or string.format("%+.1f gear score",r.delta)
-    local rank=L.catalogRank(item,ctx,r)
-    return rank and string.format("Rank #%d | %s",rank,score) or score
+local function pct(percent,delta)
+  return percent and string.format("%+.1f%%",percent) or string.format("%+.1f",delta or 0)
+end
+-- The notes say what the score leaves out ("Use effect not counted"), shortest first.
+function L.notesText(notes)
+  local out={}
+  for _,n in ipairs(notes or {}) do
+    local short=n:match("^(.-) not counted")
+    out[#out+1]=short and short:lower() or n
   end
-  if r.verdict=="cannotEquip" then return "Cannot equip" end
-  if r.verdict=="loading" then return "Loading score" end
-  return "Score unavailable"
+  if #out==0 then return end
+  local counted,other={},{}
+  for i,n in ipairs(notes) do if n:find(" not counted",1,true) then counted[#counted+1]=out[i] else other[#other+1]=n end end
+  local text=#counted>0 and ("skips "..table.concat(counted,", ")) or nil
+  if #other>0 then text=(text and text.."; " or "")..table.concat(other,"; ") end
+  return text
+end
+-- One line for the tooltip: the verdict and how much, or what's missing. Returns text, colour key.
+local function scoreLine(item,ctx,r)
+  if r.noValue then return r.reason or "No stats your build uses",r.verdict end
+  if r.confidence=="complete" then
+    local label=L.labels[r.verdict] or r.verdict
+    local score=(r.estimate and "about " or "")..(r.percent and pct(r.percent).." gear score" or
+      (r.baselineScore==0 and "fills an empty slot" or pct(nil,r.delta).." gear score"))
+    local rank=L.catalogRank(item,ctx,r)
+    return label..": "..score..(rank and string.format(" | Rank #%d",rank) or ""),r.verdict
+  end
+  if r.verdict=="cannotEquip" then
+    local f=r.future
+    if f and f.noValue then return string.format("At level %d: %s",f.level,((f.reason or "No stats your build uses"):gsub("^%u",string.lower))),"future" end
+    if f then
+      local score=f.percent and pct(f.percent) or (f.baselineScore==0 and "fills a slot" or pct(nil,f.delta))
+      return string.format("At level %d: %s%s (%s)",f.level,f.estimate and "about " or "",score,(L.labels[f.verdict] or f.verdict):lower()),"future"
+    end
+    return "Cannot equip"..(r.reason and r.reason~="" and ": "..r.reason or ""),r.verdict
+  end
+  if r.verdict=="loading" then return "Loading score","loading" end
+  if r.reason and r.reason~="" and r.reason~="Comparison needs more information" then return r.reason,"needsReview" end
+  return "Score unavailable","needsReview"
+end
+L.scoreLine=scoreLine
+-- "Equipped | Rank #6 | 12% of your gear score": where a worn item stands.
+function L.equippedLine(item,ctx)
+  local parts={"Equipped"}
+  local rank=L.catalogRank and L.catalogRank(item,ctx,{confidence="complete",delta=0})
+  if rank then parts[#parts+1]="Rank #"..rank end
+  local s=ctx.profile and L.score(item,ctx.profile)
+  local total=L.gearTotal and ctx.snapshot and L.gearTotal(ctx.snapshot.slots or {},ctx.profile)
+  if s and s.value and total and total>0 then parts[#parts+1]=string.format("%.0f%% of your gear score",s.value/total*100) end
+  return table.concat(parts," | ")
+end
+-- The second tooltip line: what it replaces and what the score leaves out.
+function L.detailLine(r)
+  local parts={}
+  local f=r.future
+  local notes=(f and f.notes) or r.notes
+  local base=r.baseline and r.baseline[1]
+  if (r.confidence=="complete" or f) and base and base.name then
+    parts[#parts+1]="vs "..ns.plain(base.name)..(r.baseline[2] and r.baseline[2].name and " + "..ns.plain(r.baseline[2].name) or "")
+  end
+  local n=L.notesText(notes)
+  if n then parts[#parts+1]=n end
+  if #parts==0 then return end
+  return table.concat(parts," - ")
 end
 function L.annotate(tip,ref)
   local db=ns.db()
@@ -27,15 +83,31 @@ function L.annotate(tip,ref)
   local key=item.key
   if tip.codexLootKey==key then return end
   local ctx=L.context()
-  local r=L.compare(item,ctx);tip.codexLootKey=key;tip.codexLootRef=ref
-  local color=SCORE_COLORS[r.verdict] or {0.74,0.80,0.84}
-  tip:AddLine(SCORE_ICON.."Codex: "..scoreLine(item,ctx,r),color[1],color[2],color[3])
+  tip.codexLootKey=key;tip.codexLootRef=ref
+  -- The item you're wearing: its standing, not a comparison with itself.
+  local snap=ctx.snapshot and ctx.snapshot.equipmentKnown~=false and ctx.snapshot.slots or {}
+  for _,n in ipairs(L.slotOrder or {}) do
+    local worn=snap[n]
+    if worn and worn.key==key then
+      local text=L.equippedLine(item,ctx)
+      tip:AddLine(SCORE_ICON.."Codex: "..ns.plain(text),0.88,0.86,0.70)
+      return
+    end
+  end
+  local r=L.compare(item,ctx)
+  local line,kind=scoreLine(item,ctx,r)
+  local color=SCORE_COLORS[kind] or {0.74,0.80,0.84}
+  tip:AddLine(SCORE_ICON.."Codex: "..ns.plain(line),color[1],color[2],color[3])
+  local detail=L.detailLine(r)
+  if detail then tip:AddLine("   "..ns.plain(detail),0.62,0.66,0.70,true) end
   if db.lootTooltipProfiles and ctx.profile then
     for _,path in ipairs((ns.TALENT_PATHS or {})[ctx.class] or {}) do
       if path.key~=ctx.profile.key then
         local other=L.context({profileKey=path.key})
         local alternate=L.compare(item,other)
-        tip:AddLine(ns.plain(other.profile.label)..": "..scoreLine(item,other,alternate),0.74,0.80,0.84)
+        local text,kind=scoreLine(item,other,alternate)
+        local c=SCORE_COLORS[kind] or {0.74,0.80,0.84}
+        tip:AddLine("   "..ns.plain(other.profile.label)..": "..ns.plain(text),c[1],c[2],c[3])
       end
     end
   end

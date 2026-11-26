@@ -3,13 +3,14 @@ local _, ns = ...
 local L=ns.loot
 local ROLES={
   ["Melee damage"]={str=1,agi=1.2,sta=0.4,ap=0.5,feralAp=0.5,hit=8,crit=7,armor=0.002},
-  ["Ranged damage"]={agi=2,str=0.1,sta=0.4,int=0.5,rap=0.5,ap=0.2,hit=8,crit=7},
-  ["Caster damage"]={int=1,sta=0.4,spi=0.5,sp=1.8,mp5=0.8,spellHit=8,spellCrit=6},
-  Healer={int=1.3,sta=0.3,spi=0.8,sp=0.4,heal=1.4,mp5=1.5},
-  Tank={sta=1.3,armor=0.02,str=0.4,agi=0.6,defense=2,dodge=7,block=1,blockValue=0.4,ap=0.1},
+  ["Ranged damage"]={agi=2,str=0.1,sta=0.4,int=0.5,rap=0.5,ap=0.2,hit=8,crit=7,armor=0.003},
+  ["Caster damage"]={int=1,sta=0.4,spi=0.5,sp=1.8,mp5=0.8,spellHit=8,spellCrit=6,spellPen=0.4,armor=0.003},
+  Healer={int=1.3,sta=0.3,spi=0.8,sp=0.4,heal=1.4,mp5=1.5,spellCrit=5,armor=0.003},
+  Tank={sta=1.3,armor=0.02,str=0.4,agi=0.6,defense=2,dodge=7,parry=6,block=4,blockValue=0.4,ap=0.1,hit=4,crit=2},
 }
 local allowed={health=true,mana=true,hp5=true,mp5=true,spFire=true,spFrost=true,spShadow=true,spNature=true,
-  spArcane=true,spHoly=true,haste=true,spellHaste=true,resist=true}
+  spArcane=true,spHoly=true,haste=true,spellHaste=true,resist=true,resHoly=true,resFire=true,resNature=true,
+  resFrost=true,resShadow=true,resArcane=true}
 for _,weights in pairs(ROLES) do for key in pairs(weights) do allowed[key]=true end end
 local function copy(t) local o={}; for k,v in pairs(t or {}) do o[k]=v end; return o end
 local function class() local _,c=UnitClass("player"); return c end
@@ -21,7 +22,7 @@ local function normalize(p)
   for k,v in pairs(p.weights) do if not allowed[k] or not validNumber(v) then return nil,"Invalid stat weight" end; out.weights[k]=v end
   for k,v in pairs(p.weapon or {}) do
     if k=="feral" then if type(v)~="boolean" then return nil,"Invalid weapon policy" end
-    elseif not (k=="melee" or k=="ranged" or k=="speed") or not validNumber(v) then return nil,"Invalid weapon policy" end
+    elseif not (k=="melee" or k=="ranged" or k=="speed" or k=="wand") or not validNumber(v) then return nil,"Invalid weapon policy" end
     out.weapon[k]=v
   end
   return out
@@ -56,7 +57,9 @@ function L.profile(ctx)
   local weights=copy(ROLES[role])
   local feral=ctx.class=="DRUID" and (path.spec or ""):find("Feral")~=nil
   local weapon={melee=(role=="Melee damage" or role=="Tank") and 4 or 0,
-    ranged=role=="Ranged damage" and 6 or 0,feral=feral}
+    ranged=role=="Ranged damage" and 6 or 0,feral=feral,
+    -- A wand is a leveling caster's steady damage: its DPS counts (a healer less).
+    wand=role=="Caster damage" and 1 or role=="Healer" and 0.5 or 0}
   local school=({Fire="Fire",Frost="Frost",Shadow="Shadow",Balance="Nature",Elemental="Nature",Arcane="Arcane"})[path.spec]
   if school then weights["sp"..school]=weights.sp or 0 end
   return {key=path.key,class=ctx.class,label=path.spec or "Leveling",role=role,weights=weights,weapon=weapon,version=ns.talentVersion or 0,
@@ -82,7 +85,7 @@ function L.profileCode()
   local p=L.profile();if not p then return "" end; local fields={p.label}
   local keys={}; for k in pairs(p.weights) do keys[#keys+1]=k end; table.sort(keys)
   for _,k in ipairs(keys) do fields[#fields+1]=k.."="..p.weights[k] end
-  for _,k in ipairs({"melee","ranged","speed"}) do if p.weapon[k] then fields[#fields+1]="w_"..k.."="..p.weapon[k] end end
+  for _,k in ipairs({"melee","ranged","speed","wand"}) do if p.weapon[k] then fields[#fields+1]="w_"..k.."="..p.weapon[k] end end
   fields[#fields+1]="feral="..(p.weapon.feral and "1" or "0")
   local payload=table.concat(fields,";")
   return "LCL1-"..p.class.."-"..payload.."-"..checksum(payload)

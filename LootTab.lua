@@ -65,7 +65,12 @@ local function verdictColor(verdict)
 end
 local STAT_NAMES={str="Strength",agi="Agility",sta="Stamina",int="Intellect",spi="Spirit",armor="Armor",
   ap="Attack power",rap="Ranged attack power",sp="Spell power",heal="Healing",defense="Defense",
-  hit="Hit",crit="Critical strike",dodge="Dodge",parry="Parry",block="Block",mp5="Mana per 5 sec"}
+  hit="Hit %",crit="Critical strike %",dodge="Dodge %",parry="Parry %",block="Block %",mp5="Mana per 5 sec",
+  spellHit="Spell hit %",spellCrit="Spell crit %",spellPen="Spell penetration",blockValue="Block value",
+  feralAp="Feral attack power",hp5="Health per 5 sec",weaponDmg="Weapon damage",health="Health",mana="Mana",
+  spFire="Fire spell power",spFrost="Frost spell power",spShadow="Shadow spell power",spNature="Nature spell power",
+  spArcane="Arcane spell power",spHoly="Holy spell power",resHoly="Holy resistance",resFire="Fire resistance",
+  resNature="Nature resistance",resFrost="Frost resistance",resShadow="Shadow resistance",resArcane="Arcane resistance"}
 
 local function refresh(top)
   if top then U.refreshTop() elseif ns.refreshLootTab then ns.refreshLootTab() end
@@ -544,10 +549,15 @@ local function pickup(source,quest,ctx)
 end
 
 local function upgradeBadge(r,futureLevel)
+  local f=r.future
+  if f then
+    local gain=f.percent and string.format("%s%+.1f%%",f.estimate and "~" or "",f.percent) or (f.verdict=="upgrade" and "Empty slot" or nil)
+    return "At level "..f.level..": "..(L.labels[f.verdict] or f.verdict),gain,f.verdict=="upgrade" and C.accent or C.dim
+  end
   if futureLevel then return "Later level","Level "..futureLevel,C.dim end
   local gain
   if r.confidence=="complete" then
-    if r.percent then gain=string.format("%+.1f%%",r.percent)
+    if r.percent then gain=string.format("%s%+.1f%%",r.estimate and "~" or "",r.percent)
     elseif r.verdict=="upgrade" then gain="Empty slot" end
   end
   if r.verdict=="needsReview" then
@@ -582,7 +592,12 @@ local function previewItem(y,row,ctx)
   line(verdict,x+24,y+6,143,"body",color)
   if gain then line(gain,x+174,y+6,w-198,"body",color,"RIGHT") end
   y=y+34
-  if r.reason and r.confidence~="complete" then y=text(r.reason,y,"small",C.dim,x+14,w-28) end
+  if r.reason and r.confidence~="complete" and not r.future then y=text(r.reason,y,"small",C.dim,x+14,w-28) end
+  if r.weaponDpsDelta and gain and not gain:find("DPS",1,true) then
+    y=text(string.format("Weapon damage: %+.1f DPS",r.weaponDpsDelta),y,"small",C.gold,x+14,w-28)
+  end
+  local detail=L.detailLine and L.detailLine(r)
+  if detail then y=text(detail,y,"small",C.dim,x+14,w-28) end
   if item.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
     y=text("Uses both hands and prevents a shield.",y,"small",C.gold,x+14,w-28)
   end
@@ -790,14 +805,15 @@ local function statOverview(it,r,y,ctx)
       itemTip(b,old)
     end
   else line(known and "Empty slot" or "Baseline not verified",16,y+36,260,"body",C.dim) end
-  line("Estimated gear score",310,y+10,236,"small",C.gold)
-  if r.confidence=="complete" and r.score and r.baselineScore then
+  line(r.future and "Gear score at level "..r.future.level or r.estimate and "Estimated gear score (about)" or "Estimated gear score",310,y+10,236,"small",C.gold)
+  if (r.confidence=="complete" or r.future) and r.score and r.baselineScore then
+    local delta=r.score-r.baselineScore
     local scale=math.max(1,math.abs(r.score),math.abs(r.baselineScore))
     line("Before "..number(r.baselineScore),310,y+31,112,"small",C.dim)
-    line("With item "..number(r.score),428,y+31,120,"small",r.delta>=0 and C.green or C.loss)
+    line("With item "..number(r.score),428,y+31,120,"small",delta>=0 and C.green or C.loss)
     U.rect(310,y+55,108,7,C.edgeSoft,"border",1);U.rect(428,y+55,108,7,C.edgeSoft,"border",1)
     if r.baselineScore>0 then U.rect(310,y+55,108*r.baselineScore/scale,7,C.dim,"border",2) end
-    if r.score>0 then U.rect(428,y+55,108*r.score/scale,7,r.delta>=0 and C.green or C.loss,"border",2) end
+    if r.score>0 then U.rect(428,y+55,108*r.score/scale,7,delta>=0 and C.green or C.loss,"border",2) end
   else
     line("Score not verified",310,y+33,236,"body",C.dim)
     line("Review the notes before replacing.",310,y+57,236,"small",C.dim)
@@ -834,9 +850,12 @@ local function statOverview(it,r,y,ctx)
       y=y+math.ceil(#keys/2)*66+6
     else y=text("No numerical stat changes. Review the item's effects.",y,"small",C.dim) end
   end
-  if #r.warnings>0 then
+  local notes=(r.future and r.future.notes) or r.notes or {}
+  if #r.warnings>0 or #notes>0 then
     y=y+8;y=y+sectionTitle("Check before replacing",y)
     for _,warning in ipairs(r.warnings) do y=text(warning,y,"small",C.gold) end
+    for _,note in ipairs(notes) do y=text(note..".",y,"small",C.dim) end
+    for _,w in ipairs(it.warnings or {}) do y=text(w,y,"small",C.dim) end
   end
   return y
 end
@@ -1005,7 +1024,7 @@ local function details(detail,y,ctx)
   itemIcon(it,16,y+16,40,it.name,r.reason)
   line(it.name,68,y+13,300,"head",quality(it.quality))
   local verdict,gain,color=upgradeBadge(r)
-  local value=r.confidence=="complete" and r.percent and string.format(" (%+.1f%% estimated gear score)",r.percent)
+  local value=r.confidence=="complete" and r.percent and string.format(" (%s%+.1f%% estimated gear score)",r.estimate and "about " or "",r.percent)
     or gain and (" / "..gain) or ""
   line(verdict..value,68,y+41,300,"small",color)
   if it.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
@@ -1045,12 +1064,13 @@ local function comparisonResult(y,ctx)
     local r=L.compare(it,ctx)
     local color=verdictColor(r.verdict)
     L.lastComparison=it.name..": "..(L.labels[r.verdict] or r.verdict).." - "..r.reason
-    local score=r.confidence=="complete" and (r.percent and string.format("%+.1f%%",r.percent) or string.format("%+.1f",r.delta))
+    local score=r.confidence=="complete" and (r.percent and string.format("%s%+.1f%%",r.estimate and "~" or "",r.percent) or string.format("%+.1f",r.delta))
+      or r.future and (r.future.percent and string.format("%+.1f%%",r.future.percent) or r.future.delta and string.format("%+.1f",r.future.delta))
     local status,dps=upgradeBadge(r)
     local equipped=#r.baseline==1 and r.baseline[1].key==it.key
     U.surface(inset,y,w-28,48,C.background,C.edgeSoft)
     U.rect(inset,y,3,48,color,"border",1)
-    line(equipped and "Already equipped" or (dps and r.verdict=="needsReview" and status) or L.labels[r.verdict] or r.verdict,
+    line(equipped and "Already equipped" or (r.future and status) or (dps and r.verdict=="needsReview" and status) or L.labels[r.verdict] or r.verdict,
       inset+12,y+7,w-106,"body",color)
     if score then
       line("Estimated gear score",inset+12,y+29,w-110,"small",C.dim)
@@ -1059,7 +1079,9 @@ local function comparisonResult(y,ctx)
       line(dps,inset+12,y+29,w-28,"small",C.gold)
     end
     y=y+57
-    if not score then y=text(r.reason,y-2,"small",C.dim,inset,w-28)+3 end
+    if not score or r.future then y=text(r.future and ("Requires level "..r.future.level..": rated for when you get there.") or r.reason,y-2,"small",C.dim,inset,w-28)+3 end
+    local notes=L.notesText and L.notesText((r.future and r.future.notes) or r.notes)
+    if notes then y=text("Score "..notes..".",y-2,"small",C.dim,inset,w-28)+3 end
     if it.slot=="INVTYPE_2HWEAPON" and L.prefersShield(ctx) then
       y=text("Uses both hands and prevents a shield.",y,"small",C.gold,inset,w-28)
     end

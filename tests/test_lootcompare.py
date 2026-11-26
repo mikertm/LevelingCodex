@@ -37,7 +37,37 @@ class LootCompareTests(unittest.TestCase):
           end
           local c=ctx(); c.snapshot.slots[5]=false
           local r=L.compare(item(10,1),c); assert(r.verdict=="upgrade" and r.percent==nil)
-          c.snapshot.slots[5]=item(1,0); assert(L.compare(item(10,0),c).verdict=="needsReview")
+          c.snapshot.slots[5]=item(1,0); r=L.compare(item(10,0),c); assert(r.verdict=="sidegrade" and r.noValue, "nothing the build uses says so")
+        ''')
+
+    def test_second_audit_gaps(self):
+        self.lua.execute('''
+          -- A wand's DPS counts for a caster; two wands with the same stats differ by damage.
+          local caster={weights={int=1,sp=1.8},weapon={melee=0,ranged=0,wand=1}}
+          local function wand(dps) local w=item(20,0,"INVTYPE_RANGEDRIGHT"); w.classID=2; w.subclassID=19; w.stats={}; w.damage=dps; w.speed=1.5; return w end
+          assert(L.score(wand(20),caster).value==20 and L.score(wand(11),caster).value==11, "wand DPS counts")
+          -- Librams, idols and totems are one class each.
+          local relic=item(21,0,"INVTYPE_RELIC"); relic.subclassID=7; relic.stats={}
+          local c=ctx(); local r=L.compare(relic,c)
+          assert(r.verdict=="cannotEquip" and r.reason=="Your class can't use librams", tostring(r.reason))
+          -- An older "damage and healing" line heals too; Forever's split healing gear doesn't double.
+          local healer={weights={heal=1.4,sp=0.4},weapon={}}
+          local a=item(22,0); a.stats={sp=10}; local b=item(23,0); b.stats={sp=10,heal=30}
+          assert(math.abs(L.score(a,healer).value-18)<1e-6 and math.abs(L.score(b,healer).value-46)<1e-6)
+          a.spDamageOnly=true; assert(math.abs(L.score(a,healer).value-4)<1e-6, "spell damage alone doesn't heal")
+          -- Why nothing counts.
+          local t=item(24,0,"INVTYPE_TRINKET"); t.stats={}; t.warnings={"Use: Increases armor by 520 for 20 sec."}
+          c=ctx(); c.snapshot.slots[13]=false; c.snapshot.slots[14]=false
+          r=L.compare(t,c); assert(r.noValue and r.reason=="Only its use effect: not scored", tostring(r.reason))
+          local n=item(25,0,"INVTYPE_NECK"); n.stats={resFire=10}; c.snapshot.slots[2]=false
+          r=L.compare(n,c); assert(r.noValue and r.reason=="Resistances only: not part of the score", tostring(r.reason))
+          n.stats={}; r=L.compare(n,c); assert(r.reason=="No stats listed: read the tooltip", tostring(r.reason))
+          n.random=true; n.complete.stats=false; r=L.compare(n,c); assert(r.reason:find("random bonus",1,true), tostring(r.reason))
+          -- Replacing an enchanted item says the enchant goes.
+          c=ctx(); c.snapshot.slots[5].notes={"Enchant not counted"}; c.snapshot.slots[5].name="Old Vest"
+          r=L.compare(item(10,150),c)
+          local found=false; for _,x in ipairs(r.notes) do if x=="You'd lose the enchant on Old Vest" then found=true end end
+          assert(found, "the enchant note names the worn item")
         ''')
 
     def test_paired_slots_unique_and_hands(self):
@@ -50,17 +80,23 @@ class LootCompareTests(unittest.TestCase):
           r=L.compare(item(10,70,"INVTYPE_2HWEAPON"),ctx())
           assert(r.verdict=="downgrade" and #r.replacedSlots==2)
           c=ctx(); c.snapshot.slots[16]=item(8,90,"INVTYPE_2HWEAPON"); c.snapshot.slots[17]=false
-          assert(L.compare(item(10,60,"INVTYPE_WEAPON"),c).verdict=="needsReview")
+          r=L.compare(item(10,60,"INVTYPE_WEAPON"),c)
+          assert(r.verdict=="downgrade" and r.estimate and r.replacedSlots[1]==16, "a one-hander is rated against the two-hander")
+          r=L.compare(item(11,60,"INVTYPE_SHIELD"),c)
+          assert(r.verdict=="needsReview" and r.reason:find("one-hand weapon",1,true), "an off-hand behind a two-hander says why")
         ''')
 
     def test_restrictions_and_unknowns(self):
         self.lua.execute('''
           local i=item(9,110); i.requiredLevel=61
-          assert(L.compare(i,ctx()).verdict=="cannotEquip")
+          local r=L.compare(i,ctx())
+          assert(r.verdict=="cannotEquip" and r.future and r.future.level==61 and r.future.verdict=="upgrade", "a future item is rated for its level")
           i.requiredLevel=1; i.restrictions.classes={"MAGE"}
-          assert(L.compare(i,ctx()).verdict=="cannotEquip")
-          i.restrictions={}; i.complete.effects=false
-          assert(L.compare(i,ctx()).verdict=="needsReview")
+          r=L.compare(i,ctx())
+          assert(r.verdict=="cannotEquip" and not r.future)
+          i.restrictions={}; i.complete.effects=false; i.warnings={"Use: Does a thing."}
+          r=L.compare(i,ctx())
+          assert(r.verdict=="upgrade" and r.estimate and r.notes[1]=="Use effect not counted", "an effect makes an estimate, not a blank")
           i.complete.effects=true; i.complete.stats=false
           assert(L.compare(i,ctx()).verdict=="needsReview")
           i.complete.stats=true; local c=ctx(); c.snapshot.slots[5]=nil
@@ -73,14 +109,24 @@ class LootCompareTests(unittest.TestCase):
           local i=item(9,100); i.damage=10000
           assert(L.compare(i,c).verdict=="sidegrade")
           i.restrictions.set=1
-          assert(L.compare(i,c).verdict=="needsReview")
+          local r=L.compare(i,c)
+          assert(r.verdict=="sidegrade" and r.estimate and r.notes[1]=="Set bonus not counted")
         ''')
 
     def test_unknown_proficiency_is_not_a_known_rejection(self):
         self.lua.execute('''
           local c=ctx();c.proficiencies={armor=1,armorKnown=false,weapons={},weaponKnown=false}
-          local i=item(9,100);i.subclassID=4
-          assert(L.compare(i,c).verdict=="needsReview")
+          local i=item(9,110);i.subclassID=4
+          assert(L.compare(i,c).verdict=="upgrade", "a level 60 warrior wears plate")
+          c.level=30; local r=L.compare(i,c)
+          assert(r.verdict=="cannotEquip" and r.reason=="Armor proficiency required")
+          c.class="MAGE"; c.level=60; assert(L.compare(i,c).verdict=="cannotEquip")
+          c.class="UNKNOWN"; r=L.compare(i,c); assert(r.verdict=="upgrade" and r.estimate)
+          c=ctx(); c.level=30; i.requiredLevel=40
+          r=L.compare(i,c); assert(r.verdict=="cannotEquip" and r.future and r.future.verdict=="upgrade", "plate is rated for level 40")
+          local w=item(12,110,"INVTYPE_WEAPONMAINHAND"); w.classID=2; w.subclassID=1; w.damage=10
+          r=L.compare(w,ctx()); assert(r.verdict=="upgrade" and r.estimate and r.notes[1]:find("rain",1,true), "an untrained weapon says to train it")
+          w.subclassID=19; assert(L.compare(w,ctx()).verdict=="cannotEquip", "a warrior can't use a wand")
         ''')
 
     def test_unread_equipment_snapshot_never_uses_stale_gear_conclusively(self):
