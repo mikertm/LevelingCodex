@@ -1017,7 +1017,8 @@ end
 -- What kind of quests the chapter was made of.
 local KIND_GROUP = { wanted = "kindHunt", slay = "kindHunt", kill = "kindHunt", proof = "kindHunt",
   loot = "kindGather", gather = "kindGather", find = "kindGather", cook = "kindGather", buy = "kindGather",
-  deliver = "kindErrand", errand = "kindErrand", scout = "kindErrand", escort = "kindEscort" }
+  deliver = "kindErrand", errand = "kindErrand", scout = "kindErrand", seek = "kindErrand", report = "kindErrand",
+  lore = "kindErrand", escort = "kindEscort" }
 Vo.noticers[#Vo.noticers + 1] = function(c)
   if not J.questKind then return end
   local counts, total, escort = {}, 0, false
