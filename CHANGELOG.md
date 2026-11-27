@@ -13,6 +13,10 @@
     - **A busy sender isn't ignored for a few odd prices:** a player is now ignored only when held prices are a tenth or more of what they sent. Before, five odd prices out of hundreds were enough.
     - **Settings > Helpers > PRICE SHARING says what happened to what you heard:** how many prices came in, how many were filed, how many were older than your own, and how many are waiting for a second player. It also lists who shared with you ("Silfer Strife (your character): 224 filed of 672") and how many prices your own scans have since replaced. That is why it could say "No price in your database comes from other players" after 224 updates: your own scans always win.
     - **Fixed:** "1 players ignored" now reads "1 player is ignored for this session". A sender sending every 2 seconds could also go over the per-minute limit and lose messages without a word.
+- **Fixed: the guide no longer waits at hand-ins for items it never sent you to get.** Favor for Krazek stopped the Stranglethorn route on a turn-in for four Lesser Bloodstone Ore that no step asked for.
+    - **"Bring me these" quests the route doesn't gather for** are offered only while your bags already hold the items.
+    - **Hand-ins for drops the route can't promise** wait until your quest log says the quest is ready, and their follow-ups wait with them.
+    - **About 35 such steps across both factions are fixed**, with collect and buy steps added where the route can get the items, and a missing Horde objective added.
 - **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
 
 ## v0.34.6
