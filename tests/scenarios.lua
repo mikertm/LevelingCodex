@@ -15685,3 +15685,89 @@ function S.questKodoRoundupAccept()
   check(at() == "desolace-35:complete:5561:1" and not questText(frame, "Accept - Kodo Roundup"),
     "accepting the quest moves the window on to its work: " .. tostring(at()))
 end
+
+----------------------------------------------------------------------------
+-- The guide's place between sessions (charDB.questPlace)
+----------------------------------------------------------------------------
+
+-- Player report (CurseForge, 2026-11-27): "my quests don't seem right compared to my last play".
+-- In Thelsamar with Vidra's, Kadrell's and Grenhild's quests in the log, the guide worked its place
+-- out again at login and jumped to Grenhild's jar quest, past Brock's errands the player was on.
+local function lochLog()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Dwarf", 12, 1432, 35, 47
+  MOCK.questDone[414] = true
+  LevelingCodexCharDB = { questFlights = { ["Thelsamar, Loch Modan"] = true } }
+  MOCK.questLog = { { questID = 418, objectives = { { text = "Boar Intestines: 0/3" } } },
+    { questID = 416, objectives = { { text = "Tunnel Rat Ear: 0/12" } } },
+    { questID = 1339, isComplete = true }, { questID = 86667, objectives = { { text = "Ceramic Jar: 0/1" } } } }
+end
+
+local BROCK = { key = "loch-modan:accept:6387:1", section = "loch-modan", quest = 6387, type = "accept", pos = 15 }
+
+-- Without a saved place: the guide stays in the chapter's earlier steps here, not at the jar quest.
+function S.questLoginSameChapter()
+  lochLog()
+  S.login()
+  MOCK.event("QUEST_LOG_UPDATE")
+  local row = MOCK.ns.quests.current()
+  check(row and row.key == BROCK.key,
+    "logging in at Thelsamar keeps the steps before the jar quest: " .. tostring(row and row.key))
+end
+
+-- With a saved place: the step you left off on, through the log arriving and the zone event.
+function S.questPlaceRestore()
+  lochLog()
+  LevelingCodexCharDB.questPlace = { v = 1, section = "loch-modan", step = BROCK, main = BROCK }
+  S.login()
+  local Q = MOCK.ns.quests
+  check(Q.current() and Q.current().key == BROCK.key, "login carries on from Brock's pickup: " .. tostring(Q.current() and Q.current().key))
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.advance(1)
+  check(Q.current().key == BROCK.key, "the quest log and the zone event keep it: " .. Q.current().key)
+  -- the game finishing the saved step moves on as usual
+  table.insert(MOCK.questLog, { questID = 6387, isComplete = true })
+  MOCK.event("QUEST_ACCEPTED", 6387)
+  MOCK.event("QUEST_LOG_UPDATE")
+  check(Q.current().key == "loch-modan:turnin:6387:1", "accepting it moves on: " .. Q.current().key)
+  check(LevelingCodexCharDB.questPlace.step.key == "loch-modan:turnin:6387:1", "the new step is saved")
+  local line
+  for _, l in ipairs(MOCK.ns.questDebugLines()) do if l:find("guide place") then line = l end end
+  check(line and line:find("restored loch%-modan:accept:6387:1"), "/codex debug says the place was restored: " .. tostring(line))
+  -- later zone changes catch up as before: the hold is only for the login
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1455, 50, 50
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  MOCK.questMap, MOCK.questX, MOCK.questY = 1432, 35, 47
+  MOCK.event("ZONE_CHANGED_NEW_AREA")
+  check(Q.current().section.id == "loch-modan", "back in Loch Modan the chapter stays")
+end
+
+-- A new version moved the steps: a quest step is found by its quest, a travel step near its old spot.
+function S.questPlaceShifted()
+  lochLog()
+  local moved = { key = "loch-modan:accept:6387:1", section = "loch-modan", quest = 6387, type = "accept", pos = 40 }
+  LevelingCodexCharDB.questPlace = { v = 1, section = "loch-modan", step = moved, shapes = { ["loch-modan"] = "1:1" },
+    visited = { ["loch-modan:goto:25:1"] = true } }
+  S.login()
+  local Q = MOCK.ns.quests
+  check(Q.current().key == BROCK.key, "the saved quest step is found again: " .. Q.current().key)
+  check(not (LevelingCodexCharDB.questPlace.visited or {})["loch-modan:goto:25:1"], "a travel arrival from another shape isn't carried over")
+end
+
+-- A saved place the route no longer has, and Find my place / /codex resync.
+function S.questPlaceResync()
+  lochLog()
+  LevelingCodexCharDB.questPlace = { v = 1, section = "no-such-chapter",
+    step = { key = "no-such-chapter:accept:1:1", section = "no-such-chapter", quest = 1, type = "accept", pos = 1 } }
+  S.login()
+  local Q = MOCK.ns.quests
+  check(Q.current() and Q.current().section.id == "loch-modan", "an unknown saved chapter falls back to the quest log")
+  -- now a place that no longer matches the quest log: resync works it out again
+  local before = Q.current().key
+  slash("quests")
+  stepTool("Find my place")
+  check(chatHas("found your place from your quest log"), "Find my place says where you are")
+  check(Q.current().section.id == "loch-modan", "Find my place stays in Loch Modan")
+  slash("resync")
+  check(Q.current().key == before or Q.current().section.id == "loch-modan", "/codex resync works too")
+end

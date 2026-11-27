@@ -1,5 +1,10 @@
 # Leveling Codex
 
+## v0.34.6
+- **The quest guide carries on from your last step.** It now remembers, per character, the step you were on (and a dungeon, class or special guide you had open) and picks up there after a login, a /reload or an update, instead of working your place out again from the quest log. That could jump to a later quest of the zone at login, past pickups you hadn't done yet.
+    - **Logging in mid-chapter without a saved step** (the first login on this version) no longer jumps past the chapter's earlier steps to an active quest further on.
+    - **Find my place:** Quests > Step > Find my place, or `/codex resync`, works your step out again from your quest log and where you stand, if the guide ever doesn't match your quests.
+
 ## v0.34.5
 - **Journey: camping, fixed and told properly.** The old check looked for any buff named like a campfire, so it could write a camp when you only passed a fire and miss the time you really sat down.
     - **A camp is a camp now:** the moment is written when you get **Camp Benefits** from sitting at a campfire, and it says what the camp gave you ("the lodestone lent you melee attack power up by 49"; several objects are listed together).

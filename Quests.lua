@@ -870,6 +870,80 @@ local function greyRange()
   return try(GetQuestGreenRange) or (level < 40 and 5 + math.floor(level / 10) or 9)
 end
 
+-- Where you are in the guide, kept per character (charDB.questPlace) so a login, a /reload or a new
+-- version carries on from the last step played. Without it the guide works your place out again
+-- from the quest log and where you stand, and at login that could jump to a later quest of the zone
+-- (or back to the chapter that fits your map) instead of the step you left off on. Saved after every
+-- calculate() that moved something; restored once, at the first update after login, before any zone
+-- catch-up. `visited` (arrivals, Next on travel steps) is session state, saved with it.
+local place = { restored = false, hold = false, last = nil }
+local PLACE_VISITED_MAX = 400
+
+-- A section's shape: an update that adds or removes steps changes it, and then a saved key of a
+-- step without a quest (numbered by position) may name another step.
+local function sectionShape(section)
+  local n, len = 0, 0
+  for _, row in ipairs(steps) do
+    if row.section == section then n, len = n + 1, len + #row.key end
+  end
+  return n .. ":" .. len
+end
+
+local function describeRow(row)
+  if not row then return nil end
+  return { key = row.key, section = row.section.id, quest = row.step.quest, type = row.step.type, pos = row.pos }
+end
+
+-- The row a saved description names: its key while the section kept its shape (or the step has a
+-- quest), else the same quest and kind in that section, else the step nearest its old position.
+local function findRow(d, shapes)
+  if type(d) ~= "table" or type(d.section) ~= "string" then return nil end
+  local section = sectionsById[d.section]
+  if not section then return nil end
+  local sameShape = type(shapes) == "table" and shapes[d.section] == sectionShape(section)
+  local byQuest, nearest, gap
+  for i, row in ipairs(steps) do
+    if row.section == section then
+      if row.key == d.key and (sameShape or row.step.quest) then return i end
+      if d.quest and row.step.quest == d.quest and row.step.type == d.type and not byQuest then byQuest = i end
+      if type(d.pos) == "number" and row.pos then
+        local g = math.abs(row.pos - d.pos)
+        if not gap or g < gap then nearest, gap = i, g end
+      end
+    end
+  end
+  return byQuest or nearest
+end
+
+local function savePlace()
+  if not place.restored or not route then return end
+  local row, resume = index and steps[index], resumeAt and steps[resumeAt]
+  local count = 0
+  for _ in pairs(visited) do count = count + 1 end
+  local sig = table.concat({ row and row.key or "-", resume and resume.key or "-", selected and selected.id or "-",
+    sideSection and sideSection.id or "-", tostring(sideFrom), tostring(sidePrepare), tostring(sideResumeAt), count }, "|")
+  if sig == place.last then return end
+  place.last = sig
+  local db = ns.charDB()
+  if not (row or selected) then return end
+  local main = row and not row.section.side and row or nil
+  local saved = { v = 1, at = try(time), level = level, step = describeRow(row), main = describeRow(main),
+    resume = describeRow(resume), section = selected and selected.id, shapes = {}, visited = {} }
+  if selected then saved.shapes[selected.id] = sectionShape(selected) end
+  if sideSection then
+    saved.side = { id = sideSection.id, from = sideFrom, prepare = sidePrepare or nil,
+      resume = sideResumeAt and sideResumeAt > 0 and describeRow(steps[sideResumeAt]) or nil }
+    saved.shapes[sideSection.id] = sectionShape(sideSection)
+  end
+  if main and main.section ~= selected then saved.shapes[main.section.id] = sectionShape(main.section) end
+  local n = 0
+  for key, value in pairs(visited) do
+    if n >= PLACE_VISITED_MAX then break end
+    if type(key) == "string" then saved.visited[key], n = value, n + 1 end
+  end
+  db.questPlace = saved
+end
+
 local function calculate()
   if review and sideHidden(steps[review].section) then review = nil end
   if sideSection and sideHidden(sideSection) then leaveSide() end
@@ -999,6 +1073,7 @@ local function calculate()
   mainIndex = nearbyPickup or mainIndex
   index = sideIndex or mainIndex
   if mainIndex then selected = steps[mainIndex].section end
+  savePlace()
 end
 
 -- Sticky goals (`sticky = true`) the route has passed in the current step's section and that
@@ -1134,6 +1209,63 @@ local function followSection(section)
   calculate()
 end
 
+-- Back to the last step played (see savePlace). A step the game has since finished passes as usual,
+-- and a saved place the route no longer has (an update removed the chapter) is dropped.
+local function restorePlace()
+  if place.restored or not route then return end
+  place.restored = true
+  local saved = ns.charDB().questPlace
+  place.note = "none saved"
+  if type(saved) ~= "table" or saved.v ~= 1 then return end
+  place.note = "saved step not in the route any more"
+
+  local shapes = type(saved.shapes) == "table" and saved.shapes or {}
+  local byKey, sameShape = {}, {}
+  for _, row in ipairs(steps) do byKey[row.key] = row end
+  for id, shape in pairs(shapes) do
+    local section = sectionsById[id]
+    sameShape[id] = section and sectionShape(section) == shape or false
+  end
+  for key, value in pairs(type(saved.visited) == "table" and saved.visited or {}) do
+    local row = type(key) == "string" and byKey[key]
+    if row and (value == true or value == "alreadyThere") and (row.step.quest or sameShape[row.section.id]) then
+      visited[key] = value
+    end
+  end
+  local section = type(saved.section) == "string" and sectionsById[saved.section]
+  if section and not section.side and not sideHidden(section) then selected = section end
+  local r = findRow(saved.resume, shapes)
+  if r and not steps[r].section.side then resumeAt = r end
+  local side = type(saved.side) == "table" and type(saved.side.id) == "string" and sectionsById[saved.side.id]
+  if side and side.side and not sideHidden(side) and not Q.guideMinimum(side) then
+    sideSection, sideHistory, sideSkips = side, {}, {}
+    sidePrepare = saved.side.prepare == true
+    sideFrom = tonumber(saved.side.from) or PHASE.prepare
+    sideResumeAt = findRow(saved.side.resume, shapes) or 0
+  end
+  if not (selected or sideSection) then return end
+  calculate()
+  -- Session state that wasn't saved (or a quest log that hasn't arrived yet) can leave the guide on
+  -- another step: start from the saved one.
+  local want = findRow(saved.step, shapes)
+  local row = want and steps[want]
+  if row and want ~= index and row.state ~= "done" and row.state ~= "filtered" then
+    if row.section.side then
+      if row.section == sideSection then sideResumeAt = want end
+    else
+      selected, resumeAt = row.section, want
+    end
+    calculate()
+  end
+  if index then
+    place.hold = true
+    place.note = "restored " .. tostring(type(saved.step) == "table" and saved.step.key) .. " -> " .. steps[index].key
+  else
+    selected, resumeAt = nil, nil
+    leaveSide()
+  end
+end
+
 local guidedFlight
 
 function Q.startGuidedFlight()
@@ -1143,6 +1275,12 @@ end
 local function resumeLocal(event, previous)
   local map, x, y = Q.position()
   if not (map and x) or Q.inFlight() then return end
+  -- Logging in on a restored place: carry on from the step you left off on, wherever you stand.
+  -- Later zone changes catch up as usual.
+  if place.hold then
+    place.hold, lastZone, checkLocalOnLog = false, map, false
+    return
+  end
   local changed = map ~= lastZone
   lastZone = map
   local arrivedByFlight = guidedFlight and guidedFlight.started and guidedFlight.step == previous
@@ -1179,7 +1317,22 @@ local function resumeLocal(event, previous)
   end
   if best then
     checkLocalOnLog = false
-    if best ~= index then followFrom(best) end
+    -- The guide already has a step in that same chapter here, before the active quest: stay on it
+    -- (a login in Thelsamar with Grenhild's jar quest in the log jumped past Brock's errands).
+    -- Only when that step is past every pickup of the chapter you have taken (your progress there),
+    -- so a fresh catch-up start at the chapter's top still goes to the active quest.
+    local here = row and not row.section.side and steps[best].section == row.section and index < best
+      and (row.step.map == map or (not row.step.map and row.section.zone == map))
+    if here then
+      for i, r in ipairs(steps) do
+        local q = r.step.quest
+        if i > index and r.section == row.section and r.step.type == "accept" and q and (log[q] or turnedIn[q]) then
+          here = false
+          break
+        end
+      end
+    end
+    if best ~= index and not here then followFrom(best) end
   elseif changed and (not selected or selected.zone ~= map) then
     local section = localSection(map)
     if section then followSection(section) end
@@ -1285,6 +1438,7 @@ function Q.update(event, id, newLevel)
   readLog()
   readCompleted()
   readStartItems()
+  restorePlace()
   chooseSection()
   local previous = index and steps[index].step
   calculate()
@@ -2132,6 +2286,28 @@ function Q.resumeActive(section)
   checkLocalOnLog = false
   followFrom(best)
   return true
+end
+
+-- Find my place (/codex resync, Quests > Step): forget the saved place and the steps passed this
+-- session, and work out where you are again from the quest log and where you stand, as a first login
+-- does. Your own skips (Next on quest steps) stay.
+function Q.placeDebug()
+  local saved = ns.charDB().questPlace
+  return "guide place at login: " .. tostring(place.note or "not read yet") .. "; saved now: "
+    .. tostring(type(saved) == "table" and type(saved.step) == "table" and saved.step.key or "nothing")
+end
+
+function Q.resync()
+  leaveSide()
+  selected, resumeAt, review, history, index = nil, nil, nil, {}, nil
+  for key in pairs(visited) do visited[key] = nil end
+  place.hold, place.last, place.restored = false, nil, true
+  ns.charDB().questPlace = nil
+  place.note = "found again with Find my place"
+  lastZone, checkLocalOnLog, guidedFlight = nil, true, nil
+  Q.update()
+  local row = index and steps[index]
+  return row
 end
 
 function Q.autoStep()

@@ -2191,6 +2191,17 @@ function ns.toggleQuestViewer()
   if not (viewer and viewer:IsShown()) then ns.openQuestRoute() end
 end
 
+-- /codex resync and Quests > Step > Find my place.
+function ns.questResync()
+  local row = Q.resync()
+  ns.questRefresh()
+  if row then
+    ns.say(Q.plain("found your place from your quest log: " .. (row.section.title or row.section.id) .. " - " .. Q.label(row.step) .. "."))
+  else
+    ns.say("found no guide step for your quest log and level here.")
+  end
+end
+
 function ns.updateQuestSettings()
   Q.update()
   ns.questRefresh()
@@ -2726,7 +2737,7 @@ function ns.questDebugLines()
     { "Travel", _G, "TakeTaxiNode", "GetGossipOptions", "SelectGossipOption" },
     { "Greeting", _G, "GetNumAvailableQuests", "GetNumActiveQuests", "SelectAvailableQuest", "SelectActiveQuest" },
   }
-  local lines = { "Quest guide APIs (+: present, -: absent)" }
+  local lines = { Q.placeDebug(), "Quest guide APIs (+: present, -: absent)" }
   for _, group in ipairs(groups) do
     local bits = {}
     for i = 3, #group do

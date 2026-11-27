@@ -474,6 +474,9 @@ local function renderStepView(current, selected, y)
       "Copy what the guide sees about this step (your position, quest log and the step) to send with a bug report.")
   end
   U.btn("Copy recorder log", half + 8, y, half, function() ns.questRecord("copy") end)
+  y = y + 34
+  U.btn("Find my place", 0, y, W, ns.questResync, false,
+    "The guide keeps your step between sessions. If it doesn't match your quests, this works your place out again from your quest log and where you stand.")
   return y + 32
 end
 
