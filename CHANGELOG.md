@@ -7,6 +7,10 @@
     - **One moment per camp:** what happens at the same fire within 20 minutes rewrites that moment instead of adding another, and buffs already on you when you log in are not a new camp.
     - **Many more ways to tell it:** the time of night (dawn, day, dusk, the small hours), who sat with you, a crowded fire or one all to yourself, a camp you set out yourself, your first camp and every milestone after (10th, 25th, 50th...), the old spot you keep going back to, a fire after a fall, a fire at the end of a long session, and a line for every camp object, from the lodestone's hum to the enchanted lute playing itself.
     - **Chapters tell your camps:** the camp objects you sat among, the sleeping bag, a chapter of many fires and the company you kept.
+    - **Around the campfire (Trophies):** how many fires you sat at and lit yourself, nights in the sleeping bag, your deepest sleep, your favourite camp spots and the comforts you sat by most, then every camp told in BY THE FIRE.
+    - **A Camps layer on the map:** every campfire and nap is its own pin now, with a switch of its own on the Map page.
+    - **New comforts are noticed:** a camp object you have never had before gets its own line ("your first mana well").
+    - **Before it fades:** a chat line about five minutes before Well-Rested or Camp Benefits runs out, so you can rest again. Settings > General > Journey pop-ups turns it off.
 
 ## v0.34.4
 - **Price tooltips, shorter and easier to read.** Four lines instead of seven:

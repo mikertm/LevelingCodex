@@ -570,6 +570,9 @@ do
       "someone had set out the %obj%: %eff%", "%flav%, and you got %eff%" },
     many = { "%objs% gave you %effs%", "%flav%, and the camp gave you %effs%", "%n% camp comforts: %effs%",
       "a well-kept camp, %objs% and all: %effs%", "%flav%; all told, %effs%" },
+    first = { "a %obj% stood in your camp for the first time and gave you %eff%", "your first %obj%: %eff%",
+      "you had never seen a %obj% by a fire before; it gave you %eff%", "a new comfort, the %obj%: %eff%" },
+    firstMany = { "your first %obj% among them", "the %obj% new to you", "and a %obj%, the first you had seen" },
   }
 
   local function hour(t)
@@ -654,6 +657,7 @@ do
     if #gains == 0 then return nil end
     if #gains == 1 then
       local g = gains[1]
+      if g.first then return J.fill(from(GAIN.first, "first"), { obj = g.obj:lower(), eff = g.eff }) end
       local flav = OBJ[g.obj] and from(OBJ[g.obj], g.obj) or nil
       local pool = {}
       for _, l in ipairs(GAIN.one) do if flav or not l:find("%flav%", 1, true) then pool[#pool + 1] = l end end
@@ -668,7 +672,11 @@ do
     end
     local pool = {}
     for _, l in ipairs(GAIN.many) do if flav or not l:find("%flav%", 1, true) then pool[#pool + 1] = l end end
-    return J.fill(from(pool, "gains"), { objs = list(objs), effs = list(effs), n = #gains, flav = flav })
+    local text = J.fill(from(pool, "gains"), { objs = list(objs), effs = list(effs), n = #gains, flav = flav })
+    for _, g in ipairs(gains) do
+      if g.first then return text .. " (" .. J.fill(from(GAIN.firstMany, "firstMany"), { obj = g.obj:lower() }) .. ")" end
+    end
+    return text
   end
   -- The whole line for the open camp, from everything seen in it so far.
   local function compose(c)
@@ -761,17 +769,26 @@ do
         c.counted = true
         bump("camps")
         j.campSpots[c.key] = (tonumber(j.campSpots[c.key]) or 0) + 1
+        if type(j.campPlaces) ~= "table" then j.campPlaces = {} end
+        j.campPlaces[c.key] = c.place
+        if camp.litAt and t - camp.litAt < 900 then bump("campsLit") end
       end
       c.benefitsAt = t
       if gains and #gains > 0 then
         c.gains = gains
+        local known = type(j.campObjects) == "table" and next(j.campObjects) ~= nil
         if type(j.campObjects) ~= "table" then j.campObjects = {} end
-        for _, g in ipairs(gains) do j.campObjects[g.obj] = (tonumber(j.campObjects[g.obj]) or 0) + 1 end
+        for _, g in ipairs(gains) do
+          -- a comfort you never had before (not on your very first camp: everything is new then)
+          if known and j.campObjects[g.obj] == nil then g.first = true end
+          j.campObjects[g.obj] = (tonumber(j.campObjects[g.obj]) or 0) + 1
+        end
       end
     end
     if stacks then
       if not c.slept then c.slept = true; bump("sleeps") end
       c.stacks = stacks
+      if stacks > (tonumber(j.campBest) or 0) then j.campBest = stacks end
     end
     local text, d = compose(c), detail(c)
     if c.e then
@@ -814,6 +831,27 @@ do
     if newCamp then record(true, readBenefits(got.camp), nil) end
     if newRest then record(false, nil, got.rest.stacks) end
     camp.camp, camp.rest = got.camp, got.rest
+    T.campNudge(got)
+  end
+  -- About five minutes before Well-Rested or Camp Benefits runs out: one chat line per buff.
+  T.NUDGE_AT = 300
+  camp.nudged = {}
+  function T.campNudge(got)
+    if ns.db().noCampNudge then return end
+    local clock = num(try(GetTime))
+    if not clock then return end
+    local function check(aura, key, line)
+      if not aura or not aura.exp or aura.exp <= 0 then return end
+      local left = aura.exp - clock
+      local mark = tostring(aura.id or "") .. ":" .. math.floor(aura.exp)
+      if left > 0 and left <= T.NUDGE_AT and camp.nudged[key] ~= mark then
+        camp.nudged[key] = mark
+        local mins = math.max(1, math.floor(left / 60 + 0.5))
+        ns.say(J.fill(line, { m = mins == 1 and "a minute" or (mins .. " minutes") }))
+      end
+    end
+    check(got.rest, "rest", "Well-Rested fades in %m%: unroll the sleeping bag again to keep it.")
+    check(got.camp, "camp", "Camp Benefits fade in %m%: sit by a campfire again to keep them.")
   end
   function T.campFell() camp.fellAt = now() end
 end
@@ -1192,7 +1230,7 @@ local LEDGER = {
     { "Auctions posted", "posted" }, { "Auctions sold", "sold" }, { "Came back unsold", "expired" }, { "Lots bought", "bought" },
     { "Gold from auctions", "ahGold", true }, { "Richest you've been", "richest", true }, { "Things crafted", "crafted" } } },
   { "FELLOWSHIP", "Spell_Holy_PrayerOfHealing", {
-    { "Raised by others", "rezzed" }, { "Trades", "trades" }, { "Campfires", "camps" }, { "Quests given up", "abandoned" } } },
+    { "Raised by others", "rezzed" }, { "Trades", "trades" }, { "Quests given up", "abandoned" } } },
 }
 
 -- One column of the ledger as a passage of the page.
@@ -1223,12 +1261,76 @@ end
 
 T.momentsCard = momentsCard
 
+-- AROUND THE CAMPFIRE: your camps in figures, the spots you come back to and the comforts you sat by.
+local function topOf(map, n)
+  local out = {}
+  if type(map) ~= "table" then return out end
+  for k, v in pairs(map) do if tonumber(v) and tonumber(v) > 0 then out[#out + 1] = { k = k, n = tonumber(v) } end end
+  table.sort(out, function(a, b) if a.n ~= b.n then return a.n > b.n end return tostring(a.k) < tostring(b.k) end)
+  while #out > n do table.remove(out) end
+  return out
+end
+T.campTop = topOf
+local function campCard(V, y)
+  local U, C, W = V.U, V.C, V.W
+  local j = journal()
+  local top = y
+  U.icon(J.ICON.camp, 14, y + 12, 22, "AROUND THE CAMPFIRE", nil)
+  U.T("AROUND THE CAMPFIRE", 44, y + 17, W - 58, "label", C.inkSoft)
+  y = y + 42
+  local function row(label, value, on)
+    U.T(label, 14, y, W - 28, "small", C.ink)
+    U.T(value, 14, y, W - 28, "small", on and C.ink or C.inkSoft, "RIGHT")
+    U.rect(14, y + 15, W - 28, 1, { 0, 0, 0, 0.1 }, "border")
+    y = y + 20
+  end
+  local camps, sleeps, lit = T.tally("camps"), T.tally("sleeps"), T.tally("campsLit")
+  local best = tonumber(j.campBest) or 0
+  local spots = topOf(j.campSpots, 3)
+  local nSpots = 0
+  if type(j.campSpots) == "table" then for _ in pairs(j.campSpots) do nSpots = nSpots + 1 end end
+  row("Campfires sat at", camps > 0 and ns.thousands(camps) or "-", camps > 0)
+  row("Fires you lit yourself", lit > 0 and ns.thousands(lit) or "-", lit > 0)
+  row("Nights in the sleeping bag", sleeps > 0 and ns.thousands(sleeps) or "-", sleeps > 0)
+  row("Deepest sleep", best > 0 and ("Well-Rested x" .. best) or "-", best > 0)
+  row("Places you made camp", nSpots > 0 and ns.thousands(nSpots) or "-", nSpots > 0)
+  if #spots > 0 then
+    y = y + 6
+    U.T("FAVOURITE SPOTS", 14, y, W - 28, "label", C.inkSoft)
+    y = y + 18
+    local places = type(j.campPlaces) == "table" and j.campPlaces or {}
+    for _, sp in ipairs(spots) do
+      local name = places[sp.k] or tostring(sp.k):gsub("/.*$", "")
+      row(plain(name), sp.n .. (sp.n == 1 and " camp" or " camps"), true)
+    end
+  end
+  local objs = topOf(j.campObjects, 4)
+  if #objs > 0 then
+    y = y + 6
+    U.T("COMFORTS BY THE FIRE", 14, y, W - 28, "label", C.inkSoft)
+    y = y + 18
+    for _, o in ipairs(objs) do row(plain(tostring(o.k)), o.n .. (o.n == 1 and " time" or " times"), true) end
+  end
+  if camps == 0 and sleeps == 0 then
+    local h = U.T("Sit by a campfire for a minute, or unroll the Cozy Sleeping Bag, and your camps are counted here.",
+      14, y + 2, W - 28, "small", C.inkSoft)
+    y = y + h + 8
+  end
+  y = y + 8
+  J.draw.page(U, C, 0, top, W, y - top)
+  return y
+end
+T.campCard = campCard
+
 -- The Trophies page's sections from this file, each fn(V, y) -> y (the book flows them into its columns),
 -- then those other files add to J.moreTrophies (JourneyWilds.lua).
 function T.trophySections()
   local out = {}
   for _, fn in ipairs(J.moreTrophies or {}) do out[#out + 1] = fn end
   for _, col in ipairs(LEDGER) do out[#out + 1] = function(V, y) return ledgerCard(V, y, col) end end
+  out[#out + 1] = campCard
+  out[#out + 1] = momentsCard("BY THE FIRE", { camp = true },
+    "Each camp is told here: the fire, the comforts beside it, who sat with you and how well you slept.")
   out[#out + 1] = momentsCard("AT THE WORKBENCH", { craft = true, skill = true },
     "Craft something, or raise a profession past 50, 100, 200 or 250, and it is written here.")
   out[#out + 1] = momentsCard("THE AUCTION HOUSE", { auction = true, sold = true, expired = true, gold = true },

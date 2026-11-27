@@ -14321,6 +14321,7 @@ function S.journeyCamp()
   MOCK.advance(12)
   c = camps()
   check(#c == 2 and c[2].s:find("Ann", 1, true) and c[2].co == "Mana Well,Incense Candle", "a second fire with the party: " .. tostring(c[2] and c[2].s))
+  check(c[2] and (c[2].s:find("first", 1, true) or c[2].s:find("new to you", 1, true)), "a comfort you never had before is told as new: " .. tostring(c[2] and c[2].s))
   -- the bag alone, far from any fire
   MOCK.advance(1300)
   MOCK.party, MOCK.partyMembers = nil, {}
@@ -14328,6 +14329,31 @@ function S.journeyCamp()
   MOCK.advance(12)
   c = camps()
   check(#c == 3 and not c[3].sat and c[3].s:lower():find("bag", 1, true), "the bag on its own is a nap: " .. tostring(c[3] and c[3].s))
+  check(LevelingCodexCharDB.journey.campBest == 3 and T.tally("camps") == 2 and T.tally("sleeps") == 2, "the camp counts")
+  -- Well-Rested about to fade: one reminder
+  MOCK.chat = {}
+  MOCK.buffs[1].exp = MOCK.time + 240
+  MOCK.advance(12)
+  MOCK.advance(12)
+  local nudges = 0
+  for _, line in ipairs(MOCK.chat) do if line:find("Well-Rested fades in 4 minutes", 1, true) then nudges = nudges + 1 end end
+  check(nudges == 1 and #camps() == 3, "a fading Well-Rested is said once and is no new camp (" .. nudges .. ")")
+  MOCK.ns.db().noCampNudge = true
+  MOCK.buffs[1].exp = MOCK.time + 200
+  MOCK.buffs[1].id = 21
+  MOCK.chat = {}
+  MOCK.advance(12)
+  check(not chatHas("fades in"), "the reminder can be turned off")
+  -- the Trophies page counts them, the map has a Camps layer
+  slash("")
+  click(win(), "Journey")
+  click(win(), "Trophies")
+  for _, t in ipairs({ "AROUND THE CAMPFIRE", "FAVOURITE SPOTS", "COMFORTS BY THE FIRE", "Lodestone", "Well-Rested x3", "BY THE FIRE" }) do
+    check(questText(win(), t), "the Trophies page has " .. t)
+  end
+  click(win(), "Map")
+  check(findButton(win(), function(l) return l == "Layer Camps" end), "the Map page has a Camps layer")
+  c = camps()
   local prose = J.voice.chapterProse(J.level(), c, nil, false) or ""
   check(prose:lower():find("lodestone", 1, true) or prose:lower():find("bag", 1, true) or prose:find("fire", 1, true),
     "the chapter tells the camps: " .. prose)

@@ -1229,6 +1229,9 @@ renderers.settings = function()
     tick("Swap journal titles and signatures with other Codex players", not db.noJourneyShare,
       function() db.noJourneyShare = not db.noJourneyShare or nil end,
       "In a party, Codex players see each other's journal title and can sign each other's journals and raise toasts.")
+    tick("Remind me when Well-Rested or Camp Benefits is about to fade", not db.noCampNudge,
+      function() db.noCampNudge = not db.noCampNudge or nil end,
+      "A chat line about five minutes before your camp's buffs run out, so you can sit by a fire or unroll the bag again.")
     tick("Take a screenshot for each group portrait", db.journeyScreenshots,
       function() db.journeyScreenshots = not db.journeyScreenshots or nil end,
       "When a level or a boss is framed with your party, the game saves a screenshot too (in your Screenshots folder).")

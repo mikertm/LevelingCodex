@@ -311,14 +311,16 @@ local LAYERS = {
   { key = "falls", label = "Falls", pin = PIN.death, color = { 0.6, 0.15, 0.12 }, kinds = { death = true, close = true, wipe = true },
     tip = "Where you fell, wiped or nearly did." },
   { key = "travels", label = "Travels", icon = ICON.zone, color = { 0.35, 0.7, 0.95 },
-    kinds = { zone = true, flight = true, mount = true, home = true, rest = true, camp = true, milestone = true },
-    tip = "New lands, flight paths, inns, homes, campfires and milestones." },
+    kinds = { zone = true, flight = true, mount = true, home = true, rest = true, milestone = true },
+    tip = "New lands, flight paths, inns, homes and milestones." },
   { key = "fortunes", label = "Fortunes", icon = ICON.gold, color = { 0.4, 0.8, 0.35 },
     kinds = { first = true, upgrade = true, craft = true, skill = true, auction = true, sold = true, expired = true, gold = true,
       mine = true, herb = true, skin = true, fish = true }, tip = "Loot, gear, crafting, gathering, fishing and gold." },
   { key = "fellowship", label = "Fellowship", icon = ICON.pal, color = { 0.75, 0.55, 0.95 },
     kinds = { pal = true, rez = true, trade = true, emote = true, guild = true, whisper = true, reunion = true, bond = true, fellowship = true,
       signed = true, toast = true, cheer = true, anniversary = true, thanks = true, memory = true }, tip = "Companions, rezzes, trades and kind words." },
+  { key = "camps", label = "Camps", icon = ICON.camp, color = { 1, 0.55, 0.2 }, kinds = { camp = true },
+    tip = "Every campfire you sat at and every night in the sleeping bag." },
 }
 local function layerOf(e)
   for i = 2, #LAYERS do if LAYERS[i].kinds[e.k] then return LAYERS[i] end end
@@ -336,9 +338,9 @@ local function toggleLayer(key)
 end
 -- small moments, drawn as dots on the map (they still gather into a pin's count)
 local MINOR = { mine = true, herb = true, skin = true, fish = true, gold = true, sold = true, expired = true, auction = true,
-  flight = true, rest = true, camp = true, emote = true, trade = true, craft = true, skill = true, milestone = true }
+  flight = true, rest = true, emote = true, trade = true, craft = true, skill = true, milestone = true }
 -- how much a moment matters when pins share a spot (the top one shows)
-local WEIGHT = { falls = 6, battles = 5, levels = 4, fellowship = 3, quests = 2, fortunes = 2, travels = 1 }
+local WEIGHT = { falls = 6, battles = 5, levels = 4, fellowship = 3, quests = 2, fortunes = 2, camps = 1, travels = 1 }
 
 local function mapLabel(j, map)
   local _, name = zoneOf(map)
