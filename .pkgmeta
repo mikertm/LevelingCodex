@@ -17,6 +17,7 @@ ignore:
   - RELEASING.md
   - CLAUDE.md
   - media/logo.png
+  - media/logo.svg
   - AGENTS.md
   - tests
   - tools
