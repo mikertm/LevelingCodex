@@ -449,46 +449,373 @@ local function guildCheck(seed)
     { g = "<" .. plain(name) .. ">", zone = zone() }), "Guild")
 end
 
-----------------------------------------------------------------------------
--- Campfires
-----------------------------------------------------------------------------
-
-local lastCamp = -1e9
-local CAMP_LIT = { "Made camp in %zone%: struck flint and lit a campfire", "Built a campfire in %zone% and settled in for a while",
-  "Gathered sticks and lit a fire in %zone%, and the night felt smaller", "Set a fire crackling in %zone% and put your boots up",
-  "Struck a spark in %zone% and made a little home for the night" }
-local CAMP_SAT = { "Sat by the campfire in %zone%%with%, warming your hands", "Rested at a campfire in %zone%%with%, trading tales",
-  "Shared the warmth of a campfire in %zone%%with%", "Watched the sparks rise from a campfire in %zone%%with%",
-  "Sat a while by the fire in %zone%%with%, saying nothing much", "Toasted bread over a campfire in %zone%%with%" }
 local function spellName(id)
   local name = C_Spell and try(C_Spell.GetSpellName, id)
   if not name then name = try(GetSpellInfo, id) end
   return type(name) == "string" and name or nil
 end
-local function campfire(lit)
-  if now() - lastCamp < 1800 then return end
-  lastCamp = now()
-  bump("camps")
-  local party = J.partyText()
-  local vars = { zone = zone(), with = party and (" with " .. party) or "" }
-  J.add("camp", J.fill(J.pick(lit and CAMP_LIT or CAMP_SAT, vars.zone .. now()), vars), "Campfire")
-end
-local function castDone(unit, _, spell)
-  if unit ~= "player" then return end
-  local name = spellName(spell)
-  if name and name:find("Campfire", 1, true) then campfire(true) end
-end
--- A campfire's buff on you (out of combat only: reading auras in combat throws).
-local function campAura()
-  if try(InCombatLockdown) or try(UnitAffectingCombat, "player") then return end
-  for i = 1, 40 do
-    local name
-    local data = C_UnitAuras and try(C_UnitAuras.GetBuffDataByIndex, "player", i)
-    if type(data) == "table" then name = data.name
-    elseif not C_UnitAuras then name = try(UnitBuff, "player", i) end
-    if type(name) ~= "string" then return end
-    if name:find("Campfire", 1, true) or name:find("Cozy", 1, true) then campfire(false); return end
+----------------------------------------------------------------------------
+-- Camping. Forever's camps work like this: sit at a campfire for about a minute and you get
+-- "Camp Benefits" (one line per camp object at the fire, "Lodestone: Melee Attack Power increased by
+-- 49.", two hours); unroll the Cozy Sleeping Bag ("Unroll Bag") and rest in it a minute for
+-- "Well-Rested" (+1% experience a stack, up to 3, two hours). Walking past a fire only gives its
+-- short warmth aura, which is not a camp. A camp moment is written when Camp Benefits arrives (or
+-- comes back after you sat again) or Well-Rested gains a stack; what follows within T.CAMP_JOIN
+-- (the bag after the fire, a second stack) rewrites that same moment instead of adding another.
+-- Buffs already on you at login are a baseline. Aura names are English (unverified spell IDs).
+----------------------------------------------------------------------------
+
+T.CAMP_BUFF, T.REST_BUFF, T.BAG_CAST = "Camp Benefits", "Well-Rested", "Unroll Bag"
+T.CAMP_JOIN = 1200
+T.CAMP_MARKS = { [10] = true, [25] = true, [50] = true, [100] = true, [250] = true, [500] = true }
+local castDone, campAura
+do
+  local camp = { seeded = false } -- this session: last seen auras, the open camp moment, what you placed
+  T.campState = camp
+  local OBJ = { -- what each camp object adds to the scene (ProfessionData.lua's camp lists)
+    ["Sharpening Wheel"] = { "the sharpening wheel sang against steel", "someone's blade got an edge on the wheel" },
+    ["Anvil"] = { "an anvil rang by the fire", "the anvil stood ready by the flames" },
+    ["Master Forge"] = { "a master forge glowed beside the fire", "the master forge breathed heat into the night" },
+    ["Lodestone"] = { "the lodestone hummed in the firelight", "the lodestone's weight settled into your arm" },
+    ["Rock Garden"] = { "the rock garden grew its little veins of ore", "stones in the rock garden glittered" },
+    ["Molten Foundry"] = { "the foundry glowed molten orange", "the foundry hissed and spat" },
+    ["Faction Banner"] = { "a banner snapped over the camp", "the banner lifted everyone's spirits" },
+    ["Spinning Wheel"] = { "the spinning wheel clicked softly", "a spinning wheel turned in the firelight" },
+    ["Loom"] = { "a loom clacked through the evening", "the loom's shuttle flew back and forth" },
+    ["Enchanted Lute"] = { "the enchanted lute played itself", "a lute strummed with no hands on it" },
+    ["Arcane Salvager"] = { "the arcane salvager crackled with stray magic", "the salvager sparked violet" },
+    ["Arcane Forge"] = { "an arcane forge pulsed beside the fire", "the arcane forge hummed with power" },
+    ["Incense Candle"] = { "incense curled up from a candle", "the candle's sweet smoke cleared your head" },
+    ["Greenhouse"] = { "the little greenhouse fogged with warmth", "herbs grew green in the greenhouse" },
+    ["Seed Hybridizer"] = { "the seed hybridizer whirred away", "seeds rattled in the hybridizer" },
+    ["Camp Chair"] = { "a camp chair waited by the fire", "you got the good camp chair" },
+    ["Field Guide"] = { "someone read aloud from a field guide", "the field guide lay open to the beasts of the land" },
+    ["Trapper's Workbench"] = { "traps hung from the trapper's workbench", "the trapper's bench smelled of leather" },
+    ["Camp Tent"] = { "a tent stood ready for anyone tired", "the camp tent's flap stirred in the breeze" },
+    ["Tanning Rack"] = { "hides dried on the tanning rack", "the tanning rack creaked" },
+    ["Sewing Machine"] = { "a sewing machine rattled away", "the sewing machine clattered" },
+    ["Mana Well"] = { "the mana well shimmered blue", "the mana well hummed softly" },
+    ["Fermenter"] = { "the fermenter bubbled", "something in the fermenter smelled promising" },
+    ["Alchemy Laboratory"] = { "flasks bubbled in the alchemy lab", "the alchemy lab fizzed and smoked" },
+    ["Reagent Bot"] = { "the reagent bot beeped its wares", "a reagent bot whirred around the fire" },
+    ["Repair Bot"] = { "the repair bot hammered at someone's armour", "a repair bot clanked about" },
+    ["Anarchist's Workbench"] = { "the anarchist's workbench sparked dangerously", "the workbench smelled of blasting powder" },
+    ["First Aid Kit"] = { "bandages were rolled from the first aid kit", "the first aid kit sat open by the fire" },
+    ["Toxin Study"] = { "the toxin study's vials glinted", "anti-venom brewed in the toxin study" },
+    ["Plague Doctor's Laboratory"] = { "the plague doctor's lab steamed", "poultices cooled in the plague doctor's lab" },
+    ["Cookie's Feast"] = { "a feast was laid out by the fire", "there was a feast, and nobody went hungry" },
+    ["Iron Oven"] = { "bread baked in the iron oven", "the iron oven ticked as it heated" },
+    ["Fish Bowl"] = { "a fish circled its bowl by the fire", "the fish bowl glittered in the light" },
+    ["Fishing Rack"] = { "lines and lures hung from the fishing rack", "the fishing rack smelled of the water" },
+    ["Fishing Hut"] = { "the fishing hut's door creaked", "nets were mended by the fishing hut" },
+  }
+  T.CAMP_OBJECTS = OBJ
+  local CAMP = {
+    night = { "Sat by a campfire in %zone% under the night sky", "Fed sticks to a campfire in %zone% while the owls called",
+      "Sat by a fire in %zone% with the stars for a roof", "Warmed your hands at a campfire in %zone% while the night went on",
+      "Kept a fire company in %zone% long after dark", "Found a campfire in the dark of %zone% and sat down by it",
+      "Watched the sparks climb into the night sky over %zone%", "Sat out the small hours by a fire in %zone%" },
+    dawn = { "Sat by a campfire in %zone% as the sky went grey", "Coaxed a fire back to life in %zone% at first light",
+      "Watched the sun come up over %zone% from beside a campfire", "Took a morning sit at a campfire in %zone%" },
+    day = { "Sat a while by a campfire in %zone%", "Stopped at a campfire in %zone% to rest your feet",
+      "Took a breather by a campfire in %zone%", "Pulled up a log by a campfire in %zone%",
+      "Rested by a crackling fire in %zone%", "Let the world wait while you sat by a fire in %zone%",
+      "Took the weight off by a campfire in %zone%", "Stopped for a sit and a snack by a fire in %zone%" },
+    dusk = { "Made camp in %zone% as the sun went down", "Sat by a campfire in %zone% while the evening drew in",
+      "Settled by a fire in %zone% as the light faded", "Ended the day by a campfire in %zone%" },
+    with = { "Sat around a campfire in %zone% with %with%", "Shared a campfire in %zone% with %with%",
+      "Swapped stories with %with% by a fire in %zone%", "Made camp in %zone% with %with%, and someone burnt the bread",
+      "Huddled round a fire in %zone% with %with%", "Sat with %with% at a campfire in %zone%, saying very little and needing to say less" },
+    crowd = { "Squeezed onto a busy campfire in %zone%: %n% adventurers around it", "Found a crowded fire in %zone% and made room for yourself",
+      "Sat at a campfire in %zone% with %n% strangers for company", "Joined a fire in %zone% where half the land seemed to be resting" },
+    lit = { "Set out your own camp in %zone% and sat down by your fire", "Lit your own campfire in %zone% and took your rest by it",
+      "Built a camp in %zone%: struck the flint, fed the flames, sat down", "Made a camp of your own in %zone% and enjoyed every minute of it" },
+    first = { "Sat at a campfire for the first time, in %zone%. The adventuring life has its comforts",
+      "Your first camp, in %zone%: a fire, a seat, a minute to breathe", "Learned the oldest trick on the road in %zone%: sit by the fire and let it mend you" },
+    mark = { "Your %nth% campfire, this one in %zone%", "Campfire number %n%, in %zone%. You know the routine by now",
+      "Sat at your %nth% fire, in %zone%. The road has many hearths" },
+    haunt = { "Back at the old fire in %place% again, your %nth% time there", "Returned to your usual spot in %place% and sat down",
+      "The fire in %place% knew you by now: visit number %n%" },
+    fall = { "Limped to a campfire in %zone% after a fall, and let it put you back together",
+      "Sat by a fire in %zone% to shake off the last death", "Still smarting from the spirit healer, you found a fire in %zone%" },
+    lone = { "Alone by a fire in %zone%, just you and the crickets", "Sat by a quiet fire in %zone% with nobody else about",
+      "Had a campfire in %zone% all to yourself", "Kept your own company by a fire in %zone%" },
+    weary = { "Hours on the road, and at last a campfire in %zone%", "After a long day, a campfire in %zone% was very welcome",
+      "Sat down heavily by a fire in %zone%: it had been a long session" },
+  }
+  local SLEEP = {
+    alone = { "Unrolled the old sleeping bag in %zone% and slept a while", "Crawled into the Cozy Sleeping Bag in %zone% for a nap",
+      "Bedded down in %zone% in the sleeping bag, old but still good", "Took a nap in %zone%, wrapped in the sleeping bag" },
+    night = { "Slept under the stars in %zone%, in the old sleeping bag", "Rolled out the bag in %zone% and slept through the dark hours" },
+  }
+  local BAG = { -- added to a camp line: the bag after the fire
+    "then unrolled the sleeping bag and dozed off", "then crawled into the sleeping bag for a nap",
+    "then slept a while in the old bag", "then curled up in the Cozy Sleeping Bag",
+  }
+  local BAG_DEEP = { -- the bag after the fire, slept in until Well-Rested reached three stacks
+    "then unrolled the sleeping bag and slept until you could rest no more",
+    "then crawled into the sleeping bag and slept long and deep, three times rested",
+    "then slept in the old bag and woke as rested as anyone has ever been",
+    "then rolled out the sleeping bag and slept the whole night through",
+  }
+  local BAG_MORE = { "then napped in the sleeping bag, and went back for a second nap",
+    "then dozed in the old bag, woke, and dozed off again", "then slept in the bag a while, and a while longer" }
+  local DEEP = { -- the bag alone, at three stacks
+    "and slept until you could rest no more", "and slept long and deep, three times rested",
+    "and woke as rested as anyone has ever been", "and slept the full night through",
+  }
+  local MORE = { "and went back for a second nap", "and slept a little longer", "and dozed off again" }
+  local GAIN = { -- the camp's benefits: %eff% = "melee attack power up by 49"
+    one = { "the %obj% gave you %eff%", "the %obj% lent you %eff%", "%flav%: %eff%", "the %obj% by the fire gave you %eff%",
+      "someone had set out the %obj%: %eff%", "%flav%, and you got %eff%" },
+    many = { "%objs% gave you %effs%", "%flav%, and the camp gave you %effs%", "%n% camp comforts: %effs%",
+      "a well-kept camp, %objs% and all: %effs%", "%flav%; all told, %effs%" },
+  }
+
+  local function hour(t)
+    if type(date) ~= "function" then return nil end
+    local ok, d = pcall(date, "*t", t)
+    return ok and type(d) == "table" and tonumber(d.hour) or nil
   end
+  local function band(t)
+    local h = hour(t)
+    if not h then return "day" end
+    if h >= 21 or h < 5 then return "night" end
+    if h < 8 then return "dawn" end
+    if h >= 17 then return "dusk" end
+    return "day"
+  end
+  local function ordinal(n)
+    local s = (n % 100 >= 11 and n % 100 <= 13) and "th" or ({ "st", "nd", "rd" })[n % 10] or "th"
+    return n .. s
+  end
+  local function lower1(s) return (s:gsub("^%u", string.lower)) end
+  -- "Lodestone: Melee Attack Power increased by 49." -> "Lodestone", "melee attack power up by 49"
+  function T.campEffect(line)
+    if type(line) ~= "string" then return nil end
+    line = plain(line):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+    local obj, eff = line:match("^%s*([^:]+):%s*(.-)%s*%.?%s*$")
+    if not obj or eff == "" then return nil end
+    eff = eff:gsub(" increased by ", " up by "):gsub(" decreased by ", " down by ")
+    eff = lower1(eff):gsub("(%a) Attack Power", function(c) return c .. " attack power" end)
+    eff = eff:gsub("Attack Power", "attack power"):gsub("Spirit", "spirit"):gsub("Intellect", "intellect")
+      :gsub("Strength", "strength"):gsub("Stamina", "stamina"):gsub("Agility", "agility"):gsub("Critical Strike", "critical strike")
+    return obj, eff
+  end
+  -- The Camp Benefits tooltip: one "Object: effect." line per camp object.
+  local function readBenefits(aura)
+    local out = {}
+    local data = aura and aura.id and C_TooltipInfo and try(C_TooltipInfo.GetUnitBuffByAuraInstanceID, "player", aura.id)
+    if type(data) ~= "table" or type(data.lines) ~= "table" then return out end
+    for _, ln in ipairs(data.lines) do
+      local text = type(ln) == "table" and ln.leftText
+      if type(text) == "string" and not text:find("remaining", 1, true) and not text:find("camp benefits", 1, true) then
+        for part in text:gmatch("[^\n]+") do
+          local obj, eff = T.campEffect(part)
+          if obj and #obj <= 40 and not obj:find("following", 1, true) then out[#out + 1] = { obj = obj, eff = eff } end
+        end
+      end
+    end
+    return out
+  end
+  -- Your buffs now: Camp Benefits and Well-Rested.
+  local function readAuras()
+    local got = {}
+    for i = 1, 40 do
+      local name, id, exp, stacks
+      local data = C_UnitAuras and try(C_UnitAuras.GetBuffDataByIndex, "player", i)
+      if type(data) == "table" then
+        name, id, exp, stacks = data.name, data.auraInstanceID, data.expirationTime, data.applications
+      elseif not C_UnitAuras then
+        local r = { try(UnitBuff, "player", i) }
+        name, stacks, exp = r[1], r[3], r[6]
+      end
+      if type(name) ~= "string" then break end
+      exp, stacks = num(exp), num(stacks)
+      if name == T.CAMP_BUFF then got.camp = { id = id, exp = exp or 0 }
+      elseif name == T.REST_BUFF then got.rest = { id = id, exp = exp or 0, stacks = math.max(1, stacks or 1) } end
+    end
+    return got
+  end
+
+  local function spotKey()
+    local sub = try(GetSubZoneText)
+    local z = zone()
+    if type(sub) ~= "string" or sub == "" then sub = z end
+    return plain(z) .. "/" .. plain(sub), plain(sub ~= z and (sub .. " in " .. z) or z)
+  end
+  local function seed() return (camp.open and camp.open.t or now()) .. (me() or "") end
+  local function from(list, key) return J.pick(list, seed() .. key) end
+  local function freshFrom(list, key, vars)
+    if J.fresh then return J.fresh(list, seed() .. key, "camp", vars) end
+    return J.fill(J.pick(list, seed() .. key), vars)
+  end
+  local function benefitClause(gains)
+    if #gains == 0 then return nil end
+    if #gains == 1 then
+      local g = gains[1]
+      local flav = OBJ[g.obj] and from(OBJ[g.obj], g.obj) or nil
+      local pool = {}
+      for _, l in ipairs(GAIN.one) do if flav or not l:find("%flav%", 1, true) then pool[#pool + 1] = l end end
+      local text = J.fill(from(pool, "gain"), { obj = g.obj:lower(), eff = g.eff, flav = flav })
+      return text
+    end
+    local objs, effs, flav = {}, {}, nil
+    for _, g in ipairs(gains) do
+      objs[#objs + 1] = "the " .. g.obj:lower()
+      effs[#effs + 1] = g.eff
+      if not flav and OBJ[g.obj] then flav = from(OBJ[g.obj], g.obj) end
+    end
+    local pool = {}
+    for _, l in ipairs(GAIN.many) do if flav or not l:find("%flav%", 1, true) then pool[#pool + 1] = l end end
+    return J.fill(from(pool, "gains"), { objs = list(objs), effs = list(effs), n = #gains, flav = flav })
+  end
+  -- The whole line for the open camp, from everything seen in it so far.
+  local function compose(c)
+    local vars = { zone = c.zone, place = c.place, with = c.with, n = c.n, nth = c.n and ordinal(c.n) }
+    if not c.head or c.headSat ~= c.sat then -- picked once, so a rewrite keeps the opening
+      if c.sat then
+        local pool = CAMP[c.situation] or CAMP[c.band] or CAMP.day
+        c.head = freshFrom(pool, c.situation or c.band, vars)
+      else
+        c.head = freshFrom(c.band == "night" and SLEEP.night or SLEEP.alone, "sleep", vars)
+      end
+      c.headSat = c.sat
+    end
+    local head = c.head
+    local parts = { head }
+    local gain = c.sat and benefitClause(c.gains or {})
+    if gain then parts[#parts + 1] = gain end
+    local tail
+    if c.stacks and c.stacks > 0 then
+      local deep = c.stacks >= 3 and c.stacks > (c.startStacks or 0)
+      local more = not deep and c.stacks > (c.startStacks or 0) + 1
+      if c.sat then
+        tail = from(deep and BAG_DEEP or more and BAG_MORE or BAG, "bag")
+      elseif deep then tail = from(DEEP, "deep")
+      elseif more then tail = from(MORE, "more") end
+    end
+    local text = parts[1]
+    if parts[2] then text = text .. "; " .. parts[2] end
+    if tail then text = text .. (c.sat and ", " or " ") .. tail end
+    return text
+  end
+  local function detail(c)
+    local d = {}
+    if c.sat then
+      local objs = {}
+      for _, g in ipairs(c.gains or {}) do objs[#objs + 1] = g.obj end
+      d[#d + 1] = #objs > 0 and ("Camp: " .. table.concat(objs, ", ")) or "Campfire"
+    end
+    if c.stacks and c.stacks > 0 then d[#d + 1] = "Well-Rested x" .. c.stacks end
+    return table.concat(d, "; ")
+  end
+  local function situation(c, j)
+    local t = now()
+    local count = tonumber(j.tally.camps) or 0
+    if count == 0 then return "first" end
+    if T.CAMP_MARKS[count + 1] then return "mark" end
+    if camp.litAt and t - camp.litAt < 900 then return "lit" end
+    local h = math.floor((J.salt and #J.salt or 0) + t / 60) % 2 == 0
+    if camp.fellAt and t - camp.fellAt < 900 then return "fall" end
+    local spots = j.campSpots
+    if type(spots) == "table" and (tonumber(spots[c.key]) or 0) >= 2 and h then return "haunt" end
+    if J.partyText() then return "with" end
+    if (c.crowd or 0) >= 5 then return "crowd" end
+    if (c.crowd or 0) == 0 and not h then return "lone" end
+    local since = J.deeds and J.deeds.sessionStart
+    if since and t - since > 3 * 3600 and h then return "weary" end
+    return nil
+  end
+  -- Write (or rewrite) the camp moment.
+  local function record(sat, gains, stacks)
+    local j = journal()
+    local t = now()
+    local c = camp.open
+    if c and (t - c.t > T.CAMP_JOIN or not c.e) then c = nil end
+    if c and sat and c.sat and c.benefitsAt and t - c.benefitsAt > 300 then c = nil end -- sat at a second fire
+    if not c then
+      local key, place = spotKey()
+      c = { t = t, key = key, place = place, zone = zone(), band = band(t), startStacks = (camp.rest and camp.rest.stacks) or 0 }
+      local near = J.social and J.social.nearby and select(2, pcall(J.social.nearby))
+      c.crowd = type(near) == "table" and #near or 0
+      if type(j.campSpots) ~= "table" then j.campSpots = {} end
+      if sat then
+        c.n = (tonumber(j.tally.camps) or 0) + 1
+        c.with = J.partyText()
+        c.situation = situation(c, j)
+        if c.situation == "haunt" then c.n = (tonumber(j.campSpots[key]) or 0) + 1 end
+        if c.situation == "crowd" then c.n = c.crowd end
+      end
+      camp.open = c
+    end
+    if sat and not c.sat then
+      -- the fire came after the bag: start the line over as a camp
+      c.sat, c.n, c.with = true, (tonumber(j.tally.camps) or 0) + 1, J.partyText()
+      c.situation = situation(c, j)
+      if c.situation == "haunt" then c.n = (tonumber(j.campSpots[c.key]) or 0) + 1 end
+      if c.situation == "crowd" then c.n = c.crowd end
+    end
+    if sat then
+      if not c.counted then
+        c.counted = true
+        bump("camps")
+        j.campSpots[c.key] = (tonumber(j.campSpots[c.key]) or 0) + 1
+      end
+      c.benefitsAt = t
+      if gains and #gains > 0 then
+        c.gains = gains
+        if type(j.campObjects) ~= "table" then j.campObjects = {} end
+        for _, g in ipairs(gains) do j.campObjects[g.obj] = (tonumber(j.campObjects[g.obj]) or 0) + 1 end
+      end
+    end
+    if stacks then
+      if not c.slept then c.slept = true; bump("sleeps") end
+      c.stacks = stacks
+    end
+    local text, d = compose(c), detail(c)
+    if c.e then
+      c.e.s, c.e.d = Q.plain(text), Q.plain(d)
+      J.version = (J.version or 0) + 1
+    else
+      c.e = J.add("camp", text, d, { told = true })
+    end
+    if type(c.e) == "table" then
+      local objs = {}
+      for _, g in ipairs(c.gains or {}) do objs[#objs + 1] = g.obj end
+      c.e.co = #objs > 0 and table.concat(objs, ",") or nil
+      c.e.wr = c.stacks
+      c.e.sat = c.sat or nil
+    end
+    return c.e
+  end
+  T.campRecord = record
+
+  castDone = function(unit, _, spell)
+    if unit ~= "player" then return end
+    local name = spellName(spell)
+    if not name then return end
+    if name == T.BAG_CAST then camp.unrolledAt = now(); return end
+    if T.inCraft and T.inCraft() then return end -- making a kit at the bench is not lighting a fire
+    if name:find("Campfire", 1, true) or OBJ[name] then camp.litAt = now() end
+  end
+  campAura = function()
+    if try(InCombatLockdown) or try(UnitAffectingCombat, "player") then return end
+    local got = readAuras()
+    if not camp.seeded then
+      camp.seeded = true
+      camp.camp, camp.rest = got.camp, got.rest
+      return
+    end
+    local newCamp = got.camp and (not camp.camp or (got.camp.id and got.camp.id ~= camp.camp.id)
+      or got.camp.exp > (camp.camp.exp or 0) + 120)
+    local newRest = got.rest and (not camp.rest or got.rest.stacks > (camp.rest.stacks or 0)
+      or got.rest.exp > (camp.rest.exp or 0) + 120)
+    if newCamp then record(true, readBenefits(got.camp), nil) end
+    if newRest then record(false, nil, got.rest.stacks) end
+    camp.camp, camp.rest = got.camp, got.rest
+  end
+  function T.campFell() camp.fellAt = now() end
 end
 
 ----------------------------------------------------------------------------
@@ -508,6 +835,7 @@ local function professionName()
   end
   return type(name) == "string" and name ~= "" and plain(name) or nil
 end
+function T.inCraft() return craft ~= nil end
 local function craftStart()
   local prof = professionName()
   if craft and craft.prof == prof then return end
@@ -787,7 +1115,7 @@ local HANDLERS = {
   TRADE_ACCEPT_UPDATE = function(mine, theirs) tradeBoth = (mine == 1 or mine == true) and (theirs == 1 or theirs == true) end,
   TRADE_CLOSED = function() if tradeBoth then tradeBoth = nil; ns.after(0.5, tradeDone) end end,
   RESURRECT_REQUEST = function(name) if type(name) == "string" then rezBy = { name = name, t = now() } end end,
-  PLAYER_DEAD = function() deadAt = now() end,
+  PLAYER_DEAD = function() deadAt = now(); T.campFell() end,
   PLAYER_ALIVE = function()
     local ghost = try(UnitIsGhost, "player")
     if ghost == true or ghost == 1 then return end -- released: the walk back starts

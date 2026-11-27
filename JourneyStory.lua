@@ -1209,3 +1209,60 @@ function J.retell(kind, text, extra)
     if sit then St.lastSituation = sit; return J.fresh(St.LEVEL_SIT[sit], tostring(extra.l) .. sit, "level", vars) end
   end
 end
+
+----------------------------------------------------------------------------
+-- Camps in a chapter: the camp objects you sat among, the sleeping bag, a run of camps, company.
+-- Camp moments carry co (the objects, "Lodestone,Mana Well"), wr (Well-Rested stacks) and sat.
+----------------------------------------------------------------------------
+Vo.M.campObjs = {
+  chronicle = { "%name% rested at camps furnished with %o%.", "The camps of this chapter offered %o%.",
+    "Among the comforts of the road: %o%." },
+  fireside = { "The fires had company: %o%. Somebody had been busy with their professions.",
+    "You sat among %o% at the campfires. Proper camps, these.", "%O% stood by the fire. Luxury, out here." },
+  bard = { "By the fires stood %o%, gifts of the crafters' hands.", "Round the flames, %o%: the road's small kindnesses." } }
+Vo.M.campSleep = {
+  chronicle = { "%name% slept in the old sleeping bag %n%, and woke the better for it.", "The sleeping bag was unrolled %n%." },
+  fireside = { "Out came the sleeping bag %n%. Old, but still good.", "You napped in that sleeping bag %n%, and the experience came easier after." },
+  bard = { "The old bag was unrolled %n%, and sleep was sweet beneath the stars.", "Wrapped in the old bag %n%, you dreamed the road ahead." } }
+Vo.M.campDeep = {
+  chronicle = { "Once, %name% slept until no more rest could be had.", "%name% reached the deepest rest the bag allows." },
+  fireside = { "One night you slept so well the bag had nothing more to give.", "Three times rested, once. You needed it." },
+  bard = { "One night the sleep ran deep, as deep as sleep can go." } }
+Vo.M.campMany = {
+  chronicle = { "%name% made camp %n% times in this chapter.", "The road was broken by %n% campfires." },
+  fireside = { "%N% campfires in one chapter. You like a sit-down, don't you.", "You stopped at %n% fires along the way. Fair enough." },
+  bard = { "%N% fires lit the way through this chapter.", "From fire to fire, %n% in all, the chapter wound on." } }
+Vo.M.campWith = {
+  chronicle = { "%name% shared a fire with %w%.", "%w% sat at the same fire as %name%." },
+  fireside = { "You shared a campfire with %w%. Good company makes a good fire.", "%W% sat with you by the fire, and the evening went quickly." },
+  bard = { "%W% and you, a fire between you, and stories to spare." } }
+Vo.noticers[#Vo.noticers + 1] = function(c)
+  local camps, slept, deep, objs, seen, with = 0, 0, false, {}, {}, nil
+  for _, e in ipairs(c.events) do
+    if e.k == "camp" then
+      if e.sat or not tonumber(e.wr) then camps = camps + 1 end
+      if tonumber(e.wr) then slept = slept + 1; if tonumber(e.wr) >= 3 then deep = true end end
+      if type(e.co) == "string" then
+        for o in e.co:gmatch("[^,]+") do
+          if not seen[o] and #objs < 3 then seen[o] = true; objs[#objs + 1] = "the " .. o:lower() end
+        end
+      end
+      if not with and type(e.with) == "string" and e.with ~= "" then
+        local names = {}
+        for n in e.with:gmatch("[^,]+") do if #names < 2 then names[#names + 1] = n end end
+        with = table.concat(names, " and ")
+      end
+    end
+  end
+  if camps == 0 and slept == 0 then return end
+  local said = false
+  if #objs > 0 then
+    local o = #objs == 1 and objs[1] or (table.concat(objs, ", ", 1, #objs - 1) .. " and " .. objs[#objs])
+    c.add(4.2, 8, "campObjs", { o = o, O = capital(o) }); said = true
+  end
+  if deep then c.add(4.4, 8.05, "campDeep"); said = true
+  elseif slept > 0 then c.add(4, 8.05, "campSleep", { n = slept == 1 and "once" or (say(slept) .. " times") }); said = true end
+  if camps >= 3 then c.add(4.3, 7.95, "campMany", { n = say(camps), N = capital(say(camps)) }); said = true end
+  if with and not said then c.add(4, 8, "campWith", { w = with, W = capital(with) }); said = true end
+  if said then c.drop("camp") end
+end

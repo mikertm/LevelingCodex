@@ -14268,6 +14268,73 @@ end
 -- Journey tales: dungeon runs and wipes, battlegrounds, honor, duels, killed by a player,
 -- resurrections, trades, emotes, the guild, crafting, the auction house and the mailbox, the purse
 -- and a quest given up; the Quest Log page; the ledger and friends.
+-- Camping, as Forever does it: a fire's passing warmth is no camp; Camp Benefits (sitting a minute at a
+-- campfire) writes one moment with what the camp objects gave; the sleeping bag's Well-Rested joins that
+-- same moment; buffs already on you at login are a baseline; a later fire is a new moment.
+function S.journeyCamp()
+  MOCK.mapInfo = STATS_MAPS
+  S.login()
+  MOCK.advance(12)
+  local J = MOCK.ns.journey
+  local T = J.tales
+  local j = LevelingCodexCharDB.journey
+  local function camps()
+    local out = {}
+    for _, e in ipairs(j.events) do if e.k == "camp" then out[#out + 1] = e end end
+    return out
+  end
+  check(T.campEffect("Lodestone: Melee Attack Power increased by 49.") == "Lodestone"
+    and select(2, T.campEffect("Lodestone: Melee Attack Power increased by 49.")) == "melee attack power up by 49",
+    "a camp benefit line reads as object and effect")
+  if MOCK.minimal then return end
+  local t0 = MOCK.time
+  MOCK.buffs = { { name = "Cozy Fire", id = 3, exp = t0 + 60 } }
+  MOCK.advance(12)
+  check(#camps() == 0, "walking past a fire is not a camp")
+  MOCK.buffs = { { name = "Cozy Fire", id = 3, exp = t0 + 60 }, { name = "Camp Benefits", id = 7, exp = t0 + 7300,
+    tip = { "Gained the following camp benefits:", "", "Lodestone: Melee Attack Power increased by 49.", "2 hours remaining" } } }
+  MOCK.advance(12)
+  local c = camps()
+  check(#c == 1 and c[1].s:find("melee attack power up by 49", 1, true), "Camp Benefits is a camp, with what it gave: " .. tostring(c[1] and c[1].s))
+  check(c[1] and c[1].d == "Camp: Lodestone" and c[1].co == "Lodestone" and T.tally("camps") == 1, "the camp's detail and tally")
+  local first = c[1] and c[1].s
+  MOCK.spells[900001] = "Unroll Bag"
+  MOCK.event("UNIT_SPELLCAST_SUCCEEDED", "player", "cast", 900001)
+  table.insert(MOCK.buffs, { name = "Well-Rested", id = 8, stacks = 1, exp = MOCK.time + 7200 })
+  MOCK.advance(12)
+  c = camps()
+  check(#c == 1 and c[1].wr == 1 and c[1].d:find("Well-Rested x1", 1, true), "the sleeping bag joins the same camp: " .. tostring(c[1] and c[1].d))
+  check(c[1] and c[1].s ~= first and c[1].s:find(first:match("^[^;]+"), 1, true), "the line grows and keeps its opening: " .. tostring(c[1] and c[1].s))
+  MOCK.buffs[3].stacks = 3
+  MOCK.advance(12)
+  c = camps()
+  check(#c == 1 and c[1].wr == 3 and T.tally("sleeps") == 1, "stacking Well-Rested still rewrites the one moment: " .. tostring(c[1] and c[1].s))
+  -- a /reload: the buffs on you are a baseline, not a new camp
+  T.campState.seeded, T.campState.open = false, nil
+  MOCK.advance(24)
+  check(#camps() == 1, "buffs already on you are not a new camp")
+  -- later, another fire with the party
+  MOCK.advance(1300)
+  MOCK.party, MOCK.partyMembers = true, { { name = "Ann", level = 9, class = "MAGE" } }
+  MOCK.buffs = { { name = "Camp Benefits", id = 11, exp = MOCK.time + 7200,
+    tip = { "Gained the following camp benefits:", "Mana Well: Mana regeneration increased by 6.", "Incense Candle: Intellect increased by 8." } } }
+  MOCK.advance(12)
+  c = camps()
+  check(#c == 2 and c[2].s:find("Ann", 1, true) and c[2].co == "Mana Well,Incense Candle", "a second fire with the party: " .. tostring(c[2] and c[2].s))
+  -- the bag alone, far from any fire
+  MOCK.advance(1300)
+  MOCK.party, MOCK.partyMembers = nil, {}
+  MOCK.buffs = { { name = "Well-Rested", id = 20, stacks = 1, exp = MOCK.time + 7200 } }
+  MOCK.advance(12)
+  c = camps()
+  check(#c == 3 and not c[3].sat and c[3].s:lower():find("bag", 1, true), "the bag on its own is a nap: " .. tostring(c[3] and c[3].s))
+  local prose = J.voice.chapterProse(J.level(), c, nil, false) or ""
+  check(prose:lower():find("lodestone", 1, true) or prose:lower():find("bag", 1, true) or prose:find("fire", 1, true),
+    "the chapter tells the camps: " .. prose)
+  for _, e in ipairs(c) do print("CAMP: " .. e.s .. " [" .. tostring(e.d) .. "]") end
+  print("PROSE: " .. prose)
+end
+
 function S.journeyTales()
   MOCK.mapInfo = STATS_MAPS
   MOCK.money = 500

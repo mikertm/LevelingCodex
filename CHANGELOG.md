@@ -1,5 +1,13 @@
 # Leveling Codex
 
+## v0.34.5
+- **Journey: camping, fixed and told properly.** The old check looked for any buff named like a campfire, so it could write a camp when you only passed a fire and miss the time you really sat down.
+    - **A camp is a camp now:** the moment is written when you get **Camp Benefits** from sitting at a campfire, and it says what the camp gave you ("the lodestone lent you melee attack power up by 49"; several objects are listed together).
+    - **The Cozy Sleeping Bag:** Unroll Bag and **Well-Rested** join the same moment ("...then crawled into the sleeping bag for a nap"), and stacking it to three reads as the deepest sleep. The bag on its own, away from a fire, is a nap of its own.
+    - **One moment per camp:** what happens at the same fire within 20 minutes rewrites that moment instead of adding another, and buffs already on you when you log in are not a new camp.
+    - **Many more ways to tell it:** the time of night (dawn, day, dusk, the small hours), who sat with you, a crowded fire or one all to yourself, a camp you set out yourself, your first camp and every milestone after (10th, 25th, 50th...), the old spot you keep going back to, a fire after a fall, a fire at the end of a long session, and a line for every camp object, from the lodestone's hum to the enchanted lute playing itself.
+    - **Chapters tell your camps:** the camp objects you sat among, the sleeping bag, a chapter of many fires and the company you kept.
+
 ## v0.34.4
 - **Price tooltips, shorter and easier to read.** Four lines instead of seven:
     - **Lowest now**, then **Usual (N days)** with the last days' range beside it ("2s  (75c - 3s)").

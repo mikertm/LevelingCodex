@@ -1522,6 +1522,21 @@ C_TooltipInfo={GetHyperlink=function(ref)
   local it=lootItem(ref)
   if it and it.loaded~=false then return {lines={{leftText=it.effect or "Plain equipment"}}} end
 end}
+-- Your buffs (the Journey's camps): MOCK.buffs = { { name, stacks, exp, id, tip = { "line", ... } } },
+-- read by C_UnitAuras.GetBuffDataByIndex and the tooltip by aura instance; gone in the minimal client.
+C_UnitAuras={GetBuffDataByIndex=function(unit,i)
+  local b=unit=="player" and MOCK.buffs and MOCK.buffs[i]
+  if b then return {name=b.name,applications=b.stacks or 0,expirationTime=b.exp or 0,auraInstanceID=b.id or i} end
+end}
+C_TooltipInfo.GetUnitBuffByAuraInstanceID=function(unit,id)
+  for _,b in ipairs(MOCK.buffs or {}) do
+    if (b.id or 0)==id then
+      local lines={{leftText=b.name}}
+      for _,t in ipairs(b.tip or {}) do lines[#lines+1]={leftText=t} end
+      return {lines=lines}
+    end
+  end
+end
 
 local function merchantItem(i) return MOCK.merchant and MOCK.merchant.items and MOCK.merchant.items[i] end
 function GetMerchantNumItems() return MOCK.merchant and MOCK.merchant.items and #MOCK.merchant.items or 0 end
@@ -2231,6 +2246,7 @@ function MOCK.setup(opts)
   if opts.minimal then
     C_QuestLog, C_Map, GetPlayerFacing, GetQuestID, GetNumQuestChoices, AcceptQuest, GetQuestReward = nil, nil, nil, nil, nil, nil, nil
     C_MapExplorationInfo = nil
+    C_UnitAuras = nil
     UnitOnTaxi, NumTaxiNodes, TaxiNodeName, TaxiNodeGetType = nil, nil, nil, nil
     for _, n in ipairs(OPTIONAL) do _G[n] = nil end
     for _, e in ipairs(MOCK.optionalEvents) do MOCK.knownEvents[e] = nil end
