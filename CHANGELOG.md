@@ -71,6 +71,12 @@
     - **Only real prices get in.** Price messages count only from the price channel or your guild, never a whisper or party message. An item ID the game has no item for is never saved. A new item's price far off your own reading from the last three days now waits for a second player, like items with a price history already did.
     - **A player with your name on a connected realm** is no longer taken for your own echo.
     - **Chat stays clean.** Lines typed into the price channel and its owner and password notices stay out of your chat windows, on newer clients too.
+- **Price tooltips, easier to read.**
+    - **Trend in words.** The little bars are gone. The Trend line now says "Holding steady", "Rising: 12% over earlier days" or "Falling: 8% under earlier days", with an up or down arrow.
+    - **Usual price (N days)** is named for what it is, and a new **Range over N days** line shows the cheapest and dearest of the last days.
+    - **The verdict says what it compares**: "Now 5% above usual: a normal price", "Now 15% above usual: a good time to sell", "Now right at its usual price". The old "Near its usual price" under a different Lowest now was confusing.
+    - **Shift** now shows "Listings at the last look" (cheapest to dearest), the middle listing and how many were for sale, instead of "Low / median / high".
+- **Fixed: Quick Sell scrolling.** The mouse wheel scrolls the list under the cursor: your bag items on the left, YOUR AUCTIONS on the right. With listings on the right, the wheel used to scroll only that list. Deals scrolls the same way.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:

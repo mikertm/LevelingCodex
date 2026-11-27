@@ -1766,6 +1766,8 @@ function A.coins(copper)
 end
 
 -- The last days as little bars (inline textures, the newest gold): nil with fewer than two days.
+-- The tooltip no longer draws it (Michael, 2026-11-27: bars without a scale said nothing); the
+-- Market page's charts carry the shape, and the tooltip says the trend and the week's range in words.
 function A.sparkline(id, days)
   local hist = A.history(id)
   local from = math.max(1, #hist - (days or 7) + 1)
@@ -1783,18 +1785,62 @@ function A.sparkline(id, days)
   return table.concat(parts, " ")
 end
 
--- The verdict line for an item with a price: text, colour.
+-- The usual price over the last days: lowest and highest daily value, how many days (nil under two).
+function A.weekRange(id, days)
+  local hist = A.history(id)
+  local from = math.max(1, #hist - (days or 7) + 1)
+  local lo, hi, n = nil, nil, 0
+  for i = from, #hist do
+    local v = tonumber(hist[i].med or hist[i].low)
+    if v and v > 0 then
+      n = n + 1
+      lo, hi = math.min(lo or v, v), math.max(hi or v, v)
+    end
+  end
+  if n < 2 then return end
+  return lo, hi, n
+end
+
+-- An up or down arrow in a colour, as inline text (nil when the client hasn't the art).
+local ARROW = { up = "Interface\\Buttons\\Arrow-Up-Up", down = "Interface\\Buttons\\Arrow-Down-Up" }
+local function arrow(dir, c)
+  local path = ARROW[dir]
+  if not (path and ns.art and ns.art.hasFile(path)) then return "" end
+  return string.format("|T%s:14:14:0:%d:32:32:0:32:0:32:%d:%d:%d|t ", path, dir == "up" and -3 or 3,
+    math.floor(c[1] * 255), math.floor(c[2] * 255), math.floor(c[3] * 255))
+end
+
+-- The trend in words: text, colour ("Holding steady", "Rising: 12% over earlier days", "Falling: ...").
+function A.trendWords(p)
+  if not p or not p.trend then return end
+  local t = p.trend
+  if math.abs(t) <= 5 then return "Holding steady", SOFT end
+  if t > 0 then return arrow("up", GREEN) .. "Rising: " .. t .. "% over earlier days", GREEN end
+  return arrow("down", RED) .. "Falling: " .. math.abs(t) .. "% under earlier days", RED
+end
+
+-- How the lowest price now stands against the usual one: "5% above usual", "right at usual".
+local function againstUsual(low, usual)
+  local pct = math.floor((low - usual) * 100 / usual + 0.5)
+  if math.abs(pct) <= 2 then return "right at its usual price", pct end
+  return math.abs(pct) .. "% " .. (pct > 0 and "above" or "under") .. " usual", pct
+end
+
+-- The verdict line for an item with a price: text, colour. It says what it compares (Michael,
+-- 2026-11-27: "Near its usual price" next to two different prices read as a contradiction).
 function A.verdict(p, vendor)
   local low = p.n > 0 and p.low or nil
   if vendor and vendor > 0 and low and vendor >= math.floor(low * 0.95) then
     return "Vendor it: a vendor pays more than a sale here", RED
   end
   if p.n == 0 then return "None listed: you set the price", GOLD end
-  if p.usual and p.days and p.days >= 2 and low then
-    if low >= p.usual * 1.1 then return "Above usual: a good time to sell", GREEN end
-    if low <= p.usual * 0.7 then return "Cheap now: buy, or hold yours", ORANGE end
+  if p.usual and p.usual > 0 and p.days and p.days >= 2 and low then
+    local words, pct = againstUsual(low, p.usual)
+    if pct >= 10 then return "Now " .. words .. ": a good time to sell", GREEN end
+    if pct <= -30 then return "Now " .. words .. ": cheap, buy or hold yours", ORANGE end
     if p.trend and p.trend <= -10 then return "Falling: sell soon", ORANGE end
-    return "Near its usual price", SOFT
+    if pct >= -2 and pct <= 2 then return "Now " .. words, SOFT end
+    return "Now " .. words .. ": a normal price", SOFT
   end
 end
 
@@ -1813,20 +1859,26 @@ function A.tooltipLines(id, shift)
       .. (fromAtor and " (Auctionator)" or (p.shared and " (shared)" or "")), GOLD, SOFT)
     if fromAtor then -- Auctionator shows it
     elseif p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
-    if p.usual and p.usual ~= p.low then add("  Usual" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual)) end
+    if p.usual and p.usual ~= p.low then
+      add("  Usual price" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual))
+    end
     if p.trend then
-      local spark = A.sparkline(id) or ""
-      local t = math.abs(p.trend) <= 5 and "steady" or ((p.trend > 0 and "+" or "-") .. math.abs(p.trend) .. "%")
-      add("  Trend", (spark ~= "" and (spark .. "  ") or "") .. t, nil, math.abs(p.trend) <= 5 and SOFT or (p.trend > 0 and GREEN or RED))
+      local words, c = A.trendWords(p)
+      add("  Trend", words, nil, c)
+    end
+    local lo, hi, n = A.weekRange(id)
+    if lo and hi and hi > lo then
+      add("  Range over " .. n .. " days", A.coins(lo) .. "  to  " .. A.coins(hi), nil, SOFT)
     end
     if vendor and vendor > 0 then add("  Vendor pays", A.coins(vendor)) end
     local v, vc = A.verdict(p, vendor)
     if v then add("  " .. v, nil, vc) end
     if shift then
       if p.low then
-        add("  Low / median / high", ns.coins(p.low) .. " / " .. ns.coins(p.med or p.low) .. " / " .. ns.coins(p.high or p.low), SOFT)
+        add("  Listings at the last look", A.coins(p.low) .. "  to  " .. A.coins(p.high or p.low), SOFT)
+        if p.med and p.med ~= p.low then add("  Middle listing", A.coins(p.med), SOFT) end
       end
-      add("  Listed at the last look", ns.thousands(p.n), SOFT)
+      add("  For sale at the last look", ns.thousands(p.n), SOFT)
     end
   elseif shift and not A.auctionator() then
     add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", "not seen yet", GOLD, SOFT)
@@ -2041,7 +2093,7 @@ ns.gold.addSection(10, function(y)
     y = y + 24
   end
   tick("Price lines on item tooltips", not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
-    "The lowest price seen, the usual price, the trend and the vendor price. Hold Shift for low, median, high and how many were listed.")
+    "The lowest price seen, the usual price, the trend, the last days' range and the vendor price. Hold Shift for the listings at the last look.")
   tick("Add the Codex tabs to the auction house", not db.noAuctionTabs, function()
     db.noAuctionTabs = not db.noAuctionTabs
     if ns.auctionPanel and open then ns.auctionPanel.onShow(root) end

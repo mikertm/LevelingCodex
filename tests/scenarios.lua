@@ -11325,10 +11325,13 @@ function S.auctionTools()
   click(panel, "Look up Linen Cloth")
   check(questText(panel, "Lowest now") and questText(panel, "Linen Cloth"), "a recent look-up opens again")
   GameTooltip:SetHyperlink("item:2592")
-  check(tipHas("Trend") and tipHas("+100%"), "the tooltip shows the trend against earlier days")
+  check(tipHas("Trend") and tipHas("Rising: 100% over earlier days") and not tipHas("WHITE8X8"),
+    "the tooltip says the trend in words against earlier days, without the little bars")
+  check(tipHas("Range over ") and tipHas("a good time to sell"), "the tooltip gives the days' range and says what the verdict compares")
   MOCK.shift = true
   GameTooltip:SetHyperlink("item:2589")
-  check(tipHas("Low / median / high") and tipHas("Listed at the last look  30"), "Shift adds low, median, high and how many are listed")
+  check(tipHas("Listings at the last look") and tipHas("For sale at the last look  30") and not tipHas("Low / median / high"),
+    "Shift adds the listings' range and how many are for sale")
   MOCK.shift = false
   MOCK.closeAuction()
   MOCK.openAuction()
@@ -12181,6 +12184,52 @@ function S.auctionQuickSell()
   click(card, "Next deal")
   MOCK.advance(1)
   check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 5, "it buys what the budget covers (" .. tostring(MOCK.purchases[1] and MOCK.purchases[1].qty) .. ")")
+  -- Quick Sell: the wheel scrolls the list under the cursor, the bag list and YOUR AUCTIONS each
+  local store = LevelingCodexDB.auction.realms.Mockrealm.items
+  for k = 1, 16 do
+    local id = 5000 + k
+    store[id] = hist(500 + k, 10, 500 + k)
+    store[id].name = "Wheel Item " .. k
+    MOCK.bagItems[#MOCK.bagItems + 1] = { name = "Wheel Item " .. k, id = id, quality = 1, level = 1, sell = 2, count = 1, class = "Trade Goods" }
+    MOCK.auctions[#MOCK.auctions + 1] = { id = id, name = "Wheel Item " .. k, count = 1, buyout = 600, mine = true }
+  end
+  MOCK.event("BAG_UPDATE_DELAYED")
+  click(AuctionHouseFrame, "Quick Sell")
+  T.queryOwned()
+  MOCK.advance(2)
+  MOCK.ns.auctionPanel.refresh()
+  local function zones(f, out)
+    for _, c in ipairs({ f:GetChildren() }) do
+      if c.codexKey and c:IsShown() then out[c.codexKey] = c end
+      zones(c, out)
+    end
+    return out
+  end
+  local z = zones(card, {})
+  check(z.selling and z.mine and z.selling._wheel and z.mine._wheel, "both Quick Sell lists have their own wheel area")
+  local function pagers(f, out)
+    for _, r in ipairs({ f:GetRegions() }) do
+      if r:IsShown() and r._text and r._text:find("(mouse wheel scrolls)", 1, true) then out[#out + 1] = r._text:match("^(%d+)%-") end
+    end
+    for _, c in ipairs({ f:GetChildren() }) do if c:IsShown() then pagers(c, out) end end
+    return out
+  end
+  local p0 = table.concat(pagers(card, {}), ",")
+  check(p0 == "1,1", "both lists start at the top (" .. p0 .. ")")
+  if z.selling and z.mine then
+    MOCK.fire(z.selling, "OnMouseWheel", -1)
+    local p1 = table.concat(pagers(card, {}), ",")
+    check(p1 == "4,1", "the wheel over the bag list scrolls it, not YOUR AUCTIONS (" .. p1 .. ")")
+    z = zones(card, {})
+    MOCK.fire(z.mine, "OnMouseWheel", -1)
+    local p2 = table.concat(pagers(card, {}), ",")
+    check(p2 == "4,4", "the wheel over YOUR AUCTIONS scrolls that list (" .. p2 .. ")")
+    z = zones(card, {})
+    MOCK.fire(z.selling, "OnMouseWheel", 1)
+    z = zones(card, {})
+    MOCK.fire(z.mine, "OnMouseWheel", 1)
+    check(table.concat(pagers(card, {}), ",") == "1,1", "scrolling back up returns to the top")
+  end
   for _, pg in ipairs({ "Codex", "Market", "Deals", "Quick Sell", "Scan" }) do click(AuctionHouseFrame, pg) end
   check(MOCK.ns.auctionPanel.lastError == nil, "every page draws (" .. tostring(MOCK.ns.auctionPanel.lastError) .. ")")
 end

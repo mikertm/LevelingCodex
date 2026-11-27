@@ -738,8 +738,30 @@ local function chartPoints(id, interval)
   return pts, "interval"
 end
 
+-- A wheel zone over a paged list: the mouse wheel over it scrolls that list (rows'
+-- buttons don't take the wheel, so it reaches the zone under them). Outside every zone
+-- the panel's own wheel scrolls the page's main list (the last one drawn with more rows than fit).
+local function wheelZone(key, x, y, w, h, fit, total)
+  local z = take("wheel", function()
+    local f = CreateFrame("Frame", nil, body)
+    f:EnableMouseWheel(true)
+    f:SetScript("OnMouseWheel", function(self, delta)
+      local k = self.codexKey
+      if not k then return end
+      local most = math.max(0, (self.codexTotal or 0) - (self.codexFit or 1))
+      offsets[k] = math.max(0, math.min(most, (offsets[k] or 0) - delta * 3))
+      P.refresh()
+    end)
+    return f
+  end)
+  z:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
+  z:SetSize(math.max(1, w), math.max(1, h))
+  z:SetFrameLevel(body:GetFrameLevel() + 1)
+  z.codexKey, z.codexFit, z.codexTotal = key, fit, total
+  return z
+end
+
 -- A paged list: rows from offsets[key], as many as fit in height; returns the height used.
--- The mouse wheel scrolls the page's main list (the last one drawn with more rows than fit).
 local function list(key, rows, x, y, w, rowH, height, draw)
   local fit = math.max(1, math.floor((height - 26) / rowH))
   if #rows <= math.floor(height / rowH) then fit = #rows end
@@ -755,6 +777,7 @@ local function list(key, rows, x, y, w, rowH, height, draw)
   local used = math.min(#rows, fit) * rowH
   if #rows > fit then
     wheelKey = key
+    wheelZone(key, x, y, w, used + 26, fit, #rows)
     local py = y + fit * rowH + 2
     button("<", x, py, 26, function() offsets[key] = math.max(0, first - fit) end,
       { label = "Previous " .. key, enabled = first > 0 })
@@ -1793,7 +1816,10 @@ function pages.deals(W, top, H)
     local fit = math.max(1, math.floor((listH - 26) / rowH))
     local first = math.max(0, math.min(offsets.deals or 0, math.max(0, #rows - fit)))
     offsets.deals = first
-    if #rows > fit then wheelKey = "deals" end
+    if #rows > fit then
+      wheelKey = "deals"
+      wheelZone("deals", x, listY, w, fit * rowH + 26, fit, #rows)
+    end
     for i = 1, fit do
       local d = rows[first + i]
       if not d then break end
