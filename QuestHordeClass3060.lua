@@ -464,7 +464,7 @@ do
         "Felcloth"),
       action("goto", P.brakkar, toFelwood),
       finish(8419, impsy, "Impsy floats beside Niby the Almighty, a short ride north-east of Bloodvenom Post."),
-      optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy.")),
+      B.ifReady(optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy."))),
       accept(8421, impsy),
       part(8421, 2, at(nil, 42.4, 47.0, M.felwood),
         "Kill Tainted Oozes along the Bloodvenom river just south of Impsy for Bloodvenom Essence.", "4 Bloodvenom Essence"),

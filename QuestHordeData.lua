@@ -412,7 +412,7 @@ do
     objective(826, du(nil, 67.4, 87.8), "Kill Zalazane in his hut on the same island and take his head.", "Zalazane's Head"),
     objective(818, du(nil, 59.6, 73.8), "Finish the Crawler Mucus and Makrura Eyes on the beach on the way back.",
       "4 Intact Makrura Eyes", "8 Crawler Mucus"),
-    finish(96873, pazula),
+    B.ifReady(finish(96873, pazula)),
     finish(808, gadrin), finish(826, gadrin), finish(97225, gadrin),
     finish(818, vornal), finish(817, velrin), finish(97223, xarti),
     finish(96876, ukor, "Return Ukor's pack to him on the road west of Sen'jin."),

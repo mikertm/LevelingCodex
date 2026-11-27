@@ -733,7 +733,7 @@ do
       finish(2922, overspark), finish(2924, klockmort), finish(2930, castpipe), finish(2929, mekkatorque),
       finish(2947, talvash),
       accept(2948, talvash, "Talvash can improve the ring for a Silver Bar, a Moss Agate (both on the Auction House) and 30 silver. Use Next twice if you don't want it."),
-      finish(2948, talvash, "Hand Talvash the bar, the agate and the silver for the improved ring."),
+      B.ifReady(finish(2948, talvash, "Hand Talvash the bar, the agate and the silver for the improved ring.")),
       finish(2962, ozzie), finish(2928, shoni),
       finish(2904, nil, "Report Kernobee's rescue to Scooty at the goblin transporter above Booty Bay."),
     })

@@ -356,6 +356,10 @@ local function buildRoute()
           for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
             if type(pair) == "table" and pair[1] then routeItems[pair[1]] = true end
           end
+          -- ifItems ({ { itemID, count } }) gates an accept on your bags: count them like collect items.
+          for _, pair in ipairs(type(step.ifItems) == "table" and step.ifItems or {}) do
+            if type(pair) == "table" and pair[1] then collectItems[pair[1]] = -1 end
+          end
           if step.type == "collect" or step.type == "buy" then
             if step.item then collectItems[step.item] = -1 end
             for _, pair in ipairs(type(step.items) == "table" and step.items or {}) do
@@ -573,6 +577,14 @@ local function eliteSkipped(s)
   return false
 end
 
+-- Every { itemID, count } pair of a list in your bags.
+local function haveItemList(list)
+  for _, pair in ipairs(list) do
+    if type(pair) == "table" and pair[1] and Q.itemCount(pair[1]) < (pair[2] or 1) then return false end
+  end
+  return true
+end
+
 -- Items a collect or buy step wants: done once your bags hold `count` (default 1) of `item` and
 -- every `items` pair ({ itemID, count }).
 local function haveItems(s)
@@ -672,6 +684,18 @@ local function state(row, skips, blockedQuests, later, map, x, y)
     if not entry and not row.section.side and eliteSkipped(s) then return "skipped" end
     local follow = s.breadcrumb
     if follow and not entry and (log[follow] or turnedIn[follow]) then return "skipped" end
+    -- `ifItems` on an accept: a "bring me these" quest the route never has you gather for. It shows
+    -- only while your bags hold the items, so nobody takes it (and then waits at its turn-in) without them.
+    if s.ifItems and s.type == "accept" and not entry and not haveItemList(s.ifItems) then
+      blockedQuests[s.quest] = "filtered"
+      return "filtered"
+    end
+    -- `ifReady` on a turn-in: the hand-in only shows once the quest log says it is ready, so a quest
+    -- whose items you never found doesn't hold the route up (its follow-ups wait with it).
+    if s.ifReady and s.type == "turnin" and entry and entry.readyKnown and not entry.ready then
+      blockedQuests[s.quest] = "filtered"
+      return "filtered"
+    end
     if s.startItem and not entry and not startItems[s.startItem] then
       local unavailable = row.section.category and "blocked" or "filtered"
       blockedQuests[s.quest] = unavailable
@@ -1845,6 +1869,10 @@ function Q.reason(row)
     if row.grey then return "Left out: it's grey for your level. Missed quests > Outleveled lists it." end
     if row.cut then return "Left out: it needs a quest chain you skipped in another zone." end
     return "Earlier: you've moved past it in this guide. Missed quests lists it."
+  elseif st == "filtered" and s.ifItems and s.type == "accept" then
+    return "Hidden: it shows once your bags hold the items it asks for."
+  elseif st == "filtered" and s.ifReady and s.type == "turnin" then
+    return "Hidden: it shows once the quest log says it is ready to turn in."
   elseif st == "blocked" then
     if s.skill and s.profession then return "Waiting: needs " .. s.profession:lower() .. " skill " .. s.skill .. "." end
     return "Waiting: " .. (s.quest and Q.questStatus(row) or "not available yet") .. "."

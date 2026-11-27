@@ -1145,8 +1145,8 @@ do
     action("goto", badlands.rigglefuzz, "Ride south through the Badlands to Rigglefuzz's camp in the middle of the zone."),
     finish(1106, martek, "Martek the Exiled camps beside Rigglefuzz."), accept(1108, martek),
     accept(703, badlands.rigglefuzz, "Rigglefuzz wants four Buzzard Wings."),
-    optional(accept(705, badlands.rigglefuzz, "If you brought nine Blue Pearls from the Vile Reef, Rigglefuzz takes them now.")),
-    optional(finish(705, badlands.rigglefuzz)),
+    B.ifItems({ { 4611, 9 } }, optional(accept(705, badlands.rigglefuzz, "You carry nine Blue Pearls from the Vile Reef: Rigglefuzz takes them now."))),
+    B.ifReady(optional(finish(705, badlands.rigglefuzz))),
   }) do steps[#steps + 1] = step end
   for _, step in ipairs(badlands.kargath()) do steps[#steps + 1] = step end
   for _, step in ipairs({
@@ -1382,8 +1382,8 @@ do
   for _, step in ipairs({
     action("goto", badlands.rigglefuzz, "Ride south through the Badlands to Rigglefuzz's camp in the middle of the zone."),
     accept(703, badlands.rigglefuzz, "Rigglefuzz wants four Buzzard Wings."),
-    optional(accept(705, badlands.rigglefuzz, "If you brought nine Blue Pearls from the Vile Reef, Rigglefuzz takes them now.")),
-    optional(finish(705, badlands.rigglefuzz)),
+    B.ifItems({ { 4611, 9 } }, optional(accept(705, badlands.rigglefuzz, "You carry nine Blue Pearls from the Vile Reef: Rigglefuzz takes them now."))),
+    B.ifReady(optional(finish(705, badlands.rigglefuzz))),
     objective(703, on.badlands(nil, 62.5, 54.9), "Kill Buzzards east of the camp for their wings.", "4 Buzzard Wings"),
     finish(703, badlands.rigglefuzz),
   }) do steps[#steps + 1] = step end

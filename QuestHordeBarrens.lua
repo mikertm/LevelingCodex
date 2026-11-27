@@ -500,7 +500,10 @@ local sunrock = (function()
     finish(97003, p.gurak),
     taxi("fly", p.omusa, "Camp Taurajo, The Barrens", "Fly to Camp Taurajo."),
     finish(878, p.mangletooth), accept(5052, p.mangletooth),
-    finish(5052, p.mangletooth, "Hand Mangletooth a Blood Shard from the quilboar you killed."),
+    action("collect", ba(nil, 44.8, 53.1),
+      "Mangletooth wants a Blood Shard. Bristleback quilboar just north of Camp Taurajo drop them; keep one if you already have it.",
+      { item = 5075, count = 1, quest = 5052 }),
+    finish(5052, p.mangletooth, "Hand Mangletooth a Blood Shard."),
     finish(882, p.jorn), accept(907, p.jorn),
     finish(883, p.jorn, "If you found Lakota'mani's hoof, hand it to Jorn."),
 
