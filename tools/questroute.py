@@ -18,7 +18,7 @@ STEP_FIELDS = {"type", "bind", "item", "startItem", "breadcrumb", "quest", "name
                "class", "race", "optional", "dungeon", "chain", "forever", "objectives", "objectiveIndex", "flight", "suggest", "also",
                "phase", "uncertain", "guide", "xp", "mobs", "logOnly", "count", "items", "skipOn", "maxLevel",
                "profession", "skill", "ifOnQuest", "ifDone", "unlessDone", "sticky", "points", "nearest", "path", "drop",
-               "elite", "recoverNearby"}
+               "elite", "recoverNearby", "ifItems", "ifReady"}
 ROOT = Path(__file__).resolve().parent.parent
 ROUTE = ROOT / "QuestData.lua"
 CLASS_ROUTE = ROOT / "QuestClassData.lua"
@@ -267,6 +267,12 @@ def audit(data, ref, cap=20):
                         fail(where, f"{key} must be a positive integer")
                 if "profession" in step and not ascii_text(step["profession"]):
                     fail(where, "profession must be a profession key such as MINING")
+                if "ifItems" in step and (step["type"] != "accept" or not isinstance(step["ifItems"], list) or not step["ifItems"]
+                        or not all(isinstance(p, list) and 1 <= len(p) <= 2 and all(type(v) is int and v > 0 for v in p)
+                                   for p in step["ifItems"])):
+                    fail(where, "ifItems must be a list of { itemID, count } pairs on an accept step")
+                if "ifReady" in step and (step["type"] != "turnin" or step["ifReady"] is not True):
+                    fail(where, "ifReady must be true on a turn-in step")
                 for key in ("ifOnQuest", "ifDone", "unlessDone"):
                     if key in step and (type(step[key]) is not int or step[key] not in ids):
                         fail(where, f"{key} must be a known quest ID")

@@ -78,7 +78,7 @@ end
 -- Warrior and Paladin
 do
   local m, at, q = B.maps, B.at, B.q
-  local accept, finish, goal, withItem = B.accept, B.finish, B.objectiveAt, B.withItem
+  local accept, finish, goal, withItem, action = B.accept, B.finish, B.objectiveAt, B.withItem, B.action
   local warrior, paladin = "WARRIOR", "PALADIN"
   local human, dwarf, gnome, nightElf, skyborne = "HUMAN", "DWARF", "GNOME", "NIGHTELF", "SKYBORNE"
   local dwarfGnome, paladinRaces = { dwarf, gnome }, { human, dwarf }
@@ -335,7 +335,8 @@ do
       accept(1643, duthorian),
       finish(1643, stephanie, "Speak to Stephanie Turner in the Trade District."),
       accept(1644, stephanie),
-      finish(1644, stephanie, "Give Stephanie 10 Linen Cloth. If short, buy some or loot Defias in Elwynn."),
+      action("collect", stephanie, "Bring 10 Linen Cloth: Defias in Elwynn drop it, or buy it at the Auction House.", { item = 2589, count = 10, quest = 1644 }),
+      finish(1644, stephanie, "Give Stephanie the 10 Linen Cloth."),
       accept(1780, stephanie),
       finish(1780, duthorian),
       accept(1781, duthorian),
@@ -376,7 +377,8 @@ do
       accept(1647, tiza),
       finish(1647, john, "Find John Turner in the Commons."),
       accept(1648, john),
-      finish(1648, john, "Give John 10 Linen Cloth. If short, buy some or loot troggs in Dun Morogh."),
+      action("collect", john, "Bring 10 Linen Cloth: troggs in Dun Morogh drop it, or buy it at the Auction House.", { item = 2589, count = 10, quest = 1648 }),
+      finish(1648, john, "Give John the 10 Linen Cloth."),
       accept(1778, john),
       finish(1778, tiza),
       accept(1779, tiza),
@@ -1821,7 +1823,7 @@ do
       goal(8419, nil,
         "Get a piece of Felcloth: Legashi satyrs in north-east Azshara and the Felguard Sentries by the Dark Portal drop it, or buy one.", "Felcloth"),
       finish(8419, impsy, "Impsy floats beside Niby the Almighty, west of the road through Felwood."),
-      optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy.")),
+      B.ifReady(optional(finish(8420, impsy, "Give Impsy the Felcloth for Hot and Itchy."))),
       accept(8421, impsy),
       goal(8421, at(nil, 49.8, 23.2, m.felwood),
         "Kill Irontree Stompers in the Irontree Woods of northern Felwood for Rotting Wood. Tainted Oozes along the Bloodvenom river near Jaedenar (40, 52) drop the essence.",

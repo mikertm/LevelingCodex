@@ -181,6 +181,12 @@ local function withItem(item, step)
   return step
 end
 
+-- Extra step fields (gates such as ifItems / ifReady): copied onto the step, which it returns.
+local function with(fields, step)
+  for key, value in pairs(fields) do step[key] = value end
+  return step
+end
+
 local function accept(id, npc, text)
   return questAction("accept", id, npc, text or ("Accept from " .. npc.name .. "."))
 end
@@ -897,9 +903,11 @@ local dusk = {
   finish(95, mound, "Go south to Sven's old farm and dig in the mound behind the stump."), accept(230, mound),
   finish(5, grual, "Walk east to Darkshire. Chef Grual is in the house next to the tavern."), accept(93, grual), finish(90, grual),
   finish(148, eva), accept(149, eva), finish(96139, sirra), finish(96137, sirra),
-  accept(174, dw("Viktori Prism'Antras", 79.8, 48.02),
-    "Buy a Bronze Tube from Herble Baubbletump on the east side of town (78.0, 48.3), then take Viktori's quest next door. Herble's stock is limited."),
-  finish(174, dw("Viktori Prism'Antras", 79.8, 48.02), "Give Viktori the Bronze Tube. If Herble had none, use Next to leave this chain."),
+  action("buy", dw("Herble Baubbletump", 78.0, 48.3),
+    "Buy a Bronze Tube from Herble Baubbletump on the east side of town. His stock is limited: if he has none, use Next and the Look To The Stars chain stays out of your route.",
+    { item = 4371, count = 1, unlessDone = 174 }),
+  with({ ifItems = { { 4371, 1 } } }, accept(174, dw("Viktori Prism'Antras", 79.8, 48.02), "Take Viktori's quest next door to Herble.")),
+  with({ ifReady = true }, finish(174, dw("Viktori Prism'Antras", 79.8, 48.02), "Give Viktori the Bronze Tube.")),
   accept(175, dw("Viktori Prism'Antras", 79.8, 48.02)),
   finish(149, mary, "Blind Mary's house is south-east of town."), accept(154, mary),
   finish(175, mary), accept(177, mary),
@@ -2315,12 +2323,12 @@ te.teldrassil = {
   objectiveAt(486, te.ursal, "At level 11-12, go south-west to Gnarlpine Hold. Clear nearby furbolgs and pull Ursal alone. Use Next if the pull is unsafe.", "Ursal the Mauler slain"),
   action("goto", te.denalan, "Return east along the south side of Lake Al'Ameth to Denalan."),
   finish(2499, te.denalan),
-  accept(4161, te.zarrin, "If you know Cooking and already have 7 Small Spider Legs from Webwood spiders, accept from Zarrin. Otherwise use Next."),
-  finish(4161, te.zarrin),
+  with({ ifItems = { { 5465, 7 } } }, accept(4161, te.zarrin, "You carry seven Small Spider Legs: if you know Cooking, Zarrin trades a recipe for them.")),
+  with({ ifReady = true }, finish(4161, te.zarrin)),
   finish(486, te.athridas),
   finish(99050, te.byancie, "Return to Byancie in Dolanaar."), accept(99073, te.byancie),
   action("grind", te.t(nil, 51.5, 43.6), "If still under level 12, finish quests nearby or clear Befouled Webwoods.", { level = 12 }),
-  finish(490, te.shayla, "Find Shayla on the road west. Turn in if you have 15 Gnarlpine Fangs. Otherwise use Next."),
+  with({ ifReady = true }, finish(490, te.shayla, "Find Shayla on the road west and give her the 15 Gnarlpine Fangs.")),
   finish(99073, te.eralya, "Take the road west, then north to Sentinel Eralya."),
   action("goto", te.gate, "Return to the Darnassus gate."),
   -- One loop through the city: gate, Craftsmen's Terrace, Cenarion Enclave, bank, temple, portal.
@@ -3076,7 +3084,11 @@ LevelingCodexQuests = {
 
 -- Helpers for QuestClassData.lua, which loads next and removes this field.
 LevelingCodexQuests.build = { at = at, q = q, quest = quest, accept = accept, finish = finish,
-  objective = objective, objectiveAt = objectiveAt, action = action, taxi = taxi, withItem = withItem,
+  objective = objective, objectiveAt = objectiveAt, action = action, taxi = taxi, withItem = withItem, with = with,
+  -- An accept that shows only while your bags hold the items: { { itemID, count }, ... }.
+  ifItems = function(items, step) step.ifItems = items; return step end,
+  -- A turn-in that shows only once the quest log says the quest is ready.
+  ifReady = function(step) step.ifReady = true; return step end,
   breadcrumb = breadcrumb, elite = elite, withTrainers = withTrainers, forDungeon = forDungeon, along = along,
   withGuide = withGuide, objectivePart = objectivePart, maps = { elwynn = elwynn, stormwind = stormwind,
   westfall = westfall, redridge = redridge, duskwood = duskwood, wetlands = wetlands, lochModan = lochModan,

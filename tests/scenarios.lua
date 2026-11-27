@@ -15634,6 +15634,53 @@ function S.questStayInDesolace()
   check(sectionId() == "desolace-35", "the guide stays on Desolace at the Valley of Bones: " .. tostring(sectionId()))
 end
 
+-- In game the Stranglethorn guide stopped on "Turn in - Favor for Krazek" ("Give Krazek four Lesser
+-- Bloodstone Ore if you brought them") with Return to Corporal Kaleb next: nothing in the route ever
+-- sent the player for the ore. The favor now shows only while your bags hold four ore, and a turn-in
+-- the log says isn't ready leaves the route alone (its follow-up waits with it).
+function S.questFavorForKrazek()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 27.0, 77.3
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "stv-36" then
+      for _, step in ipairs(section.steps) do
+        if step.type == "accept" and step.quest == 627 then break end
+        if step.quest and step.quest ~= 210 and step.quest ~= 201 then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questDone[210], MOCK.questDone[201] = true, true
+  MOCK.questLog = {}
+  S.login()
+  LevelingCodexDB.questOptional = true -- "Every quest": the favor is an optional quest
+  slash("quests")
+  stepTool("Resume active quest")
+  MOCK.advance(0.3)
+  local Q = MOCK.ns.quests
+  local function stateOf(kind, quest)
+    for _, row in ipairs((Q.rows())) do
+      if row.section.id == "stv-36" and row.step.type == kind and row.step.quest == quest then return row.state end
+    end
+  end
+  local function at() local row = Q.current(); return row and row.step.type .. ":" .. tostring(row.step.quest) end
+  check(stateOf("accept", 627) == "filtered", "without the ore the favor stays out of the route: " .. tostring(stateOf("accept", 627)))
+  check(stateOf("accept", 622) == "filtered", "and so does its follow-up: " .. tostring(stateOf("accept", 622)))
+  check(at() ~= "accept:627" and at() ~= "turnin:627" and at() ~= "accept:622", "the route moves on: " .. tostring(at()))
+  -- The case from the game: the favor already in the log without the ore.
+  MOCK.questLog = { { questID = 627, isComplete = false, objectives = { { text = "Lesser Bloodstone Ore: 0/4", finished = false } } } }
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.advance(1)
+  check(stateOf("turnin", 627) == "filtered", "a favor in the log without the ore doesn't stop the route: " .. tostring(stateOf("turnin", 627)))
+  check(at() ~= "turnin:627" and at() ~= "accept:622", "the route is not held at Krazek: " .. tostring(at()))
+  -- With four ore in your bags the favor is on the route again.
+  MOCK.questLog = {}
+  MOCK.bags[4278] = 4
+  MOCK.event("QUEST_LOG_UPDATE")
+  MOCK.event("BAG_UPDATE_DELAYED")
+  MOCK.advance(1)
+  check(stateOf("accept", 627) ~= "filtered", "with four ore the favor shows: " .. tostring(stateOf("accept", 627)))
+  MOCK.bags[4278] = nil
+end
+
 -- The same spot after a /reload or a login there: the Desolace work in the log keeps the guide on Desolace.
 function S.questStayInDesolaceLogin()
   MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "NightElf", 39, 2652, 35.5, 30.5

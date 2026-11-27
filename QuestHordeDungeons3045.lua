@@ -159,7 +159,7 @@ do
       finish(2841, nogg, "Bring the blueprints and the combination to Nogg."),
       finish(2949, nogg, "Show Nogg the ring."),
       accept(2950, nogg, "For a better ring Nogg wants a Silver Bar, a Moss Agate and 30 silver. The auction house sells the bar and the agate."),
-      finish(2950, nogg, "Give Nogg the bar, the agate and his fee."),
+      B.ifReady(finish(2950, nogg, "Give Nogg the bar, the agate and his fee.")),
     })
 end
 
