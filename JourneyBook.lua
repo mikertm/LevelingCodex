@@ -478,7 +478,7 @@ local function drawPlate(V, map, mx, my, mw, mh, pinSize, onlyLevel, all)
       -- (the pooled icon frame is a square with a square ring, which read as coloured tiles)
       disc(U, px - 3, py - 3, size + 6, { 0.08, 0.05, 0.02, 0.6 }, 1, "journeyHalo", true)
       disc(U, px - 1, py - 1, size + 2, { c[1], c[2], c[3], 1 }, 2, "journeyHalo", true)
-      roundIcon(U, ICON[e.k] or lay.icon or ICON.quest, px + 1, py + 1, size - 2)
+      roundIcon(U, (J.momentIcon and J.momentIcon(e)) or ICON[e.k] or lay.icon or ICON.quest, px + 1, py + 1, size - 2)
       U.hit(px - 1, py - 1, size + 2, size + 2, e.s, tipText, pick, "Pin " .. e.s)
     end
     if #sp.list > 1 then
@@ -675,7 +675,7 @@ local function drawChapter(V, l, events, x, y, w, limit, compact)
     drawn = drawn + 1
     spineTop = spineTop or (y + 10)
     spineEnd = y + 10
-    U.icon(ICON[e.k] or ICON.quest, ix, y, 22, e.s, e.d)
+    U.icon((J.momentIcon and J.momentIcon(e)) or ICON[e.k] or ICON.quest, ix, y, 22, e.s, e.d)
     local th = U.T(e.s, ix + 30, y + 3, textW, compact and "small" or "body", e.k == "death" and DEATH_INK or C.ink)
     local day = dayOf(j, e.t)
     if not compact and day ~= lastDay then U.T("day " .. day, x + w - 66, y + 4, 52, "small", C.inkSoft, "RIGHT") end
@@ -1218,7 +1218,7 @@ local function mapPage(V, y)
       local lit = highlight == e
       if lit then U.rect(8, ry - 3, W - 16, 30, { C.gold[1], C.gold[2], C.gold[3], 0.18 }) end
       U.rect(14, ry, 3, 24, { c[1], c[2], c[3], 1 }, "border")
-      U.icon(ICON[e.k] or lay.icon or ICON.quest, 22, ry, 22, e.s, e.d)
+      U.icon((J.momentIcon and J.momentIcon(e)) or ICON[e.k] or lay.icon or ICON.quest, 22, ry, 22, e.s, e.d)
       local h = U.T(e.s, 50, ry, W - 64, "small", C.ink or C.light)
       U.T("Level " .. (e.l or "?") .. ", day " .. dayOf(j, e.t) .. "  -  " .. lay.label:lower(), 50, ry + h + 1, W - 64, "small", C.dim)
       U.hit(8, ry - 3, W - 16, math.max(28, h + 18), e.s, "Click to mark it on the map.", function()
@@ -1425,7 +1425,7 @@ local function momentRows(V, rows, x, y, w, band, first, last)
       end, "Fold " .. text)
       y = y + rowH + 6
     else
-      U.icon(ICON[e.k] or ICON.quest, ix, y, r.sub and 18 or 22, e.s, e.d)
+      U.icon((J.momentIcon and J.momentIcon(e)) or ICON[e.k] or ICON.quest, ix, y, r.sub and 18 or 22, e.s, e.d)
       local th = U.T(e.s, ix + 30, y + 3, textW, r.sub and "small" or "body", e.k == "death" and DEATH_INK or C.ink)
       local rowH = math.max(r.sub and 20 or 24, th + 6)
       if e.d then rowH = rowH + U.T(e.d, ix + 30, y + th + 5, textW, "small", C.inkSoft) + 2 end
@@ -1478,7 +1478,7 @@ local function highlightCards(CV, list, y)
   y = y + U.sectionTitle("HIGHLIGHTS", y)
   for _, e in ipairs(best) do
     local top = y
-    U.icon(ICON[e.k] or ICON.quest, 10, y + 8, 32, e.s, e.d)
+    U.icon((J.momentIcon and J.momentIcon(e)) or ICON[e.k] or ICON.quest, 10, y + 8, 32, e.s, e.d)
     local th = U.T(e.s, 52, y + 8, W - 64, "body", e.k == "death" and DEATH_INK or C.ink)
     local h = math.max(48, th + 16)
     if e.d then h = math.max(h, th + 14 + U.T(e.d, 52, y + th + 10, W - 64, "small", C.inkSoft) + 4) end

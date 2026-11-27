@@ -14344,11 +14344,20 @@ function S.journeyCamp()
   MOCK.chat = {}
   MOCK.advance(12)
   check(not chatHas("fades in"), "the reminder can be turned off")
+  MOCK.chat = {}
+  slash("camp")
+  check(chatHas("Well%-Rested x1, 3 min left") and chatHas("No Camp Benefits") and chatHas("So far: 2 campfires"),
+    "/codex camp says the camp buffs and the tally: " .. table.concat(MOCK.chat, " | "))
+  check(LevelingCodexCharDB.journey.campCompany and LevelingCodexCharDB.journey.campCompany.Ann == 1, "who sat at the fire with you is counted")
+  check(T.campObjectIcon("Lodestone") == "trade_mining" and T.campClimate("Duskwood") == "gloom" and T.campClimate("Elwynn Forest") == nil,
+    "camp objects carry their profession's icon, lands their weather")
+  check(J.momentIcon(camps()[3]) == J.ICON.nap and J.momentIcon(camps()[1]) == nil, "a nap shows the sleep icon")
   -- the Trophies page counts them, the map has a Camps layer
   slash("")
   click(win(), "Journey")
   click(win(), "Trophies")
-  for _, t in ipairs({ "AROUND THE CAMPFIRE", "FAVOURITE SPOTS", "COMFORTS BY THE FIRE", "Lodestone", "Well-Rested x3", "BY THE FIRE" }) do
+  for _, t in ipairs({ "AROUND THE CAMPFIRE", "FAVOURITE SPOTS", "COMFORTS BY THE FIRE", "Lodestone", "Well-Rested x3", "BY THE FIRE",
+    "SHARED THE FIRE WITH", "Ann" }) do
     check(questText(win(), t), "the Trophies page has " .. t)
   end
   click(win(), "Map")

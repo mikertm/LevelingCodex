@@ -10,7 +10,11 @@
     - **Around the campfire (Trophies):** how many fires you sat at and lit yourself, nights in the sleeping bag, your deepest sleep, your favourite camp spots and the comforts you sat by most, then every camp told in BY THE FIRE.
     - **A Camps layer on the map:** every campfire and nap is its own pin now, with a switch of its own on the Map page.
     - **New comforts are noticed:** a camp object you have never had before gets its own line ("your first mana well").
-    - **Before it fades:** a chat line about five minutes before Well-Rested or Camp Benefits runs out, so you can rest again. Settings > General > Journey pop-ups turns it off.
+    - **The land's weather:** camps in snowy, desert, swampy and gloomy lands get lines of their own (thawing your fingers in Dun Morogh, drying your boots in the Wetlands, keeping the dark of Duskwood at bay).
+    - **More on the Trophies page:** each camp comfort shows the icon of the profession that makes it, and SHARED THE FIRE WITH lists the friends you camped with most.
+    - **Naps look like naps:** a night in the sleeping bag away from a fire shows a sleep icon on the map and in the story.
+    - **/codex camp:** says how long your Camp Benefits and Well-Rested have left, which comforts you have, and your camping so far.
+    - **Before it fades:** a chat line about five minutes before Well-Rested (with its stacks) or Camp Benefits runs out, so you can rest again. Settings > General > Journey pop-ups turns it off.
 
 ## v0.34.4
 - **Price tooltips, shorter and easier to read.** Four lines instead of seven:

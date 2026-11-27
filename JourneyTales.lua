@@ -540,6 +540,15 @@ do
       "Sat by a fire in %zone% to shake off the last death", "Still smarting from the spirit healer, you found a fire in %zone%" },
     lone = { "Alone by a fire in %zone%, just you and the crickets", "Sat by a quiet fire in %zone% with nobody else about",
       "Had a campfire in %zone% all to yourself", "Kept your own company by a fire in %zone%" },
+    cold = { "Sat as close to the fire as you dared in %zone%, the snow hissing in the flames",
+      "Thawed your fingers at a campfire in %zone%", "Kept the cold of %zone% at arm's length with a good fire",
+      "Huddled by a fire in %zone% while your breath smoked in the air" },
+    hot = { "Sat by a fire in %zone% for the company more than the heat", "Made camp in the dry heat of %zone% and watched the flames shimmer",
+      "Rested by a small fire in %zone%, the ground still warm from the sun", "Found shade and a fire in %zone% and stayed a while" },
+    wet = { "Coaxed a fire to burn in the damp of %zone% and sat by its smoke", "Dried your boots by a campfire in %zone%",
+      "Kept a fire going in %zone% while the mosquitoes kept you company", "Sat by a sputtering campfire in %zone%, steam rising from your cloak" },
+    gloom = { "Kept a fire bright against the gloom of %zone%", "Sat with your back to the fire in %zone%, watching the dark trees",
+      "Lit the only warm light for miles in %zone% and sat down beside it", "Made camp in %zone% and did not look too hard at the shadows" },
     weary = { "Hours on the road, and at last a campfire in %zone%", "After a long day, a campfire in %zone% was very welcome",
       "Sat down heavily by a fire in %zone%: it had been a long session" },
   }
@@ -569,7 +578,7 @@ do
     one = { "the %obj% gave you %eff%", "the %obj% lent you %eff%", "%flav%: %eff%", "the %obj% by the fire gave you %eff%",
       "someone had set out the %obj%: %eff%", "%flav%, and you got %eff%" },
     many = { "%objs% gave you %effs%", "%flav%, and the camp gave you %effs%", "%n% camp comforts: %effs%",
-      "a well-kept camp, %objs% and all: %effs%", "%flav%; all told, %effs%" },
+      "a well-kept camp with %objs%: %effs%", "%flav%; all told, %effs%" },
     first = { "a %obj% stood in your camp for the first time and gave you %eff%", "your first %obj%: %eff%",
       "you had never seen a %obj% by a fire before; it gave you %eff%", "a new comfort, the %obj%: %eff%" },
     firstMany = { "your first %obj% among them", "the %obj% new to you", "and a %obj%, the first you had seen" },
@@ -580,6 +589,19 @@ do
     local ok, d = pcall(date, "*t", t)
     return ok and type(d) == "table" and tonumber(d.hour) or nil
   end
+  -- the lands whose weather gets its own camp lines (English names, the client's zone text)
+  T.CAMP_CLIMATE = {
+    cold = { ["Dun Morogh"] = true, ["Coldridge Valley"] = true, ["Winterspring"] = true, ["Alterac Mountains"] = true },
+    hot = { ["Tanaris"] = true, ["The Barrens"] = true, ["Durotar"] = true, ["Badlands"] = true, ["Searing Gorge"] = true,
+      ["Burning Steppes"] = true, ["Desolace"] = true, ["Thousand Needles"] = true, ["Silithus"] = true, ["Un'Goro Crater"] = true },
+    wet = { ["Wetlands"] = true, ["Swamp of Sorrows"] = true, ["Dustwallow Marsh"] = true, ["Stranglethorn Vale"] = true },
+    gloom = { ["Duskwood"] = true, ["Felwood"] = true, ["Tirisfal Glades"] = true, ["Silverpine Forest"] = true,
+      ["Deadwind Pass"] = true, ["Eastern Plaguelands"] = true, ["Western Plaguelands"] = true },
+  }
+  local function climate(name)
+    for kind, lands in pairs(T.CAMP_CLIMATE) do if lands[name] then return kind end end
+  end
+  T.campClimate = climate
   local function band(t)
     local h = hour(t)
     if not h then return "day" end
@@ -683,7 +705,9 @@ do
     local vars = { zone = c.zone, place = c.place, with = c.with, n = c.n, nth = c.n and ordinal(c.n) }
     if not c.head or c.headSat ~= c.sat then -- picked once, so a rewrite keeps the opening
       if c.sat then
-        local pool = CAMP[c.situation] or CAMP[c.band] or CAMP.day
+        -- no situation: the land's weather on every other camp there, else the hour
+        local wx = not c.situation and c.climate and (#(c.key or "") + (c.n or 0)) % 2 == 0 and c.climate or nil
+        local pool = CAMP[c.situation] or (wx and CAMP[wx]) or CAMP[c.band] or CAMP.day
         c.head = freshFrom(pool, c.situation or c.band, vars)
       else
         c.head = freshFrom(c.band == "night" and SLEEP.night or SLEEP.alone, "sleep", vars)
@@ -745,6 +769,7 @@ do
     if not c then
       local key, place = spotKey()
       c = { t = t, key = key, place = place, zone = zone(), band = band(t), startStacks = (camp.rest and camp.rest.stacks) or 0 }
+      c.climate = climate(c.zone)
       local near = J.social and J.social.nearby and select(2, pcall(J.social.nearby))
       c.crowd = type(near) == "table" and #near or 0
       if type(j.campSpots) ~= "table" then j.campSpots = {} end
@@ -772,6 +797,11 @@ do
         if type(j.campPlaces) ~= "table" then j.campPlaces = {} end
         j.campPlaces[c.key] = c.place
         if camp.litAt and t - camp.litAt < 900 then bump("campsLit") end
+        if type(j.campCompany) ~= "table" then j.campCompany = {} end
+        for _, p in ipairs(J.partyNames and J.partyNames() or {}) do
+          local name = plain(p.name)
+          if name ~= "" then j.campCompany[name] = (tonumber(j.campCompany[name]) or 0) + 1 end
+        end
       end
       c.benefitsAt = t
       if gains and #gains > 0 then
@@ -847,13 +877,44 @@ do
       if left > 0 and left <= T.NUDGE_AT and camp.nudged[key] ~= mark then
         camp.nudged[key] = mark
         local mins = math.max(1, math.floor(left / 60 + 0.5))
-        ns.say(J.fill(line, { m = mins == 1 and "a minute" or (mins .. " minutes") }))
+        ns.say(J.fill(line, { m = mins == 1 and "a minute" or (mins .. " minutes"),
+          x = (aura.stacks or 1) > 1 and (" x" .. aura.stacks) or "" }))
       end
     end
-    check(got.rest, "rest", "Well-Rested fades in %m%: unroll the sleeping bag again to keep it.")
+    check(got.rest, "rest", "Well-Rested%x% fades in %m%: unroll the sleeping bag again to keep it.")
     check(got.camp, "camp", "Camp Benefits fade in %m%: sit by a campfire again to keep them.")
   end
   function T.campFell() camp.fellAt = now() end
+  -- /codex camp: the camp buffs on you now and your camping so far, as chat lines.
+  function T.campStatus()
+    local out = {}
+    local got = readAuras()
+    local clock = num(try(GetTime))
+    local function left(a)
+      if not clock or not a.exp or a.exp <= 0 then return "" end
+      local s = a.exp - clock
+      if s <= 0 then return "" end
+      local h, m = math.floor(s / 3600), math.floor((s % 3600) / 60 + 0.5)
+      if m == 60 then h, m = h + 1, 0 end
+      return ", " .. (h > 0 and (h .. " h " .. m .. " min") or (math.max(1, m) .. " min")) .. " left"
+    end
+    if got.camp then
+      local objs = {}
+      for _, g in ipairs(readBenefits(got.camp)) do objs[#objs + 1] = g.obj end
+      out[#out + 1] = "Camp Benefits" .. left(got.camp) .. (#objs > 0 and (" (" .. table.concat(objs, ", ") .. ")") or "") .. "."
+    else
+      out[#out + 1] = "No Camp Benefits on you: sit by a campfire for a minute."
+    end
+    if got.rest then
+      out[#out + 1] = "Well-Rested x" .. got.rest.stacks .. left(got.rest) .. "."
+    else
+      out[#out + 1] = "Not Well-Rested: unroll the Cozy Sleeping Bag near a fire."
+    end
+    local j = journal()
+    out[#out + 1] = "So far: " .. plural(T.tally("camps"), "campfire") .. ", " .. plural(T.tally("sleeps"), "night") ..
+      " in the sleeping bag" .. ((tonumber(j.campBest) or 0) > 0 and (", deepest sleep x" .. j.campBest) or "") .. "."
+    return out
+  end
 end
 
 ----------------------------------------------------------------------------
@@ -1216,7 +1277,7 @@ end
 -- One moment as a row of a list card (absolute x); returns its height.
 local function momentRow(V, e, x, y, w)
   local U, C, D = V.U, V.C, J.draw
-  U.icon(J.ICON[e.k] or J.ICON.quest, x + 14, y, 22, e.s, e.d)
+  U.icon((J.momentIcon and J.momentIcon(e)) or J.ICON[e.k] or J.ICON.quest, x + 14, y, 22, e.s, e.d)
   local h = U.T(e.s, x + 44, y + 1, w - 58, "small", C.light)
   U.T((e.d and (e.d .. "  -  ") or "") .. "level " .. (e.l or "?") .. ", day " .. D.dayOf(V.j, e.t), x + 44, y + h + 3, w - 58, "small", C.dim)
   return math.max(28, h + 22)
@@ -1271,6 +1332,23 @@ local function topOf(map, n)
   return out
 end
 T.campTop = topOf
+-- A nap in the sleeping bag (no fire) shows the sleep icon wherever its moment is drawn.
+J.ICON.nap = "Spell_Nature_Sleep"
+function J.momentIcon(e)
+  if type(e) == "table" and e.k == "camp" and e.wr and not e.sat then return J.ICON.nap end
+end
+-- A camp object's icon: the profession that makes it (ProfessionData.lua's camp lists), else the fire.
+function T.campObjectIcon(name)
+  for _, key in ipairs(ns.PROF_ORDER or {}) do
+    local p = LevelingCodexProfessions and LevelingCodexProfessions[key]
+    if type(p) == "table" and type(p.camp) == "table" then
+      for _, o in ipairs(p.camp) do
+        if o.name == name then return p.icon or J.ICON.camp, p.name end
+      end
+    end
+  end
+  return J.ICON.camp
+end
 local function campCard(V, y)
   local U, C, W = V.U, V.C, V.W
   local j = journal()
@@ -1309,7 +1387,21 @@ local function campCard(V, y)
     y = y + 6
     U.T("COMFORTS BY THE FIRE", 14, y, W - 28, "label", C.inkSoft)
     y = y + 18
-    for _, o in ipairs(objs) do row(plain(tostring(o.k)), o.n .. (o.n == 1 and " time" or " times"), true) end
+    for _, o in ipairs(objs) do
+      local icon, prof = T.campObjectIcon(o.k)
+      U.icon(icon, 22, y + 6, 16, plain(tostring(o.k)), prof and ("Made with " .. prof .. ".") or nil)
+      U.T(plain(tostring(o.k)), 36, y, W - 50, "small", C.ink)
+      U.T(o.n .. (o.n == 1 and " time" or " times"), 14, y, W - 28, "small", C.ink, "RIGHT")
+      U.rect(14, y + 15, W - 28, 1, { 0, 0, 0, 0.1 }, "border")
+      y = y + 20
+    end
+  end
+  local company = topOf(j.campCompany, 3)
+  if #company > 0 then
+    y = y + 6
+    U.T("SHARED THE FIRE WITH", 14, y, W - 28, "label", C.inkSoft)
+    y = y + 18
+    for _, p in ipairs(company) do row(plain(tostring(p.k)), p.n .. (p.n == 1 and " fire" or " fires"), true) end
   end
   if camps == 0 and sleeps == 0 then
     local h = U.T("Sit by a campfire for a minute, or unroll the Cozy Sleeping Bag, and your camps are counted here.",
