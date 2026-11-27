@@ -1,12 +1,20 @@
 # Leveling Codex
 
 ## v0.34.4
+- **Price tooltips, shorter and easier to read.** Four lines instead of seven:
+    - **Lowest now**, then **Usual (N days)** with the last days' range beside it ("2s  (75c - 3s)").
+    - **One verdict line** says how far today's price is from usual, with an up or down arrow: "Now 41% above usual: a good time to sell", "Now right at its usual price". The separate Trend line said the same thing and is gone, as are the little bars.
+    - **Shift** adds a single line: how many are listed and the dearest listing.
+- **Deals: tidier sniper tooltips.** Hovering THIS SESSION or the won/lost tiles now shows short label and value rows (Running, Searches, Deals found, Bought, Est. profit, Per hour, Best buy) with gains in green and losses in red, instead of a wall of text. The THIS SESSION tile shows just the estimated profit, so it no longer gets cut off; the per-hour figure is in its tooltip.
+- **Fixed: Quick Sell scrolling.** The mouse wheel scrolls the list under the cursor: your bag items on the left, YOUR AUCTIONS on the right. With listings on the right, the wheel used to scroll only that list. Deals scrolls the same way.
+- **Fixed: Desolace stays put in the Valley of Bones.** The game calls the south of the Valley of Bones Shen'dralas, so walking or logging in there switched the guide to the Shen'dralas route. The guide now stays on Desolace while you stand in it and it has work left.
 - **Stranglethorn 35-38, both factions, walked again.**
     - **Booty Bay in one pass.** Alliance: off the boat at the docks, then the inn from the bottom floor up, Drizzlik next door, and the flight path last, right before you fly. The old order sent you up to the flight master first and back down to the docks. Horde: the same pass from the tunnel, with the flight path and Scooty at the end. Both returns to Booty Bay walk the inn top to bottom and end by the docks.
     - **Alliance second loop** goes Mistvale, Lake Nazferiti, the Lashtail Raptors, the Haunted Isle and Sin'Dall on the way back to Nesingwary, about 300 yd less riding.
     - **Fixed hunting spots.** The Lashtail Raptors live north of Grom'gol, not on the west coast; the Panthers, Elder Tigers, Stranglethorn Raptors and Shadowmaw Panthers now point at their real packs. The shards come from Crystal Spine Basilisks, not Stone Maw ones.
     - **No more "Watch out: Gringer".** The other faction's flight master in a neutral town isn't a danger warning any more.
 
+## v0.34.3
 - **Party play: the guide in a group, polished.**
     - **Steps counted across zones.** A party member in the next zone of your route (or the one before) shows as "12 ahead in Duskwood" instead of just the zone's name, and the catch-up note names them when they fall 3 or more steps behind. Dungeons, class and special guides still show by name.
     - **Who you're waiting for.** On a shared step, once your quest is ready the step window says "Waiting on Bo: Kobold Vermin slain: 3/10." When every one of you is ready, the heading reads "Party - all ready to turn in".
@@ -71,12 +79,6 @@
     - **Only real prices get in.** Price messages count only from the price channel or your guild, never a whisper or party message. An item ID the game has no item for is never saved. A new item's price far off your own reading from the last three days now waits for a second player, like items with a price history already did.
     - **A player with your name on a connected realm** is no longer taken for your own echo.
     - **Chat stays clean.** Lines typed into the price channel and its owner and password notices stay out of your chat windows, on newer clients too.
-- **Price tooltips, shorter and easier to read.** Four lines instead of seven:
-    - **Lowest now**, then **Usual (N days)** with the last days' range beside it ("2s  (75c - 3s)").
-    - **One verdict line** says how far today's price is from usual, with an up or down arrow: "Now 41% above usual: a good time to sell", "Now right at its usual price". The separate Trend line said the same thing and is gone, as are the little bars.
-    - **Shift** adds a single line: how many are listed and the dearest listing.
-- **Deals: tidier sniper tooltips.** Hovering THIS SESSION or the won/lost tiles now shows short label and value rows (Running, Searches, Deals found, Bought, Est. profit, Per hour, Best buy) with gains in green and losses in red, instead of a wall of text. The THIS SESSION tile shows just the estimated profit, so it no longer gets cut off; the per-hour figure is in its tooltip.
-- **Fixed: Quick Sell scrolling.** The mouse wheel scrolls the list under the cursor: your bag items on the left, YOUR AUCTIONS on the right. With listings on the right, the wheel used to scroll only that list. Deals scrolls the same way.
 
 ## v0.34.2
 - **Journey: signing journals and raising toasts, reworked.** Clicking the "asks for a line" card now opens the signing box with a line ready to send, so there's no more empty journal page. Every request is confirmed:
