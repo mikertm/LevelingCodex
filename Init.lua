@@ -228,10 +228,12 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     for _, line in ipairs(ns.journey.tales.campStatus()) do ns.say(line) end
   elseif cmd == "sign" then
     ns.journey.social.openSign()
+  elseif cmd == "way" then
+    ns.profShowWay()
   elseif cmd == "debug" then
     for _, line in ipairs(ns.debugLines()) do ns.say(line) end
   else
-    ns.say("/codex opens the guide - everything else is under its Settings button (also in Esc > Options > AddOns > Leveling Codex, or /codex options). Also: /codex macros, /codex resync (find your guide step again from your quest log), /codex mail (take all at a mailbox), /codex add [name] (add your target or a name to your journey), /codex sign, /codex camp (your camp buffs), /codex test, /codex reset, /codex debug")
+    ns.say("/codex opens the guide - everything else is under its Settings button (also in Esc > Options > AddOns > Leveling Codex, or /codex options). Also: /codex macros, /codex resync (find your guide step again from your quest log), /codex mail (take all at a mailbox), /codex way (point the arrow at the trainer or vendor a profession card named), /codex add [name] (add your target or a name to your journey), /codex sign, /codex camp (your camp buffs), /codex test, /codex reset, /codex debug")
   end
 end
 

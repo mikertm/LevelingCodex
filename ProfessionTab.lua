@@ -14,6 +14,29 @@ local browse       -- a guide you haven't learned, opened from Other guides (sho
 local grid = false -- the Other guides picker is open
 local shopAll = false -- this session: the shopping list counts to 300, not to your cap
 
+-- Where to go for a tier or step, for your faction, with the NPC's map spot when the guide knows it.
+local function whereLine(key, entry)
+  local text, place = ns.profWhereText(key, entry)
+  if not place then return plain(entry.where or entry.source or "") end
+  -- the guide's own text keeps details a spot can't say (quest steps, limited stock)
+  local extra = entry.source and entry.source:match("[,;] ([^,;]*[Ll]imited[^,;]*)$")
+  return text .. (extra and (", " .. extra) or "")
+end
+
+-- Show the way: the arrow leads to that tier's or step's NPC (nothing when no spot is known).
+local function wayButton(key, entry, why, y, small)
+  local _, place = ns.profWhereText(key, entry)
+  if not place then return 0 end
+  local ui = ns.ui
+  local pointing = ns.questErrand and ns.questErrand()
+  local on = pointing and pointing.npc == place.name
+  ui.btn(on and "Back to my step" or "Show the way", 16, y, 150, function()
+    ns.profShowWay(place, why)
+    ui.refresh()
+  end, on, "Point the arrow at " .. place.name .. " in " .. place.zone .. ".")
+  return 30
+end
+
 local function choose(key)
   shown, pending, browse, grid = key, nil, nil, false
 end
@@ -215,20 +238,25 @@ local function renderer(_, snapshot)
         T(title, 16, y, W - 32, "label", C.gold)
         y = y + 18
         y = y + T("Ask a trainer about " .. nextTier.name .. " at skill " .. nextTier.skill .. " for a cap of " .. nextTier.cap ..
-          ". The character level requirement is unconfirmed. " .. plain(nextTier.where) .. ".",
+          ". The character level requirement is unconfirmed. " .. whereLine(key, nextTier) .. ".",
           16, y, W - 32, "body", C.light) + 10
       elseif due == "train" then
         T(string.upper(action .. " " .. nextTier.name), 16, y, W - 32, "label", C.gold)
         y = y + 18
         y = y + T("Raises your cap to " .. nextTier.cap .. ". Requires skill " .. nextTier.skill .. " and character level " .. nextTier.level ..
-          ". " .. plain(nextTier.where) .. ".", 16, y, W - 32, "body", C.light) + 10
+          ". " .. whereLine(key, nextTier) .. ".", 16, y, W - 32, "body", C.light) + 10
       else
         local trained = ns.profTier(key, skill, cap)
         T("AT YOUR CAP", 16, y, W - 32, "label", C.gold)
         y = y + 18
         y = y + T(action .. " " .. nextTier.name .. " at " .. nextTier.skill .. " (level " .. nextTier.level .. ") to go past " ..
-          (trained and trained.cap or cap or skill) .. ". " .. plain(nextTier.where) .. ".", 16, y, W - 32, "body", C.light) + 10
+          (trained and trained.cap or cap or skill) .. ". " .. whereLine(key, nextTier) .. ".", 16, y, W - 32, "body", C.light) + 10
       end
+      local _, place = ns.profWhereText(key, nextTier)
+      if place then -- the guide's own text: other trainers, Zephras Isle, quest tips
+        y = y + T(plain(nextTier.where) .. ".", 16, y, W - 32, "small", C.inkSoft) + 8
+      end
+      y = y + wayButton(key, nextTier, (nextTier.action or "Train") .. " " .. nextTier.name .. " " .. P.name, y)
       for _, m in ipairs(nextTier.mats or {}) do
         local count = have(m[1])
         local label = m[2] .. " " .. m[1] .. (count and (" (you have " .. count .. ")") or "")
@@ -267,8 +295,13 @@ local function renderer(_, snapshot)
     y = y + math.max(54, h + subH + 12)
     y = y + T(colorsLine(step), 16, y, W - 32, "small", C.inkSoft) + 6
     local source = plain(step.source)
-    if not source:find("^Known when") then source = source .. " (skill " .. step.learn .. ")" end
+    if not source:find("^Known when") then
+      source = whereLine(key, step) .. " (skill " .. step.learn .. ")"
+    end
     y = y + T(source, 16, y, W - 32, "small", C.inkSoft) + 8
+    if not source:find("^Known when") and skill and not browsing and skill + 25 >= step.learn then
+      y = y + wayButton(key, step, "Learn " .. step.name, y, true)
+    end
     if step.tools then
       y = y + T("Tools: " .. table.concat(step.tools, ", "), 16, y, W - 32, "small", C.inkSoft) + 6
     end

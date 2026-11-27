@@ -1,5 +1,14 @@
 # Leveling Codex
 
+## v0.34.8
+- **Professions: the guide tells you where to go, for your faction, with the spot.** Reported at First Aid 150/150, where the card only said "First Aid trainer (skill 150)".
+    - **At your cap the crafting window card says what unlocks the next rank:** "At your cap: unlock Expert to go past 150. Buy and read Expert First Aid - Under Wraps from Deneb Walker in Arathi Highlands (27.0, 58.8)". It adds where to learn the next recipe ("Also learn Silk Bandage: Learn from Nissa Firestone in Ironforge") and the character level a rank needs.
+    - **A recipe you haven't learned names the NPC for your faction and where they stand:** the vendor for a bought recipe ("Buy Manual: Heavy Silk Bandage from Balai Lok'Wein in Dustwallow Marsh (36.5, 30.4)"), the quest giver for a quest plan, or the closest trainer that teaches it. A recipe or book already in your bags says to use it.
+    - **The arrow can lead there:** `/codex way` (the chat says so when a card names a place) or **Show the way** on the Professions tab's training card and step. The arrow leads to that NPC, flights included, until you talk to them; `/codex way` again leads back to your step.
+    - **At the vendor, the shopping card offers the book or recipe** you need (Expert First Aid - Under Wraps, the Expert Cookbook, The Bass and You, the step's recipe), with its price.
+    - **The level-up and skill-up banners, the Professions tab and the profession trainer card** name your faction's trainer or vendor with its spot too.
+    - **Fixed:** Horde players can buy Recipe: Roast Raptor from Nerrist in Grom'gol as well as Keena in Hammerfall.
+
 ## v0.34.7
 - **The Codex's settings are in the game's Options too.** Esc > Options > AddOns > **Leveling Codex** now lists every setting, on the same pages as the Codex's Settings tab: Leveling Codex (general), Questing, Map and arrow, Group and Helpers.
     - **Both places stay in step:** they change the same settings, so a box you tick in one shows ticked in the other.

@@ -100,24 +100,24 @@ local function professionRead(list)
     info.rankNote = nextTier.name .. " " .. P.name .. " at skill " .. nextTier.skill ..
       (nextTier.level > 1 and (" and level " .. nextTier.level) or "")
   elseif nextTier and not tierService then
-    info.rankNote = nextTier.name .. " " .. P.name .. " isn't listed here: " .. plain(nextTier.short or nextTier.where)
+    info.rankNote = nextTier.name .. " " .. P.name .. " isn't listed here: " .. ns.profBannerWhere(key, nextTier)
   end
   -- the route's recipes in range, each once: steps, the rods and parts they use, Mining's smelts
   local wanted, seenName = {}, {}
-  local function want(name, range, learn, source, spell)
+  local function want(name, range, learn, source, spell, entry)
     if name and not seenName[name] then
       seenName[name] = true
-      wanted[#wanted + 1] = { name = name, range = range, learn = learn, source = source, spell = spell }
+      wanted[#wanted + 1] = { name = name, range = range, learn = learn, source = source, spell = spell, entry = entry }
     end
   end
   for _, st in ipairs(P.steps) do
     if st.to > skill and st.from < limit then
-      if st.name then want(st.name, st.from .. "-" .. st.to, st.learn, st.source, st.spell) end
+      if st.name then want(st.name, st.from .. "-" .. st.to, st.learn, st.source, st.spell, st) end
       local rod = ns.profRod(key, st)
-      if rod then want(rod.name, nil, rod.learn, rod.source, rod.spell) end
+      if rod then want(rod.name, nil, rod.learn, rod.source, rod.spell, rod) end
       for _, m in ipairs(st.mats or {}) do
         local part = ns.profPart(key, m[1])
-        if part and part.learn < limit then want(part.name, nil, part.learn, part.source, part.spell) end
+        if part and part.learn < limit then want(part.name, nil, part.learn, part.source, part.spell, part) end
       end
     end
   end
@@ -134,7 +134,8 @@ local function professionRead(list)
       info.later[#info.later + 1] = { text = w.name .. " at " .. at, at = at, i = #info.later }
     elseif not s and not info.elsewhere and w.source and not w.source:find("^Known when")
         and known(w.spell) == false then
-      info.elsewhere = "Not taught here: " .. w.name .. " (learn at " .. w.learn .. "): " .. plain(w.source) .. "."
+      local where = w.entry and ns.profWhereText(key, w.entry) or ""
+      info.elsewhere = "Not taught here: " .. w.name .. " (learn at " .. w.learn .. "): " .. (where ~= "" and where or plain(w.source)) .. "."
     end
   end
   table.sort(info.later, function(a, b) if a.at ~= b.at then return a.at < b.at end return a.i < b.i end)

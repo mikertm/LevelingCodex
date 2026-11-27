@@ -692,14 +692,57 @@ end
 local arrowGoal
 function ns.questArrowGoal() return arrowGoal end
 
+-- A side trip the arrow leads to instead of the step (a profession trainer or book vendor):
+-- { map, x, y, type = "goto", npc, name, why }. Ends at that NPC (talking to anyone within reach
+-- of it), a minute after arriving, or when pointed again.
+local errand
+
+function ns.questErrand() return errand end
+
+function ns.pointArrowTo(place, why)
+  if errand and (not place or (place.name == errand.npc and place.map == errand.map)) then
+    errand = nil
+    ns.say("the arrow leads to your step again.")
+    ns.questRefresh()
+    return
+  end
+  if not place then return end
+  errand = { map = place.map, x = place.x, y = place.y, type = "goto", npc = place.name, name = place.name,
+    why = why, errand = true }
+  ns.showQuestViewer()
+  if viewer and viewer:IsShown() and not ns.db().noQuestArrow then
+    ns.say(Q.plain("the arrow points to " .. place.name .. (place.zone and (" in " .. place.zone) or "") ..
+      (why and (" (" .. why .. ")") or "") .. ". /codex way again leads back to your step."))
+  else
+    ns.say(Q.plain(place.name .. (place.zone and (" is in " .. place.zone) or "") ..
+      string.format(" at %.1f, %.1f", place.x, place.y) .. ": the arrow shows with the step window."))
+  end
+  ns.questRefresh()
+end
+
+local function errandDone()
+  if not errand then return end
+  local map, x, y = Q.position()
+  local _, yards = Q.vector(errand, map, x, y)
+  if yards and yards <= 15 then
+    errand = nil
+    ns.questRefresh()
+  end
+end
+
 local function paintArrow()
   arrowGoal = nil
   if not viewer or not viewer:IsShown() then
     if arrow then arrow:Hide() end
     return
   end
+  if errand and errand.arrivedAt and GetTime() - errand.arrivedAt > 60 then errand = nil end
   local row = Q.current()
   local goal = row and row.step
+  if errand then
+    goal = errand
+    row = { key = "errand:" .. errand.npc, step = errand }
+  end
   arrowBearing, aim = nil, nil
   local off = ns.db().noQuestArrow
   local corpse = Q.corpse()
@@ -759,6 +802,7 @@ local function paintArrow()
     arrive(key .. ":" .. spawnName, goal, spawnName .. " nearby")
     return
   elseif yards and yards <= ARROW_ARRIVAL_YARDS and not travel then
+    if goal.errand and not goal.arrivedAt then goal.arrivedAt = GetTime() end
     local npc = which == "" and type(goal.npc) == "string" and Q.plain(goal.npc) or nil
     arrive(key, goal, (npc and (npc .. "\n") or "") .. "Arrived" .. which)
     return
@@ -776,6 +820,8 @@ local function paintArrow()
     if travel then
       -- every leg shows how far it is: a road's gate or a zone hub's flight master too
       arrowCaption = travel .. (distance ~= "" and ("\n" .. distance) or "")
+    elseif goal.errand then
+      arrowCaption = Q.plain(goal.npc) .. "\n" .. distance
     else
       arrowCaption = travel or (distance .. which)
     end
@@ -2571,6 +2617,11 @@ local function bossEvent(event, a, b, e)
 end
 
 local function handle(event, a, b, c, d, e)
+  if event == "GOSSIP_SHOW" or event == "QUEST_GREETING" or event == "QUEST_DETAIL" or event == "MERCHANT_SHOW"
+      or event == "TRAINER_SHOW" then
+    errandDone() -- talking to the NPC the arrow led to ends the side trip
+    if event == "MERCHANT_SHOW" or event == "TRAINER_SHOW" then return end
+  end
   if event == "ENCOUNTER_START" or event == "ENCOUNTER_END" or event == "BOSS_KILL" then
     if bossEvent(event, a, b, e) then ns.questRefresh() end
     return
@@ -2686,7 +2737,7 @@ function ns.startQuestGuide()
     "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "HEARTHSTONE_BOUND", "PLAYER_BIND_CHANGED",
     "GOSSIP_SHOW", "QUEST_GREETING", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED",
     "PLAYER_XP_UPDATE", "CHAT_MSG_COMBAT_XP_GAIN", "QUEST_FINISHED", "ENCOUNTER_START", "ENCOUNTER_END", "BOSS_KILL",
-    "PLAYER_REGEN_DISABLED" }) do
+    "PLAYER_REGEN_DISABLED", "MERCHANT_SHOW", "TRAINER_SHOW" }) do
     pcall(events.RegisterEvent, events, ev)
   end
   events:SetScript("OnEvent", function(_, ...) handle(...) end)

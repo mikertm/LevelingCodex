@@ -9870,8 +9870,10 @@ function S.firstAidTab()
   MOCK.setSkill("First Aid", 125, 150); MOCK.advance(1.2)
   local text = profText()
   check(text:find("UNLOCK EXPERT", 1, true) and text:find("Under Wraps", 1, true) and
-    text:find("Deneb Walker", 1, true) and text:find("Balai Lok'Wein", 1, true),
-    "the Expert book is available at 125 before character level 20")
+    text:find("Buy and read Expert First Aid - Under Wraps from Deneb Walker in Arathi Highlands", 1, true),
+    "the Expert book is available at 125 before character level 20, from your faction's vendor")
+  click(win(), "Show the way")
+  check(chatHas("the arrow points to Deneb Walker"), "Show the way points the arrow at the book vendor")
   openAt(34, "Professions")
   MOCK.setSkill("First Aid", 225, 225); MOCK.advance(1.2)
   text = profText()
@@ -10003,7 +10005,7 @@ function S.cookingTab()
   MOCK.setSkill("Cooking", 125, 150); MOCK.advance(1.2)
   text = profText()
   check(text:find("UNLOCK EXPERT", 1, true) and text:find("Expert Cookbook", 1, true) and
-    text:find("Shandrina", 1, true) and text:find("Wulan", 1, true), "both factions can find the Expert book")
+    text:find("Expert Cookbook from Shandrina in Ashenvale", 1, true), "the Expert book from your faction's vendor")
   MOCK.setSkill("Cooking", 225, 225); MOCK.advance(1.2)
   text = profText()
   check(text:find("AT YOUR CAP", 1, true) and text:find("level 35", 1, true), "Artisan Cooking requires level 35")
@@ -10221,7 +10223,7 @@ function S.tailorSkillUps()
   MOCK.advance(4.5)
   t = toast()
   local text = t and t:IsShown() and MOCK.textUnder(t) or ""
-  check(text:find("TRAIN JOURNEYMAN TAILORING") and text:find("An Expert, Master or Artisan Tailor"), "level-up banner: train Journeyman Tailoring")
+  check(text:find("TRAIN JOURNEYMAN TAILORING") and text:find("%(%d+%.%d, %d+%.%d%)"), "level-up banner: train Journeyman Tailoring, with a trainer's spot")
   MOCK.advance(10)
 end
 
@@ -10359,7 +10361,7 @@ function S.enchantSkillUps()
   MOCK.advance(4.5)
   t = toast()
   local text = t and t:IsShown() and MOCK.textUnder(t) or ""
-  check(text:find("TRAIN JOURNEYMAN ENCHANTING") and text:find("An Expert, Master or Artisan Enchanter"), "level-up banner: train Journeyman Enchanting")
+  check(text:find("TRAIN JOURNEYMAN ENCHANTING") and text:find("%(%d+%.%d, %d+%.%d%)"), "level-up banner: train Journeyman Enchanting, with a trainer's spot")
   MOCK.advance(10)
 end
 
@@ -10478,6 +10480,39 @@ function S.craftFirstAid()
   closeCraft()
 end
 
+-- Reported from the game: at First Aid 150/150 the card only said "First Aid trainer (skill 150)" for
+-- Silk Bandage. At your cap it names the book for your faction with its spot, the next recipe's
+-- trainer, and /codex way points the arrow there.
+function S.craftFirstAidCap()
+  local horde = MOCK.faction == "Horde"
+  MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "First Aid", 150, 150
+  MOCK.trade.recipes = { { "Heavy Wool Bandage", "medium", 3 } }
+  MOCK.trade.layout()
+  openCraft()
+  local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
+  local text = MOCK.textUnder(hint)
+  local vendor, zone, other = "Deneb Walker", "Arathi Highlands", "Balai Lok'Wein"
+  local trainer = "Nissa Firestone"
+  if horde then vendor, zone, other, trainer = "Balai Lok'Wein", "Dustwallow Marsh", "Deneb Walker", "Arnok" end
+  check(hint:IsShown() and not trace:IsShown() and text:find("At your cap", 1, true)
+    and text:find("Expert First Aid - Under Wraps", 1, true) and text:find(vendor, 1, true)
+    and text:find(zone, 1, true) and not text:find(other, 1, true), "at the cap the card names your faction's book vendor: " .. text)
+  check(text:find("Also learn Silk Bandage", 1, true) and text:find(trainer, 1, true), "and where to learn the next bandage")
+  check(chatHas("/codex way"), "the chat offers the arrow")
+  closeCraft()
+  slash("way")
+  check(chatHas("the arrow points to " .. vendor), "/codex way points the arrow at the vendor")
+  check(LevelingCodexQuestArrow:IsShown(), "the arrow shows")
+  slash("way")
+  check(chatHas("leads to your step again"), "/codex way again leads back to the step")
+  -- at the vendor, the shopping card offers the book
+  MOCK.openMerchant{ items = { { id = 16084, name = "Expert First Aid - Under Wraps", price = 10000 } } }
+  MOCK.advance(1)
+  check(LevelingCodexShopCard and LevelingCodexShopCard:IsShown()
+    and MOCK.textUnder(LevelingCodexShopCard):find("Expert First Aid - Under Wraps", 1, true), "the vendor card offers the book")
+  MOCK.closeMerchant()
+end
+
 function S.craftEngineering()
   MOCK.trade.line, MOCK.trade.rank, MOCK.trade.max = "Engineering", 285, 300
   MOCK.trade.recipes = { { "Thorium Widget", "medium", 0 } }
@@ -10523,8 +10558,8 @@ function S.craftLeatherworking()
   local hint, trace = LevelingCodexCraftHint, LevelingCodexCraftTrace
   check(hint and hint:IsShown() and MOCK.textUnder(hint):find("Wicked Leather Gauntlets"), "Leatherworking hint")
   local status = MOCK.textUnder(hint)
-  check(status:find("Recipe not learned") and status:find("Leonard Porter") and status:find("Werg Thickblade"),
-    "missing Leatherworking recipe names the pattern vendors")
+  check(status:find("Recipe not learned") and status:find("Leonard Porter") and status:find("Western Plaguelands")
+    and not status:find("Werg Thickblade"), "missing Leatherworking recipe names your faction's pattern vendor")
   MOCK.trade.recipes[2] = { "Wicked Leather Gauntlets", "optimal", 3 }
   MOCK.trade.layout(); MOCK.advance(1)
   local _, row = trace:GetPoint(1)
@@ -10794,7 +10829,7 @@ function S.profTrainer()
     questText(card, "Next here: Heavy Grinding Stone at 100, Bronze Warhammer at 100, Iron Buckle at 125"),
     "before the skill is there it says what this trainer teaches next")
   check(questText(card, "Expert Blacksmithing at skill 125 and level 20"), "and when the next rank opens")
-  check(questText(card, "Not taught here: Green Iron Bracers (learn at 140): Expert trainers: Bengus Deepforge"),
+  check(questText(card, "Not taught here: Green Iron Bracers (learn at 140): Learn from Bengus Deepforge in Ironforge"),
     "and where the route's next recipe this trainer lacks comes from")
   check(not questText(card, "Silver Rod"), "recipes off the route are left out")
   MOCK.setSkill("Blacksmithing", 100, 150); MOCK.advance(1.2)

@@ -15,6 +15,7 @@ TalentTreeData.lua
 TalentPaths.lua
 PathMacros.lua
 ProfessionData.lua
+ProfessionPlaces.lua
 LootData.lua
 QuestData.lua
 QuestAlternateData.lua

@@ -347,6 +347,20 @@ function ns.profSupplies()
         for _, m in ipairs(rod.mats or {}) do add(m[1], m[2], rod.name .. " (" .. P.name .. ")") end
       end
     end
+    -- the book that unlocks your next rank once it's due, and a bought recipe your step needs
+    -- and you don't know: the vendor card offers them where they're sold
+    if P and reading and reading.rank then
+      local level = UnitLevel and tonumber((UnitLevel("player"))) or 1
+      local due, nextTier = ns.profTierDue(key, reading.rank, reading.cap, level)
+      if due and nextTier.item and (bagCount(nextTier.item) or 0) == 0 then
+        add(nextTier.item, 1, nextTier.name .. " " .. P.name, true)
+      end
+      if step and step.item and not (step.source or ""):find("^Quest") and (bagCount(step.item) or 0) == 0
+          and step.spell and IsPlayerSpell then
+        local ok, known = pcall(IsPlayerSpell, step.spell)
+        if ok and known == false then add(step.item, 1, step.name .. " (" .. P.name .. ")", true) end
+      end
+    end
   end
   return out
 end
@@ -375,6 +389,125 @@ function ns.profTierDue(key, skill, cap, level)
   if not nextTier then return end
   if skill >= nextTier.skill and (level or 1) >= nextTier.level then return "train", nextTier end
   if skill >= trained.cap then return "cap", nextTier end
+end
+
+-- Where to learn, buy or unlock something: a tier or a step's `at` (ProfessionPlaces.lua's NPCs),
+-- else for a trainer's step the trainer tier that teaches at its skill, else the profession's
+-- capital trainers. Only your faction's (both when unknown); nearest you first (same continent by
+-- yards, then the list's order). Each { name, faction, map, x, y, zone }.
+local function placeOf(name)
+  local p = ns.PROF_PLACES and ns.PROF_PLACES[name]
+  if p then return { name = name, faction = p[1], map = p[2], x = p[3], y = p[4], zone = p[5] } end
+end
+
+local function trainerTier(P, learn)
+  for i = #P.tiers, 1, -1 do
+    local t = P.tiers[i]
+    if t.at and not t.action and t.skill <= learn and learn <= t.cap then return t end
+  end
+end
+
+local function sortPlaces(list)
+  local Q = ns.quests
+  local here
+  if Q and Q.position then
+    local map, x, y = Q.position()
+    if map and x then here = { map = map, x = x, y = y } end
+  end
+  for i, p in ipairs(list) do
+    p.order = i
+    p.yards = here and Q.worldYards and Q.worldYards(here, p) or nil
+  end
+  table.sort(list, function(a, b)
+    if (a.yards ~= nil) ~= (b.yards ~= nil) then return a.yards ~= nil end
+    if a.yards and b.yards and a.yards ~= b.yards then return a.yards < b.yards end
+    return a.order < b.order
+  end)
+  return list
+end
+
+function ns.profPlaces(key, entry)
+  local P = ns.P and ns.P[key]
+  if not (P and entry) then return {} end
+  local faction = ns.profFaction()
+  local letter = faction == "Alliance" and "A" or faction == "Horde" and "H" or nil
+  local function pick(names)
+    local out = {}
+    for _, name in ipairs(names or {}) do
+      local p = placeOf(name)
+      if p and (not letter or p.faction:find(letter, 1, true)) then out[#out + 1] = p end
+    end
+    return out
+  end
+  local out = pick(entry.at)
+  local text = (entry.source or entry.where or ""):lower()
+  if #out == 0 and entry.learn and not entry.at and text:find("trainer", 1, true) then
+    local tier = trainerTier(P, entry.learn)
+    out = pick(tier and tier.at)
+  end
+  local trainer = (entry.cap and not entry.action) or (not entry.cap and text:find("trainer", 1, true))
+  if #out == 0 and trainer and not text:find("^known when") then out = pick(ns.PROF_TRAINERS and ns.PROF_TRAINERS[key]) end
+  return sortPlaces(out)
+end
+
+local function spot(p)
+  return string.format("%s in %s (%.1f, %.1f)", p.name, p.zone, p.x, p.y)
+end
+ns.profSpotText = spot
+
+-- One line saying where to go for a tier or step, for your faction, and the place (nil when the
+-- guide names no NPC with a known spot: then the guide's own text).
+function ns.profWhereText(key, entry)
+  local places = ns.profPlaces(key, entry)
+  local p = places[1]
+  if not p then return ns.plain(entry.short or entry.where or entry.source or ""), nil end
+  local text
+  if (entry.source or ""):find("^Quest") then
+    text = "Quest from " .. spot(p) .. (entry.item and (" (it gives " .. entry.item .. ")") or "")
+  elseif entry.item then
+    text = (entry.cap and "Buy and read " or "Buy ") .. entry.item .. " from " .. spot(p)
+  elseif entry.cap and entry.action then
+    text = "Quest from " .. spot(p)
+  else
+    text = (entry.cap and "Trainer: " or "Learn from ") .. spot(p)
+  end
+  if places[2] and (places[2].yards or 0) - (p.yards or 0) < 2000 and not entry.item and not entry.action then
+    text = text .. ", or " .. places[2].name .. " in " .. places[2].zone
+  end
+  return ns.plain(text), p
+end
+
+-- The last place a profession card named (the crafting window's hint, the Professions tab): /codex
+-- way points the arrow there. Said in chat once a session per place and reason.
+local offered = {}
+function ns.offerProfWay(place, why)
+  if not place then return end
+  ns.profWay = { place = place, why = why }
+  local key = place.name .. ":" .. (why or "")
+  if offered[key] then return end
+  offered[key] = true
+  if not ns.db().quiet then
+    ns.say(ns.plain((why and (why .. ": ") or "") .. spot(place) .. ". Type /codex way to point the arrow there."))
+  end
+end
+
+-- /codex way (and the Professions tab's Show the way): the arrow leads to that place, or back to
+-- your step when it already does.
+function ns.profShowWay(place, why)
+  place = place or (ns.profWay and ns.profWay.place)
+  why = why or (ns.profWay and ns.profWay.why)
+  if not place then
+    ns.say("no profession trainer or vendor to point to yet: open a crafting window or the Professions tab.")
+    return
+  end
+  if ns.pointArrowTo then ns.pointArrowTo(place, why) end
+end
+
+-- One banner row (about 60 characters): the NPC for your faction with its spot, else the tier's short text.
+function ns.profBannerWhere(key, tier)
+  local p = ns.profPlaces(key, tier)[1]
+  if p then return ns.plain(spot(p)) end
+  return ns.plain(tier.short or tier.where)
 end
 
 -- Herbs specify their own cutoffs. Veins use Forever's gathering intervals: orange to +25, yellow to
@@ -450,10 +583,15 @@ function ns.profCardRows(key, old, new, cap, level)
   local nextTier = trained and P.tiers[i + 1]
   if nextTier and nextTier.skill > old and nextTier.skill <= new and (level or 1) >= nextTier.level then
     local label = P.levelGatesUnconfirmed and "CHECK " or string.upper(nextTier.action or "Train") .. " "
-    rows[#rows + 1] = { P.icon, label .. string.upper(nextTier.name), ns.plain(nextTier.short or nextTier.where) }
+    rows[#rows + 1] = { P.icon, label .. string.upper(nextTier.name), ns.profBannerWhere(key, nextTier) }
   end
   if nextTier and trained.cap > old and trained.cap <= new then
     rows[#rows + 1] = { P.icon, "AT YOUR CAP", (nextTier.action or "Train") .. " " .. nextTier.name .. " to go past " .. trained.cap }
+    local text, place = ns.profWhereText(key, nextTier)
+    if place then
+      rows[#rows + 1] = { P.icon, string.upper(nextTier.item and "Buy the book" or nextTier.action and "Quest" or "Trainer"), spot(place) }
+      ns.offerProfWay(place, (nextTier.action or "Train") .. " " .. nextTier.name .. " " .. P.name)
+    end
   end
   local unlock = P.herbs and "NEW HERB" or "NEW VEIN"
   for _, node in ipairs(P.herbs or P.veins or {}) do
@@ -477,7 +615,7 @@ function ns.profLevelRows(level)
       if due == "train" and nextTier.level == level then
         local P = ns.P[key]
         local label = (nextTier.action or "Train") .. " " .. nextTier.name .. " " .. P.name
-        rows[#rows + 1] = { P.icon, string.upper(label), ns.plain(nextTier.short or nextTier.where), P.name, nextTier }
+        rows[#rows + 1] = { P.icon, string.upper(label), ns.profBannerWhere(key, nextTier), P.name, nextTier }
       end
     end
   end

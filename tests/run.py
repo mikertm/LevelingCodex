@@ -560,6 +560,16 @@ def prof_shape_checks():
         elif isinstance(x, list):
             for v in x:
                 strings(v, where)
+    _, pns = load_addon_file("ProfessionPlaces.lua")
+    world = load_addon_file("QuestFlightData.lua")[1].questWorld
+    places, trainers = {}, {}
+    for name, p in (pns.PROF_PLACES or {}).items():
+        places[name] = p
+        faction, m, x, y, zone = p[1], p[2], p[3], p[4], p[5]
+        if faction not in ("A", "H", "AH") or not world[m] or not (0 < x < 100 and 0 < y < 100) or not zone:
+            errors.append("professions: place %s needs a faction (A, H or AH), a known map, a spot and a zone" % name)
+    for key in (pns.PROF_TRAINERS or {}):
+        trainers[key] = list((pns.PROF_TRAINERS[key] or {}).values())
     for key in PROF_KEYS:
         P = data.get(key)
         if not isinstance(P, dict):
@@ -653,6 +663,17 @@ def prof_shape_checks():
                 at = b["to"] + 1
             if at != 100:
                 errors.append("professions %s: disenchant item levels must run 5-99 without gaps (end %s)" % (key, at - 1))
+        # `at`: NPCs with a known spot (ProfessionPlaces.lua), for your faction's card line and the arrow
+        for kind, entries in (("tier", P.get("tiers") or []), ("step", P.get("steps") or []),
+                              ("part", P.get("parts") or []), ("rod", P.get("rods") or [])):
+            for e in entries:
+                for name in e.get("at") or []:
+                    if name not in places:
+                        errors.append("professions %s %s %s: `at` names %s, who isn't in ProfessionPlaces.lua" %
+                                      (key, kind, e.get("name"), name))
+        for name in trainers.get(key) or []:
+            if name not in places:
+                errors.append("professions %s: PROF_TRAINERS names %s, who isn't in PROF_PLACES" % (key, name))
         cloth = P.get("cloth") or []
         for c in cloth:
             for f in ("name", "icon", "levels", "zones"):
@@ -1257,6 +1278,10 @@ def main():
                          ["skills:EG;285;300:professions", "makeCraftWindow", "login", "craftEngineering"]))
             runs.append(("WARRIOR/full/craft-first-aid", "WARRIOR", False,
                          ["skills:FA;180;225:professions", "makeCraftWindow", "login", "craftFirstAid"]))
+            runs.append(("WARRIOR/full/craft-first-aid-cap", "WARRIOR", False,
+                         ["skills:FA;150;150:professions:Alliance:Human", "makeCraftWindow", "login", "craftFirstAidCap"]))
+            runs.append(("WARRIOR/full/craft-first-aid-cap-horde", "WARRIOR", False,
+                         ["skills:FA;150;150:professions:Horde:Orc", "makeCraftWindow", "login", "craftFirstAidCap"]))
         runs.append(("WARRIOR/%s/tailor" % variant, "WARRIOR", minimal, TAILOR))
         runs.append(("MAGE/%s/tailor-only" % variant, "MAGE", minimal, TAILOR_ONLY))
         runs.append(("PALADIN/%s/tailor-skilllines" % variant, "PALADIN", minimal, TAILOR_LINES))

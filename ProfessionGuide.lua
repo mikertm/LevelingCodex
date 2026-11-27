@@ -11,6 +11,7 @@
 
 local _, ns = ...
 local C, rgba, plain = ns.C, ns.rgba, ns.plain
+local learnText
 
 local WINDOWS = { "TradeSkillFrame", "ProfessionsFrame", "CraftFrame" }
 local guide = { roots = {} }
@@ -401,6 +402,20 @@ local function watchRoot(f)
   pcall(f.HookScript, f, "OnHide", function() if guide.open then hideGuide() end end)
 end
 
+local function itemCount(name)
+  if not GetItemCount then return 0 end
+  local ok, n = pcall(GetItemCount, name)
+  return ok and tonumber(n) or 0
+end
+
+-- Where to learn a recipe: the place for your faction, else the guide's source text.
+learnText = function(key, step)
+  local P = ns.P[key]
+  local text, place = ns.profWhereText(key, step)
+  if text == "" then text = plain(P.name .. " trainer") end
+  return text, place
+end
+
 -- Every 0.25 s while a crafting window is open.
 local function tick(root, rootName)
   if not root then root, rootName = craftWindow() end
@@ -437,8 +452,28 @@ local function tick(root, rootName)
   local h, t = guide.hint, guide.trace
   h.label:SetText(string.upper(P.name) .. "  " .. skillText(skill, cap))
   local line, status, detail, difficulty
+  local trained, tierIndex = ns.profTier(key, skill, cap)
+  local nextTier = trained and P.tiers[tierIndex + 1]
 
-  if not pick or pick.none or pick.gathering then
+  if nextTier and cap and cap > 0 and skill >= cap then
+    -- at your cap nothing gives a point: say where the next rank comes from, for your faction
+    local verb = nextTier.action or "Train"
+    ns.setIcon(h.icon, P.icon)
+    h.name:SetText(verb .. " " .. nextTier.name .. " " .. P.name)
+    line = "At your cap: " .. string.lower(verb) .. " " .. nextTier.name .. " to go past " .. skill
+    local where, place = ns.profWhereText(key, nextTier)
+    status = where
+    local extra = {}
+    local level = (UnitLevel and tonumber((UnitLevel("player")))) or 1
+    if level < nextTier.level then extra[#extra + 1] = "Needs character level " .. nextTier.level .. "." end
+    if nextTier.item and itemCount(nextTier.item) > 0 then extra[#extra + 1] = nextTier.item .. " is in your bags: use it." end
+    if pick and pick.name and not pick.none and not pick.gathering and not findRecipe(pick.name) then
+      extra[#extra + 1] = "Also learn " .. pick.name .. ": " .. learnText(key, pick) .. "."
+    end
+    detail = table.concat(extra, " ")
+    ns.offerProfWay(place, verb .. " " .. nextTier.name .. " " .. P.name)
+    t:Hide(); guide.row, guide.how = nil, "at cap"
+  elseif not pick or pick.none or pick.gathering then
     ns.setIcon(h.icon, P.icon)
     if pick then
       local targets, places = gatheringAdvice(key, pick.step, skill)
@@ -493,10 +528,12 @@ local function tick(root, rootName)
         status = "Clear the search or filters, or expand the recipe category."
         guide.how = "filtered"
       else
-        local source = pick.source or (P.name .. " trainer")
         line = known == false and "Recipe not learned" or "Recipe unavailable"
-        status = plain(source) .. (pick.learn and (" (skill " .. pick.learn .. ")") or "")
+        local where, place = learnText(key, pick)
+        status = where .. (pick.learn and (" (skill " .. pick.learn .. ")") or "")
+        if pick.item and itemCount(pick.item) > 0 then status = pick.item .. " is in your bags: use it to learn the recipe." end
         if known == nil then status = status .. ". If you know it, check your search and filters." end
+        ns.offerProfWay(place, "Learn " .. pick.name)
         if pick.alt and pick.alt ~= "" then detail = "Alternative: " .. plain(pick.alt) end
         guide.how = "not learned"
       end
