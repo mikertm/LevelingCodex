@@ -1474,6 +1474,14 @@ renderers.settings = function()
     row("Reset position", 0, 140, false, function() db.minimapAngle = nil; ns.updateMini() end)
     y = y + 40
   end }
+  sections[#sections + 1] = { "GAME OPTIONS", "General", function()
+    T("Every setting here is also in the game's Esc > Options > AddOns > Leveling Codex, and a change in either place shows in both.",
+      0, y, W, "small", C.dim)
+    y = y + 20
+    row("Open in Options > AddOns", 0, 220, false, function() ns.options.open(settingsPage) end,
+      "Opens the game's Options at this page of the Codex's settings.")
+    y = y + 40
+  end }
   sections[#sections + 1] = { "THIS WINDOW", "General", function()
     T("Size", 0, y + 4, 60, "body", C.light)
     row("-", 60, 28, false, function() db.windowScale = math.max(0.6, (db.windowScale or 1) - 0.1); ns.placeWindow() end)

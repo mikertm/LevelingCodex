@@ -1154,6 +1154,7 @@ def main():
         runs.append(("WARRIOR/%s/vendor-shopping" % variant, "WARRIOR", minimal, ["vendorShopping"]))
         runs.append(("WARRIOR/%s/vendor-prof-supplies" % variant, "WARRIOR", minimal, ["vendorProfSupplies"]))
         runs.append(("WARRIOR/%s/mail-take-all" % variant, "WARRIOR", minimal, ["mailTakeAll"]))
+        runs.append(("WARRIOR/%s/addon-options" % variant, "WARRIOR", minimal, ["addonOptions"]))
         if not minimal:
             runs.append(("WARRIOR/full/vendor-shopping-quest", "WARRIOR", False, ["vendorShoppingQuest"]))
             runs.append(("WARRIOR/full/vendor-server", "WARRIOR", False, ["vendorServer"]))

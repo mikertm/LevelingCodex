@@ -1,6 +1,9 @@
 # Leveling Codex
 
 ## v0.34.7
+- **The Codex's settings are in the game's Options too.** Esc > Options > AddOns > **Leveling Codex** now lists every setting, on the same pages as the Codex's Settings tab: Leveling Codex (general), Questing, Map and arrow, Group and Helpers.
+    - **Both places stay in step:** they change the same settings, so a box you tick in one shows ticked in the other.
+    - **Settings > General > GAME OPTIONS** has a button that opens the game's Options at the page you're on, and `/codex options` does the same from chat.
 - **Missing flight paths: the guide shows the way.** A Fly step whose flight path you don't have no longer asks you to pick a flight you can't take.
     - **The step says what to do instead:** "You don't have the Sentinel Hill flight path yet. Fly to Stormwind, the closest flight path you have, then ride south-west to Sentinel Hill and talk to Thor to learn it", or to ride straight there when no flight helps.
     - **The arrow follows it:** "Fly to Stormwind from Ironforge, then ride to Sentinel Hill", or "Ride to Sentinel Hill: learn the flight path".
