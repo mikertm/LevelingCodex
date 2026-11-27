@@ -1,5 +1,8 @@
 # Leveling Codex
 
+## v0.34.7
+- **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
+
 ## v0.34.6
 - **The quest guide carries on from your last step.** It now remembers, per character, the step you were on (and a dungeon, class or special guide you had open) and picks up there after a login, a /reload or an update, instead of working your place out again from the quest log. That could jump to a later quest of the zone at login, past pickups you hadn't done yet.
     - **Logging in mid-chapter without a saved step** (the first login on this version) no longer jumps past the chapter's earlier steps to an active quest further on.
@@ -20,9 +23,6 @@
     - **Naps look like naps:** a night in the sleeping bag away from a fire shows a sleep icon on the map and in the story.
     - **/codex camp:** says how long your Camp Benefits and Well-Rested have left, which comforts you have, and your camping so far.
     - **Before it fades:** a chat line about five minutes before Well-Rested (with its stacks) or Camp Benefits runs out, so you can rest again. Settings > General > Journey pop-ups turns it off.
-
-## v0.34.5
-- **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
 
 ## v0.34.4
 - **Price tooltips, shorter and easier to read.** Four lines instead of seven:
