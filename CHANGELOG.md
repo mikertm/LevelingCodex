@@ -71,11 +71,11 @@
     - **Only real prices get in.** Price messages count only from the price channel or your guild, never a whisper or party message. An item ID the game has no item for is never saved. A new item's price far off your own reading from the last three days now waits for a second player, like items with a price history already did.
     - **A player with your name on a connected realm** is no longer taken for your own echo.
     - **Chat stays clean.** Lines typed into the price channel and its owner and password notices stay out of your chat windows, on newer clients too.
-- **Price tooltips, easier to read.**
-    - **Trend in words.** The little bars are gone. The Trend line now says "Holding steady", "Rising: 12% over earlier days" or "Falling: 8% under earlier days", with an up or down arrow.
-    - **Usual price (N days)** is named for what it is, and a new **Range over N days** line shows the cheapest and dearest of the last days.
-    - **The verdict says what it compares**: "Now 5% above usual: a normal price", "Now 15% above usual: a good time to sell", "Now right at its usual price". The old "Near its usual price" under a different Lowest now was confusing.
-    - **Shift** now shows "Listings at the last look" (cheapest to dearest), the middle listing and how many were for sale, instead of "Low / median / high".
+- **Price tooltips, shorter and easier to read.** Four lines instead of seven:
+    - **Lowest now**, then **Usual (N days)** with the last days' range beside it ("2s  (75c - 3s)").
+    - **One verdict line** says how far today's price is from usual, with an up or down arrow: "Now 41% above usual: a good time to sell", "Now right at its usual price". The separate Trend line said the same thing and is gone, as are the little bars.
+    - **Shift** adds a single line: how many are listed and the dearest listing.
+- **Deals: tidier sniper tooltips.** Hovering THIS SESSION or the won/lost tiles now shows short label and value rows (Running, Searches, Deals found, Bought, Est. profit, Per hour, Best buy) with gains in green and losses in red, instead of a wall of text. The THIS SESSION tile shows just the estimated profit, so it no longer gets cut off; the per-hour figure is in its tooltip.
 - **Fixed: Quick Sell scrolling.** The mouse wheel scrolls the list under the cursor: your bag items on the left, YOUR AUCTIONS on the right. With listings on the right, the wheel used to scroll only that list. Deals scrolls the same way.
 
 ## v0.34.2

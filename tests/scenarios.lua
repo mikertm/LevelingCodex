@@ -11325,13 +11325,13 @@ function S.auctionTools()
   click(panel, "Look up Linen Cloth")
   check(questText(panel, "Lowest now") and questText(panel, "Linen Cloth"), "a recent look-up opens again")
   GameTooltip:SetHyperlink("item:2592")
-  check(tipHas("Trend") and tipHas("Rising: 100% over earlier days") and not tipHas("WHITE8X8"),
-    "the tooltip says the trend in words against earlier days, without the little bars")
-  check(tipHas("Range over ") and tipHas("a good time to sell"), "the tooltip gives the days' range and says what the verdict compares")
+  check(tipHas("a good time to sell") and tipHas("above usual") and not tipHas("Trend") and not tipHas("WHITE8X8"),
+    "the verdict says how far the price is from usual, without a separate trend line")
+  check(tipHas("Usual (") and tipHas(" - ") and not tipHas("Range over "), "the usual price carries the days' range")
   MOCK.shift = true
   GameTooltip:SetHyperlink("item:2589")
-  check(tipHas("Listings at the last look") and tipHas("For sale at the last look  30") and not tipHas("Low / median / high"),
-    "Shift adds the listings' range and how many are for sale")
+  check(tipHas("Listed: 30") and tipHas("up to ") and not tipHas("Listings at the last look") and not tipHas("Middle listing"),
+    "Shift adds one line: how many are listed and the dearest")
   MOCK.shift = false
   MOCK.closeAuction()
   MOCK.openAuction()
@@ -11491,7 +11491,7 @@ function S.auctionAuctionator()
   rec.days[day - 2] = { low = 60, med = 60 }
   GameTooltip:SetHyperlink("item:2591")
   GameTooltip:SetHyperlink("item:2589")
-  check(tipHas("Codex prices") and tipHas("(Auctionator)") and tipHas("Trend") and not tipHas("Lowest now"),
+  check(tipHas("Codex prices") and tipHas("(Auctionator)") and tipHas("usual") and not tipHas("Lowest now"),
     "with days of history the block adds the trend and leaves the price to Auctionator")
   MOCK.auctions = { { id = 2589, name = "Linen Cloth", count = 20, buyout = 2000 } }
   -- Auctionator's tabs: unnamed buttons on a frame of their own, in the row after Auctions
@@ -12184,6 +12184,20 @@ function S.auctionQuickSell()
   click(card, "Next deal")
   MOCK.advance(1)
   check(#MOCK.purchases == 1 and MOCK.purchases[1].qty == 5, "it buys what the budget covers (" .. tostring(MOCK.purchases[1] and MOCK.purchases[1].qty) .. ")")
+  -- the sniper session and scoreboard tooltips are label / value rows
+  local function tipLines(name)
+    local b = findButton(card, function(l) return l == name end)
+    if not b then return "" end
+    GameTooltip:ClearLines()
+    MOCK.fire(b, "OnEnter")
+    return table.concat(GameTooltip._lines or {}, "\n")
+  end
+  local sess = tipLines("Sniper session")
+  check(sess:find("Running", 1, true) and sess:find("Searches", 1, true) and sess:find("Bought", 1, true)
+    and not sess:find("listings checked", 1, true), "the sniper session tooltip is short rows (" .. sess .. ")")
+  local score = tipLines("Scoreboard trades")
+  check(score:find("Won / lost", 1, true) and score:find("Net profit", 1, true) and score:find("Click for your trade history", 1, true),
+    "the scoreboard tooltip is short rows (" .. score .. ")")
   -- Quick Sell: the wheel scrolls the list under the cursor, the bag list and YOUR AUCTIONS each
   local store = LevelingCodexDB.auction.realms.Mockrealm.items
   for k = 1, 16 do

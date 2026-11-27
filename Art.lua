@@ -208,6 +208,15 @@ function A.showTip(self)
   GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
   GameTooltip:SetText(self.tipTitle, 1, 0.82, 0)
   if self.tipText and self.tipText ~= "" then GameTooltip:AddLine(self.tipText, 1, 1, 1, true) end
+  -- label / value rows: { left, right, leftColour, rightColour }, or { left } for a wrapped note
+  for _, r in ipairs(self.tipRows or {}) do
+    local lc, rc = r[3] or { 0.82, 0.82, 0.82 }, r[4] or { 1, 1, 1 }
+    if r[2] and GameTooltip.AddDoubleLine then
+      GameTooltip:AddDoubleLine(r[1], r[2], lc[1], lc[2], lc[3], rc[1], rc[2], rc[3])
+    else
+      GameTooltip:AddLine(r[2] and (r[1] .. "  " .. r[2]) or r[1], lc[1], lc[2], lc[3], true)
+    end
+  end
   GameTooltip:Show()
 end
 function A.hideTip() if GameTooltip then GameTooltip:Hide() end end

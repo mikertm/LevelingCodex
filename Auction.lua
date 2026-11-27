@@ -1857,28 +1857,28 @@ function A.tooltipLines(id, shift)
   if p then
     add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", A.age(p.at)
       .. (fromAtor and " (Auctionator)" or (p.shared and " (shared)" or "")), GOLD, SOFT)
+    -- Compact (Michael, 2026-11-27: "compress the tooltip, some of the info looks redundant"):
+    -- the usual price carries the days' range, the verdict carries the change against usual (its
+    -- arrow from the trend), and Shift adds one line with the dearest listing and the count.
     if fromAtor then -- Auctionator shows it
     elseif p.n > 0 and p.low then add("  Lowest now", A.coins(p.low)) else add("  Lowest now", "none listed", nil, SOFT) end
-    if p.usual and p.usual ~= p.low then
-      add("  Usual price" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), A.coins(p.usual))
-    end
-    if p.trend then
-      local words, c = A.trendWords(p)
-      add("  Trend", words, nil, c)
-    end
     local lo, hi, n = A.weekRange(id)
-    if lo and hi and hi > lo then
-      add("  Range over " .. n .. " days", A.coins(lo) .. "  to  " .. A.coins(hi), nil, SOFT)
+    if p.usual and (p.usual ~= p.low or (lo and hi and hi > lo)) then
+      local right = A.coins(p.usual)
+      if lo and hi and hi > lo then right = right .. "  (" .. A.coins(lo) .. " - " .. A.coins(hi) .. ")" end
+      add("  Usual" .. (p.days and p.days > 1 and (" (" .. p.days .. " days)") or ""), right)
     end
     if vendor and vendor > 0 then add("  Vendor pays", A.coins(vendor)) end
     local v, vc = A.verdict(p, vendor)
-    if v then add("  " .. v, nil, vc) end
-    if shift then
-      if p.low then
-        add("  Listings at the last look", A.coins(p.low) .. "  to  " .. A.coins(p.high or p.low), SOFT)
-        if p.med and p.med ~= p.low then add("  Middle listing", A.coins(p.med), SOFT) end
-      end
-      add("  For sale at the last look", ns.thousands(p.n), SOFT)
+    if v then
+      local dir = p.trend and (p.trend > 5 and "up" or (p.trend < -5 and "down")) or nil
+      add("  " .. (dir and arrow(dir, vc) or "") .. v, nil, vc)
+    elseif p.trend then
+      local words, c = A.trendWords(p)
+      add("  Trend", words, nil, c)
+    end
+    if shift and p.low and p.n > 0 then
+      add("  Listed: " .. ns.thousands(p.n), "up to " .. A.coins(p.high or p.low), SOFT, SOFT)
     end
   elseif shift and not A.auctionator() then
     add("|T" .. "Interface\\Icons\\" .. ns.ADDON_ICON .. ":14:14:0:0:64:64:5:59:5:59|t Codex prices", "not seen yet", GOLD, SOFT)
@@ -2093,7 +2093,7 @@ ns.gold.addSection(10, function(y)
     y = y + 24
   end
   tick("Price lines on item tooltips", not db.noPriceTooltip, function() db.noPriceTooltip = not db.noPriceTooltip end,
-    "The lowest price seen, the usual price, the trend, the last days' range and the vendor price. Hold Shift for the listings at the last look.")
+    "The lowest price seen, the usual price with the last days' range, the vendor price and how the price stands against usual. Hold Shift for how many are listed.")
   tick("Add the Codex tabs to the auction house", not db.noAuctionTabs, function()
     db.noAuctionTabs = not db.noAuctionTabs
     if ns.auctionPanel and open then ns.auctionPanel.onShow(root) end

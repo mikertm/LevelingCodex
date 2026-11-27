@@ -434,7 +434,7 @@ local function hit(x, y, w, h, title, tipText, onClick, label)
   b:SetPoint("TOPLEFT", body, "TOPLEFT", x, -y)
   b:SetSize(math.max(1, w), math.max(1, h))
   b:SetFrameLevel(body:GetFrameLevel() + 3)
-  b.tipTitle, b.tipText, b.codexLabel = title, tipText, label
+  b.tipTitle, b.tipText, b.codexLabel, b.tipRows = title, tipText, label, nil
   b:SetScript("OnClick", onClick and function() onClick(); P.refresh() end or nil)
   return b
 end
@@ -1768,31 +1768,57 @@ function pages.deals(W, top, H)
   miniStat(3, closed > 0 and "NET PROFIT" or (#rec.holdings > 0 and "HOLDING EST." or "NET PROFIT"),
     (closed == 0 and #rec.holdings > 0 and rec.net == 0) and shortSigned(rec.unrealized) or shortSigned(rec.net),
     ((closed == 0 and #rec.holdings > 0 and rec.net == 0) and rec.unrealized or rec.net) >= 0 and GREEN or RED)
-  local scoreTip = table.concat({
-    "Closed flips & vendor snipes: " .. rec.wins .. " won, " .. rec.losses .. " lost" .. (rec.winRate and (" (" .. rec.winRate .. "%)") or ""),
-    "Money made (profits + sales): +" .. ns.money(made) .. ((rec.vendorSales or 0) > 0 and (" (" .. rec.vendorSales .. " vendored: " .. signed(rec.vendorProfit or 0) .. ")") or ""),
-    "Money lost (losses + lost deposits): -" .. ns.money(lost),
-    "Spent on deals: " .. ns.money(rec.spent or 0) .. "  |  Open holdings: " .. #rec.holdings .. (#rec.holdings > 0 and (" (" .. signed(rec.unrealized) .. ")") or ""),
-    "Vendor sales of sniped items track automatically when you visit any merchant.",
-    "Click to open full trade history & holdings.",
-  }, "\n")
-  hit(cx, y + 23, 3 * (mw + 4) - 4, 29, "Sniper & Flip Record", scoreTip, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
-  -- this session's sniper: what it bought and its estimated profit per hour
+  -- tooltips as label / value rows, money in coins, gains green and losses red
+  local DIM = { 0.62, 0.62, 0.62 }
+  local function money(c, sign)
+    c = math.floor(tonumber(c) or 0)
+    local s = A().coins(math.abs(c))
+    if sign then s = (c < 0 and "-" or "+") .. s end
+    return s
+  end
+  local function gainColour(c) return (tonumber(c) or 0) >= 0 and GREEN or RED end
+  local function note(t) return { t, nil, DIM } end
+  local scoreRows = {
+    { "Won / lost", rec.wins .. " / " .. rec.losses .. (rec.winRate and closed > 0 and ("  (" .. rec.winRate .. "%)") or "") },
+    { "Made", money(made, true), nil, GREEN },
+    { "Lost", "-" .. A().coins(math.max(0, math.floor(lost))), nil, lost > 0 and RED or nil },
+    { "Net profit", money(rec.net, true), nil, gainColour(rec.net) },
+    { "Spent on deals", money(rec.spent or 0) },
+  }
+  if (rec.vendorSales or 0) > 0 then
+    scoreRows[#scoreRows + 1] = { "Sold to vendors", rec.vendorSales .. "  (" .. money(rec.vendorProfit or 0, true) .. ")", nil, gainColour(rec.vendorProfit) }
+  end
+  if #rec.holdings > 0 then
+    scoreRows[#scoreRows + 1] = { "Still holding", #rec.holdings .. "  (" .. money(rec.unrealized, true) .. ")", nil, gainColour(rec.unrealized) }
+  end
+  scoreRows[#scoreRows + 1] = note("Click for your trade history.")
+  local scoreHit = hit(cx, y + 23, 3 * (mw + 4) - 4, 29, "Flips and snipes", nil, function() view.marketMode = "trades"; P.open("market") end, "Scoreboard trades")
+  scoreHit.tipRows = scoreRows
+  -- this session's sniper: what it bought and its estimated profit (per hour in the tooltip: the
+  -- tile is a quarter of the console wide, and "+12s 25c +1g 9s/h" didn't fit)
   local ss = A().snipeSession()
   local mins = math.floor(ss.run / 60)
   local runText = mins >= 60 and (math.floor(mins / 60) .. " h " .. (mins % 60) .. " min") or (mins .. " min")
-  miniStat(4, "THIS SESSION", ss.buys > 0 and (shortSigned(ss.est) .. (ss.perHour and (" " .. shortSigned(ss.perHour) .. "/h") or ""))
-    or (ss.run > 0 and (runText .. ", " .. ss.alerts .. (ss.alerts == 1 and " alert" or " alerts")) or "not run yet"),
+  miniStat(4, "THIS SESSION", ss.buys > 0 and shortSigned(ss.est)
+    or (ss.run > 0 and (ss.alerts .. (ss.alerts == 1 and " alert" or " alerts")) or "not run yet"),
     ss.buys > 0 and (ss.est >= 0 and GREEN or RED) or ns.C.light)
-  hit(cx + 3 * (mw + 4), y + 23, mw, 29, "Sniper session", table.concat({
-    "Running " .. runText .. " this session" .. (sn.on and " (on now)" or ""),
-    ns.thousands(ss.searches) .. " searches, " .. ss.alerts .. " live deals found, " .. ss.checks .. " listings checked",
-    "Bought " .. ss.buys .. (ss.buys == 1 and " deal" or " deals") .. " for " .. ns.money(ss.spent) .. ", est. " .. signed(ss.est) .. " after resale"
-      .. (ss.hitRate and (" (" .. ss.hitRate .. "% of alerts bought)") or ""),
-    ss.perHour and ("About " .. signed(ss.perHour) .. " per hour of sniping") or "Profit per hour shows after a minute of sniping",
-    ss.bestName and ("Best buy: " .. Q.plain(ss.bestName) .. " " .. signed(ss.bestEst)) or "No buy yet",
-    "Estimates assume you resell at the deal's price. Market > Your trades shows the real profit.",
-  }, "\n"), nil, "Sniper session")
+  local sessRows = {
+    { "Running", runText .. (sn.on and "  (on now)" or "") },
+    { "Searches", ns.thousands(ss.searches) },
+    { "Deals found", ns.thousands(ss.alerts) .. "  (" .. ns.thousands(ss.checks) .. " checked)" },
+    { "Bought", ss.buys > 0 and (ss.buys .. "  for " .. money(ss.spent)) or "nothing yet" },
+  }
+  if ss.buys > 0 then
+    sessRows[#sessRows + 1] = { "Est. profit", money(ss.est, true), nil, gainColour(ss.est) }
+    sessRows[#sessRows + 1] = { "Per hour", ss.perHour and money(ss.perHour, true) or "after a minute", nil, ss.perHour and gainColour(ss.perHour) or DIM }
+    if ss.hitRate then sessRows[#sessRows + 1] = { "Deals bought", ss.hitRate .. "%" } end
+    if ss.bestName then
+      sessRows[#sessRows + 1] = { "Best buy", Q.plain(ss.bestName) .. "  " .. money(ss.bestEst, true), nil, gainColour(ss.bestEst) }
+    end
+  end
+  sessRows[#sessRows + 1] = note("Estimates assume you resell at the deal's price.")
+  local sessHit = hit(cx + 3 * (mw + 4), y + 23, mw, 29, "Sniper session", nil, nil, "Sniper session")
+  sessHit.tipRows = sessRows
 
   -- 3. Column Header Bar + Graphical Deal Cards
   y = top + 146
