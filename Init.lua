@@ -30,6 +30,7 @@ local function start()
   ns.CLASS_NAME = localized
   ns.D = LevelingCodexData and LevelingCodexData[token]
   ns.startQuestGuide()
+  ns.startOptions()
   if not ns.D then return end
   ns.say("loaded the " .. ns.D.spec .. " " .. localized .. " guide. Type " .. ns.WHITE .. "/codex|r or click the Level 60 badge on your minimap.")
   -- Macros from an earlier session but no saved settings: they didn't load (a known Forever issue).
@@ -209,6 +210,8 @@ SlashCmdList.LEVELINGCODEX = function(msg)
     db.minimapAngle = nil
     ns.updateMini()
     ns.say("banner, window and minimap button positions and sizes reset.")
+  elseif cmd == "options" or cmd == "config" then
+    ns.options.open(rest ~= "" and rawRest or nil)
   elseif cmd == "mail" then
     ns.mailbox.takeAll()
   elseif cmd == "add" then
@@ -228,7 +231,7 @@ SlashCmdList.LEVELINGCODEX = function(msg)
   elseif cmd == "debug" then
     for _, line in ipairs(ns.debugLines()) do ns.say(line) end
   else
-    ns.say("/codex opens the guide - everything else is under its Settings button. Also: /codex macros, /codex resync (find your guide step again from your quest log), /codex mail (take all at a mailbox), /codex add [name] (add your target or a name to your journey), /codex sign, /codex camp (your camp buffs), /codex test, /codex reset, /codex debug")
+    ns.say("/codex opens the guide - everything else is under its Settings button (also in Esc > Options > AddOns > Leveling Codex, or /codex options). Also: /codex macros, /codex resync (find your guide step again from your quest log), /codex mail (take all at a mailbox), /codex add [name] (add your target or a name to your journey), /codex sign, /codex camp (your camp buffs), /codex test, /codex reset, /codex debug")
   end
 end
 
@@ -256,6 +259,7 @@ function ns.debugLines()
   out[#out + 1] = ns.skinSupport.debugLine()
   for _, line in ipairs(ns.talentDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.trackingDebugLines()) do out[#out + 1] = line end
+  for _, line in ipairs(ns.optionsDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.profDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.craftDebugLines()) do out[#out + 1] = line end
   for _, line in ipairs(ns.loot and ns.loot.debugLines() or {}) do out[#out + 1] = line end

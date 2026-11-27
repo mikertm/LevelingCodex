@@ -15984,3 +15984,62 @@ function S.questPlaceResync()
   slash("resync")
   check(Q.current().key == before or Q.current().section.id == "loch-modan", "/codex resync works too")
 end
+
+-- Esc > Options > AddOns > Leveling Codex holds the Settings tab's pages; both read and write the
+-- same settings, so a change in either place shows in the other.
+function S.addonOptions()
+  S.login()
+  local main = MOCK.optionPanels["Leveling Codex"]
+  check(main, "the Codex has a category in the game's Options")
+  for _, page in ipairs({ "Questing", "Map and arrow", "Group", "Helpers" }) do
+    check(MOCK.optionPanels["Leveling Codex/" .. page], "with the subcategory " .. page)
+  end
+  check(MOCK.minimal or MOCK.addonCategory == "Leveling Codex", "listed under AddOns")
+  local function box(root, label) return findButton(root, function(l) return l == label end) end
+  -- Options -> Codex
+  local helpers = MOCK.openOptions("Leveling Codex/Helpers")
+  check(questText(helpers, "VENDOR") and questText(helpers, "PRICE SHARING"), "the Helpers page has its sections")
+  local sell = box(helpers, "Sell grey items at vendors")
+  check(sell and sell:GetChecked(), "junk selling starts on")
+  sell:Click()
+  check(LevelingCodexDB.noAutoSell and not sell:GetChecked(), "unticking it turns junk selling off")
+  slash("")
+  click(win(), "Settings")
+  click(win(), "Helpers")
+  local inCodex = box(win(), "Sell grey items at vendors")
+  check(inCodex and not inCodex:GetChecked(), "the Codex's tab shows it off too")
+  -- Codex -> Options
+  click(win(), "Repair at vendors")
+  check(LevelingCodexDB.noAutoRepair, "the Codex's tab turns repairing off")
+  MOCK.advance(1)
+  check(not box(helpers, "Repair at vendors"):GetChecked(), "the Options page follows within a second")
+  -- choices and steppers
+  local questing = MOCK.openOptions("Leveling Codex/Questing")
+  check(not helpers:IsShown(), "one page at a time")
+  click(questing, "Always skip")
+  check(LevelingCodexDB.questEliteMode == "skip", "the elite choice is saved")
+  check(box(questing, "Always skip").codexOn and not box(questing, "Ask").codexOn, "and lit")
+  click(questing, "Quest item horizontal +")
+  check(questText(questing, "5 px"), "the quest item button's offset moves")
+  local map = MOCK.openOptions("Leveling Codex/Map and arrow")
+  click(map, "Step window size +")
+  check(math.abs((tonumber(LevelingCodexDB.questViewerScale) or 0) - 1.1) < 0.001, "the step window grows")
+  check(questText(map, "110%"), "and the page says its size")
+  local group = MOCK.openOptions("Leveling Codex/Group")
+  click(group, "Share guide quests with my party")
+  check(LevelingCodexDB.questShareParty == false, "quest sharing turns off")
+  local general = MOCK.openOptions("Leveling Codex")
+  click(general, "Codex (gold)")
+  check(box(general, "Codex (gold)").codexOn, "the theme switches")
+  click(general, "Level-up messages in chat")
+  check(LevelingCodexDB.quiet, "chat messages go quiet")
+  click(general, "Use Forever's controller navigation")
+  check(LevelingCodexDB.padNative == false, "the controller setting keeps its false")
+  -- opening the game's Options from the Codex and from chat
+  MOCK.openedCategory = nil
+  slash("options Helpers")
+  check(MOCK.openedCategory ~= nil, "/codex options opens the game's Options")
+  slash("debug")
+  check(chatHas("game options: " .. (MOCK.minimal and "interface options" or "settings")), "debug says how the pages were added")
+  check(not chatHas("last error"), "no page failed to draw")
+end

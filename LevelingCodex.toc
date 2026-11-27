@@ -108,4 +108,5 @@ ProfessionGuide.lua
 TrainerGuide.lua
 Vendor.lua
 Mailbox.lua
+Options.lua
 Init.lua

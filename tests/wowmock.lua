@@ -890,6 +890,49 @@ UIParent:SetSize(1920, 1080)
 UIParent._top, UIParent._bottom = 1080, 0
 WorldFrame = CreateFrame("Frame", "WorldFrame")
 
+-- The game's Options > AddOns list: canvas categories (Settings, gone in the minimal client) and the
+-- old InterfaceOptions_AddCategory. MOCK.optionPanels[name] = the frame; MOCK.openOptions(name)
+-- shows one page (and hides the others), like picking it in the list.
+MOCK.optionPanels, MOCK.optionOrder = {}, {}
+local function addOptionPanel(frame, name, parent)
+  if type(name) ~= "string" or name == "" then error("option category needs a name", 3) end
+  if MOCK.optionPanels[name] then error("option category registered twice: " .. name, 3) end
+  MOCK.optionPanels[name] = frame
+  MOCK.optionOrder[#MOCK.optionOrder + 1] = { name = name, parent = parent }
+end
+local categoryID = 0
+local function newCategory(name, frame)
+  categoryID = categoryID + 1
+  local id = categoryID
+  return { name = name, frame = frame, GetID = function() return id end }
+end
+Settings = {}
+function Settings.RegisterCanvasLayoutCategory(frame, name)
+  addOptionPanel(frame, name)
+  return newCategory(name, frame)
+end
+function Settings.RegisterCanvasLayoutSubcategory(parent, frame, name)
+  if type(parent) ~= "table" or not parent.GetID then error("subcategory needs its parent category", 2) end
+  addOptionPanel(frame, parent.name .. "/" .. name, parent.name)
+  return newCategory(parent.name .. "/" .. name, frame)
+end
+function Settings.RegisterAddOnCategory(category) MOCK.addonCategory = category.name end
+function Settings.OpenToCategory(id) MOCK.openedCategory = id end
+function InterfaceOptions_AddCategory(frame)
+  addOptionPanel(frame, frame.parent and (frame.parent .. "/" .. frame.name) or frame.name, frame.parent)
+end
+function InterfaceOptionsFrame_OpenToCategory(frame) MOCK.openedCategory = frame end
+function MOCK.openOptions(name)
+  local shown
+  for key, frame in pairs(MOCK.optionPanels) do
+    if key ~= name and frame:IsShown() then frame:Hide() end
+  end
+  shown = MOCK.optionPanels[name]
+  if not shown then error("no option category " .. tostring(name), 2) end
+  shown:Show()
+  return shown
+end
+
 Minimap = CreateFrame("Frame", "Minimap", UIParent)
 Minimap:SetSize(140, 140)
 Minimap._cx, Minimap._cy = 1780, 940
@@ -2219,7 +2262,7 @@ function MOCK.drag(f, dx, dy)
 end
 
 -- Remove the APIs a careful addon must not rely on.
-local OPTIONAL = { "JoinTemporaryChannel", "GetChannelName", "LeaveChannelByName", "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
+local OPTIONAL = { "Settings", "JoinTemporaryChannel", "GetChannelName", "LeaveChannelByName", "C_Timer", "C_Spell", "GetSpellInfo", "BackdropTemplateMixin", "CLASS_ICON_TCOORDS", "C_Texture", "SetPortraitToTexture",
   "GetPhysicalScreenSize",
   "C_ClassTalents", "C_Traits", "GetBuildInfo", "C_AddOns", "GetFileIDFromPath", "EnumerateFrames", "hooksecurefunc",
   "CreateColor", "GetMinimapShape", "PlaySound", "GetMacroInfo", "GetNumMacros", "C_Minimap", "UnitIsDeadOrGhost",
