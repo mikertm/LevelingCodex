@@ -1,6 +1,13 @@
 # Leveling Codex
 
 ## v0.34.7
+- **Missing flight paths: the guide shows the way.** A Fly step whose flight path you don't have no longer asks you to pick a flight you can't take.
+    - **The step says what to do instead:** "You don't have the Sentinel Hill flight path yet. Fly to Stormwind, the closest flight path you have, then ride south-west to Sentinel Hill and talk to Thor to learn it", or to ride straight there when no flight helps.
+    - **The arrow follows it:** "Fly to Stormwind from Ironforge, then ride to Sentinel Hill", or "Ride to Sentinel Hill: learn the flight path".
+    - **The step waits at the flight master** until you have learned the flight path, instead of passing as soon as you walk by.
+    - **The flight map marks the flight to take instead** ("fly to Stormwind, then ride to Sentinel Hill"), and travel automation takes it.
+    - **A missing connecting flight path is named:** "No flight you have reaches Rut'theran Village yet: the way there goes through Auberdine, a flight path you don't have."
+    - **The flight path of the zone you're questing in** is now worth a longer way round: the arrow leads you to it when it is within 1,000 yards and at most 500 yards out of the way (was 500 and 250).
 - **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
 
 ## v0.34.6

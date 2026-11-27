@@ -3157,6 +3157,70 @@ function S.questFlightLearn()
   check(chatHas("travel: %d+ flight points for your faction"), "the debug output reports travel planning")
 end
 
+-- A Fly step whose flight path you don't have, or that no flight of yours reaches: the step says how
+-- to get there (fly to the closest flight path you have and ride on), waits at the flight master
+-- until you've learned it, and the flight map marks the closest flight instead.
+function S.questFlightGap()
+  redridgeBrutes()
+  local Q = MOCK.ns.quests
+  local fly = { type = "fly", flight = "Lakeshire, Redridge", map = 1433, x = 25.3, y = 59, npc = "Ariena Stormfeather",
+    text = "Fly to Lakeshire." }
+  -- From Ironforge to Sentinel Hill: fly to Stormwind and ride on.
+  local sentinel = { type = "fly", flight = "Sentinel Hill, Westfall", map = 1436, x = 56.6, y = 52.7, npc = "Thor", text = "Fly to Sentinel Hill." }
+  walkTo(1455, 55.9, 47.9)
+  check(Q.flightGap(sentinel) == nil, "nothing is said before the guide knows your flight paths")
+  taxiMap({ { "Ironforge, Dun Morogh", "CURRENT" }, { "Stormwind, Elwynn", "REACHABLE" } })
+  TaxiFrame:Hide()
+  check(Q.text(sentinel):find("You don't have the Sentinel Hill flight path yet. Fly to Stormwind, the closest flight path you have, then ride", 1, true)
+    and Q.text(sentinel):find("talk to Thor to learn it", 1, true), "fly closer and ride on: " .. Q.text(sentinel))
+  walkTo(1436, 56.6, 52.7) -- at the Sentinel Hill flight master
+  taxiMap({ { "Sentinel Hill, Westfall", "CURRENT" }, { "Stormwind, Elwynn", "REACHABLE" } })
+  TaxiFrame:Hide()
+  local gap = Q.flightGap(fly)
+  check(gap and gap.kind == "unknown" and Q.flightUnlearned(fly), "a flight path you don't have is found")
+  check(gap and not gap.via and Q.text(fly):find("You don't have the Lakeshire flight path yet: ride there and talk to Ariena Stormfeather to learn it", 1, true),
+    "no flight gets you closer: ride there and learn it: " .. Q.text(fly))
+  check(not Q.text(fly):find("choose Lakeshire", 1, true), "it doesn't ask for a flight you can't take")
+  -- at the flight master: learn it
+  walkTo(1433, 25.3, 59)
+  check(Q.text(fly):find("talk to Ariena Stormfeather to learn it", 1, true), "at the flight master: talk to learn it")
+  -- the flight map names the flight to take instead, or says to ride
+  TaxiFrame:Show()
+  MOCK.ns.markTaxi(nil, nil, "Leveling Codex: no flight gets you to Lakeshire yet: ride there")
+  check(_G.LevelingCodexTaxiMark:IsShown() and questText(_G.LevelingCodexTaxiMark, "ride there")
+    and not _G.LevelingCodexTaxiGlow:IsShown(), "the flight map can say to ride with nothing lit")
+  TaxiFrame:Hide()
+  -- learned: the step is as written again
+  taxiMap({ { "Lakeshire, Redridge", "CURRENT" }, { "Stormwind, Elwynn", "REACHABLE" } })
+  TaxiFrame:Hide()
+  check(Q.flightGap(fly) == nil and Q.text(fly):find("choose Lakeshire", 1, true), "once learned, fly as the step says")
+  -- A flight path you have but can't reach: from Astranaar the way to Rut'theran Village goes
+  -- through Auberdine.
+  local rut = { type = "fly", flight = "Rut'theran Village, Teldrassil", map = 1438, x = 58.4, y = 93.9, npc = "Vesprystus",
+    text = "Fly to Rut'theran Village." }
+  taxiMap({ { "Rut'theran Village, Teldrassil", "CURRENT" } })
+  TaxiFrame:Hide()
+  walkTo(1440, 34.5, 48)
+  taxiMap({ { "Astranaar, Ashenvale", "CURRENT" } })
+  TaxiFrame:Hide()
+  gap = Q.flightGap(rut)
+  check(gap and gap.kind == "link" and gap.gap and gap.gap.name == "Auberdine, Darkshore",
+    "a missing connecting flight path is named: " .. tostring(gap and gap.gap and gap.gap.name))
+  check(Q.text(rut):find("goes through Auberdine, a flight path you don't have", 1, true), "and the step says so: " .. Q.text(rut))
+end
+
+-- Questing in a zone, its own flight path is worth a longer way round than one on the road.
+function S.questFlightZone()
+  redridgeBrutes(32.5, 31.5)
+  local Q = MOCK.ns.quests
+  taxiMap({ { "Stormwind, Elwynn", "CURRENT" }, { "Sentinel Hill, Westfall", "REACHABLE" } })
+  TaxiFrame:Hide()
+  walkTo(1433, 25.3, 95) -- south of Lakeshire, the brutes are north of it
+  local yards = Q.worldYards({ map = 1433, x = 25.3, y = 95 }, { map = 1433, x = 25.3, y = 59 })
+  check(yards and yards > 500 and yards < 1000 and arrowSays("Learn the Lakeshire flight path on the way"),
+    "the zone's flight path " .. tostring(yards and math.floor(yards)) .. " yd away is learned first: " .. arrowCaption())
+end
+
 -- Reported from the game: at the Ironforge flight master the arrow said "Fly to Menethil Harbor"
 -- (the Wetlands' flight hub), but the flight map marked nothing and travel automation didn't fly.
 -- The trip planner measured the walk to Ironbeard's Tomb as a straight line over the mountains and

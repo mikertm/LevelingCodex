@@ -737,6 +737,10 @@ local function state(row, skips, blockedQuests, later, map, x, y)
   end
   if s.type == "goto" or s.type == "fly" then
     local _, dist = Q.vector(s, map, x, y)
+    -- At a Fly step's flight master without its flight path: it waits until you've learned it.
+    if dist and dist <= RADIUS and s.type == "fly" and Q.flightUnlearned and Q.flightUnlearned(s) then
+      return "pending"
+    end
     if dist and dist <= RADIUS then
       visited[row.key] = true
       return "done"
@@ -1446,6 +1450,16 @@ function Q.update(event, id, newLevel)
   if event == "PLAYER_ENTERING_WORLD" then inWorld = true end
   if not route then buildRoute() end
   if not probed or event == "NEW_TAXI_PATH" then probeFlights() end
+  -- A flight path learned at the current Fly or flight path step's flight master: that one, even
+  -- when the client has no list of your flight paths to read it from.
+  if event == "NEW_TAXI_PATH" then
+    local row = not review and index and steps[index]
+    local s = row and row.step
+    if s and (s.type == "fly" or s.type == "getfp") and s.flight and not knownFlights[s.flight] then
+      local _, d = Q.vector(s, Q.position())
+      if d and d <= RADIUS * 2 then rememberFlight(s.flight, true) end
+    end
+  end
   level = newLevel or UnitLevel("player") or 1
   if event == "QUEST_TURNED_IN" and id then liveDone[id] = true end
   if event == "QUEST_REMOVED" and id then
@@ -2156,6 +2170,10 @@ function Q.destination(step, map)
   local info = try(C_Map and C_Map.GetMapInfo, step.map)
   local name = type(info) == "table" and info.name or step.flight
   local label = name and ("Travel to " .. Q.plain(name)) or "Objective in another zone"
+  -- A Fly step whose flight path you don't have: no flight gets you there, so ride and learn it.
+  if step.type == "fly" and step.flight and Q.flightUnlearned and Q.flightUnlearned(step) then
+    label = "Ride to " .. step.flight:match("^[^,]+") .. ": learn the flight path"
+  end
   -- On your continent with no flight or road to take, the arrow points across the border with its
   -- distance (Sentinel Hill to Sven's Camp) instead of only naming the zone.
   if direct then
@@ -2429,13 +2447,18 @@ end
 function Q.text(step)
   local instructions = step.text
   if step.type == "fly" and step.flight then
+    local gap = Q.flightGap and Q.flightGap(step)
+    if gap then return instructions .. " " .. gap.text end
     return instructions .. " Talk to the flight master and choose " .. step.flight .. "."
   end
   if step.type == "hearth" then
     for i, row in ipairs(steps) do
       if row.step == step then
         local nextRow = steps[i + 1]
-        if nextRow and nextRow.step.type == "fly" then
+        if nextRow and nextRow.step.type == "fly" and Q.flightUnlearned and Q.flightUnlearned(nextRow.step) then
+          instructions = instructions .. " You don't have the " .. nextRow.step.flight:match("^[^,]+")
+            .. " flight path yet: the next step shows the way there."
+        elseif nextRow and nextRow.step.type == "fly" then
           instructions = instructions .. " Next, talk to the flight master and fly to " .. nextRow.step.flight .. "."
         end
         break

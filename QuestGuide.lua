@@ -2533,9 +2533,9 @@ end
 -- The flight map: mark the guide's flight (a Fly step's, else the travel plan's from here) and,
 -- with travel automation on, take it.
 local function takeFlight(nodes)
-  local target = Q.flightTarget(nodes)
+  local target, note = Q.flightTarget(nodes)
   flight.suggested = target and Q.plain(target):lower()
-  ns.markTaxi(target)
+  ns.markTaxi(target, nil, note)
   if not (target and travelAllowed()) then return end
   local want = Q.plain(target):lower()
   for i = 1, tonumber(try(NumTaxiNodes)) or 0 do
