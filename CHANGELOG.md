@@ -1,6 +1,12 @@
 # Leveling Codex
 
-## v0.34.3
+## v0.34.4
+- **Stranglethorn 35-38, both factions, walked again.**
+    - **Booty Bay in one pass.** Alliance: off the boat at the docks, then the inn from the bottom floor up, Drizzlik next door, and the flight path last, right before you fly. The old order sent you up to the flight master first and back down to the docks. Horde: the same pass from the tunnel, with the flight path and Scooty at the end. Both returns to Booty Bay walk the inn top to bottom and end by the docks.
+    - **Alliance second loop** goes Mistvale, Lake Nazferiti, the Lashtail Raptors, the Haunted Isle and Sin'Dall on the way back to Nesingwary, about 300 yd less riding.
+    - **Fixed hunting spots.** The Lashtail Raptors live north of Grom'gol, not on the west coast; the Panthers, Elder Tigers, Stranglethorn Raptors and Shadowmaw Panthers now point at their real packs. The shards come from Crystal Spine Basilisks, not Stone Maw ones.
+    - **No more "Watch out: Gringer".** The other faction's flight master in a neutral town isn't a danger warning any more.
+
 - **Party play: the guide in a group, polished.**
     - **Steps counted across zones.** A party member in the next zone of your route (or the one before) shows as "12 ahead in Duskwood" instead of just the zone's name, and the catch-up note names them when they fall 3 or more steps behind. Dungeons, class and special guides still show by name.
     - **Who you're waiting for.** On a shared step, once your quest is ready the step window says "Waiting on Bo: Kobold Vermin slain: 3/10." When every one of you is ready, the heading reads "Party - all ready to turn in".
