@@ -8,6 +8,11 @@
     - **The flight map marks the flight to take instead** ("fly to Stormwind, then ride to Sentinel Hill"), and travel automation takes it.
     - **A missing connecting flight path is named:** "No flight you have reaches Rut'theran Village yet: the way there goes through Auberdine, a flight path you don't have."
     - **The flight path of the zone you're questing in** is now worth a longer way round: the arrow leads you to it when it is within 1,000 yards and at most 500 yards out of the way (was 500 and 250).
+- **Price sharing: clearer, and kinder to your own characters.**
+    - **Your other characters on the realm are trusted:** their prices are never held back as odd, and they are never ignored. Every character that logs in with the Codex is remembered for this.
+    - **A busy sender isn't ignored for a few odd prices:** a player is now ignored only when held prices are a tenth or more of what they sent. Before, five odd prices out of hundreds were enough.
+    - **Settings > Helpers > PRICE SHARING says what happened to what you heard:** how many prices came in, how many were filed, how many were older than your own, and how many are waiting for a second player. It also lists who shared with you ("Silfer Strife (your character): 224 filed of 672") and how many prices your own scans have since replaced. That is why it could say "No price in your database comes from other players" after 224 updates: your own scans always win.
+    - **Fixed:** "1 players ignored" now reads "1 player is ignored for this session". A sender sending every 2 seconds could also go over the per-minute limit and lose messages without a word.
 - **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
 
 ## v0.34.6

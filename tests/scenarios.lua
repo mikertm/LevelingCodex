@@ -12417,8 +12417,8 @@ function S.auctionShare()
   if not (win() and win():IsShown()) then slash("") end
   click(win(), "Settings")
   click(win(), "Helpers")
-  check(questText(win(), "PRICE SHARING") and questText(win(), "got 2 updates from 2 players")
-    and questText(win(), "Last update just now, from Bo") and questText(win(), "in your database now come from other players"),
+  check(questText(win(), "PRICE SHARING") and questText(win(), "heard 2 prices from 2 players") and questText(win(), "Of those: 2 filed")
+    and questText(win(), "Last update just now, from Bo") and questText(win(), "in your database comes from other players"),
     "Settings > Helpers shows the shared prices this session, the last update and the database count")
   win():Hide()
   -- a shared price is never sent on again
@@ -12442,6 +12442,30 @@ function S.auctionShare()
   MOCK.advance(61)
   from("Cy", "P1;" .. b(4338) .. "," .. b(700) .. ",2,0")
   check(not A.store().items[4338], "a muted sender's prices are ignored")
+  check(table.concat(Sh.fieldLines(), " "):find("1 player is ignored", 1, true), "Settings names one ignored player in the singular")
+  -- audit (2026-11-27): a busy sender's few odd prices don't get them muted
+  for m = 0, 2 do
+    local parts = {}
+    for i = 1, 30 do parts[i] = b(5000 + m * 30 + i) .. "," .. b(300) .. ",2,0" end
+    MOCK.advance(61); from("Dot", "P1;" .. table.concat(parts, "/"))
+  end
+  for i = 1, 6 do MOCK.advance(61); from("Dot", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
+  check(not Sh.muted["Dot"], "a sender whose odd prices are a small share of what they sent isn't muted")
+  -- your own other characters are never held back: their reading is as good as yours
+  A.store().shareAlts = A.store().shareAlts or {}
+  A.store().shareAlts["Silfer Strife"] = true
+  MOCK.advance(61)
+  from("Silfer Strife-Mockrealm", "P1;" .. b(2589) .. "," .. b(9) .. ",4,0")
+  check(A.store().items[2589].low == 9 and Sh.people["Silfer Strife"] and Sh.people["Silfer Strife"].alt,
+    "a price from your own alt isn't held back (" .. tostring(A.store().items[2589].low) .. ")")
+  local fl = table.concat(Sh.fieldLines(), " | ")
+  check(fl:find("Silfer Strife (your character): 1 filed of 1", 1, true), "Settings lists who shared and that it's your character (" .. fl .. ")")
+  -- a price you got, then scanned yourself, is counted as replaced, not lost
+  MOCK.advance(61)
+  A.record(2589, "Linen Cloth", 95, 20)
+  MOCK.advance(61)
+  fl = table.concat(Sh.fieldLines(), " | ")
+  check(fl:find("have since replaced", 1, true), "Settings says your own scans replaced prices you got (" .. fl .. ")")
   -- broken or own messages do nothing
   from("Dee", "P1;zz,!!/1,2")
   from("Dee", "nonsense")

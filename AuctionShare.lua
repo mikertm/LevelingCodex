@@ -26,7 +26,8 @@ Sh.FRESH = 15 * 60
 Sh.ECHO = 10 * 60
 Sh.MAX_BYTES = 245
 Sh.ORDER_SIZE = 300
-Sh.SENDER_MAX = 30
+Sh.SENDER_MAX = 45 -- messages a minute; a sender sends one every Sh.GAP s, 30 a minute
+Sh.MUTE_SHARE = 0.1 -- muted only when held prices are at least this share of what they sent
 Sh.CONFIRM = 30 * 60
 Sh.JOIN_DELAY = 15 -- s after entering the world: an early join can take General's channel number
 Sh.MAX_ID, Sh.MAX_PRICE, Sh.MAX_N = 2000000, 99999999999, 1000000
@@ -35,8 +36,13 @@ local pending, order = {}, {}
 local heard, senders, held, agree, strikes, muted = {}, {}, {}, {}, {}, {}
 Sh.muted = muted
 Sh.STRIKES = 5
-Sh.stats = { sentMsgs = 0, sentItems = 0, got = 0, filed = 0, older = 0, doubted = 0, bad = 0, refused = 0, peers = 0 }
+Sh.stats = { sentMsgs = 0, sentItems = 0, got = 0, filed = 0, older = 0, doubted = 0, bad = 0, refused = 0, peers = 0, flooded = 0 }
 local peers = {}
+-- each sender this session (by the name without its realm): entries heard, filed, older than
+-- yours, held back, and whether it is one of your own characters
+Sh.people = {}
+-- the items filed from other players this session (to tell how many are still theirs)
+local filedIDs, filedCount = {}, 0
 local gap, lastSend, joinedAt, channelID = Sh.GAP, 0, nil, nil
 -- joining: tries so far, when the last one was, whether the world has loaded (no join before it)
 Sh.JOIN_RETRY, Sh.JOIN_TRIES = 60, 5
@@ -83,6 +89,52 @@ local function isMyName(sender)
   return squash(realm) == squash(mine)
 end
 Sh.isMyName = isMyName
+-- Your other characters on this realm: every name the Codex has seen log in here (kept in the
+-- realm's price store) and every character with trade notes. Their prices are as good as your
+-- own reading, so they are never held back or muted (Michael, 2026-11-27: his alt was muted).
+local function altKeys()
+  local ok, store = pcall(function() return A().store() end)
+  local out = {}
+  if not ok or type(store) ~= "table" then return out end
+  if type(store.shareAlts) == "table" then for k in pairs(store.shareAlts) do out[squash(k)] = true end end
+  local tr = store.trade
+  if type(tr) == "table" and type(tr.chars) == "table" then for k in pairs(tr.chars) do out[squash(k)] = true end end
+  return out
+end
+function Sh.noteMe()
+  local me = myName()
+  if me == "" then return end
+  local ok, store = pcall(function() return A().store() end)
+  if not ok or type(store) ~= "table" then return end
+  if type(store.shareAlts) ~= "table" then store.shareAlts = {} end
+  store.shareAlts[me] = true
+end
+local function sameRealm(sender)
+  local realm = type(sender) == "string" and sender:match("^[^%-]+%-(.+)$")
+  if not realm then return true end
+  local mine = try(GetNormalizedRealmName) or try(GetRealmName)
+  if type(mine) ~= "string" or mine == "" then return true end
+  return squash(realm) == squash(mine)
+end
+function Sh.isAlt(sender)
+  if type(sender) ~= "string" or isMyName(sender) or not sameRealm(sender) then return false end
+  local keys = altKeys()
+  local n = short(sender)
+  if keys[squash(n)] then return true end
+  -- Forever gives some names with a surname: the first name alone matches too
+  local first = n:match("^(%S+)%s")
+  return first ~= nil and keys[squash(first)] == true
+end
+local function person(sender)
+  local k = short(sender)
+  local p = Sh.people[k]
+  if not p then
+    p = { heard = 0, filed = 0, older = 0, held = 0, alt = Sh.isAlt(sender) }
+    Sh.people[k] = p
+  end
+  return p
+end
+
 local function isMine(sender, text)
   return sentLately[text] == true or isMyName(sender)
 end
@@ -125,6 +177,7 @@ local function chatFilter(_, _, _, _, _, _, _, _, _, _, base)
 end
 
 function Sh.join()
+  pcall(Sh.noteMe) -- the realm is known by now
   if not Sh.on() then return end
   ready = true
   if not channel() then
@@ -335,6 +388,7 @@ end
 
 function Sh.take(id, low, n, at, sender)
   local t = now()
+  local p = person(sender)
   heard[id] = { low = low, t = t }
   local it = A().store().items[id]
   if type(it) ~= "table" and not realItem(id) then
@@ -345,9 +399,10 @@ function Sh.take(id, low, n, at, sender)
   -- passed over when your reading is newer, or as new and your own (a shared one as new may be confirmed)
   if mine and (mine > at or (mine == at and it.shAt ~= mine)) then
     Sh.stats.older = Sh.stats.older + 1
+    p.older = p.older + 1
     return false
   end
-  if doubtful(id, low) then
+  if not p.alt and doubtful(id, low) then
     local h = held[id]
     if h and h.by ~= sender and t - h.t < Sh.CONFIRM and math.abs(h.low - low) <= 0.15 * math.max(h.low, low) then
       held[id] = nil
@@ -355,12 +410,19 @@ function Sh.take(id, low, n, at, sender)
     else
       held[id] = { low = low, by = sender, t = t }
       Sh.stats.doubted = Sh.stats.doubted + 1
+      p.held = p.held + 1
       strikes[sender] = (strikes[sender] or 0) + 1
-      if strikes[sender] >= Sh.STRIKES and not muted[sender] then muted[sender] = true; Sh.stats.muted = (Sh.stats.muted or 0) + 1 end
+      -- a busy sender's few odd prices are real listings (a cheap one put up by someone): only a
+      -- sender whose held prices are a fair share of what they sent is ignored
+      if strikes[sender] >= Sh.STRIKES and strikes[sender] >= Sh.MUTE_SHARE * p.heard and not muted[sender] then
+        muted[sender] = true; p.muted = true; Sh.stats.muted = (Sh.stats.muted or 0) + 1
+      end
       return false
     end
   end
   file(id, low, n, at, sender, agreed(id, low, sender, t))
+  p.filed = p.filed + 1
+  if not filedIDs[id] then filedIDs[id] = true; filedCount = filedCount + 1 end
   return true
 end
 
@@ -370,7 +432,9 @@ function Sh.receive(text, sender)
   local body = text:match("^P1;(.+)$")
   if not body then return end
   local t = now()
-  if muted[sender] or not allowSender(sender, t) then return end
+  if muted[sender] then Sh.stats.mutedMsgs = (Sh.stats.mutedMsgs or 0) + 1; return end
+  if not allowSender(sender, t) then Sh.stats.flooded = Sh.stats.flooded + 1; return end
+  local p = person(sender)
   if not peers[sender] then peers[sender] = true; Sh.stats.peers = Sh.stats.peers + 1; Sh.lastPeer = sender end
   Sh.lastHeard = t
   local filed, count = 0, 0
@@ -380,6 +444,7 @@ function Sh.receive(text, sender)
     local a, b, c, d = part:match("^([0-9a-z]+),([0-9a-z]+),([0-9a-z]+),([0-9a-z]+)$")
     local id, low, n, age = num(a), num(b), num(c), num(d)
     Sh.stats.got = Sh.stats.got + 1
+    p.heard = p.heard + 1
     if id and low and n and age and id > 0 and id < Sh.MAX_ID and low > 0 and low <= Sh.MAX_PRICE
       and n > 0 and n <= Sh.MAX_N and age <= Sh.FRESH / 60 then
       if Sh.take(id, low, n, t - age * 60, sender) then filed = filed + 1 end
@@ -396,27 +461,45 @@ function Sh.summary()
   local s = Sh.stats
   if not Sh.on() then return "Off." end
   local where = channel() and "the realm channel" or (try(IsInGuild) and "your guild" or "nobody yet")
-  return "Sharing with " .. where .. ": sent " .. ns.thousands(s.sentItems) .. " prices, got " .. ns.thousands(s.filed)
-    .. " from " .. s.peers .. (s.peers == 1 and " player" or " players") .. " this session."
+  return "Sharing with " .. where .. ": sent " .. ns.thousands(s.sentItems) .. (s.sentItems == 1 and " price" or " prices")
+    .. ", filed " .. ns.thousands(s.filed) .. " from " .. ns.thousands(s.peers) .. (s.peers == 1 and " player" or " players") .. " this session."
 end
 
 -- For Settings > Helpers > PRICE SHARING (Michael, 2026-11-26: see what sharing did away from
 -- the auction house): this session's traffic, the last update and how many prices in your
 -- database came from other players (counted at most once a minute).
-local storeCount = { at = 0, n = 0 }
+local storeCount = { at = 0, n = 0, filed = -1 }
 function Sh.sharedInStore()
   local t = now()
-  if t - storeCount.at < 60 then return storeCount.n end
-  local n = 0
+  -- counted again once a minute, or 5 s after new prices came in
+  local fresh = t - storeCount.at < 60 and (storeCount.filed == Sh.stats.filed or t - storeCount.at < 5)
+  if fresh then return storeCount.n, storeCount.kept end
+  local n, kept = 0, 0
   local ok, store = pcall(A().store)
   if ok and type(store) == "table" and type(store.items) == "table" then
-    for _, it in pairs(store.items) do
-      if type(it) == "table" and it.shAt and it.shAt == it.at then n = n + 1 end
+    for id, it in pairs(store.items) do
+      if type(it) == "table" and it.shAt and it.shAt == it.at then
+        n = n + 1
+        if filedIDs[id] then kept = kept + 1 end
+      end
     end
   end
-  storeCount = { at = t, n = n }
-  return n
+  storeCount = { at = t, n = n, kept = kept, filed = Sh.stats.filed }
+  return n, kept
 end
+
+local function plural(n, one, many) return ns.thousands(n) .. " " .. (n == 1 and one or many) end
+
+-- the players heard this session: your own characters first, then the busiest
+function Sh.peopleList()
+  local out = {}
+  for name, p in pairs(Sh.people) do out[#out + 1] = { name = name, p = p } end
+  table.sort(out, function(a, b)
+    if (a.p.alt and true or false) ~= (b.p.alt and true or false) then return a.p.alt == true end
+    if a.p.heard ~= b.p.heard then return a.p.heard > b.p.heard end return a.name < b.name end)
+  return out
+end
+
 function Sh.fieldLines()
   local s = Sh.stats
   if not Sh.on() then return { "Price sharing is off." } end
@@ -425,19 +508,40 @@ function Sh.fieldLines()
     where = (try(IsInGuild) and "your guild only" or "nobody") .. ": the game wouldn't let it join the price channel (you may be in ten channels already)"
   end
   local lines = { "Sharing with " .. where .. "." }
-  lines[#lines + 1] = "This session: sent " .. ns.thousands(s.sentItems) .. " prices, got " .. ns.thousands(s.filed) .. " updates from "
-    .. s.peers .. (s.peers == 1 and " player." or " players.")
+  lines[#lines + 1] = "This session: sent " .. plural(s.sentItems, "price", "prices") .. ", heard " .. plural(s.got, "price", "prices")
+    .. " from " .. plural(s.peers, "player", "players") .. "."
+  if s.got > 0 then
+    local parts = { ns.thousands(s.filed) .. " filed" }
+    if s.older > 0 then parts[#parts + 1] = ns.thousands(s.older) .. " older than your own" end
+    if (s.doubted or 0) > 0 then parts[#parts + 1] = ns.thousands(s.doubted) .. " odd, waiting for a second player" end
+    if s.bad > 0 then parts[#parts + 1] = ns.thousands(s.bad) .. " unreadable" end
+    lines[#lines + 1] = "Of those: " .. table.concat(parts, ", ") .. "."
+  end
+  local list = Sh.peopleList()
+  for i = 1, math.min(3, #list) do
+    local e = list[i]
+    local tag = e.p.muted and " (ignored: too many odd prices)" or (e.p.alt and " (your character)" or "")
+    lines[#lines + 1] = "  " .. ns.plain(e.name) .. tag .. ": " .. ns.thousands(e.p.filed) .. " filed of " .. ns.thousands(e.p.heard) .. "."
+  end
+  if #list > 3 then lines[#lines + 1] = "  and " .. plural(#list - 3, "more player", "more players") .. "." end
   if Sh.lastAt then
     local by = ns.plain(Sh.lastBy or "")
     lines[#lines + 1] = "Last update " .. A().age(Sh.lastAt) .. (by ~= "" and (", from " .. by) or "") .. "."
-  else
-    lines[#lines + 1] = "No updates from other players yet this session."
+  elseif s.got == 0 then
+    lines[#lines + 1] = "No prices from other players yet this session."
   end
-  local n = Sh.sharedInStore()
-  lines[#lines + 1] = n > 0 and (ns.thousands(n) .. (n == 1 and " price" or " prices") .. " in your database now come from other players.")
-    or "No price in your database comes from other players yet."
-  if (s.doubted or 0) > 0 or (s.muted or 0) > 0 then
-    lines[#lines + 1] = ns.thousands(s.doubted or 0) .. " odd prices held for a second player, " .. (s.muted or 0) .. " players ignored."
+  local n, kept = Sh.sharedInStore()
+  if n > 0 then
+    lines[#lines + 1] = plural(n, "price", "prices") .. " in your database " .. (n == 1 and "comes" or "come") .. " from other players."
+  else
+    lines[#lines + 1] = "No price in your database comes from other players right now."
+  end
+  if filedCount > (kept or 0) then
+    lines[#lines + 1] = "Your own scans and searches have since replaced " .. plural(filedCount - (kept or 0), "price", "prices")
+      .. " you got this session: yours always win."
+  end
+  if (s.muted or 0) > 0 then
+    lines[#lines + 1] = plural(s.muted, "player is", "players are") .. " ignored for this session."
   end
   return lines
 end
@@ -449,7 +553,7 @@ function ns.auctionShareDebugLines()
   return { "price sharing: " .. (Sh.on() and "on" or "off") .. ", channel " .. tostring(channelID or "none")
     .. ", sent " .. s.sentMsgs .. " messages / " .. s.sentItems .. " prices, " .. s.refused .. " refused, gap " .. gap .. " s, queued "
     .. (q + #order) .. "; heard " .. s.got .. " from " .. s.peers .. " players: filed " .. s.filed .. ", older " .. s.older
-    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
+    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", over the rate " .. s.flooded .. ", from muted " .. (s.mutedMsgs or 0) .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
     .. (Sh.lastPeer and (", last new player " .. ns.plain(Sh.lastPeer)) or "")
     .. "; join tries " .. joinTries .. (Sh.joinFailed() and " (gave up)" or "") .. ", other channel types skipped " .. (s.otherDist or 0) }
 end
@@ -468,6 +572,7 @@ function ns.startAuctionShare()
     pcall(addFilter, "CHAT_MSG_CHANNEL_NOTICE_USER", noticeFilter)
     pcall(addFilter, "CHAT_MSG_CHANNEL", chatFilter)
   end
+  pcall(Sh.noteMe)
   frame = CreateFrame("Frame")
   for _, ev in ipairs({ "CHAT_MSG_ADDON", "PLAYER_ENTERING_WORLD" }) do pcall(frame.RegisterEvent, frame, ev) end
   local entered = false
