@@ -31,6 +31,10 @@ Sh.MUTE_SHARE = 0.1 -- muted only when held prices are at least this share of wh
 Sh.CONFIRM = 30 * 60
 Sh.JOIN_DELAY = 15 -- s after entering the world: an early join can take General's channel number
 Sh.MAX_ID, Sh.MAX_PRICE, Sh.MAX_N = 2000000, 99999999999, 1000000
+-- Filing is budgeted (a mega realm can have dozens of senders): up to Sh.PER_SECOND entries are
+-- filed as they arrive, the rest wait in an inbox drained Sh.DRAIN entries every 0.1 s (and all
+-- of it waits while a scan of your own runs); past Sh.INBOX_MAX the oldest waiting are dropped.
+Sh.PER_SECOND, Sh.DRAIN, Sh.INBOX_MAX = 200, 20, 3000
 
 local pending, order = {}, {}
 local heard, senders, held, agree, strikes, muted = {}, {}, {}, {}, {}, {}
@@ -382,6 +386,9 @@ local function file(id, low, n, at, sender, intoDays)
   if not ok then return end
   local it = a.store().items[id]
   if type(it) == "table" then it.shAt, it.shBy = it.at, short(sender) end
+  -- an item known only from someone else gets its name (from the item cache, or asked for), so
+  -- it shows by name in the market, deals and look-ups and A.idFor finds it
+  if type(it) == "table" and (type(it.name) ~= "string" or it.name == "") and a.nameOf then pcall(a.nameOf, id) end
   Sh.stats.filed = Sh.stats.filed + 1
   Sh.lastAt, Sh.lastBy = now(), short(sender)
 end
@@ -406,9 +413,15 @@ function Sh.take(id, low, n, at, sender)
     local h = held[id]
     if h and h.by ~= sender and t - h.t < Sh.CONFIRM and math.abs(h.low - low) <= 0.15 * math.max(h.low, low) then
       held[id] = nil
+      agreed(id, h.low, h.by, t) -- the first sender's word counts towards the day's agreement too
       strikes[h.by] = math.max(0, (strikes[h.by] or 0) - 1) -- it was true after all
     else
       held[id] = { low = low, by = sender, t = t }
+      Sh.heldCount = (Sh.heldCount or 0) + 1
+      if Sh.heldCount > 500 then
+        Sh.heldCount = 0
+        for k, v in pairs(held) do if t - v.t >= Sh.CONFIRM then held[k] = nil else Sh.heldCount = Sh.heldCount + 1 end end
+      end
       Sh.stats.doubted = Sh.stats.doubted + 1
       p.held = p.held + 1
       strikes[sender] = (strikes[sender] or 0) + 1
@@ -424,6 +437,53 @@ function Sh.take(id, low, n, at, sender)
   p.filed = p.filed + 1
   if not filedIDs[id] then filedIDs[id] = true; filedCount = filedCount + 1 end
   return true
+end
+
+local inbox, inHead, inTail = {}, 1, 0 -- a queue: # is no use on a table with holes at the front
+local window = { at = -1, n = 0 }
+local function inboxSize() return inTail - inHead + 1 end
+Sh.inboxSize = inboxSize
+local function canFileNow()
+  if A().scanning and A().scanning() then return false end
+  local t = math.floor(GetTime and GetTime() or now())
+  if window.at ~= t then window.at, window.n = t, 0 end
+  if window.n >= Sh.PER_SECOND then return false end
+  window.n = window.n + 1
+  return true
+end
+local function enqueue(e)
+  inTail = inTail + 1
+  inbox[inTail] = e
+  if inboxSize() > Sh.INBOX_MAX then
+    inbox[inHead] = nil; inHead = inHead + 1
+    Sh.stats.dropped = (Sh.stats.dropped or 0) + 1
+  end
+end
+local redrawSoon
+local function redraw()
+  local t = now()
+  if not A().refresh then return end
+  if not Sh.drawnAt or t - Sh.drawnAt >= 5 then
+    Sh.drawnAt = t; pcall(A().refresh)
+  elseif not redrawSoon then
+    -- a filing inside the 5 s still shows: one redraw when they are up
+    redrawSoon = true
+    ns.after(5 - (t - Sh.drawnAt), function() redrawSoon = nil; Sh.drawnAt = now(); pcall(A().refresh) end)
+  end
+end
+-- Files waiting entries; true when something was filed.
+function Sh.drain(max)
+  if inHead > inTail or (A().scanning and A().scanning()) then return false end
+  local filed = false
+  for _ = 1, max or Sh.DRAIN do
+    local e = inbox[inHead]
+    if not e then break end
+    inbox[inHead] = nil; inHead = inHead + 1
+    if not muted[e[5]] and Sh.take(e[1], e[2], e[3], e[4], e[5]) then filed = true end
+  end
+  if inHead > inTail then inbox, inHead, inTail = {}, 1, 0 end
+  if filed then redraw() end
+  return filed
 end
 
 function Sh.receive(text, sender)
@@ -447,13 +507,19 @@ function Sh.receive(text, sender)
     p.heard = p.heard + 1
     if id and low and n and age and id > 0 and id < Sh.MAX_ID and low > 0 and low <= Sh.MAX_PRICE
       and n > 0 and n <= Sh.MAX_N and age <= Sh.FRESH / 60 then
-      if Sh.take(id, low, n, t - age * 60, sender) then filed = filed + 1 end
+      -- the age travels in whole minutes: the middle of that minute is the best guess
+      local at = t - age * 60 - (age > 0 and 30 or 0)
+      if inboxSize() == 0 and canFileNow() then
+        if Sh.take(id, low, n, at, sender) then filed = filed + 1 end
+      else
+        enqueue({ id, low, n, at, sender })
+      end
     else
       Sh.stats.bad = Sh.stats.bad + 1
     end
   end
   -- the open page redraws at most every 5 s however many players are sending
-  if filed > 0 and A().refresh and (not Sh.drawnAt or t - Sh.drawnAt >= 5) then Sh.drawnAt = t; pcall(A().refresh) end
+  if filed > 0 then redraw() end
 end
 
 ----------------------------------------------------------------------------
@@ -517,6 +583,8 @@ function Sh.fieldLines()
     if s.bad > 0 then parts[#parts + 1] = ns.thousands(s.bad) .. " unreadable" end
     lines[#lines + 1] = "Of those: " .. table.concat(parts, ", ") .. "."
   end
+  local waiting = inboxSize()
+  if waiting > 0 then lines[#lines + 1] = plural(waiting, "price is", "prices are") .. " waiting to be filed (a few hundred a second, none during your own scans)." end
   local list = Sh.peopleList()
   for i = 1, math.min(3, #list) do
     local e = list[i]
@@ -553,7 +621,7 @@ function ns.auctionShareDebugLines()
   return { "price sharing: " .. (Sh.on() and "on" or "off") .. ", channel " .. tostring(channelID or "none")
     .. ", sent " .. s.sentMsgs .. " messages / " .. s.sentItems .. " prices, " .. s.refused .. " refused, gap " .. gap .. " s, queued "
     .. (q + #order) .. "; heard " .. s.got .. " from " .. s.peers .. " players: filed " .. s.filed .. ", older " .. s.older
-    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", over the rate " .. s.flooded .. ", from muted " .. (s.mutedMsgs or 0) .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
+    .. ", held for a second sender " .. s.doubted .. ", bad " .. s.bad .. ", over the rate " .. s.flooded .. ", waiting to file " .. inboxSize() .. ", dropped from the inbox " .. (s.dropped or 0) .. ", from muted " .. (s.mutedMsgs or 0) .. ", muted " .. (s.muted or 0) .. " players; own echoes skipped " .. (s.echo or 0)
     .. (Sh.lastPeer and (", last new player " .. ns.plain(Sh.lastPeer)) or "")
     .. "; join tries " .. joinTries .. (Sh.joinFailed() and " (gave up)" or "") .. ", other channel types skipped " .. (s.otherDist or 0) }
 end
@@ -598,4 +666,5 @@ function ns.startAuctionShare()
     if not entered then entered = true; pcall(Sh.join) end
   end)
   ns.every(1, function() pcall(Sh.tick) end)
+  ns.every(0.1, function() pcall(Sh.drain) end)
 end

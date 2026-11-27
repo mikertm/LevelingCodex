@@ -13,6 +13,12 @@
     - **A busy sender isn't ignored for a few odd prices:** a player is now ignored only when held prices are a tenth or more of what they sent. Before, five odd prices out of hundreds were enough.
     - **Settings > Helpers > PRICE SHARING says what happened to what you heard:** how many prices came in, how many were filed, how many were older than your own, and how many are waiting for a second player. It also lists who shared with you ("Silfer Strife (your character): 224 filed of 672") and how many prices your own scans have since replaced. That is why it could say "No price in your database comes from other players" after 224 updates: your own scans always win.
     - **Fixed:** "1 players ignored" now reads "1 player is ignored for this session". A sender sending every 2 seconds could also go over the per-minute limit and lose messages without a word.
+- **Price sharing: receiving prices is smoother and more accurate.**
+    - **No hitches on a busy realm:** shared prices are filed a few hundred a second, and they wait while your own scan runs. Before, many players sending at once could file thousands of prices in a single frame.
+    - **Shared prices keep their real time.** A price read 5 minutes ago is filed as 5 minutes old, on the Market charts too. Before, the chart point was placed at the time it arrived.
+    - **Items you only know from other players now get their names,** so they show by name in the Market, Deals and look-ups.
+    - **Fixed: an odd price that a second player confirmed never joined the price history.** Now both players count towards it.
+    - **Fixed: the Codex pages didn't redraw for prices that arrived shortly after an earlier batch.**
 - **Fixed: the guide no longer waits at hand-ins for items it never sent you to get.** Favor for Krazek stopped the Stranglethorn route on a turn-in for four Lesser Bloodstone Ore that no step asked for.
     - **"Bring me these" quests the route doesn't gather for** are offered only while your bags already hold the items.
     - **Hand-ins for drops the route can't promise** wait until your quest log says the quest is ready, and their follow-ups wait with them.

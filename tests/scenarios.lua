@@ -12405,10 +12405,14 @@ function S.auctionShare()
   end
   -- a price from another player fills the store, marked as shared, outside the history
   MOCK.advance(60)
+  MOCK.lootItems = MOCK.lootItems or {}
+  MOCK.lootItems[4306] = MOCK.lootItems[4306] or { name = "Silk Cloth", quality = 1 }
   from("Ann-Mockrealm", "P1;" .. b(4306) .. "," .. b(1200) .. ",5,0")
   local it = A.store().items[4306]
   check(it and it.low == 1200 and it.n == 5 and A.price(4306).shared, "a shared price is filed and marked shared (" .. MOCK.ns.auctionShareDebugLines()[1] .. ")")
   check(next(it.days) == nil, "one player's price doesn't join the history")
+  -- (the minimal client's item cache doesn't know it)
+  check(MOCK.minimal or (it.name and it.name ~= ""), "an item first known from someone else gets its name (" .. tostring(it.name) .. ")")
   local tip = A.tooltipLines(4306)
   check(tip[1] and tostring(tip[1][2]):find("(shared)", 1, true), "the tooltip says the price is shared (" .. tostring(tip[1] and tip[1][2]) .. ")")
   from("Bo", "P1;" .. b(4306) .. "," .. b(1250) .. ",4,0")
@@ -12435,6 +12439,8 @@ function S.auctionShare()
     .. tostring(A.price(2589).days) .. ", usual " .. tostring(A.price(2589).usual) .. ")")
   from("Bo", "P1;" .. b(2589) .. "," .. b(5) .. ",9,0")
   check(A.store().items[2589].low == 5, "a second player confirms it")
+  local today = A.store().items[2589].days[day]
+  check(today and today.low == 5, "a confirmed odd price joins the day's history: both players agreed (" .. tostring(today and today.low) .. ")")
   -- a player whose prices keep being held back is muted
   A.record(2589, "Linen Cloth", 100, 20)
   for i = 1, 6 do MOCK.advance(61); from("Cy", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
@@ -12472,6 +12478,30 @@ function S.auctionShare()
   from("Tester", "P1;" .. b(4339) .. ",5,1,0")
   check(not A.store().items[4339], "your own echo is ignored")
   check(Sh.stats.bad >= 2, "broken entries are counted, not filed")
+  -- audit (2026-11-27): a reading is placed at the time it was read, in the market's readings too
+  MOCK.advance(61)
+  from("Ann-Mockrealm", "P1;" .. b(4500) .. "," .. b(800) .. ",3," .. b(5))
+  local tk = A.ticks(4500)
+  local at45 = A.store().items[4500] and A.store().items[4500].at
+  check(at45 and math.abs(at45 - (time() - 330)) <= 1 and tk[#tk] and math.abs(tk[#tk].t - at45) <= 1,
+    "a 5 minute old shared price is filed 5 and a half minutes back, its market reading too (" .. tostring(at45 and time() - at45) .. " s, reading "
+    .. tostring(tk[#tk] and time() - tk[#tk].t) .. " s)")
+  -- a flood of prices is filed a few at a time, not all in one frame
+  local perSecond = Sh.PER_SECOND
+  Sh.PER_SECOND = 5
+  MOCK.advance(61)
+  local parts = {}
+  for i = 1, 30 do parts[i] = b(4600 + i) .. "," .. b(250) .. ",2,0" end
+  from("Gil", "P1;" .. table.concat(parts, "/"))
+  local filedNow = 0
+  for i = 1, 30 do if A.store().items[4600 + i] then filedNow = filedNow + 1 end end
+  check(filedNow <= 5 and Sh.inboxSize() >= 25 and table.concat(Sh.fieldLines(), " "):find("waiting to be filed", 1, true),
+    "past the budget, prices wait in the inbox (" .. filedNow .. " filed, " .. Sh.inboxSize() .. " waiting)")
+  Sh.PER_SECOND = perSecond
+  for _ = 1, 12 do MOCK.advance(0.1) end
+  local filedLater = 0
+  for i = 1, 30 do if A.store().items[4600 + i] then filedLater = filedLater + 1 end end
+  check(filedLater == 30 and Sh.inboxSize() == 0, "the inbox is filed over the next moments (" .. filedLater .. " of 30, " .. Sh.inboxSize() .. " waiting)")
   -- audit (2026-11-26): a new item's odd price is weighed against your own reading of it
   A.record(4400, "Heavy Stone", 1000, 5)
   MOCK.advance(61)

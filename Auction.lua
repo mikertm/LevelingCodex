@@ -130,6 +130,9 @@ local function tick(it, low, n)
   it.tk = tk
   local t, k = now(), #tk
   local lastT, lastLow = tonumber(tk[k - 2]), tonumber(tk[k - 1])
+  -- a price shared by another player (AuctionShare.lua) is placed at the time it was read, never
+  -- before the newest reading (the list stays oldest first)
+  if A.recordAt then t = math.max(math.min(tonumber(A.recordAt) or t, t), lastT or 0) end
   if k >= 6 and lastLow == low and lastT and t - lastT < 2 * 3600 then
     -- already have an earlier reading to compare against: refresh time & supply without erasing the last price move
     tk[k - 2], tk[k] = t, n
