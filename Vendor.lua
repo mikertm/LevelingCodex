@@ -215,8 +215,9 @@ local function itemName(item, names)
 end
 
 -- { { item, need, forText }, ... } in route order, then your profession steps' supplies.
--- names: item -> name (the vendor's list).
-function V.needs(names)
+-- names: item -> name (the vendor's list). wantAll = item -> { n, forText }: what the route ahead
+-- wants in all, before your bags (Quick Sell keeps that many back).
+function V.needs(names, wantAll)
   local steps, quests, order, forText, counted, turnins = {}, {}, {}, {}, {}, {}
   local function note(item, text, better)
     if not forText[item] then order[#order + 1] = item; forText[item] = text
@@ -260,6 +261,14 @@ function V.needs(names)
       end
     end
   end
+  if wantAll then
+    local out = {}
+    for _, item in ipairs(order) do
+      local n = math.max(steps[item] or 0, quests[item] or 0)
+      if n > 0 then out[item] = { n = n, forText = Q.plain(forText[item]) } end
+    end
+    return out
+  end
   local out = {}
   for _, item in ipairs(order) do
     local have = Q.itemCount(item)
@@ -269,6 +278,7 @@ function V.needs(names)
   end
   return out
 end
+function V.wanted() return V.needs(nil, true) end
 
 ----------------------------------------------------------------------------
 -- The shopping card

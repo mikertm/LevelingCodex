@@ -1012,7 +1012,7 @@ function pages.overview(W, top, H)
   local deals = T().deals("vendor")
   local sells = T().sellable()
   local worth = 0
-  for _, r in ipairs(sells) do if not r.sell.blocked then worth = worth + r.sell.price * r.count end end
+  for _, r in ipairs(sells) do if not r.sell.blocked and not r.kept then worth = worth + r.sell.price * r.count end end
   local haul = 0
   for i, d in ipairs(deals) do
     if i > 60 then break end
@@ -2048,7 +2048,7 @@ function pages.selling(W, top, H)
   local rows = T().sellable(false, view.hidden)
   local gross, keep, vend, posts = 0, 0, 0, 0
   for _, row in ipairs(rows) do
-    if not row.sell.blocked then
+    if not row.sell.blocked and not row.kept then
       local n = T().sellNet(row, row.sell)
       if n then gross, keep, vend, posts = gross + n.gross, keep + n.net, vend + n.vendor, posts + 1 end
     end
@@ -2115,6 +2115,13 @@ function pages.selling(W, top, H)
         tx = tx + tw + 4
       end
       tag(short or label, 70, color, label, "How the market looks for selling it now.")
+      if row.kept then
+        tag("NEEDED", 56, ORANGE, "Your guide needs these",
+          (row.needFor ~= "" and row.needFor or "Your guide") .. " needs " .. row.need .. ": Post asks first, then posts them all.")
+      elseif row.need then
+        tag("KEEP " .. row.need, 64, CYAN, "Kept back",
+          "You carry " .. row.have .. "; " .. (row.needFor ~= "" and row.needFor or "your guide") .. " needs " .. row.need .. ", so Quick Sell posts the other " .. row.count .. ".")
+      end
       if row.relist then tag("RELIST", 46, CYAN, "Relist", "You cancelled this one after it was undercut: post it again.") end
       if s.live then tag("LIVE", 34, GREEN, "Live price", "Checked against what's listed right now.")
       elseif T().sellChecking(row.id) then tag(waiting == row.id and "..." or "QUEUED", 46, CYAN, "Checking", "A live price check is on its way.")
@@ -2150,8 +2157,8 @@ function pages.selling(W, top, H)
         { label = "Raise " .. row.name, enabled = not s.blocked, tip = "Raise the price", tipText = "5% more each click." })
       local armed = T().armed("post:" .. row.id)
       local needs = T().needsCheck(row)
-      local plabel = s.blocked and "Vendor it" or (needs and (T().sellChecking(row.id) and "..." or "Check") or (armed and "Sure?" or "Post"))
-      proBtn(plabel, bx + 44, iy + 8, 64, 24, s.blocked and "ghost" or (needs and "gold" or (armed and "danger" or "emerald")),
+      local plabel = s.blocked and "Vendor it" or (needs and (T().sellChecking(row.id) and "..." or "Check") or (armed and "Sure?" or (row.kept and "Post all" or "Post")))
+      proBtn(plabel, bx + 44, iy + 8, 64, 24, s.blocked and "ghost" or (needs and "gold" or (armed and "danger" or (row.kept and "ghost" or "emerald"))),
         function() T().post(row) end,
         { label = "Post " .. row.name, enabled = not s.blocked and T().available(), lit = armed,
           tip = needs and "Check, then post" or "Post", tipText = needs and "Searches what's listed now; click again to post at that price."

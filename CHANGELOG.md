@@ -21,6 +21,9 @@
     - **/codex camp:** says how long your Camp Benefits and Well-Rested have left, which comforts you have, and your camping so far.
     - **Before it fades:** a chat line about five minutes before Well-Rested (with its stacks) or Camp Benefits runs out, so you can rest again. Settings > General > Journey pop-ups turns it off.
 
+## v0.34.5
+- **Fixed: Quick Sell showing all your bags.** Items any step of the guide named anywhere, like Silk Cloth, never showed in Quick Sell. Now every tradeable item does. What your next steps or your profession still need is kept back: "KEEP 12" means Quick Sell posts only the rest, and an item you need all of shows as NEEDED, after the others, and asks before posting.
+
 ## v0.34.4
 - **Price tooltips, shorter and easier to read.** Four lines instead of seven:
     - **Lowest now**, then **Usual (N days)** with the last days' range beside it ("2s  (75c - 3s)").

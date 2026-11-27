@@ -595,28 +595,36 @@ end
 local function needed()
   local names = {}
   for _, w in ipairs(type(ns.profSupplies) == "function" and ns.profSupplies() or {}) do
-    if w.name then names[w.name:lower()] = true end
+    if w.name then
+      local k = w.name:lower()
+      local e = names[k] or { n = 0 }
+      e.n, e.label = e.n + (tonumber(w.n) or 0), e.label or w.label
+      names[k] = e
+    end
   end
   return names
 end
 
 -- { { id, name, count, bag, slot, icon, sell = T.sellPrice } }, the most valuable first: items you
--- can trade (not bound, not grey, not something your route or your professions still need) with a
--- price from the auction house. unpriced = also those without a price (sell = nil); hidden = also
--- the ones you hid.
+-- can trade (not bound, not grey, not the Hearthstone) with a price from the auction house.
+-- unpriced = also those without a price (sell = nil); hidden = also the ones you hid.
+-- What your route ahead (buy/collect steps, vendor quest items) or your profession's current step
+-- still needs is held back: count = the spare ones, have = all you carry, need / needFor = what's
+-- kept and why. An item needed in full stays in the list with kept = true (Post asks first and posts
+-- them all), so nothing in your bags silently goes missing.
 function T.sellable(unpriced, hidden)
   local C = type(C_Container) == "table" and C_Container
   if not has(C, "GetContainerNumSlots") or not has(C, "GetContainerItemInfo") then return {} end
   local keep, byID, out = needed(), {}, {}
+  local route = ns.vendor and ns.vendor.wanted and ns.vendor.wanted() or {}
   local notes = T.notes()
   for bag = 0, 4 do
     for slot = 1, tonumber(try(C.GetContainerNumSlots, bag)) or 0 do
       local info = try(C.GetContainerItemInfo, bag, slot)
       local id = type(info) == "table" and tonumber(info.itemID)
-      if id and not info.isBound and (tonumber(info.quality) or 1) >= 1 and id ~= HEARTHSTONE
-        and not (ns.vendor and ns.vendor.kept and ns.vendor.kept(id)) then
+      if id and not info.isBound and (tonumber(info.quality) or 1) >= 1 and id ~= HEARTHSTONE then
         local name = ns.itemInfo(id) or (type(info.hyperlink) == "string" and info.hyperlink:match("%[(.-)%]"))
-        if name and not keep[name:lower()] and (hidden or not notes.hidden[id]) then
+        if name and (hidden or not notes.hidden[id]) then
           local e = byID[id]
           if not e then
             local sell = T.sellPrice(id)
@@ -633,7 +641,17 @@ function T.sellable(unpriced, hidden)
       end
     end
   end
+  for _, e in ipairs(out) do
+    local r, p = route[e.id], keep[e.name:lower()]
+    local need = (r and r.n or 0) + (p and p.n or 0)
+    if need > 0 then
+      e.have, e.need = e.count, need
+      e.needFor = Q.plain((r and r.forText or "") .. ((r and p) and " and " or "") .. (p and p.label or ""))
+      if e.count > need then e.count = e.count - need else e.kept = true end
+    end
+  end
   table.sort(out, function(a, b)
+    if (a.kept or false) ~= (b.kept or false) then return not a.kept end
     local va, vb = a.sell and a.sell.price * a.count or -1, b.sell and b.sell.price * b.count or -1
     if va ~= vb then return va > vb end
     return a.name < b.name
@@ -724,7 +742,12 @@ function T.post(row)
   local sell = row and T.sellPrice(row.id)
   if not sell then return "failed" end
   if sell.blocked then ns.say(sell.blocked); return "blocked" end
-  if (sell.warn or sell.loss) and not arm("post:" .. row.id) then
+  if row.kept and not arm("post:" .. row.id) then
+    ns.say(Q.plain(row.name) .. ": " .. (row.needFor ~= "" and row.needFor or "your guide") .. " needs " .. row.need
+      .. ". Click Post again within 5 s to post all " .. row.count .. " anyway.")
+    return "armed"
+  end
+  if not row.kept and (sell.warn or sell.loss) and not arm("post:" .. row.id) then
     if sell.loss then
       ns.say(Q.plain(row.name) .. ": " .. ns.money(sell.price) .. " each is less than the " .. ns.money(sell.loss)
         .. " you paid, after the 5% cut. Click Post again within 5 s to post it anyway.")
@@ -766,7 +789,7 @@ end
 -- The first row Post next would post (not blocked), or nil.
 function T.nextPost()
   for _, row in ipairs(T.sellable()) do
-    if not row.sell.blocked then return row end
+    if not row.sell.blocked and not row.kept then return row end
   end
 end
 function T.postNext()

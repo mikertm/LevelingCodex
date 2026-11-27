@@ -12047,6 +12047,54 @@ function S.auctionSnipeGuard()
   check(MOCK.ns.auctionPanel.lastError == nil, "the Deals page draws without errors")
 end
 
+-- Quick Sell lists every tradeable item in your bags: an item some route step names somewhere
+-- (Silk Cloth, a level 40 turn-in) used to vanish from it; one your profession still needs is kept
+-- back (KEEP N), or stays listed as NEEDED when all of it is needed.
+function S.auctionQuickSellKept()
+  local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
+  local function hist(name, low)
+    return { name = name, low = low, med = low, n = 20, at = 1700000000, vendor = 10,
+      days = { [day - 2] = { low = low, med = low }, [day - 1] = { low = low, med = low }, [day] = { low = low, med = low } } }
+  end
+  LevelingCodexDB = LevelingCodexDB or {}
+  LevelingCodexDB.auction = { version = 1, realms = { Mockrealm = { items = {
+    [4306] = hist("Silk Cloth", 300), [2589] = hist("Linen Cloth", 100), [2592] = hist("Wool Cloth", 200) } } } }
+  MOCK.bagItems = {
+    { name = "Silk Cloth", id = 4306, quality = 1, level = 1, sell = 38, count = 18, class = "Trade Goods" },
+    { name = "Linen Cloth", id = 2589, quality = 1, level = 1, sell = 13, count = 20, class = "Trade Goods" },
+    { name = "Wool Cloth", id = 2592, quality = 1, level = 1, sell = 33, count = 5, class = "Trade Goods" },
+  }
+  MOCK.money = 100000
+  MOCK.auctions = { { id = 4306, name = "Silk Cloth", count = 20, buyout = 6000 } }
+  S.login()
+  if MOCK.minimal then return end
+  local T = MOCK.ns.auctionTrade
+  check(MOCK.ns.quests.routeItems()[4306], "Silk Cloth is an item the route names")
+  local supplies = MOCK.ns.profSupplies
+  MOCK.ns.profSupplies = function()
+    return { { name = "Linen Cloth", n = 12, label = "Linen Bag (Tailoring)" }, { name = "Wool Cloth", n = 9, label = "Gray Woolen Shirt (Tailoring)" } }
+  end
+  MOCK.openAuction()
+  MOCK.advance(2)
+  click(AuctionHouseFrame, "Quick Sell")
+  local card = _G.LevelingCodexAHPanel
+  MOCK.advance(10)
+  local rows = {}
+  for _, r in ipairs(T.sellable()) do rows[r.id] = r end
+  check(rows[4306] and rows[4306].count == 18 and not rows[4306].need, "Silk Cloth is in Quick Sell, all 18")
+  check(questText(card, "18 x Silk Cloth"), "the Silk Cloth row shows")
+  check(rows[2589] and rows[2589].count == 8 and rows[2589].have == 20 and rows[2589].need == 12, "Linen keeps 12 back for Tailoring, posts 8")
+  check(questText(card, "8 x Linen Cloth") and questText(card, "KEEP 12"), "the Linen row says what's kept")
+  check(rows[2592] and rows[2592].kept and rows[2592].count == 5, "Wool, all needed, stays listed as needed")
+  check(questText(card, "NEEDED") and questText(card, "Post all"), "the Wool row says it's needed")
+  check(T.nextPost() and T.nextPost().id ~= 2592, "Post next passes over a needed item")
+  local posted = #(MOCK.posted or {})
+  click(card, "Post Wool Cloth")
+  check(#(MOCK.posted or {}) == posted, "the first Post on a needed item only asks")
+  MOCK.ns.profSupplies = supplies
+  MOCK.closeAuction()
+end
+
 function S.auctionQuickSell()
   local day = math.floor((1700000000 + math.floor(MOCK.time)) / 86400)
   local function hist(low, n, before, vendor, days)
