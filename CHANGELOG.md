@@ -1,5 +1,8 @@
 # Leveling Codex
 
+## v0.34.9
+- **Bug fixes and polish for price sharing:** a clearer readout under Settings > Helpers > PRICE SHARING.
+
 ## v0.34.8
 - **Fixed: a boat you don't need.** In Ironforge with the Booty Bay flight path, the Stranglethorn chapter still said to take the boat from Ratchet. When you're already on the continent a boat sails to, away from its dock, the guide now passes the boat and goes on to the next step there, and the arrow finds the way by flight path or road. The same goes for the flight path and other travel steps over there that only lead to work on your side of the sea. At the dock the boat stays the step.
 - **Professions: the guide tells you where to go, for your faction, with the spot.** Reported at First Aid 150/150, where the card only said "First Aid trainer (skill 150)".
@@ -13,7 +16,6 @@
     - **An odd price no longer counts against the player who sent it.** It is still held back until a second player agrees with it, but a real oddball listing (someone posting at 999g) doesn't get the sender ignored.
     - **A player is ignored only when other players keep contradicting them:** five prices that another player's price disagreed with, and at least a quarter of everything they sent (was a tenth).
     - **The odd band is wider:** a price counts as odd under a fifth or over five times the usual price (was a quarter and four times).
-- **Price sharing no longer shows other players' names.** Settings > Helpers > PRICE SHARING lists other sharers as "Player 1", "Player 2" and the last update without a name; only your own characters are named.
 
 ## v0.34.7
 - **The Codex's settings are in the game's Options too.** Esc > Options > AddOns > **Leveling Codex** now lists every setting, on the same pages as the Codex's Settings tab: Leveling Codex (general), Questing, Map and arrow, Group and Helpers.
