@@ -12457,7 +12457,8 @@ function S.auctionShare()
   click(win(), "Settings")
   click(win(), "Helpers")
   check(questText(win(), "PRICE SHARING") and questText(win(), "heard 2 prices from 2 players") and questText(win(), "Of those: 2 filed")
-    and questText(win(), "Last update just now, from Bo") and questText(win(), "in your database comes from other players"),
+    and questText(win(), "Last update just now.") and not questText(win(), "from Bo")
+    and questText(win(), "in your database comes from other players"),
     "Settings > Helpers shows the shared prices this session, the last update and the database count")
   win():Hide()
   -- a shared price is never sent on again
@@ -12516,6 +12517,8 @@ function S.auctionShare()
     "a price from your own alt isn't held back (" .. tostring(A.store().items[2589].low) .. ")")
   local fl = table.concat(Sh.fieldLines(), " | ")
   check(fl:find("Silfer Strife (your character): 1 filed of 1", 1, true), "Settings lists who shared and that it's your character (" .. fl .. ")")
+  check(fl:find("Player 1: ", 1, true) and not fl:find("Bo", 1, true) and not fl:find("Ann", 1, true),
+    "Settings shows other players as Player N, never their names (" .. fl .. ")")
   -- a price you got, then scanned yourself, is counted as replaced, not lost
   MOCK.advance(61)
   A.record(2589, "Linen Cloth", 95, 20)

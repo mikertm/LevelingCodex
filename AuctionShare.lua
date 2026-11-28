@@ -595,16 +595,21 @@ function Sh.fieldLines()
   end
   local waiting = inboxSize()
   if waiting > 0 then lines[#lines + 1] = plural(waiting, "price is", "prices are") .. " waiting to be filed (a few hundred a second, none during your own scans)." end
-  local list = Sh.peopleList()
+  -- other players stay anonymous (Michael, 2026-11-28): "Player N", only your own characters by name
+  local list, others = Sh.peopleList(), 0
   for i = 1, math.min(3, #list) do
     local e = list[i]
-    local tag = e.p.muted and " (ignored: other players contradicted their prices)" or (e.p.alt and " (your character)" or "")
-    lines[#lines + 1] = "  " .. ns.plain(e.name) .. tag .. ": " .. ns.thousands(e.p.filed) .. " filed of " .. ns.thousands(e.p.heard) .. "."
+    local label
+    if e.p.alt then label = ns.plain(e.name) .. " (your character)"
+    else others = others + 1; label = "Player " .. others end
+    if e.p.muted then label = label .. " (ignored: other players contradicted their prices)" end
+    lines[#lines + 1] = "  " .. label .. ": " .. ns.thousands(e.p.filed) .. " filed of " .. ns.thousands(e.p.heard) .. "."
   end
   if #list > 3 then lines[#lines + 1] = "  and " .. plural(#list - 3, "more player", "more players") .. "." end
   if Sh.lastAt then
-    local by = ns.plain(Sh.lastBy or "")
-    lines[#lines + 1] = "Last update " .. A().age(Sh.lastAt) .. (by ~= "" and (", from " .. by) or "") .. "."
+    local lp = Sh.lastBy and Sh.people[Sh.lastBy]
+    local by = (lp and lp.alt) and ns.plain(Sh.lastBy) or ""
+    lines[#lines + 1] = "Last update " .. A().age(Sh.lastAt) .. (by ~= "" and (", from your character " .. by) or "") .. "."
   elseif s.got == 0 then
     lines[#lines + 1] = "No prices from other players yet this session."
   end

@@ -12,6 +12,7 @@
     - **An odd price no longer counts against the player who sent it.** It is still held back until a second player agrees with it, but a real oddball listing (someone posting at 999g) doesn't get the sender ignored.
     - **A player is ignored only when other players keep contradicting them:** five prices that another player's price disagreed with, and at least a quarter of everything they sent (was a tenth).
     - **The odd band is wider:** a price counts as odd under a fifth or over five times the usual price (was a quarter and four times).
+- **Price sharing no longer shows other players' names.** Settings > Helpers > PRICE SHARING lists other sharers as "Player 1", "Player 2" and the last update without a name; only your own characters are named.
 
 ## v0.34.7
 - **The Codex's settings are in the game's Options too.** Esc > Options > AddOns > **Leveling Codex** now lists every setting, on the same pages as the Codex's Settings tab: Leveling Codex (general), Questing, Map and arrow, Group and Helpers.
