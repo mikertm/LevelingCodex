@@ -284,6 +284,7 @@ local function included(step)
 end
 
 local LEAD_IN = { ["goto"] = true, fly = true, getfp = true, boat = true }
+local strandedTravel -- below Q.reason
 
 -- Keep the dungeon's quest walkthrough in order. Auto-opening the dungeon can start at its
 -- first encounter, where inside quest objectives also appear as "On the way" goals.
@@ -995,6 +996,7 @@ local function calculate()
       sectionBlocked[row.section] = sectionBlocked[row.section] or {}
       blocked = sectionBlocked[row.section]
     end
+    row.passedWhy = nil
     row.state = state(row, row.section.side and sideSkips or skips, blocked, later[i], map, x, y)
     local s = row.step
     local entry = s.quest and log[s.quest]
@@ -1045,10 +1047,26 @@ local function calculate()
   end
   -- Rows the route walks past instead of stopping at: a sticky goal (it shows beside the steps
   -- after it) and a step whose `skipOn` map you're already on (it counts as done from then on).
-  local function passOver(row)
+  local function passOver(row, i)
+    row.passedWhy = nil
     if row.step.sticky or row.sticky then return true end
     if row.step.skipOn and map and matches(row.step.skipOn, map) then
       visited[row.key], row.state = true, "done"
+      return true
+    end
+    -- A boat you don't need: you're already on the continent it sails to, away from its dock's
+    -- (in Ironforge with the Booty Bay flight path, the Ratchet boat to Booty Bay). The route goes
+    -- on to the first step over there, and the arrow finds the way by flight or road.
+    if Q.boatNotNeeded(row.step, map) then
+      row.state, row.passedWhy = "skipped", "Passed: you're already on the continent this boat sails to."
+      return true
+    end
+    -- A flight or hearth to the map you're already on: walk on to the next step instead (a Fly
+    -- step whose flight path you don't have still leads you to learn it).
+    -- Travel on another continent that only leads to work on yours (Ratchet's flight path and
+    -- dock, when the next thing to do is in Booty Bay and you stand in Ironforge): passed too.
+    if i and strandedTravel(i, map) then
+      row.state, row.passedWhy = "skipped", "Passed: it leads over the sea to work that's on your side of it."
       return true
     end
   end
@@ -1063,14 +1081,14 @@ local function calculate()
       if row.section.side then
         if row.section == sideSection and not sideIndex and i >= sideResumeAt and (PHASE[s.phase] or 1) >= sideFrom
             and (not sidePrepare or (s.phase == "prepare" and s.type ~= "dungeon"))
-            and not passOver(row) then
+            and not passOver(row, i) then
           sideIndex = i
         end
       elseif not mainIndex then
         local onRoute = reached and follows(row.section, fromSection)
         local early = resumeAt and i < resumeAt
         if onRoute and not early then
-          if not passOver(row) then
+          if not passOver(row, i) then
             mainIndex = (away and s.type == "accept" and not entry and not prerequisitesMet(s)) and away or i
           end
         elseif (needed[s.quest] or onRoute) and not s.sticky then
@@ -1858,6 +1876,43 @@ function Q.followQuest(row)
   end
 end
 
+-- A boat step whose destination (its `skipOn` maps) lies on your continent while its dock is on
+-- another: you have no reason to cross the sea twice.
+function Q.boatNotNeeded(step, map)
+  if not (step and step.type == "boat" and step.skipOn and step.map and map and Q.sameContinent) then return false end
+  if Q.sameContinent(step.map, map) then return false end
+  local targets = type(step.skipOn) == "table" and step.skipOn or { step.skipOn }
+  for _, target in ipairs(targets) do
+    if Q.sameContinent(target, map) then return true end
+  end
+  return false
+end
+
+-- A travel row (goto, fly, getfp or boat, no quest) on another continent from you, when the next
+-- thing its guide still has for you there is on your continent, or a boat you don't need: going
+-- over only to come back would be the whole point of it.
+local function travelOnly(s) return not s.quest and LEAD_IN[s.type] end
+strandedTravel = function(i, map)
+  local row = steps[i]
+  local s = row and row.step
+  if not (s and travelOnly(s) and s.map and map and Q.sameContinent) then return false end
+  if Q.sameContinent(s.map, map) or not ns.questWorld or not ns.questWorld[s.map] or not ns.questWorld[map] then
+    return false
+  end
+  for n = i + 1, #steps do
+    local later = steps[n]
+    if later.section ~= row.section then return false end
+    local t = later.step
+    if later.state == "pending" then
+      if t.type == "boat" and Q.boatNotNeeded(t, map) then return true end
+      if not (travelOnly(t) and t.map and Q.sameContinent(t.map, s.map)) then
+        return t.map ~= nil and Q.sameContinent(t.map, map)
+      end
+    end
+  end
+  return false
+end
+
 -- Why a route row isn't (or is) where the route stops, for the route list's tooltips.
 function Q.reason(row)
   local s, st = row.step, row.state
@@ -1868,6 +1923,7 @@ function Q.reason(row)
     if s.skipOn and visited[row.key] then return "Done: you were already there." end
     return "Done."
   elseif st == "skipped" then
+    if row.passedWhy then return row.passedWhy end
     if s.breadcrumb and (log[s.breadcrumb] or turnedIn[s.breadcrumb]) then
       return "Skipped: you already have its follow-up, " .. named(s.breadcrumb) .. "."
     end
@@ -2392,7 +2448,8 @@ function Q.checkPosition()
   local row = not review and index and steps[index]
   if row and ARRIVAL[row.step.type] then
     local _, dist = Q.vector(row.step, map, x, y)
-    if dist and dist <= RADIUS then
+    local waiting = row.step.type == "fly" and Q.flightUnlearned and Q.flightUnlearned(row.step)
+    if dist and dist <= RADIUS and not waiting then
       visited[row.key] = true
       calculate()
       return true

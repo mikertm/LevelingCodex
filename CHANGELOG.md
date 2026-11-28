@@ -1,6 +1,7 @@
 # Leveling Codex
 
 ## v0.34.8
+- **Fixed: a boat you don't need.** In Ironforge with the Booty Bay flight path, the Stranglethorn chapter still said to take the boat from Ratchet. When you're already on the continent a boat sails to, away from its dock, the guide now passes the boat and goes on to the next step there, and the arrow finds the way by flight path or road. The same goes for the flight path and other travel steps over there that only lead to work on your side of the sea. At the dock the boat stays the step.
 - **Professions: the guide tells you where to go, for your faction, with the spot.** Reported at First Aid 150/150, where the card only said "First Aid trainer (skill 150)".
     - **At your cap the crafting window card says what unlocks the next rank:** "At your cap: unlock Expert to go past 150. Buy and read Expert First Aid - Under Wraps from Deneb Walker in Arathi Highlands (27.0, 58.8)". It adds where to learn the next recipe ("Also learn Silk Bandage: Learn from Nissa Firestone in Ironforge") and the character level a rank needs.
     - **A recipe you haven't learned names the NPC for your faction and where they stand:** the vendor for a bought recipe ("Buy Manual: Heavy Silk Bandage from Balai Lok'Wein in Dustwallow Marsh (36.5, 30.4)"), the quest giver for a quest plan, or the closest trainer that teaches it. A recipe or book already in your bags says to use it.

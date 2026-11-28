@@ -15857,6 +15857,45 @@ end
 -- Bloodstone Ore if you brought them") with Return to Corporal Kaleb next: nothing in the route ever
 -- sent the player for the ore. The favor now shows only while your bags hold four ore, and a turn-in
 -- the log says isn't ready leaves the route alone (its follow-up waits with it).
+-- Reported from the game: in Ironforge with the Booty Bay flight path, the Stranglethorn chapter
+-- said "Take the boat from Ratchet's dock to Booty Bay". On the boat's destination continent, away
+-- from its dock, the route passes the boat and goes on to Booty Bay.
+function S.questBoatNotNeeded()
+  MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1455, 55.9, 47.9
+  local stv
+  for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
+    if section.id == "stv-36" then
+      stv = section
+      for _, step in ipairs(section.steps) do
+        if step.type == "boat" then break end
+        if step.quest then MOCK.questDone[step.quest] = true end
+      end
+    end
+  end
+  MOCK.questDone[1180], MOCK.questDone[1040] = nil, nil
+  MOCK.questLog = { { questID = 1180, isComplete = false }, { questID = 1040, isComplete = false } }
+  S.login()
+  local Q = MOCK.ns.quests
+  taxiMap({ { "Ironforge, Dun Morogh", "CURRENT" }, { "Booty Bay, Stranglethorn", "REACHABLE" } })
+  TaxiFrame:Hide()
+  Q.jump(stv)
+  MOCK.advance(0.5)
+  local row = Q.current()
+  check(row and row.section.id == "stv-36" and row.step.type ~= "boat",
+    "in Ironforge the boat from Ratchet is passed: " .. tostring(row and (row.step.type .. " " .. tostring(row.step.quest) .. " " .. tostring(row.step.text))))
+  local boat
+  for _, r in ipairs((Q.rows())) do
+    if r.section == stv and r.step.type == "boat" then boat = r end
+  end
+  check(boat and boat.state == "skipped" and Q.reason(boat):find("already on the continent", 1, true),
+    "the route says why: " .. tostring(boat and boat.state) .. " " .. tostring(boat and Q.reason(boat)))
+  -- At Ratchet's dock the boat is the way.
+  walkTo(1413, 63.5, 38.4)
+  MOCK.advance(0.5)
+  row = Q.current()
+  check(row and (row.step.type == "boat" or row.step.type == "getfp"), "at Ratchet the dock steps come back: " .. tostring(row and row.step.type))
+end
+
 function S.questFavorForKrazek()
   MOCK.race, MOCK.level, MOCK.questMap, MOCK.questX, MOCK.questY = "Human", 37, 1434, 27.0, 77.3
   for _, section in ipairs(LevelingCodexQuests.ALLIANCE.sections) do
