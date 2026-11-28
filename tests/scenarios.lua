@@ -2387,6 +2387,20 @@ end
 
 local function fromParty(name, text) MOCK.event("CHAT_MSG_ADDON", "LevCodex", text, "PARTY", name) end
 
+-- Sharing a quest needs a click (QuestLogPushQuest is protected): the shown card naming that
+-- quest, clicked like a player would.
+local function shareCard(title)
+  local toast = MOCK.ns.getToast and MOCK.ns.getToast()
+  return toast and toast:IsShown() and questText(toast, "SHARE") and questText(toast, title) and toast or nil
+end
+local function clickShareCard(title)
+  local toast = shareCard(title)
+  check(toast, "a card offers to share " .. title)
+  MOCK.inClick = true
+  toast:GetScript("OnMouseUp")(toast, "LeftButton")
+  MOCK.inClick = false
+end
+
 local function addonCount(pattern)
   local n = 0
   for _, m in ipairs(MOCK.addonSent or {}) do if m.text:find(pattern) then n = n + 1 end end
@@ -2418,7 +2432,9 @@ function S.questParty()
   MOCK.advance(0.6)
   check(not MOCK.pushed, "the offer waits a moment, so a member who takes it at the same time isn't offered it")
   MOCK.advance(2)
-  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party (on by default)")
+  check(not MOCK.pushed, "never shared from a timer: the game blocks it")
+  clickShareCard("A Threat Within")
+  check(MOCK.pushed == 783, "a guide quest you accept is offered to the party on a click (on by default)")
   LevelingCodexDB.questShareParty = false
   MOCK.pushed = nil
   MOCK.questLog = { { questID = 783 }, { questID = 7 } }
@@ -2589,13 +2605,16 @@ function S.questPartyShare()
   MOCK.event("GROUP_ROSTER_UPDATE")
   check(addonCount("^L;783$") >= 1, "your quest log goes out")
   fromParty("Ann", "R;783;Tester")
-  check(MOCK.pushed == 783 and chatHas("Ann asked for A Threat Within"), "a share request from a party member")
+  check(not MOCK.pushed and chatHas("Ann asks for A Threat Within"), "a share request from a party member")
+  clickShareCard("A Threat Within")
+  check(MOCK.pushed == 783, "shared on a click")
   MOCK.pushed = nil
+  MOCK.chat = {}
   fromParty("Ann", "R;783;Tester")
-  check(not MOCK.pushed, "once per 10 s")
+  check(not chatHas("asks for"), "once per 10 s")
   MOCK.advance(11)
   fromParty("Ann", "R;783;Someone")
-  check(not MOCK.pushed, "a request for someone else")
+  check(not chatHas("asks for"), "a request for someone else")
   MOCK.notPushable = { [783] = true }
   fromParty("Ann", "R;783;Tester")
   check(not MOCK.pushed and addonCount("^N;783;Ann$") == 1, "a quest the game won't share says so")
@@ -2609,10 +2628,11 @@ function S.questPartyShare()
   table.insert(MOCK.questLog, { questID = 33, title = "Wolves Across the Border" })
   MOCK.event("QUEST_ACCEPTED", 2, 33)
   MOCK.advance(2.6)
-  check(not MOCK.pushed, "auto-share leaves out a quest every member already has")
+  check(not shareCard("Wolves Across the Border"), "auto-share leaves out a quest every member already has")
   table.insert(MOCK.questLog, { questID = 7, title = "Kobold Camp Cleanup" })
   MOCK.event("QUEST_ACCEPTED", 3, 7)
   MOCK.advance(2.6)
+  clickShareCard("Kobold Camp Cleanup")
   check(MOCK.pushed == 7, "and offers one a member lacks")
 end
 
@@ -2996,6 +3016,7 @@ function S.questPartyTogether()
   check(questText(frame, "PARTY - ALL READY TO TURN IN"), "the heading when every one of you is ready")
   -- share requests reach a name with an accent
   fromParty("Ann", "R;124;M\195\175a")
+  clickShareCard("A Baying of Gnolls")
   check(MOCK.pushed == 124, "a share request for a name with an accent")
   -- a member in the next zone is counted in steps
   to(zoe .. "-Far", 1, "", nil, "duskwood")
@@ -3060,10 +3081,12 @@ function S.questPartySurnames()
   check(questText(frame, "Bo Lark (37): Somewhere same step"), "and a party name with a surname matches a short sender")
   check(not questText(frame, "no step shared"), "nobody shows as no step shared")
   fromParty("Ever Hillsong-Realm", "R;124;Silfer")
+  clickShareCard("A Baying of Gnolls")
   check(MOCK.pushed == 124, "a share request names you by your first name")
   MOCK.pushed = nil
   MOCK.advance(11)
   fromParty("Bo-Realm", "R;124;Silfer Strife")
+  clickShareCard("A Baying of Gnolls")
   check(MOCK.pushed == 124, "or by your full name")
 end
 

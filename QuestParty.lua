@@ -177,16 +177,39 @@ local function pushQuest(id, index)
   return true
 end
 
--- A member's Ask to share: offer them that quest (once per 10 s each), or tell them it can't be.
+-- Sharing a quest (QuestLogPushQuest, and selecting it first) is blocked unless it comes from a
+-- click: a timer or an addon message calling it got "the game blocked the Codex" in Forever. So an
+-- automatic share or a member's request shows a card, and clicking the card shares the quest.
+local function offerShare(id, title, sub, why)
+  ns.showCard(title, sub,
+    { { "INV_Letter_15", Q.plain(questTitle(id, Q.log(id))), why } },
+    function()
+      local entry = Q.log(id)
+      if entry and pushQuest(id, entry.index) then
+        ns.say("offered " .. Q.plain(questTitle(id, entry)) .. " to your party.")
+      else
+        ns.say("the game won't let " .. Q.plain(questTitle(id, entry)) .. " be shared.")
+      end
+    end, nil, "Click to share it  -  right-click to dismiss")
+end
+
+-- A member's Ask to share: a card that shares it on a click (once per 10 s per quest), or tell
+-- them it can't be.
 local asked = {}
+local function pushable(id)
+  local L = C_QuestLog
+  if L and type(L.IsPushableQuest) == "function" then return try(L.IsPushableQuest, id) ~= false end
+  return true
+end
 local function shareRequest(id, asker)
   if not id then return end
   local now = GetTime()
   if asked[id] and now - asked[id] < 10 then return end
   asked[id] = now
   local entry = Q.log(id)
-  if entry and pushQuest(id, entry.index) then
-    ns.say(display(asker) .. " asked for " .. Q.plain(questTitle(id, entry)) .. ": offered it to your party.")
+  if entry and pushable(id) then
+    ns.say(display(asker) .. " asks for " .. Q.plain(questTitle(id, entry)) .. ": click the card to share it.")
+    offerShare(id, "SHARE A QUEST", display(asker) .. " asks for it", "Click to share it with your party")
   else
     send("N;" .. id .. ";" .. asker)
   end
@@ -564,7 +587,9 @@ local function accepted(a, b)
   local index = b and tonumber(a) or nil
   if not id or not ns.questSharing() or not inParty() or not Q.questMatch(id) then return end
   ns.after(2.5, function()
-    if inParty() and Q.log(id) and not everyoneHas(id) then pushQuest(id, index) end
+    if inParty() and Q.log(id) and not everyoneHas(id) and pushable(id) then
+      offerShare(id, "SHARE WITH YOUR PARTY", "A quest of your guide", "Click to offer it to your party")
+    end
   end)
 end
 

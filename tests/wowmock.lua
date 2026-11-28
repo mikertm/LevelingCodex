@@ -148,7 +148,11 @@ function ChatFrameAddMessageEventFilter(event, filter)
   MOCK.chatFilters = MOCK.chatFilters or {}
   MOCK.chatFilters[event] = filter
 end
-function QuestLogPushQuest() MOCK.pushed = MOCK.selectedQuest end
+-- protected in Forever: only from a click (a timer or an addon message got "the game blocked the Codex")
+function QuestLogPushQuest()
+  if not MOCK.inClick then problem("hardware", "QuestLogPushQuest outside a click"); error("QuestLogPushQuest: blocked", 2) end
+  MOCK.pushed = MOCK.selectedQuest
+end
 -- Forever can block the map's controller focus change when an addon opens it.
 function OpenWorldMap(map)
   MOCK.openedMap = map
