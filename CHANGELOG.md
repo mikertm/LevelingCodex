@@ -1,5 +1,11 @@
 # Leveling Codex
 
+## v0.34.10
+- **Fixed: party steps never showed.** Party members using the Codex always read "no step shared". Their steps, goals and quest lists now arrive, Ask to share reaches them, and your own call to the party no longer comes back to you.
+- **Fixed: "the game blocked the Codex" when sharing a quest.** The game only lets you share a quest with a click, so a guide quest you accept in a party, or one a party member asks you for, now shows a card: click it to share.
+- **Fixed: Journey toasts said "No answer from ... journal"** for a party member who has the Codex. Toasts, thanks, signatures, memories and fellowship toasts now reach them and get their answer.
+- Bug fixes for price sharing.
+
 ## v0.34.9
 - **Bug fixes and polish for price sharing:** a clearer readout under Settings > Helpers > PRICE SHARING.
 
@@ -82,9 +88,6 @@
 
 ## v0.34.3
 - **Party play: the guide in a group, polished.**
-    - **Quest sharing without the "blocked" error.** The game only lets a quest be shared from a click, so a guide quest you accept, or one a party member asks you for, now shows a card: click it to share the quest.
-    - **Journey toasts, thanks, signatures and memories reach surnamed players.** A toast to "Ever" whose Codex answered as "Ever Highwind" said "No answer from Ever's journal" and sent its reply to the wrong name; every Journey message and price sharing now match players by first name.
-    - **Party steps now arrive.** Names with a surname (sent as "Ever Hillsong", shown on the party frame as "Ever") never matched, so every member read "no step shared", your own call to the party came back to you, and share requests missed.
     - **Steps counted across zones.** A party member in the next zone of your route (or the one before) shows as "12 ahead in Duskwood" instead of just the zone's name, and the catch-up note names them when they fall 3 or more steps behind. Dungeons, class and special guides still show by name.
     - **Who you're waiting for.** On a shared step, once your quest is ready the step window says "Waiting on Bo: Kobold Vermin slain: 3/10." When every one of you is ready, the heading reads "Party - all ready to turn in".
     - **Missing quests.** A member on your step who doesn't have its quest is named ("Bo doesn't have A Threat Within yet"), so you can share it from Quests > Party.
