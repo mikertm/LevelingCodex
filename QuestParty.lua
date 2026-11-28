@@ -46,6 +46,17 @@ local function shortName(name)
 end
 local function me() return shortName(try(UnitName, "player")) end
 
+-- The key two forms of one player's name share: Forever gives names with a surname, and not the
+-- same way everywhere (the addon message's sender "Ever Hillsong-Realm", UnitName "Ever"): the
+-- first word, lower case (JourneySocial's firstName). Every member table and name check uses it;
+-- the row keeps the name to draw.
+local function nameKey(name)
+  name = shortName(name)
+  if not name then return nil end
+  return (name:match("^([^%s%._|]+)") or name):lower()
+end
+ns.partyNameKey = nameKey
+
 function ns.partyName(name)
   name = tostring(name or "")
   if name:find("[\128-\255]") then return name end
@@ -181,14 +192,16 @@ local function shareRequest(id, asker)
   end
 end
 
+local lastSender -- the last member's sender name as the client gave it (/codex debug)
 local function receive(prefix, text, channel, sender)
   if prefix ~= PREFIX or channel ~= "PARTY" or type(text) ~= "string" or type(sender) ~= "string" then return end
-  local myName = me()
+  local myName = nameKey(me())
   local name = shortName(sender)
-  if name == myName then return end
+  if not name or nameKey(name) == myName then return end
+  lastSender = sender
   local now = GetTime()
   if text == "HELLO" then broadcast(true); return end
-  local m = members[name]
+  local m = members[nameKey(name)]
   local goal = text:match("^G;(.*)$")
   if goal then
     if m then m.goal, m.live, m.at = goal, true, now end
@@ -199,7 +212,7 @@ local function receive(prefix, text, channel, sender)
   if list then
     local set = {}
     for id in list:gmatch("%d+") do set[tonumber(id)] = true end
-    logs[name] = set
+    logs[nameKey(name)] = set
     if m then m.live, m.at = true, now end
     ns.questRefresh()
     return
@@ -208,7 +221,7 @@ local function receive(prefix, text, channel, sender)
   local kind, quest, target = text:match("^([RN]);(%d+);(.+)$")
   if kind then
     quest = tonumber(quest)
-    if shortName(target) ~= myName then return end
+    if nameKey(target) ~= myName then return end
     if kind == "R" then shareRequest(quest, name)
     else ns.say(display(name) .. " can't share " .. Q.plain(questTitle(quest)) .. ": the game won't let it be shared, or it isn't in their log.") end
     return
@@ -223,11 +236,11 @@ local function receive(prefix, text, channel, sender)
   if not section then return end
   pos = tonumber(pos)
   if section == "none" then
-    members[name] = nil
+    members[nameKey(name)] = nil
   else
     -- a new step drops the old step's goal until its own arrives
     local goalKept = m and m.section == section and m.pos == pos and m.goal or nil
-    members[name] = { section = section, pos = pos, label = label, goal = goalKept, live = m and m.live, at = now }
+    members[nameKey(name)] = { name = name, section = section, pos = pos, label = label, goal = goalKept, live = m and m.live, at = now }
   end
   ns.questRefresh()
 end
@@ -276,7 +289,7 @@ end
 
 -- A member's place as a row of your route (for Show <name>'s step), or nil.
 local function memberRow(name)
-  local m = members[name]
+  local m = members[nameKey(name)]
   if not (m and m.section and m.pos) then return nil end
   local steps = Q.rows()
   local i = placeOf(steps, m.section, m.pos)
@@ -296,12 +309,12 @@ function ns.partyRows(all)
   local list = roster()
   if #list == 0 then
     for name, m in pairs(members) do
-      if fresh(m, now) then list[#list + 1] = { name = name } end
+      if fresh(m, now) then list[#list + 1] = { name = m.name or name } end
     end
   end
   local rows = {}
   for _, who in ipairs(list) do
-    local m = members[who.name]
+    local m = members[nameKey(who.name)]
     if not fresh(m, now) then m = nil end
     local head = display(who.name) .. (who.level and (" (" .. who.level .. ")") or "")
     local r = { name = who.name, level = who.level, className = who.className, offline = who.offline,
@@ -379,7 +392,7 @@ function ns.partyWaitLines(rows)
     if r.status == "behind" and -r.steps >= 3 then
       lines[#lines + 1] = name .. " is " .. -r.steps .. " steps behind you."
     elseif r.status == "same" and step and step.quest and step.type ~= "accept" then
-      local log = logs[r.name]
+      local log = logs[nameKey(r.name)]
       if log and not log[step.quest] then
         lines[#lines + 1] = name .. " doesn't have " .. Q.plain(questTitle(step.quest, Q.log(step.quest)))
           .. " yet: share it (Quests > Party)."
@@ -420,7 +433,7 @@ end
 -- The quests a member has that you don't (quests of your route you haven't turned in), and the
 -- quests you have that they don't: two lists of { id, title }, or nil before their log is known.
 function ns.partyQuestDiff(name)
-  local theirs = logs[name]
+  local theirs = logs[nameKey(name)]
   if not theirs then return nil end
   local log = Q.logEntries()
   local have, lack = {}, {}
@@ -459,7 +472,7 @@ end
 
 -- Switch your guide to the one a member is in.
 function ns.partyFollow(name)
-  local m = members[name]
+  local m = members[nameKey(name)]
   local section = m and Q.section(m.section)
   if not section then return end
   if section.side then
@@ -513,10 +526,10 @@ function ns.partyCalled(name, sectionId, pos, label)
   local now = GetTime()
   if callHeard[name] and now - callHeard[name] < 10 then return end
   callHeard[name] = now
-  local m = members[name]
+  local m = members[nameKey(name)]
   if m then m.section, m.pos, m.at = sectionId, pos, now
-  else members[name] = { section = sectionId, pos = pos, label = label, at = now } end
-  if label ~= "" then members[name].label = label end
+  else members[nameKey(name)] = { name = name, section = sectionId, pos = pos, label = label, at = now } end
+  if label ~= "" then members[nameKey(name)].label = label end
   local who = display(name)
   local text = Q.plain(label ~= "" and label or "their step")
   local row = memberRow(name)
@@ -541,7 +554,7 @@ local function everyoneHas(id)
   local list = roster()
   if #list == 0 then return false end
   for _, who in ipairs(list) do
-    if not (logs[who.name] and logs[who.name][id]) then return false end
+    if not (logs[nameKey(who.name)] and logs[nameKey(who.name)][id]) then return false end
   end
   return true
 end
@@ -940,7 +953,7 @@ local function tick()
   local bits = {}
   for _, who in ipairs(roster()) do
     bits[#bits + 1] = who.name .. (who.offline and "o" or "") .. (who.dead and "d" or "")
-      .. (fresh(members[who.name], now) and "f" or "")
+      .. (fresh(members[nameKey(who.name)], now) and "f" or "")
   end
   for name, m in pairs(members) do bits[#bits + 1] = name .. (fresh(m, now) and "+" or "-") end
   table.sort(bits)
@@ -976,6 +989,11 @@ function ns.startQuestParty()
   ns.every(5, tick)
 end
 
+-- A name as /codex debug shows it: letters past ASCII as \ddd, so its exact form can be read.
+local function bytes(name)
+  return (tostring(name):gsub("[\128-\255]", function(c) return "\\" .. c:byte() end))
+end
+
 function ns.partyDebugLines()
   local count = 0
   for _ in pairs(members) do count = count + 1 end
@@ -986,11 +1004,12 @@ function ns.partyDebugLines()
   if db.questAnnounceProgress then on[#on + 1] = "progress" end
   local lines = { "party: " .. (inParty() and "in a party" or "not in a party") .. ", Codex members seen: " .. count
     .. ", addon messages: " .. ((C_ChatInfo and C_ChatInfo.SendAddonMessage or SendAddonMessage) and "yes" or "no")
-    .. ", party chat lines: " .. (#on > 0 and table.concat(on, ", ") or "off") .. ", waiting: " .. #queue }
+    .. ", party chat lines: " .. (#on > 0 and table.concat(on, ", ") or "off") .. ", waiting: " .. #queue
+    .. ", you: " .. bytes(try(UnitName, "player")) .. ", last sender: " .. bytes(lastSender) }
   local now = GetTime()
   for _, r in ipairs(ns.partyRows(true)) do
-    local m = members[r.name]
-    local log = logs[r.name]
+    local m = members[nameKey(r.name)]
+    local log = logs[nameKey(r.name)]
     local n = 0
     for _ in pairs(log or {}) do n = n + 1 end
     lines[#lines + 1] = "party member " .. r.name .. ": " .. (not m and "no step shared"

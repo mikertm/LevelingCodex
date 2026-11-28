@@ -3032,6 +3032,41 @@ function S.questPartyTogether()
   end
 end
 
+-- Forever names carry surnames, not the same way everywhere: the addon message's sender is
+-- "Ever Hillsong-Realm" while the party frame's UnitName is "Ever" (and the reverse). Steps kept
+-- saying "no step shared", your own echo became a member, and share requests missed.
+function S.questPartySurnames()
+  MOCK.party = true
+  MOCK.playerName = "Silfer"
+  MOCK.partyMembers = { { name = "Ever", level = 38 }, { name = "Bo Lark", level = 37 } }
+  redridgeBrutes()
+  local frame = questViewer()
+  MOCK.event("GROUP_ROSTER_UPDATE")
+  MOCK.advance(6)
+  local Q = MOCK.ns.quests
+  local here = Q.routeRow().pos
+  local section = Q.routeRow().section.id
+  fromParty("Silfer Strife-Realm", "S;" .. section .. ";" .. here .. ";Me")
+  fromParty("Silfer Strife-Realm", "C;" .. section .. ";" .. here .. ";Me")
+  MOCK.chat = {}
+  slash("debug")
+  check(chatHas("Codex members seen: 0"), "your own echo under your full name isn't a member")
+  check(not chatHas("calls the party"), "nor is your own call heard")
+  fromParty("Ever Hillsong-Realm", "S;" .. section .. ";" .. here .. ";Somewhere")
+  fromParty("Ever Hillsong-Realm", "G;Redridge Brutes 3/10")
+  fromParty("Ever Hillsong-Realm", "L;124")
+  fromParty("Bo-Realm", "S;" .. section .. ";" .. here .. ";Somewhere")
+  check(questText(frame, "Ever (38): Redridge Brutes 3/10 same step"), "a sender with a surname matches the party frame's name")
+  check(questText(frame, "Bo Lark (37): Somewhere same step"), "and a party name with a surname matches a short sender")
+  check(not questText(frame, "no step shared"), "nobody shows as no step shared")
+  fromParty("Ever Hillsong-Realm", "R;124;Silfer")
+  check(MOCK.pushed == 124, "a share request names you by your first name")
+  MOCK.pushed = nil
+  MOCK.advance(11)
+  fromParty("Bo-Realm", "R;124;Silfer Strife")
+  check(MOCK.pushed == 124, "or by your full name")
+end
+
 local function arrowCaption()
   local caption = ""
   for _, r in ipairs({ LevelingCodexQuestArrow:GetRegions() }) do

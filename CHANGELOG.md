@@ -82,6 +82,7 @@
 
 ## v0.34.3
 - **Party play: the guide in a group, polished.**
+    - **Party steps now arrive.** Names with a surname (sent as "Ever Hillsong", shown on the party frame as "Ever") never matched, so every member read "no step shared", your own call to the party came back to you, and share requests missed.
     - **Steps counted across zones.** A party member in the next zone of your route (or the one before) shows as "12 ahead in Duskwood" instead of just the zone's name, and the catch-up note names them when they fall 3 or more steps behind. Dungeons, class and special guides still show by name.
     - **Who you're waiting for.** On a shared step, once your quest is ready the step window says "Waiting on Bo: Kobold Vermin slain: 3/10." When every one of you is ready, the heading reads "Party - all ready to turn in".
     - **Missing quests.** A member on your step who doesn't have its quest is named ("Bo doesn't have A Threat Within yet"), so you can share it from Quests > Party.
