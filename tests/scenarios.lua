@@ -12476,22 +12476,37 @@ function S.auctionShare()
   check(A.store().items[2589].low == 5, "a second player confirms it")
   local today = A.store().items[2589].days[day]
   check(today and today.low == 5, "a confirmed odd price joins the day's history: both players agreed (" .. tostring(today and today.low) .. ")")
-  -- a player whose prices keep being held back is muted
+  -- odd prices nobody contradicts (a real silly listing) only wait: the sender isn't ignored (Michael, 2026-11-28)
   A.record(2589, "Linen Cloth", 100, 20)
-  for i = 1, 6 do MOCK.advance(61); from("Cy", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
-  check(Sh.muted["Cy"], "a sender held back five times is muted")
+  for i = 1, 8 do MOCK.advance(61); from("Cy", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
+  check(not Sh.muted["Cy"], "a sender with odd prices nobody contradicts isn't ignored")
+  -- a player whose odd prices other players keep contradicting is ignored
+  for i = 1, 6 do
+    MOCK.advance(61); from("Cy", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0")
+    from("Ed", "P1;" .. b(2589) .. "," .. b(100) .. ",20,0")
+  end
+  check(Sh.muted["Cy"], "a sender contradicted five times is ignored (" .. tostring(Sh.people["Cy"] and Sh.people["Cy"].contradicted) .. ")")
+  check(not Sh.muted["Ed"], "the player who disagreed isn't")
   MOCK.advance(61)
   from("Cy", "P1;" .. b(4338) .. "," .. b(700) .. ",2,0")
   check(not A.store().items[4338], "a muted sender's prices are ignored")
   check(table.concat(Sh.fieldLines(), " "):find("1 player is ignored", 1, true), "Settings names one ignored player in the singular")
-  -- audit (2026-11-27): a busy sender's few odd prices don't get them muted
+  -- a price four times the usual is no longer odd: it is filed at once
+  MOCK.advance(61)
+  from("Ed", "P1;" .. b(2589) .. "," .. b(400) .. ",3,0")
+  check(A.store().items[2589].low == 400, "a price four times the usual is filed (" .. tostring(A.store().items[2589].low) .. ")")
+  -- audit (2026-11-27): a busy sender's few contradicted prices don't get them muted
   for m = 0, 2 do
     local parts = {}
     for i = 1, 30 do parts[i] = b(5000 + m * 30 + i) .. "," .. b(300) .. ",2,0" end
     MOCK.advance(61); from("Dot", "P1;" .. table.concat(parts, "/"))
   end
-  for i = 1, 6 do MOCK.advance(61); from("Dot", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0") end
-  check(not Sh.muted["Dot"], "a sender whose odd prices are a small share of what they sent isn't muted")
+  A.record(2589, "Linen Cloth", 100, 20)
+  for i = 1, 6 do
+    MOCK.advance(61); from("Dot", "P1;" .. b(2589) .. "," .. b(9999) .. ",1,0")
+    from("Fay", "P1;" .. b(2589) .. "," .. b(100) .. ",20,0")
+  end
+  check(not Sh.muted["Dot"], "a sender whose contradicted prices are a small share of what they sent isn't muted")
   -- your own other characters are never held back: their reading is as good as yours
   A.store().shareAlts = A.store().shareAlts or {}
   A.store().shareAlts["Silfer Strife"] = true

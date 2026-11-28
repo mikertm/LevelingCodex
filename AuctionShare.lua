@@ -8,10 +8,12 @@
 --     the most valuable first, only readings under Sh.FRESH old, never a price that came from someone
 --     else, never one another player sent within Sh.ECHO s at the same price.
 --   Receiving: at most Sh.SENDER_MAX messages a minute per sender; numbers are checked; a reading
---     older than your own is passed over; on an item with 2+ days of history a price under a quarter
---     or over four times its usual waits for a second sender within 15% (Sh.CONFIRM s) before it counts.
+--     older than your own is passed over; on an item with 2+ days of history a price under a fifth
+--     or over five times its usual (Sh.ODD) waits for a second sender within 15% (Sh.CONFIRM s) before it counts.
 --   Shared prices join the daily history (the usual price) only once two players agree within 15% that day;
---     a sender held back Sh.STRIKES times is ignored for the session. Tooltips mark them "(shared)".
+--     a sender whose held prices other players contradicted Sh.STRIKES times (and for at least
+--     Sh.MUTE_SHARE of what they sent) is ignored for the session; an odd price nobody contradicts
+--     (a real silly listing) is only held. Tooltips mark them "(shared)".
 --   db.auctionNoShare turns it off (and leaves the channel). Never buys: deals are still checked live.
 local _, ns = ...
 local function try(f, ...) if type(f) ~= "function" then return end local ok, a, b, c = pcall(f, ...); if ok then return a, b, c end end
@@ -27,7 +29,8 @@ Sh.ECHO = 10 * 60
 Sh.MAX_BYTES = 245
 Sh.ORDER_SIZE = 300
 Sh.SENDER_MAX = 45 -- messages a minute; a sender sends one every Sh.GAP s, 30 a minute
-Sh.MUTE_SHARE = 0.1 -- muted only when held prices are at least this share of what they sent
+Sh.MUTE_SHARE = 0.25 -- muted only when contradicted prices are at least this share of what they sent
+Sh.ODD = 5 -- a price under 1/ODD or over ODD times the usual is odd: held until a second player agrees
 Sh.CONFIRM = 30 * 60
 Sh.JOIN_DELAY = 15 -- s after entering the world: an early join can take General's channel number
 Sh.MAX_ID, Sh.MAX_PRICE, Sh.MAX_N = 2000000, 99999999999, 1000000
@@ -353,7 +356,7 @@ local function doubtful(id, low)
     if at and it.shAt ~= at and not it.ator and (tonumber(it.n) or 0) > 0 and now() - at < 3 * 86400 then ref = tonumber(it.low) end
   end
   if not ref or ref <= 0 then return false end
-  return low < ref / 4 or low > ref * 4
+  return low < ref / Sh.ODD or low > ref * Sh.ODD
 end
 
 -- An ID the game has no item for never enters the store (a broken or made-up message would
@@ -409,12 +412,25 @@ function Sh.take(id, low, n, at, sender)
     p.older = p.older + 1
     return false
   end
+  -- another player's price for an item someone's odd price is held on: within 15% confirms it (below),
+  -- else it contradicts it, and only that is a strike against the first sender (Michael,
+  -- 2026-11-28: a real silly listing, 999g, mustn't get a sharer ignored)
+  local h = held[id]
+  if h and h.by ~= sender and t - h.t < Sh.CONFIRM and math.abs(h.low - low) > 0.15 * math.max(h.low, low) then
+    held[id] = nil
+    local by = h.by
+    strikes[by] = (strikes[by] or 0) + 1
+    local q = person(by)
+    q.contradicted = (q.contradicted or 0) + 1
+    if not q.alt and strikes[by] >= Sh.STRIKES and strikes[by] >= Sh.MUTE_SHARE * q.heard and not muted[by] then
+      muted[by] = true; q.muted = true; Sh.stats.muted = (Sh.stats.muted or 0) + 1
+    end
+    h = nil
+  end
   if not p.alt and doubtful(id, low) then
-    local h = held[id]
-    if h and h.by ~= sender and t - h.t < Sh.CONFIRM and math.abs(h.low - low) <= 0.15 * math.max(h.low, low) then
+    if h and h.by ~= sender and t - h.t < Sh.CONFIRM then
       held[id] = nil
       agreed(id, h.low, h.by, t) -- the first sender's word counts towards the day's agreement too
-      strikes[h.by] = math.max(0, (strikes[h.by] or 0) - 1) -- it was true after all
     else
       held[id] = { low = low, by = sender, t = t }
       Sh.heldCount = (Sh.heldCount or 0) + 1
@@ -424,12 +440,6 @@ function Sh.take(id, low, n, at, sender)
       end
       Sh.stats.doubted = Sh.stats.doubted + 1
       p.held = p.held + 1
-      strikes[sender] = (strikes[sender] or 0) + 1
-      -- a busy sender's few odd prices are real listings (a cheap one put up by someone): only a
-      -- sender whose held prices are a fair share of what they sent is ignored
-      if strikes[sender] >= Sh.STRIKES and strikes[sender] >= Sh.MUTE_SHARE * p.heard and not muted[sender] then
-        muted[sender] = true; p.muted = true; Sh.stats.muted = (Sh.stats.muted or 0) + 1
-      end
       return false
     end
   end
@@ -588,7 +598,7 @@ function Sh.fieldLines()
   local list = Sh.peopleList()
   for i = 1, math.min(3, #list) do
     local e = list[i]
-    local tag = e.p.muted and " (ignored: too many odd prices)" or (e.p.alt and " (your character)" or "")
+    local tag = e.p.muted and " (ignored: other players contradicted their prices)" or (e.p.alt and " (your character)" or "")
     lines[#lines + 1] = "  " .. ns.plain(e.name) .. tag .. ": " .. ns.thousands(e.p.filed) .. " filed of " .. ns.thousands(e.p.heard) .. "."
   end
   if #list > 3 then lines[#lines + 1] = "  and " .. plural(#list - 3, "more player", "more players") .. "." end

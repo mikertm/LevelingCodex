@@ -8,6 +8,10 @@
     - **At the vendor, the shopping card offers the book or recipe** you need (Expert First Aid - Under Wraps, the Expert Cookbook, The Bass and You, the step's recipe), with its price.
     - **The level-up and skill-up banners, the Professions tab and the profession trainer card** name your faction's trainer or vendor with its spot too.
     - **Fixed:** Horde players can buy Recipe: Roast Raptor from Nerrist in Grom'gol as well as Keena in Hammerfall.
+- **Price sharing is less strict.** A sharer was ignored for a whole session after 20 odd prices out of 208, even though no one said those prices were wrong.
+    - **An odd price no longer counts against the player who sent it.** It is still held back until a second player agrees with it, but a real oddball listing (someone posting at 999g) doesn't get the sender ignored.
+    - **A player is ignored only when other players keep contradicting them:** five prices that another player's price disagreed with, and at least a quarter of everything they sent (was a tenth).
+    - **The odd band is wider:** a price counts as odd under a fifth or over five times the usual price (was a quarter and four times).
 
 ## v0.34.7
 - **The Codex's settings are in the game's Options too.** Esc > Options > AddOns > **Leveling Codex** now lists every setting, on the same pages as the Codex's Settings tab: Leveling Codex (general), Questing, Map and arrow, Group and Helpers.
