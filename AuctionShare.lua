@@ -88,9 +88,12 @@ local function squash(s) return (tostring(s or ""):gsub("[%s%-']", ""):lower()) 
 local function isMyName(sender)
   local me = myName()
   if me == "" or type(sender) ~= "string" then return false end
+  -- Forever names carry surnames, not the same way in UnitName and a sender ("Silfer Strife-Realm"
+  -- for "Silfer"): compare the first word
+  local function first(n) return (n:match("^([^%s%._|]+)") or n):lower() end
   local n, realm = sender:match("^([^%-]+)%-(.+)$")
-  if not n then return sender == me end
-  if n ~= me then return false end
+  if not n then return first(sender) == first(me) end
+  if first(n) ~= first(me) then return false end
   local mine = try(GetNormalizedRealmName) or try(GetRealmName)
   if type(mine) ~= "string" or mine == "" then return true end
   return squash(realm) == squash(mine)

@@ -820,6 +820,7 @@ function S.keyFrom(theirKey, from)
   local list = { from }
   local mine = me()
   for _, n in ipairs(names(theirKey)) do
+    n = S.knownName(n)
     if n ~= mine and firstName(n) ~= firstName(mine) then list[#list + 1] = n end
   end
   return (S.groupKey(list))
@@ -1322,7 +1323,13 @@ end
 -- S.ACK_WAIT seconds you hear why it may not have landed.
 local acks = {}
 S.acks = acks
+-- Keyed "QA:<first name>": the answer's sender may carry a surname the name you asked didn't.
+local function ackKey(key)
+  local kind, name = key:match("^(%u+):(.*)$")
+  return kind and (kind .. ":" .. (firstName(name) or name)) or key
+end
 local function expectAck(key, name, onMissing)
+  key = ackKey(key)
   acks[key] = GetTime()
   ns.after(S.ACK_WAIT, function()
     if acks[key] then
@@ -1333,6 +1340,7 @@ local function expectAck(key, name, onMissing)
   end)
 end
 local function gotAck(key)
+  key = ackKey(key)
   if not acks[key] then return false end
   acks[key] = nil
   return true
@@ -1569,13 +1577,13 @@ function HANDLE.HI(from, f)
   local bond, metDay
   for pair in tostring(f[7] or ""):gmatch("[^,]+") do
     local n, r, d = pair:match("^(.-)=(%d+):(%d+)$")
-    if n == mine then bond, metDay = tonumber(r), tonumber(d) end
+    if isMe(n) then bond, metDay = tonumber(r), tonumber(d) end
   end
   p.codex = { ep = plain(f[3] or ""), day = tonumber(f[4]), moments = tonumber(f[5]), level = tonumber(f[6]), bond = bond, met = metDay, at = now() }
   if not hiTo[from] and Co_party()[from] then S.sayHi() end
 end
 function HANDLE.SQ(from, f)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   send("QA;" .. from, from)
   local again = requests[from] and GetTime() - requests[from] < 60
   requests[from] = GetTime()
@@ -1590,23 +1598,23 @@ function HANDLE.SQ(from, f)
 end
 -- The other Codex has the request / your line / your toast.
 function HANDLE.QA(from, f)
-  if f[2] ~= me() or not gotAck("QA:" .. from) then return end
+  if not isMe(f[2]) or not gotAck("QA:" .. from) then return end
   if asked[from] then asked[from].seen = true end
   ns.say(Co_name(from) .. " got your request: their line lands here once they write it.")
   if ns.ui and ns.ui.refresh then pcall(ns.ui.refresh) end
 end
 function HANDLE.GA(from, f)
-  if f[2] ~= me() or not gotAck("GA:" .. from) then return end
+  if not isMe(f[2]) or not gotAck("GA:" .. from) then return end
   ns.say(Co_name(from) .. " has your line in their journal.")
   S.card("YOUR LINE ARRIVED", Co_name(from) .. " keeps it in their journal", { { J.ICON.signed, "Signed", "Day " .. (J.draw and J.draw.dayOf(journal(), now()) or 1) } }, from)
 end
 function HANDLE.TA(from, f)
-  if f[2] ~= me() or not gotAck("TA:" .. from) then return end
+  if not isMe(f[2]) or not gotAck("TA:" .. from) then return end
   ns.say(Co_name(from) .. " got your toast.")
   S.card("TOAST RECEIVED", Co_name(from) .. " drank to that", { { J.ICON.toast, "Where", zone() } }, from)
 end
 function HANDLE.SG(from, f, raw)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   if not asked[from] or GetTime() - asked[from].at > S.SIGN_WINDOW then return end
   asked[from] = nil
   send("GA;" .. from, from)
@@ -1624,7 +1632,7 @@ function HANDLE.SG(from, f, raw)
   S.checkBond(from)
 end
 function HANDLE.TS(from, f)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   send("TA;" .. from, from)
   if gotToast[from] and GetTime() - gotToast[from] < 3600 then return end
   gotToast[from] = GetTime()
@@ -1653,7 +1661,7 @@ function HANDLE.LV(from, f)
 end
 
 function HANDLE.TY(from, f)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   send("YA;" .. from, from)
   if gotThanks[from] and GetTime() - gotThanks[from] < 300 then return end
   gotThanks[from] = GetTime()
@@ -1668,11 +1676,11 @@ function HANDLE.TY(from, f)
   S.checkBond(from)
 end
 function HANDLE.YA(from, f)
-  if f[2] ~= me() or not gotAck("YA:" .. from) then return end
+  if not isMe(f[2]) or not gotAck("YA:" .. from) then return end
   ns.say(Co_name(from) .. " got your thanks.")
 end
 function HANDLE.MM(from, f, raw)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   send("MA;" .. from, from)
   local text = plain(raw:match("^MM;[^;]*;[^;]*;[^;]*;[^;]*;(.*)$") or ""):sub(1, S.MEMORY_MAX)
   if text == "" or not person(from, "memGot") then return end
@@ -1690,7 +1698,7 @@ function HANDLE.MM(from, f, raw)
   if ns.refreshTab then ns.refreshTab("journey") end
 end
 function HANDLE.MA(from, f)
-  if f[2] ~= me() or not gotAck("MA:" .. from) then return end
+  if not isMe(f[2]) or not gotAck("MA:" .. from) then return end
   ns.say(Co_name(from) .. " keeps the memory in their journal now.")
 end
 function HANDLE.TB(from, f)
@@ -1713,7 +1721,7 @@ function HANDLE.TB(from, f)
   if ns.refreshTab then ns.refreshTab("journey") end
 end
 function HANDLE.BA(from, f)
-  if f[2] ~= me() then return end
+  if not isMe(f[2]) then return end
   ns.say(Co_name(from) .. " drank to the fellowship with you.")
 end
 function HANDLE.FN(from, f)
@@ -1731,10 +1739,24 @@ function HANDLE.FN(from, f)
     end, "Click to use this name  -  right-click to dismiss")
 end
 
+-- A sender as the name you know them by: Forever gives "Ever Highwind" as the sender of a player
+-- your party frame calls "Ever" (or the reverse). Every table here (party, requests, toasts, the
+-- reply's whisper target) uses the party's or your target's form, so the sender takes it.
+function S.knownName(name)
+  local f = firstName(name)
+  if not f then return name end
+  for _, p in ipairs(S.party()) do
+    if firstName(p.name) == f then return p.name end
+  end
+  local info = unitInfo("target")
+  if info and info.name and firstName(info.name) == f then return info.name end
+  return name
+end
+
 local function addonMessage(prefix, text, channel, sender)
   if prefix ~= S.PREFIX or type(text) ~= "string" or not sharing() then return end
-  local from = short(sender)
-  if not from or from == me() or J.isForgotten(from) then return end
+  local from = S.knownName(short(sender))
+  if not from or isMe(from) or J.isForgotten(from) then return end
   local f = {}
   for part in (text .. ";"):gmatch("([^;]*);") do f[#f + 1] = part end
   local h = HANDLE[f[1]]

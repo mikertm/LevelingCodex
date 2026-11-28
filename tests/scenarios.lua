@@ -12466,6 +12466,8 @@ function S.auctionShare()
   S.login()
   local A, Sh = MOCK.ns.auction, MOCK.ns.auctionShare
   local b = Sh.b36
+  check(Sh.isMyName("Tester Strife-Mockrealm") and Sh.isMyName("Tester") and not Sh.isMyName("Testa-Mockrealm"),
+    "your own name with a surname (Forever's sender form) is you")
   A.store().items[2589] = A.store().items[2589] or { name = "Linen Cloth", low = 100, n = 20, at = t - 7200 }
   A.store().items[2589].days = hist
   -- the minimal client has no CHAT_MSG_ADDON: its reading is fed straight in
@@ -15253,7 +15255,7 @@ function S.journeySocial()
   check(journeyHas("signed", "Signed Bo's journal"), "the signer's journal keeps the line")
   check(j.wrote.Bo and j.wrote.Bo[1], "and remembers what you wrote")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "GA;Tester", "PARTY", "Bo")
-  check(J.social.acks["GA:Bo"] == nil, "Bo's answer confirms the line arrived")
+  check(J.social.acks["GA:bo"] == nil, "Bo's answer confirms the line arrived")
   MOCK.addonSent = {}
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester", "PARTY", "Bo")
@@ -15268,14 +15270,28 @@ function S.journeySocial()
   check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "TS;Ann", "Raise a toast sends it")
   check(journeyHas("toast", "Ann"), "the toast you raise goes in your journal too")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TA;Tester", "PARTY", "Ann")
-  check(J.social.acks["TA:Ann"] == nil, "Ann's answer confirms the toast arrived")
+  check(J.social.acks["TA:ann"] == nil, "Ann's answer confirms the toast arrived")
+  -- Forever senders carry surnames: "Ann Rowan" answers for the Ann of your party frame
+  MOCK.advance(700)
+  MOCK.addonSent = {}
+  click(win(), "Toast Ann")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "TS;Ann", "a second toast after ten minutes")
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TA;Tester Strife", "PARTY", "Ann Rowan-Realm")
+  check(J.social.acks["TA:ann"] == nil, "an answer from a sender with a surname confirms the toast")
+  MOCK.chat = {}
+  MOCK.advance(8)
+  check(not chatHas("No answer from"), "no 'no answer' line for a surnamed sender")
+  MOCK.addonSent = {}
+  MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TS;Tester Strife", "PARTY", "Bo Lark-Realm")
+  check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "TA;Bo" and MOCK.addonSent[1].channel ~= "WHISPER",
+    "a surnamed toast is answered to the party name")
   -- thanks: sent, answered, received
   MOCK.addonSent = {}
   click(win(), "Thank Ann")
   check(MOCK.addonSent[1] and MOCK.addonSent[1].text:find("^TY;Ann;"), "Thank them sends the thanks (" .. tostring(MOCK.addonSent[1] and MOCK.addonSent[1].text) .. ")")
   check(journeyHas("thanks", "Ann") and j.people.Ann.thanksGiven == 1, "your thanks go in your journal")
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "YA;Tester", "PARTY", "Ann")
-  check(J.social.acks["YA:Ann"] == nil, "Ann's answer confirms the thanks arrived")
+  check(J.social.acks["YA:ann"] == nil, "Ann's answer confirms the thanks arrived")
   MOCK.addonSent = {}
   MOCK.event("CHAT_MSG_ADDON", "LevCodexJ", "TY;Tester;rez", "PARTY", "Bo")
   check(MOCK.addonSent[1] and MOCK.addonSent[1].text == "YA;Bo", "thanks are answered")
